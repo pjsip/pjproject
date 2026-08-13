@@ -942,7 +942,16 @@ PJ_DEF(unsigned) pj_timer_heap_poll( pj_timer_heap_t *ht,
         }
     }
     if (ht->cur_size && next_delay) {
+#if PJ_TIMER_USE_LINKED_LIST
+        /* In linked-list mode the earliest entry is the list head; heap[0]
+         * is not heap-ordered in this mode. The enclosing "ht->cur_size"
+         * check guarantees the list is non-empty, so head_list.next is a
+         * real node.
+         */
+        *next_delay = ht->head_list.next->_timer_value;
+#else
         *next_delay = ht->heap[0]->_timer_value;
+#endif
         if (count > 0)
             pj_gettickcount(&now);
         PJ_TIME_VAL_SUB(*next_delay, now);
@@ -958,23 +967,38 @@ PJ_DEF(unsigned) pj_timer_heap_poll( pj_timer_heap_t *ht,
 
 PJ_DEF(pj_size_t) pj_timer_heap_count( pj_timer_heap_t *ht )
 {
+    pj_size_t count;
+
     PJ_ASSERT_RETURN(ht, 0);
 
-    return ht->cur_size;
+    lock_timer_heap(ht);
+    count = ht->cur_size;
+    unlock_timer_heap(ht);
+
+    return count;
 }
 
 PJ_DEF(pj_status_t) pj_timer_heap_earliest_time( pj_timer_heap_t * ht,
                                                  pj_time_val *timeval)
 {
-    pj_assert(ht->cur_size != 0);
-    if (ht->cur_size == 0)
-        return PJ_ENOTFOUND;
+    pj_status_t status;
 
     lock_timer_heap(ht);
-    *timeval = ht->heap[0]->_timer_value;
+
+    if (ht->cur_size == 0) {
+        status = PJ_ENOTFOUND;
+    } else {
+#if PJ_TIMER_USE_LINKED_LIST
+        *timeval = ht->head_list.next->_timer_value;
+#else
+        *timeval = ht->heap[0]->_timer_value;
+#endif
+        status = PJ_SUCCESS;
+    }
+
     unlock_timer_heap(ht);
 
-    return PJ_SUCCESS;
+    return status;
 }
 
 #if PJ_TIMER_DEBUG

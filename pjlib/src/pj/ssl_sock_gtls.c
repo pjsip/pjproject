@@ -1072,9 +1072,22 @@ static void tls_cert_get_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
 
             if (len && type != PJ_SSL_CERT_NAME_UNKNOWN) {
                 ci->subj_alt_name.entry[ci->subj_alt_name.cnt].type = type;
-                pj_strdup2(pool,
+                if (type == PJ_SSL_CERT_NAME_IP) {
+                    pj_strdup2(pool,
                         &ci->subj_alt_name.entry[ci->subj_alt_name.cnt].name,
-                        type == PJ_SSL_CERT_NAME_IP ? buf : out);
+                        buf);
+                } else {
+                    /* Preserve the reported length instead of using strlen(),
+                     * so a DNS SAN containing an embedded NUL is not truncated
+                     * at the NUL (which would allow a crafted cert to be
+                     * accepted for the prefix hostname; identity bypass).
+                     */
+                    pj_str_t tmp;
+                    pj_strset(&tmp, out, len);
+                    pj_strdup_with_null(pool,
+                        &ci->subj_alt_name.entry[ci->subj_alt_name.cnt].name,
+                        &tmp);
+                }
                 ci->subj_alt_name.cnt++;
             }
         }

@@ -440,6 +440,23 @@ typedef struct pj_stun_resolve_result pj_stun_resolve_result;
 #endif
 
 /**
+ * Maximum time (in milliseconds) to wait for synchronous ICE media transport
+ * initialization to complete. When ICE is created synchronously (i.e. neither
+ * asynchronous transport creation nor trickle ICE is active), pjsua will wait
+ * for the ICE initialization callback before proceeding. Normally the ICE
+ * stack reports back within its own STUN/TURN timeouts, but this setting acts
+ * as a safety net so the calling thread cannot block indefinitely if the
+ * callback never arrives (e.g. a candidate stuck pending forever).
+ *
+ * Set to zero to disable the timeout and wait indefinitely (legacy behavior).
+ *
+ * Default: 30000 ms (30 seconds)
+ */
+#ifndef PJSUA_ICE_TRANSPORT_INIT_TIMEOUT
+#   define PJSUA_ICE_TRANSPORT_INIT_TIMEOUT     30000
+#endif
+
+/**
  * Interval of checking for any new ICE candidate when trickle ICE is active.
  * Trickle ICE gathers local ICE candidates, such as STUN and TURN candidates,
  * in the background, while SDP offer/answer negotiation is being performed.
@@ -1051,6 +1068,12 @@ typedef struct pjsua_dtmf_info {
      */
     unsigned duration;
 
+    /**
+     * The media index of the audio stream that received the DTMF, or -1
+     * if the DTMF was not received via a media stream (e.g. SIP INFO).
+     */
+    int med_idx;
+
 } pjsua_dtmf_info;
 
 
@@ -1100,6 +1123,12 @@ typedef struct pjsua_dtmf_event {
      * an event with PJMEDIA_STREAM_DTMF_IS_END for every event.
      */
     unsigned flags;
+
+    /**
+     * The media index of the audio stream that received the DTMF, or -1
+     * if the DTMF was not received via a media stream (e.g. SIP INFO).
+     */
+    int med_idx;
 } pjsua_dtmf_event;
 
 
@@ -1122,6 +1151,11 @@ typedef struct pjsua_txt_stream_data {
      * Note that the text can be empty.
      */
     pj_str_t            text;
+
+    /**
+     * The index of the text media stream that received the text.
+     */
+    int                 med_idx;
 
 } pjsua_txt_stream_data;
 
@@ -1558,7 +1592,7 @@ typedef struct pjsua_callback
     void (*on_dtmf_digit)(pjsua_call_id call_id, int digit);
 
     /**
-     * Notify application upon incoming DTMF digits using the method specified 
+     * Notify application upon incoming DTMF digits using the method specified
      * in \a pjsua_dtmf_method. This callback will not be called if app
      * implements \a on_dtmf_event().
      *
@@ -1568,7 +1602,7 @@ typedef struct pjsua_callback
     void (*on_dtmf_digit2)(pjsua_call_id call_id, const pjsua_dtmf_info *info);
 
     /**
-     * Notify application upon incoming DTMF digits using the method specified 
+     * Notify application upon incoming DTMF digits using the method specified
      * in \a pjsua_dtmf_method. Includes additional information about events
      * received via RTP.
      *
@@ -2663,6 +2697,38 @@ typedef struct pjsua_config
      * Default: PJSUA_SIP_SIPREC_INACTIVE
      */
     pjsua_sip_siprec_use use_siprec;
+
+    /**
+     * Specify whether SIPREC label attributes ('a=label') are required
+     * in incoming INVITE requests.
+     *
+     * When set to PJ_TRUE, SIPREC INVITEs without the label attribute in
+     * all media streams will be rejected with 400 Bad Request. This enforces
+     * RFC 7866 compliance for proper metadata correlation.
+     *
+     * When set to PJ_FALSE (default), the SRS will accept SIPREC INVITEs
+     * even without labels for better interoperability. Missing labels will
+     * be logged as warnings for debugging purposes.
+     *
+     * Default: PJ_FALSE (allow for interoperability)
+     */
+    pj_bool_t       siprec_require_label;
+
+    /**
+     * Specify whether SIPREC rs-metadata documents are required
+     * in incoming INVITE requests.
+     *
+     * When set to PJ_TRUE, SIPREC INVITEs without rs-metadata documents
+     * will be rejected with 400 Bad Request. This enforces strict RFC 7866
+     * compliance for complete recording session metadata.
+     *
+     * When set to PJ_FALSE (default), the SRS will accept SIPREC INVITEs
+     * even without rs-metadata for better interoperability. Missing metadata
+     * will be logged as warnings for debugging purposes.
+     *
+     * Default: PJ_FALSE (allow for interoperability)
+     */
+    pj_bool_t       siprec_require_metadata;
 
     /**
      * Handle unsolicited NOTIFY requests containing message waiting 
@@ -4481,7 +4547,41 @@ typedef struct pjsua_acc_config
     pjsua_sip_siprec_use use_siprec;
 
     /**
-     * Specify Session Timer settings, see #pjsip_timer_setting. 
+     * Specify whether SIPREC label attributes ('a=label') are required
+     * in incoming INVITE requests.
+     *
+     * When set to PJ_TRUE, SIPREC INVITEs without the label attribute in
+     * all media streams will be rejected with 400 Bad Request. This enforces
+     * RFC 7866 compliance for proper metadata correlation.
+     *
+     * When set to PJ_FALSE (default), the SRS will accept SIPREC INVITEs
+     * even without labels for better interoperability. Missing labels will
+     * be logged as warnings for debugging purposes.
+     *
+     * Default: The default value is taken from siprec_require_label in
+     *          pjsua_config (PJ_FALSE).
+     */
+    pj_bool_t       siprec_require_label;
+
+    /**
+     * Specify whether SIPREC rs-metadata documents are required
+     * in incoming INVITE requests.
+     *
+     * When set to PJ_TRUE, SIPREC INVITEs without rs-metadata documents
+     * will be rejected with 400 Bad Request. This enforces strict RFC 7866
+     * compliance for complete recording session metadata.
+     *
+     * When set to PJ_FALSE (default), the SRS will accept SIPREC INVITEs
+     * even without rs-metadata for better interoperability. Missing metadata
+     * will be logged as warnings for debugging purposes.
+     *
+     * Default: The default value is taken from siprec_require_metadata in
+     *          pjsua_config (PJ_FALSE).
+     */
+    pj_bool_t       siprec_require_metadata;
+
+    /**
+     * Specify Session Timer settings, see #pjsip_timer_setting.
      */
     pjsip_timer_setting timer_setting;
 
@@ -8961,6 +9061,46 @@ PJ_DECL(pj_status_t) pjsua_recorder_create(const pj_str_t *filename,
                                            unsigned options,
                                            pjsua_recorder_id *p_id);
 
+/**
+ * Create a tone detector and connect it to the conference bridge. The
+ * detector reuses the recorder slot table, so its id can be passed to
+ * #pjsua_recorder_get_conf_port() to wire a call's audio into it.
+ *
+ * @param cb         Callback invoked the first time the detector identifies
+ *                   the configured tone sustained for
+ *                   PJMEDIA_TONE_DETECT_DEBOUNCE_FRAMES consecutive frames
+ *                   (≈60ms at the default 20ms ptime; scales with the
+ *                   active audio frame size and clock rate). Delivered via
+ *                   the pjmedia event mechanism, so it runs on the pjmedia
+ *                   event thread (not the conf bridge worker). The event
+ *                   pointer references internal storage and is valid only
+ *                   for the duration of the callback; do not retain it.
+ * @param usr_data   Opaque user data passed back to \a cb.
+ * @param freqs      Array of frequencies (Hz) the detector must observe
+ *                   simultaneously (AND).
+ * @param n_freqs    Number of frequencies (1..PJMEDIA_TONE_DETECT_MAX_FREQS).
+ * @param p_id       Receives the detector id (a recorder slot id).
+ *
+ * @return           PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsua_tone_detector_create(
+				   void (*cb)(pjmedia_port *port,
+					      void *usr_data,
+					      const pjmedia_tone_detect_event *event),
+				   void *usr_data,
+				   const unsigned *freqs,
+				   unsigned n_freqs,
+				   pjsua_recorder_id *p_id);
+
+/**
+ * Destroy a tone detector previously created with
+ * #pjsua_tone_detector_create().
+ *
+ * @param id    The detector id.
+ *
+ * @return      PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsua_tone_detector_destroy(pjsua_recorder_id id);
 
 /**
  * Get conference port associated with recorder.

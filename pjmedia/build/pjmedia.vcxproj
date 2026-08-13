@@ -762,6 +762,7 @@
     <ClCompile Include="..\src\pjmedia\wav_player.c" />
     <ClCompile Include="..\src\pjmedia\wav_playlist.c" />
     <ClCompile Include="..\src\pjmedia\wav_writer.c" />
+    <ClCompile Include="..\src\pjmedia\tone_detector.c" />
     <ClCompile Include="..\src\pjmedia\wsola.c" />
   </ItemGroup>
   <ItemGroup>
@@ -827,6 +828,7 @@
     <ClInclude Include="..\include\pjmedia\vid_stream.h" />
     <ClInclude Include="..\include\pjmedia\vid_tee.h" />
     <ClInclude Include="..\include\pjmedia\wave.h" />
+    <ClInclude Include="..\include\pjmedia\tone_detector.h" />
     <ClInclude Include="..\include\pjmedia\wav_playlist.h" />
     <ClInclude Include="..\include\pjmedia\wav_port.h" />
     <ClInclude Include="..\include\pjmedia\wsola.h" />

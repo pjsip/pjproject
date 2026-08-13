@@ -95,6 +95,13 @@ struct pjsua_call_media
     pjmedia_transport   *tp;        /**< Current media transport (can be 0) */
     pj_status_t          tp_ready;  /**< Media transport status.            */
     pj_status_t          tp_result; /**< Media transport creation result.   */
+    unsigned             tp_init_gen;/**< Media transport init generation,
+                                          bumped on each (re)init and when a
+                                          synchronous init wait is abandoned. */
+    unsigned             tp_result_gen;/**< Generation that tp_result belongs
+                                            to; a deferred completion whose
+                                            generation no longer matches
+                                            tp_init_gen is stale and ignored. */
     pjmedia_transport   *tp_orig;   /**< Original media transport           */
     pj_bool_t            tp_auto_del; /**< May delete media transport       */
     pjsua_med_tp_st      tp_st;     /**< Media transport state              */
@@ -122,6 +129,30 @@ struct pjsua_call_media
  * Maximum number of SDP "m=" lines to be supported.
  */
 #define PJSUA_MAX_CALL_MEDIA            PJMEDIA_MAX_SDP_MEDIA
+
+/* Pack/extract call id (lower 16 bits) and media index (upper 16 bits)
+ * in media stream callback user data. Valid input is [0, 0x7FFF] and
+ * asserted in debug builds. The fields are stored as signed 16-bit
+ * values so that an invalid -1 escaping the assertion in release
+ * builds still decodes as -1 rather than 65535.
+ */
+PJ_INLINE(void*) pjsua_med_udata_pack(pjsua_call_id call_id, int med_idx)
+{
+    pj_assert(call_id >= 0 && call_id <= 0x7FFF &&
+              med_idx >= 0 && med_idx <= 0x7FFF);
+    return (void*)(((pj_size_t)(pj_uint16_t)med_idx << 16) |
+                   (pj_size_t)(pj_uint16_t)call_id);
+}
+
+PJ_INLINE(pjsua_call_id) pjsua_med_udata_call_id(const void *udata)
+{
+    return (pjsua_call_id)(pj_int16_t)((pj_size_t)udata & 0xFFFF);
+}
+
+PJ_INLINE(int) pjsua_med_udata_med_idx(const void *udata)
+{
+    return (int)(pj_int16_t)(((pj_size_t)udata >> 16) & 0xFFFF);
+}
 
  /**
   * Maximum number of streams from an avi player.
@@ -373,6 +404,12 @@ typedef struct pjsua_acc
     pj_str_t         rfc5626_instprm;/**< SIP outbound instance param.  */
     pj_str_t         rfc5626_regprm;/**< SIP outbound reg param.        */
     unsigned         rfc5626_flowtmr;/**< SIP outbound flow timer.      */
+    pj_bool_t        outbound_rejected;/**< First hop answered 439 to
+                                            outbound. Unlike
+                                            rfc5626_status this survives
+                                            destroy_regc(), so the
+                                            re-REGISTER is rebuilt
+                                            without outbound.           */
 
     unsigned         cred_cnt;      /**< Number of credentials.         */
     pjsip_cred_info  cred[PJSUA_ACC_MAX_PROXIES]; /**< Complete creds.  */
@@ -844,6 +881,35 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
                                    pjsip_transport_type_e *p_tp_type,
                                    int *p_secure,
                                    const void **p_tp);
+
+/* Get local transport address suitable to be used for the Via address of
+ * requests sent by a UAS dialog. Unlike pjsua_acc_get_uac_addr(), the next
+ * hop is taken from the dialog route set (from the incoming Record-Route),
+ * falling back to the remote target. Returns PJ_ENOTFOUND when the next hop
+ * is a reliable transport (the Via is then resolved at send time), so the
+ * caller should leave the Via untouched.
+ */
+pj_status_t pjsua_acc_get_uas_addr(pjsua_acc_id acc_id,
+                                   pj_pool_t *pool,
+                                   pjsip_dialog *dlg,
+                                   pjsip_host_port *addr,
+                                   pjsip_transport_type_e *p_tp_type,
+                                   int *p_secure,
+                                   const void **p_tp);
+
+/* Get local transport address for the Via of requests sent by a UAC dialog.
+ * Like pjsua_acc_get_uac_addr(), the next hop is the account outbound proxy
+ * when configured, but otherwise the dialog's remote target (not the account
+ * id URI). Returns PJ_ENOTFOUND when the next hop is a reliable transport (the
+ * Via is resolved at send time), so the caller should leave the Via untouched.
+ */
+pj_status_t pjsua_acc_get_uac_dlg_addr(pjsua_acc_id acc_id,
+                                       pj_pool_t *pool,
+                                       pjsip_dialog *dlg,
+                                       pjsip_host_port *addr,
+                                       pjsip_transport_type_e *p_tp_type,
+                                       int *p_secure,
+                                       const void **p_tp);
 
 /**
  * Handle incoming invite request.

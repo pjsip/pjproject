@@ -218,6 +218,11 @@ struct pj_dns_resolver
 
     /* Query entries free list */
     struct query_head    query_free_nodes;
+
+    /* Set once pj_dns_resolver_destroy() has started, to reject new queries
+     * and cache updates that would otherwise miss the teardown.
+     */
+    pj_bool_t            shutting_down;
 };
 
 
@@ -473,28 +478,85 @@ PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
                                              pj_bool_t notify)
 {
     pj_hash_iterator_t it_buf, *it;
+    struct query_head cancel_list;
+    pj_dns_async_query *q;
     PJ_ASSERT_RETURN(resolver, PJ_EINVAL);
 
-    if (notify) {
-        /*
-         * Notify pending queries if requested.
-         */
-        it = pj_hash_first(resolver->hquerybyid, &it_buf);
-        while (it) {
-            pj_dns_async_query *q = (pj_dns_async_query *)
-                                    pj_hash_this(resolver->hquerybyid, it);
-            pj_dns_async_query *cq;
-            if (q->cb)
-                (*q->cb)(q->user_data, PJ_ECANCELLED, NULL);
+    /*
+     * Cancel and dequeue every pending query. This must be done regardless
+     * of the notify flag: a query's retransmit timer lives in the (possibly
+     * shared) timer heap, so a timer that is still armed -- or one that has
+     * already been dispatched and is blocked in on_timeout() on the group
+     * lock -- would otherwise fire after the socket is closed below and
+     * retransmit on a NULL udp_key. Removing the query from the hash tables
+     * makes an already-dispatched on_timeout() exit at its recheck instead.
+     * The dequeued queries are moved to a local list and notified after the
+     * lock is released, to avoid the lock inversion that on_timeout() also
+     * guards against (#1565).
+     */
+    pj_list_init(&cancel_list);
 
-            cq = q->child_head.next;
-            while (cq != (pj_dns_async_query*)&q->child_head) {
-                if (cq->cb)
-                    (*cq->cb)(cq->user_data, PJ_ECANCELLED, NULL);
-                cq = cq->next;
-            }
-            it = pj_hash_next(resolver->hquerybyid, it);
+    pj_grp_lock_acquire(resolver->grp_lock);
+    resolver->shutting_down = PJ_TRUE;
+    it = pj_hash_first(resolver->hquerybyid, &it_buf);
+    while (it) {
+        q = (pj_dns_async_query *)pj_hash_this(resolver->hquerybyid, it);
+
+        if (q->timer_entry.id == 1)
+            pj_timer_heap_cancel_if_active(resolver->timer,
+                                           &q->timer_entry, 0);
+
+        pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key),
+                    0, NULL);
+        pj_hash_set(NULL, resolver->hquerybyid, &q->id, sizeof(q->id),
+                    0, NULL);
+
+        /* A pending parent query is on no list, so its list links are free
+         * to move it onto the local cancel list. The queries are not returned
+         * to query_free_nodes here; the whole pool is released once the
+         * resolver's group lock reference count reaches zero.
+         */
+        pj_list_push_back(&cancel_list, q);
+
+        it = pj_hash_first(resolver->hquerybyid, &it_buf);
+    }
+    pj_grp_lock_release(resolver->grp_lock);
+
+    /* Capture and clear each callback under the lock, but invoke it after
+     * releasing, so it neither runs under the lock nor races a concurrent
+     * cancel into a duplicate call.
+     */
+    q = cancel_list.next;
+    while (q != (pj_dns_async_query*)&cancel_list) {
+        pj_dns_async_query *next_q = q->next;
+        pj_dns_async_query *cq;
+        pj_dns_callback *cb;
+
+        pj_grp_lock_acquire(resolver->grp_lock);
+        cb = q->cb;
+        q->cb = NULL;
+        pj_grp_lock_release(resolver->grp_lock);
+
+        if (notify && cb)
+            (*cb)(q->user_data, PJ_ECANCELLED, NULL);
+
+        cq = q->child_head.next;
+        while (cq != (pj_dns_async_query*)&q->child_head) {
+            pj_dns_async_query *next_cq = cq->next;
+            pj_dns_callback *ccb;
+
+            pj_grp_lock_acquire(resolver->grp_lock);
+            ccb = cq->cb;
+            cq->cb = NULL;
+            pj_grp_lock_release(resolver->grp_lock);
+
+            if (notify && ccb)
+                (*ccb)(cq->user_data, PJ_ECANCELLED, NULL);
+
+            cq = next_cq;
         }
+
+        q = next_q;
     }
 
     /* Destroy cached entries */
@@ -884,6 +946,17 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
     /* Start working with the resolver */
     pj_grp_lock_acquire(resolver->grp_lock);
 
+    /* Reject new queries once destroy has started: a query started after
+     * destroy collected the pending queries would arm a timer that survives
+     * the teardown.
+     */
+    if (resolver->shutting_down) {
+        if (p_query)
+            *p_query = NULL;
+        pj_grp_lock_release(resolver->grp_lock);
+        return PJ_EGONE;
+    }
+
     /* Get current time. */
     pj_gettimeofday(&now);
 
@@ -1040,7 +1113,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_cancel_query(pj_dns_async_query *query,
     cb = query->cb;
     query->cb = NULL;
 
-    if (notify)
+    if (notify && cb)
         (*cb)(query->user_data, PJ_ECANCELLED, NULL);
 
     pj_grp_lock_release(query->resolver->grp_lock);
@@ -1777,8 +1850,11 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     /* Workaround for deadlock problem in #1108 */
     pj_grp_lock_acquire(resolver->grp_lock);
 
-    /* Truncated responses MUST NOT be saved (cached). */
-    if (PJ_DNS_GET_TC(dns_pkt->hdr.flags) == 0) {
+    /* Truncated responses MUST NOT be saved (cached). Skip caching as well
+     * once destroy has started: destroy sweeps the cache, so a late entry
+     * would never be freed.
+     */
+    if (PJ_DNS_GET_TC(dns_pkt->hdr.flags) == 0 && !resolver->shutting_down) {
         /* Save/update response cache. */
         update_res_cache(resolver, &q->key, status, PJ_TRUE, dns_pkt);
     }

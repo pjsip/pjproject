@@ -64,8 +64,11 @@ PJ_DEF(pj_status_t) pj_time_encode(const pj_parsed_time *pt, pj_time_val *tv)
     local_time.tm_hour = pt->hour;
     local_time.tm_min = pt->min;
     local_time.tm_sec = pt->sec;
-    local_time.tm_isdst = 0;
-    
+    /* Let mktime() determine whether DST is in effect, otherwise the encoded
+     * time is off by one hour during DST.
+     */
+    local_time.tm_isdst = -1;
+
     tv->sec = mktime(&local_time);
     tv->msec = pt->msec;
 
@@ -87,6 +90,18 @@ static int get_tz_offset_secs()
 #endif
 
     offset_min = (ltime.tm_hour*60+ltime.tm_min) - (gtime.tm_hour*60+gtime.tm_min);
+
+    /* The local and GMT samples may fall on different calendar days for zones
+     * beyond +/-12h (e.g. UTC+13/+14) or across the date line. The two samples
+     * are at most one day apart, so adjust by a full day accordingly, otherwise
+     * the offset is wrong by 24h for those zones.
+     */
+    if (ltime.tm_year != gtime.tm_year) {
+        offset_min += (ltime.tm_year > gtime.tm_year) ? 24*60 : -24*60;
+    } else if (ltime.tm_yday != gtime.tm_yday) {
+        offset_min += (ltime.tm_yday > gtime.tm_yday) ? 24*60 : -24*60;
+    }
+
     return offset_min*60;
 }
 

@@ -182,6 +182,9 @@ struct pj_ssl_cert_t
     pj_ssl_cert_buffer cert_buf;
     pj_ssl_cert_buffer privkey_buf;
 
+    /* DER-encoded OCSP response to be stapled by a server socket. */
+    pj_ssl_cert_buffer ocsp_resp_buf;
+
     /* Certificate direct (backend specific instances). */
     pj_ssl_cert_direct direct;
 #else

@@ -67,6 +67,10 @@ static void usage(void)
     puts  ("  --contact=url       Optionally override the Contact information");
     puts  ("  --contact-params=S  Append the specified parameters S in Contact header");
     puts  ("  --contact-uri-params=S  Append the specified parameters S in Contact URI");
+    puts  ("  --reg-contact-params=S  Append the specified parameters S in Contact");
+    puts  ("                      header of REGISTER requests only");
+    puts  ("  --reg-contact-uri-params=S  Append the specified parameters S in");
+    puts  ("                      Contact URI of REGISTER requests only");
     puts  ("  --proxy=url         Optional URL of proxy server to visit");
     puts  ("                      May be specified multiple times");
     printf("  --reg-timeout=SEC   Optional registration interval (default %d)\n",
@@ -221,6 +225,8 @@ static void usage(void)
     puts  ("  --turn-user         TURN username");
     puts  ("  --turn-passwd       TURN password");
     puts  ("  --rtcp-mux          Enable RTP & RTCP multiplexing (default: no)");
+    puts  ("  --rtcp-xr           Enable RTCP XR, extended reports");
+    puts  ("                      (requires PJMEDIA_HAS_RTCP_XR build option)");
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     puts  ("  --srtp-keying       SRTP keying method for outgoing SDP offer.");
     puts  ("                      0=SDES (default), 1=DTLS");
@@ -396,6 +402,7 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_LOCAL_PORT, OPT_IP_ADDR, OPT_PROXY, OPT_OUTBOUND_PROXY,
            OPT_REGISTRAR, OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT,
            OPT_BOUND_ADDR, OPT_CONTACT_PARAMS, OPT_CONTACT_URI_PARAMS,
+           OPT_REG_CONTACT_PARAMS, OPT_REG_CONTACT_URI_PARAMS,
            OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD, OPT_AKA_OP, OPT_AKA_AMF,
            OPT_REG_RETRY_INTERVAL, OPT_REG_USE_PROXY,
            OPT_MWI, OPT_NAMESERVER, OPT_STUN_SRV, OPT_UPNP, OPT_OUTB_RID,
@@ -409,7 +416,7 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_TURN_TLS_CA_FILE, OPT_TURN_TLS_CERT_FILE, 
            OPT_TURN_TLS_NEG_TIMEOUT, OPT_TURN_TLS_CIPHER,
            OPT_TURN_TLS_PRIV_FILE, OPT_TURN_TLS_PASSWORD,
-           OPT_RTCP_MUX, OPT_SRTP_KEYING,
+           OPT_RTCP_MUX, OPT_RTCP_XR, OPT_SRTP_KEYING,
            OPT_PLAY_FILE, OPT_PLAY_TONE, OPT_RTP_PORT, OPT_ADD_CODEC,
            OPT_ILBC_MODE, OPT_REC_FILE, OPT_AUTO_REC,
            OPT_COMPLEXITY, OPT_QUALITY, OPT_PTIME, OPT_NO_VAD,
@@ -475,6 +482,8 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "contact",    1, 0, OPT_CONTACT},
         { "contact-params",1,0, OPT_CONTACT_PARAMS},
         { "contact-uri-params",1,0, OPT_CONTACT_URI_PARAMS},
+        { "reg-contact-params",1,0, OPT_REG_CONTACT_PARAMS},
+        { "reg-contact-uri-params",1,0, OPT_REG_CONTACT_URI_PARAMS},
         { "auto-update-nat",    1, 0, OPT_AUTO_UPDATE_NAT},
         { "disable-stun",0,0, OPT_DISABLE_STUN},
         { "use-compact-form",   0, 0, OPT_USE_COMPACT_FORM},
@@ -526,6 +535,7 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "turn-user",  1, 0, OPT_TURN_USER},
         { "turn-passwd",1, 0, OPT_TURN_PASSWD},
         { "rtcp-mux",   0, 0, OPT_RTCP_MUX},
+        { "rtcp-xr",    0, 0, OPT_RTCP_XR},
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
         { "use-srtp",   1, 0, OPT_USE_SRTP},
@@ -707,6 +717,12 @@ static pj_status_t parse_args(int argc, char *argv[],
             if (pj_log_get_level() < 3)
                 pj_log_set_level(3);
             pj_dump_config();
+            /* pj_dump_config() lives in pjlib and cannot report pjmedia
+             * build flags. Emit the ones the test suite probes for here so
+             * detection works regardless of static vs. shared linking
+             * (inc_util.has_rtcp_xr). */
+            PJ_LOG(3, (THIS_FILE, "PJMEDIA_HAS_RTCP_XR : %d",
+                       PJMEDIA_HAS_RTCP_XR));
             return PJ_EINVAL;
 
         case OPT_NULL_AUDIO:
@@ -795,6 +811,10 @@ static pj_status_t parse_args(int argc, char *argv[],
                           "in proxy argument", pj_optarg));
                 return PJ_EINVAL;
             }
+            if (cur_acc->proxy_cnt >= PJ_ARRAY_SIZE(cur_acc->proxy)) {
+                PJ_LOG(1,(THIS_FILE, "Error: too many proxies"));
+                return PJ_ETOOMANY;
+            }
             cur_acc->proxy[cur_acc->proxy_cnt++] = pj_str(pj_optarg);
             break;
 
@@ -805,7 +825,14 @@ static pj_status_t parse_args(int argc, char *argv[],
                           "in outbound proxy argument", pj_optarg));
                 return PJ_EINVAL;
             }
-            cfg->cfg.outbound_proxy[cfg->cfg.outbound_proxy_cnt++] = pj_str(pj_optarg);
+            if (cfg->cfg.outbound_proxy_cnt >=
+                PJ_ARRAY_SIZE(cfg->cfg.outbound_proxy))
+            {
+                PJ_LOG(1,(THIS_FILE, "Error: too many outbound proxies"));
+                return PJ_ETOOMANY;
+            }
+            cfg->cfg.outbound_proxy[cfg->cfg.outbound_proxy_cnt++] =
+                pj_str(pj_optarg);
             break;
 
         case OPT_REGISTRAR:   /* registrar */
@@ -908,6 +935,14 @@ static pj_status_t parse_args(int argc, char *argv[],
 
         case OPT_CONTACT_URI_PARAMS:
             cur_acc->contact_uri_params = pj_str(pj_optarg);
+            break;
+
+        case OPT_REG_CONTACT_PARAMS:
+            cur_acc->reg_contact_params = pj_str(pj_optarg);
+            break;
+
+        case OPT_REG_CONTACT_URI_PARAMS:
+            cur_acc->reg_contact_uri_params = pj_str(pj_optarg);
             break;
 
         case OPT_AUTO_UPDATE_NAT:   /* OPT_AUTO_UPDATE_NAT */
@@ -1251,6 +1286,11 @@ static pj_status_t parse_args(int argc, char *argv[],
         case OPT_RTCP_MUX:
             cur_acc->enable_rtcp_mux = PJ_TRUE;
             cfg->enable_rtcp_mux = PJ_TRUE;
+            break;
+
+        case OPT_RTCP_XR:
+            cur_acc->enable_rtcp_xr = PJ_TRUE;
+            cfg->enable_rtcp_xr = PJ_TRUE;
             break;
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
@@ -1825,6 +1865,11 @@ static void default_config()
     pjsua_transport_config_default(&cfg->rtp_cfg);
     cfg->rtp_cfg.port = 4000;
     cfg->enable_rtcp_mux = PJ_FALSE;
+    /* Match pjsua_acc_config_default()'s macro-derived default so that
+     * applying this app-level fallback to transport-created local accounts
+     * doesn't override RTCP XR on builds that enable it by default. The
+     * --rtcp-xr option force-enables it regardless. */
+    cfg->enable_rtcp_xr = (PJMEDIA_HAS_RTCP_XR && PJMEDIA_STREAM_ENABLE_XR);
     cfg->redir_op = PJSIP_REDIRECT_ACCEPT_REPLACE;
     cfg->duration = PJSUA_APP_NO_LIMIT_DURATION;
     cfg->wav_id = PJSUA_INVALID_ID;
@@ -1971,6 +2016,21 @@ static void write_account_settings(int acc_index, pj_str_t *result)
                         (int)acc_cfg->contact_uri_params.slen,
                         acc_cfg->contact_uri_params.ptr);
         pj_strcat2(result, line);
+    }
+
+    /* Appended directly: line[] is shorter than the config reader's buffer
+     * and would truncate a long value such as a push token.
+     */
+    if (acc_cfg->reg_contact_params.slen) {
+        pj_strcat2(result, "--reg-contact-params ");
+        pj_strcat(result, &acc_cfg->reg_contact_params);
+        pj_strcat2(result, "\n");
+    }
+
+    if (acc_cfg->reg_contact_uri_params.slen) {
+        pj_strcat2(result, "--reg-contact-uri-params ");
+        pj_strcat(result, &acc_cfg->reg_contact_uri_params);
+        pj_strcat2(result, "\n");
     }
 
     /*  */
@@ -2162,6 +2222,9 @@ static void write_account_settings(int acc_index, pj_str_t *result)
 
     if (acc_cfg->enable_rtcp_mux)
         pj_strcat2(result, "--rtcp-mux\n");
+
+    if (acc_cfg->enable_rtcp_xr)
+        pj_strcat2(result, "--rtcp-xr\n");
 }
 
 /*
@@ -2238,6 +2301,9 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
      * write_account_settings(), so emit it here from the global flag. */
     if (config->acc_cnt == 0 && config->enable_rtcp_mux) {
         pj_strcat2(&cfg, "--rtcp-mux\n");
+    }
+    if (config->acc_cnt == 0 && config->enable_rtcp_xr) {
+        pj_strcat2(&cfg, "--rtcp-xr\n");
     }
 
     /* Message Composition Indication */

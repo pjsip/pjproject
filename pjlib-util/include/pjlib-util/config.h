@@ -389,6 +389,21 @@
 #endif
 
 /**
+ * Maximum XML nesting depth accepted by pj_xml_parse(), to bound the parser's
+ * recursion and prevent stack exhaustion from deeply nested documents.
+ * Parsing fails with a syntax error beyond this depth.
+ *
+ * Each level costs one parser stack frame, around 112 bytes on 64bit builds
+ * and more in debug builds, so the default needs about 30KB of stack. Lower
+ * this on platforms with small thread stacks.
+ *
+ * Default: 256
+ */
+#ifndef PJ_XML_MAX_NESTING
+#   define PJ_XML_MAX_NESTING      256
+#endif
+
+/**
  * @}
  */
 

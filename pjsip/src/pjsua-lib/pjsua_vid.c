@@ -1567,47 +1567,57 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
      */
     while (1) {
         pjsua_timer_list *act_timer;
+        pjsip_dialog *dlg;
+        pj_bool_t found = PJ_FALSE;
 
+        /* active_timer_list is guarded by timer_mutex, not PJSUA_LOCK. Walk
+         * it under timer_mutex so a concurrent schedule/fire (which relinks
+         * the list under timer_mutex) can't send this scan through a
+         * recycled node and spin forever holding PJSUA_LOCK.
+         */
+        pj_mutex_lock(pjsua_var.timer_mutex);
         act_timer = pjsua_var.active_timer_list.next;
         while (act_timer != &pjsua_var.active_timer_list) {
             if (act_timer->cb == &call_med_event_cb) {
-                pjsua_event_list *eve;
-                
-                eve = (pjsua_event_list *)act_timer->user_data;
+                pjsua_event_list *eve =
+                                    (pjsua_event_list *)act_timer->user_data;
 
                 if (eve->call_id == (int)call_med->call->index &&
                     eve->med_idx == call_med->idx)
                 {
-                    pjsip_dialog *dlg = call_med->call->inv ?
-                                            call_med->call->inv->dlg : NULL;
-
-                    /* The function may be called from worker thread, we have
-                     * to handle the events instead of simple sleep here
-                     * and must not hold any lock while handling the events:
-                     * https://github.com/pjsip/pjproject/issues/1737
-                     */
-                    num_locks = PJSUA_RELEASE_LOCK();
-
-                    if (dlg) {
-                        pjsip_dlg_inc_session(dlg, &pjsua_var.mod);
-                        pjsip_dlg_dec_lock(dlg);
-                    }
-
-                    pjsua_handle_events(10);
-
-                    if (dlg) {
-                        pjsip_dlg_inc_lock(dlg);
-                        pjsip_dlg_dec_session(dlg, &pjsua_var.mod);
-                    }
-
-                    PJSUA_RELOCK(num_locks);
+                    found = PJ_TRUE;
                     break;
                 }
             }
-            act_timer = act_timer->next;            
+            act_timer = act_timer->next;
         }
-        if (act_timer == &pjsua_var.active_timer_list)
+        pj_mutex_unlock(pjsua_var.timer_mutex);
+
+        if (!found)
             break;
+
+        /* A media-event timer for this stream is still pending. Handle
+         * events until it fires; don't hold timer_mutex (timer_cb takes it)
+         * or PJSUA_LOCK while doing so:
+         * https://github.com/pjsip/pjproject/issues/1737
+         */
+        dlg = call_med->call->inv ? call_med->call->inv->dlg : NULL;
+
+        num_locks = PJSUA_RELEASE_LOCK();
+
+        if (dlg) {
+            pjsip_dlg_inc_session(dlg, &pjsua_var.mod);
+            pjsip_dlg_dec_lock(dlg);
+        }
+
+        pjsua_handle_events(10);
+
+        if (dlg) {
+            pjsip_dlg_inc_lock(dlg);
+            pjsip_dlg_dec_session(dlg, &pjsua_var.mod);
+        }
+
+        PJSUA_RELOCK(num_locks);
     }
 
     if (call_med->strm.v.cap_win_id != PJSUA_INVALID_ID) {

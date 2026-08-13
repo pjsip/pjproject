@@ -712,7 +712,34 @@ static pj_status_t apply_call_setting(pjsua_call *call,
                                       const pjsua_call_setting *opt,
                                       const pjmedia_sdp_session *rem_sdp)
 {
+    pjsua_call_setting prev_opt;
+
     pj_assert(call);
+
+    /* Remember the current setting so it can be restored if re-initializing
+     * the media channel below fails: a rejected re-offer must not leave the
+     * call holding a setting it never applied (which could e.g. drop media on
+     * the next re-offer).
+     */
+    prev_opt = call->opt;
+
+    /* Reject media counts that would overflow the call's fixed-size media
+     * arrays (pjsua_call.media[PJSUA_MAX_CALL_MEDIA]). This is application
+     * input, so fail gracefully rather than assert or overflow. The
+     * per-field checks precede the sum so the addition cannot overflow.
+     */
+    if (opt &&
+        (opt->aud_cnt > PJSUA_MAX_CALL_MEDIA ||
+         opt->vid_cnt > PJSUA_MAX_CALL_MEDIA ||
+         opt->txt_cnt > PJSUA_MAX_CALL_MEDIA ||
+         opt->aud_cnt + opt->vid_cnt + opt->txt_cnt > PJSUA_MAX_CALL_MEDIA))
+    {
+        PJ_LOG(1,(THIS_FILE, "Rejecting call setting: requested media count "
+                  "(aud=%u vid=%u txt=%u) exceeds maximum per call (%d)",
+                  opt->aud_cnt, opt->vid_cnt, opt->txt_cnt,
+                  PJSUA_MAX_CALL_MEDIA));
+        return PJ_ETOOMANY;
+    }
 
     if (!opt) {
         pjsua_call_cleanup_flag(&call->opt);
@@ -749,6 +776,8 @@ static pj_status_t apply_call_setting(pjsua_call *call,
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE, "Error re-initializing media channel",
                          status);
+            /* Restore the previous setting; this re-offer was rejected. */
+            call->opt = prev_opt;
             return status;
         }
     }
@@ -763,15 +792,17 @@ static void dlg_set_via(pjsip_dialog *dlg, pjsua_acc *acc)
     } else if (!pjsua_sip_acc_is_using_stun(acc->index) &&
                !pjsua_sip_acc_is_using_upnp(acc->index))
     {
-        /* Choose local interface to use in Via if acc is not using
-         * STUN nor UPnP. See https://github.com/pjsip/pjproject/issues/1804
+        /* Choose local interface to use in Via if acc is not using STUN nor
+         * UPnP. See https://github.com/pjsip/pjproject/issues/1804
+         * The address is selected toward the actual next hop (account outbound
+         * proxy if set, else the dialog's remote target); reliable transports
+         * are skipped and resolved at send time.
          */
         pjsip_host_port via_addr;
         const void *via_tp;
 
-        if (pjsua_acc_get_uac_addr(acc->index, dlg->pool, &acc->cfg.id,
-                                   &via_addr, NULL, NULL,
-                                   &via_tp) == PJ_SUCCESS)
+        if (pjsua_acc_get_uac_dlg_addr(acc->index, dlg->pool, dlg, &via_addr,
+                                       NULL, NULL, &via_tp) == PJ_SUCCESS)
         {
             pjsip_dlg_set_via_sent_by(dlg, &via_addr,
                                       (pjsip_transport*)via_tp);
@@ -1272,6 +1303,7 @@ on_return:
     return status;
 }
 
+#if !PJSUA_MEDIA_HAS_PJMEDIA
 /* Check whether an rtpmap/fmtp attribute value refers to the given payload
  * type (SDP format). The attribute value must begin with the payload type
  * token followed by whitespace or end-of-string. An empty fmt never matches.
@@ -1287,6 +1319,7 @@ static pj_bool_t attr_matches_fmt(const pj_str_t *attr_val,
             (attr_val->slen == fmt->slen ||
              pj_isspace((unsigned char)attr_val->ptr[fmt->slen])));
 }
+#endif
 
 pj_status_t create_temp_sdp(pj_pool_t *pool,
                             const pjmedia_sdp_session *rem_sdp,
@@ -1706,6 +1739,9 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     pj_str_t st_reason = pj_str("");
     int ret_st_code = 0;
     pj_status_t status;
+#if PJSUA_HAS_SIPREC
+    pjsip_siprec_verify_setting siprec_setting;
+#endif
 
     /* Don't want to handle anything but INVITE */
     if (msg->line.req.method.id != PJSIP_INVITE_METHOD)
@@ -1979,10 +2015,15 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     /* Check if the INVITE request is a siprec
      * this function add PJSIP_INV_REQUIRE_SIPREC to options
-     * and returns the value PJ_SUCCESS 
+     * and returns the value PJ_SUCCESS
      */
+    pjsip_siprec_verify_setting_default(&siprec_setting);
+    siprec_setting.require_label = pjsua_var.acc[acc_id].cfg.siprec_require_label;
+    siprec_setting.require_metadata = pjsua_var.acc[acc_id].cfg.siprec_require_metadata;
+
     status = pjsip_siprec_verify_request(rdata, &call->siprec_metadata, offer,
-                                &options, NULL, pjsua_var.endpt, &response);
+                                &options, NULL, pjsua_var.endpt, &response,
+                                &siprec_setting);
 
     if(status != PJ_SUCCESS){
         /*
@@ -2084,23 +2125,17 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     } else if (!pjsua_sip_acc_is_using_stun(acc_id) &&
                !pjsua_sip_acc_is_using_upnp(acc_id))
     {
-        /* Choose local interface to use in Via if acc is not using
-         * STUN nor UPnP. See https://github.com/pjsip/pjproject/issues/1804
+        /* Choose local interface to use in Via if acc is not using STUN nor
+         * UPnP. See https://github.com/pjsip/pjproject/issues/1804
+         * The address is selected toward the dialog's actual next hop (route
+         * set from Record-Route, else the remote target); reliable transports
+         * are skipped and resolved at send time.
          */
-        char target_buf[PJSIP_MAX_URL_SIZE];
-        pj_str_t target;
         pjsip_host_port via_addr;
         const void *via_tp;
 
-        target.ptr = target_buf;
-        target.slen = pjsip_uri_print(PJSIP_URI_IN_REQ_URI,
-                                      dlg->target,
-                                      target_buf, sizeof(target_buf));
-        if (target.slen < 0) target.slen = 0;
-
-        if (pjsua_acc_get_uac_addr(acc_id, dlg->pool, &target,
-                                   &via_addr, NULL, NULL,
-                                   &via_tp) == PJ_SUCCESS)
+        if (pjsua_acc_get_uas_addr(acc_id, dlg->pool, dlg, &via_addr,
+                                   NULL, NULL, &via_tp) == PJ_SUCCESS)
         {
             pjsip_dlg_set_via_sent_by(dlg, &via_addr,
                                       (pjsip_transport*)via_tp);
@@ -3008,8 +3043,12 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
          * the previous one.
          */
         if (!call->opt_inited) {
+            status = apply_call_setting(call, opt, NULL);
+            if (status != PJ_SUCCESS) {
+                pjsua_perror(THIS_FILE, "Failed to apply call setting", status);
+                goto on_return;
+            }
             call->opt_inited = PJ_TRUE;
-            apply_call_setting(call, opt, NULL);
         } else if (pj_memcmp(opt, &call->opt, sizeof(*opt)) != 0) {
             /* Warn application about call setting inconsistency */
             PJ_LOG(2,(THIS_FILE, "The call setting changes is ignored."));
@@ -5264,6 +5303,20 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
         return;
     }
 
+    /* Stale callback guard (see pjsua_call_on_media_update): a leftover inv
+     * whose call slot has been recycled into a new dialog. Running the
+     * teardown below (media deinit, on_call_state, reset_call) would wipe
+     * the live call's slot and drop its own DISCONNECTED (issue #4992).
+     */
+    if (call->inv != inv) {
+        PJ_LOG(4, (THIS_FILE,
+                   "Ignoring stale state change on call %d "
+                   "(inv %p != current %p, state=%d)",
+                   call->index, inv, (void*)call->inv, inv->state));
+        pj_log_pop_indent();
+        return;
+    }
+
 
     /* Get call times */
     switch (inv->state) {
@@ -5740,6 +5793,17 @@ static pj_status_t modify_sdp_of_call_hold(pjsua_call *call,
             conn = m->conn;
             if (!conn)
                 conn = sdp->conn;
+
+            /* The SDP may have no connection line at all (neither media nor
+             * session level), so create a media level one to hold the
+             * call-hold address.
+             */
+            if (!conn) {
+                conn = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_conn);
+                conn->net_type = pj_str("IN");
+                conn->addr_type = pj_str("IP4");
+                m->conn = conn;
+            }
 
             /* Modify address */
             conn->addr = pj_str("0.0.0.0");
@@ -6894,6 +6958,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 
                         if (is_handled) {
                             info.method = PJSUA_DTMF_METHOD_SIP_INFO;
+                            info.med_idx = -1;
                             if (pjsua_var.ua_cfg.cb.on_dtmf_event) {
                                 pjsua_dtmf_event evt;
                                 pj_timestamp begin_of_time, timestamp;
@@ -6911,6 +6976,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
                                  * duration of the digit.
                                  */
                                 evt.flags = PJMEDIA_STREAM_DTMF_IS_END;
+                                evt.med_idx = -1;
                                 (*pjsua_var.ua_cfg.cb.on_dtmf_event)(call->index,
                                                                      &evt);
                             } else {

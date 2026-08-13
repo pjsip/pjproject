@@ -388,6 +388,38 @@ struct AccountCallConfig : public PersistentObject
     pjsua_sip_siprec_use siprecUse;
 
     /**
+     * Specify whether SIPREC label attributes ('a=label') are required
+     * in incoming INVITE requests.
+     *
+     * When set to true, SIPREC INVITEs without the label attribute in
+     * all media streams will be rejected with 400 Bad Request. This enforces
+     * RFC 7866 compliance for proper metadata correlation.
+     *
+     * When set to false (default), the SRS will accept SIPREC INVITEs
+     * even without labels for better interoperability. Missing labels will
+     * be logged as warnings for debugging purposes.
+     *
+     * Default: false (allow for interoperability)
+     */
+    bool siprecRequireLabel;
+
+    /**
+     * Specify whether SIPREC rs-metadata documents are required
+     * in incoming INVITE requests.
+     *
+     * When set to true, SIPREC INVITEs without rs-metadata documents
+     * will be rejected with 400 Bad Request. This enforces strict RFC 7866
+     * compliance for complete recording session metadata.
+     *
+     * When set to false (default), the SRS will accept SIPREC INVITEs
+     * even without rs-metadata for better interoperability. Missing metadata
+     * will be logged as warnings for debugging purposes.
+     *
+     * Default: false (allow for interoperability)
+     */
+    bool siprecRequireMetadata;
+
+    /**
      * Specify minimum Session Timer expiration period, in seconds.
      * Must not be lower than 90. Default is 90.
      */
@@ -407,6 +439,8 @@ public:
                           prackUse(PJSUA_100REL_NOT_USED),
                           timerUse(PJSUA_SIP_TIMER_OPTIONAL),
                           siprecUse(PJSUA_SIP_SIPREC_INACTIVE),
+                          siprecRequireLabel(false),
+                          siprecRequireMetadata(false),
                           timerMinSESec(90),
                           timerSessExpiresSec(PJSIP_SESS_TIMER_DEF_SE)
     {}

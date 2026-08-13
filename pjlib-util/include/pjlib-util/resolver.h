@@ -407,11 +407,14 @@ PJ_DECL(pj_status_t) pj_dns_resolver_destroy(pj_dns_resolver *resolver,
  *                  and which will be given back in the callback.
  * @param p_query   Optional pointer to receive the query object, if one
  *                  was started. If this pointer is specified, a NULL will
- *                  be returned if response cache is available immediately.
+ *                  be returned if response cache is available immediately,
+ *                  or if the query is rejected because the resolver is
+ *                  being destroyed.
  *
- * @return          PJ_SUCCESS if either an asynchronous query has been 
+ * @return          PJ_SUCCESS if either an asynchronous query has been
  *                  started successfully or response cache is available and
- *                  the user callback has been called.
+ *                  the user callback has been called; PJ_EGONE if the
+ *                  resolver is being destroyed.
  */
 PJ_DECL(pj_status_t) pj_dns_resolver_start_query(pj_dns_resolver *resolver,
                                                  const pj_str_t *name,

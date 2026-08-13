@@ -124,6 +124,8 @@ PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
 
     cfg->use_timer = PJSUA_SIP_TIMER_OPTIONAL;
     cfg->use_siprec = PJSUA_SIP_SIPREC_INACTIVE;
+    cfg->siprec_require_label = PJ_FALSE;
+    cfg->siprec_require_metadata = PJ_FALSE;
     pjsip_timer_setting_default(&cfg->timer_setting);
     pjsua_srtp_opt_default(&cfg->srtp_opt);
     cfg->no_refer_sub = PJ_TRUE;
@@ -349,6 +351,8 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->use_timer = pjsua_var.ua_cfg.use_timer;
     cfg->timer_setting = pjsua_var.ua_cfg.timer_setting;
     cfg->use_siprec = pjsua_var.ua_cfg.use_siprec;
+    cfg->siprec_require_label = pjsua_var.ua_cfg.siprec_require_label;
+    cfg->siprec_require_metadata = pjsua_var.ua_cfg.siprec_require_metadata;
     cfg->lock_codec = 1;
     cfg->ka_interval = 15;
     cfg->ka_data = pj_str("\r\n");
@@ -1096,6 +1100,10 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
         pjsua_media_config_default(&default_media_cfg);
         media_cfg = &default_media_cfg;
     }
+
+    PJ_ASSERT_ON_FAIL(ua_cfg->outbound_proxy_cnt <=
+                      PJ_ARRAY_SIZE(ua_cfg->outbound_proxy),
+                      { status = PJ_EINVAL; goto on_error; });
 
     /* Initialize logging first so that info/errors can be captured */
     if (log_cfg) {
@@ -3584,11 +3592,28 @@ static void timer_cb( pj_timer_heap_t *th,
                       pj_timer_entry *entry)
 {
     pjsua_timer_list *tmr = (pjsua_timer_list *)entry->user_data;
-    void (*cb)(void *user_data) = tmr->cb;
-    void *user_data = tmr->user_data;
+    void (*cb)(void *user_data);
+    void *user_data;
 
     PJ_UNUSED_ARG(th);
 
+    /* The tmr fields are guarded by timer_mutex (they are assigned in
+     * pjsua_schedule_timer2() with the mutex held), so fetch them under
+     * the mutex.
+     */
+    pj_mutex_lock(pjsua_var.timer_mutex);
+    cb = tmr->cb;
+    user_data = tmr->user_data;
+    pj_mutex_unlock(pjsua_var.timer_mutex);
+
+    /* Invoke the callback without holding timer_mutex, since the callback
+     * may acquire it too (e.g. call_med_event_cb()) or acquire other locks,
+     * such as PJSUA_LOCK, which must not be nested under timer_mutex.
+     *
+     * Note that the entry deliberately stays in the active timer list until
+     * the callback returns: pjsua_vid.c scans that list to find out whether
+     * a pending media event callback has completed.
+     */
     if (cb)
         (*cb)(user_data);
 

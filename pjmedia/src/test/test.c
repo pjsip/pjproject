@@ -102,11 +102,17 @@ int test_main(int argc, char *argv[])
 #if HAS_SDP_NEG_TEST
     UT_ADD_TEST(&test_app.ut_app, sdp_neg_test, 0);
 #endif
+#if HAS_SDP_ATTR_TEST
+    UT_ADD_TEST(&test_app.ut_app, sdp_attr_test, 0);
+#endif
     //DO_TEST(sdp_test (&caching_pool.factory));
     //DO_TEST(rtp_test(&caching_pool.factory));
     //DO_TEST(session_test (&caching_pool.factory));
 #if HAS_JBUF_TEST
     UT_ADD_TEST(&test_app.ut_app, jbuf_test, 0);
+#endif
+#if HAS_TONE_DETECTOR_TEST
+    UT_ADD_TEST(&test_app.ut_app, tone_detector_test, 0);
 #endif
 #if HAS_CODEC_VECTOR_TEST
     /* Run in exclusive mode: creates/destroys a local pjmedia_endpt which

@@ -494,7 +494,6 @@ pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
                                                      codec_info, &codec_param);
         if (status != PJ_SUCCESS)
             return status;
-        fmt = &m->desc.fmt[m->desc.fmt_count++];
         pt = codec_info->pt;
 
         /* Rearrange dynamic payload type to make sure it is inside 96-127
@@ -520,10 +519,24 @@ pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
             pt = pt_check;
         }
 
-        /* Take a note of used dynamic PT */
-        if (pt >= 96)
-            used_pt[used_pt_num++] = pt;
+        /* Bail out if format array is full (PT chosen before fmt_count++) */
+        if (m->desc.fmt_count >= PJMEDIA_MAX_SDP_FMT) {
+            PJ_LOG(4,(THIS_FILE, "Warning: SDP format array is full, "
+                      "some audio codecs are omitted"));
+            break;
+        }
 
+        /* Take a note of used dynamic PT */
+        if (pt >= 96) {
+            if (used_pt_num >= PJMEDIA_MAX_SDP_FMT) {
+                PJ_LOG(4,(THIS_FILE, "Warning: used-PT array is full, "
+                          "some audio codecs are omitted"));
+                break;
+            }
+            used_pt[used_pt_num++] = pt;
+        }
+
+        fmt = &m->desc.fmt[m->desc.fmt_count++];
         fmt->ptr = (char*) pj_pool_alloc(pool, 8);
         fmt->slen = pj_utoa(pt, fmt->ptr);
 
@@ -651,6 +664,15 @@ pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
             char buf[160];
             unsigned j = 0;
             unsigned pt;
+
+            /* Bail out if format or used-PT array is full */
+            if (m->desc.fmt_count >= PJMEDIA_MAX_SDP_FMT ||
+                used_pt_num >= PJMEDIA_MAX_SDP_FMT)
+            {
+                PJ_LOG(4,(THIS_FILE, "Warning: no space left in SDP format "
+                          "array, some telephone-events are omitted"));
+                break;
+            }
 
             /* Find PT for this tel-event */
             if (i == 0) {

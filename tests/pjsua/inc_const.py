@@ -32,8 +32,31 @@ MEDIA_HOLD = "Call [0-9]+ media [0-9]+ .*, status is .* hold"
 # Media call is active
 MEDIA_ACTIVE = "Call [0-9]+ media [0-9]+ .*, status is Active"
 #MEDIA_ACTIVE = "Media for call [0-9]+ is active"
+# Same as above but restricted to the video stream (type=video), for
+# asserting on video media specifically in a video call. The directional
+# variants distinguish the hold initiator (Local hold) from the peer that
+# received the hold (Remote hold); VID_MEDIA_HOLD matches either.
+VID_MEDIA_ACTIVE = r"Call [0-9]+ media [0-9]+ \[type=video\], status is Active"
+# Video stream is present in the call but not running, e.g. after it has
+# been removed on the fly (the m=video line is deactivated with port 0,
+# so the media slot survives with status None).
+VID_MEDIA_NONE = r"Call [0-9]+ media [0-9]+ \[type=video\], status is None"
+VID_MEDIA_HOLD = r"Call [0-9]+ media [0-9]+ \[type=video\], status is .* hold"
+VID_MEDIA_LOCAL_HOLD = r"Call [0-9]+ media [0-9]+ \[type=video\], status is Local hold"
+VID_MEDIA_REMOTE_HOLD = r"Call [0-9]+ media [0-9]+ \[type=video\], status is Remote hold"
+# The audio counterpart, for asserting that the audio stream of a video
+# call is unaffected by whatever was done to its video stream. Each
+# endpoint reports its media in index order, so audio (media 0) is logged
+# ahead of video (media 1).
+AUD_MEDIA_ACTIVE = r"Call [0-9]+ media [0-9]+ \[type=audio\], status is Active"
 # RX_DTMF
 RX_DTMF = "Incoming DTMF on call [0-9]+: "
+# Suffix logged after the digit when DTMF is received via SIP INFO
+# (as opposed to RFC 2833), including the stream index,
+# which is -1 as SIP INFO is not stream-specific.
+# Append after RX_DTMF + digit to assert the
+# transport method, e.g. RX_DTMF + "1" + RX_DTMF_INFO_METHOD.
+RX_DTMF_INFO_METHOD = ".*using SIP INFO method, stream -1"
 
 ##########################
 # MEDIA

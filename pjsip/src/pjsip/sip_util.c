@@ -989,6 +989,26 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
             const pjsip_sip_uri *url = (const pjsip_sip_uri*)
                 pjsip_uri_get_uri((const void*)topmost_route_uri);
             has_lr_param = url->lr_param;
+
+            /* By design, PJSIP's proprietary 'hide' param is always
+             * paired with 'lr'. This URI may come from external/
+             * malformed input though, so don't rely on that invariant:
+             * treat 'hide' as implying 'lr' here too, otherwise a
+             * hidden route would incorrectly be treated as a strict
+             * route (Request-URI rewritten to a URI that was meant to
+             * stay hidden).
+             */
+            if (!has_lr_param) {
+                const pj_str_t st_hide = {"hide", 4};
+                const pjsip_param *prm = url->other_param.next;
+
+                for (; prm != &url->other_param; prm = prm->next) {
+                    if (pj_stricmp(&prm->name, &st_hide) == 0) {
+                        has_lr_param = PJ_TRUE;
+                        break;
+                    }
+                }
+            }
         } else {
             has_lr_param = 0;
         }
@@ -1213,6 +1233,14 @@ static void stateless_send_transport_cb( void *token,
                                                 tdata,
                                                 &stateless_data->cur_transport);
         if (status != PJ_SUCCESS) {
+            /* Couldn't acquire this transport; fall through to the next
+             * resolved address (e.g. RFC 3261 18.1.1 TCP upgrade reverts to
+             * UDP when no TCP transport is available). */
+            PJ_PERROR(5,(THIS_FILE, status,
+                         "Unable to acquire %s transport for %s, "
+                         "trying next address",
+                         pjsip_transport_get_type_name(cur_addr_type),
+                         pjsip_tx_data_get_info(tdata)));
             sent = -status;
             continue;
         }
@@ -1302,15 +1330,18 @@ static void stateless_send_transport_cb( void *token,
         pjsip_tx_data_invalidate_msg(tdata);
 
         /* Send message using this transport. */
-        status = pjsip_transport_send( stateless_data->cur_transport,
-                                       tdata,
-                                       cur_addr,
-                                       cur_addr_len,
-                                       stateless_data,
-                                       &stateless_send_transport_cb);
+        status = pjsip_transport_send2( stateless_data->cur_transport,
+                                        tdata,
+                                        cur_addr,
+                                        cur_addr_len,
+                                        stateless_data,
+                                        &stateless_send_transport_cb,
+                                        &sent);
         if (status == PJ_SUCCESS) {
+            /* A sent message is never empty, don't derive this from tdata. */
+            pj_assert(sent > 0);
+
             /* Recursively call this function. */
-            sent = tdata->buf.cur - tdata->buf.start;
             stateless_send_transport_cb( stateless_data, tdata, sent );
             return;
         } else if (status == PJ_EPENDING) {
@@ -1459,6 +1490,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request_stateless(pjsip_endpoint *endpt,
 {
     pjsip_host_info dest_info;
     pjsip_send_state *stateless_data;
+    pj_bool_t tp_pinned = PJ_FALSE;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(endpt && tdata, PJ_EINVAL);
@@ -1474,6 +1506,56 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request_stateless(pjsip_endpoint *endpt,
     stateless_data->endpt = endpt;
     stateless_data->tdata = tdata;
     stateless_data->app_cb = cb;
+
+    /* If the caller selected a specific, connected reliable transport
+     * (e.g. server affinity, #4964), the message can only be sent to that
+     * transport's peer. Pin the destination to it and skip host resolution,
+     * which would otherwise re-run DNS/SRV and may pick a different address
+     * than the selected transport's. dest_info.name is kept as the next-hop
+     * hostname so TLS SNI and certificate validation remain correct. Only
+     * reliable transports (TCP/TLS) represent a fixed peer; datagram (UDP)
+     * selectors don't, so they still resolve normally.
+     */
+    if (tdata->dest_info.addr.count == 0 &&
+        tdata->tp_sel.type == PJSIP_TPSELECTOR_TRANSPORT &&
+        tdata->tp_sel.u.transport != NULL &&
+        !tdata->tp_sel.u.transport->is_shutdown &&
+        !tdata->tp_sel.u.transport->is_destroying)
+    {
+        pjsip_transport *tp = tdata->tp_sel.u.transport;
+        unsigned tp_flag = pjsip_transport_get_flag_from_type(
+                               (pjsip_transport_type_e)tp->key.type);
+
+        if ((tp_flag & PJSIP_TRANSPORT_RELIABLE) &&
+            pj_sockaddr_has_addr(&tp->key.rem_addr))
+        {
+            /* Preserve the next-hop hostname for TLS SNI / certificate
+             * validation: prefer the parsed next-hop host, falling back to
+             * the transport's remote name only if it is not available.
+             */
+            if (tdata->dest_info.name.slen == 0) {
+                if (dest_info.addr.host.slen) {
+                    pj_strdup(tdata->pool, &tdata->dest_info.name,
+                              &dest_info.addr.host);
+                } else if (tp->remote_name.host.slen) {
+                    pj_strdup(tdata->pool, &tdata->dest_info.name,
+                              &tp->remote_name.host);
+                }
+            }
+            tdata->dest_info.addr.count = 1;
+            tdata->dest_info.addr.entry[0].type =
+                                    (pjsip_transport_type_e)tp->key.type;
+            tdata->dest_info.addr.entry[0].priority = 0;
+            tdata->dest_info.addr.entry[0].weight = 0;
+            pj_sockaddr_cp(&tdata->dest_info.addr.entry[0].addr,
+                           &tp->key.rem_addr);
+            tdata->dest_info.addr.entry[0].addr_len =
+                           pj_sockaddr_get_len(&tp->key.rem_addr);
+            tdata->dest_info.addr.entry[0].name = tdata->dest_info.name;
+            tdata->dest_info.cur_addr = 0;
+            tp_pinned = PJ_TRUE;
+        }
+    }
 
     /* If destination info has not been initialized (this applies for most
      * all requests except CANCEL), resolve destination host. The processing
@@ -1513,9 +1595,10 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request_stateless(pjsip_endpoint *endpt,
         pjsip_endpt_resolve( endpt, tdata->pool, &dest_info, stateless_data,
                              &stateless_send_resolver_callback);
     } else {
-        PJ_LOG(5,(THIS_FILE, "%s: skipping target resolution because "
-                             "address is already set",
-                             pjsip_tx_data_get_info(tdata)));
+        PJ_LOG(5,(THIS_FILE, "%s: skipping target resolution because %s",
+                             pjsip_tx_data_get_info(tdata),
+                             tp_pinned ? "a reliable transport is already "
+                                         "pinned" : "address is already set"));
         stateless_send_resolver_callback(PJ_SUCCESS, stateless_data,
                                          &tdata->dest_info.addr);
     }
@@ -1806,6 +1889,7 @@ static void send_response_resolver_cb( pj_status_t status, void *token,
                                        const pjsip_server_addresses *addr )
 {
     pjsip_send_state *send_state = (pjsip_send_state*) token;
+    pj_ssize_t sent;
     unsigned i;
 
     if (status != PJ_SUCCESS) {
@@ -1845,15 +1929,17 @@ static void send_response_resolver_cb( pj_status_t status, void *token,
     }
 
     /* Send response using the transoprt. */
-    status = pjsip_transport_send( send_state->cur_transport, 
-                                   send_state->tdata,
-                                   &addr->entry[0].addr,
-                                   addr->entry[0].addr_len,
-                                   send_state,
-                                   &send_response_transport_cb);
+    status = pjsip_transport_send2( send_state->cur_transport,
+                                    send_state->tdata,
+                                    &addr->entry[0].addr,
+                                    addr->entry[0].addr_len,
+                                    send_state,
+                                    &send_response_transport_cb,
+                                    &sent);
     if (status == PJ_SUCCESS) {
-        pj_ssize_t sent = send_state->tdata->buf.cur - 
-                          send_state->tdata->buf.start;
+        /* A sent message is never empty, don't derive this from tdata. */
+        pj_assert(sent > 0);
+
         send_response_transport_cb(send_state, send_state->tdata, sent);
 
     } else if (status == PJ_EPENDING) {
@@ -1876,6 +1962,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_response( pjsip_endpoint *endpt,
      * based on Section 18.2.2 of RFC 3261.
      */
     pjsip_send_state *send_state;
+    pj_ssize_t sent;
     pj_status_t status;
 
     /* Create structure to keep the sending state. */
@@ -1889,13 +1976,16 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_response( pjsip_endpoint *endpt,
         send_state->cur_transport = res_addr->transport;
         pjsip_transport_add_ref(send_state->cur_transport);
 
-        status = pjsip_transport_send( send_state->cur_transport, tdata, 
-                                       &res_addr->addr,
-                                       res_addr->addr_len,
-                                       send_state,
-                                       &send_response_transport_cb );
+        status = pjsip_transport_send2( send_state->cur_transport, tdata,
+                                        &res_addr->addr,
+                                        res_addr->addr_len,
+                                        send_state,
+                                        &send_response_transport_cb,
+                                        &sent );
         if (status == PJ_SUCCESS) {
-            pj_ssize_t sent = tdata->buf.cur - tdata->buf.start;
+            /* A sent message is never empty, don't derive this from tdata. */
+            pj_assert(sent > 0);
+
             send_response_transport_cb(send_state, tdata, sent);
             return PJ_SUCCESS;
         } else if (status == PJ_EPENDING) {

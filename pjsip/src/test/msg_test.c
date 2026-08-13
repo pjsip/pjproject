@@ -2231,6 +2231,134 @@ static pj_status_t malformed_hdr_test(void)
 }
 
 
+/*
+ * Regression test for PJSIP #4991: a Route header with the proprietary
+ * 'hide' param but without 'lr' -- which by design should never happen,
+ * but can be triggered by external/malformed input (e.g. a received
+ * "Route: <sip:host;hide>") -- used to crash the process via pj_assert()
+ * in pjsip_routing_hdr_print().
+ *
+ * This verifies both that printing no longer crashes, and that
+ * pjsip_process_route_set() treats 'hide' as implying 'lr' (i.e. as a
+ * loose route: Request-URI left alone, Route header kept), instead of
+ * mistakenly treating the hidden route as a strict route.
+ */
+static int route_hide_lr_test(void)
+{
+    static const struct {
+        const char *desc;
+        const char *route_uri;
+    } cases[] = {
+        { "'hide' without 'lr' (malformed/external input)",
+          "<sip:proxy.example.com;hide>" },
+        { "'hide' with 'lr' (well-formed)",
+          "<sip:proxy.example.com;hide;lr>" },
+    };
+    unsigned i;
+
+    PJ_LOG(3,(THIS_FILE, "  testing Route with 'hide' param.."));
+
+    for (i = 0; i < PJ_ARRAY_SIZE(cases); ++i) {
+        pjsip_tx_data *tdata;
+        pjsip_hdr *hdr;
+        char hdr_line[64];
+        pj_str_t hname = { "Route", 5 };
+        pj_str_t target, from, to, contact, result;
+        pjsip_host_info dest_info;
+        char printed[512];
+        char uri_buf[128];
+        int parsed_len = 0, len;
+        pj_status_t status;
+
+        PJ_LOG(3,(THIS_FILE, "    case: %s", cases[i].desc));
+
+        pj_ansi_snprintf(hdr_line, sizeof(hdr_line), "%s\r\n",
+                         cases[i].route_uri);
+
+        target = pj_str("sip:user@example.com");
+        from = pj_str("sip:alice@example.com");
+        to = pj_str("sip:bob@example.com");
+        contact = pj_str("sip:alice@1.2.3.4");
+
+        status = pjsip_endpt_create_request(endpt, &pjsip_invite_method,
+                                            &target, &from, &to, &contact,
+                                            NULL, -1, NULL, &tdata);
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(3,(THIS_FILE, "      error: failed to create request"));
+            return -800;
+        }
+
+        hdr = (pjsip_hdr*) pjsip_parse_hdr(tdata->pool, &hname, hdr_line,
+                                           pj_ansi_strlen(hdr_line),
+                                           &parsed_len);
+        if (!hdr) {
+            PJ_LOG(3,(THIS_FILE, "      error: failed to parse Route "
+                                  "header"));
+            pjsip_tx_data_dec_ref(tdata);
+            return -810;
+        }
+        pjsip_msg_add_hdr(tdata->msg, hdr);
+
+        /* Process the route set first, exactly as happens in real usage
+         * (routing decisions are made before the message is ever printed
+         * for transmission). This must not silently rely on any
+         * print-time side effect.
+         */
+        status = pjsip_process_route_set(tdata, &dest_info);
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(3,(THIS_FILE,
+                      "      error: pjsip_process_route_set() failed"));
+            pjsip_tx_data_dec_ref(tdata);
+            return -820;
+        }
+
+        /* Route header must be kept -- 'hide' implies 'lr', so this is
+         * never treated as a strict route.
+         */
+        if (pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, NULL) == NULL) {
+            PJ_LOG(3,(THIS_FILE, "      error: Route header was erased "
+                                  "even though 'hide' implies 'lr'"));
+            pjsip_tx_data_dec_ref(tdata);
+            return -830;
+        }
+
+        /* Request-URI must be left untouched -- a strict route would
+         * have rewritten it to the (deliberately hidden) route URI.
+         * Compare with the exact printed length, not just a prefix, so
+         * a truncated/garbled URI can't slip through.
+         */
+        len = pjsip_uri_print(PJSIP_URI_IN_REQ_URI,
+                              tdata->msg->line.req.uri,
+                              uri_buf, sizeof(uri_buf));
+        result.ptr = uri_buf;
+        result.slen = (len < 0? 0: len);
+        if (len < 0 || pj_strcmp2(&result, "sip:user@example.com") != 0) {
+            PJ_LOG(3,(THIS_FILE, "      error: Request-URI was rewritten "
+                                  "to the hidden route URI"));
+            pjsip_tx_data_dec_ref(tdata);
+            return -840;
+        }
+
+        /* Printing (as would happen at transmission time) must not
+         * crash -- this was the original bug report -- and a 'hide'
+         * route must always be fully suppressed, i.e. print 0 bytes.
+         */
+        len = pjsip_hdr_print_on(hdr, printed, sizeof(printed)-1);
+        if (len != 0) {
+            PJ_LOG(3,(THIS_FILE, "      error: 'hide' route was not "
+                                  "fully suppressed from print (len=%d)",
+                                  len));
+            pjsip_tx_data_dec_ref(tdata);
+            return -850;
+        }
+
+        pjsip_tx_data_dec_ref(tdata);
+    }
+
+    return PJ_SUCCESS;
+}
+
+
 /*****************************************************************************/
 
 int msg_test(void)
@@ -2254,6 +2382,10 @@ int msg_test(void)
         return status;
 
     status = malformed_hdr_test();
+    if (status != PJ_SUCCESS)
+        return status;
+
+    status = route_hide_lr_test();
     if (status != PJ_SUCCESS)
         return status;
 

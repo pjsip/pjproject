@@ -92,6 +92,9 @@ extern pj_caching_pool caching_pool;
 #define INCLUDE_REGC_TEST       INCLUDE_REGC_GROUP
 #define INCLUDE_AUTH_ASYNC_TEST INCLUDE_REGC_GROUP
 #define INCLUDE_PJSUA_AUTH_TEST INCLUDE_REGC_GROUP
+#define INCLUDE_PJSUA_CALL_TEST INCLUDE_REGC_GROUP
+#define INCLUDE_PJSUA_ACC_TEST  INCLUDE_REGC_GROUP
+#define INCLUDE_DLG_CORE_TEST   INCLUDE_MESSAGING_GROUP
 
 
 /* The tests */
@@ -107,11 +110,15 @@ int transport_loop_test(void);
 int transport_loop_multi_test(void);
 int transport_loop_resolve_error_test(void);
 int transport_tcp_test(void);
+int transport_tcp_keep_alive_test(void);
 int resolve_test(void);
 int regc_test(void);
 int auth_async_test(void);
 int pjsua_auth_test(void);
+int pjsua_call_test(void);
+int pjsua_acc_test(void);
 int inv_offer_answer_test(void);
+int dlg_core_test(void);
 
 #define MAX_TSX_TESTS   10
 
