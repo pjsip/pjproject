@@ -1680,16 +1680,11 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
     pj_hash_set(NULL, resolver->hquerybyid, &q->id, sizeof(q->id), 0, NULL);
     pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key), 0, NULL);
 
-    /* Workaround for deadlock problem in #1565 (similar to #1108) */
-    pj_grp_lock_release(resolver->grp_lock);
-
-    /* Capture and clear each callback under the lock, but invoke it after
-     * releasing, so it neither runs under the lock nor races a concurrent
-     * cancel into a duplicate call.
-     */
-    pj_grp_lock_acquire(resolver->grp_lock);
+    /* Capture and clear the callback under the lock; invoke it unlocked. */
     cb = q->cb;
     q->cb = NULL;
+
+    /* Workaround for deadlock problem in #1565 (similar to #1108) */
     pj_grp_lock_release(resolver->grp_lock);
 
     if (cb)
@@ -1699,14 +1694,15 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
     cq = q->child_head.next;
     while (cq != (void*)&q->child_head) {
         pj_dns_async_query *next = cq->next;
+        pj_dns_callback *ccb;
 
         pj_grp_lock_acquire(resolver->grp_lock);
-        cb = cq->cb;
+        ccb = cq->cb;
         cq->cb = NULL;
         pj_grp_lock_release(resolver->grp_lock);
 
-        if (cb)
-            (*cb)(cq->user_data, PJ_ETIMEDOUT, NULL);
+        if (ccb)
+            (*ccb)(cq->user_data, PJ_ETIMEDOUT, NULL);
 
         cq = next;
     }
@@ -1844,19 +1840,14 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     pj_hash_set(NULL, resolver->hquerybyid, &q->id, sizeof(q->id), 0, NULL);
     pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key), 0, NULL);
 
-    /* Workaround for deadlock problem in #1108 */
-    pj_grp_lock_release(resolver->grp_lock);
-
     /* Notify applications first, to allow application to modify the
-     * record before it is saved to the hash table.
-     *
-     * Capture and clear each callback under the lock, but invoke it after
-     * releasing, so it neither runs under the lock nor races a concurrent
-     * cancel into a duplicate call.
+     * record before it is saved to the hash table. Capture and clear
+     * the callback under the lock; invoke it unlocked.
      */
-    pj_grp_lock_acquire(resolver->grp_lock);
     cb = q->cb;
     q->cb = NULL;
+
+    /* Workaround for deadlock problem in #1108 */
     pj_grp_lock_release(resolver->grp_lock);
 
     if (cb)
@@ -1869,14 +1860,15 @@ static void on_read_complete(pj_ioqueue_key_t *key,
         child_q = q->child_head.next;
         while (child_q != (pj_dns_async_query*)&q->child_head) {
             pj_dns_async_query *next = child_q->next;
+            pj_dns_callback *ccb;
 
             pj_grp_lock_acquire(resolver->grp_lock);
-            cb = child_q->cb;
+            ccb = child_q->cb;
             child_q->cb = NULL;
             pj_grp_lock_release(resolver->grp_lock);
 
-            if (cb)
-                (*cb)(child_q->user_data, status, dns_pkt);
+            if (ccb)
+                (*ccb)(child_q->user_data, status, dns_pkt);
 
             child_q = next;
         }

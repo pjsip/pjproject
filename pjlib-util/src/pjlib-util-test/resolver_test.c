@@ -74,6 +74,8 @@ static volatile pj_bool_t cb_after_destroy;
 static pj_dns_resolver *start_during_destroy_res;
 static pj_status_t start_during_destroy_status;
 static pj_dns_async_query *start_during_destroy_query;
+static int cancel_in_cb_count;
+static pj_dns_async_query *cancel_in_cb_query;
 
 #define MAX_LABEL   32
 
@@ -1207,6 +1209,64 @@ static int dns_start_during_destroy_test(void)
 }
 
 
+/* Callback for the cancel-in-callback test: on the first delivery it cancels
+ * its own query with notify=PJ_TRUE. Before the callback is captured and
+ * cleared under the group lock, the query still held a live cb, so cancel
+ * delivered a second (PJ_ECANCELLED) callback for the same query.
+ */
+static void dns_callback_cancel_in_cb(void *user_data,
+                                      pj_status_t status,
+                                      pj_dns_parsed_packet *resp)
+{
+    PJ_UNUSED_ARG(user_data);
+    PJ_UNUSED_ARG(status);
+    PJ_UNUSED_ARG(resp);
+
+    cancel_in_cb_count++;
+
+    if (cancel_in_cb_count == 1 && cancel_in_cb_query) {
+        pj_dns_async_query *q = cancel_in_cb_query;
+        cancel_in_cb_query = NULL;
+        pj_dns_resolver_cancel_query(q, PJ_TRUE);
+    }
+
+    pj_sem_post(sem);
+}
+
+
+/* Cancelling a query from inside its own completion callback must not deliver
+ * the callback a second time (the cb is captured and cleared under the lock
+ * before it is invoked). Asserts the callback runs exactly once.
+ */
+static int dns_cancel_in_callback_test(void)
+{
+    pj_str_t name = pj_str("name_cancel_in_cb");
+
+    PJ_LOG(3,(THIS_FILE, "  cancel query from within its callback test"));
+
+    cancel_in_cb_count = 0;
+    cancel_in_cb_query = NULL;
+
+    /* Servers answer so the query completes and the callback fires. */
+    g_server[0].action = PJ_DNS_RCODE_NXDOMAIN;
+    g_server[1].action = PJ_DNS_RCODE_NXDOMAIN;
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(
+                        resolver, &name, PJ_DNS_TYPE_A, 0,
+                        &dns_callback_cancel_in_cb, NULL, &cancel_in_cb_query),
+                    NULL, return -600);
+
+    pj_sem_wait(sem);
+
+    /* Give any erroneous second (PJ_ECANCELLED) delivery time to arrive. */
+    pj_thread_sleep(1000);
+
+    PJ_TEST_EQ(cancel_in_cb_count, 1, NULL, return -610);
+
+    return 0;
+}
+
+
 /* DNS test */
 static int dns_test(void)
 {
@@ -2085,6 +2145,11 @@ int resolver_test(void)
 
     PJ_LOG(3,(THIS_FILE, "dns_test"));
     rc = dns_test();
+    if (rc != 0)
+        goto on_error;
+
+    PJ_LOG(3,(THIS_FILE, "dns_cancel_in_callback_test"));
+    rc = dns_cancel_in_callback_test();
     if (rc != 0)
         goto on_error;
 
