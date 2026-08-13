@@ -19,8 +19,9 @@
 /*
  * pjsua-level regression tests for the call media-count bounds checks that
  * prevent overflowing the fixed-size per-call media arrays
- * (pjsua_call.media[PJSUA_MAX_CALL_MEDIA]), plus RFC2543 call hold on an SDP
- * that carries no connection line.
+ * (pjsua_call.media[PJSUA_MAX_CALL_MEDIA]), RFC2543 call hold on an SDP
+ * that carries no connection line, and the "smart media update" comparison
+ * that decides whether a renegotiation has to restart a running stream.
  *
  * Scenarios covered:
  *   1. Outgoing pjsua_call_make_call() rejects a call setting whose media
@@ -38,6 +39,21 @@
  *      SDP has neither a session-level nor a media-level connection line:
  *      modify_sdp_of_call_hold() must create one to hold the 0.0.0.0 address
  *      instead of dereferencing NULL.
+ *   5. A no-op re-INVITE on a call whose remote m= line advertises
+ *      a=rtcp-mux, while the account leaves enable_rtcp_mux disabled, must
+ *      NOT tear down and recreate the audio stream.
+ *   6. Narrowing the media direction while answering a re-INVITE (via
+ *      PJSUA_CALL_SET_MEDIA_DIR in on_call_rx_reinvite) must actually restart
+ *      the running stream, so the live stream's direction and the direction
+ *      reported by pjsua_call_get_info() agree.
+ *
+ * Scenarios 5 and 6 are two symptoms of one defect: apply_med_update() derives
+ * the stream info from the negotiated SDP, then adjusts it (RTCP mux off when
+ * not enabled locally, direction narrowed to the configured default). If the
+ * copy handed to is_media_changed() is taken before those adjustments, the
+ * comparison runs against values that never reach the stream. Scenario 5 is
+ * the false-positive half (a restart that should not happen), scenario 6 the
+ * false-negative half (a restart that must happen but does not).
  *
  * The over-limit settings are rejected before any media is instantiated, so
  * the tests use text media (txt_cnt) as the "second" media type: this keeps
@@ -161,6 +177,34 @@ static struct
     pj_bool_t     expect_hold_offer;
     pj_bool_t     hold_offer_seen;
     pj_bool_t     hold_offer_conn_ok;
+
+    /* ---- smart-media-update tests (scenarios 5 and 6) ---- */
+
+    /* When set, on_call_sdp_created adds a=rtcp-mux to every m= line of every
+     * local SDP it creates, offers and answers alike. Since the tests place
+     * loopback calls, whatever we emit is also what the peer leg parses as
+     * the remote SDP, which is the only thing stream_info_from_sdp() looks at
+     * when it sets pjmedia_stream_info.rtcp_mux. */
+    pj_bool_t     inject_rtcp_mux;
+    /* Set by on_call_rx_offer when it sees a re-INVITE offer that really
+     * carries a=rtcp-mux, i.e. proof the attribute survived to the peer. */
+    pj_bool_t     rx_offer_had_rtcp_mux;
+
+    /* Per-call audio stream lifecycle counters, maintained by
+     * on_stream_created2()/on_stream_destroyed(). A stream restart shows up
+     * as one extra destroy plus one extra create on the affected leg. */
+    unsigned      strm_created[PJSUA_MAX_CALLS];
+    unsigned      strm_destroyed[PJSUA_MAX_CALLS];
+    /* Per-call count of completed media updates (on_call_media_state), used
+     * to wait for a renegotiation to finish without sleeping. */
+    unsigned      med_state_cnt[PJSUA_MAX_CALLS];
+    unsigned      med_state_target;
+
+    /* When armed, on_call_rx_reinvite takes over answering the re-INVITE on
+     * narrow_dir_call_id and requests a receive-only media direction. */
+    pj_bool_t     narrow_dir_armed;
+    pjsua_call_id narrow_dir_call_id;
+    pj_bool_t     narrow_dir_reinvite_seen;
 } g_ctx;
 
 
@@ -221,6 +265,28 @@ static void on_call_sdp_created(pjsua_call_id call_id,
 {
     pjmedia_sdp_media *m;
 
+    /* Advertise RTP/RTCP multiplexing on every m= line, in offers as well as
+     * in answers, so both legs of a loopback call see a=rtcp-mux in the SDP
+     * they parse as the remote one.
+     */
+    if (g_ctx.inject_rtcp_mux) {
+        unsigned i;
+
+        for (i = 0; i < sdp->media_count; ++i) {
+            pjmedia_sdp_media *mm = sdp->media[i];
+
+            if (pjmedia_sdp_attr_find2(mm->attr_count, mm->attr,
+                                       "rtcp-mux", NULL))
+            {
+                continue;
+            }
+            if (mm->attr_count >= PJMEDIA_MAX_SDP_ATTR)
+                continue;
+            mm->attr[mm->attr_count++] =
+                pjmedia_sdp_attr_create(pool, "rtcp-mux", NULL);
+        }
+    }
+
     /* Strip all connection lines from the offer of the designated call, so
      * modify_sdp_of_call_hold() finds neither a media- nor a session-level
      * c= line. Only offers are touched (rem_sdp == NULL).
@@ -279,6 +345,17 @@ static void on_call_rx_offer(pjsua_call_id call_id,
     PJ_UNUSED_ARG(code);
     PJ_UNUSED_ARG(opt);
 
+    /* Confirm the peer really receives a=rtcp-mux in the offer, so the
+     * rtcp-mux sub-test cannot silently degrade into a no-op if the
+     * injection above ever stops working.
+     */
+    if (g_ctx.inject_rtcp_mux && offer->media_count > 0 &&
+        pjmedia_sdp_attr_find2(offer->media[0]->attr_count,
+                               offer->media[0]->attr, "rtcp-mux", NULL))
+    {
+        g_ctx.rx_offer_had_rtcp_mux = PJ_TRUE;
+    }
+
     if (!g_ctx.expect_hold_offer)
         return;
 
@@ -299,6 +376,74 @@ static void on_call_rx_offer(pjsua_call_id call_id,
 
     g_ctx.hold_offer_conn_ok = ok;
     g_ctx.hold_offer_seen = PJ_TRUE;
+}
+
+/* Audio stream lifecycle bookkeeping. PJSUA only fires these for audio
+ * streams, which is exactly the media the tests below assert on.
+ */
+static void on_stream_created2(pjsua_call_id call_id,
+                               pjsua_on_stream_created_param *param)
+{
+    PJ_UNUSED_ARG(param);
+
+    if (call_id >= 0 && call_id < (int)PJ_ARRAY_SIZE(g_ctx.strm_created))
+        ++g_ctx.strm_created[call_id];
+}
+
+static void on_stream_destroyed(pjsua_call_id call_id,
+                                pjmedia_stream *strm,
+                                unsigned stream_idx)
+{
+    PJ_UNUSED_ARG(strm);
+    PJ_UNUSED_ARG(stream_idx);
+
+    if (call_id >= 0 && call_id < (int)PJ_ARRAY_SIZE(g_ctx.strm_destroyed))
+        ++g_ctx.strm_destroyed[call_id];
+}
+
+/* Called once per completed media update on a leg, i.e. once the SDP
+ * negotiation of an offer/answer round has been applied. Gives the tests a
+ * deterministic "the renegotiation is done" signal instead of a fixed sleep.
+ */
+static void on_call_media_state(pjsua_call_id call_id)
+{
+    if (call_id >= 0 && call_id < (int)PJ_ARRAY_SIZE(g_ctx.med_state_cnt))
+        ++g_ctx.med_state_cnt[call_id];
+}
+
+/* Take over answering the re-INVITE on the armed leg and request a
+ * receive-only direction for the audio media.
+ *
+ * The answer is deliberately deferred (async = PJ_TRUE): PJSUA still builds
+ * an answer before returning here, but discards it in that case, so the
+ * direction requested through PJSUA_CALL_SET_MEDIA_DIR does not reach the
+ * wire SDP by that route. The test supplies its own answer instead, one that
+ * still says sendrecv and is otherwise identical to the SDP the running
+ * stream was built from. The narrowing to recvonly then happens purely inside
+ * apply_med_update(), which is the code path under test.
+ */
+static void on_call_rx_reinvite(pjsua_call_id call_id,
+                                const pjmedia_sdp_session *offer,
+                                pjsip_rx_data *rdata,
+                                void *reserved,
+                                pj_bool_t *async,
+                                pjsip_status_code *code,
+                                pjsua_call_setting *opt)
+{
+    PJ_UNUSED_ARG(offer);
+    PJ_UNUSED_ARG(rdata);
+    PJ_UNUSED_ARG(reserved);
+
+    if (!g_ctx.narrow_dir_armed || call_id != g_ctx.narrow_dir_call_id)
+        return;
+
+    *async = PJ_TRUE;
+    *code  = PJSIP_SC_OK;
+
+    opt->flag |= PJSUA_CALL_SET_MEDIA_DIR;
+    opt->media_dir[0] = PJMEDIA_DIR_DECODING;
+
+    g_ctx.narrow_dir_reinvite_seen = PJ_TRUE;
 }
 
 
@@ -335,6 +480,22 @@ static pj_bool_t hold_offer_processed(pjsua_call_id call_id)
 {
     PJ_UNUSED_ARG(call_id);
     return g_ctx.hold_offer_seen;
+}
+
+/* True once the given leg has completed at least g_ctx.med_state_target
+ * media updates.
+ */
+static pj_bool_t media_state_reached(pjsua_call_id call_id)
+{
+    if (call_id < 0 || call_id >= (int)PJ_ARRAY_SIZE(g_ctx.med_state_cnt))
+        return PJ_FALSE;
+    return g_ctx.med_state_cnt[call_id] >= g_ctx.med_state_target;
+}
+
+static pj_bool_t reinvite_was_received(pjsua_call_id call_id)
+{
+    PJ_UNUSED_ARG(call_id);
+    return g_ctx.narrow_dir_reinvite_seen;
 }
 
 static pj_bool_t call_is_confirmed(pjsua_call_id call_id)
@@ -1078,6 +1239,364 @@ on_return:
 }
 
 
+/* Place a single-audio loopback call and wait until both legs are confirmed
+ * and their initial media update has completed, so each leg is running
+ * exactly one audio stream. Resets the per-call stream and media-update
+ * counters first, so the caller can reason about them in absolute terms.
+ * Returns 0 on success, or a negative code derived from err_base.
+ */
+static int establish_self_call(pjsua_call_id *p_caller,
+                               pjsua_call_id *p_callee,
+                               int err_base)
+{
+    pjsua_call_setting opt;
+    pj_str_t uri = pj_str(g_ctx.self_uri);
+    pj_status_t status;
+    pjsua_call_id caller = PJSUA_INVALID_ID;
+
+    g_ctx.incoming_call_id = PJSUA_INVALID_ID;
+    pj_bzero(g_ctx.strm_created, sizeof(g_ctx.strm_created));
+    pj_bzero(g_ctx.strm_destroyed, sizeof(g_ctx.strm_destroyed));
+    pj_bzero(g_ctx.med_state_cnt, sizeof(g_ctx.med_state_cnt));
+
+    pjsua_call_setting_default(&opt);
+    opt.aud_cnt = 1;
+    opt.vid_cnt = 0;
+    opt.txt_cnt = 0;
+    status = pjsua_call_make_call(g_ctx.acc_id, &uri, &opt, NULL, NULL,
+                                  &caller);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    make_call failed (%d)", status));
+        return err_base - 0;
+    }
+
+    if (!wait_until(&call_is_confirmed, caller, 8000)) {
+        PJ_LOG(1, (THIS_FILE, "    caller leg did not reach CONFIRMED"));
+        return err_base - 1;
+    }
+
+    if (g_ctx.incoming_call_id == PJSUA_INVALID_ID ||
+        g_ctx.incoming_call_id == caller)
+    {
+        PJ_LOG(1, (THIS_FILE, "    callee leg was not identified"));
+        return err_base - 2;
+    }
+
+    if (!wait_until(&call_is_confirmed, g_ctx.incoming_call_id, 8000)) {
+        PJ_LOG(1, (THIS_FILE, "    callee leg did not reach CONFIRMED"));
+        return err_base - 3;
+    }
+
+    g_ctx.med_state_target = 1;
+    if (!wait_until(&media_state_reached, caller, 8000) ||
+        !wait_until(&media_state_reached, g_ctx.incoming_call_id, 8000))
+    {
+        PJ_LOG(1, (THIS_FILE, "    initial media update did not complete"));
+        return err_base - 4;
+    }
+
+    if (g_ctx.strm_created[caller] != 1 ||
+        g_ctx.strm_created[g_ctx.incoming_call_id] != 1)
+    {
+        PJ_LOG(1, (THIS_FILE, "    expected one audio stream per leg, got "
+                   "caller=%u callee=%u", g_ctx.strm_created[caller],
+                   g_ctx.strm_created[g_ctx.incoming_call_id]));
+        return err_base - 5;
+    }
+
+    *p_caller = caller;
+    *p_callee = g_ctx.incoming_call_id;
+    return 0;
+}
+
+
+/* A no-op re-INVITE must not restart the audio stream just because the remote
+ * SDP advertises a=rtcp-mux that we do not accept.
+ *
+ * pjmedia_stream_info_from_sdp() sets pjmedia_stream_info.rtcp_mux purely from
+ * the remote m= line, and apply_med_update() then clears it again because the
+ * account leaves enable_rtcp_mux off. The stream is created from the corrected
+ * info, so the value is_media_changed() compares against is PJ_FALSE. Compare
+ * the uncorrected PJ_TRUE with it and every single renegotiation with such a
+ * peer looks like a media change, tearing the stream down and rebuilding it
+ * for nothing.
+ *
+ * The assertion is made on the public on_stream_created2()/on_stream_destroyed()
+ * callbacks: on an unchanged media the counters must not move on either leg.
+ */
+static int test_rtcp_mux_no_spurious_restart(void)
+{
+    pjsua_call_setting opt;
+    pj_status_t status;
+    pjsua_call_id caller = PJSUA_INVALID_ID, callee = PJSUA_INVALID_ID;
+    unsigned created_a = 0, created_b = 0;
+    unsigned destroyed_a = 0, destroyed_b = 0;
+    int rc;
+
+    PJ_LOG(3, (THIS_FILE, "  no media restart on a no-op re-INVITE with "
+               "remote a=rtcp-mux"));
+
+    g_ctx.inject_rtcp_mux = PJ_TRUE;
+    g_ctx.rx_offer_had_rtcp_mux = PJ_FALSE;
+
+    rc = establish_self_call(&caller, &callee, -1600);
+    if (rc != 0)
+        goto on_return;
+
+    created_a   = g_ctx.strm_created[caller];
+    destroyed_a = g_ctx.strm_destroyed[caller];
+    created_b   = g_ctx.strm_created[callee];
+    destroyed_b = g_ctx.strm_destroyed[callee];
+
+    /* A re-INVITE that changes nothing whatsoever. */
+    pjsua_call_setting_default(&opt);
+    opt.aud_cnt = 1;
+    opt.vid_cnt = 0;
+    opt.txt_cnt = 0;
+    status = pjsua_call_reinvite2(caller, &opt, NULL);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    reinvite2 failed (%d)", status));
+        rc = -1610;
+        goto on_return;
+    }
+
+    g_ctx.med_state_target = 2;
+    if (!wait_until(&media_state_reached, callee, 8000) ||
+        !wait_until(&media_state_reached, caller, 8000))
+    {
+        PJ_LOG(1, (THIS_FILE, "    re-INVITE media update did not complete"));
+        rc = -1611;
+        goto on_return;
+    }
+
+    /* Give a teardown that trails the media update a chance to be seen. */
+    wait_until(NULL, PJSUA_INVALID_ID, 500);
+
+    /* Guard against the test quietly degrading into a no-op. */
+    if (!g_ctx.rx_offer_had_rtcp_mux) {
+        PJ_LOG(1, (THIS_FILE, "    the re-INVITE offer carried no a=rtcp-mux, "
+                   "so this test would prove nothing"));
+        rc = -1612;
+        goto on_return;
+    }
+
+    if (g_ctx.strm_created[caller]   != created_a ||
+        g_ctx.strm_destroyed[caller] != destroyed_a ||
+        g_ctx.strm_created[callee]   != created_b ||
+        g_ctx.strm_destroyed[callee] != destroyed_b)
+    {
+        PJ_LOG(1, (THIS_FILE,
+                   "    audio stream restarted on a no-op re-INVITE: caller "
+                   "created %u->%u destroyed %u->%u, callee created %u->%u "
+                   "destroyed %u->%u",
+                   created_a, g_ctx.strm_created[caller],
+                   destroyed_a, g_ctx.strm_destroyed[caller],
+                   created_b, g_ctx.strm_created[callee],
+                   destroyed_b, g_ctx.strm_destroyed[callee]));
+        rc = -1613;
+        goto on_return;
+    }
+
+on_return:
+    g_ctx.inject_rtcp_mux = PJ_FALSE;
+    g_ctx.rx_offer_had_rtcp_mux = PJ_FALSE;
+    drain_all_calls();
+
+    return rc;
+}
+
+
+/* Narrowing the media direction while answering a re-INVITE must restart the
+ * running stream.
+ *
+ * apply_med_update() narrows the negotiated direction down to the direction
+ * configured for the call (PJSUA_CALL_SET_MEDIA_DIR), rewrites the a= line of
+ * the SDP that goes on the wire, and stores the result in call_med->dir. If
+ * is_media_changed() is handed a copy of the stream info taken before that
+ * narrowing, the direction it compares is the pre-narrowing one, the media
+ * looks unchanged, and the stream keeps running in its old direction - it
+ * carries on transmitting although both call_med->dir and the SDP on the wire
+ * say receive-only.
+ *
+ * The test drives exactly that situation and then asserts that the two public
+ * views of the direction agree. Answering with the SDP the running stream was
+ * built from (forced back to sendrecv) keeps every other field
+ * is_media_changed() inspects bit-for-bit identical, so the direction is the
+ * only thing that can possibly differ.
+ */
+static int test_dir_narrowing_restarts_stream(void)
+{
+    pjsua_call_setting opt;
+    pj_status_t status;
+    pjsua_call_id caller = PJSUA_INVALID_ID, callee = PJSUA_INVALID_ID;
+    pjsua_call_info ci;
+    pjsua_stream_info psi;
+    pj_pool_t *pool = NULL;
+    pjmedia_sdp_session *answer = NULL;
+    int rc;
+
+    PJ_LOG(3, (THIS_FILE, "  direction narrowing restarts the running "
+               "stream"));
+
+    g_ctx.narrow_dir_armed = PJ_FALSE;
+    g_ctx.narrow_dir_call_id = PJSUA_INVALID_ID;
+    g_ctx.narrow_dir_reinvite_seen = PJ_FALSE;
+
+    rc = establish_self_call(&caller, &callee, -1700);
+    if (rc != 0)
+        goto on_return;
+
+    /* Both legs are now running audio in ENCODING_DECODING. Arm the callee
+     * leg and poke it with an ordinary no-op re-INVITE from the caller.
+     */
+    g_ctx.narrow_dir_call_id = callee;
+    g_ctx.narrow_dir_armed = PJ_TRUE;
+
+    pjsua_call_setting_default(&opt);
+    opt.aud_cnt = 1;
+    opt.vid_cnt = 0;
+    opt.txt_cnt = 0;
+    status = pjsua_call_reinvite2(caller, &opt, NULL);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    reinvite2 failed (%d)", status));
+        rc = -1710;
+        goto on_return;
+    }
+
+    if (!wait_until(&reinvite_was_received, PJSUA_INVALID_ID, 8000)) {
+        PJ_LOG(1, (THIS_FILE, "    on_call_rx_reinvite never ran on the "
+                   "callee leg"));
+        rc = -1711;
+        goto on_return;
+    }
+
+    /* Build the answer out of the SDP the running stream was negotiated
+     * from, with the direction forced to sendrecv.
+     */
+    pool = pjsua_pool_create("dir-narrow-test", 1024, 1024);
+    if (!pool) {
+        PJ_LOG(1, (THIS_FILE, "    failed to create pool"));
+        rc = -1712;
+        goto on_return;
+    }
+
+    {
+        const pjmedia_sdp_session *active = NULL;
+        pjsip_inv_session *inv = pjsua_var.calls[callee].inv;
+        pjmedia_sdp_media *m;
+
+        if (!inv || !inv->neg ||
+            pjmedia_sdp_neg_get_active_local(inv->neg, &active) != PJ_SUCCESS ||
+            active == NULL || active->media_count < 1)
+        {
+            PJ_LOG(1, (THIS_FILE, "    no active local SDP on the callee leg"));
+            rc = -1713;
+            goto on_return;
+        }
+
+        answer = pjmedia_sdp_session_clone(pool, active);
+        m = answer->media[0];
+        pjmedia_sdp_media_remove_all_attr(m, "sendonly");
+        pjmedia_sdp_media_remove_all_attr(m, "recvonly");
+        pjmedia_sdp_media_remove_all_attr(m, "inactive");
+        if (!pjmedia_sdp_attr_find2(m->attr_count, m->attr, "sendrecv", NULL) &&
+            m->attr_count < PJMEDIA_MAX_SDP_ATTR)
+        {
+            m->attr[m->attr_count++] =
+                pjmedia_sdp_attr_create(pool, "sendrecv", NULL);
+        }
+    }
+
+    status = pjsua_call_answer_with_sdp(callee, answer, NULL, 200, NULL, NULL);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    answer_with_sdp failed (%d)", status));
+        rc = -1714;
+        goto on_return;
+    }
+
+    g_ctx.med_state_target = 2;
+    if (!wait_until(&media_state_reached, callee, 8000) ||
+        !wait_until(&media_state_reached, caller, 8000))
+    {
+        PJ_LOG(1, (THIS_FILE, "    re-INVITE media update did not complete"));
+        rc = -1715;
+        goto on_return;
+    }
+
+    status = pjsua_call_get_info(callee, &ci);
+    if (status != PJ_SUCCESS || ci.media_cnt < 1) {
+        PJ_LOG(1, (THIS_FILE, "    call_get_info(callee) failed (%d)",
+                   status));
+        rc = -1716;
+        goto on_return;
+    }
+
+    status = pjsua_call_get_stream_info(callee, 0, &psi);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    call_get_stream_info(callee) failed (%d)",
+                   status));
+        rc = -1717;
+        goto on_return;
+    }
+
+    /* The direction PJSUA reports for the call media and the direction of the
+     * stream that is actually running have to be the same one.
+     */
+    if (ci.media[0].dir != PJMEDIA_DIR_DECODING ||
+        psi.info.aud.dir != PJMEDIA_DIR_DECODING)
+    {
+        PJ_LOG(1, (THIS_FILE,
+                   "    callee direction mismatch: call_info dir=%d, running "
+                   "stream dir=%d, both expected %d (PJMEDIA_DIR_DECODING). A "
+                   "running stream still in ENCODING_DECODING (%d) means the "
+                   "narrowed direction was invisible to is_media_changed() "
+                   "and the stream was never restarted.",
+                   ci.media[0].dir, psi.info.aud.dir,
+                   PJMEDIA_DIR_DECODING, PJMEDIA_DIR_ENCODING_DECODING));
+        rc = -1718;
+        goto on_return;
+    }
+
+    /* And that agreement has to come from an actual restart. */
+    if (g_ctx.strm_destroyed[callee] != 1 || g_ctx.strm_created[callee] != 2) {
+        PJ_LOG(1, (THIS_FILE, "    callee stream was not restarted exactly "
+                   "once (created=%u destroyed=%u)",
+                   g_ctx.strm_created[callee], g_ctx.strm_destroyed[callee]));
+        rc = -1719;
+        goto on_return;
+    }
+
+    /* Cross-check from the far side: the caller offered sendrecv, so it can
+     * only have ended up send-only if the narrowed direction really made it
+     * into the answer that went out on the wire.
+     */
+    status = pjsua_call_get_info(caller, &ci);
+    if (status != PJ_SUCCESS || ci.media_cnt < 1) {
+        PJ_LOG(1, (THIS_FILE, "    call_get_info(caller) failed (%d)",
+                   status));
+        rc = -1720;
+        goto on_return;
+    }
+    if (ci.media[0].dir != PJMEDIA_DIR_ENCODING) {
+        PJ_LOG(1, (THIS_FILE, "    caller direction is %d, expected %d "
+                   "(PJMEDIA_DIR_ENCODING); the narrowed direction did not "
+                   "reach the answer SDP on the wire",
+                   ci.media[0].dir, PJMEDIA_DIR_ENCODING));
+        rc = -1721;
+        goto on_return;
+    }
+
+on_return:
+    g_ctx.narrow_dir_armed = PJ_FALSE;
+    g_ctx.narrow_dir_call_id = PJSUA_INVALID_ID;
+    if (pool)
+        pj_pool_release(pool);
+    drain_all_calls();
+
+    return rc;
+}
+
+
 /*****************************************************************************
  * Main entry point
  *****************************************************************************/
@@ -1117,6 +1636,15 @@ int pjsua_call_test(void)
     ua_cfg.cb.on_incoming_call = &on_incoming_call;
     ua_cfg.cb.on_call_sdp_created = &on_call_sdp_created;
     ua_cfg.cb.on_call_rx_offer = &on_call_rx_offer;
+    /* Registering on_call_rx_reinvite is what makes PJSUA wire up the invite
+     * session's on_rx_reinvite hook, which the direction-narrowing test needs
+     * in order to answer a re-INVITE itself. The callback stays inert unless
+     * that test arms it, and leaving async at PJ_FALSE keeps on_call_rx_offer
+     * in the loop for the other sub-tests. */
+    ua_cfg.cb.on_call_rx_reinvite = &on_call_rx_reinvite;
+    ua_cfg.cb.on_stream_created2 = &on_stream_created2;
+    ua_cfg.cb.on_stream_destroyed = &on_stream_destroyed;
+    ua_cfg.cb.on_call_media_state = &on_call_media_state;
     /* Single-threaded: event pumping happens on this thread, so callbacks
      * run here too and no locking races arise in the test itself. */
     ua_cfg.thread_cnt = 0;
@@ -1222,6 +1750,12 @@ int pjsua_call_test(void)
 #endif
 
     rc = test_rfc2543_hold_without_conn();
+    if (rc != 0) goto on_return;
+
+    rc = test_rtcp_mux_no_spurious_restart();
+    if (rc != 0) goto on_return;
+
+    rc = test_dir_narrowing_restarts_stream();
     if (rc != 0) goto on_return;
 
 on_return:
