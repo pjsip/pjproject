@@ -434,8 +434,14 @@ static void on_call_rx_reinvite(pjsua_call_id call_id,
     PJ_UNUSED_ARG(rdata);
     PJ_UNUSED_ARG(reserved);
 
-    if (!g_ctx.narrow_dir_armed || call_id != g_ctx.narrow_dir_call_id)
+    /* One-shot: a second re-INVITE must not re-enter and leave the leg
+     * with an offer nobody answers.
+     */
+    if (!g_ctx.narrow_dir_armed || g_ctx.narrow_dir_reinvite_seen ||
+        call_id != g_ctx.narrow_dir_call_id)
+    {
         return;
+    }
 
     *async = PJ_TRUE;
     *code  = PJSIP_SC_OK;
@@ -1374,8 +1380,7 @@ static int test_rtcp_mux_no_spurious_restart(void)
 
     /* Guard against the test quietly degrading into a no-op. */
     if (!g_ctx.rx_offer_had_rtcp_mux) {
-        PJ_LOG(1, (THIS_FILE, "    the re-INVITE offer carried no a=rtcp-mux, "
-                   "so this test would prove nothing"));
+        PJ_LOG(1, (THIS_FILE, "    re-INVITE offer carried no a=rtcp-mux"));
         rc = -1612;
         goto on_return;
     }
@@ -1545,14 +1550,9 @@ static int test_dir_narrowing_restarts_stream(void)
     if (ci.media[0].dir != PJMEDIA_DIR_DECODING ||
         psi.info.aud.dir != PJMEDIA_DIR_DECODING)
     {
-        PJ_LOG(1, (THIS_FILE,
-                   "    callee direction mismatch: call_info dir=%d, running "
-                   "stream dir=%d, both expected %d (PJMEDIA_DIR_DECODING). A "
-                   "running stream still in ENCODING_DECODING (%d) means the "
-                   "narrowed direction was invisible to is_media_changed() "
-                   "and the stream was never restarted.",
-                   ci.media[0].dir, psi.info.aud.dir,
-                   PJMEDIA_DIR_DECODING, PJMEDIA_DIR_ENCODING_DECODING));
+        PJ_LOG(1, (THIS_FILE, "    callee dir mismatch: call_info=%d "
+                   "stream=%d, expected %d", ci.media[0].dir,
+                   psi.info.aud.dir, PJMEDIA_DIR_DECODING));
         rc = -1718;
         goto on_return;
     }
@@ -1578,9 +1578,7 @@ static int test_dir_narrowing_restarts_stream(void)
         goto on_return;
     }
     if (ci.media[0].dir != PJMEDIA_DIR_ENCODING) {
-        PJ_LOG(1, (THIS_FILE, "    caller direction is %d, expected %d "
-                   "(PJMEDIA_DIR_ENCODING); the narrowed direction did not "
-                   "reach the answer SDP on the wire",
+        PJ_LOG(1, (THIS_FILE, "    caller dir is %d, expected %d",
                    ci.media[0].dir, PJMEDIA_DIR_ENCODING));
         rc = -1721;
         goto on_return;
@@ -1589,6 +1587,7 @@ static int test_dir_narrowing_restarts_stream(void)
 on_return:
     g_ctx.narrow_dir_armed = PJ_FALSE;
     g_ctx.narrow_dir_call_id = PJSUA_INVALID_ID;
+    g_ctx.narrow_dir_reinvite_seen = PJ_FALSE;
     if (pool)
         pj_pool_release(pool);
     drain_all_calls();
