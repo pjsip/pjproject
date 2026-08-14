@@ -14,6 +14,47 @@ using namespace std;
 using namespace pj;
 %}
 
+#ifdef SWIGJAVA
+%{
+static void pjsua2_throw_java_runtime(JNIEnv *jenv, const char *msg)
+{
+  jclass excep = jenv->FindClass("java/lang/RuntimeException");
+  if (excep)
+    jenv->ThrowNew(excep, msg);
+}
+%}
+// Keep C++ exceptions from crossing the JNI boundary, which aborts the process
+// (there is no C++ unwind handler in the intervening JVM frames). Exceptions
+// from methods that are not declared PJSUA2_THROW, including constructors,
+// become a Java RuntimeException; a Java exception thrown inside a director
+// callback is logged and cleared instead of unwinding into pjsip C code.
+// Placed before the STL %template instantiations below so the handler also
+// wraps their generated wrappers (e.g. std::vector::at() out-of-range).
+%exception {
+  try {
+    $action
+  } catch (Swig::DirectorException &e) {
+    e.throwException(jenv);
+    return $null;
+  } catch (pj::Error &e) {
+    pjsua2_throw_java_runtime(jenv, e.info(true).c_str());
+    return $null;
+  } catch (std::exception &e) {
+    pjsua2_throw_java_runtime(jenv, e.what());
+    return $null;
+  } catch (...) {
+    pjsua2_throw_java_runtime(jenv, "Unknown C++ exception");
+    return $null;
+  }
+}
+%feature("director:except") {
+  if (jenv->ExceptionCheck()) {
+    jenv->ExceptionDescribe();
+    jenv->ExceptionClear();
+  }
+}
+#endif
+
 //
 // STL stuff.
 //
