@@ -557,6 +557,9 @@ static pj_bool_t on_data_recvfrom(pj_activesock_t *asock,
     }
 
 send_pkt:
+    /* Mark as a response (QR bit) as a real server would. */
+    ans.hdr.flags |= PJ_DNS_SET_QR(1);
+
     pkt_len = print_packet(&ans, (pj_uint8_t*)data, MAX_PKT);
     if (pkt_len < 1) {
         PJ_LOG(4,(THIS_FILE, "Error: answer too large"));
