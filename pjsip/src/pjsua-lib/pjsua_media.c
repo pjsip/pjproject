@@ -4349,7 +4349,6 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
                 const pjmedia_sdp_session *local_sdp_renego =
                     pjmedia_sdp_session_clone(tmp_pool, local_sdp);
                 local_sdp = local_sdp_renego;
-                /* replace the local SDP with the new clone */
                 *local_sdp_ref = local_sdp_renego;
                 *need_renego_sdp = PJ_TRUE;
             }
@@ -4376,11 +4375,7 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
         }
     }
 
-    /* Take the copy of the stream info only now, i.e. after all the
-     * adjustments above (RTCP XR, RTCP mux, media direction) have been
-     * applied via 'si'. Copying it any earlier would hide those changes
-     * from check_srtp_roc() and is_media_changed() below.
-     */
+    /* Copy stream info only now, so is_media_changed() sees the adjustments above. */
     if (call_med->type == PJMEDIA_TYPE_AUDIO) {
         stream_info.info.aud = asi;
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
