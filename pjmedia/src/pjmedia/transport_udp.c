@@ -27,12 +27,19 @@
 #include <pj/rand.h>
 #include <pj/string.h>
 
-/* Maximum size of incoming RTP packet */
-#define RTP_LEN     PJMEDIA_MAX_MRU
+/* Maximum size of incoming RTP packet. Use the larger DTLS-specific
+ * buffer when DTLS-SRTP is in play, so a certificate-bearing handshake
+ * flight isn't silently truncated on receipt (see PJMEDIA_MAX_MRU_DTLS).
+ */
+#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
+#   define RTP_LEN      PJMEDIA_MAX_MRU_DTLS
+#else
+#   define RTP_LEN      PJMEDIA_MAX_MRU
+#endif
 
 /* Maximum size of incoming RTCP packet */
 #if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
-#   define RTCP_LEN    PJMEDIA_MAX_MRU
+#   define RTCP_LEN    PJMEDIA_MAX_MRU_DTLS
 #else
 #   define RTCP_LEN    600
 #endif

@@ -501,8 +501,22 @@
 /**
  * Max packet size for receiving direction.
  */
-#ifndef PJMEDIA_MAX_MRU                 
+#ifndef PJMEDIA_MAX_MRU
 #  define PJMEDIA_MAX_MRU                       2000
+#endif
+
+
+/**
+ * Max packet size for receiving direction when DTLS-SRTP keying is used
+ * (see #PJMEDIA_SRTP_HAS_DTLS). A DTLS handshake flight carrying a
+ * certificate can exceed #PJMEDIA_MAX_MRU; since recvfrom() truncates
+ * oversized datagrams silently, that corrupts the handshake instead of
+ * failing loudly.
+ *
+ * Default: 4000
+ */
+#ifndef PJMEDIA_MAX_MRU_DTLS
+#  define PJMEDIA_MAX_MRU_DTLS                  4000
 #endif
 
 
