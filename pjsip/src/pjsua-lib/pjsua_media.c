@@ -4216,7 +4216,7 @@ static pj_bool_t is_media_changed(const pjsua_call *call,
 
 /* Apply media update. */
 static pj_status_t apply_med_update(pjsua_call_media *call_med,
-                                    const pjmedia_sdp_session *local_sdp,
+                                    const pjmedia_sdp_session **local_sdp_ref,
                                     const pjmedia_sdp_session *remote_sdp,
                                     pj_bool_t *need_renego_sdp)
 {
@@ -4225,6 +4225,7 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
     const char *STR_RECVONLY = "recvonly";
     const char *STR_INACTIVE = "inactive";
 
+    const pjmedia_sdp_session *local_sdp = *local_sdp_ref;
     pjsua_call *call = call_med->call;
     pjsua_acc *acc = &pjsua_var.acc[call->acc_id];
     pjsua_call_id call_id = call->index;
@@ -4241,7 +4242,7 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     pjmedia_vid_stream_info vsi = {0};
 #endif
-    pjmedia_txt_stream_info tsi;
+    pjmedia_txt_stream_info tsi = {0};
     pjmedia_stream_info_common *si = NULL;
     pjsua_stream_info stream_info = {0};
     pj_str_t *enc_name = NULL;
@@ -4251,7 +4252,6 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
         status = pjmedia_stream_info_from_sdp(
                                     &asi, tmp_pool, pjsua_var.med_endpt,
                                     local_sdp, remote_sdp, mi);
-        stream_info.info.aud = asi;
         enc_name = &asi.fmt.encoding_name;
 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
@@ -4260,7 +4260,6 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
         status = pjmedia_vid_stream_info_from_sdp(
                                     &vsi, tmp_pool, pjsua_var.med_endpt,
                                     local_sdp, remote_sdp, mi);
-        stream_info.info.vid = vsi;
         enc_name = &vsi.codec_info.encoding_name;
 #endif
     } else if (call_med->type == PJMEDIA_TYPE_TEXT) {
@@ -4268,7 +4267,6 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
         status = pjmedia_txt_stream_info_from_sdp(
                                     &tsi, tmp_pool, pjsua_var.med_endpt,
                                     local_sdp, remote_sdp, mi);
-        stream_info.info.txt = tsi;
         enc_name = &tsi.fmt.encoding_name;
     }
     else {
@@ -4348,10 +4346,10 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
             pjmedia_sdp_media *m;
 
             if (!*need_renego_sdp) {
-                pjmedia_sdp_session *local_sdp_renego;
-                local_sdp_renego =
+                const pjmedia_sdp_session *local_sdp_renego =
                     pjmedia_sdp_session_clone(tmp_pool, local_sdp);
                 local_sdp = local_sdp_renego;
+                *local_sdp_ref = local_sdp_renego;
                 *need_renego_sdp = PJ_TRUE;
             }
 
@@ -4375,6 +4373,17 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
             attr = pjmedia_sdp_attr_create(tmp_pool, str_attr, NULL);
             pjmedia_sdp_media_add_attr(m, attr);
         }
+    }
+
+    /* Copy stream info only now, so is_media_changed() sees the adjustments above. */
+    if (call_med->type == PJMEDIA_TYPE_AUDIO) {
+        stream_info.info.aud = asi;
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+    } else if (call_med->type == PJMEDIA_TYPE_VIDEO) {
+        stream_info.info.vid = vsi;
+#endif
+    } else if (call_med->type == PJMEDIA_TYPE_TEXT) {
+        stream_info.info.txt = tsi;
     }
 
     stream_info.type = call_med->type;
@@ -4741,18 +4750,20 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 
         /* Apply media update action */
         if (call_med->type==PJMEDIA_TYPE_AUDIO) {
-            status = apply_med_update(call_med, local_sdp, remote_sdp, &need_renego_sdp);
+            status = apply_med_update(call_med, &local_sdp, remote_sdp,
+                                      &need_renego_sdp);
             if (status != PJ_SUCCESS)
                 goto on_check_med_status;
 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
         } else if (call_med->type==PJMEDIA_TYPE_VIDEO) {
-            status = apply_med_update(call_med, local_sdp, remote_sdp, &need_renego_sdp);
+            status = apply_med_update(call_med, &local_sdp, remote_sdp,
+                                      &need_renego_sdp);
             if (status != PJ_SUCCESS)
                 goto on_check_med_status;
 #endif
         } else if (call_med->type==PJMEDIA_TYPE_TEXT) {
-            status = apply_med_update(call_med, local_sdp, remote_sdp,
+            status = apply_med_update(call_med, &local_sdp, remote_sdp,
                                       &need_renego_sdp);
             if (status != PJ_SUCCESS)
                 goto on_check_med_status;
