@@ -287,9 +287,11 @@ static int print_packet(const pj_dns_parsed_packet *rec, pj_uint8_t *pkt,
     if (size < (int)sizeof(pj_dns_hdr))
         return -1;
 
-    /* Initialize header */
+    /* Initialize header. This mock server only serializes responses, so set
+     * the QR bit as a real server would.
+     */
     write16(p+0,  rec->hdr.id);
-    write16(p+2,  rec->hdr.flags);
+    write16(p+2,  (pj_uint16_t)(rec->hdr.flags | PJ_DNS_SET_QR(1)));
     write16(p+4,  rec->hdr.qdcount);
     write16(p+6,  rec->hdr.anscount);
     write16(p+8,  rec->hdr.nscount);

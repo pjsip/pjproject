@@ -175,6 +175,24 @@
 
 
 /**
+ * Default value of the resolver's setting to DISABLE validation that a DNS
+ * response originates from one of the configured nameservers (matching address
+ * and port). When not disabled (the default), such validation defends against
+ * off-path response spoofing; it is standard resolver behavior and compatible
+ * with anycast and load-balanced DNS (which preserve the queried address as the
+ * source). It can be disabled per resolver via pj_dns_settings for unusual
+ * deployments where responses legitimately arrive from a different address. The
+ * flag is phrased as "disable" so that a zero-initialized pj_dns_settings keeps
+ * the protection enabled.
+ *
+ * Default: PJ_FALSE (validation enabled)
+ */
+#ifndef PJ_DNS_RESOLVER_DISABLE_RESPONSE_SRC_CHECK
+#   define PJ_DNS_RESOLVER_DISABLE_RESPONSE_SRC_CHECK   PJ_FALSE
+#endif
+
+
+/**
  * Maximum size of UDP packet. RFC 1035 states that maximum size of
  * DNS packet carried over UDP is 512 bytes.
  *
