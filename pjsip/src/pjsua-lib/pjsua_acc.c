@@ -2996,6 +2996,16 @@ static void update_rfc5626_status(pjsua_acc *acc, pjsip_rx_data *rdata)
 on_return:
     if (acc->rfc5626_status != OUTBOUND_ACTIVE) {
         acc->reg_contact = acc->contact;
+        /* The regc still carries the outbound-parameter Contact from the
+         * initial registration, so refresh REGISTERs keep advertising
+         * outbound even though we just learned the server does not
+         * support it. Sync the regc the same way the NAT rewrite paths
+         * do (see pjsip_regc_update_contact() call sites), so state and
+         * wire agree from the next refresh on.
+         */
+        if (acc->regc) {
+            pjsip_regc_update_contact(acc->regc, 1, &acc->reg_contact);
+        }
     }
     PJ_LOG(4,(THIS_FILE, "SIP outbound status for acc %d is %s",
                          acc->index, (acc->rfc5626_status==OUTBOUND_ACTIVE?
