@@ -137,6 +137,43 @@ PJ_BEGIN_DECL
 #endif
 
 
+/**
+ * Specify whether the coreaudio backend should enable advanced ducking of
+ * other (i.e. non-voice) audio while the VoiceProcessingIO audio unit is in
+ * use, i.e. while echo cancellation is enabled. Advanced ducking follows the
+ * voice activity of the chat participants, so other audio is only attenuated
+ * while somebody is talking, instead of being attenuated for the whole call.
+ *
+ * Requires macOS 14 or iOS 17, it is ignored on older versions.
+ *
+ * Default: 0 (no, i.e. the fixed ducking applied by the system). Enabled in
+ * config_site_sample.h for iOS.
+ */
+#ifndef PJMEDIA_AUDIO_DEV_COREAUDIO_ADVANCED_DUCKING
+#   define PJMEDIA_AUDIO_DEV_COREAUDIO_ADVANCED_DUCKING 0
+#endif
+
+
+/**
+ * Specify how much the coreaudio backend should duck other (i.e. non-voice)
+ * audio while the VoiceProcessingIO audio unit is in use, i.e. while echo
+ * cancellation is enabled. Valid values are the AUVoiceIOOtherAudioDuckingLevel
+ * constants: kAUVoiceIOOtherAudioDuckingLevelDefault (0),
+ * kAUVoiceIOOtherAudioDuckingLevelMin (10),
+ * kAUVoiceIOOtherAudioDuckingLevelMid (20), or
+ * kAUVoiceIOOtherAudioDuckingLevelMax (30). This setting is independent of
+ * PJMEDIA_AUDIO_DEV_COREAUDIO_ADVANCED_DUCKING.
+ *
+ * Requires macOS 14 or iOS 17, it is ignored on older versions.
+ *
+ * Default: 0 (kAUVoiceIOOtherAudioDuckingLevelDefault, the level Apple applies
+ * for a typical voice chat)
+ */
+#ifndef PJMEDIA_AUDIO_DEV_COREAUDIO_DUCKING_LEVEL
+#   define PJMEDIA_AUDIO_DEV_COREAUDIO_DUCKING_LEVEL 0
+#endif
+
+
  /**
   * This setting controls whether WMME support should be included.
   */
