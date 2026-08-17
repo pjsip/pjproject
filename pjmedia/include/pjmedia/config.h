@@ -1201,6 +1201,22 @@
 
 
 /**
+ * Use EC key on the P-256 curve for the DTLS-SRTP self-signed certificate,
+ * which is the key type commonly used by DTLS-SRTP peers and the one required
+ * by RFC 8827 for WebRTC. It also makes the certificate, and hence the
+ * handshake, significantly smaller than RSA.
+ *
+ * Disable this to use RSA 2048 bit key instead, e.g: for interoperability
+ * with peers that do not support ECDSA cipher suites.
+ *
+ * Default value: 1 (enabled)
+ */
+#ifndef PJMEDIA_SRTP_DTLS_USE_EC_KEY
+#   define PJMEDIA_SRTP_DTLS_USE_EC_KEY             1
+#endif
+
+
+/**
  * Set OpenSSL ciphers for DTLS-SRTP.
  *
  * Default value: "DEFAULT"
