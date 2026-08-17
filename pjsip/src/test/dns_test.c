@@ -584,8 +584,17 @@ int resolve_test(void)
     }
 
     nameserver = pj_str("192.168.0.106");
-    pj_dns_resolver_set_ns(resv, 1, &nameserver, &port);
-    pjsip_endpt_set_resolver(endpt, resv);
+    status = pj_dns_resolver_set_ns(resv, 1, &nameserver, &port);
+    if (status != PJ_SUCCESS) {
+        pjsip_endpt_release_pool(endpt, pool);
+        return -8;
+    }
+
+    status = pjsip_endpt_set_resolver(endpt, resv);
+    if (status != PJ_SUCCESS) {
+        pjsip_endpt_release_pool(endpt, pool);
+        return -9;
+    }
 
     add_dns_entries(resv);
 

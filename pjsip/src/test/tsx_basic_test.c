@@ -262,7 +262,11 @@ static pj_status_t init_endpt()
         return rc;
     }
 
-    pj_dns_resolver_set_ns(resolver, 1, &ns, NULL);
+    rc = pj_dns_resolver_set_ns(resolver, 1, &ns, NULL);
+    if (rc != PJ_SUCCESS) {
+        app_perror("set nameserver", rc);
+        return rc;
+    }
 
     rc = pjsip_endpt_set_resolver(endpt, resolver);
     if (rc != PJ_SUCCESS) {
