@@ -18,6 +18,7 @@
  */
 #include <pjmedia/sdp.h>
 #include <pjmedia/errno.h>
+#include "sdp_internal.h"
 #include <pjlib-util/scanner.h>
 #include <pj/array.h>
 #include <pj/except.h>
@@ -1694,6 +1695,79 @@ static pj_status_t validate_sdp_conn(const pjmedia_sdp_conn *c)
 }
 
 
+/* Return PJ_TRUE if a session level group attribute lists the supplied MID
+ * in a BUNDLE group.
+ */
+static pj_bool_t bundle_group_contains_mid(const pjmedia_sdp_session *sdp,
+                                           const pj_str_t *mid)
+{
+    unsigned i;
+
+    for (i = 0; i < sdp->attr_count; ++i) {
+        const pjmedia_sdp_attr *attr = sdp->attr[i];
+        const char *pos, *end;
+        unsigned token_index = 0;
+        pj_bool_t is_bundle = PJ_FALSE;
+
+        if (pj_stricmp2(&attr->name, "group") != 0)
+            continue;
+
+        if (attr->value.ptr == NULL || attr->value.slen == 0)
+            continue;
+
+        pos = attr->value.ptr;
+        end = attr->value.ptr + attr->value.slen;
+        while (pos < end) {
+            const char *token_start;
+            pj_str_t token;
+
+            while (pos < end && (*pos == ' ' || *pos == '\t'))
+                ++pos;
+            if (pos == end)
+                break;
+
+            token_start = pos;
+            while (pos < end && *pos != ' ' && *pos != '\t')
+                ++pos;
+
+            token.ptr = (char *)token_start;
+            token.slen = pos - token_start;
+
+            if (token_index++ == 0) {
+                is_bundle = (pj_stricmp2(&token, "BUNDLE") == 0);
+                if (!is_bundle)
+                    break;
+                continue;
+            }
+
+            if (is_bundle && pj_strcmp(&token, mid) == 0)
+                return PJ_TRUE;
+        }
+    }
+
+    return PJ_FALSE;
+}
+
+
+pj_bool_t pjmedia_sdp_media_is_bundle_only(const pjmedia_sdp_session *sdp,
+                                           const pjmedia_sdp_media *media)
+{
+    const pjmedia_sdp_attr *mid;
+
+    if (media->desc.port != 0 ||
+        !pjmedia_sdp_media_find_attr2(media, "bundle-only", NULL))
+    {
+        return PJ_FALSE;
+    }
+
+    mid = pjmedia_sdp_media_find_attr2(media, "mid", NULL);
+    if (!mid)
+        return PJ_FALSE;
+
+    return bundle_group_contains_mid(sdp, &mid->value);
+}
+
+
 /* Validate SDP session descriptor. */
 PJ_DEF(pj_status_t) pjmedia_sdp_validate(const pjmedia_sdp_session *sdp)
 {
@@ -1734,12 +1808,20 @@ PJ_DEF(pj_status_t) pjmedia_sdp_validate2(const pjmedia_sdp_session *sdp,
     /* Validate each media. */
     for (i=0; i<sdp->media_count; ++i) {
         const pjmedia_sdp_media *m = sdp->media[i];
+        pj_bool_t is_active;
         unsigned j;
 
         /* Validate the m= line. */
         CHECK( m->desc.media.slen != 0, PJMEDIA_SDP_EINMEDIA);
         CHECK( m->desc.transport.slen != 0, PJMEDIA_SDP_EINMEDIA);
-        CHECK( m->desc.fmt_count != 0 || m->desc.port==0, PJMEDIA_SDP_ENOFMT);
+
+        /* Zero port media is disabled, so the checks below are relaxed for
+         * it, except for bundle-only media which is still usable (RFC 9143).
+         */
+        is_active = (m->desc.port != 0) ||
+                    pjmedia_sdp_media_is_bundle_only(sdp, m);
+
+        CHECK( m->desc.fmt_count != 0 || !is_active, PJMEDIA_SDP_ENOFMT);
 
         /* If media level connection info is present, validate it. */
         if (m->conn) {
@@ -1753,7 +1835,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_validate2(const pjmedia_sdp_session *sdp,
          */
         if (m->conn == NULL) {
             if (sdp->conn == NULL)
-                if (strict || m->desc.port != 0)
+                if (strict || is_active)
                     return PJMEDIA_SDP_EMISSINGCONN;
         }
 
@@ -1771,10 +1853,10 @@ PJ_DEF(pj_status_t) pjmedia_sdp_validate2(const pjmedia_sdp_session *sdp,
                  */
                 CHECK( status == PJ_SUCCESS && pt <= 127, PJMEDIA_SDP_EINPT);
 
-                /* If port is not zero, then for each dynamic payload type, an
+                /* If media is active, then for each dynamic payload type, an
                  * rtpmap attribute must be specified.
                  */
-                if (m->desc.port != 0 && pt >= 96) {
+                if (is_active && pt >= 96) {
                     const pjmedia_sdp_attr *a;
 
                     a = pjmedia_sdp_media_find_attr(m, &STR_RTPMAP, 
