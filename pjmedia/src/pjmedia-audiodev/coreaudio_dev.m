@@ -1346,6 +1346,46 @@ static pj_status_t create_audio_resample(struct coreaudio_stream     *strm,
 }
 #endif
 
+#if (TARGET_OS_IPHONE && !TARGET_OS_TV && !TARGET_OS_WATCH && \
+     defined(__IPHONE_17_0)) || \
+    (TARGET_OS_OSX && defined(__MAC_14_0))
+/* Internal: configure how the VoiceProcessingIO unit ducks other audio */
+static void set_other_audio_ducking(AudioUnit io_unit)
+    API_AVAILABLE(macos(14.0), ios(17.0))
+{
+    AUVoiceIOOtherAudioDuckingConfiguration ducking;
+    Boolean writable = false;
+    OSStatus ostatus;
+
+    ostatus = AudioUnitGetPropertyInfo(io_unit,
+                  kAUVoiceIOProperty_OtherAudioDuckingConfiguration,
+                  kAudioUnitScope_Global, 0, NULL, &writable);
+    if (ostatus != noErr || !writable) {
+        PJ_LOG(4, (THIS_FILE, "Warning: other audio ducking is not "
+                              "configurable, error: %d", (int)ostatus));
+        return;
+    }
+
+    ducking.mEnableAdvancedDucking =
+        PJMEDIA_AUDIO_DEV_COREAUDIO_ADVANCED_DUCKING;
+    ducking.mDuckingLevel = (AUVoiceIOOtherAudioDuckingLevel)
+        PJMEDIA_AUDIO_DEV_COREAUDIO_DUCKING_LEVEL;
+
+    ostatus = AudioUnitSetProperty(io_unit,
+                  kAUVoiceIOProperty_OtherAudioDuckingConfiguration,
+                  kAudioUnitScope_Global, 0, &ducking, sizeof(ducking));
+    if (ostatus != noErr) {
+        PJ_LOG(4, (THIS_FILE, "Warning: cannot set other audio ducking "
+                              "configuration, error: %d", (int)ostatus));
+        return;
+    }
+
+    PJ_LOG(4, (THIS_FILE, "Other audio ducking: advanced=%d, level=%d",
+               (int)ducking.mEnableAdvancedDucking,
+               (int)ducking.mDuckingLevel));
+}
+#endif
+
 /* Internal: create audio unit for recorder/playback device */
 static pj_status_t create_audio_unit(AudioComponent io_comp,
                                      AudioDeviceID dev_id,
@@ -1364,6 +1404,15 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
     if (ostatus != noErr) {
         return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
     }
+
+#if (TARGET_OS_IPHONE && !TARGET_OS_TV && !TARGET_OS_WATCH && \
+     defined(__IPHONE_17_0)) || \
+    (TARGET_OS_OSX && defined(__MAC_14_0))
+    if (strm->param.ec_enabled) {
+        if (@available(macOS 14.0, iOS 17.0, *))
+            set_other_audio_ducking(*io_unit);
+    }
+#endif
 
     /* Set audio unit's properties for capture device */
     if (dir & PJMEDIA_DIR_CAPTURE) {
