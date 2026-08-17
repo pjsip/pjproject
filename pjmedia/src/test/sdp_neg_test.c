@@ -1822,6 +1822,94 @@ static int sdp_neg_bundle_only_test(pj_pool_t *pool)
     return 0;
 }
 
+
+/* A bundle-only media is not disabled, so it must be validated as any
+ * active media, i.e. it must have format and rtpmap for dynamic payload
+ * type. Otherwise the offer must be rejected, instead of being negotiated
+ * as if it was validated.
+ */
+static int sdp_neg_bundle_only_invalid_test(pj_pool_t *pool)
+{
+    /* Bundle-only media without rtpmap for its dynamic payload type. */
+    static char no_rtpmap_str[] =
+        "v=0\r\n"
+        "o=- 0 0 IN IP4 127.0.0.1\r\n"
+        "s=-\r\n"
+        "c=IN IP4 127.0.0.1\r\n"
+        "t=0 0\r\n"
+        "a=group:BUNDLE 0 1\r\n"
+        "m=audio 4000 RTP/AVP 0\r\n"
+        "a=mid:0\r\n"
+        "m=video 0 RTP/AVP 96\r\n"
+        "a=mid:1\r\n"
+        "a=bundle-only\r\n";
+
+    /* Bundle-only media without any format. */
+    static char no_fmt_str[] =
+        "v=0\r\n"
+        "o=- 0 0 IN IP4 127.0.0.1\r\n"
+        "s=-\r\n"
+        "c=IN IP4 127.0.0.1\r\n"
+        "t=0 0\r\n"
+        "a=group:BUNDLE 0 1\r\n"
+        "m=audio 4000 RTP/AVP 0\r\n"
+        "a=mid:0\r\n"
+        "m=video 0 RTP/AVP\r\n"
+        "a=mid:1\r\n"
+        "a=bundle-only\r\n";
+
+    static char local_str[] =
+        "v=0\r\n"
+        "o=- 1 1 IN IP4 127.0.0.1\r\n"
+        "s=-\r\n"
+        "c=IN IP4 127.0.0.1\r\n"
+        "t=0 0\r\n"
+        "a=group:BUNDLE 0 1\r\n"
+        "m=audio 5000 RTP/AVP 0\r\n"
+        "a=mid:0\r\n"
+        "m=video 5002 RTP/AVP 96\r\n"
+        "a=mid:1\r\n"
+        "a=rtpmap:96 VP8/90000\r\n";
+
+    struct {
+        char        *sdp;
+        unsigned     len;
+        pj_status_t  exp_status;
+    } offers[] = {
+        { no_rtpmap_str, sizeof(no_rtpmap_str)-1, PJMEDIA_SDP_EMISSINGRTPMAP },
+        { no_fmt_str,    sizeof(no_fmt_str)-1,    PJMEDIA_SDP_ENOFMT }
+    };
+    pjmedia_sdp_session *offer, *local;
+    pjmedia_sdp_neg *neg;
+    pj_status_t status;
+    unsigned i;
+    char b1[sizeof(no_rtpmap_str) > sizeof(no_fmt_str) ?
+            sizeof(no_rtpmap_str) : sizeof(no_fmt_str)];
+    char b2[sizeof(local_str)];
+
+    pj_memcpy(b2, local_str, sizeof(local_str));
+    if (pjmedia_sdp_parse(pool, b2, pj_ansi_strlen(b2), &local) != PJ_SUCCESS)
+        return -3060;
+
+    for (i=0; i<PJ_ARRAY_SIZE(offers); ++i) {
+        pj_memcpy(b1, offers[i].sdp, offers[i].len + 1);
+
+        if (pjmedia_sdp_parse(pool, b1, offers[i].len, &offer) != PJ_SUCCESS)
+            return -3070 - i*10;
+
+        status = pjmedia_sdp_validate2(offer, PJ_FALSE);
+        if (status != offers[i].exp_status)
+            return -3072 - i*10;
+
+        status = pjmedia_sdp_neg_create_w_remote_offer(pool, local, offer,
+                                                       &neg);
+        if (status != offers[i].exp_status)
+            return -3074 - i*10;
+    }
+
+    return 0;
+}
+
 int sdp_neg_test()
 {
     unsigned i;
@@ -1868,6 +1956,10 @@ int sdp_neg_test()
 
         PJ_LOG(3,(THIS_FILE, "  sdp_neg_bundle_only_test"));
         status = sdp_neg_bundle_only_test(pool);
+        if (status == 0) {
+            PJ_LOG(3,(THIS_FILE, "  sdp_neg_bundle_only_invalid_test"));
+            status = sdp_neg_bundle_only_invalid_test(pool);
+        }
         pj_pool_release(pool);
 
         if (status != 0)
