@@ -435,7 +435,9 @@ PJ_DECL(pj_status_t) pj_dns_resolver_start_query(pj_dns_resolver *resolver,
  *
  * @param query     The pending asynchronous query to be cancelled.
  * @param notify    If non-zero, the callback will be called with failure
- *                  status to notify that the query has been cancelled.
+ *                  status to notify that the query has been cancelled,
+ *                  unless the query has already completed and its callback
+ *                  has already been invoked.
  *
  * @return          PJ_SUCCESS on success, or the appropriate error code,
  */
