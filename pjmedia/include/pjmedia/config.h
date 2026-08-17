@@ -499,24 +499,27 @@
 
 
 /**
- * Max packet size for receiving direction.
+ * Max packet size for receiving direction. This also bounds the RTP/RTCP
+ * UDP transport buffer and the STUN/TURN transport buffers used by ICE
+ * (see pjsua_media.c), since DTLS-SRTP keying traffic (RFC 5764) is
+ * multiplexed onto the same sockets as media.
+ *
+ * A DTLS-SRTP peer that reuses its full TLS server certificate (plus any
+ * intermediates) for the handshake, rather than a single self-signed
+ * leaf cert, can produce a ServerHello+Certificate+... flight larger than
+ * the default below. Since recvfrom() truncates an oversized datagram
+ * silently (see the truncation warning logged in transport_udp.c), such
+ * a peer's handshake would otherwise hang instead of failing loudly.
+ *
+ * Default: 4000 when DTLS-SRTP is enabled (#PJMEDIA_SRTP_HAS_DTLS),
+ *          2000 otherwise.
  */
 #ifndef PJMEDIA_MAX_MRU
-#  define PJMEDIA_MAX_MRU                       2000
-#endif
-
-
-/**
- * Max packet size for receiving direction when DTLS-SRTP keying is used
- * (see #PJMEDIA_SRTP_HAS_DTLS). A DTLS handshake flight carrying a
- * certificate can exceed #PJMEDIA_MAX_MRU; since recvfrom() truncates
- * oversized datagrams silently, that corrupts the handshake instead of
- * failing loudly.
- *
- * Default: 4000
- */
-#ifndef PJMEDIA_MAX_MRU_DTLS
-#  define PJMEDIA_MAX_MRU_DTLS                  4000
+#  if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
+#    define PJMEDIA_MAX_MRU                     4000
+#  else
+#    define PJMEDIA_MAX_MRU                     2000
+#  endif
 #endif
 
 
