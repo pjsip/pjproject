@@ -1768,6 +1768,7 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
 {
     pj_dns_resolver *resolver;
     pj_dns_async_query *q, *cq;
+    pj_dns_callback *cb;
     pj_status_t status;
 
     PJ_UNUSED_ARG(timer_heap);
@@ -1809,19 +1810,31 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
     pj_hash_set(NULL, resolver->hquerybyid, &q->id, sizeof(q->id), 0, NULL);
     pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key), 0, NULL);
 
+    /* Capture and clear the callback under the lock; invoke it unlocked. */
+    cb = q->cb;
+    q->cb = NULL;
+
     /* Workaround for deadlock problem in #1565 (similar to #1108) */
     pj_grp_lock_release(resolver->grp_lock);
 
-    /* Call application callback, if any. */
-    if (q->cb)
-        (*q->cb)(q->user_data, PJ_ETIMEDOUT, NULL);
+    if (cb)
+        (*cb)(q->user_data, PJ_ETIMEDOUT, NULL);
 
     /* Call application callback for child queries. */
     cq = q->child_head.next;
     while (cq != (void*)&q->child_head) {
-        if (cq->cb)
-            (*cq->cb)(cq->user_data, PJ_ETIMEDOUT, NULL);
-        cq = cq->next;
+        pj_dns_async_query *next = cq->next;
+        pj_dns_callback *ccb;
+
+        pj_grp_lock_acquire(resolver->grp_lock);
+        ccb = cq->cb;
+        cq->cb = NULL;
+        pj_grp_lock_release(resolver->grp_lock);
+
+        if (ccb)
+            (*ccb)(cq->user_data, PJ_ETIMEDOUT, NULL);
+
+        cq = next;
     }
 
     /* Workaround for deadlock problem in #1565 (similar to #1108) */
@@ -1855,6 +1868,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     pj_pool_t *pool = NULL;
     pj_dns_parsed_packet *dns_pkt;
     pj_dns_async_query *q;
+    pj_dns_callback *cb;
     char addr[PJ_INET6_ADDRSTRLEN];
     pj_sockaddr *src_addr;
     int *src_addr_len;
@@ -2002,14 +2016,18 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     pj_hash_set(NULL, resolver->hquerybyid, &q->id, sizeof(q->id), 0, NULL);
     pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key), 0, NULL);
 
+    /* Notify applications first, to allow application to modify the
+     * record before it is saved to the hash table. Capture and clear
+     * the callback under the lock; invoke it unlocked.
+     */
+    cb = q->cb;
+    q->cb = NULL;
+
     /* Workaround for deadlock problem in #1108 */
     pj_grp_lock_release(resolver->grp_lock);
 
-    /* Notify applications first, to allow application to modify the 
-     * record before it is saved to the hash table.
-     */
-    if (q->cb)
-        (*q->cb)(q->user_data, status, dns_pkt);
+    if (cb)
+        (*cb)(q->user_data, status, dns_pkt);
 
     /* If query has subqueries, notify subqueries's application callback */
     if (!pj_list_empty(&q->child_head)) {
@@ -2017,9 +2035,18 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
         child_q = q->child_head.next;
         while (child_q != (pj_dns_async_query*)&q->child_head) {
-            if (child_q->cb)
-                (*child_q->cb)(child_q->user_data, status, dns_pkt);
-            child_q = child_q->next;
+            pj_dns_async_query *next = child_q->next;
+            pj_dns_callback *ccb;
+
+            pj_grp_lock_acquire(resolver->grp_lock);
+            ccb = child_q->cb;
+            child_q->cb = NULL;
+            pj_grp_lock_release(resolver->grp_lock);
+
+            if (ccb)
+                (*ccb)(child_q->user_data, status, dns_pkt);
+
+            child_q = next;
         }
     }
 
