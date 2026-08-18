@@ -306,6 +306,21 @@
 #   define PJ_HTTP_DEFAULT_TIMEOUT         (60000)
 #endif
 
+/**
+ * Maximum size (in bytes) of an HTTP response body that the HTTP client will
+ * buffer internally. A response advertising a larger Content-Length is
+ * rejected before its body is allocated, and a response without Content-Length
+ * is aborted once the received body grows past this limit. This bounds memory
+ * usage against a malicious or malfunctioning server. Applications that stream
+ * the body themselves via the on_data_read() callback are not subject to this
+ * limit. Set to 0 to disable the check (not recommended).
+ *
+ * Default: 8 MB
+ */
+#ifndef PJ_HTTP_MAX_CONTENT_LENGTH
+#   define PJ_HTTP_MAX_CONTENT_LENGTH      (8 * 1024 * 1024)
+#endif
+
 /* **************************************************************************
  * CLI configuration
  */
