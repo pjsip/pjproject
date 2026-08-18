@@ -1966,6 +1966,7 @@ pj_status_t load_config(int argc,
 static void write_account_settings(int acc_index, pj_str_t *result)
 {
     unsigned i;
+    int len;
     char line[128];
     pjsua_acc_config *acc_cfg = &app_config.acc_cfg[acc_index];
 
@@ -2022,17 +2023,30 @@ static void write_account_settings(int acc_index, pj_str_t *result)
      * truncated without swallowing it and merging the next option.
      */
     if (acc_cfg->reg_contact_params.slen) {
-        pj_ansi_snprintf(line, sizeof(line), "--reg-contact-params %.*s",
-                        (int)acc_cfg->reg_contact_params.slen,
-                        acc_cfg->reg_contact_params.ptr);
+        len = pj_ansi_snprintf(line, sizeof(line), "--reg-contact-params %.*s",
+                              (int)acc_cfg->reg_contact_params.slen,
+                              acc_cfg->reg_contact_params.ptr);
+        if (len >= (int)sizeof(line) || len < 0) {
+            PJ_LOG(2,(THIS_FILE, "Warning: acc %d --reg-contact-params "
+                                 "truncated when saving settings",
+                                 acc_index));
+        }
+        PJ_CHECK_TRUNC_STR(len, line, sizeof(line));
         pj_strcat2(result, line);
         pj_strcat2(result, "\n");
     }
 
     if (acc_cfg->reg_contact_uri_params.slen) {
-        pj_ansi_snprintf(line, sizeof(line), "--reg-contact-uri-params %.*s",
-                        (int)acc_cfg->reg_contact_uri_params.slen,
-                        acc_cfg->reg_contact_uri_params.ptr);
+        len = pj_ansi_snprintf(line, sizeof(line),
+                              "--reg-contact-uri-params %.*s",
+                              (int)acc_cfg->reg_contact_uri_params.slen,
+                              acc_cfg->reg_contact_uri_params.ptr);
+        if (len >= (int)sizeof(line) || len < 0) {
+            PJ_LOG(2,(THIS_FILE, "Warning: acc %d --reg-contact-uri-params "
+                                 "truncated when saving settings",
+                                 acc_index));
+        }
+        PJ_CHECK_TRUNC_STR(len, line, sizeof(line));
         pj_strcat2(result, line);
         pj_strcat2(result, "\n");
     }
