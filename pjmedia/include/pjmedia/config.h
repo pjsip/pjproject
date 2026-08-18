@@ -499,14 +499,6 @@
 
 
 /**
- * Max packet size for receiving direction.
- */
-#ifndef PJMEDIA_MAX_MRU                 
-#  define PJMEDIA_MAX_MRU                       2000
-#endif
-
-
-/**
  * DTMF/telephone-event duration, in timestamp. To specify the duration in
  * milliseconds, use the setting PJMEDIA_DTMF_DURATION_MSEC instead.
  *
@@ -1213,6 +1205,51 @@
  */
 #ifndef PJMEDIA_SRTP_DTLS_USE_EC_KEY
 #   define PJMEDIA_SRTP_DTLS_USE_EC_KEY             1
+#endif
+
+
+/**
+ * Max packet size for receiving direction. This also bounds the RTP/RTCP
+ * UDP transport buffer and the STUN/TURN transport buffers used by ICE
+ * (see pjsua_media.c), since DTLS-SRTP keying traffic (RFC 5764) is
+ * multiplexed onto the same sockets as media. This block is placed after
+ * #PJMEDIA_SRTP_HAS_DTLS on purpose, so the dependency below is positional
+ * rather than coincidental.
+ *
+ * A DTLS-SRTP peer that reuses its full TLS server certificate (plus any
+ * intermediates) for the handshake, rather than a single self-signed
+ * leaf cert, can produce a ServerHello+Certificate+... flight larger than
+ * the default below, even with #PJMEDIA_SRTP_DTLS_USE_EC_KEY keeping our
+ * own certificate small (observed ~2500 bytes for such a flight). Since
+ * recvfrom() truncates an oversized datagram silently (see the truncation
+ * warning logged in transport_udp.c), such a peer's handshake would
+ * otherwise hang instead of failing loudly.
+ *
+ * Raising this value below 2672 is free: vid_stream.c's video jitter
+ * buffer byte size stays flat, since its slot count shrinks by the same
+ * factor this macro grows. Above that, the reassembly capacity it derives
+ * would drop below one max-size video frame, so vid_stream.c raises its
+ * MIN_CHUNKS_PER_FRM floor to compensate once the shrunk capacity would no
+ * longer hold a full frame, which pins the count and makes jitter buffer
+ * memory scale with this macro from then on. This default (3000) sits
+ * just above that free threshold, keeping the added cost to ~15% of a
+ * video stream's jitter buffer instead of the 2x an unconstrained 4000
+ * would cost. See vid_stream.c's MIN_CHUNKS_PER_FRM comment for the exact
+ * capacity margin this leaves.
+ *
+ * 3000 also matches pjnath's PJ_TURN_MAX_PKT_LEN default, so it stops
+ * pjsua_media.c's ICE TURN transport buffer from being silently lowered
+ * from that default down to this macro's value.
+ *
+ * Default: 3000 when DTLS-SRTP is enabled (#PJMEDIA_SRTP_HAS_DTLS),
+ *          2000 otherwise.
+ */
+#ifndef PJMEDIA_MAX_MRU
+#  if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
+#    define PJMEDIA_MAX_MRU                     3000
+#  else
+#    define PJMEDIA_MAX_MRU                     2000
+#  endif
 #endif
 
 
