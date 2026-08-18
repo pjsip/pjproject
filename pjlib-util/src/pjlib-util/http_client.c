@@ -707,7 +707,8 @@ static pj_status_t http_response_parse(pj_pool_t *pool,
         response->status_code = (pj_uint16_t)pj_strtoul(&s);
         pj_scan_advance_n(&scanner, 1, PJ_FALSE);
         pj_scan_get_until_ch(&scanner, '\n', &response->reason);
-        if (response->reason.ptr[response->reason.slen-1] == '\r')
+        if (response->reason.slen > 0 &&
+            response->reason.ptr[response->reason.slen-1] == '\r')
             response->reason.slen--;
     }
     PJ_CATCH_ANY {
@@ -781,7 +782,7 @@ static pj_status_t http_headers_parse(char *hdata, pj_size_t size,
             if (*scanner.curptr == ':') {
                 pj_scan_advance_n(&scanner, 1, PJ_TRUE);
                 pj_scan_get_until_ch(&scanner, '\n', &s2);
-                if (s2.ptr[s2.slen-1] == '\r')
+                if (s2.slen > 0 && s2.ptr[s2.slen-1] == '\r')
                     s2.slen--;
                 status = pj_http_headers_add_elmt(headers, &s, &s2);
                 if (status != PJ_SUCCESS)
