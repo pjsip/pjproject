@@ -22,6 +22,7 @@
 #if INCLUDE_JSON_TEST
 
 #include <pjlib-util/json.h>
+#include <pjlib-util/config.h>
 #include <pj/log.h>
 #include <pj/string.h>
 
@@ -87,11 +88,64 @@ on_error:
 }
 
 
+/* A document nested deeper than PJ_JSON_MAX_NESTING must be rejected rather
+ * than overflowing the parser stack; one nested exactly at the limit must
+ * still parse.
+ */
+static int json_verify_nesting()
+{
+    pj_pool_t *pool;
+    pj_json_elem *elem;
+    unsigned size, i;
+    const unsigned too_deep = PJ_JSON_MAX_NESTING + 1;
+    char buf[2 * (PJ_JSON_MAX_NESTING + 4) + 1];
+
+    pool = pj_pool_create(mem, "json", 1000, 1000, NULL);
+
+    /* Over the limit: "[[[...]]]" nested too_deep levels, expect rejection. */
+    for (i = 0; i < too_deep; ++i)
+        buf[i] = '[';
+    for (i = 0; i < too_deep; ++i)
+        buf[too_deep + i] = ']';
+    buf[2 * too_deep] = '\0';
+    size = 2 * too_deep;
+
+    elem = pj_json_parse(pool, buf, &size, NULL);
+    if (elem) {
+        PJ_LOG(1, (THIS_FILE, "  Error: over-deep JSON was not rejected"));
+        pj_pool_release(pool);
+        return 20;
+    }
+
+    /* At the limit: must still parse successfully. */
+    for (i = 0; i < PJ_JSON_MAX_NESTING; ++i)
+        buf[i] = '[';
+    for (i = 0; i < PJ_JSON_MAX_NESTING; ++i)
+        buf[PJ_JSON_MAX_NESTING + i] = ']';
+    buf[2 * PJ_JSON_MAX_NESTING] = '\0';
+    size = 2 * PJ_JSON_MAX_NESTING;
+
+    elem = pj_json_parse(pool, buf, &size, NULL);
+    if (!elem) {
+        PJ_LOG(1, (THIS_FILE, "  Error: max-depth JSON was rejected"));
+        pj_pool_release(pool);
+        return 21;
+    }
+
+    pj_pool_release(pool);
+    return 0;
+}
+
+
 int json_test(void)
 {
     int rc;
 
     rc = json_verify_1();
+    if (rc)
+        return rc;
+
+    rc = json_verify_nesting();
     if (rc)
         return rc;
 

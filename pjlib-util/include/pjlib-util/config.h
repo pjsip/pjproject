@@ -422,6 +422,17 @@
 #endif
 
 /**
+ * Maximum JSON nesting depth accepted by pj_json_parse(), to bound the
+ * parser's recursion and prevent stack exhaustion from deeply nested arrays
+ * or objects. Parsing fails beyond this depth.
+ *
+ * Default: 256
+ */
+#ifndef PJ_JSON_MAX_NESTING
+#   define PJ_JSON_MAX_NESTING     256
+#endif
+
+/**
  * @}
  */
 

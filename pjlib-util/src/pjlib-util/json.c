@@ -16,6 +16,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjlib-util/json.h>
+#include <pjlib-util/config.h>
 #include <pjlib-util/errno.h>
 #include <pjlib-util/scanner.h>
 #include <pj/assert.h>
@@ -95,12 +96,19 @@ struct parse_state
     pj_scanner           scanner;
     pj_json_err_info    *err_info;
     pj_cis_t             float_spec;    /* numbers with dot! */
+    unsigned             depth;         /* current array/object nesting */
 };
 
 static pj_status_t parse_children(struct parse_state *st,
                                   pj_json_elem *parent)
 {
     char end_quote = (parent->type == PJ_JSON_VAL_ARRAY)? ']' : '}';
+
+    /* Bound the recursion so a deeply nested document cannot exhaust the
+     * stack. Each nesting level recurses through parse_elem_throw().
+     */
+    if (++st->depth > PJ_JSON_MAX_NESTING)
+        return PJLIB_UTIL_EINJSON;
 
     pj_scan_get_char(&st->scanner);
 
@@ -121,6 +129,7 @@ static pj_status_t parse_children(struct parse_state *st,
     }
 
     pj_scan_get_char(&st->scanner);
+    --st->depth;
     return PJ_SUCCESS;
 }
 
