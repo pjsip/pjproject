@@ -92,6 +92,7 @@ struct transport_udp
     pj_sockaddr         rtp_src_addr;   /**< Actual packet src addr.        */
     int                 rtp_addrlen;    /**< Address length.                */
     char                rtp_pkt[RTP_LEN];/**< Incoming RTP packet buffer    */
+    unsigned            rtp_trunc_cnt;  /**< Truncated RTP pkt count.        */
 
     pj_bool_t           enable_rtcp_mux;/**< Enable RTP & RTCP multiplexing?*/
     pj_bool_t           use_rtcp_mux;   /**< Use RTP & RTCP multiplexing?   */
@@ -104,6 +105,7 @@ struct transport_udp
     pj_ioqueue_op_key_t rtcp_read_op;   /**< Pending read operation         */
     pj_ioqueue_op_key_t rtcp_write_op;  /**< Pending write operation        */
     char                rtcp_pkt[RTCP_LEN];/**< Incoming RTCP packet buffer */
+    unsigned            rtcp_trunc_cnt; /**< Truncated RTCP pkt count.       */
 };
 
 
@@ -496,6 +498,30 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
     return PJ_SUCCESS;
 }
 
+/* Warn (rate-limited) when a received packet exactly fills its buffer,
+ * the tell-tale sign that recvfrom() silently truncated it. This runs on
+ * every packet reaching the socket, before any address check, SRTP auth,
+ * or RTP/RTCP validation, so a remote host can trigger it at will simply
+ * by sending oversized datagrams. *cnt is rate-limited to avoid becoming
+ * a log-flood/CPU amplifier under such traffic.
+ */
+static void warn_if_truncated(const char *name, const char *proto,
+                              pj_ssize_t bytes_read, pj_size_t buf_size,
+                              unsigned *cnt)
+{
+    if (bytes_read > 0 && (pj_size_t)bytes_read == buf_size &&
+        (*cnt)++ % 100 == 0)
+    {
+        PJ_LOG(2,(name,
+                  "Received %s packet filled the %d-byte receive buffer "
+                  "and was likely truncated by the OS (recvfrom() "
+                  "truncates silently), %u so far. Consider raising "
+                  "PJMEDIA_MAX_MRU, e.g. if the peer uses DTLS-SRTP with "
+                  "a certificate chain.",
+                  proto, (int)buf_size, *cnt));
+    }
+}
+
 /* Call RTP cb.
  *
  * src_addr is an out-param: on return, holds the snapshot of the RTP
@@ -527,6 +553,9 @@ static void call_rtp_cb(struct transport_udp *udp, pj_ssize_t bytes_read,
      * non-NULL cb here means the owner is still alive and safe to ref, and
      * the ref keeps it alive for the whole up-call.
      */
+    warn_if_truncated(udp->base.name, "RTP", bytes_read,
+                      sizeof(udp->rtp_pkt), &udp->rtp_trunc_cnt);
+
     if (udp->base.grp_lock)
         pj_grp_lock_acquire(udp->base.grp_lock);
 
@@ -586,6 +615,9 @@ static void call_rtcp_cb(struct transport_udp *udp, pj_ssize_t bytes_read)
     void(*cb)(void*, void*, pj_ssize_t);
     void *user_data;
     pj_grp_lock_t *cb_grp_lock;
+
+    warn_if_truncated(udp->base.name, "RTCP", bytes_read,
+                      sizeof(udp->rtcp_pkt), &udp->rtcp_trunc_cnt);
 
     /* See comment in call_rtp_cb() above. */
     if (udp->base.grp_lock)
