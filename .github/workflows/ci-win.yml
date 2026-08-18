@@ -147,6 +147,8 @@ jobs:
       run: |
         for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do dir "%%i\Common7\Tools\VsDevCmd.bat"
       shell: cmd
+    - name: Restore .NET MAUI Workloads
+      run: dotnet workload restore pjsip-apps\src\swig\csharp\pjsua2maui\pjsua2maui\pjsua2maui.csproj
     - name: MSBuild
       working-directory: .
       run: |
@@ -326,6 +328,8 @@ jobs:
       run: |
         for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do dir "%%i\Common7\Tools\VsDevCmd.bat"
       shell: cmd
+    - name: Restore .NET MAUI Workloads
+      run: dotnet workload restore pjsip-apps\src\swig\csharp\pjsua2maui\pjsua2maui\pjsua2maui.csproj
     - name: MSBuild
       working-directory: .
       run: |
@@ -713,6 +717,8 @@ jobs:
       run: |
         for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do dir "%%i\Common7\Tools\VsDevCmd.bat"
       shell: cmd
+    - name: Restore .NET MAUI Workloads
+      run: dotnet workload restore pjsip-apps\src\swig\csharp\pjsua2maui\pjsua2maui\pjsua2maui.csproj
     - name: MSBuild
       working-directory: .
       run: |
