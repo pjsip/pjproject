@@ -323,8 +323,14 @@ PJ_DEF(void) pj_scan_get_unescape( pj_scanner *scanner,
                 ++dst;
                 s += 3;
             } else {
+                /* Not a valid "%XX" escape: copy the '%' (and the next
+                 * character if any) literally. Guard the second copy so a
+                 * '%' at the very end does not read past the buffer and
+                 * leave curptr beyond scanner->end.
+                 */
                 *dst++ = *s++;
-                *dst++ = *s++;
+                if (PJ_SCAN_CHECK_EOF(s))
+                    *dst++ = *s++;
                 break;
             }
         }
