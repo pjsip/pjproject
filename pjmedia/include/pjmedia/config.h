@@ -499,31 +499,6 @@
 
 
 /**
- * Max packet size for receiving direction. This also bounds the RTP/RTCP
- * UDP transport buffer and the STUN/TURN transport buffers used by ICE
- * (see pjsua_media.c), since DTLS-SRTP keying traffic (RFC 5764) is
- * multiplexed onto the same sockets as media.
- *
- * A DTLS-SRTP peer that reuses its full TLS server certificate (plus any
- * intermediates) for the handshake, rather than a single self-signed
- * leaf cert, can produce a ServerHello+Certificate+... flight larger than
- * the default below. Since recvfrom() truncates an oversized datagram
- * silently (see the truncation warning logged in transport_udp.c), such
- * a peer's handshake would otherwise hang instead of failing loudly.
- *
- * Default: 4000 when DTLS-SRTP is enabled (#PJMEDIA_SRTP_HAS_DTLS),
- *          2000 otherwise.
- */
-#ifndef PJMEDIA_MAX_MRU
-#  if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
-#    define PJMEDIA_MAX_MRU                     4000
-#  else
-#    define PJMEDIA_MAX_MRU                     2000
-#  endif
-#endif
-
-
-/**
  * DTMF/telephone-event duration, in timestamp. To specify the duration in
  * milliseconds, use the setting PJMEDIA_DTMF_DURATION_MSEC instead.
  *
@@ -1214,6 +1189,41 @@
  */
 #ifndef PJMEDIA_SRTP_HAS_DTLS
 #   define PJMEDIA_SRTP_HAS_DTLS                    0
+#endif
+
+
+/**
+ * Max packet size for receiving direction. This also bounds the RTP/RTCP
+ * UDP transport buffer and the STUN/TURN transport buffers used by ICE
+ * (see pjsua_media.c), since DTLS-SRTP keying traffic (RFC 5764) is
+ * multiplexed onto the same sockets as media. This block is placed after
+ * #PJMEDIA_SRTP_HAS_DTLS on purpose, so the dependency below is positional
+ * rather than coincidental.
+ *
+ * A DTLS-SRTP peer that reuses its full TLS server certificate (plus any
+ * intermediates) for the handshake, rather than a single self-signed
+ * leaf cert, can produce a ServerHello+Certificate+... flight larger than
+ * the default below. Since recvfrom() truncates an oversized datagram
+ * silently (see the truncation warning logged in transport_udp.c), such
+ * a peer's handshake would otherwise hang instead of failing loudly.
+ *
+ * Raising this value also halves the video jitter buffer/reassembly
+ * capacity computed in vid_stream.c relative to what the same
+ * MIN_CHUNKS_PER_FRM floor would give at 2000, since that capacity is
+ * derived by dividing a fixed max frame size by this macro. That file
+ * raises its floor to compensate, at the cost of roughly 2x the jitter
+ * buffer memory per video stream (since the jitter buffer's slot size is
+ * this macro's value): about 2 extra MB per stream when DTLS-SRTP is on.
+ *
+ * Default: 4000 when DTLS-SRTP is enabled (#PJMEDIA_SRTP_HAS_DTLS),
+ *          2000 otherwise.
+ */
+#ifndef PJMEDIA_MAX_MRU
+#  if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
+#    define PJMEDIA_MAX_MRU                     4000
+#  else
+#    define PJMEDIA_MAX_MRU                     2000
+#  endif
 #endif
 
 
