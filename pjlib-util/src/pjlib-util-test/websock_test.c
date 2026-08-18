@@ -45,6 +45,7 @@ static struct echo_server_t
     pj_thread_t    *thread;
     pj_bool_t       quit;
     pj_pool_t      *pool;
+    pj_bool_t       send_masked;  /* Send masked frames (protocol violation) */
 } g_server;
 
 /* Minimal Base64 encode (RFC 4648) for the server handshake */
@@ -135,26 +136,42 @@ static pj_size_t server_decode_frame(const pj_uint8_t *data, pj_size_t len,
     return pos + pl;
 }
 
-/* Encode a server WebSocket frame (unmasked) */
+/* Encode a server WebSocket frame. Server frames are normally unmasked;
+ * when g_server.send_masked is set the frame is masked, which a compliant
+ * client must reject (used to test that rejection).
+ */
 static pj_size_t server_encode_frame(pj_uint8_t *buf, pj_uint8_t opcode,
                                      const pj_uint8_t *payload,
                                      pj_size_t plen)
 {
     pj_size_t pos = 0;
+    pj_bool_t masked = g_server.send_masked;
+    pj_uint8_t mask_bit = (pj_uint8_t)(masked ? 0x80 : 0);
+
     buf[pos++] = (pj_uint8_t)(0x80 | opcode); /* FIN + opcode */
     if (plen < 126) {
-        buf[pos++] = (pj_uint8_t)plen;
+        buf[pos++] = (pj_uint8_t)(mask_bit | plen);
     } else if (plen <= 0xFFFF) {
-        buf[pos++] = 126;
+        buf[pos++] = (pj_uint8_t)(mask_bit | 126);
         buf[pos++] = (pj_uint8_t)((plen >> 8) & 0xFF);
         buf[pos++] = (pj_uint8_t)(plen & 0xFF);
     } else {
-        buf[pos++] = 127;
+        buf[pos++] = (pj_uint8_t)(mask_bit | 127);
         buf[pos++] = 0; buf[pos++] = 0; buf[pos++] = 0; buf[pos++] = 0;
         buf[pos++] = (pj_uint8_t)((plen >> 24) & 0xFF);
         buf[pos++] = (pj_uint8_t)((plen >> 16) & 0xFF);
         buf[pos++] = (pj_uint8_t)((plen >> 8) & 0xFF);
         buf[pos++] = (pj_uint8_t)(plen & 0xFF);
+    }
+    if (masked) {
+        pj_uint8_t mask[4];
+        pj_size_t i;
+        mask[0] = 0x12; mask[1] = 0x34; mask[2] = 0x56; mask[3] = 0x78;
+        pj_memcpy(&buf[pos], mask, 4);
+        pos += 4;
+        for (i = 0; i < plen; ++i)
+            buf[pos + i] = (pj_uint8_t)(payload[i] ^ mask[i & 3]);
+        return pos + plen;
     }
     if (plen > 0)
         pj_memcpy(&buf[pos], payload, plen);
@@ -896,6 +913,69 @@ static int test_public_wss_echo(void)
 
 
 /* ======== Main entry ======== */
+/* ======== Test: masked server frame is rejected (RFC 6455 5.1) ======== */
+static int test_masked_frame_rejected(void)
+{
+    test_state_t st;
+    pj_str_t url;
+    char url_buf[64];
+    const char *msg = "hello";
+    pj_status_t status;
+
+    PJ_LOG(3, (THIS_FILE, "  test_masked_frame_rejected"));
+
+    PJ_TEST_SUCCESS(setup_test_state(&st), NULL, return -600);
+
+    pj_ansi_snprintf(url_buf, sizeof(url_buf),
+                     "ws://127.0.0.1:%d/masked", g_server.port);
+    pj_cstr(&url, url_buf);
+
+    /* Make the echo server reply with masked frames. */
+    g_server.send_masked = PJ_TRUE;
+
+    status = pj_websock_connect(st.ws, &url, NULL);
+    PJ_TEST_TRUE(status == PJ_SUCCESS || status == PJ_EPENDING, NULL, {
+        g_server.send_masked = PJ_FALSE;
+        teardown_test_state(&st); return -610;
+    });
+
+    poll_events_ex(&st, 2000, PJ_TRUE);
+    PJ_TEST_TRUE(st.connected, "WebSocket connect failed", {
+        g_server.send_masked = PJ_FALSE;
+        teardown_test_state(&st); return -620;
+    });
+
+    /* Send a message; the server echoes it masked, which the client must
+     * reject by failing the connection with close code 1002.
+     */
+    status = pj_websock_send(st.ws, PJ_WEBSOCK_OP_TEXT,
+                             msg, pj_ansi_strlen(msg));
+    PJ_TEST_SUCCESS(status, NULL, {
+        g_server.send_masked = PJ_FALSE;
+        teardown_test_state(&st); return -630;
+    });
+
+    poll_events(&st, 1000);
+
+    g_server.send_masked = PJ_FALSE;
+
+    /* The masked frame must not be delivered as a message... */
+    PJ_TEST_EQ(st.rx_count, 0U, "Masked frame should not be delivered", {
+        teardown_test_state(&st); return -640;
+    });
+    /* ...and the connection must have been failed with code 1002. */
+    PJ_TEST_TRUE(st.closed, "Connection was not closed", {
+        teardown_test_state(&st); return -650;
+    });
+    PJ_TEST_EQ(st.close_code, 1002, "Expected close code 1002", {
+        teardown_test_state(&st); return -660;
+    });
+
+    teardown_test_state(&st);
+    return 0;
+}
+
+
 int websock_test(void)
 {
     int rc;
@@ -918,6 +998,9 @@ int websock_test(void)
     if (rc) goto on_return;
 
     rc = test_close();
+    if (rc) goto on_return;
+
+    rc = test_masked_frame_rejected();
     if (rc) goto on_return;
 
 on_return:

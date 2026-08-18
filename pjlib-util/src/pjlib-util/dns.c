@@ -65,8 +65,12 @@ PJ_DEF(pj_status_t) pj_dns_make_query( void *packet,
     /* Sanity check */
     PJ_ASSERT_RETURN(packet && size && qtype && name, PJ_EINVAL);
 
-    /* Calculate total number of bytes required. */
-    d = sizeof(pj_dns_hdr) + name->slen + 4;
+    /* Calculate total number of bytes required: DNS header, the encoded
+     * query name, and the query type & class (4 bytes). The encoded name
+     * needs 2 octets more than the dotted string - a leading length octet
+     * and the trailing root (zero) octet.
+     */
+    d = sizeof(pj_dns_hdr) + (name->slen + 2) + 4;
 
     /* Check that size is sufficient. */
     PJ_ASSERT_RETURN(*size >= d, PJLIB_UTIL_EDNSQRYTOOSMALL);

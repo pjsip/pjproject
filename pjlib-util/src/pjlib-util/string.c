@@ -57,8 +57,10 @@ PJ_DEF(pj_str_t*) pj_strcpy_unescape(pj_str_t *dst_str,
     char *dst = dst_str->ptr;
     
     while (src != end) {
-        if (*src == '%' && src < end-2) {
-            *dst = (pj_uint8_t) ((pj_hex_digit_to_val(*(src+1)) << 4) + 
+        if (*src == '%' && src < end-2 && pj_isxdigit(*(src+1)) &&
+            pj_isxdigit(*(src+2)))
+        {
+            *dst = (pj_uint8_t) ((pj_hex_digit_to_val(*(src+1)) << 4) +
                                  pj_hex_digit_to_val(*(src+2)));
             ++dst;
             src += 3;
