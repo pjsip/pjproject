@@ -137,6 +137,49 @@ static int json_verify_nesting()
 }
 
 
+/* Writing a deeply nested object must not drive the writer's indent past its
+ * buffer (a regression here is caught by ASan/valgrind CI builds).
+ */
+static int json_verify_write_indent()
+{
+    pj_pool_t *pool;
+    pj_json_elem *root, *cur;
+    pj_str_t name = pj_str("a");
+    pj_str_t val = pj_str("x");
+    char *out_buf;
+    unsigned i, size;
+
+    pool = pj_pool_create(mem, "json", 4000, 4000, NULL);
+
+    root = PJ_POOL_ZALLOC_T(pool, pj_json_elem);
+    pj_json_elem_obj(root, NULL);
+    cur = root;
+    /* 50 named-object levels -> indent hits its cap (old code overran it). */
+    for (i = 0; i < 50; ++i) {
+        pj_json_elem *child = PJ_POOL_ZALLOC_T(pool, pj_json_elem);
+        pj_json_elem_obj(child, &name);
+        pj_json_elem_add(cur, child);
+        cur = child;
+    }
+    {
+        pj_json_elem *leaf = PJ_POOL_ZALLOC_T(pool, pj_json_elem);
+        pj_json_elem_string(leaf, &name, &val);
+        pj_json_elem_add(cur, leaf);
+    }
+
+    size = 32768;
+    out_buf = pj_pool_alloc(pool, size);
+    if (pj_json_write(root, out_buf, &size)) {
+        PJ_LOG(1, (THIS_FILE, "  Error: deep-object write failed"));
+        pj_pool_release(pool);
+        return 22;
+    }
+
+    pj_pool_release(pool);
+    return 0;
+}
+
+
 int json_test(void)
 {
     int rc;
@@ -146,6 +189,10 @@ int json_test(void)
         return rc;
 
     rc = json_verify_nesting();
+    if (rc)
+        return rc;
+
+    rc = json_verify_write_indent();
     if (rc)
         return rc;
 

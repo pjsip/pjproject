@@ -513,7 +513,12 @@ static pj_status_t write_children(const pj_json_list *list,
                 child = child->next;
             }
         } else {
-            if (st->indent < (int)sizeof(st->indent_buf)) {
+            /* Only deepen the indent while a full step still fits the buffer,
+             * otherwise st->indent could exceed sizeof(indent_buf) and the
+             * writer would read past it.
+             */
+            if (st->indent + PJ_JSON_INDENT_SIZE <= (int)sizeof(st->indent_buf))
+            {
                 st->indent += PJ_JSON_INDENT_SIZE;
                 indent_added = PJ_TRUE;
             }
