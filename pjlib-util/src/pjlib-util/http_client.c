@@ -420,15 +420,32 @@ static pj_bool_t http_on_data_read(pj_activesock_t *asock,
         if (size > 0)
             (*hreq->cb.on_data_read)(hreq, data, size);
     } else {
+#if PJ_HTTP_MAX_CONTENT_LENGTH
+        /* Bound the amount of response body buffered internally. Reject a
+         * response whose declared Content-Length is too large before
+         * allocating anything, and abort an unknown-length response once the
+         * received body grows past the limit. This prevents a malicious or
+         * malfunctioning server from forcing a huge allocation.
+         */
+        if (hreq->response.content_length > PJ_HTTP_MAX_CONTENT_LENGTH ||
+            hreq->tcp_state.current_read_size + size >
+            PJ_HTTP_MAX_CONTENT_LENGTH)
+        {
+            hreq->error = PJ_ETOOBIG;
+            pj_http_req_cancel(hreq, PJ_TRUE);
+            return PJ_FALSE;
+        }
+#endif
+
         if (hreq->response.size == 0) {
             /* If we know the content length, allocate the data based
-             * on that, otherwise we'll use initial buffer size and grow 
+             * on that, otherwise we'll use initial buffer size and grow
              * it later if necessary.
              */
-            hreq->response.size = (hreq->response.content_length == -1 ? 
-                                   INITIAL_DATA_BUF_SIZE : 
+            hreq->response.size = (hreq->response.content_length == -1 ?
+                                   INITIAL_DATA_BUF_SIZE :
                                    hreq->response.content_length);
-            hreq->response.data = pj_pool_alloc(hreq->pool, 
+            hreq->response.data = pj_pool_alloc(hreq->pool,
                                                 hreq->response.size);
         }
 
@@ -690,7 +707,8 @@ static pj_status_t http_response_parse(pj_pool_t *pool,
         response->status_code = (pj_uint16_t)pj_strtoul(&s);
         pj_scan_advance_n(&scanner, 1, PJ_FALSE);
         pj_scan_get_until_ch(&scanner, '\n', &response->reason);
-        if (response->reason.ptr[response->reason.slen-1] == '\r')
+        if (response->reason.slen > 0 &&
+            response->reason.ptr[response->reason.slen-1] == '\r')
             response->reason.slen--;
     }
     PJ_CATCH_ANY {
@@ -716,8 +734,18 @@ static pj_status_t http_response_parse(pj_pool_t *pool,
         if (!pj_stricmp(&response->headers.header[i].name,
                         &STR_CONTENT_LENGTH))
         {
-            response->content_length = 
+            unsigned long clen =
                 pj_strtoul(&response->headers.header[i].value);
+
+            /* Treat a value that does not fit in the (signed) content_length
+             * field as unspecified, so it cannot wrap to a negative value and
+             * later be used as a huge allocation size.
+             */
+            if (clen > PJ_MAXINT32) {
+                response->content_length = -1;
+            } else {
+                response->content_length = (pj_int32_t)clen;
+            }
             /* If content length is zero, make sure that it is because the
              * header value is really zero and not due to parsing error.
              */
@@ -754,7 +782,7 @@ static pj_status_t http_headers_parse(char *hdata, pj_size_t size,
             if (*scanner.curptr == ':') {
                 pj_scan_advance_n(&scanner, 1, PJ_TRUE);
                 pj_scan_get_until_ch(&scanner, '\n', &s2);
-                if (s2.ptr[s2.slen-1] == '\r')
+                if (s2.slen > 0 && s2.ptr[s2.slen-1] == '\r')
                     s2.slen--;
                 status = pj_http_headers_add_elmt(headers, &s, &s2);
                 if (status != PJ_SUCCESS)

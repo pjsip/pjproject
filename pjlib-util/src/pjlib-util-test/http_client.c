@@ -59,6 +59,7 @@ static pj_size_t send_size = 0;
 static pj_status_t sstatus;
 static pj_sockaddr_in addr;
 static int counter = 0;
+static pj_status_t g_comp_status;
 
 static int server_thread(void *p)
 {
@@ -201,6 +202,8 @@ static void on_complete(pj_http_req *hreq, pj_status_t status,
                         const pj_http_resp *resp)
 {
     PJ_UNUSED_ARG(hreq);
+
+    g_comp_status = status;
 
     if (status == PJ_ECANCELLED) {
         PJ_LOG(5, (THIS_FILE, "Request cancelled"));
@@ -923,10 +926,114 @@ int http_client_test_delete()
     return PJ_SUCCESS;
 }
 
+/*
+ * GET request against a server that advertises an oversized Content-Length.
+ * The client must reject the response (PJ_ETOOBIG) instead of allocating a
+ * buffer of the attacker-declared size.
+ */
+int http_client_test_maxlen()
+{
+    pj_str_t url;
+    pj_http_req_callback hcb;
+    pj_http_req_param param;
+    char urlbuf[80];
+
+    pj_bzero(&hcb, sizeof(hcb));
+    hcb.on_complete = &on_complete;
+    hcb.on_response = &on_response;
+
+    /* Create pool, timer, and ioqueue */
+    pool = pj_pool_create(mem, NULL, 8192, 4096, NULL);
+    if (pj_timer_heap_create(pool, 16, &timer_heap))
+        return -71;
+    if (pj_ioqueue_create(pool, 16, &ioqueue))
+        return -72;
+
+#ifdef USE_LOCAL_SERVER
+    thread_quit = PJ_FALSE;
+    g_server.action = ACTION_REPLY;
+    g_server.send_content_length = PJ_TRUE;
+    /* Advertise a body larger than the client's internal buffering limit. */
+    g_server.data_size = (unsigned)PJ_HTTP_MAX_CONTENT_LENGTH + 1024;
+    g_server.buf_size = 1024;
+
+    sstatus = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0,
+                             &g_server.sock);
+    if (sstatus != PJ_SUCCESS)
+        return -41;
+
+    pj_sockaddr_in_init(&addr, NULL, 0);
+
+    sstatus = pj_sock_bind(g_server.sock, &addr, sizeof(addr));
+    if (sstatus != PJ_SUCCESS)
+        return -43;
+
+    {
+        pj_sockaddr_in addr2;
+        int addr_len = sizeof(addr2);
+        sstatus = pj_sock_getsockname(g_server.sock, &addr2, &addr_len);
+        if (sstatus != PJ_SUCCESS)
+            return -44;
+        g_server.port = pj_sockaddr_in_get_port(&addr2);
+        pj_ansi_snprintf(urlbuf, sizeof(urlbuf),
+                         "http://127.0.0.1:%d/big",
+                         g_server.port);
+        url = pj_str(urlbuf);
+    }
+
+    sstatus = pj_sock_listen(g_server.sock, 8);
+    if (sstatus != PJ_SUCCESS)
+        return -45;
+
+    sstatus = pj_thread_create(pool, NULL, &server_thread, &g_server,
+                               0, 0, &g_server.thread);
+    if (sstatus != PJ_SUCCESS)
+        return -47;
+#else
+    pj_cstr(&url, "http://127.0.0.1:280/big");
+#endif
+
+    g_comp_status = PJ_SUCCESS;
+    pj_http_req_param_default(&param);
+    if (pj_http_req_create(pool, &url, timer_heap, ioqueue,
+                           &param, &hcb, &http_req))
+        return -73;
+
+    if (pj_http_req_start(http_req))
+        return -75;
+
+    while (pj_http_req_is_running(http_req)) {
+        pj_time_val delay = {0, 50};
+        pj_ioqueue_poll(ioqueue, &delay);
+        pj_timer_heap_poll(timer_heap, NULL);
+    }
+
+#ifdef USE_LOCAL_SERVER
+    thread_quit = PJ_TRUE;
+    pj_thread_join(g_server.thread);
+    pj_sock_close(g_server.sock);
+#endif
+
+    pj_http_req_destroy(http_req);
+    pj_ioqueue_destroy(ioqueue);
+    pj_timer_heap_destroy(timer_heap);
+    pj_pool_release(pool);
+
+#ifdef USE_LOCAL_SERVER
+    /* The oversized response must have been rejected. */
+    if (g_comp_status != PJ_ETOOBIG) {
+        PJ_LOG(3, (THIS_FILE, "  expected PJ_ETOOBIG, got %d", g_comp_status));
+        return -77;
+    }
+#endif
+
+    return PJ_SUCCESS;
+}
+
 int http_client_test()
 {
     int rc;
-    
+
     PJ_LOG(3, (THIS_FILE, "..Testing URL parsing"));
     rc = parse_url_test();
     if (rc)
@@ -954,6 +1061,11 @@ int http_client_test()
 
     PJ_LOG(3, (THIS_FILE, "..Testing DELETE request"));
     rc = http_client_test_delete();
+    if (rc)
+        return rc;
+
+    PJ_LOG(3, (THIS_FILE, "..Testing oversized Content-Length rejection"));
+    rc = http_client_test_maxlen();
     if (rc)
         return rc;
 
