@@ -27,7 +27,9 @@
  * Include OpenSSL headers
  */
 #include <openssl/bn.h>
+#include <openssl/ec.h>
 #include <openssl/err.h>
+#include <openssl/obj_mac.h>
 #include <openssl/rsa.h>
 #include <openssl/ssl.h>
 
@@ -414,30 +416,89 @@ static pj_status_t ssl_get_fingerprint(X509 *cert, pj_bool_t is_sha256,
     return PJ_SUCCESS;
 }
 
+/* Generate private key for the self-signed cert */
+static pj_status_t ssl_generate_key(EVP_PKEY **p_priv_key)
+{
+    EVP_PKEY *priv_key = NULL;
+
+#if PJMEDIA_SRTP_DTLS_USE_EC_KEY
+
+    EC_KEY *ec_key;
+
+    ec_key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+    if (!ec_key) return PJ_EUNKNOWN;
+
+    /* Refer to the curve by name, as some peers reject certificate with
+     * explicit curve parameters.
+     */
+    EC_KEY_set_asn1_flag(ec_key, OPENSSL_EC_NAMED_CURVE);
+
+    if (!EC_KEY_generate_key(ec_key))
+        goto on_error;
+
+    priv_key = EVP_PKEY_new();
+    if (!priv_key)
+        goto on_error;
+
+    if (!EVP_PKEY_assign_EC_KEY(priv_key, ec_key))
+        goto on_error;
+
+    *p_priv_key = priv_key;
+    return PJ_SUCCESS;
+
+on_error:
+    EC_KEY_free(ec_key);
+    if (priv_key) EVP_PKEY_free(priv_key);
+    return PJ_EUNKNOWN;
+
+#else
+
+    BIGNUM *bne = NULL;
+    RSA *rsa_key = NULL;
+
+    bne = BN_new();
+    if (!bne) return PJ_EUNKNOWN;
+    if (!BN_set_word(bne, RSA_F4))
+        goto on_error;
+
+    rsa_key = RSA_new();
+    if (!rsa_key)
+        goto on_error;
+
+    if (!RSA_generate_key_ex(rsa_key, 2048, bne, NULL))
+        goto on_error;
+
+    priv_key = EVP_PKEY_new();
+    if (!priv_key)
+        goto on_error;
+
+    if (!EVP_PKEY_assign_RSA(priv_key, rsa_key))
+        goto on_error;
+
+    BN_free(bne);
+
+    *p_priv_key = priv_key;
+    return PJ_SUCCESS;
+
+on_error:
+    BN_free(bne);
+    if (rsa_key) RSA_free(rsa_key);
+    if (priv_key) EVP_PKEY_free(priv_key);
+    return PJ_EUNKNOWN;
+
+#endif
+}
+
 /* Generate self-signed cert */
 static pj_status_t ssl_generate_cert(X509 **p_cert, EVP_PKEY **p_priv_key)
 {
-    BIGNUM *bne = NULL;
-    RSA *rsa_key = NULL;
     X509_NAME *cert_name = NULL;
     X509 *cert = NULL;
     EVP_PKEY *priv_key = NULL;
 
-    /* Create big number */
-    bne = BN_new();
-    if (!bne) goto on_error;
-    if (!BN_set_word(bne, RSA_F4)) goto on_error;
-
-    /* Generate RSA key */
-    rsa_key = RSA_new();
-    if (!rsa_key) goto on_error;
-    if (!RSA_generate_key_ex(rsa_key, 2048, bne, NULL)) goto on_error;
-
     /* Create private key */
-    priv_key = EVP_PKEY_new();
-    if (!priv_key) goto on_error;
-    if (!EVP_PKEY_assign_RSA(priv_key, rsa_key)) goto on_error;
-    rsa_key = NULL;
+    if (ssl_generate_key(&priv_key) != PJ_SUCCESS)
+        return PJ_EUNKNOWN;
 
     /* Create certificate */
     cert = X509_new();
@@ -469,16 +530,11 @@ static pj_status_t ssl_generate_cert(X509 **p_cert, EVP_PKEY **p_priv_key)
     /* Sign with the private key */
     if (!X509_sign(cert, priv_key, EVP_sha256())) goto on_error;
 
-    /* Free big number */
-    BN_free(bne);
-
     *p_cert = cert;
     *p_priv_key = priv_key;
     return PJ_SUCCESS;
 
 on_error:
-    if (bne) BN_free(bne);
-    if (rsa_key && !priv_key) RSA_free(rsa_key);
     if (priv_key) EVP_PKEY_free(priv_key);
     if (cert) X509_free(cert);
     return PJ_EUNKNOWN;

@@ -52,6 +52,39 @@ static void on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
     PJ_UNUSED_ARG(event);
 }
 
+/* Stub resolver.
+ *
+ * Message content can direct a response to an arbitrary host name (e.g. via
+ * the Via "maddr" parameter, see RFC 3261 section 18.2.2), which would make
+ * the endpoint perform a real DNS lookup with getaddrinfo(). Blocking network
+ * I/O is not allowed in the fuzzing environment, so resolve every target to
+ * the loopback address on the loop transport instead.
+ */
+static void fuzz_resolve(pjsip_resolver_t *resolver, pj_pool_t *pool,
+                         const pjsip_host_info *target, void *token,
+                         pjsip_resolver_callback *cb)
+{
+    pjsip_server_addresses svr_addr;
+    pj_uint16_t port;
+
+    PJ_UNUSED_ARG(resolver);
+    PJ_UNUSED_ARG(pool);
+
+    port = (pj_uint16_t)(target->addr.port? target->addr.port : 5060);
+
+    pj_bzero(&svr_addr, sizeof(svr_addr));
+    svr_addr.count = 1;
+    svr_addr.entry[0].name = target->addr.host;
+    svr_addr.entry[0].type = PJSIP_TRANSPORT_LOOP_DGRAM;
+    pj_sockaddr_in_init(&svr_addr.entry[0].addr.ipv4, NULL, port);
+    svr_addr.entry[0].addr.ipv4.sin_addr.s_addr = pj_htonl(0x7F000001);
+    svr_addr.entry[0].addr_len = sizeof(pj_sockaddr_in);
+
+    (*cb)(PJ_SUCCESS, token, &svr_addr);
+}
+
+static pjsip_ext_resolver fuzz_ext_resolver = { &fuzz_resolve };
+
 /* Standard header types to test */
 static const pjsip_hdr_e hdr_types[] = {
     PJSIP_H_AUTHORIZATION,
@@ -382,6 +415,13 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 
         if (pjsip_tsx_layer_init_module(endpt) != PJ_SUCCESS ||
             pjsip_loop_start(endpt, NULL) != PJ_SUCCESS) {
+            free(DataFx);
+            return 0;
+        }
+
+        if (pjsip_endpt_set_ext_resolver(endpt, &fuzz_ext_resolver)
+            != PJ_SUCCESS)
+        {
             free(DataFx);
             return 0;
         }

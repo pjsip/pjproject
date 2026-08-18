@@ -1193,6 +1193,22 @@
 
 
 /**
+ * Use EC key on the P-256 curve for the DTLS-SRTP self-signed certificate,
+ * which is the key type commonly used by DTLS-SRTP peers and the one required
+ * by RFC 8827 for WebRTC. It also makes the certificate, and hence the
+ * handshake, significantly smaller than RSA.
+ *
+ * Disable this to use RSA 2048 bit key instead, e.g: for interoperability
+ * with peers that do not support ECDSA cipher suites.
+ *
+ * Default value: 1 (enabled)
+ */
+#ifndef PJMEDIA_SRTP_DTLS_USE_EC_KEY
+#   define PJMEDIA_SRTP_DTLS_USE_EC_KEY             1
+#endif
+
+
+/**
  * Max packet size for receiving direction. This also bounds the RTP/RTCP
  * UDP transport buffer and the STUN/TURN transport buffers used by ICE
  * (see pjsua_media.c), since DTLS-SRTP keying traffic (RFC 5764) is
@@ -1203,7 +1219,8 @@
  * A DTLS-SRTP peer that reuses its full TLS server certificate (plus any
  * intermediates) for the handshake, rather than a single self-signed
  * leaf cert, can produce a ServerHello+Certificate+... flight larger than
- * the default below. Since recvfrom() truncates an oversized datagram
+ * the default below, even with #PJMEDIA_SRTP_DTLS_USE_EC_KEY keeping our
+ * own certificate small. Since recvfrom() truncates an oversized datagram
  * silently (see the truncation warning logged in transport_udp.c), such
  * a peer's handshake would otherwise hang instead of failing loudly.
  *
