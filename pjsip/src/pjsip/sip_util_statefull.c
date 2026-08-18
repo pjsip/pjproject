@@ -89,6 +89,17 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request(  pjsip_endpoint *endpt,
                                                void *token,
                                                pjsip_endpt_send_callback cb)
 {
+    return pjsip_endpt_send_request2(endpt, tdata, timeout, token, cb, NULL);
+}
+
+
+PJ_DEF(pj_status_t) pjsip_endpt_send_request2( pjsip_endpoint *endpt,
+                                               pjsip_tx_data *tdata,
+                                               pj_int32_t timeout,
+                                               void *token,
+                                               pjsip_endpt_send_callback cb,
+                                               pjsip_transaction **p_tsx)
+{
     pjsip_transaction *tsx;
     struct tsx_data *tsx_data;
     pj_status_t status;
@@ -99,6 +110,8 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request(  pjsip_endpoint *endpt,
     PJ_ASSERT_RETURN(mod_stateful_util.id != -1, PJ_EINVALIDOP);
 
     PJ_UNUSED_ARG(timeout);
+
+    if (p_tsx) *p_tsx = NULL;
 
     status = pjsip_tsx_create_uac(&mod_stateful_util, tdata, &tsx);
     if (status != PJ_SUCCESS) {
@@ -119,8 +132,24 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request(  pjsip_endpoint *endpt,
      */
     pj_grp_lock_add_ref(tsx->grp_lock);
 
+    /* Return the transaction before sending the request, as the callback may
+     * already be called from another thread once the request is sent.
+     */
+    if (p_tsx) {
+        pj_grp_lock_add_ref(tsx->grp_lock);
+        *p_tsx = tsx;
+    }
+
     status = pjsip_tsx_send_msg(tsx, NULL);
     if (status != PJ_SUCCESS) {
+        /* Release the reference and reset the output before terminating the
+         * transaction, as terminating it may invoke the callback which may
+         * destroy the storage of the output argument.
+         */
+        if (p_tsx) {
+            *p_tsx = NULL;
+            pj_grp_lock_dec_ref(tsx->grp_lock);
+        }
         pjsip_tx_data_dec_ref(tdata);
         pjsip_tsx_terminate(tsx, tsx->status_code? tsx->status_code:
                             PJSIP_SC_SERVICE_UNAVAILABLE);
