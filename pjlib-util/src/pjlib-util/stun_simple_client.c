@@ -89,7 +89,7 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr2(pj_pool_factory *pf,
 
     srv1 = &opt->srv1;
     port1 = opt->port1;
-    srv2 = &opt->srv1;
+    srv2 = &opt->srv2;
     port2 = opt->port2;
 
     TRACE_((THIS_FILE, "Entering pjstun_get_mapped_addr()"));
@@ -328,15 +328,31 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr2(pj_pool_factory *pf,
                     continue;
                 }
 
-                attr = (pjstun_mapped_addr_attr*) 
+                attr = (pjstun_mapped_addr_attr*)
                        pjstun_msg_find_attr(&msg, PJSTUN_ATTR_MAPPED_ADDR);
                 if (!attr) {
-                    attr = (pjstun_mapped_addr_attr*) 
+                    attr = (pjstun_mapped_addr_attr*)
                            pjstun_msg_find_attr(&msg, PJSTUN_ATTR_XOR_MAPPED_ADDR);
-                    if (!attr || attr->family != 1) {
-                        status = PJLIB_UTIL_ESTUNNOMAP;
-                        continue;
-                    }
+                }
+
+                /* Reject a missing or truncated attribute before reading the
+                 * address fields below. The parser only guarantees that the
+                 * attribute's declared length fits the packet, so a short
+                 * (XOR-)MAPPED-ADDRESS would otherwise be read past its end,
+                 * and past recv_buf when it sits at the tail of the packet.
+                 * A valid attribute value is 8 bytes (family, port, IPv4).
+                 */
+                if (!attr || pj_ntohs(attr->hdr.length) < 8) {
+                    status = PJLIB_UTIL_ESTUNNOMAP;
+                    continue;
+                }
+
+                /* For XOR-MAPPED-ADDRESS, require IPv4 family as before. */
+                if (pj_ntohs(attr->hdr.type) == PJSTUN_ATTR_XOR_MAPPED_ADDR &&
+                    attr->family != 1)
+                {
+                    status = PJLIB_UTIL_ESTUNNOMAP;
+                    continue;
                 }
 
                 rec[sock_idx].srv[srv_idx].mapped_addr = attr->addr;
