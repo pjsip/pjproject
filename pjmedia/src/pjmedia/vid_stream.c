@@ -65,13 +65,18 @@
  * picture resolution and MTU. This constant specifies the minimum chunk
  * number to be allocated to store a picture bitstream in decoding direction.
  *
- * This is deliberately kept at the packet count PJMEDIA_MAX_MRU=2000 would
- * give a max-size frame (131072 / 2000 = 65), rather than PJMEDIA_MAX_MRU
- * itself, since raising PJMEDIA_MAX_MRU under DTLS-SRTP would otherwise
- * silently halve reassembly/jitter buffer capacity for video (frame_size /
- * PJMEDIA_MAX_MRU shrinks as the divisor grows).
+ * Derived from the true worst case instead of any particular PJMEDIA_MAX_MRU
+ * value: a max-size video frame (PJMEDIA_MAX_VIDEO_ENC_FRAME_SIZE, 131072
+ * bytes) split into PJMEDIA_MAX_VID_PAYLOAD_SIZE-sized packets (1336 bytes
+ * with SRTP) needs ceil(131072/1336) = 99 packets, halved since this floor
+ * bounds chunks_per_frm and rx_frame_cnt is 2x that. This only binds once
+ * PJMEDIA_MAX_MRU rises enough that frame_size/PJMEDIA_MAX_MRU alone would
+ * fall below it (above ~2672); below that, raising PJMEDIA_MAX_MRU doesn't
+ * touch reassembly capacity at all. At the current default of 50, that
+ * leaves rx_frame_cnt at 100 against a 99-packet worst case -- a thin
+ * margin, not a designed one; raise it if this ever needs more headroom.
  */
-#define MIN_CHUNKS_PER_FRM      65
+#define MIN_CHUNKS_PER_FRM      50
 
 /*  Number of send error before repeat the report. */
 #define SEND_ERR_COUNT_TO_REPORT        50

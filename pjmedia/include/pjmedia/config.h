@@ -1220,24 +1220,33 @@
  * intermediates) for the handshake, rather than a single self-signed
  * leaf cert, can produce a ServerHello+Certificate+... flight larger than
  * the default below, even with #PJMEDIA_SRTP_DTLS_USE_EC_KEY keeping our
- * own certificate small. Since recvfrom() truncates an oversized datagram
- * silently (see the truncation warning logged in transport_udp.c), such
- * a peer's handshake would otherwise hang instead of failing loudly.
+ * own certificate small (observed ~2500 bytes for such a flight). Since
+ * recvfrom() truncates an oversized datagram silently (see the truncation
+ * warning logged in transport_udp.c), such a peer's handshake would
+ * otherwise hang instead of failing loudly.
  *
- * Raising this value also halves the video jitter buffer/reassembly
- * capacity computed in vid_stream.c relative to what the same
- * MIN_CHUNKS_PER_FRM floor would give at 2000, since that capacity is
- * derived by dividing a fixed max frame size by this macro. That file
- * raises its floor to compensate, at the cost of roughly 2x the jitter
- * buffer memory per video stream (since the jitter buffer's slot size is
- * this macro's value): about 2 extra MB per stream when DTLS-SRTP is on.
+ * Raising this value below 2672 is free: vid_stream.c's video jitter
+ * buffer byte size stays flat, since its slot count shrinks by the same
+ * factor this macro grows. Above that, the reassembly capacity it derives
+ * would drop below one max-size video frame, so vid_stream.c raises its
+ * MIN_CHUNKS_PER_FRM floor to compensate once the shrunk capacity would no
+ * longer hold a full frame, which pins the count and makes jitter buffer
+ * memory scale with this macro from then on. This default (3000) sits
+ * just above that free threshold, keeping the added cost to ~15% of a
+ * video stream's jitter buffer instead of the 2x an unconstrained 4000
+ * would cost. See vid_stream.c's MIN_CHUNKS_PER_FRM comment for the exact
+ * capacity margin this leaves.
  *
- * Default: 4000 when DTLS-SRTP is enabled (#PJMEDIA_SRTP_HAS_DTLS),
+ * 3000 also matches pjnath's PJ_TURN_MAX_PKT_LEN default, so it stops
+ * pjsua_media.c's ICE TURN transport buffer from being silently lowered
+ * from that default down to this macro's value.
+ *
+ * Default: 3000 when DTLS-SRTP is enabled (#PJMEDIA_SRTP_HAS_DTLS),
  *          2000 otherwise.
  */
 #ifndef PJMEDIA_MAX_MRU
 #  if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
-#    define PJMEDIA_MAX_MRU                     4000
+#    define PJMEDIA_MAX_MRU                     3000
 #  else
 #    define PJMEDIA_MAX_MRU                     2000
 #  endif
