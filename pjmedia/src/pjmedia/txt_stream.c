@@ -91,6 +91,9 @@ typedef struct pjmedia_txt_stream {
     pjmedia_clock *clock; /**< Clock.                 */
     unsigned buf_time;    /**< Buffering time.        */
     pj_bool_t is_idle;    /**< Is idle?               */
+    unsigned start_ka_left; /**< Remaining number of automatic
+                                 start-of-stream keep-alives to
+                                 send (for NAT hole punching).  */
 
     pj_timestamp rtcp_last_tx;   /**< Last RTCP tx time.     */
     pj_timestamp tx_last_ts;     /**< Timestamp of last tx.  */
@@ -241,6 +244,13 @@ pjmedia_txt_stream_create(pjmedia_endpt *endpt, pj_pool_t *pool,
     c_strm->rtcp_fb_nack.pid = -1;
     stream->rx_last_seq = -1;
     stream->is_idle = PJ_TRUE;
+
+    /* Unconditionally (regardless of PJMEDIA_STREAM_ENABLE_KA) send a
+     * short burst of empty packets right after stream start, to help with
+     * NAT hole punching even if the user hasn't typed anything yet. This
+     * reuses the existing start-keep-alive count/interval settings.
+     */
+    stream->start_ka_left = PJMEDIA_STREAM_START_KA_CNT;
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
     c_strm->use_ka = info->use_ka;
@@ -823,11 +833,26 @@ static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
             rtp_ts_len = 1;
     }
 
-    /* Keep-alive check */
+    /* Keep-alive check.
+     * The very first packet is always sent, even if empty, so that an
+     * initial RTP packet goes out immediately at stream start to help
+     * with NAT hole punching. On top of that, up to
+     * PJMEDIA_STREAM_START_KA_CNT more empty packets are sent, spaced
+     * PJMEDIA_STREAM_START_KA_INTERVAL_MSEC apart, so the hole punch
+     * survives losing any single packet. Once that budget is spent,
+     * fall back to the normal 10-second idle keep-alive.
+     */
     if (stream->is_idle && stream->tx_buf[0].length == 0) {
-        if (!is_first_packet &&
-            pj_elapsed_msec(&stream->tx_last_ts, &now) >= 10000) {
+        unsigned idle_msec = pj_elapsed_msec(&stream->tx_last_ts, &now);
+        pj_bool_t start_burst =
+            stream->start_ka_left > 0 &&
+            idle_msec >= PJMEDIA_STREAM_START_KA_INTERVAL_MSEC;
+
+        if (is_first_packet || start_burst || idle_msec >= 10000)
+        {
             is_keepalive = PJ_TRUE;
+            if (stream->start_ka_left > 0)
+                stream->start_ka_left--;
         } else {
             return PJ_SUCCESS; /* Clean return */
         }
@@ -933,6 +958,13 @@ static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
                 pjmedia_transport_send_rtp(c_strm->transport, tx_pkt, tx_size);
             pj_mutex_lock(c_strm->jb_mutex);
         }
+
+        /* Record time of this transmission so that is_first_packet,
+         * the keep-alive gate above, and the RTP timestamp calculation
+         * are based on the actual last-send time instead of always
+         * comparing against a zeroed timestamp.
+         */
+        stream->tx_last_ts = now;
 
         /* Prepare second pass if needed */
         pass++;
