@@ -835,6 +835,31 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
 }
 
 
+/* Detach/replace port are not implemented for the switchboard backend (its
+ * synchronous switching model differs from the serial/parallel bridges).
+ * Return PJ_ENOTSUP so the library builds and links under this backend.
+ */
+PJ_DEF(pj_status_t) pjmedia_conf_detach_port( pjmedia_conf *conf,
+                                              unsigned slot )
+{
+    PJ_UNUSED_ARG(conf);
+    PJ_UNUSED_ARG(slot);
+    return PJ_ENOTSUP;
+}
+
+PJ_DEF(pj_status_t) pjmedia_conf_replace_port( pjmedia_conf *conf,
+                                               pj_pool_t *pool,
+                                               unsigned slot,
+                                               pjmedia_port *strm_port )
+{
+    PJ_UNUSED_ARG(conf);
+    PJ_UNUSED_ARG(pool);
+    PJ_UNUSED_ARG(slot);
+    PJ_UNUSED_ARG(strm_port);
+    return PJ_ENOTSUP;
+}
+
+
 /*
  * Enum ports.
  */

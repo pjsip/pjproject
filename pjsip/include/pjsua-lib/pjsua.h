@@ -5176,6 +5176,19 @@ typedef struct pjsua_acc_config
     pj_bool_t           enable_rtcp_mux;
 
     /**
+     * Preserve the call's conference bridge slot (and its connections, mute,
+     * and level settings) across media renegotiation. When enabled, if a
+     * re-INVITE/UPDATE recreates the audio stream but keeps it as active
+     * audio, the conference slot is re-used (via detach/replace) instead of
+     * being removed and re-added, so the slot id and all its state survive.
+     * Media that is removed, deactivated, or changes type is still removed
+     * normally.
+     *
+     * Default: PJ_FALSE (keep the traditional remove/add behavior).
+     */
+    pj_bool_t           preserve_conf_slot;
+
+    /**
      * RTCP Feedback configuration.
      */
     pjmedia_rtcp_fb_setting rtcp_fb_cfg;
