@@ -2449,6 +2449,28 @@ void pjsua_media_prov_revert(pjsua_call_id call_id)
 }
 
 
+/* Detect T.38 (image/udptl) media: app-managed, as pjmedia has no T.38
+ * engine. Such a line is let through channel_init and treated as disabled
+ * media so the app can answer it on its own UDPTL socket. */
+static pj_bool_t pjsua_sdp_media_is_udptl(const pjmedia_sdp_media *m)
+{
+    return (m && pj_stricmp2(&m->desc.media, "image") == 0 &&
+            pj_stricmp2(&m->desc.transport, "udptl") == 0);
+}
+
+static pj_bool_t pjsua_sdp_has_udptl(const pjmedia_sdp_session *sdp)
+{
+    unsigned i;
+    if (!sdp)
+        return PJ_FALSE;
+    for (i = 0; i < sdp->media_count; ++i) {
+        if (pjsua_sdp_media_is_udptl(sdp->media[i]))
+            return PJ_TRUE;
+    }
+    return PJ_FALSE;
+}
+
+
 pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
                                      pjsip_role_e role,
                                      int security_level,
@@ -2561,8 +2583,8 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
         sort_media(rem_sdp, &STR_TEXT, acc->cfg.use_srtp,
                    mtxtidx, &mtxtcnt, &mtottxtcnt);
 
-        if (maudcnt + mvidcnt + mtxtcnt == 0) {
-            /* Expecting media in the offer */
+        if (maudcnt + mvidcnt + mtxtcnt == 0 && !pjsua_sdp_has_udptl(rem_sdp)) {
+            /* Expecting media, unless it is an app-managed T.38 offer. */
             if (sip_err_code)
                 *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
             status = PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_NOT_ACCEPTABLE_HERE);
@@ -2880,8 +2902,16 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
                 pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_DISABLED);
             }
 
+            /* Force app-managed T.38 to NONE so the media update won't build
+             * an audio stream on it (a stale AUDIO type would assert on
+             * sa_family); the update then reports it as disabled media. */
+            if (rem_sdp && mi < rem_sdp->media_count &&
+                pjsua_sdp_media_is_udptl(rem_sdp->media[mi]))
+            {
+                call_med->type = PJMEDIA_TYPE_NONE;
+            }
             /* Put media type just for info if not yet defined */
-            if (call_med->type == PJMEDIA_TYPE_NONE)
+            else if (call_med->type == PJMEDIA_TYPE_NONE)
                 call_med->type = media_type;
         }
     }
@@ -4767,6 +4797,26 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
                                       &need_renego_sdp);
             if (status != PJ_SUCCESS)
                 goto on_check_med_status;
+        } else if (mi < remote_sdp->media_count &&
+                   pjsua_sdp_media_is_udptl(remote_sdp->media[mi]))
+        {
+            /* App-managed T.38: no pjsua stream to build. Tear down leftovers
+             * and mark the slot disabled (not error) so the call isn't
+             * dropped. */
+            stop_media_stream(call, mi);
+            if (call_med->tp) {
+                pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_NULL);
+                pjmedia_transport_close(call_med->tp);
+                call_med->tp = call_med->tp_orig = NULL;
+            }
+            call_med->state = PJSUA_CALL_MEDIA_NONE;
+            call_med->dir = PJMEDIA_DIR_NONE;
+
+            /* Count active app-managed media so the call stays answerable. */
+            if (local_sdp->media[mi]->desc.port != 0)
+                got_media = PJ_TRUE;
+
+            continue;
         } else {
             status = PJMEDIA_EUNSUPMEDIATYPE;
         }
