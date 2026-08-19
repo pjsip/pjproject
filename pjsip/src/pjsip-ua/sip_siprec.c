@@ -336,14 +336,26 @@ PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
         return PJ_ENOTFOUND;
     }
 
-    pjsip_media_type_init2(&app_metadata, "application", "rs-metadata");
+    /* Try rs-metadata+xml first (RFC 9806 - correct media type) */
+    pjsip_media_type_init2(&app_metadata, "application", "rs-metadata+xml");
     metadata_part = pjsip_multipart_find_part(body, &app_metadata, NULL);
 
-    /* Fallback to XML extension rs-metadata+xml if needed per rfc*/
+    /* Fallback to legacy rs-metadata if needed (RFC 7866 - pre-9806).
+     * RFC 9806 obsoletes the use of application/rs-metadata in favor of
+     * application/rs-metadata+xml. Log a deprecation warning if legacy
+     * media type is encountered.
+     */
     if (!metadata_part) {
-        pjsip_media_type_init2(&app_metadata, "application",
-                               "rs-metadata+xml");
+        pjsip_media_type_init2(&app_metadata, "application", "rs-metadata");
         metadata_part = pjsip_multipart_find_part(body, &app_metadata, NULL);
+
+        if (metadata_part) {
+            PJ_LOG(4,(THIS_FILE,
+                      "SIPREC metadata uses legacy media type "
+                      "'application/rs-metadata' (RFC 7866). "
+                      "This media type is obsoleted by 'application/rs-metadata+xml' "
+                      "(RFC 9806). Please update the sender to use the correct media type."));
+        }
     }
 
     if(!metadata_part)
@@ -351,6 +363,204 @@ PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
 
     metadata->ptr  = (char*)metadata_part->body->data;
     metadata->slen = metadata_part->body->len;
-    
+
+    return PJ_SUCCESS;
+}
+
+
+/**
+ * Parse rs-metadata XML to determine dataMode attribute.
+ * Returns PJ_TRUE if dataMode is "complete" or absent, PJ_FALSE if "partial".
+ */
+PJ_DEF(pj_status_t) pjsip_siprec_parse_data_mode(pj_pool_t *pool,
+                                                   const pj_str_t *metadata,
+                                                   pj_bool_t *is_complete)
+{
+    const char *ptr;
+    const char *end;
+    const char datamode_str[] = "dataMode";
+    const unsigned datamode_len = sizeof(datamode_str) - 1;
+    const char complete_str[] = "complete";
+    const char partial_str[] = "partial";
+
+    PJ_ASSERT_RETURN(metadata && is_complete, PJ_EINVAL);
+    PJ_ASSERT_RETURN(metadata->ptr && metadata->slen > 0, PJ_EINVAL);
+
+    /* Default to complete if not found */
+    *is_complete = PJ_TRUE;
+
+    ptr = metadata->ptr;
+    end = ptr + metadata->slen;
+
+    /* Search for dataMode attribute */
+    while (ptr + datamode_len <= end) {
+        /* Find "dataMode" */
+        if (pj_memcmp(ptr, datamode_str, datamode_len) == 0) {
+            ptr += datamode_len;
+
+            /* Skip whitespace and '=' */
+            while (ptr < end && (*ptr == ' ' || *ptr == '\t' ||
+                                *ptr == '\r' || *ptr == '\n' ||
+                                *ptr == '='))
+                ptr++;
+
+            if (ptr >= end) break;
+
+            /* Check for quote and skip it (RFC 7865: dataMode is unquoted,
+             * but we handle quotes for robustness) */
+            if (*ptr == '"' || *ptr == '\'') {
+                ptr++;
+                if (ptr >= end) break;
+            }
+
+            /* Check value */
+            if (ptr + sizeof(complete_str) - 1 <= end &&
+                pj_memcmp(ptr, complete_str, sizeof(complete_str) - 1) == 0)
+            {
+                *is_complete = PJ_TRUE;
+                return PJ_SUCCESS;
+            }
+            else if (ptr + sizeof(partial_str) - 1 <= end &&
+                     pj_memcmp(ptr, partial_str, sizeof(partial_str) - 1) == 0)
+            {
+                *is_complete = PJ_FALSE;
+                return PJ_SUCCESS;
+            }
+
+            /* Not a valid value, break */
+            break;
+        }
+        ptr++;
+    }
+
+    /* dataMode not found, default is complete */
+    return PJ_SUCCESS;
+}
+
+
+/**
+ * Verifies rs-metadata in mid-dialog requests (re-INVITE/UPDATE).
+ * Extracts and validates metadata updates for SIPREC sessions.
+ */
+PJ_DEF(pj_status_t) pjsip_siprec_verify_update(pjsip_rx_data *rdata,
+                                                  pj_str_t *metadata,
+                                                  pj_pool_t *pool,
+                                                  pjsip_tx_data **p_tdata,
+                                                  pjsip_dialog *dlg,
+                                                  pjsip_endpoint *endpt,
+                                                  const pjsip_siprec_verify_setting *setting)
+{
+    pjsip_msg *msg;
+    pjsip_msg_body *body;
+    pj_status_t status;
+    pj_bool_t is_complete;
+    pjsip_siprec_verify_setting default_setting;
+    int code = 200;
+    const char *warn_text = NULL;
+
+    /* Initialize output */
+    if (metadata) {
+        metadata->ptr = NULL;
+        metadata->slen = 0;
+    }
+    if (p_tdata) *p_tdata = NULL;
+
+    PJ_ASSERT_RETURN(rdata, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pool, PJ_EINVAL);
+
+    /* Use default settings if not provided */
+    if (!setting) {
+        pjsip_siprec_verify_setting_default(&default_setting);
+        setting = &default_setting;
+    }
+
+    msg = rdata->msg_info.msg;
+
+    /* Check if body exists */
+    if (!msg || !msg->body) {
+        /* No body - metadata update is optional, accept request */
+        return PJ_SUCCESS;
+    }
+
+    body = msg->body;
+
+    /* Try to extract metadata from multipart body */
+    status = pjsip_siprec_get_metadata(pool, body, metadata);
+
+    if (status == PJ_ENOTFOUND) {
+        /* Metadata not found in this request
+         * Behavior depends on require_metadata:
+         * - PJ_TRUE (require): Reject if metadata is missing
+         * - PJ_FALSE (optional): Accept, but log warning
+         */
+        if (setting->require_metadata) {
+            /* Require metadata - reject if missing */
+            code = PJSIP_SC_BAD_REQUEST;
+            warn_text = "SIPREC mid-dialog request must have rs-metadata";
+
+            PJ_LOG(3,(THIS_FILE,
+                      "SIPREC metadata not found in mid-dialog request. "
+                      "To allow metadata-less updates, set "
+                      "siprec_require_metadata to PJ_FALSE."));
+
+            /* Create error response */
+            if (p_tdata) {
+                pjsip_tx_data *tdata;
+                pj_status_t ret;
+
+                if (dlg) {
+                    ret = pjsip_dlg_create_response(dlg, rdata, code,
+                                                     NULL, &tdata);
+                } else {
+                    ret = pjsip_endpt_create_response(endpt, rdata, code,
+                                                       NULL, &tdata);
+                }
+
+                if (ret == PJ_SUCCESS) {
+                    pjsip_warning_hdr *warn_hdr;
+                    pj_str_t warn_value = pj_str((char*)warn_text);
+
+                    warn_hdr = pjsip_warning_hdr_create(tdata->pool, 399,
+                                                        pjsip_endpt_name(endpt),
+                                                        &warn_value);
+                    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)warn_hdr);
+
+                    *p_tdata = tdata;
+                }
+
+                return PJSIP_ERRNO_FROM_SIP_STATUS(code);
+            }
+        } else {
+            /* Metadata is optional - log warning and continue */
+            PJ_LOG(4,(THIS_FILE,
+                      "SIPREC metadata not found in mid-dialog request, "
+                      "continuing without metadata update"));
+            return PJ_SUCCESS;
+        }
+    }
+
+    if (status != PJ_SUCCESS) {
+        /* Error extracting metadata */
+        PJ_LOG(3,(THIS_FILE,
+                  "Error extracting SIPREC metadata from mid-dialog request"));
+        return status;
+    }
+
+    /* Parse dataMode to determine update type */
+    status = pjsip_siprec_parse_data_mode(pool, metadata, &is_complete);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(3,(THIS_FILE,
+                  "Error parsing SIPREC metadata dataMode"));
+        return status;
+    }
+
+    if (is_complete) {
+        PJ_LOG(4,(THIS_FILE,
+                  "SIPREC received complete metadata update in mid-dialog request"));
+    } else {
+        PJ_LOG(4,(THIS_FILE,
+                  "SIPREC received partial metadata update in mid-dialog request"));
+    }
+
     return PJ_SUCCESS;
 }

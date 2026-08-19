@@ -23,7 +23,8 @@
 /**
  * @file sip_siprec.h
  * @brief SIP Session Recording Protocol (siprec)
- * support (RFC 7866 - Session Recording Protocol in SIP)
+ * support (RFC 7866 - Session Recording Protocol in SIP,
+ *          RFC 7865 - Metadata Format, RFC 9806 - Media Type Update)
  */
 
 
@@ -43,6 +44,11 @@
  *  - <A HREF="http://www.ietf.org/rfc/rfc7866.txt">
  *    RFC 7866: Session Recording Protocol (siprec)
  *    in the Session Initiation Protocol (SIP)</A>
+ *  - <A HREF="http://www.ietf.org/rfc/rfc7865.txt">
+ *    RFC 7865: Metadata Format for Session Recording</A>
+ *  - <A HREF="http://www.ietf.org/rfc/rfc9806.txt">
+ *    RFC 9806: Updates to SIP-Based Media Recording (SIPREC)
+ *    to Correct Metadata Media Type</A>
  */
 PJ_BEGIN_DECL
 
@@ -154,6 +160,53 @@ PJ_DECL(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
 PJ_DECL(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
                                                 pjsip_msg_body *body,
                                                 pj_str_t* metadata);
+
+
+/**
+ * Verifies and extracts rs-metadata from mid-dialog requests
+ * (re-INVITE or UPDATE). This function should only be called for
+ * sessions that are already SIPREC-enabled (PJSIP_INV_REQUIRE_SIPREC set).
+ *
+ * @param rdata             The incoming request (re-INVITE or UPDATE).
+ * @param metadata          If metadata is found, this variable will be
+ *                          populated with the extracted data.
+ * @param pool              Pool to allocate memory.
+ * @param p_tdata           Upon error, it will be filled with the final
+ *                          response to be sent to the request sender.
+ * @param dlg               The dialog instance.
+ * @param endpt             The SIP endpoint.
+ * @param setting           Verification setting, or NULL to use defaults.
+ *
+ * @return                  PJ_SUCCESS if metadata is successfully extracted
+ *                          (or if optional metadata is missing),
+ *                          otherwise return error code and p_tdata is set.
+ */
+PJ_DECL(pj_status_t) pjsip_siprec_verify_update(pjsip_rx_data *rdata,
+                                                  pj_str_t *metadata,
+                                                  pj_pool_t *pool,
+                                                  pjsip_tx_data **p_tdata,
+                                                  pjsip_dialog *dlg,
+                                                  pjsip_endpoint *endpt,
+                                                  const pjsip_siprec_verify_setting *setting);
+
+
+/**
+ * Parses rs-metadata XML to determine the dataMode attribute.
+ * This distinguishes between complete and partial metadata updates
+ * as specified in RFC 7865.
+ *
+ * @param pool              Pool for temporary allocations.
+ * @param metadata          The rs-metadata XML string.
+ * @param is_complete       Output: PJ_TRUE if dataMode is "complete"
+ *                          or absent (default), PJ_FALSE if dataMode
+ *                          is "partial".
+ *
+ * @return                  PJ_SUCCESS if dataMode is successfully parsed,
+ *                          otherwise return error code.
+ */
+PJ_DECL(pj_status_t) pjsip_siprec_parse_data_mode(pj_pool_t *pool,
+                                                   const pj_str_t *metadata,
+                                                   pj_bool_t *is_complete);
 
 
 PJ_END_DECL
