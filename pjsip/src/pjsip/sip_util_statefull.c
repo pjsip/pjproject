@@ -28,6 +28,8 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 
+#define THIS_FILE   "sip_util_statefull.c"
+
 struct tsx_data
 {
     void *token;
@@ -83,22 +85,33 @@ static void mod_util_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
 }
 
 
-PJ_DEF(pj_status_t) pjsip_endpt_send_request(  pjsip_endpoint *endpt,
+PJ_DEF(pj_status_t) pjsip_endpt_send_request2( pjsip_endpoint *endpt,
                                                pjsip_tx_data *tdata,
                                                pj_int32_t timeout,
                                                void *token,
-                                               pjsip_endpt_send_callback cb)
+                                               pjsip_endpt_send_callback cb,
+                                               pj_str_t *p_tsx_key)
 {
     pjsip_transaction *tsx;
     struct tsx_data *tsx_data;
     pj_status_t status;
+    pj_size_t key_buf_cap;
 
     PJ_ASSERT_RETURN(endpt && tdata && (timeout==-1 || timeout>0), PJ_EINVAL);
+    PJ_ASSERT_RETURN(!p_tsx_key || (p_tsx_key->ptr && p_tsx_key->slen >= 0),
+                     PJ_EINVAL);
 
     /* Check that transaction layer module is registered to endpoint */
     PJ_ASSERT_RETURN(mod_stateful_util.id != -1, PJ_EINVALIDOP);
 
     PJ_UNUSED_ARG(timeout);
+
+    /* p_tsx_key->slen carries the caller-supplied buffer *capacity* on
+     * input; capture it now, before it gets overwritten below with the
+     * *actual* key length (or 0) on return.
+     */
+    key_buf_cap = p_tsx_key ? (pj_size_t) p_tsx_key->slen : 0;
+    if (p_tsx_key) p_tsx_key->slen = 0;
 
     status = pjsip_tsx_create_uac(&mod_stateful_util, tdata, &tsx);
     if (status != PJ_SUCCESS) {
@@ -124,11 +137,64 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request(  pjsip_endpoint *endpt,
         pjsip_tx_data_dec_ref(tdata);
         pjsip_tsx_terminate(tsx, tsx->status_code? tsx->status_code:
                             PJSIP_SC_SERVICE_UNAVAILABLE);
+    } else if (p_tsx_key) {
+        /* Bounds-check against the capacity the caller actually gave us,
+         * not an assumed constant. Guard against overflow rather than
+         * silently truncate into a corrupt/unusable key.
+         */
+        if ((pj_size_t) tsx->transaction_key.slen <= key_buf_cap) {
+            pj_memcpy(p_tsx_key->ptr, tsx->transaction_key.ptr,
+                      tsx->transaction_key.slen);
+            p_tsx_key->slen = tsx->transaction_key.slen;
+        } else {
+            PJ_LOG(2,(THIS_FILE, "Transaction key (%d bytes) exceeds "
+                      "caller-provided buffer (%d bytes), unable to "
+                      "return key",
+                      (int)tsx->transaction_key.slen, (int)key_buf_cap));
+        }
     }
 
     pj_grp_lock_dec_ref(tsx->grp_lock);
 
     return status;
+}
+
+
+PJ_DEF(pj_status_t) pjsip_endpt_send_request(  pjsip_endpoint *endpt,
+                                               pjsip_tx_data *tdata,
+                                               pj_int32_t timeout,
+                                               void *token,
+                                               pjsip_endpt_send_callback cb)
+{
+    return pjsip_endpt_send_request2(endpt, tdata, timeout, token, cb, NULL);
+}
+
+
+/*
+ * Locally abandon a request sent with pjsip_endpt_send_request2().
+ */
+PJ_DEF(pj_status_t) pjsip_endpt_cancel_request( pjsip_endpoint *endpt,
+                                                const pj_str_t *tsx_key,
+                                                int code)
+{
+    pjsip_transaction *tsx;
+
+    PJ_ASSERT_RETURN(endpt && tsx_key && code >= 200, PJ_EINVAL);
+    PJ_UNUSED_ARG(endpt);
+
+    tsx = pjsip_tsx_layer_find_tsx2(tsx_key, PJ_TRUE);
+    if (!tsx)
+        return PJ_ENOTFOUND;
+
+    /* Use the async variant so this is safe to call from anywhere,
+     * including from within the pjsip_endpt_send_callback registered for
+     * this same transaction -- it never synchronously re-enters the
+     * transaction's own state notification.
+     */
+    pjsip_tsx_terminate_async(tsx, code);
+    pj_grp_lock_dec_ref(tsx->grp_lock);
+
+    return PJ_SUCCESS;
 }
 
 

@@ -794,6 +794,102 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_request( pjsip_endpoint *endpt,
                                                pjsip_endpt_send_callback cb);
 
 /**
+ * Suggested buffer size, in bytes, comfortably covering the key returned
+ * by #pjsip_endpt_send_request2() for any standard SIP method: 1 byte for
+ * the role character, 1 byte for the separator, up to 31 bytes for the
+ * method name, plus #PJSIP_MAX_BRANCH_LEN for the branch parameter. This
+ * is only a suggestion for sizing the caller's buffer -- the function
+ * itself bounds-checks against whatever capacity the caller actually
+ * supplies (see \a p_tsx_key below), it does not assume this size.
+ */
+#define PJSIP_TSX_KEY_MAX_LEN   (PJSIP_MAX_BRANCH_LEN + 32)
+
+/**
+ * Variant of #pjsip_endpt_send_request() that also returns the key of the
+ * transaction created to send the request. The application can save this
+ * key and use it later, at any time, to call #pjsip_endpt_cancel_request()
+ * to locally abandon the request (e.g. to stop retransmissions of an
+ * out-of-dialog request such as OPTIONS) before a response arrives.
+ *
+ * Unlike returning the transaction object itself, this key is a plain,
+ * inert value with no reference-counting or use-after-free hazard: the
+ * application does not need to add or release any reference. It only
+ * needs to keep the buffer backing \a p_tsx_key valid for as long as it
+ * may still want to call #pjsip_endpt_cancel_request() -- in practice,
+ * until its \a cb has been called for this transaction. Calling
+ * #pjsip_endpt_cancel_request() with a key whose transaction has already
+ * completed is safe and simply returns PJ_ENOTFOUND.
+ *
+ * @param endpt     The endpoint instance.
+ * @param tdata     The transmit data to be sent.
+ * @param timeout   Optional timeout for final response to be received, or -1
+ *                  if the transaction should not have a timeout restriction.
+ *                  The value is in miliseconds. Note that this is not
+ *                  implemented yet, so application needs to use its own timer
+ *                  to handle timeout.
+ * @param token     Optional token to be associated with the transaction, and
+ *                  to be passed to the callback.
+ * @param cb        Optional callback to be called when the transaction has
+ *                  received a final response. The callback will be called with
+ *                  the previously registered token and the event that triggers
+ *                  the completion of the transaction.
+ * @param p_tsx_key Optional, used as BOTH input and output. If not NULL,
+ *                  on input \a p_tsx_key->ptr MUST already point to a
+ *                  buffer owned/allocated by the caller (e.g. a field
+ *                  embedded in the caller's own session/call struct; see
+ *                  #PJSIP_TSX_KEY_MAX_LEN for a suggested size), and
+ *                  \a p_tsx_key->slen MUST be set to that buffer's actual
+ *                  capacity in bytes -- this function bounds-checks
+ *                  against that value, it does not assume any particular
+ *                  buffer size. On return, \a p_tsx_key->slen is
+ *                  overwritten with the actual key length on success, or
+ *                  set to 0 if no key could be produced (the send failed,
+ *                  or the supplied buffer was too small -- the latter is
+ *                  logged but does not fail the send itself). See
+ *                  ownership note above.
+ *
+ * @return          PJ_SUCCESS, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_endpt_send_request2( pjsip_endpoint *endpt,
+                                                pjsip_tx_data *tdata,
+                                                pj_int32_t timeout,
+                                                void *token,
+                                                pjsip_endpt_send_callback cb,
+                                                pj_str_t *p_tsx_key);
+
+/**
+ * Locally abandon a request sent with #pjsip_endpt_send_request2(), using
+ * the transaction key it returned. This does NOT send anything on the
+ * wire (per RFC 3261 9.1, CANCEL does not apply to non-INVITE requests);
+ * it only stops the local transaction (retransmissions and the eventual
+ * completion callback) as soon as possible.
+ *
+ * This function is safe to call from anywhere, including from within the
+ * #pjsip_endpt_send_callback registered for the transaction: it uses
+ * #pjsip_tsx_terminate_async() internally, so it never synchronously
+ * re-enters the transaction's own state notification.
+ *
+ * If the transaction has already completed (e.g. a response already
+ * arrived) by the time this is called, this function simply returns
+ * PJ_ENOTFOUND; this is a normal, expected outcome, not an error to be
+ * treated specially.
+ *
+ * @param endpt     The endpoint instance.
+ * @param tsx_key   The transaction key, as returned by
+ *                  #pjsip_endpt_send_request2().
+ * @param code      The (final) status code to report for the abandoned
+ *                  transaction, e.g. PJSIP_SC_REQUEST_TERMINATED. Must be
+ *                  >= 200.
+ *
+ * @return          PJ_SUCCESS if the transaction was found and termination
+ *                  was scheduled, or PJ_ENOTFOUND if no matching
+ *                  transaction is currently active.
+ */
+PJ_DECL(pj_status_t) pjsip_endpt_cancel_request( pjsip_endpoint *endpt,
+                                                 const pj_str_t *tsx_key,
+                                                 int code);
+
+/**
  * @}
  */
 
