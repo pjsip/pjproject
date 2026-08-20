@@ -28,6 +28,7 @@
 #include <pj/math.h>
 #include <pj/os.h>
 #include <pj/pool.h>
+#include <pjlib-util/xml.h>
 
 
 #define THIS_FILE               "sip_siprec.c"
@@ -369,71 +370,63 @@ PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
 
 
 /**
- * Parse rs-metadata XML to determine dataMode attribute.
+ * Parse rs-metadata XML to determine dataMode element value.
  * Returns PJ_TRUE if dataMode is "complete" or absent, PJ_FALSE if "partial".
+ *
+ * Per RFC 7865, the datamode element appears as:
+ *   <datamode>complete</datamode> or <datamode>partial</datamode>
+ *
+ * @param pool          Pool for temporary allocations.
+ * @param metadata      The rs-metadata XML string.
+ * @param is_complete   Output: PJ_TRUE if dataMode is "complete" or absent,
+ *                      PJ_FALSE if dataMode is "partial".
+ *
+ * @return              PJ_SUCCESS on success, or PJ_ENOMEM if memory allocation
+ *                      fails for XML parsing.
  */
 PJ_DEF(pj_status_t) pjsip_siprec_parse_data_mode(pj_pool_t *pool,
                                                    const pj_str_t *metadata,
                                                    pj_bool_t *is_complete)
 {
-    const char *ptr;
-    const char *end;
-    const char datamode_str[] = "dataMode";
-    const unsigned datamode_len = sizeof(datamode_str) - 1;
-    const char complete_str[] = "complete";
-    const char partial_str[] = "partial";
+    char *xml_buf;
+    pj_xml_node *root;
+    pj_xml_node *datamode_node;
+    pj_str_t datamode_name = { "datamode", 8 };
+    pj_str_t partial_val = { "partial", 7 };
 
     PJ_ASSERT_RETURN(metadata && is_complete, PJ_EINVAL);
     PJ_ASSERT_RETURN(metadata->ptr && metadata->slen > 0, PJ_EINVAL);
 
-    /* Default to complete if not found */
+    /* Default to complete if datamode element is not found */
     *is_complete = PJ_TRUE;
 
-    ptr = metadata->ptr;
-    end = ptr + metadata->slen;
+    /* pj_xml_parse() requires NULL-terminated input, so we need to
+     * create a NULL-terminated copy of the metadata.
+     */
+    xml_buf = (char*)pj_pool_alloc(pool, metadata->slen + 1);
+    pj_memcpy(xml_buf, metadata->ptr, metadata->slen);
+    xml_buf[metadata->slen] = '\0';
 
-    /* Search for dataMode attribute */
-    while (ptr + datamode_len <= end) {
-        /* Find "dataMode" */
-        if (pj_memcmp(ptr, datamode_str, datamode_len) == 0) {
-            ptr += datamode_len;
-
-            /* Skip whitespace and '=' */
-            while (ptr < end && (*ptr == ' ' || *ptr == '\t' ||
-                                *ptr == '\r' || *ptr == '\n' ||
-                                *ptr == '='))
-                ptr++;
-
-            if (ptr >= end) break;
-
-            /* Check for quote and skip it (RFC 7865: dataMode is unquoted,
-             * but we handle quotes for robustness) */
-            if (*ptr == '"' || *ptr == '\'') {
-                ptr++;
-                if (ptr >= end) break;
-            }
-
-            /* Check value */
-            if (ptr + sizeof(complete_str) - 1 <= end &&
-                pj_memcmp(ptr, complete_str, sizeof(complete_str) - 1) == 0)
-            {
-                *is_complete = PJ_TRUE;
-                return PJ_SUCCESS;
-            }
-            else if (ptr + sizeof(partial_str) - 1 <= end &&
-                     pj_memcmp(ptr, partial_str, sizeof(partial_str) - 1) == 0)
-            {
-                *is_complete = PJ_FALSE;
-                return PJ_SUCCESS;
-            }
-
-            /* Not a valid value, break */
-            break;
-        }
-        ptr++;
+    /* Parse the XML */
+    root = pj_xml_parse(pool, xml_buf, metadata->slen);
+    if (!root) {
+        /* XML parsing failed, default to complete */
+        PJ_LOG(5,(THIS_FILE, "Failed to parse SIPREC metadata XML"));
+        return PJ_SUCCESS;
     }
 
-    /* dataMode not found, default is complete */
+    /* Find the datamode element (lowercase per RFC 7865) */
+    datamode_node = pj_xml_find_node_rec(root, &datamode_name);
+    if (datamode_node) {
+        /* Compare the element content value */
+        if (pj_stricmp(&datamode_node->content, &partial_val) == 0) {
+            *is_complete = PJ_FALSE;
+        } else {
+            /* Any other value (including "complete") defaults to complete */
+            *is_complete = PJ_TRUE;
+        }
+    }
+
     return PJ_SUCCESS;
 }
 
