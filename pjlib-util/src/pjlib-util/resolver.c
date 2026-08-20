@@ -1216,24 +1216,35 @@ on_return:
 PJ_DEF(pj_status_t) pj_dns_resolver_cancel_query(pj_dns_async_query *query,
                                                  pj_bool_t notify)
 {
+    pj_grp_lock_t *grp_lock;
     pj_dns_callback *cb;
+    void *user_data;
 
     PJ_ASSERT_RETURN(query, PJ_EINVAL);
 
-    pj_grp_lock_acquire(query->resolver->grp_lock);
+    grp_lock = query->resolver->grp_lock;
+    pj_grp_lock_acquire(grp_lock);
 
     if (query->timer_entry.id == 1) {
         pj_timer_heap_cancel_if_active(query->resolver->timer,
                                        &query->timer_entry, 0);
     }
 
+    /* Capture the callback and its user data under the lock. Unlike the
+     * other delivery sites, this one does not remove the query from the
+     * hash tables, so it may be completed and recycled once the lock is
+     * released.
+     */
     cb = query->cb;
+    user_data = query->user_data;
     query->cb = NULL;
 
-    if (notify && cb)
-        (*cb)(query->user_data, PJ_ECANCELLED, NULL);
+    pj_grp_lock_release(grp_lock);
 
-    pj_grp_lock_release(query->resolver->grp_lock);
+    /* Invoke the callback unlocked, as the other delivery sites do. */
+    if (notify && cb)
+        (*cb)(user_data, PJ_ECANCELLED, NULL);
+
     return PJ_SUCCESS;
 }
 
