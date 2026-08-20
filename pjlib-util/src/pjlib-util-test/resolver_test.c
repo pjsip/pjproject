@@ -86,6 +86,11 @@ static int cancel_child_child_count;
 static pj_dns_async_query *cancel_child_query;
 static pj_bool_t cancel_child_cancelled;
 static pj_status_t cancel_child_status;
+static pj_dns_resolver *cancel_unlocked_res;
+static pj_sem_t *cancel_unlocked_entered;
+static pj_sem_t *cancel_unlocked_probed;
+static pj_bool_t cancel_unlocked_probe_seen;
+static int cancel_unlocked_count;
 
 #define MAX_LABEL   32
 
@@ -1471,6 +1476,123 @@ static int dns_cancel_child_in_callback_test(void)
 }
 
 
+
+/* Probe thread for the cancel-unlocked test: once the callback signals that
+ * it is running, take the resolver group lock through a read-only API. This
+ * blocks until the callback returns if the callback still holds the lock.
+ */
+static int cancel_unlocked_probe_thread(void *arg)
+{
+    pj_dns_settings lset;
+
+    PJ_UNUSED_ARG(arg);
+
+    pj_sem_wait(cancel_unlocked_entered);
+    pj_dns_resolver_get_settings(cancel_unlocked_res, &lset);
+    pj_sem_post(cancel_unlocked_probed);
+
+    return 0;
+}
+
+
+/* Callback delivered by pj_dns_resolver_cancel_query(): signals the probe
+ * thread, then waits for it to acquire the resolver lock. The probe can only
+ * succeed while this callback is running if the lock was released before the
+ * callback was invoked.
+ */
+static void dns_callback_cancel_unlocked(void *user_data,
+                                         pj_status_t status,
+                                         pj_dns_parsed_packet *resp)
+{
+    unsigned i;
+
+    PJ_UNUSED_ARG(user_data);
+    PJ_UNUSED_ARG(status);
+    PJ_UNUSED_ARG(resp);
+
+    cancel_unlocked_count++;
+
+    pj_sem_post(cancel_unlocked_entered);
+
+    /* Bounded wait, so the test fails rather than hangs when the callback
+     * is invoked under the lock.
+     */
+    for (i=0; i<500; ++i) {
+        if (pj_sem_trywait(cancel_unlocked_probed) == PJ_SUCCESS) {
+            cancel_unlocked_probe_seen = PJ_TRUE;
+            break;
+        }
+        pj_thread_sleep(10);
+    }
+}
+
+
+/* pj_dns_resolver_cancel_query() must invoke the application callback with
+ * the group lock released, as every other delivery site does, so that a
+ * callback re-entering the resolver or taking another lock cannot deadlock
+ * or invert the lock order.
+ */
+static int dns_cancel_unlocked_test(void)
+{
+    pj_str_t name = pj_str("name_cancel_unlocked");
+    pj_str_t nameservers[2];
+    pj_uint16_t ports[2];
+    pj_dns_async_query *q = NULL;
+    pj_thread_t *probe = NULL;
+
+    PJ_LOG(3,(THIS_FILE, "  cancel query delivers callback unlocked test"));
+
+    cancel_unlocked_count = 0;
+    cancel_unlocked_probe_seen = PJ_FALSE;
+
+    /* Servers ignore the query so it stays pending until cancelled. */
+    g_server[0].action = ACTION_IGNORE;
+    g_server[1].action = ACTION_IGNORE;
+
+    nameservers[0] = nameservers[1] = pj_str("127.0.0.1");
+    ports[0] = g_server[0].port;
+    ports[1] = g_server[1].port;
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_create(mem, NULL, 0, timer_heap, ioqueue,
+                                           &cancel_unlocked_res),
+                    NULL, return -760);
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(cancel_unlocked_res, 2,
+                                           nameservers, ports),
+                    NULL, return -761);
+
+    PJ_TEST_SUCCESS(pj_sem_create(pool, NULL, 0, 1, &cancel_unlocked_entered),
+                    NULL, return -762);
+    PJ_TEST_SUCCESS(pj_sem_create(pool, NULL, 0, 1, &cancel_unlocked_probed),
+                    NULL, return -763);
+    PJ_TEST_SUCCESS(pj_thread_create(pool, NULL, &cancel_unlocked_probe_thread,
+                                     NULL, 0, 0, &probe),
+                    NULL, return -764);
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(
+                        cancel_unlocked_res, &name, PJ_DNS_TYPE_A, 0,
+                        &dns_callback_cancel_unlocked, NULL, &q),
+                    NULL, return -765);
+
+    pj_dns_resolver_cancel_query(q, PJ_TRUE);
+
+    pj_thread_join(probe);
+    pj_thread_destroy(probe);
+    pj_sem_destroy(cancel_unlocked_entered);
+    pj_sem_destroy(cancel_unlocked_probed);
+    pj_dns_resolver_destroy(cancel_unlocked_res, PJ_FALSE);
+
+    /* The cancelled query was already on the wire. Let the servers consume it
+     * while they are still ignoring, so that it is not mistaken for the first
+     * query of whichever test installs an action_cb next.
+     */
+    pj_thread_sleep(1000);
+
+    PJ_TEST_EQ(cancel_unlocked_count, 1, NULL, return -766);
+    PJ_TEST_EQ(cancel_unlocked_probe_seen, PJ_TRUE, NULL, return -767);
+
+    return 0;
+}
+
 /* DNS test */
 static int dns_test(void)
 {
@@ -2384,6 +2506,11 @@ int resolver_test(void)
 
     PJ_LOG(3,(THIS_FILE, "dns_destroy_pending_test"));
     rc = dns_destroy_pending_test();
+    if (rc != 0)
+        goto on_error;
+
+    PJ_LOG(3,(THIS_FILE, "dns_cancel_unlocked_test"));
+    rc = dns_cancel_unlocked_test();
     if (rc != 0)
         goto on_error;
 
