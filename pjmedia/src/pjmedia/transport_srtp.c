@@ -252,6 +252,8 @@ typedef struct srtp_context
     pjmedia_srtp_crypto  rx_policy;
 
     /* Temporary policy for negotiation */
+    char                 tx_neg_key[MAX_KEY_LEN];
+    char                 rx_neg_key[MAX_KEY_LEN];
     pjmedia_srtp_crypto  tx_policy_neg;
     pjmedia_srtp_crypto  rx_policy_neg;
 
@@ -435,6 +437,10 @@ static pj_bool_t srtp_crypto_empty(const pjmedia_srtp_crypto* c);
 /* Compare crypto, return zero if same */
 static int srtp_crypto_cmp(const pjmedia_srtp_crypto* c1,
                            const pjmedia_srtp_crypto* c2);
+
+/* Copy a negotiated crypto into transport-owned storage */
+static pj_status_t store_crypto_neg(pjmedia_srtp_crypto *dst, char *key_buf,
+                                    const pjmedia_srtp_crypto *src);
 
 /* Start SRTP */
 static pj_status_t start_srtp(transport_srtp *srtp);
@@ -638,6 +644,36 @@ static int get_crypto_idx(const pj_str_t* crypto_name)
     }
 
     return -1;
+}
+
+
+/* Copy a negotiated crypto into transport-owned storage: key bytes into the
+ * given fixed buffer, name into the static crypto-suite table. This lets the
+ * keying parse crypto from a transient per-negotiation pool without leaking
+ * into (or dangling past the release of) any pool.
+ */
+static pj_status_t store_crypto_neg(pjmedia_srtp_crypto *dst, char *key_buf,
+                                    const pjmedia_srtp_crypto *src)
+{
+    int cs_idx = get_crypto_idx(&src->name);
+
+    /* The name must be in the crypto-suite table, otherwise there is no
+     * transport-owned storage to point it to.
+     */
+    if (cs_idx < 0)
+        return PJMEDIA_SRTP_ENOTSUPCRYPTO;
+
+    if (src->key.slen > MAX_KEY_LEN)
+        return PJMEDIA_SRTP_EINKEYLEN;
+
+    *dst = *src;
+
+    if (src->key.slen > 0)
+        pj_memcpy(key_buf, src->key.ptr, src->key.slen);
+    pj_strset(&dst->key, key_buf, src->key.slen);
+    dst->name = pj_str(crypto_suites[cs_idx].name);
+
+    return PJ_SUCCESS;
 }
 
 
