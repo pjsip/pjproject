@@ -370,70 +370,15 @@ PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
 
 
 /**
- * Parse rs-metadata XML to determine dataMode element value.
- * Returns PJ_TRUE if dataMode is "complete" or absent, PJ_FALSE if "partial".
- *
- * Per RFC 7865, the datamode element appears as:
- *   <datamode>complete</datamode> or <datamode>partial</datamode>
- *
- * @param pool          Pool for temporary allocations.
- * @param metadata      The rs-metadata XML string.
- * @param is_complete   Output: PJ_TRUE if dataMode is "complete" or absent,
- *                      PJ_FALSE if dataMode is "partial".
- *
- * @return              PJ_SUCCESS on success, or PJ_ENOMEM if memory allocation
- *                      fails for XML parsing.
- */
-PJ_DEF(pj_status_t) pjsip_siprec_parse_data_mode(pj_pool_t *pool,
-                                                   const pj_str_t *metadata,
-                                                   pj_bool_t *is_complete)
-{
-    char *xml_buf;
-    pj_xml_node *root;
-    pj_xml_node *datamode_node;
-    pj_str_t datamode_name = { "datamode", 8 };
-    pj_str_t partial_val = { "partial", 7 };
-
-    PJ_ASSERT_RETURN(metadata && is_complete, PJ_EINVAL);
-    PJ_ASSERT_RETURN(metadata->ptr && metadata->slen > 0, PJ_EINVAL);
-
-    /* Default to complete if datamode element is not found */
-    *is_complete = PJ_TRUE;
-
-    /* pj_xml_parse() requires NULL-terminated input, so we need to
-     * create a NULL-terminated copy of the metadata.
-     */
-    xml_buf = (char*)pj_pool_alloc(pool, metadata->slen + 1);
-    pj_memcpy(xml_buf, metadata->ptr, metadata->slen);
-    xml_buf[metadata->slen] = '\0';
-
-    /* Parse the XML */
-    root = pj_xml_parse(pool, xml_buf, metadata->slen);
-    if (!root) {
-        /* XML parsing failed, default to complete */
-        PJ_LOG(5,(THIS_FILE, "Failed to parse SIPREC metadata XML"));
-        return PJ_SUCCESS;
-    }
-
-    /* Find the datamode element (lowercase per RFC 7865) */
-    datamode_node = pj_xml_find_node_rec(root, &datamode_name);
-    if (datamode_node) {
-        /* Compare the element content value */
-        if (pj_stricmp(&datamode_node->content, &partial_val) == 0) {
-            *is_complete = PJ_FALSE;
-        } else {
-            /* Any other value (including "complete") defaults to complete */
-            *is_complete = PJ_TRUE;
-        }
-    }
-
-    return PJ_SUCCESS;
-}
-
-
-/**
  * Verifies rs-metadata in mid-dialog requests (re-INVITE/UPDATE).
  * Extracts and validates metadata updates for SIPREC sessions.
+ *
+ * Note: This implementation currently only supports complete metadata updates
+ * (dataMode="complete" or absent). Per RFC 7865 Section 5.1.2, partial metadata
+ * updates (dataMode="partial") must be merged into the existing metadata rather
+ * than replacing it. Partial update support is not yet implemented.
+ *
+ * PJ_TODO(implement_rfc7865_partial_metadata_update);
  */
 PJ_DEF(pj_status_t) pjsip_siprec_verify_update(pjsip_rx_data *rdata,
                                                   pj_str_t *metadata,
@@ -539,21 +484,8 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_update(pjsip_rx_data *rdata,
         return status;
     }
 
-    /* Parse dataMode to determine update type */
-    status = pjsip_siprec_parse_data_mode(pool, metadata, &is_complete);
-    if (status != PJ_SUCCESS) {
-        PJ_LOG(3,(THIS_FILE,
-                  "Error parsing SIPREC metadata dataMode"));
-        return status;
-    }
-
-    if (is_complete) {
-        PJ_LOG(4,(THIS_FILE,
-                  "SIPREC received complete metadata update in mid-dialog request"));
-    } else {
-        PJ_LOG(4,(THIS_FILE,
-                  "SIPREC received partial metadata update in mid-dialog request"));
-    }
+    PJ_LOG(4,(THIS_FILE,
+              "SIPREC received metadata update in mid-dialog request"));
 
     return PJ_SUCCESS;
 }

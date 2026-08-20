@@ -190,25 +190,6 @@ PJ_DECL(pj_status_t) pjsip_siprec_verify_update(pjsip_rx_data *rdata,
                                                   const pjsip_siprec_verify_setting *setting);
 
 
-/**
- * Parses rs-metadata XML to determine the dataMode attribute.
- * This distinguishes between complete and partial metadata updates
- * as specified in RFC 7865.
- *
- * @param pool              Pool for temporary allocations.
- * @param metadata          The rs-metadata XML string.
- * @param is_complete       Output: PJ_TRUE if dataMode is "complete"
- *                          or absent (default), PJ_FALSE if dataMode
- *                          is "partial".
- *
- * @return                  PJ_SUCCESS if dataMode is successfully parsed,
- *                          otherwise return error code.
- */
-PJ_DECL(pj_status_t) pjsip_siprec_parse_data_mode(pj_pool_t *pool,
-                                                   const pj_str_t *metadata,
-                                                   pj_bool_t *is_complete);
-
-
 PJ_END_DECL
 
 
