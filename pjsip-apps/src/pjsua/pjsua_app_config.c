@@ -107,6 +107,9 @@ static void usage(void)
     puts  ("Transport Options:");
 #if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
     puts  ("  --ipv6              Create SIP IPv6 transports.");
+    puts  ("  --ipv6-port-offset=N  Offset of the IPv6 listener port from the");
+    puts  ("                      IPv4 one (default=10). Zero puts both on the");
+    puts  ("                      same port, which needs IPV6_V6ONLY support.");
 #endif
     puts  ("  --set-qos           Enable QoS tagging for SIP and media.");
     puts  ("  --no-mci            Disable message composition indication (RFC 3994)");
@@ -430,7 +433,8 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_TLS_NEG_TIMEOUT, OPT_TLS_CIPHER,
            OPT_CAPTURE_DEV, OPT_PLAYBACK_DEV,
            OPT_CAPTURE_LAT, OPT_PLAYBACK_LAT, OPT_NO_TONES, OPT_JB_MAX_SIZE,
-           OPT_STDOUT_REFRESH, OPT_STDOUT_REFRESH_TEXT, OPT_IPV6, OPT_QOS, OPT_MCI,
+           OPT_STDOUT_REFRESH, OPT_STDOUT_REFRESH_TEXT, OPT_IPV6,
+           OPT_IPV6_PORT_OFFSET, OPT_QOS, OPT_MCI,
 #ifdef _IONBF
            OPT_STDOUT_NO_BUF,
 #endif
@@ -583,6 +587,7 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "jb-max-size", 1, 0, OPT_JB_MAX_SIZE},
 #if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
         { "ipv6",        0, 0, OPT_IPV6},
+        { "ipv6-port-offset", 1, 0, OPT_IPV6_PORT_OFFSET},
 #endif
         { "set-qos",     0, 0, OPT_QOS},
         { "no-mci",     0, 0, OPT_MCI},
@@ -1591,6 +1596,11 @@ static pj_status_t parse_args(int argc, char *argv[],
         case OPT_IPV6:
             cfg->ipv6 = PJ_TRUE;
             break;
+
+        case OPT_IPV6_PORT_OFFSET:
+            cfg->ipv6_port_offset = (unsigned)pj_strtoul(pj_cstr(&tmp,
+                                                                pj_optarg));
+            break;
 #endif
         case OPT_QOS:
             cfg->enable_qos = PJ_TRUE;
@@ -1862,6 +1872,7 @@ static void default_config()
     pjsua_media_config_default(&cfg->media_cfg);
     pjsua_transport_config_default(&cfg->udp_cfg);
     cfg->udp_cfg.port = 5060;
+    cfg->ipv6_port_offset = 10;
     pjsua_transport_config_default(&cfg->rtp_cfg);
     cfg->rtp_cfg.port = 4000;
     cfg->enable_rtcp_mux = PJ_FALSE;
@@ -2311,6 +2322,11 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
     /* Transport options */
     if (config->ipv6) {
         pj_strcat2(&cfg, "--ipv6\n");
+        if (config->ipv6_port_offset != 10) {
+            pj_ansi_snprintf(line, sizeof(line), "--ipv6-port-offset %u\n",
+                             config->ipv6_port_offset);
+            pj_strcat2(&cfg, line);
+        }
     }
     if (config->enable_qos) {
         pj_strcat2(&cfg, "--set-qos\n");

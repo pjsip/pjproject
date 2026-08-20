@@ -1842,14 +1842,16 @@ static void ui_call_redirect(char menuin[])
 
 static void ui_handle_ip_change()
 {
-    pjsua_ip_change_param param;
-    pj_status_t status;
+    char buf[8];
+    int ip_ver = 0;
 
-    pjsua_ip_change_param_default(&param);
-    status = pjsua_handle_ip_change(&param);
-    if (status != PJ_SUCCESS) {
-        pjsua_perror(THIS_FILE, "IP change failed", status);
-    }
+    /* No input means no address family switch, i.e. the plain
+     * same-family IP change.
+     */
+    if (simple_input("Switch accounts to IP version (4/6)", buf, sizeof(buf)))
+        ip_ver = my_atoi(buf);
+
+    app_handle_ip_change(ip_ver);
 }
 
 static void ui_send_rtt()

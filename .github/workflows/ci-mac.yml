@@ -154,10 +154,14 @@ jobs:
       # Enable RTCP XR so scripts-call/415_call_rtcp_xr.py runs instead of
       # skipping (it skips unless PJMEDIA_HAS_RTCP_XR is compiled in; the
       # test then activates XR per-call via pjsua's --rtcp-xr option).
+      # Likewise PJ_HAS_IPV6 (off by default) for the IPv4 <-> IPv6 IP
+      # change tests, scripts-run/22[01]_ip_change_*.py, which need
+      # pjsua's --ipv6 to yield real UDP6 listeners.
       run: |
         cd pjlib/include/pj
         cp config_site_test.h config_site.h
         echo "#define PJMEDIA_HAS_RTCP_XR 1" >> config_site.h
+        echo "#define PJ_HAS_IPV6 1" >> config_site.h
     - name: configure
       run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb) $(pkg-config --cflags opencore-amrwb) $(pkg-config --cflags vo-amrwbenc) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L opencore-amrnb) $(pkg-config --libs-only-L opencore-amrwb) $(pkg-config --libs-only-L vo-amrwbenc)" CXXFLAGS="-g -fPIC" ./configure
     - name: make

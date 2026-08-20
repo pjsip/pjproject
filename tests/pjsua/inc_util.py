@@ -65,6 +65,38 @@ def has_ssl_sock(exe):
    # the TLS/SIPS tests.
    return True
 
+def has_ipv6(exe):
+   """Return True if the pjsua build under test has IPv6 support compiled
+   in, i.e. PJ_HAS_IPV6 is not 0, so that "--ipv6" actually yields UDP6/
+   TCP6 listeners instead of failing transport creation at startup.
+
+   Unlike most capability flags this one is off by default (config.h only
+   defaults PJ_HAS_IPV6 to 1 on a few platforms); a build has to opt in
+   via config_site.h. pjlib/include/pj/config_site_test.h -- what CI
+   copies over config_site.h -- does not, so IPv6 tests are expected to
+   skip on a stock CI build.
+
+   Probed from "<exe> --version" (pj_dump_config prints "PJ_HAS_IPV6 :
+   0|1") for the same reason as has_ssl_sock(): it works regardless of
+   which build system produced the binary.
+
+   This one fails *closed* (returns False when the probe is unusable),
+   unlike has_ssl_sock(): pjsua aborts at startup when asked for --ipv6
+   without IPv6 support, which the test framework can only report as a
+   premature EOF, so guessing wrong here costs a confusing failure rather
+   than a clean skip.
+   """
+   try:
+      out = subprocess.check_output(exe + " --version", shell=True,
+                                     stderr=subprocess.STDOUT,
+                                     universal_newlines=True, timeout=10)
+   except (OSError, subprocess.CalledProcessError,
+           subprocess.TimeoutExpired) as e:
+      out = getattr(e, "output", "") or ""
+
+   m = re.search(r'PJ_HAS_IPV6\s*:\s*(\d+)', out)
+   return bool(m) and m.group(1) != "0"
+
 # Cache of vid_codec_list() results, keyed by executable path. The
 # video capability checks below run at config-load time, once per test
 # script, and a script that asks for both video and a specific codec

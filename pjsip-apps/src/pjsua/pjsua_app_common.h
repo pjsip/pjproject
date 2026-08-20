@@ -76,6 +76,10 @@ typedef struct pjsua_app_config
     pjsua_media_config      media_cfg;
     pj_bool_t               no_refersub;
     pj_bool_t               ipv6;
+    /* Added to the IPv4 listener port to get the IPv6 one. Zero puts
+     * both families on the same port, which needs IPV6_V6ONLY support.
+     */
+    unsigned                ipv6_port_offset;
     pj_bool_t               enable_qos;
     pj_bool_t               no_mci;
     pj_bool_t               enable_loam;
@@ -221,6 +225,7 @@ void log_call_dump(int call_id);
 int write_settings(pjsua_app_config *cfg, char *buf, pj_size_t max);
 void app_config_init_video(pjsua_acc_config *acc_cfg);
 void arrange_window(pjsua_vid_win_id wid);
+pj_status_t app_handle_ip_change(int ip_ver);
 
 /** Defined in pjsua_app_config.c **/
 /** This is to load the configuration **/

@@ -280,11 +280,17 @@ class Expect(threading.Thread):
     def trace(self, s):
         if self.trace_enabled:
             now = time.time()
-            fmt = self.name + ": " + "================== " + s + " ==================" + " [at t=%(time)03d]"
+            # Interpolate the timestamp into the literal only, then
+            # concatenate: 's' is caller-supplied (an expect() regex,
+            # say) and a '%' in it would otherwise be taken as a
+            # conversion specifier and raise.
+            msg = self.name + ": " + "================== " + s + \
+                  " ==================" + \
+                  " [at t=%(time)03d]" % {'time':int(now - self.t0)}
             try:
-                print(fmt % {'time':int(now - self.t0)})
+                print(msg)
             except UnicodeEncodeError:
-                print((fmt % {'time':int(now - self.t0)}).encode('utf-8'))
+                print(msg.encode('utf-8'))
 
 #########################
 # Error handling

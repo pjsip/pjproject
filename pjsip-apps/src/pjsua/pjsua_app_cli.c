@@ -3261,15 +3261,17 @@ static pj_status_t cmd_quit_handler(pj_cli_cmd_val *cval)
 
 static pj_status_t cmd_ip_change_handler(pj_cli_cmd_val *cval)
 {
-    pjsua_ip_change_param param;
     pj_status_t status;
-    PJ_UNUSED_ARG(cval);
+    int ip_ver = 0;
 
-    pjsua_ip_change_param_default(&param);
-    status = pjsua_handle_ip_change(&param);
-    if (status != PJ_SUCCESS) {
-        pjsua_perror(THIS_FILE, "IP change failed", status);
-    } else {
+    /* The optional argument names the IP version to switch the accounts
+     * to, for a network change that crosses address families.
+     */
+    if (cval->argc > 1)
+        ip_ver = my_atoi2(&cval->argv[1]);
+
+    status = app_handle_ip_change(ip_ver);
+    if (status == PJ_SUCCESS) {
         PJ_LOG(3,(THIS_FILE, "IP change succeeded"));
     }
 
@@ -3798,8 +3800,18 @@ static pj_status_t add_other_command(pj_cli_t *c)
         "  <ARG name='options4' type='string' desc='Options' optional='1'/>"
         "</CMD>";
 
+    /* ip_version is a plain string rather than a choice of 4/6 because
+     * a static-choice argument cannot be left out: pj_cli only honours
+     * 'optional' for the other argument types (see cli.c,
+     * parse_available_cmds()). app_handle_ip_change() rejects anything
+     * that is not 4 or 6.
+     */
     char* ip_change_command =
-        "<CMD name='ip_change' id='130' desc='Handle IP change'/>";
+        "<CMD name='ip_change' id='130' desc='Handle IP change'>"
+        "  <ARG name='ip_version' type='string' optional='1' "
+        "   desc='Switch accounts to IP version 4 or 6 first (needs a "
+        "transport of that family, see --ipv6)'/>"
+        "</CMD>";
 
     char* toggle_sdp_offer_command =
         "<CMD name='toggle_sdp_offer' sc='o' id='140' "

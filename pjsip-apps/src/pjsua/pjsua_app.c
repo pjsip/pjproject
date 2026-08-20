@@ -1406,6 +1406,102 @@ void on_ip_change_progress(pjsua_ip_change_op op,
     }
 }
 
+/* Handle an IP address change, optionally moving every account to a
+ * different IP version first (ip_ver is 4 or 6, or 0 to leave the
+ * accounts alone).
+ *
+ * A same-family change needs nothing but pjsua_handle_ip_change(). A
+ * change that crosses address families additionally has to point the
+ * accounts at the new family before that, which is what ip_ver does: a
+ * transport of the new family must already exist (see --ipv6), the
+ * accounts' IPv6 preference is moved over with pjsua_acc_modify(), and
+ * only then is the IP change handled.
+ */
+pj_status_t app_handle_ip_change(int ip_ver)
+{
+    pjsua_ip_change_param param;
+    pj_status_t status;
+
+    if (ip_ver != 0) {
+        pjsua_ipv6_use ipv6_use;
+        pjsua_transport_id tp_ids[8];
+        unsigned tp_cnt = PJ_ARRAY_SIZE(tp_ids);
+        pj_bool_t have_tp = PJ_FALSE;
+        unsigned i;
+        int af;
+
+        if (ip_ver != 4 && ip_ver != 6) {
+            PJ_LOG(1,(THIS_FILE, "Invalid IP version %d, expecting 4 or 6",
+                      ip_ver));
+            return PJ_EINVAL;
+        }
+
+#if !PJ_HAS_IPV6
+        if (ip_ver == 6) {
+            PJ_LOG(1,(THIS_FILE, "Cannot switch to IPv6, this build has no "
+                      "IPv6 support"));
+            return PJ_ENOTSUP;
+        }
+#endif
+
+        ipv6_use = (ip_ver == 6)? PJSUA_IPV6_ENABLED_USE_IPV6_ONLY :
+                                  PJSUA_IPV6_DISABLED;
+        af = (ip_ver == 6)? pj_AF_INET6() : pj_AF_INET();
+
+        /* Warn up front: without a listener of the target family the
+         * re-registration below has nothing to go out on.
+         */
+        if (pjsua_enum_transports(tp_ids, &tp_cnt) == PJ_SUCCESS) {
+            for (i = 0; i < tp_cnt; ++i) {
+                pjsua_transport_info tp_info;
+
+                if (pjsua_transport_get_info(tp_ids[i], &tp_info)==PJ_SUCCESS &&
+                    pjsip_transport_type_get_af(tp_info.type) == af)
+                {
+                    have_tp = PJ_TRUE;
+                    break;
+                }
+            }
+        }
+        if (!have_tp) {
+            PJ_LOG(2,(THIS_FILE, "No IPv%d transport to switch to, see the "
+                      "--ipv6 option", ip_ver));
+        }
+
+        for (i = 0; i < PJSUA_MAX_ACC; ++i) {
+            pjsua_acc_config acc_cfg;
+
+            if (!pjsua_acc_is_valid(i))
+                continue;
+
+            pjsua_acc_get_config(i, app_config.pool, &acc_cfg);
+            acc_cfg.ipv6_sip_use = ipv6_use;
+            acc_cfg.ipv6_media_use = ipv6_use;
+            /* Keep pjsua_acc_modify() from sending a REGISTER over the
+             * transport that has just gone away; re-registering is
+             * pjsua_handle_ip_change()'s job.
+             */
+            acc_cfg.disable_reg_on_modify = PJ_TRUE;
+
+            status = pjsua_acc_modify(i, &acc_cfg);
+            if (status != PJ_SUCCESS) {
+                pjsua_perror(THIS_FILE, "Error switching account IP version",
+                             status);
+                return status;
+            }
+        }
+
+        PJ_LOG(3,(THIS_FILE, "Accounts switched to IPv%d only", ip_ver));
+    }
+
+    pjsua_ip_change_param_default(&param);
+    status = pjsua_handle_ip_change(&param);
+    if (status != PJ_SUCCESS)
+        pjsua_perror(THIS_FILE, "IP change failed", status);
+
+    return status;
+}
+
 /* Auto hangup timer callback */
 static void hangup_timeout_callback(pj_timer_heap_t *timer_heap,
                                     struct pj_timer_entry *entry)
@@ -1996,7 +2092,7 @@ static pj_status_t app_init(void)
         if (udp_cfg.port == 0)
             udp_cfg.port = 5060;
         else
-            udp_cfg.port += 10;
+            udp_cfg.port += app_config.ipv6_port_offset;
         status = pjsua_transport_create(type,
                                         &udp_cfg,
                                         &transport_id);
@@ -2066,7 +2162,7 @@ static pj_status_t app_init(void)
         pjsua_acc_id aid;
         pjsip_transport_type_e type = PJSIP_TRANSPORT_TCP6;
 
-        tcp_cfg.port += 10;
+        tcp_cfg.port += app_config.ipv6_port_offset;
 
         status = pjsua_transport_create(type,
                                         &tcp_cfg,
@@ -2140,7 +2236,7 @@ static pj_status_t app_init(void)
         pjsua_acc_id aid;
         pjsip_transport_type_e type = PJSIP_TRANSPORT_TLS6;
 
-        tcp_cfg.port += 10;
+        tcp_cfg.port += app_config.ipv6_port_offset;
 
         status = pjsua_transport_create(type,
                                         &tcp_cfg,
