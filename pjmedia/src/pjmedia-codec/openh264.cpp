@@ -459,25 +459,20 @@ static pj_status_t oh264_codec_open(pjmedia_vid_codec *codec,
 
     pj_bzero(&pktz_cfg, sizeof(pktz_cfg));
     pktz_cfg.mtu = param->enc_mtu;
-    /* Packetization mode */
-#if 0
+    /* Packetization mode: follow the mode negotiated in fmtp instead of
+     * always forcing single NAL mode. In mode 0 every NAL unit must fit
+     * in one RTP packet, so the encoder has to emit MTU-sized slices.
+     * In mode 1 the packetizer fragments large NAL units (FU-A), so the
+     * encoder can code one slice per frame, avoiding the compression
+     * penalty of many small slices. A peer that negotiated mode 1 is
+     * required to support FU-A, so this is safe.
+     */
     if (h264_fmtp.packetization_mode == 0)
         pktz_cfg.mode = PJMEDIA_H264_PACKETIZER_MODE_SINGLE_NAL;
     else if (h264_fmtp.packetization_mode == 1)
         pktz_cfg.mode = PJMEDIA_H264_PACKETIZER_MODE_NON_INTERLEAVED;
     else
         return PJ_ENOTSUP;
-#else
-    if (h264_fmtp.packetization_mode!=
-                                PJMEDIA_H264_PACKETIZER_MODE_SINGLE_NAL &&
-        h264_fmtp.packetization_mode!=
-                                PJMEDIA_H264_PACKETIZER_MODE_NON_INTERLEAVED)
-    {
-        return PJ_ENOTSUP;
-    }
-    /* Better always send in single NAL mode for better compatibility */
-    pktz_cfg.mode = PJMEDIA_H264_PACKETIZER_MODE_SINGLE_NAL;
-#endif
 
     status = pjmedia_h264_packetizer_create(oh264_data->pool, &pktz_cfg,
                                             &oh264_data->pktz);
@@ -511,6 +506,18 @@ static pj_status_t oh264_codec_open(pjmedia_vid_codec *codec,
     eprm.iMultipleThreadIdc             = 1;
     //eprm.bEnableRc                    = 1;
     eprm.iTargetBitrate                 = param->enc_fmt.det.vid.avg_bps;
+    /* Give the rate control an explicit ceiling from the negotiated
+     * max_bps, so transient bursts (scene changes, keyframes) may exceed
+     * the average bitrate without exceeding what was agreed in SDP.
+     * This also matches oh264_codec_modify(), which already sets
+     * ENCODER_OPTION_MAX_BITRATE; without it the encoder runs on the
+     * library default ceiling until the first modify call.
+     * OpenH264 requires max >= target, so clamp.
+     */
+    eprm.iMaxBitrate                    = param->enc_fmt.det.vid.max_bps;
+    if (eprm.iMaxBitrate != 0 && eprm.iMaxBitrate < eprm.iTargetBitrate) {
+        eprm.iMaxBitrate                = eprm.iTargetBitrate;
+    }
     eprm.bEnableFrameSkip               = 1;
     eprm.bEnableDenoise                 = 0;
     eprm.bEnableSceneChangeDetect       = 1;
@@ -520,18 +527,34 @@ static pj_status_t oh264_codec_open(pjmedia_vid_codec *codec,
     eprm.iLtrMarkPeriod                 = 30;
     eprm.bPrefixNalAddingCtrl           = false;
     eprm.iSpatialLayerNum               = 1;
-    if (!oh264_data->whole) {
+    /* Cap the NAL unit size to the MTU only in single NAL mode, where
+     * each NAL unit must fit in one RTP packet. In non-interleaved mode
+     * the packetizer fragments large NAL units, so no cap is needed.
+     */
+    if (!oh264_data->whole &&
+        pktz_cfg.mode == PJMEDIA_H264_PACKETIZER_MODE_SINGLE_NAL)
+    {
         eprm.uiMaxNalSize                       = param->enc_mtu;
     }
 
     pj_bzero(&elayer_ctx, sizeof (SLayerPEncCtx));
     elayer_ctx.iDLayerQp                = 24;
-    elayer_ctx.sSliceArgument.uiSliceMode = (oh264_data->whole ?
-                                             SM_SINGLE_SLICE : 
-                                             SM_SIZELIMITED_SLICE);
+    /* Size-limited slicing is only required in single NAL mode, to keep
+     * each slice (and thus each NAL unit) within the MTU. Otherwise use
+     * a single slice per frame: every slice boundary resets prediction
+     * and entropy coding contexts and adds header bytes, so fewer slices
+     * give better quality at the same bitrate.
+     */
+    if (!oh264_data->whole &&
+        pktz_cfg.mode == PJMEDIA_H264_PACKETIZER_MODE_SINGLE_NAL)
+    {
+        elayer_ctx.sSliceArgument.uiSliceMode = SM_SIZELIMITED_SLICE;
 
-    /* uiSliceSizeConstraint = uiMaxNalSize - NAL_HEADER_ADD_0X30BYTES */
-    elayer_ctx.sSliceArgument.uiSliceSizeConstraint = param->enc_mtu - 50;
+        /* uiSliceSizeConstraint = uiMaxNalSize - NAL_HEADER_ADD_0X30BYTES */
+        elayer_ctx.sSliceArgument.uiSliceSizeConstraint = param->enc_mtu - 50;
+    } else {
+        elayer_ctx.sSliceArgument.uiSliceMode = SM_SINGLE_SLICE;
+    }
     elayer_ctx.sSliceArgument.uiSliceNum      = 1;
     elayer_ctx.sSliceArgument.uiSliceMbNum[0] = 960;
     elayer_ctx.sSliceArgument.uiSliceMbNum[1] = 0;
@@ -547,6 +570,10 @@ static pj_status_t oh264_codec_open(pjmedia_vid_codec *codec,
     elayer->fFrameRate                  = eprm.fMaxFrameRate;
     elayer->uiProfileIdc                = eprm.sSpatialLayers[0].uiProfileIdc;
     elayer->iSpatialBitrate             = eprm.iTargetBitrate;
+    /* The per-layer maximum must mirror the global iMaxBitrate,
+     * otherwise OpenH264 rejects the parameter set.
+     */
+    elayer->iMaxSpatialBitrate          = eprm.iMaxBitrate;
     elayer->iDLayerQp                   = elayer_ctx.iDLayerQp;
     elayer->sSliceArgument.uiSliceMode = elayer_ctx.sSliceArgument.uiSliceMode;
 
