@@ -28,6 +28,12 @@ PJ_BEGIN_DECL
 #define PJSUA_APP_MAX_AVI               4
 #define PJSUA_APP_NO_NB                 -2
 
+/* Buffer for write_settings(), taken from a temporary pool. Sized for the
+ * per-account section (42 fields, up to PJSUA_MAX_ACC accounts) plus the
+ * global options.
+ */
+#define PJSUA_APP_SETTINGS_SIZE         (64 * 1024)
+
 typedef struct input_result
 {
     int   nb_result;

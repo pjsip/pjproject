@@ -1773,23 +1773,45 @@ static void ui_dump_call_quality()
 
 static void ui_dump_configuration()
 {
-    char settings[2000];
+    pj_pool_t *pool;
+    char *settings;
     int len;
 
-    len = write_settings(&app_config, settings, sizeof(settings));
+    pool = pjsua_pool_create("settings", PJSUA_APP_SETTINGS_SIZE + 1024,
+                             1024);
+    if (!pool) {
+        PJ_LOG(1,(THIS_FILE, "Error: unable to allocate settings buffer"));
+        pj_pool_release(pool);
+        return;
+    }
+    settings = (char*)pj_pool_alloc(pool, PJSUA_APP_SETTINGS_SIZE);
+
+    len = write_settings(&app_config, settings, PJSUA_APP_SETTINGS_SIZE);
     if (len < 1)
         PJ_LOG(1,(THIS_FILE, "Error: not enough buffer"));
     else
         PJ_LOG(3,(THIS_FILE, "Dumping configuration (%d bytes):\n%s\n",
                   len, settings));
+
+    pj_pool_release(pool);
 }
 
 static void ui_write_settings(const char *filename)
 {
-    char settings[2000];
+    pj_pool_t *pool;
+    char *settings;
     int len;
 
-    len = write_settings(&app_config, settings, sizeof(settings));
+    pool = pjsua_pool_create("settings", PJSUA_APP_SETTINGS_SIZE + 1024,
+                             1024);
+    if (!pool) {
+        PJ_LOG(1,(THIS_FILE, "Error: unable to allocate settings buffer"));
+        pj_pool_release(pool);
+        return;
+    }
+    settings = (char*)pj_pool_alloc(pool, PJSUA_APP_SETTINGS_SIZE);
+
+    len = write_settings(&app_config, settings, PJSUA_APP_SETTINGS_SIZE);
     if (len < 1)
         PJ_LOG(1,(THIS_FILE, "Error: not enough buffer"));
     else {
@@ -1807,6 +1829,8 @@ static void ui_write_settings(const char *filename)
             printf("Settings successfully written to '%s'\n", filename);
         }
     }
+
+    pj_pool_release(pool);
 }
 
 /*
