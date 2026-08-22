@@ -124,6 +124,16 @@ static pj_bool_t pjsua_call_on_uac_tsx_terminate_session(
                                             pjsip_transaction *tsx,
                                             pjsip_event *e);
 
+#if PJSUA_HAS_SIPREC
+/*
+ * SIPREC metadata update handler.
+ */
+static void pjsua_call_on_siprec_metadata_update(pjsip_inv_session *inv,
+                                                  const pj_str_t *old_metadata,
+                                                  const pj_str_t *new_metadata,
+                                                  pjsip_rx_data *rdata);
+#endif
+
 
 /* Create SDP for call hold. */
 static pj_status_t create_sdp_of_call_hold(pjsua_call *call,
@@ -258,6 +268,10 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
         inv_cb.on_uac_tsx_terminate_session =
                                     &pjsua_call_on_uac_tsx_terminate_session;
     }
+
+#if PJSUA_HAS_SIPREC
+    inv_cb.on_siprec_metadata_update = &pjsua_call_on_siprec_metadata_update;
+#endif
 
     /* Initialize invite session module: */
     status = pjsip_inv_usage_init(pjsua_var.endpt, &inv_cb);
@@ -6054,6 +6068,43 @@ static pj_status_t pjsua_call_on_rx_reinvite(pjsip_inv_session *inv,
 
     return (async? PJ_SUCCESS: !PJ_SUCCESS);
 }
+
+
+#if PJSUA_HAS_SIPREC
+/*
+ * Called when SIPREC metadata is updated via re-INVITE or UPDATE.
+ */
+static void pjsua_call_on_siprec_metadata_update(pjsip_inv_session *inv,
+                                                  const pj_str_t *old_metadata,
+                                                  const pj_str_t *new_metadata,
+                                                  pjsip_rx_data *rdata)
+{
+    pjsua_call *call;
+
+    PJ_UNUSED_ARG(old_metadata);
+    PJ_UNUSED_ARG(rdata);
+
+    call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+    if (!call) {
+        PJ_LOG(3,(THIS_FILE,
+                  "SIPREC metadata update callback called but call not found"));
+        return;
+    }
+
+    /* Update pjsua_call metadata from INVITE session */
+    if (new_metadata && new_metadata->slen > 0) {
+        call->siprec_metadata.ptr = (char*)
+            pj_pool_alloc(call->inv->pool_prov, new_metadata->slen);
+        pj_memcpy(call->siprec_metadata.ptr, new_metadata->ptr,
+                 new_metadata->slen);
+        call->siprec_metadata.slen = new_metadata->slen;
+
+        PJ_LOG(4,(THIS_FILE,
+                  "Call %d: SIPREC metadata updated (%d bytes)",
+                  call->index, (int)new_metadata->slen));
+    }
+}
+#endif
 
 
 /*

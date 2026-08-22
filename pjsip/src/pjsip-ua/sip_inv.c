@@ -118,6 +118,13 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
                                                   pjsip_transaction *tsx,
                                                   pjsip_rx_data *rdata);
 static pj_status_t inv_negotiate_sdp( pjsip_inv_session *inv );
+
+#if PJSUA_HAS_SIPREC
+static pj_status_t inv_process_siprec_metadata_update(
+                                pjsip_inv_session *inv,
+                                pjsip_rx_data *rdata);
+#endif
+
 static pjsip_msg_body *create_sdp_body(pj_pool_t *pool,
                                        const pjmedia_sdp_session *c_sdp);
 static pj_status_t process_answer( pjsip_inv_session *inv,
@@ -2338,6 +2345,99 @@ static void swap_pool(pj_pool_t **p1, pj_pool_t **p2)
 }
 
 
+#if PJSUA_HAS_SIPREC
+/*
+ * Process SIPREC metadata update from mid-dialog requests (re-INVITE/UPDATE).
+ * This function extracts and validates metadata from the request, updates
+ * the INVITE session's metadata storage, and fires the update callback.
+ *
+ * Parameters:
+ *  @param inv          The invite session.
+ *  @param rdata        The received request containing potential metadata update.
+ *
+ * Returns:
+ *  @return             PJ_SUCCESS on success, or appropriate error code.
+ *                      If the error response is created, it will be sent by
+ *                      this function (for re-INVITE) or returned via err_response
+ *                      (for UPDATE).
+ */
+static pj_status_t inv_process_siprec_metadata_update(
+                                        pjsip_inv_session *inv,
+                                        pjsip_rx_data *rdata)
+{
+    pj_str_t new_metadata;
+    pj_status_t meta_status;
+    pjsip_tx_data *tdata;
+    pjsip_status_code st_code;
+
+    PJ_ASSERT_RETURN(inv && rdata, PJ_EINVAL);
+
+    /* Only process if SIPREC is supported */
+    if (!(inv->options & PJSIP_INV_SUPPORT_SIPREC))
+        return PJ_SUCCESS;
+
+    pj_bzero(&new_metadata, sizeof(new_metadata));
+
+    /* Extract and verify metadata from the request.
+     * Note: pool_prov is used for temporary allocations during metadata
+     * extraction. The actual metadata data points into rdata's buffer
+     * (receive pool), which remains valid during this function call.
+     */
+    meta_status = pjsip_siprec_verify_update(rdata, &new_metadata,
+                                             inv->pool_prov,
+                                             &st_code,
+                                             NULL);
+    if (meta_status != PJ_SUCCESS) {
+        /* Error processing metadata - reject the request */
+        meta_status = pjsip_dlg_create_response(inv->dlg, rdata, st_code,
+                                                 NULL, &tdata);
+        if (meta_status != PJ_SUCCESS)
+            return meta_status;
+
+        pjsip_dlg_send_response(inv->dlg,
+                                pjsip_rdata_get_tsx(rdata),
+                                tdata);
+        return PJSIP_SC_BAD_REQUEST;
+    }
+
+    /* Update INVITE session metadata if present in this request.
+     * Copy from receive buffer to permanent session pool before
+     * invoking callback to ensure data remains valid.
+     */
+    if (new_metadata.slen > 0) {
+        pj_str_t old_metadata;
+
+        /* Capture old metadata for callback (value copy, pointer is
+         * safe since it's from inv->pool).
+         */
+        old_metadata = inv->siprec_metadata;
+
+        /* Copy new metadata to permanent session pool.
+         * The callback receives pointers to inv->pool memory.
+         */
+        inv->siprec_metadata.ptr = (char*)
+            pj_pool_alloc(inv->pool, new_metadata.slen);
+        pj_memcpy(inv->siprec_metadata.ptr, new_metadata.ptr,
+                 new_metadata.slen);
+        inv->siprec_metadata.slen = new_metadata.slen;
+
+        /* Fire metadata update callback if set.
+         * Both old_metadata and inv->siprec_metadata point to
+         * inv->pool memory and are valid for the callback duration.
+         */
+        if (mod_inv.cb.on_siprec_metadata_update) {
+            (*mod_inv.cb.on_siprec_metadata_update)(inv,
+                                                     &old_metadata,
+                                                     &inv->siprec_metadata,
+                                                     rdata);
+        }
+    }
+
+    return PJ_SUCCESS;
+}
+#endif
+
+
 /*
  * Initiate SDP negotiation in the SDP negotiator.
  */
@@ -4209,6 +4309,9 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
 {
     pjmedia_sdp_neg_state neg_state;
     pj_status_t status;
+#if PJSUA_HAS_SIPREC
+    pj_status_t meta_status;
+#endif
     pjsip_tx_data *tdata = NULL;
     pjsip_rx_data *rdata;
     pjsip_status_code st_code;
@@ -4266,6 +4369,16 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
 
     } else {
         /* We receive new offer from remote */
+
+#if PJSUA_HAS_SIPREC
+        /* Process SIPREC metadata update if present */
+        meta_status = inv_process_siprec_metadata_update(inv, rdata);
+        if (meta_status != PJ_SUCCESS) {
+            status = PJSIP_SC_BAD_REQUEST;
+            goto on_return;
+        }
+#endif
+
         inv_check_sdp_in_incoming_msg(inv, pjsip_rdata_get_tsx(rdata), rdata);
 
         /* Application MUST have supplied the answer by now.
@@ -5916,6 +6029,12 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
                 status = pjsip_dlg_send_response(dlg, tsx, tdata);
                 return;
             }
+
+#if PJSUA_HAS_SIPREC
+            /* Process SIPREC metadata update if present */
+            if (inv_process_siprec_metadata_update(inv, rdata) != PJ_SUCCESS)
+                return;
+#endif
 
             /* Process SDP in incoming message. */
             status = inv_check_sdp_in_incoming_msg(inv, tsx, rdata);

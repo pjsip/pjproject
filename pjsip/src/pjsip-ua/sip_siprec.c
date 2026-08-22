@@ -28,6 +28,7 @@
 #include <pj/math.h>
 #include <pj/os.h>
 #include <pj/pool.h>
+#include <pjlib-util/xml.h>
 
 
 #define THIS_FILE               "sip_siprec.c"
@@ -336,14 +337,26 @@ PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
         return PJ_ENOTFOUND;
     }
 
-    pjsip_media_type_init2(&app_metadata, "application", "rs-metadata");
+    /* Try rs-metadata+xml first (RFC 9806 - correct media type) */
+    pjsip_media_type_init2(&app_metadata, "application", "rs-metadata+xml");
     metadata_part = pjsip_multipart_find_part(body, &app_metadata, NULL);
 
-    /* Fallback to XML extension rs-metadata+xml if needed per rfc*/
+    /* Fallback to legacy rs-metadata if needed (RFC 7866 - pre-9806).
+     * RFC 9806 obsoletes the use of application/rs-metadata in favor of
+     * application/rs-metadata+xml. Log a deprecation warning if legacy
+     * media type is encountered.
+     */
     if (!metadata_part) {
-        pjsip_media_type_init2(&app_metadata, "application",
-                               "rs-metadata+xml");
+        pjsip_media_type_init2(&app_metadata, "application", "rs-metadata");
         metadata_part = pjsip_multipart_find_part(body, &app_metadata, NULL);
+
+        if (metadata_part) {
+            PJ_LOG(4,(THIS_FILE,
+                      "SIPREC metadata uses legacy media type "
+                      "'application/rs-metadata' (RFC 7866). "
+                      "This media type is obsoleted by 'application/rs-metadata+xml' "
+                      "(RFC 9806). Please update the sender to use the correct media type."));
+        }
     }
 
     if(!metadata_part)
@@ -351,6 +364,100 @@ PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
 
     metadata->ptr  = (char*)metadata_part->body->data;
     metadata->slen = metadata_part->body->len;
-    
+
+    return PJ_SUCCESS;
+}
+
+
+/**
+ * Verifies rs-metadata in mid-dialog requests (re-INVITE/UPDATE).
+ * Extracts and validates metadata updates for SIPREC sessions.
+ *
+ * Note: This implementation currently only supports complete metadata updates
+ * (dataMode="complete" or absent). Per RFC 7865 Section 5.1.2, partial metadata
+ * updates (dataMode="partial") must be merged into the existing metadata rather
+ * than replacing it. Partial update support is not yet implemented.
+ *
+ * PJ_TODO(implement_rfc7865_partial_metadata_update);
+ */
+PJ_DEF(pj_status_t) pjsip_siprec_verify_update(pjsip_rx_data *rdata,
+                                                  pj_str_t *metadata,
+                                                  pj_pool_t *pool,
+                                                  pjsip_status_code *p_st_code,
+                                                  const pjsip_siprec_verify_setting *setting)
+{
+    pjsip_msg *msg;
+    pjsip_msg_body *body;
+    pj_status_t status;
+    pj_bool_t is_complete;
+    pjsip_siprec_verify_setting default_setting;
+    int code;
+
+    PJ_ASSERT_RETURN(rdata, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pool, PJ_EINVAL);
+
+    /* Initialize output */
+    if (metadata) {
+        metadata->ptr = NULL;
+        metadata->slen = 0;
+    }
+
+    /* Use default settings if not provided */
+    if (!setting) {
+        pjsip_siprec_verify_setting_default(&default_setting);
+        setting = &default_setting;
+    }
+
+    msg = rdata->msg_info.msg;
+
+    /* Check if body exists */
+    if (!msg || !msg->body) {
+        /* No body - metadata update is optional, accept request */
+        return PJ_SUCCESS;
+    }
+
+    body = msg->body;
+
+    /* Try to extract metadata from multipart body */
+    status = pjsip_siprec_get_metadata(pool, body, metadata);
+
+    if (status == PJ_ENOTFOUND) {
+        /* Metadata not found in this request
+         * Behavior depends on require_metadata:
+         * - PJ_TRUE (require): Reject if metadata is missing
+         * - PJ_FALSE (optional): Accept, but log warning
+         */
+        if (setting->require_metadata) {
+            /* Require metadata - reject if missing */
+            code = PJSIP_SC_BAD_REQUEST;
+
+            PJ_LOG(3,(THIS_FILE,
+                      "SIPREC metadata not found in mid-dialog request. "
+                      "To allow metadata-less updates, set "
+                      "siprec_require_metadata to PJ_FALSE."));
+
+            if (p_st_code)
+                *p_st_code = code;
+
+            return PJSIP_ERRNO_FROM_SIP_STATUS(code);
+        } else {
+            /* Metadata is optional - log warning and continue */
+            PJ_LOG(4,(THIS_FILE,
+                      "SIPREC metadata not found in mid-dialog request, "
+                      "continuing without metadata update"));
+            return PJ_SUCCESS;
+        }
+    }
+
+    if (status != PJ_SUCCESS) {
+        /* Error extracting metadata */
+        PJ_LOG(3,(THIS_FILE,
+                  "Error extracting SIPREC metadata from mid-dialog request"));
+        return status;
+    }
+
+    PJ_LOG(4,(THIS_FILE,
+              "SIPREC received metadata update in mid-dialog request"));
+
     return PJ_SUCCESS;
 }

@@ -380,6 +380,30 @@ typedef struct pjsip_inv_callback
                                               pjsip_transaction *tsx,
                                               pjsip_event *e);
 
+#if PJSUA_HAS_SIPREC
+    /**
+     * This callback is called when SIPREC rs-metadata is updated via
+     * mid-dialog re-INVITE or UPDATE request. This allows applications
+     * to track metadata changes during the lifetime of a recording
+     * session, as required by RFC 7866.
+     *
+     * The callback is invoked after the metadata has been successfully
+     * parsed and stored in the INVITE session, but before SDP
+     * negotiation completes.
+     *
+     * This callback is optional.
+     *
+     * @param inv           The invite session.
+     * @param old_metadata  Previous metadata (may be NULL or empty).
+     * @param new_metadata  New metadata from the update.
+     * @param rdata         The received request containing the update.
+     */
+    void (*on_siprec_metadata_update)(pjsip_inv_session *inv,
+                                      const pj_str_t *old_metadata,
+                                      const pj_str_t *new_metadata,
+                                      pjsip_rx_data *rdata);
+#endif
+
 } pjsip_inv_callback;
 
 
@@ -529,6 +553,9 @@ struct pjsip_inv_session
     pj_atomic_t         *ref_cnt;                   /**< Reference counter. */
     pj_bool_t            updated_sdp_answer;        /**< SDP answer just been
                                                          updated?           */
+#if PJSUA_HAS_SIPREC
+    pj_str_t             siprec_metadata;           /**< SIPREC rs-metadata  */
+#endif
 };
 
 
