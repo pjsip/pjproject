@@ -391,16 +391,16 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_update(pjsip_rx_data *rdata,
     pj_status_t status;
     pj_bool_t is_complete;
     pjsip_siprec_verify_setting default_setting;
-    int code = 200;
+    int code;
+
+    PJ_ASSERT_RETURN(rdata, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pool, PJ_EINVAL);
 
     /* Initialize output */
     if (metadata) {
         metadata->ptr = NULL;
         metadata->slen = 0;
     }
-
-    PJ_ASSERT_RETURN(rdata, PJ_EINVAL);
-    PJ_ASSERT_RETURN(pool, PJ_EINVAL);
 
     /* Use default settings if not provided */
     if (!setting) {
