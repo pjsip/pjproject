@@ -171,22 +171,18 @@ PJ_DECL(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
  * @param metadata          If metadata is found, this variable will be
  *                          populated with the extracted data.
  * @param pool              Pool to allocate memory.
- * @param p_tdata           Upon error, it will be filled with the final
- *                          response to be sent to the request sender.
- * @param dlg               The dialog instance.
- * @param endpt             The SIP endpoint.
- * @param setting           Verification setting, or NULL to use defaults.
+ * @param p_st_code        Upon error, this will be filled with the SIP
+ *                          status code to use in the error response.
+ * @param setting          Verification setting, or NULL to use defaults.
  *
  * @return                  PJ_SUCCESS if metadata is successfully extracted
  *                          (or if optional metadata is missing),
- *                          otherwise return error code and p_tdata is set.
+ *                          otherwise return error code and p_st_code is set.
  */
 PJ_DECL(pj_status_t) pjsip_siprec_verify_update(pjsip_rx_data *rdata,
                                                   pj_str_t *metadata,
                                                   pj_pool_t *pool,
-                                                  pjsip_tx_data **p_tdata,
-                                                  pjsip_dialog *dlg,
-                                                  pjsip_endpoint *endpt,
+                                                  pjsip_status_code *p_st_code,
                                                   const pjsip_siprec_verify_setting *setting);
 
 

@@ -383,9 +383,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
 PJ_DEF(pj_status_t) pjsip_siprec_verify_update(pjsip_rx_data *rdata,
                                                   pj_str_t *metadata,
                                                   pj_pool_t *pool,
-                                                  pjsip_tx_data **p_tdata,
-                                                  pjsip_dialog *dlg,
-                                                  pjsip_endpoint *endpt,
+                                                  pjsip_status_code *p_st_code,
                                                   const pjsip_siprec_verify_setting *setting)
 {
     pjsip_msg *msg;
@@ -394,14 +392,12 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_update(pjsip_rx_data *rdata,
     pj_bool_t is_complete;
     pjsip_siprec_verify_setting default_setting;
     int code = 200;
-    const char *warn_text = NULL;
 
     /* Initialize output */
     if (metadata) {
         metadata->ptr = NULL;
         metadata->slen = 0;
     }
-    if (p_tdata) *p_tdata = NULL;
 
     PJ_ASSERT_RETURN(rdata, PJ_EINVAL);
     PJ_ASSERT_RETURN(pool, PJ_EINVAL);
@@ -434,40 +430,16 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_update(pjsip_rx_data *rdata,
         if (setting->require_metadata) {
             /* Require metadata - reject if missing */
             code = PJSIP_SC_BAD_REQUEST;
-            warn_text = "SIPREC mid-dialog request must have rs-metadata";
 
             PJ_LOG(3,(THIS_FILE,
                       "SIPREC metadata not found in mid-dialog request. "
                       "To allow metadata-less updates, set "
                       "siprec_require_metadata to PJ_FALSE."));
 
-            /* Create error response */
-            if (p_tdata) {
-                pjsip_tx_data *tdata;
-                pj_status_t ret;
+            if (p_st_code)
+                *p_st_code = code;
 
-                if (dlg) {
-                    ret = pjsip_dlg_create_response(dlg, rdata, code,
-                                                     NULL, &tdata);
-                } else {
-                    ret = pjsip_endpt_create_response(endpt, rdata, code,
-                                                       NULL, &tdata);
-                }
-
-                if (ret == PJ_SUCCESS) {
-                    pjsip_warning_hdr *warn_hdr;
-                    pj_str_t warn_value = pj_str((char*)warn_text);
-
-                    warn_hdr = pjsip_warning_hdr_create(tdata->pool, 399,
-                                                        pjsip_endpt_name(endpt),
-                                                        &warn_value);
-                    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)warn_hdr);
-
-                    *p_tdata = tdata;
-                }
-
-                return PJSIP_ERRNO_FROM_SIP_STATUS(code);
-            }
+            return PJSIP_ERRNO_FROM_SIP_STATUS(code);
         } else {
             /* Metadata is optional - log warning and continue */
             PJ_LOG(4,(THIS_FILE,
