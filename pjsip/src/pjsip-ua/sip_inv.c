@@ -2372,8 +2372,8 @@ static pj_status_t inv_process_siprec_metadata_update(
 
     PJ_ASSERT_RETURN(inv && rdata, PJ_EINVAL);
 
-    /* Only process if SIPREC is supported */
-    if (!(inv->options & PJSIP_INV_SUPPORT_SIPREC))
+    /* Only process if SIPREC is required */
+    if (!(inv->options & PJSIP_INV_REQUIRE_SIPREC))
         return PJ_SUCCESS;
 
     pj_bzero(&new_metadata, sizeof(new_metadata));
