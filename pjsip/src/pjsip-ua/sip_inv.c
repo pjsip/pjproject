@@ -2393,8 +2393,19 @@ static pj_status_t inv_process_siprec_metadata_update(
             pjsip_dlg_send_response(inv->dlg,
                                     pjsip_rdata_get_tsx(rdata),
                                     tdata);
+        } else {
+            /* Callback failed to create response - create generic error */
+            pjsip_tx_data *err_tdata;
+            pj_status_t err_status = pjsip_dlg_create_response(inv->dlg, rdata,
+                                                PJSIP_SC_INTERNAL_SERVER_ERROR,
+                                                NULL, &err_tdata);
+            if (err_status == PJ_SUCCESS) {
+                pjsip_dlg_send_response(inv->dlg,
+                                        pjsip_rdata_get_tsx(rdata),
+                                        err_tdata);
+            }
         }
-        return PJSIP_SC_BAD_REQUEST;
+        return meta_status;
     }
 
     /* Update INVITE session metadata if present in this request.
