@@ -2382,7 +2382,6 @@ static pj_status_t inv_process_siprec_metadata_update(
     if (!mod_inv.cb.on_verify_siprec_update)
         return PJ_SUCCESS;
 
-    pj_bzero(&new_metadata, sizeof(new_metadata));
     tdata = NULL;
 
     meta_status = (*mod_inv.cb.on_verify_siprec_update)(inv, rdata,

@@ -6094,7 +6094,6 @@ static pj_status_t pjsua_call_on_verify_siprec_update(pjsip_inv_session *inv,
     pjsip_msg *msg;
     pjsip_msg_body *body;
     pj_status_t status;
-    pjsip_siprec_verify_setting setting;
     pjsip_status_code st_code;
 
     PJ_ASSERT_RETURN(inv && rdata, PJ_EINVAL);
@@ -6172,20 +6171,7 @@ static pj_status_t pjsua_call_on_verify_siprec_update(pjsip_inv_session *inv,
         return status;
     }
 
-    /* Metadata found - verify according to account settings */
-    pjsip_siprec_verify_setting_default(&setting);
-    setting.require_label = acc->cfg.siprec_require_label;
-
-    status = pjsip_siprec_verify_label(metadata, &setting);
-    if (status != PJ_SUCCESS) {
-        /* Label verification failed - reject request */
-        st_code = PJSIP_SC_BAD_REQUEST;
-
-        status = pjsip_dlg_create_response(inv->dlg, rdata, st_code,
-                                             NULL, p_tdata);
-        return PJSIP_ERRNO_FROM_SIP_STATUS(st_code);
-    }
-
+    /* Metadata found and extracted successfully */
     return PJ_SUCCESS;
 }
 
