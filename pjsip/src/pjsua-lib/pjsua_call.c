@@ -6165,10 +6165,24 @@ static pj_status_t pjsua_call_on_verify_siprec_update(pjsip_inv_session *inv,
     }
 
     if (status != PJ_SUCCESS) {
-        /* Error extracting metadata */
+        /* Error extracting metadata - create error response */
+        st_code = PJSIP_SC_BAD_REQUEST;
+
         PJ_LOG(3,(THIS_FILE,
                   "Error extracting SIPREC metadata from mid-dialog request"));
-        return status;
+
+        status = pjsip_dlg_create_response(inv->dlg, rdata, st_code,
+                                             NULL, p_tdata);
+        if (status == PJ_SUCCESS && p_tdata && *p_tdata) {
+            pj_str_t warn_value = pj_str("Error extracting SIPREC metadata from mid-dialog request");
+
+            pjsip_warning_hdr *warn_hdr = pjsip_warning_hdr_create((*p_tdata)->pool, 399,
+                                                    pjsip_endpt_name(pjsua_var.endpt),
+                                                    &warn_value);
+            pjsip_msg_add_hdr((*p_tdata)->msg, (pjsip_hdr*)warn_hdr);
+        }
+
+        return PJSIP_ERRNO_FROM_SIP_STATUS(st_code);
     }
 
     /* Metadata found and extracted successfully */
