@@ -142,7 +142,8 @@ PJ_DECL(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
                                                 pjsip_dialog *dlg,
                                                 pjsip_endpoint *endpt,
                                                 pjsip_tx_data **p_tdata,
-                                                const pjsip_siprec_verify_setting *setting);
+                                                const pjsip_siprec_verify_setting
+                                                *setting);
 
 
 /**
@@ -159,7 +160,7 @@ PJ_DECL(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
  */
 PJ_DECL(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
                                                 pjsip_msg_body *body,
-                                                pj_str_t* metadata);
+                                                pj_str_t *metadata);
 
 
 /**
@@ -183,7 +184,8 @@ PJ_DECL(pj_status_t) pjsip_siprec_verify_update(pjsip_rx_data *rdata,
                                                   pj_str_t *metadata,
                                                   pj_pool_t *pool,
                                                   pjsip_status_code *p_st_code,
-                                                  const pjsip_siprec_verify_setting *setting);
+                                                  const pjsip_siprec_verify_setting
+                                                  *setting);
 
 
 PJ_END_DECL
