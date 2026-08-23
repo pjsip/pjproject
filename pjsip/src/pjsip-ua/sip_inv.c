@@ -2368,35 +2368,33 @@ static pj_status_t inv_process_siprec_metadata_update(
     pj_str_t new_metadata;
     pj_status_t meta_status;
     pjsip_tx_data *tdata;
-    pjsip_status_code st_code;
 
     PJ_ASSERT_RETURN(inv && rdata, PJ_EINVAL);
 
-    /* Only process if SIPREC is required */
-    if (!(inv->options & PJSIP_INV_REQUIRE_SIPREC))
+    /* Call callback to verify and extract metadata from the request.
+     * The callback is responsible for:
+     * 1. Extracting metadata from the request
+     * 2. Verifying according to application policy (require_label, etc.)
+     * 3. Creating error response if verification fails
+     *
+     * If callback is not implemented, accept the request without verification.
+     */
+    if (!mod_inv.cb.on_verify_siprec_update)
         return PJ_SUCCESS;
 
     pj_bzero(&new_metadata, sizeof(new_metadata));
+    tdata = NULL;
 
-    /* Extract and verify metadata from the request.
-     * Note: pool_prov is used for temporary allocations during metadata
-     * extraction. The actual metadata data points into rdata's buffer
-     * (receive pool), which remains valid during this function call.
-     */
-    meta_status = pjsip_siprec_verify_update(rdata, &new_metadata,
-                                             inv->pool_prov,
-                                             &st_code,
-                                             NULL);
+    meta_status = (*mod_inv.cb.on_verify_siprec_update)(inv, rdata,
+                                                        &new_metadata,
+                                                        &tdata);
     if (meta_status != PJ_SUCCESS) {
-        /* Error processing metadata - reject the request */
-        meta_status = pjsip_dlg_create_response(inv->dlg, rdata, st_code,
-                                                 NULL, &tdata);
-        if (meta_status != PJ_SUCCESS)
-            return meta_status;
-
-        pjsip_dlg_send_response(inv->dlg,
-                                pjsip_rdata_get_tsx(rdata),
-                                tdata);
+        /* Verification failed - send error response if provided */
+        if (tdata) {
+            pjsip_dlg_send_response(inv->dlg,
+                                    pjsip_rdata_get_tsx(rdata),
+                                    tdata);
+        }
         return PJSIP_SC_BAD_REQUEST;
     }
 
@@ -2421,7 +2419,7 @@ static pj_status_t inv_process_siprec_metadata_update(
                  new_metadata.slen);
         inv->siprec_metadata.slen = new_metadata.slen;
 
-        /* Fire metadata update callback if set.
+        /* Fire metadata update notification callback if set.
          * Both old_metadata and inv->siprec_metadata point to
          * inv->pool memory and are valid for the callback duration.
          */

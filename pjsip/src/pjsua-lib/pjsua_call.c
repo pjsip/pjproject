@@ -126,6 +126,14 @@ static pj_bool_t pjsua_call_on_uac_tsx_terminate_session(
 
 #if PJSUA_HAS_SIPREC
 /*
+ * SIPREC metadata verification handler.
+ */
+static pj_status_t pjsua_call_on_verify_siprec_update(pjsip_inv_session *inv,
+                                                        pjsip_rx_data *rdata,
+                                                        pj_str_t *metadata,
+                                                        pjsip_tx_data **p_tdata);
+
+/*
  * SIPREC metadata update handler.
  */
 static void pjsua_call_on_siprec_metadata_update(pjsip_inv_session *inv,
@@ -270,6 +278,7 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     }
 
 #if PJSUA_HAS_SIPREC
+    inv_cb.on_verify_siprec_update = &pjsua_call_on_verify_siprec_update;
     inv_cb.on_siprec_metadata_update = &pjsua_call_on_siprec_metadata_update;
 #endif
 
@@ -6071,6 +6080,115 @@ static pj_status_t pjsua_call_on_rx_reinvite(pjsip_inv_session *inv,
 
 
 #if PJSUA_HAS_SIPREC
+/*
+ * Called to verify SIPREC metadata in mid-dialog requests (re-INVITE/UPDATE).
+ * This callback extracts metadata and verifies according to account policy.
+ */
+static pj_status_t pjsua_call_on_verify_siprec_update(pjsip_inv_session *inv,
+                                                        pjsip_rx_data *rdata,
+                                                        pj_str_t *metadata,
+                                                        pjsip_tx_data **p_tdata)
+{
+    pjsua_call *call;
+    pjsua_acc *acc;
+    pjsip_msg *msg;
+    pjsip_msg_body *body;
+    pj_status_t status;
+    pjsip_siprec_verify_setting setting;
+    pjsip_status_code st_code;
+
+    PJ_ASSERT_RETURN(inv && rdata, PJ_EINVAL);
+
+    call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+    if (!call) {
+        PJ_LOG(3,(THIS_FILE,
+                  "SIPREC verify callback called but call not found"));
+        return PJ_SUCCESS;
+    }
+
+    acc = &pjsua_var.acc[call->acc_id];
+
+    /* Initialize output */
+    metadata->ptr = NULL;
+    metadata->slen = 0;
+    if (p_tdata)
+        *p_tdata = NULL;
+
+    /* Only process if SIPREC is required for this call */
+    if (!(inv->options & PJSIP_INV_REQUIRE_SIPREC))
+        return PJ_SUCCESS;
+
+    msg = rdata->msg_info.msg;
+
+    /* Check if body exists */
+    if (!msg || !msg->body) {
+        /* No body - metadata update is optional, accept request */
+        return PJ_SUCCESS;
+    }
+
+    body = msg->body;
+
+    /* Try to extract metadata from multipart body */
+    status = pjsip_siprec_get_metadata(inv->pool_prov, body, metadata);
+
+    if (status == PJ_ENOTFOUND) {
+        /* Metadata not found - check if it's required */
+        if (acc->cfg.siprec_require_metadata) {
+            /* Require metadata - reject if missing */
+            st_code = PJSIP_SC_BAD_REQUEST;
+
+            PJ_LOG(3,(THIS_FILE,
+                      "SIPREC metadata not found in mid-dialog request. "
+                      "To allow metadata-less updates, set "
+                      "siprec_require_metadata to PJ_FALSE."));
+
+            /* Create error response */
+            status = pjsip_dlg_create_response(inv->dlg, rdata, st_code,
+                                                 NULL, p_tdata);
+            if (status == PJ_SUCCESS && p_tdata && *p_tdata) {
+                pjsip_warning_hdr *warn_hdr;
+                pj_str_t warn_value = pj_str("SIPREC mid-dialog request must have rs-metadata");
+
+                warn_hdr = pjsip_warning_hdr_create((*p_tdata)->pool, 399,
+                                                    pjsip_endpt_name(pjsua_var.endpt),
+                                                    &warn_value);
+                pjsip_msg_add_hdr((*p_tdata)->msg, (pjsip_hdr*)warn_hdr);
+            }
+
+            return PJSIP_ERRNO_FROM_SIP_STATUS(st_code);
+        } else {
+            /* Metadata is optional - log warning and continue */
+            PJ_LOG(4,(THIS_FILE,
+                      "SIPREC metadata not found in mid-dialog request, "
+                      "continuing without metadata update"));
+            return PJ_SUCCESS;
+        }
+    }
+
+    if (status != PJ_SUCCESS) {
+        /* Error extracting metadata */
+        PJ_LOG(3,(THIS_FILE,
+                  "Error extracting SIPREC metadata from mid-dialog request"));
+        return status;
+    }
+
+    /* Metadata found - verify according to account settings */
+    pjsip_siprec_verify_setting_default(&setting);
+    setting.require_label = acc->cfg.siprec_require_label;
+
+    status = pjsip_siprec_verify_label(metadata, &setting);
+    if (status != PJ_SUCCESS) {
+        /* Label verification failed - reject request */
+        st_code = PJSIP_SC_BAD_REQUEST;
+
+        status = pjsip_dlg_create_response(inv->dlg, rdata, st_code,
+                                             NULL, p_tdata);
+        return PJSIP_ERRNO_FROM_SIP_STATUS(st_code);
+    }
+
+    return PJ_SUCCESS;
+}
+
 /*
  * Called when SIPREC metadata is updated via re-INVITE or UPDATE.
  */

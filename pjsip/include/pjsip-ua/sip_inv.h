@@ -382,6 +382,32 @@ typedef struct pjsip_inv_callback
 
 #if PJSUA_HAS_SIPREC
     /**
+     * This callback is called to verify SIPREC rs-metadata in mid-dialog
+     * requests (re-INVITE or UPDATE) before accepting the request.
+     *
+     * The callback should extract the metadata from the request and
+     * verify it according to the application's policy. If verification
+     * fails, the callback may create an error response in p_tdata.
+     *
+     * This callback is optional. If not implemented, metadata will be
+     * accepted without verification.
+     *
+     * @param inv           The invite session.
+     * @param rdata         The received request (re-INVITE or UPDATE).
+     * @param metadata      Output parameter to be filled with the
+     *                      extracted metadata.
+     * @param p_tdata       Optional output parameter to be filled with
+     *                      error response if verification fails.
+     *
+     * @return              PJ_SUCCESS to accept the request, or error
+     *                      code to reject it.
+     */
+    pj_status_t (*on_verify_siprec_update)(pjsip_inv_session *inv,
+                                            pjsip_rx_data *rdata,
+                                            pj_str_t *metadata,
+                                            pjsip_tx_data **p_tdata);
+
+    /**
      * This callback is called when SIPREC rs-metadata is updated via
      * mid-dialog re-INVITE or UPDATE request. This allows applications
      * to track metadata changes during the lifetime of a recording
