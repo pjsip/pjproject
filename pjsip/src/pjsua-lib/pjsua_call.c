@@ -2073,6 +2073,21 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
         goto on_return;
     }
 
+    /*
+     * Copy metadata to permanent pool.
+     * The metadata returned by pjsip_siprec_verify_request points to
+     * data in the rdata message body, which is temporary and will be freed.
+     * We need to copy it to the invite session's permanent pool for the
+     * call lifetime.
+     */
+    if (call->siprec_metadata.slen > 0) {
+        pj_str_t temp_metadata = call->siprec_metadata;
+        call->siprec_metadata.ptr = (char*)pj_pool_alloc(call->inv->pool,
+                                                         temp_metadata.slen);
+        pj_memcpy(call->siprec_metadata.ptr, temp_metadata.ptr,
+                 temp_metadata.slen);
+    }
+
 #endif
 
     if (pjsua_var.acc[acc_id].cfg.require_100rel == PJSUA_100REL_MANDATORY)
