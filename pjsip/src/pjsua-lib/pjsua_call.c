@@ -132,6 +132,14 @@ static pj_status_t pjsua_call_on_verify_siprec_update(pjsip_inv_session *inv,
                                                         pjsip_rx_data *rdata,
                                                         pj_str_t *metadata,
                                                         pjsip_tx_data **p_tdata);
+
+/*
+ * SIPREC metadata update notification handler.
+ */
+static void pjsua_call_on_siprec_metadata_update(pjsip_inv_session *inv,
+                                                   const pj_str_t *old_metadata,
+                                                   const pj_str_t *new_metadata,
+                                                   pjsip_rx_data *rdata);
 #endif
 
 
@@ -271,6 +279,9 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
 
 #if PJSUA_HAS_SIPREC
     inv_cb.on_verify_siprec_update = &pjsua_call_on_verify_siprec_update;
+    if (pjsua_var.ua_cfg.cb.on_call_siprec_metadata_update) {
+        inv_cb.on_siprec_metadata_update = &pjsua_call_on_siprec_metadata_update;
+    }
 #endif
 
     /* Initialize invite session module: */
@@ -6178,6 +6189,32 @@ static pj_status_t pjsua_call_on_verify_siprec_update(pjsip_inv_session *inv,
 
     /* Metadata found and extracted successfully */
     return PJ_SUCCESS;
+}
+
+/*
+ * Called when SIPREC metadata is updated via mid-dialog re-INVITE/UPDATE.
+ * This callback forwards the notification to the application.
+ */
+static void pjsua_call_on_siprec_metadata_update(pjsip_inv_session *inv,
+                                                   const pj_str_t *old_metadata,
+                                                   const pj_str_t *new_metadata,
+                                                   pjsip_rx_data *rdata)
+{
+    pjsua_call *call;
+
+    PJ_UNUSED_ARG(old_metadata);
+
+    call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+    if (!call) {
+        PJ_LOG(3,(THIS_FILE,
+                  "SIPREC metadata update callback called but call not found"));
+        return;
+    }
+
+    if (pjsua_var.ua_cfg.cb.on_call_siprec_metadata_update) {
+        (*pjsua_var.ua_cfg.cb.on_call_siprec_metadata_update)(
+            call->index, old_metadata, new_metadata, rdata);
+    }
 }
 #endif
 

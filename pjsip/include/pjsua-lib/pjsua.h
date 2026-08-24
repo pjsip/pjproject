@@ -1832,6 +1832,28 @@ typedef struct pjsua_callback
                              void *reserved,
                              pjsua_call_setting *opt);
 
+    /**
+     * Notify application when SIPREC rs-metadata is updated via
+     * mid-dialog re-INVITE or UPDATE request. This allows applications
+     * to track metadata changes during the lifetime of a recording
+     * session, as required by RFC 7866.
+     *
+     * The metadata is temporary and valid only during the callback.
+     * Applications must copy the data to their own storage if persistence
+     * is needed.
+     *
+     * This callback is optional. When not set, metadata updates are
+     * handled internally without application notification.
+     *
+     * @param call_id       The call index.
+     * @param old_metadata   Previous metadata (may be NULL or empty).
+     * @param new_metadata   New metadata (temporary - copy if needed).
+     * @param rdata         The received request containing the update.
+     */
+    void (*on_call_siprec_metadata_update)(pjsua_call_id call_id,
+                                           const pj_str_t *old_metadata,
+                                           const pj_str_t *new_metadata,
+                                           pjsip_rx_data *rdata);
 
     /**
      * Notify application when registration or unregistration has been

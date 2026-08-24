@@ -380,7 +380,6 @@ typedef struct pjsip_inv_callback
                                               pjsip_transaction *tsx,
                                               pjsip_event *e);
 
-#if PJSUA_HAS_SIPREC
     /**
      * This callback is called to verify SIPREC rs-metadata in mid-dialog
      * requests (re-INVITE or UPDATE) before accepting the request.
@@ -436,7 +435,6 @@ typedef struct pjsip_inv_callback
                                       const pj_str_t *old_metadata,
                                       const pj_str_t *new_metadata,
                                       pjsip_rx_data *rdata);
-#endif
 
 } pjsip_inv_callback;
 
