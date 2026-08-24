@@ -316,7 +316,9 @@ on_return:
 
 
 /**
- * Find siprec metadata from the message body
+ * Find siprec metadata from the message body.
+ * Handles both multipart bodies with rs-metadata part (RFC 7866 §7.1)
+ * and single-part rs-metadata documents (RFC 7866 §7.1, RFC 9806).
  */
 PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
                                               pjsip_msg_body *body,
@@ -325,45 +327,74 @@ PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
     pjsip_media_type app_metadata;
     pjsip_multipart_part *metadata_part;
     const pj_str_t STR_MULTIPART = {"multipart", 9};
+    const pj_str_t STR_APPLICATION = {"application", 11};
 
     PJ_UNUSED_ARG(pool);
 
-    /* Check if body is multipart to avoid assertion failure
-     * when INVITE only contains SDP (not multipart/mixed) */
-    if (!body ||
-        pj_stricmp(&body->content_type.type, &STR_MULTIPART) != 0)
-    {
+    if (!body) {
         return PJ_ENOTFOUND;
     }
 
-    /* Try rs-metadata+xml first (RFC 9806 - correct media type) */
-    pjsip_media_type_init2(&app_metadata, "application", "rs-metadata+xml");
-    metadata_part = pjsip_multipart_find_part(body, &app_metadata, NULL);
-
-    /* Fallback to legacy rs-metadata if needed (RFC 7866 - pre-9806).
-     * RFC 9806 obsoletes the use of application/rs-metadata in favor of
-     * application/rs-metadata+xml. Log a deprecation warning if legacy
-     * media type is encountered.
-     */
-    if (!metadata_part) {
-        pjsip_media_type_init2(&app_metadata, "application", "rs-metadata");
+    /* Check if body is multipart (with rs-metadata part) */
+    if (pj_stricmp(&body->content_type.type, &STR_MULTIPART) == 0) {
+        /* Try rs-metadata+xml first (RFC 9806 - correct media type) */
+        pjsip_media_type_init2(&app_metadata, "application", "rs-metadata+xml");
         metadata_part = pjsip_multipart_find_part(body, &app_metadata, NULL);
 
+        /* Fallback to legacy rs-metadata if needed (RFC 7866 - pre-9806).
+         * RFC 9806 obsoletes the use of application/rs-metadata in favor of
+         * application/rs-metadata+xml. Log a deprecation warning if legacy
+         * media type is encountered.
+         */
+        if (!metadata_part) {
+            pjsip_media_type_init2(&app_metadata, "application", "rs-metadata");
+            metadata_part = pjsip_multipart_find_part(body, &app_metadata, NULL);
+
+            if (metadata_part) {
+                PJ_LOG(4,(THIS_FILE,
+                          "SIPREC metadata uses legacy media type "
+                          "'application/rs-metadata' (RFC 7866). "
+                          "This media type is obsoleted by 'application/rs-metadata+xml' "
+                          "(RFC 9806). Please update the sender to use the correct media type."));
+            }
+        }
+
         if (metadata_part) {
+            metadata->ptr  = (char*)metadata_part->body->data;
+            metadata->slen = metadata_part->body->len;
+            return PJ_SUCCESS;
+        }
+    }
+
+    /* Check if body is a single-part rs-metadata document (RFC 7866 §7.1).
+     * This handles the case where UPDATE contains only rs-metadata without SDP.
+     */
+    if (pj_stricmp(&body->content_type.type, &STR_APPLICATION) == 0) {
+        pj_bool_t is_rs_metadata = PJ_FALSE;
+        static const pj_str_t STR_RSMETADATA_XML = {"rs-metadata+xml", 15};
+        static const pj_str_t STR_RSMETADATA = {"rs-metadata", 11};
+
+        /* Check for rs-metadata+xml (RFC 9806) */
+        if (pj_stricmp(&body->content_type.subtype, &STR_RSMETADATA_XML) == 0) {
+            is_rs_metadata = PJ_TRUE;
+        }
+        /* Check for legacy rs-metadata (RFC 7866) */
+        else if (pj_stricmp(&body->content_type.subtype, &STR_RSMETADATA) == 0) {
+            is_rs_metadata = PJ_TRUE;
             PJ_LOG(4,(THIS_FILE,
                       "SIPREC metadata uses legacy media type "
                       "'application/rs-metadata' (RFC 7866). "
                       "This media type is obsoleted by 'application/rs-metadata+xml' "
                       "(RFC 9806). Please update the sender to use the correct media type."));
         }
+
+        if (is_rs_metadata) {
+            metadata->ptr  = (char*)body->data;
+            metadata->slen = body->len;
+            return PJ_SUCCESS;
+        }
     }
 
-    if(!metadata_part)
-        return PJ_ENOTFOUND;
-
-    metadata->ptr  = (char*)metadata_part->body->data;
-    metadata->slen = metadata_part->body->len;
-
-    return PJ_SUCCESS;
+    return PJ_ENOTFOUND;
 }
 

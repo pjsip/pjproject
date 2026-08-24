@@ -1142,6 +1142,401 @@ static int test_siprec_no_metadata_rejected(void)
 
     return 0;
 }
+
+/* Test 3: SIPREC metadata-only UPDATE with multipart body (no SDP).
+ * Per RFC 7866 §7.1, a mid-dialog UPDATE can contain rs-metadata
+ * without SDP. This test verifies that such requests are accepted
+ * with 200 OK when siprec_require_metadata is disabled.
+ */
+static int test_siprec_metadata_only_update_multipart(void)
+{
+    extern struct pjsua_data pjsua_var;
+    pjsua_call_setting opt;
+    pj_str_t uri = pj_str(g_ctx.self_uri);
+    pjsip_tx_data *tdata;
+    pj_pool_t *pool;
+    pjsip_dialog *dlg;
+    static const pjsip_method UPDATE_METHOD = { PJSIP_OTHER_METHOD, {"UPDATE", 6}};
+    pj_status_t status;
+    pjsua_call_id cid = PJSUA_INVALID_ID;
+    int rc = 0;
+    pjsip_msg_body *metadata_body;
+    pjsip_multipart_part *metadata_part;
+
+    PJ_LOG(3, (THIS_FILE, "  SIPREC metadata-only UPDATE (multipart)"));
+
+    /* Enable SIPREC support with optional metadata */
+    pjsua_var.acc[g_ctx.acc_id].cfg.use_siprec = PJSUA_SIP_SIPREC_OPTIONAL;
+    pjsua_var.acc[g_ctx.acc_id].cfg.siprec_require_metadata = PJ_FALSE;
+
+    g_siprec_test_ctx.request_seen = PJ_FALSE;
+    g_siprec_test_ctx.response_code = 0;
+
+    pjsua_call_setting_default(&opt);
+    opt.aud_cnt = 1;
+    opt.vid_cnt = 0;
+    opt.txt_cnt = 0;
+
+    status = pjsua_call_make_call(g_ctx.acc_id, &uri, &opt, NULL, NULL, &cid);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    make_call failed (%d)", status));
+        rc = -1600;
+        goto on_return;
+    }
+
+    if (!wait_until(&call_is_confirmed, cid, 8000)) {
+        PJ_LOG(1, (THIS_FILE, "    call did not reach CONFIRMED in time"));
+        rc = -1601;
+        goto on_return;
+    }
+
+    /* Get dialog for sending UPDATE */
+    if (!pjsua_var.calls[cid].inv || !pjsua_var.calls[cid].inv->dlg) {
+        PJ_LOG(1, (THIS_FILE, "    failed to get dialog"));
+        rc = -1602;
+        goto on_return;
+    }
+    dlg = pjsua_var.calls[cid].inv->dlg;
+
+    pool = pjsua_pool_create("siprec-update1", 4096, 4096);
+    if (!pool) {
+        PJ_LOG(1, (THIS_FILE, "    failed to create pool"));
+        rc = -1603;
+        goto on_return;
+    }
+
+    /* Create simple rs-metadata XML */
+    pj_str_t metadata_xml = pj_str(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+        "<recording xmlns='urn:ietf:params:xml:ns:recording:1'>"
+        "<datamode>complete</datamode>"
+        "</recording>"
+    );
+
+    /* Create empty multipart body */
+    pjsip_media_type multipart_ct;
+    pjsip_media_type_init2(&multipart_ct, "multipart", "mixed");
+    pj_str_t boundary = pj_str("boundary123");
+    metadata_body = pjsip_multipart_create(pool, &multipart_ct, &boundary);
+
+    /* Create rs-metadata part */
+    metadata_part = pjsip_multipart_create_part(pool);
+    pjsip_media_type_init2(&metadata_part->body->content_type,
+                            "application", "rs-metadata+xml");
+    {
+        pjsip_msg_body *body = metadata_part->body;
+        body->data = metadata_xml.ptr;
+        body->len = metadata_xml.slen;
+        body->print_body = &pjsip_print_text_body;
+    }
+
+    /* Add metadata part to multipart body */
+    pjsip_multipart_add_part(pool, metadata_body, metadata_part);
+
+    /* Create UPDATE request */
+    status = pjsip_dlg_create_request(dlg, &UPDATE_METHOD, -1, &tdata);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    failed to create UPDATE (%d)", status));
+        rc = -1604;
+        goto cleanup_pool;
+    }
+
+    /* Set multipart body */
+    tdata->msg->body = metadata_body;
+
+    /* Send UPDATE statefully */
+    status = pjsip_dlg_send_request(dlg, tdata, -1, NULL);
+
+    pj_pool_release(pool);
+
+    /* Wait for response */
+    if (!wait_until(&siprec_response_seen, PJSUA_INVALID_ID, 8000)) {
+        PJ_LOG(1, (THIS_FILE, "    no response received"));
+        rc = -1605;
+        goto on_return;
+    }
+
+    PJ_LOG(3,(THIS_FILE, "    response code: %d",
+             g_siprec_test_ctx.response_code));
+
+    /* Clean up */
+    pjsua_call_hangup_all();
+    goto on_return;
+
+cleanup_pool:
+    pj_pool_release(pool);
+
+on_return:
+    pjsua_var.acc[g_ctx.acc_id].cfg.use_siprec = PJSUA_SIP_SIPREC_INACTIVE;
+    pjsua_var.acc[g_ctx.acc_id].cfg.siprec_require_metadata = PJ_FALSE;
+    pjsua_call_hangup_all();
+
+    if (rc != 0)
+        return rc;
+
+    if (g_siprec_test_ctx.response_code < 200 ||
+        g_siprec_test_ctx.response_code >= 300) {
+        PJ_LOG(1, (THIS_FILE, "    expected 2xx, got %d",
+                   g_siprec_test_ctx.response_code));
+        return -1606;
+    }
+
+    return 0;
+}
+
+/* Test 4: SIPREC metadata-only UPDATE with single-part rs-metadata body.
+ * Per RFC 7866 §7.1, a mid-dialog UPDATE can contain a single-part
+ * rs-metadata document. This test verifies that such requests are
+ * accepted with 200 OK.
+ *
+ * NOTE: This test currently FAILS because pjsip_siprec_get_metadata()
+ * only handles multipart bodies and returns PJ_ENOTFOUND for single-part.
+ * This is the bug described in reviewer issue #2.
+ */
+static int test_siprec_metadata_only_update_singlepart(void)
+{
+    extern struct pjsua_data pjsua_var;
+    pjsua_call_setting opt;
+    pj_str_t uri = pj_str(g_ctx.self_uri);
+    pjsip_tx_data *tdata;
+    pj_pool_t *pool;
+    pjsip_dialog *dlg;
+    static const pjsip_method UPDATE_METHOD = { PJSIP_OTHER_METHOD, {"UPDATE", 6}};
+    pj_status_t status;
+    pjsua_call_id cid = PJSUA_INVALID_ID;
+    int rc = 0;
+
+    PJ_LOG(3, (THIS_FILE, "  SIPREC metadata-only UPDATE (single-part)"));
+
+    /* Enable SIPREC support with optional metadata */
+    pjsua_var.acc[g_ctx.acc_id].cfg.use_siprec = PJSUA_SIP_SIPREC_OPTIONAL;
+    pjsua_var.acc[g_ctx.acc_id].cfg.siprec_require_metadata = PJ_FALSE;
+
+    g_siprec_test_ctx.request_seen = PJ_FALSE;
+    g_siprec_test_ctx.response_code = 0;
+
+    pjsua_call_setting_default(&opt);
+    opt.aud_cnt = 1;
+    opt.vid_cnt = 0;
+    opt.txt_cnt = 0;
+
+    status = pjsua_call_make_call(g_ctx.acc_id, &uri, &opt, NULL, NULL, &cid);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    make_call failed (%d)", status));
+        rc = -1700;
+        goto on_return;
+    }
+
+    if (!wait_until(&call_is_confirmed, cid, 8000)) {
+        PJ_LOG(1, (THIS_FILE, "    call did not reach CONFIRMED in time"));
+        rc = -1701;
+        goto on_return;
+    }
+
+    /* Get dialog for sending UPDATE */
+    if (!pjsua_var.calls[cid].inv || !pjsua_var.calls[cid].inv->dlg) {
+        PJ_LOG(1, (THIS_FILE, "    failed to get dialog"));
+        rc = -1702;
+        goto on_return;
+    }
+    dlg = pjsua_var.calls[cid].inv->dlg;
+
+    pool = pjsua_pool_create("siprec-update2", 4096, 4096);
+    if (!pool) {
+        PJ_LOG(1, (THIS_FILE, "    failed to create pool"));
+        rc = -1703;
+        goto on_return;
+    }
+
+    /* Create simple rs-metadata XML */
+    pj_str_t metadata_xml = pj_str(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+        "<recording xmlns='urn:ietf:params:xml:ns:recording:1'>"
+        "<datamode>complete</datamode>"
+        "</recording>"
+    );
+
+    /* Create single-part rs-metadata body */
+    pj_str_t metadata_type = pj_str("application");
+    pj_str_t metadata_subtype = pj_str("rs-metadata+xml");
+    pjsip_msg_body *metadata_body = pjsip_msg_body_create(pool,
+                                                           &metadata_type,
+                                                           &metadata_subtype,
+                                                           &metadata_xml);
+
+    /* Create UPDATE request */
+    status = pjsip_dlg_create_request(dlg, &UPDATE_METHOD, -1, &tdata);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    failed to create UPDATE (%d)", status));
+        rc = -1704;
+        goto cleanup_pool;
+    }
+
+    /* Set single-part body */
+    tdata->msg->body = metadata_body;
+
+    /* Send UPDATE statefully */
+    status = pjsip_dlg_send_request(dlg, tdata, -1, NULL);
+
+    pj_pool_release(pool);
+
+    /* Wait for response */
+    if (!wait_until(&siprec_response_seen, PJSUA_INVALID_ID, 8000)) {
+        PJ_LOG(1, (THIS_FILE, "    no response received"));
+        rc = -1705;
+        goto on_return;
+    }
+
+    PJ_LOG(3,(THIS_FILE, "    response code: %d",
+             g_siprec_test_ctx.response_code));
+
+cleanup_pool:
+    pj_pool_release(pool);
+
+on_return:
+    pjsua_var.acc[g_ctx.acc_id].cfg.use_siprec = PJSUA_SIP_SIPREC_INACTIVE;
+    pjsua_var.acc[g_ctx.acc_id].cfg.siprec_require_metadata = PJ_FALSE;
+    pjsua_call_hangup_all();
+
+    if (rc != 0)
+        return rc;
+
+    if (g_siprec_test_ctx.response_code < 200 ||
+        g_siprec_test_ctx.response_code >= 300) {
+        PJ_LOG(1, (THIS_FILE, "    expected 2xx, got %d",
+                   g_siprec_test_ctx.response_code));
+        return -1706;
+    }
+
+    return 0;
+}
+
+/* Test 5: SIPREC metadata UPDATE with datamode=partial element.
+ * Per RFC 7865, the <datamode> element indicates whether metadata
+ * is complete or partial. This test verifies proper parsing of
+ * the lowercase <datamode> element.
+ *
+ * NOTE: This test validates the fix for reviewer issue #1 (if
+ * pjsip_siprec_parse_data_mode() still exists).
+ */
+static int test_siprec_datamode_partial_element(void)
+{
+    extern struct pjsua_data pjsua_var;
+    pjsua_call_setting opt;
+    pj_str_t uri = pj_str(g_ctx.self_uri);
+    pjsip_tx_data *tdata;
+    pj_pool_t *pool;
+    pjsip_dialog *dlg;
+    static const pjsip_method UPDATE_METHOD = { PJSIP_OTHER_METHOD, {"UPDATE", 6}};
+    pj_status_t status;
+    pjsua_call_id cid = PJSUA_INVALID_ID;
+    int rc = 0;
+
+    PJ_LOG(3, (THIS_FILE, "  SIPREC datamode=partial element parsing"));
+
+    /* Enable SIPREC support with optional metadata */
+    pjsua_var.acc[g_ctx.acc_id].cfg.use_siprec = PJSUA_SIP_SIPREC_OPTIONAL;
+    pjsua_var.acc[g_ctx.acc_id].cfg.siprec_require_metadata = PJ_FALSE;
+
+    g_siprec_test_ctx.request_seen = PJ_FALSE;
+    g_siprec_test_ctx.response_code = 0;
+
+    pjsua_call_setting_default(&opt);
+    opt.aud_cnt = 1;
+    opt.vid_cnt = 0;
+    opt.txt_cnt = 0;
+
+    status = pjsua_call_make_call(g_ctx.acc_id, &uri, &opt, NULL, NULL, &cid);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    make_call failed (%d)", status));
+        rc = -1800;
+        goto on_return;
+    }
+
+    if (!wait_until(&call_is_confirmed, cid, 8000)) {
+        PJ_LOG(1, (THIS_FILE, "    call did not reach CONFIRMED in time"));
+        rc = -1801;
+        goto on_return;
+    }
+
+    /* Get dialog for sending UPDATE */
+    if (!pjsua_var.calls[cid].inv || !pjsua_var.calls[cid].inv->dlg) {
+        PJ_LOG(1, (THIS_FILE, "    failed to get dialog"));
+        rc = -1802;
+        goto on_return;
+    }
+    dlg = pjsua_var.calls[cid].inv->dlg;
+
+    pool = pjsua_pool_create("siprec-update3", 4096, 4096);
+    if (!pool) {
+        PJ_LOG(1, (THIS_FILE, "    failed to create pool"));
+        rc = -1803;
+        goto on_return;
+    }
+
+    /* Create rs-metadata with datamode=partial (lowercase element) */
+    pj_str_t metadata_xml = pj_str(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+        "<recording xmlns='urn:ietf:params:xml:ns:recording:1'>"
+        "<datamode>partial</datamode>"
+        "</recording>"
+    );
+
+    /* Create single-part rs-metadata body */
+    pj_str_t metadata_type = pj_str("application");
+    pj_str_t metadata_subtype = pj_str("rs-metadata+xml");
+    pjsip_msg_body *metadata_body = pjsip_msg_body_create(pool,
+                                                           &metadata_type,
+                                                           &metadata_subtype,
+                                                           &metadata_xml);
+
+    /* Create UPDATE request */
+    status = pjsip_dlg_create_request(dlg, &UPDATE_METHOD, -1, &tdata);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    failed to create UPDATE (%d)", status));
+        rc = -1804;
+        goto cleanup_pool;
+    }
+
+    /* Set body */
+    tdata->msg->body = metadata_body;
+
+    /* Send UPDATE statefully */
+    status = pjsip_dlg_send_request(dlg, tdata, -1, NULL);
+
+    pj_pool_release(pool);
+
+    /* Wait for response */
+    if (!wait_until(&siprec_response_seen, PJSUA_INVALID_ID, 8000)) {
+        PJ_LOG(1, (THIS_FILE, "    no response received"));
+        rc = -1805;
+        goto on_return;
+    }
+
+    PJ_LOG(3,(THIS_FILE, "    response code: %d",
+             g_siprec_test_ctx.response_code));
+
+cleanup_pool:
+    pj_pool_release(pool);
+
+on_return:
+    pjsua_var.acc[g_ctx.acc_id].cfg.use_siprec = PJSUA_SIP_SIPREC_INACTIVE;
+    pjsua_var.acc[g_ctx.acc_id].cfg.siprec_require_metadata = PJ_FALSE;
+    pjsua_call_hangup_all();
+
+    if (rc != 0)
+        return rc;
+
+    if (g_siprec_test_ctx.response_code < 200 ||
+        g_siprec_test_ctx.response_code >= 300) {
+        PJ_LOG(1, (THIS_FILE, "    expected 2xx, got %d",
+                   g_siprec_test_ctx.response_code));
+        return -1806;
+    }
+
+    return 0;
+}
+
 #endif
 
 /* RFC2543 call hold of a call whose local SDP has no connection line at all.
@@ -1745,6 +2140,18 @@ int pjsua_call_test(void)
     if (rc != 0) goto on_return;
 
     rc = test_siprec_no_metadata_rejected();
+    if (rc != 0) goto on_return;
+
+    /* SIPREC mid-dialog UPDATE tests. These tests verify RFC 7866 §7.1
+     * metadata-only UPDATE handling and datamode element parsing.
+     */
+    rc = test_siprec_metadata_only_update_multipart();
+    if (rc != 0) goto on_return;
+
+    rc = test_siprec_metadata_only_update_singlepart();
+    if (rc != 0) goto on_return;
+
+    rc = test_siprec_datamode_partial_element();
     if (rc != 0) goto on_return;
 #endif
 
