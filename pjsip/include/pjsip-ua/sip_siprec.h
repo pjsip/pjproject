@@ -163,31 +163,6 @@ PJ_DECL(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
                                                 pj_str_t *metadata);
 
 
-/**
- * Verifies and extracts rs-metadata from mid-dialog requests
- * (re-INVITE or UPDATE). This function should only be called for
- * sessions that are already SIPREC-enabled (PJSIP_INV_REQUIRE_SIPREC set).
- *
- * @param rdata             The incoming request (re-INVITE or UPDATE).
- * @param metadata          If metadata is found, this variable will be
- *                          populated with the extracted data.
- * @param pool              Pool to allocate memory.
- * @param p_st_code        Upon error, this will be filled with the SIP
- *                          status code to use in the error response.
- * @param setting          Verification setting, or NULL to use defaults.
- *
- * @return                  PJ_SUCCESS if metadata is successfully extracted
- *                          (or if optional metadata is missing),
- *                          otherwise return error code and p_st_code is set.
- */
-PJ_DECL(pj_status_t) pjsip_siprec_verify_update(pjsip_rx_data *rdata,
-                                                  pj_str_t *metadata,
-                                                  pj_pool_t *pool,
-                                                  pjsip_status_code *p_st_code,
-                                                  const pjsip_siprec_verify_setting
-                                                  *setting);
-
-
 PJ_END_DECL
 
 

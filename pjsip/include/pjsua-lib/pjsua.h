@@ -490,7 +490,7 @@ typedef struct pj_stun_resolve_result pj_stun_resolve_result;
  * Default: 0 (disabled)
  */
 #ifndef PJSUA_HAS_SIPREC
-#   define PJSUA_HAS_SIPREC              0
+#   define PJSUA_HAS_SIPREC              PJSIP_HAS_SIPREC
 #endif
 
 

@@ -119,7 +119,7 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
                                                   pjsip_rx_data *rdata);
 static pj_status_t inv_negotiate_sdp( pjsip_inv_session *inv );
 
-#if PJSUA_HAS_SIPREC
+#if PJSIP_HAS_SIPREC
 static pj_status_t inv_process_siprec_metadata_update(
                                 pjsip_inv_session *inv,
                                 pjsip_rx_data *rdata);
@@ -2345,7 +2345,7 @@ static void swap_pool(pj_pool_t **p1, pj_pool_t **p2)
 }
 
 
-#if PJSUA_HAS_SIPREC
+#if PJSIP_HAS_SIPREC
 /*
  * Process SIPREC metadata update from mid-dialog requests (re-INVITE/UPDATE).
  * This function validates metadata from the request and fires the update callback.
@@ -2372,7 +2372,7 @@ static pj_status_t inv_process_siprec_metadata_update(
                                         pjsip_inv_session *inv,
                                         pjsip_rx_data *rdata)
 {
-    pj_str_t new_metadata;
+    pj_str_t new_metadata = {NULL, 0};
     pj_status_t meta_status;
     pjsip_tx_data *tdata;
 
@@ -4326,7 +4326,7 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
 {
     pjmedia_sdp_neg_state neg_state;
     pj_status_t status;
-#if PJSUA_HAS_SIPREC
+#if PJSIP_HAS_SIPREC
     pj_status_t meta_status;
 #endif
     pjsip_tx_data *tdata = NULL;
@@ -4351,7 +4351,7 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
 
     neg_state = pjmedia_sdp_neg_get_state(inv->neg);
 
-#if PJSUA_HAS_SIPREC
+#if PJSIP_HAS_SIPREC
     /* Process SIPREC metadata update if present (RFC 7866 §7.1).
      * Must be processed before SDP handling to support metadata-only
      * UPDATE requests (body contains rs-metadata without SDP).
@@ -6069,7 +6069,7 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
                 return;
             }
 
-#if PJSUA_HAS_SIPREC
+#if PJSIP_HAS_SIPREC
             /* Process SIPREC metadata update if present */
             if (inv_process_siprec_metadata_update(inv, rdata) != PJ_SUCCESS)
                 return;
