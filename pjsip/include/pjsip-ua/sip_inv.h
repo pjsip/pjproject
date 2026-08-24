@@ -413,15 +413,23 @@ typedef struct pjsip_inv_callback
      * to track metadata changes during the lifetime of a recording
      * session, as required by RFC 7866.
      *
-     * The callback is invoked after the metadata has been successfully
-     * parsed and stored in the INVITE session, but before SDP
-     * negotiation completes.
+     * The callback receives temporary copies of metadata allocated in
+     * pool_prov. The application MUST copy the data to its own storage
+     * if it needs to persist beyond the callback duration. After the
+     * callback returns, the metadata pointers become invalid when
+     * pool_prov is reset (typically after SDP negotiation).
+     *
+     * This design prevents memory accumulation in long recording sessions
+     * with frequent metadata updates.
      *
      * This callback is optional.
      *
      * @param inv           The invite session.
-     * @param old_metadata  Previous metadata (may be NULL or empty).
-     * @param new_metadata  New metadata from the update.
+     * @param old_metadata  Previous metadata (may be NULL or empty). For the
+     *                       core layer, this is always empty since metadata
+     *                       state is maintained at the application layer.
+     * @param new_metadata  New metadata from the update. Valid only during
+     *                       the callback - copy if persistence is needed.
      * @param rdata         The received request containing the update.
      */
     void (*on_siprec_metadata_update)(pjsip_inv_session *inv,
@@ -579,9 +587,6 @@ struct pjsip_inv_session
     pj_atomic_t         *ref_cnt;                   /**< Reference counter. */
     pj_bool_t            updated_sdp_answer;        /**< SDP answer just been
                                                          updated?           */
-#if PJSUA_HAS_SIPREC
-    pj_str_t             siprec_metadata;           /**< SIPREC rs-metadata  */
-#endif
 };
 
 

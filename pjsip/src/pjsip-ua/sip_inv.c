@@ -2348,8 +2348,15 @@ static void swap_pool(pj_pool_t **p1, pj_pool_t **p2)
 #if PJSUA_HAS_SIPREC
 /*
  * Process SIPREC metadata update from mid-dialog requests (re-INVITE/UPDATE).
- * This function extracts and validates metadata from the request, updates
- * the INVITE session's metadata storage, and fires the update callback.
+ * This function validates metadata from the request and fires the update callback.
+ *
+ * The metadata is passed to the callback via temporary allocation in pool_prov,
+ * which will be freed after SDP negotiation. The callback must copy the data
+ * to its own persistent storage if needed (e.g., application pool or long-term
+ * storage).
+ *
+ * This design prevents memory accumulation that would occur if metadata were
+ * stored in inv->pool (permanent) for every update in long recording sessions.
  *
  * Parameters:
  *  @param inv          The invite session.
@@ -2408,37 +2415,39 @@ static pj_status_t inv_process_siprec_metadata_update(
         return meta_status;
     }
 
-    /* Update INVITE session metadata if present in this request.
-     * Copy from receive buffer to permanent session pool before
-     * invoking callback to ensure data remains valid.
+    /* Fire metadata update notification callback if new metadata is present.
+     * Allocate temporary copies in pool_prov for the callback duration.
+     * The callback is responsible for copying the data if it needs to persist.
+     *
+     * Using pool_prov (resettable) instead of inv->pool (permanent) prevents
+     * memory accumulation during long recording sessions with frequent updates.
      */
-    if (new_metadata.slen > 0) {
-        pj_str_t old_metadata;
+    if (new_metadata.slen > 0 &&
+        mod_inv.cb.on_siprec_metadata_update)
+    {
+        pj_str_t temp_metadata;
+        pj_str_t empty_metadata = {NULL, 0};
 
-        /* Capture old metadata for callback (value copy, pointer is
-         * safe since it's from inv->pool).
+        /* Copy new metadata to provisional pool for callback.
+         * This allocation will be freed when pool_prov is reset after
+         * SDP negotiation completes. The callback must copy the data
+         * to its own storage if it needs to persist beyond the callback.
          */
-        old_metadata = inv->siprec_metadata;
-
-        /* Copy new metadata to permanent session pool.
-         * The callback receives pointers to inv->pool memory.
-         */
-        inv->siprec_metadata.ptr = (char*)
-            pj_pool_alloc(inv->pool, new_metadata.slen);
-        pj_memcpy(inv->siprec_metadata.ptr, new_metadata.ptr,
+        temp_metadata.ptr = (char*)
+            pj_pool_alloc(inv->pool_prov, new_metadata.slen);
+        pj_memcpy(temp_metadata.ptr, new_metadata.ptr,
                  new_metadata.slen);
-        inv->siprec_metadata.slen = new_metadata.slen;
+        temp_metadata.slen = new_metadata.slen;
 
-        /* Fire metadata update notification callback if set.
-         * Both old_metadata and inv->siprec_metadata point to
-         * inv->pool memory and are valid for the callback duration.
+        /* Fire callback with empty old metadata and new metadata from
+         * this request. The application layer maintains its own metadata
+         * state (e.g., pjsua_call.siprec_metadata) and can provide the
+         * actual old metadata if needed.
          */
-        if (mod_inv.cb.on_siprec_metadata_update) {
-            (*mod_inv.cb.on_siprec_metadata_update)(inv,
-                                                     &old_metadata,
-                                                     &inv->siprec_metadata,
-                                                     rdata);
-        }
+        (*mod_inv.cb.on_siprec_metadata_update)(inv,
+                                                &empty_metadata,
+                                                &temp_metadata,
+                                                rdata);
     }
 
     return PJ_SUCCESS;
