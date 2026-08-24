@@ -1242,8 +1242,8 @@ static int test_siprec_metadata_only_update_multipart(void)
     /* Set multipart body */
     tdata->msg->body = metadata_body;
 
-    /* Send UPDATE statefully */
-    status = pjsip_dlg_send_request(dlg, tdata, -1, NULL);
+    /* Send UPDATE statefully via INVITE session */
+    status = pjsip_inv_send_msg(pjsua_var.calls[cid].inv, tdata);
 
     pj_pool_release(pool);
 
@@ -1369,8 +1369,8 @@ static int test_siprec_metadata_only_update_singlepart(void)
     /* Set single-part body */
     tdata->msg->body = metadata_body;
 
-    /* Send UPDATE statefully */
-    status = pjsip_dlg_send_request(dlg, tdata, -1, NULL);
+    /* Send UPDATE statefully via INVITE session */
+    status = pjsip_inv_send_msg(pjsua_var.calls[cid].inv, tdata);
 
     pj_pool_release(pool);
 
@@ -1495,8 +1495,8 @@ static int test_siprec_datamode_partial_element(void)
     /* Set body */
     tdata->msg->body = metadata_body;
 
-    /* Send UPDATE statefully */
-    status = pjsip_dlg_send_request(dlg, tdata, -1, NULL);
+    /* Send UPDATE statefully via INVITE session */
+    status = pjsip_inv_send_msg(pjsua_var.calls[cid].inv, tdata);
 
     pj_pool_release(pool);
 
