@@ -1220,14 +1220,12 @@ static int test_siprec_metadata_only_update_multipart(void)
     metadata_body = pjsip_multipart_create(pool, &multipart_ct, &boundary);
 
     /* Create rs-metadata part */
-    metadata_part = pjsip_multipart_create_part(pool);
-    pjsip_media_type_init2(&metadata_part->body->content_type,
-                            "application", "rs-metadata+xml");
     {
-        pjsip_msg_body *body = metadata_part->body;
-        body->data = metadata_xml.ptr;
-        body->len = metadata_xml.slen;
-        body->print_body = &pjsip_print_text_body;
+        pj_str_t type = pj_str("application");
+        pj_str_t subtype = pj_str("rs-metadata+xml");
+        metadata_part = pjsip_multipart_create_part(pool);
+        metadata_part->body = pjsip_msg_body_create(pool, &type, &subtype,
+                                                     &metadata_xml);
     }
 
     /* Add metadata part to multipart body */
@@ -1258,10 +1256,6 @@ static int test_siprec_metadata_only_update_multipart(void)
 
     PJ_LOG(3,(THIS_FILE, "    response code: %d",
              g_siprec_test_ctx.response_code));
-
-    /* Clean up */
-    pjsua_call_hangup_all();
-    goto on_return;
 
 cleanup_pool:
     pj_pool_release(pool);
