@@ -4351,21 +4351,38 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
 
     neg_state = pjmedia_sdp_neg_get_state(inv->neg);
 
+#if PJSUA_HAS_SIPREC
+    /* Process SIPREC metadata update if present (RFC 7866 §7.1).
+     * Must be processed before SDP handling to support metadata-only
+     * UPDATE requests (body contains rs-metadata without SDP).
+     */
+    if (rdata->msg_info.msg->body != NULL) {
+        meta_status = inv_process_siprec_metadata_update(inv, rdata);
+        if (meta_status != PJ_SUCCESS) {
+            /* Metadata verification failed - error response already sent
+             * by inv_process_siprec_metadata_update().
+             */
+            return;
+        }
+    }
+#endif
+
     /* If UPDATE doesn't contain SDP, just respond with 200/OK.
      * This is a valid scenario according to session-timer draft.
+     * Also valid for SIPREC metadata-only updates per RFC 7866 §7.1.
      */
     if (rdata->msg_info.msg->body == NULL) {
 
-        status = pjsip_dlg_create_response(inv->dlg, rdata, 
+        status = pjsip_dlg_create_response(inv->dlg, rdata,
                                            200, NULL, &tdata);
     }
     /* Send 491 if we receive UPDATE while we're waiting for an answer */
     else if (neg_state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER) {
-        status = pjsip_dlg_create_response(inv->dlg, rdata, 
+        status = pjsip_dlg_create_response(inv->dlg, rdata,
                                            PJSIP_SC_REQUEST_PENDING, NULL,
                                            &tdata);
     }
-    /* Send 500 with Retry-After header set randomly between 0 and 10 if we 
+    /* Send 500 with Retry-After header set randomly between 0 and 10 if we
      * receive UPDATE while we haven't sent answer.
      */
     else if (neg_state == PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER ||
@@ -4374,10 +4391,10 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
         pjsip_retry_after_hdr *ra_hdr;
         int val;
 
-        status = pjsip_dlg_create_response(inv->dlg, rdata, 
+        status = pjsip_dlg_create_response(inv->dlg, rdata,
                                            PJSIP_SC_INTERNAL_SERVER_ERROR,
                                            NULL, &tdata);
-    
+
         if (status == PJ_SUCCESS) {
             val = (pj_rand() % 10);
             ra_hdr = pjsip_retry_after_hdr_create(tdata->pool, val);
@@ -4386,17 +4403,21 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
 
     } else {
         /* We receive new offer from remote */
+        pj_bool_t has_sdp = PJ_TRUE;
 
-#if PJSUA_HAS_SIPREC
-        /* Process SIPREC metadata update if present */
-        meta_status = inv_process_siprec_metadata_update(inv, rdata);
-        if (meta_status != PJ_SUCCESS) {
-            status = PJSIP_SC_BAD_REQUEST;
-            goto on_return;
+        /* Check if this UPDATE contains SDP or is metadata-only */
+        if (rdata->msg_info.msg->body != NULL) {
+            pjsip_rdata_sdp_info *sdp_info = pjsip_rdata_get_sdp_info(rdata);
+            has_sdp = (sdp_info->sdp != NULL);
         }
-#endif
 
-        inv_check_sdp_in_incoming_msg(inv, pjsip_rdata_get_tsx(rdata), rdata);
+        if (!has_sdp) {
+            /* Metadata-only UPDATE (RFC 7866 7.1) - no SDP to process */
+            status = pjsip_dlg_create_response(inv->dlg, rdata,
+                                               PJSIP_SC_OK, NULL, &tdata);
+        } else {
+            /* Process SDP offer/answer */
+            inv_check_sdp_in_incoming_msg(inv, pjsip_rdata_get_tsx(rdata), rdata);
 
         /* Application MUST have supplied the answer by now.
          * If so, negotiate the SDP.
@@ -4418,7 +4439,7 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
                                                NULL, &tdata);
         } else {
             /* New media has been negotiated successfully, send 200/OK */
-            status = pjsip_dlg_create_response(inv->dlg, rdata, 
+            status = pjsip_dlg_create_response(inv->dlg, rdata,
                                                PJSIP_SC_OK, NULL, &tdata);
             if (status == PJ_SUCCESS) {
                 const pjmedia_sdp_session *sdp;
@@ -4426,6 +4447,7 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
                 if (status == PJ_SUCCESS)
                     tdata->msg->body = create_sdp_body(tdata->pool, sdp);
             }
+        }
         }
     }
 
