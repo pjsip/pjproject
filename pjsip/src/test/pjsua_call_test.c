@@ -1732,6 +1732,11 @@ static int test_rtcp_mux_no_spurious_restart(void)
     if (rc != 0)
         goto on_return;
 
+    if (caller < 0 || callee < 0) {
+        rc = -1609;
+        goto on_return;
+    }
+
     created_a   = g_ctx.strm_created[caller];
     destroyed_a = g_ctx.strm_destroyed[caller];
     created_b   = g_ctx.strm_created[callee];
@@ -1833,6 +1838,11 @@ static int test_dir_narrowing_restarts_stream(void)
     rc = establish_self_call(&caller, &callee, -1700);
     if (rc != 0)
         goto on_return;
+
+    if (caller < 0 || callee < 0) {
+        rc = -1709;
+        goto on_return;
+    }
 
     /* Both legs are now running audio in ENCODING_DECODING. Arm the callee
      * leg and poke it with an ordinary no-op re-INVITE from the caller.

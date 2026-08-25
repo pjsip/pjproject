@@ -1919,7 +1919,7 @@ pj_status_t call_media_on_event(pjmedia_event *event,
             break;
     }
 
-    if (pjsua_var.ua_cfg.cb.on_call_media_event) {
+    if (pjsua_var.ua_cfg.cb.on_call_media_event && !call->hanging_up) {
         pjsua_event_list *eve = NULL;
  
         pj_mutex_lock(pjsua_var.timer_mutex);
@@ -1932,9 +1932,6 @@ pj_status_t call_media_on_event(pjmedia_event *event,
         }
 
         pj_mutex_unlock(pjsua_var.timer_mutex);
-
-        if (call->hanging_up)
-            return status;
 
         eve->call_id = call->index;
         eve->med_idx = call_med->idx;
