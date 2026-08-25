@@ -2074,15 +2074,15 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     }
 
     /*
-     * Copy metadata to permanent pool.
+     * Copy metadata to temporary pool first.
      * The metadata returned by pjsip_siprec_verify_request points to
      * data in the rdata message body, which is temporary and will be freed.
-     * We need to copy it to the invite session's permanent pool for the
-     * call lifetime.
+     * We copy it to rdata->tp_info.pool initially, then re-copy to the invite
+     * session's permanent pool after call->inv is assigned.
      */
     if (call->siprec_metadata.slen > 0) {
         pj_str_t temp_metadata = call->siprec_metadata;
-        call->siprec_metadata.ptr = (char*)pj_pool_alloc(call->inv->pool,
+        call->siprec_metadata.ptr = (char*)pj_pool_alloc(rdata->tp_info.pool,
                                                          temp_metadata.slen);
         pj_memcpy(call->siprec_metadata.ptr, temp_metadata.ptr,
                  temp_metadata.slen);
@@ -2253,6 +2253,22 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     /* Create and attach pjsua_var data to the dialog */
     call->inv = inv;
+
+#if PJSUA_HAS_SIPREC
+    /*
+     * Re-copy metadata to invite session's permanent pool.
+     * The metadata was initially copied to rdata->tp_info.pool, which is
+     * temporary. Now that call->inv is assigned, we copy to the permanent
+     * pool for the call lifetime.
+     */
+    if (call->siprec_metadata.slen > 0) {
+        pj_str_t temp_metadata = call->siprec_metadata;
+        call->siprec_metadata.ptr = (char*)pj_pool_alloc(call->inv->pool,
+                                                         temp_metadata.slen);
+        pj_memcpy(call->siprec_metadata.ptr, temp_metadata.ptr,
+                 temp_metadata.slen);
+    }
+#endif
 
     /* Store variables required for the callback after the async
      * media transport creation is completed.

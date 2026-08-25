@@ -1245,13 +1245,11 @@ static int test_siprec_metadata_only_update_multipart(void)
     /* Send UPDATE statefully via INVITE session */
     status = pjsip_inv_send_msg(pjsua_var.calls[cid].inv, tdata);
 
-    pj_pool_release(pool);
-
     /* Wait for response */
     if (!wait_until(&siprec_response_seen, PJSUA_INVALID_ID, 8000)) {
         PJ_LOG(1, (THIS_FILE, "    no response received"));
         rc = -1605;
-        goto on_return;
+        goto cleanup_pool;
     }
 
     PJ_LOG(3,(THIS_FILE, "    response code: %d",
@@ -1372,13 +1370,11 @@ static int test_siprec_metadata_only_update_singlepart(void)
     /* Send UPDATE statefully via INVITE session */
     status = pjsip_inv_send_msg(pjsua_var.calls[cid].inv, tdata);
 
-    pj_pool_release(pool);
-
     /* Wait for response */
     if (!wait_until(&siprec_response_seen, PJSUA_INVALID_ID, 8000)) {
         PJ_LOG(1, (THIS_FILE, "    no response received"));
         rc = -1705;
-        goto on_return;
+        goto cleanup_pool;
     }
 
     PJ_LOG(3,(THIS_FILE, "    response code: %d",
@@ -1498,13 +1494,11 @@ static int test_siprec_datamode_partial_element(void)
     /* Send UPDATE statefully via INVITE session */
     status = pjsip_inv_send_msg(pjsua_var.calls[cid].inv, tdata);
 
-    pj_pool_release(pool);
-
     /* Wait for response */
     if (!wait_until(&siprec_response_seen, PJSUA_INVALID_ID, 8000)) {
         PJ_LOG(1, (THIS_FILE, "    no response received"));
         rc = -1805;
-        goto on_return;
+        goto cleanup_pool;
     }
 
     PJ_LOG(3,(THIS_FILE, "    response code: %d",
