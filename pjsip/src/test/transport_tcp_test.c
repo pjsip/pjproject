@@ -606,12 +606,190 @@ on_return:
     return 0;
 #endif  /* PJSIP_TCP_KEEP_ALIVE_RESPONSE */
 }
+
+
+/*
+ * A request too large for the receive buffer must be answered with
+ * 513 Message Too Large.
+ *
+ * A stream message is assembled in rdata->pkt_info.packet, a fixed
+ * PJSIP_MAX_PKT_LEN buffer. A request bigger than that can never be completed,
+ * so the transport layer discards it. Without a response the sender has no way
+ * of learning why its request went unanswered; RFC 3261 section 21.4.11
+ * defines 513 for exactly this case.
+ *
+ * The request is written straight to a socket rather than sent through PJSIP,
+ * because a pjsip_tx_data buffer is itself capped at PJSIP_MAX_PKT_LEN.
+ */
+int transport_rx_overflow_test(void)
+{
+    enum { TIMEOUT_MSEC = 10000, CHUNK = 1024 };
+    const char *EXPECTED = "SIP/2.0 513";
+    pjsip_tpfactory *tpfactory = NULL;
+    pj_pool_t *pool = NULL;
+    pj_sock_t sock = PJ_INVALID_SOCKET;
+    pj_sockaddr_in rem_addr;
+    pj_time_val deadline, now;
+    pj_size_t body_len, buf_size, req_len, sent_total;
+    char *req;
+    char reply[512];
+    int len;
+    int rc = 0;
+    pj_status_t status;
+
+    PJ_LOG(3,(THIS_FILE, "  oversized request gets 513 Message Too Large"));
+
+    body_len = PJSIP_MAX_PKT_LEN;
+    buf_size = body_len + 1024;
+
+    pool = pjsip_endpt_create_pool(endpt, "rxovf", buf_size + 1024, 1024);
+    if (pool == NULL)
+        return -500;
+
+    /* Listener on an arbitrary port, and a plain socket connected to it. */
+    status = pjsip_tcp_transport_start(endpt, NULL, 1, &tpfactory);
+    if (status != PJ_SUCCESS) {
+        app_perror("   error: unable to start TCP listener", status);
+        rc = -505;
+        goto on_return;
+    }
+
+    status = pj_sockaddr_in_init(&rem_addr, &tpfactory->addr_name.host,
+                                 (pj_uint16_t)tpfactory->addr_name.port);
+    if (status != PJ_SUCCESS) {
+        app_perror("   error: invalid TCP address name", status);
+        rc = -510;
+        goto on_return;
+    }
+
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, &sock);
+    if (status != PJ_SUCCESS) {
+        app_perror("   error: unable to create socket", status);
+        rc = -515;
+        goto on_return;
+    }
+
+    status = pj_sock_connect(sock, &rem_addr, sizeof(rem_addr));
+    if (status != PJ_SUCCESS) {
+        app_perror("   error: unable to connect to TCP listener", status);
+        rc = -520;
+        goto on_return;
+    }
+
+    /* A body of PJSIP_MAX_PKT_LEN bytes puts the request over the receive
+     * buffer whatever the header block adds.
+     */
+    req = (char*) pj_pool_alloc(pool, buf_size);
+    len = pj_ansi_snprintf(req, buf_size,
+                    "NOTIFY sip:overflow@127.0.0.1 SIP/2.0\r\n"
+                    "Via: SIP/2.0/TCP 127.0.0.1:5060;branch=z9hG4bK-rxovf;rport\r\n"
+                    "Max-Forwards: 70\r\n"
+                    "From: <sip:tester@127.0.0.1>;tag=rxovf\r\n"
+                    "To: <sip:overflow@127.0.0.1>\r\n"
+                    "Call-ID: rx-overflow-test\r\n"
+                    "CSeq: 1 NOTIFY\r\n"
+                    "Event: dialog\r\n"
+                    "Subscription-State: active;expires=60\r\n"
+                    "Content-Type: text/plain\r\n"
+                    "Content-Length: %u\r\n"
+                    "\r\n",
+                    (unsigned)body_len);
+    if (len < 0 || (pj_size_t)len + body_len > buf_size) {
+        rc = -525;
+        goto on_return;
+    }
+    pj_memset(req + len, 'x', body_len);
+    req_len = (pj_size_t)len + body_len;
+
+    /* Nothing else polls the endpoint from this thread, so let it drain the
+     * connection between chunks instead of filling the socket buffer.
+     */
+    for (sent_total = 0; sent_total < req_len; ) {
+        pj_ssize_t chunk = req_len - sent_total;
+        if (chunk > CHUNK)
+            chunk = CHUNK;
+
+        status = pj_sock_send(sock, req + sent_total, &chunk, 0);
+        if (status != PJ_SUCCESS) {
+            app_perror("   error: unable to send the oversized request", status);
+            rc = -530;
+            goto on_return;
+        }
+        sent_total += chunk;
+        flush_events(1);
+    }
+
+    pj_gettimeofday(&deadline);
+    deadline.msec += TIMEOUT_MSEC;
+    pj_time_val_normalize(&deadline);
+
+    for (;;) {
+        pj_fd_set_t rset;
+        pj_time_val zero = { 0, 0 };
+        pj_ssize_t received;
+
+        flush_events(10);
+
+        PJ_FD_ZERO(&rset);
+        PJ_FD_SET(sock, &rset);
+        if (pj_sock_select((int)sock + 1, &rset, NULL, NULL, &zero) > 0 &&
+            PJ_FD_ISSET(sock, &rset))
+        {
+            received = sizeof(reply) - 1;
+            status = pj_sock_recv(sock, reply, &received, 0);
+            if (status != PJ_SUCCESS || received <= 0) {
+                PJ_LOG(3,(THIS_FILE, "   error: the connection was closed "
+                                     "without a response"));
+                rc = -535;
+                goto on_return;
+            }
+            reply[received] = '\0';
+            break;
+        }
+
+        pj_gettimeofday(&now);
+        if (PJ_TIME_VAL_GTE(now, deadline)) {
+            PJ_LOG(3,(THIS_FILE, "   error: the oversized request was dropped "
+                                 "without any response to the sender"));
+            rc = -540;
+            goto on_return;
+        }
+    }
+
+    if (pj_ansi_strncmp(reply, EXPECTED, pj_ansi_strlen(EXPECTED)) != 0) {
+        PJ_LOG(3,(THIS_FILE, "   error: expected a \"%s\" status line, got "
+                             "\"%.32s\"", EXPECTED, reply));
+        rc = -545;
+        goto on_return;
+    }
+
+on_return:
+    if (sock != PJ_INVALID_SOCKET)
+        pj_sock_close(sock);
+
+    if (tpfactory) {
+        flush_events(100);
+        pjsip_tpmgr_unregister_tpfactory(pjsip_endpt_get_tpmgr(endpt),
+                                         tpfactory);
+    }
+
+    flush_events(500);
+
+    if (pool)
+        pjsip_endpt_release_pool(endpt, pool);
+
+    return rc;
+}
 #else   /* PJ_HAS_TCP */
 int transport_tcp_test(void)
 {
     return 0;
 }
 int transport_tcp_keep_alive_test(void)
+{
+    return 0;
+}
+int transport_rx_overflow_test(void)
 {
     return 0;
 }
