@@ -2093,6 +2093,47 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     return PJ_SUCCESS;
 }
 
+/* Eagerly build and validate the server SSL_CTX (loading and checking the
+ * certificate and private key) on the listener socket itself, so that a
+ * missing, unparsable, or mismatched certificate/key fails
+ * pj_ssl_sock_start_accept() up front. Without this, init_ossl_ctx() (see
+ * ssl_create() above) is only invoked lazily on the first accepted
+ * connection, and with server context reuse enabled, whatever context gets
+ * built there is then cached and reused by every subsequent connection.
+ */
+static pj_status_t ssl_init_server_ctx(pj_ssl_sock_t *ssock)
+{
+    ossl_sock_t *ossock = (ossl_sock_t *)ssock;
+    pj_status_t status;
+
+    pj_assert(ssock->is_server && !ssock->parent);
+
+    /* Nothing to eagerly validate: without session reuse, each accepted
+     * connection builds and owns its own context anyway; without a
+     * certificate configured yet, there is nothing to load.
+     */
+    if (!SERVER_SUPPORT_SESSION_REUSE || !ssock->cert)
+        return PJ_SUCCESS;
+
+    status = init_openssl();
+    if (status != PJ_SUCCESS)
+        return status;
+
+    set_entropy(ssock);
+
+    status = init_ossl_ctx(ssock);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    /* This listener now owns the SSL_CTX that accepted connections will
+     * share (see the server-session-reuse branch in ssl_create()), so it
+     * must be the one to free it on destroy.
+     */
+    ossock->own_ctx = PJ_TRUE;
+
+    return PJ_SUCCESS;
+}
+
 static void ssl_free_cert(pj_ssl_cert_t *cert)
 {
     /* For OpenSSL version >= 3.0, dec ref EVP_PKEY & X509 */

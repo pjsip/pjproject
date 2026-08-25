@@ -2233,6 +2233,16 @@ pj_ssl_sock_start_accept2(pj_ssl_sock_t *ssock,
 
     ssock->is_server = PJ_TRUE;
 
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+    /* Eagerly load and validate the certificate/private key now, instead
+     * of leaving it to the first accepted connection, so that a bad
+     * credential fails the listener startup itself.
+     */
+    status = ssl_init_server_ctx(ssock);
+    if (status != PJ_SUCCESS)
+        goto on_error;
+#endif
+
 #ifdef SSL_SOCK_IMP_USE_OWN_NETWORK
     status = network_start_accept(ssock, pool, localaddr, addr_len,
                                   newsock_param);
