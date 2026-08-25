@@ -2422,7 +2422,7 @@ static pj_status_t inv_process_siprec_metadata_update(
      * Using pool_prov (resettable) instead of inv->pool (permanent) prevents
      * memory accumulation during long recording sessions with frequent updates.
      */
-    if (new_metadata.slen > 0 &&
+    if (new_metadata.slen > 0 && new_metadata.ptr != NULL &&
         mod_inv.cb.on_siprec_metadata_update)
     {
         pj_str_t temp_metadata;

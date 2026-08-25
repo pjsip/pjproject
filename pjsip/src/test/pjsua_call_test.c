@@ -1242,18 +1242,39 @@ static int test_siprec_metadata_only_update_multipart(void)
     /* Set multipart body */
     tdata->msg->body = metadata_body;
 
-    /* Send UPDATE statefully via INVITE session */
-    status = pjsip_inv_send_msg(pjsua_var.calls[cid].inv, tdata);
-
-    /* Wait for response */
-    if (!wait_until(&siprec_response_seen, PJSUA_INVALID_ID, 8000)) {
-        PJ_LOG(1, (THIS_FILE, "    no response received"));
-        rc = -1605;
+    /* Send UPDATE statefully with callback to capture response */
+    status = pjsip_endpt_send_request(pjsua_var.endpt, tdata, -1,
+                                       NULL, &siprec_test_request_cb);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    failed to send UPDATE (%d)", status));
+        rc = -1606;
         goto cleanup_pool;
     }
 
-    PJ_LOG(3,(THIS_FILE, "    response code: %d",
+    /* Wait for the response to be received */
+    PJ_LOG(3,(THIS_FILE, "    Waiting for SIPREC UPDATE response..."));
+    if (!wait_until(&siprec_response_seen, PJSUA_INVALID_ID, 8000)) {
+        PJ_LOG(1, (THIS_FILE, "    timeout waiting for SIPREC UPDATE response"));
+        rc = -1607;
+        goto cleanup_pool;
+    }
+
+    PJ_LOG(3,(THIS_FILE, "    SIPREC UPDATE response received: %d",
              g_siprec_test_ctx.response_code));
+
+    /* Verify call is still established after metadata UPDATE */
+    {
+        pjsua_call_info ci;
+        if (pjsua_call_get_count() == 0 ||
+            pjsua_call_get_info(cid, &ci) != PJ_SUCCESS ||
+            ci.state != PJSIP_INV_STATE_CONFIRMED) {
+            PJ_LOG(1, (THIS_FILE, "    call not established after UPDATE"));
+            rc = -1608;
+            goto cleanup_pool;
+        }
+    }
+
+    PJ_LOG(3,(THIS_FILE, "    call still established after metadata UPDATE"));
 
 cleanup_pool:
     pj_pool_release(pool);
@@ -1261,7 +1282,7 @@ cleanup_pool:
 on_return:
     pjsua_var.acc[g_ctx.acc_id].cfg.use_siprec = PJSUA_SIP_SIPREC_INACTIVE;
     pjsua_var.acc[g_ctx.acc_id].cfg.siprec_require_metadata = PJ_FALSE;
-    pjsua_call_hangup_all();
+    drain_all_calls();
 
     if (rc != 0)
         return rc;
@@ -1270,7 +1291,7 @@ on_return:
         g_siprec_test_ctx.response_code >= 300) {
         PJ_LOG(1, (THIS_FILE, "    expected 2xx, got %d",
                    g_siprec_test_ctx.response_code));
-        return -1606;
+        return -1609;
     }
 
     return 0;
@@ -1367,18 +1388,39 @@ static int test_siprec_metadata_only_update_singlepart(void)
     /* Set single-part body */
     tdata->msg->body = metadata_body;
 
-    /* Send UPDATE statefully via INVITE session */
-    status = pjsip_inv_send_msg(pjsua_var.calls[cid].inv, tdata);
-
-    /* Wait for response */
-    if (!wait_until(&siprec_response_seen, PJSUA_INVALID_ID, 8000)) {
-        PJ_LOG(1, (THIS_FILE, "    no response received"));
-        rc = -1705;
+    /* Send UPDATE statefully - response will be handled by invite session */
+    status = pjsip_endpt_send_request(pjsua_var.endpt, tdata, -1,
+                                       NULL, &siprec_test_request_cb);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    failed to send UPDATE (%d)", status));
+        rc = -1706;
         goto cleanup_pool;
     }
 
-    PJ_LOG(3,(THIS_FILE, "    response code: %d",
+    /* Wait for the response to be received */
+    PJ_LOG(3,(THIS_FILE, "    Waiting for SIPREC UPDATE response..."));
+    if (!wait_until(&siprec_response_seen, PJSUA_INVALID_ID, 8000)) {
+        PJ_LOG(1, (THIS_FILE, "    timeout waiting for SIPREC UPDATE response"));
+        rc = -1707;
+        goto cleanup_pool;
+    }
+
+    PJ_LOG(3,(THIS_FILE, "    SIPREC UPDATE response received: %d",
              g_siprec_test_ctx.response_code));
+
+    /* Verify call is still established after metadata UPDATE */
+    {
+        pjsua_call_info ci;
+        if (pjsua_call_get_count() == 0 ||
+            pjsua_call_get_info(cid, &ci) != PJ_SUCCESS ||
+            ci.state != PJSIP_INV_STATE_CONFIRMED) {
+            PJ_LOG(1, (THIS_FILE, "    call not established after UPDATE"));
+            rc = -1708;
+            goto cleanup_pool;
+        }
+    }
+
+    PJ_LOG(3,(THIS_FILE, "    call still established after metadata UPDATE"));
 
 cleanup_pool:
     pj_pool_release(pool);
@@ -1386,7 +1428,7 @@ cleanup_pool:
 on_return:
     pjsua_var.acc[g_ctx.acc_id].cfg.use_siprec = PJSUA_SIP_SIPREC_INACTIVE;
     pjsua_var.acc[g_ctx.acc_id].cfg.siprec_require_metadata = PJ_FALSE;
-    pjsua_call_hangup_all();
+    drain_all_calls();
 
     if (rc != 0)
         return rc;
@@ -1395,7 +1437,7 @@ on_return:
         g_siprec_test_ctx.response_code >= 300) {
         PJ_LOG(1, (THIS_FILE, "    expected 2xx, got %d",
                    g_siprec_test_ctx.response_code));
-        return -1706;
+        return -1709;
     }
 
     return 0;
@@ -1491,18 +1533,39 @@ static int test_siprec_datamode_partial_element(void)
     /* Set body */
     tdata->msg->body = metadata_body;
 
-    /* Send UPDATE statefully via INVITE session */
-    status = pjsip_inv_send_msg(pjsua_var.calls[cid].inv, tdata);
-
-    /* Wait for response */
-    if (!wait_until(&siprec_response_seen, PJSUA_INVALID_ID, 8000)) {
-        PJ_LOG(1, (THIS_FILE, "    no response received"));
-        rc = -1805;
+    /* Send UPDATE statefully - response will be handled by invite session */
+    status = pjsip_endpt_send_request(pjsua_var.endpt, tdata, -1,
+                                       NULL, &siprec_test_request_cb);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    failed to send UPDATE (%d)", status));
+        rc = -1806;
         goto cleanup_pool;
     }
 
-    PJ_LOG(3,(THIS_FILE, "    response code: %d",
+    /* Wait for the response to be received */
+    PJ_LOG(3,(THIS_FILE, "    Waiting for SIPREC UPDATE response..."));
+    if (!wait_until(&siprec_response_seen, PJSUA_INVALID_ID, 8000)) {
+        PJ_LOG(1, (THIS_FILE, "    timeout waiting for SIPREC UPDATE response"));
+        rc = -1807;
+        goto cleanup_pool;
+    }
+
+    PJ_LOG(3,(THIS_FILE, "    SIPREC UPDATE response received: %d",
              g_siprec_test_ctx.response_code));
+
+    /* Verify call is still established after metadata UPDATE */
+    {
+        pjsua_call_info ci;
+        if (pjsua_call_get_count() == 0 ||
+            pjsua_call_get_info(cid, &ci) != PJ_SUCCESS ||
+            ci.state != PJSIP_INV_STATE_CONFIRMED) {
+            PJ_LOG(1, (THIS_FILE, "    call not established after UPDATE"));
+            rc = -1808;
+            goto cleanup_pool;
+        }
+    }
+
+    PJ_LOG(3,(THIS_FILE, "    call still established after metadata UPDATE"));
 
 cleanup_pool:
     pj_pool_release(pool);
@@ -1510,7 +1573,7 @@ cleanup_pool:
 on_return:
     pjsua_var.acc[g_ctx.acc_id].cfg.use_siprec = PJSUA_SIP_SIPREC_INACTIVE;
     pjsua_var.acc[g_ctx.acc_id].cfg.siprec_require_metadata = PJ_FALSE;
-    pjsua_call_hangup_all();
+    drain_all_calls();
 
     if (rc != 0)
         return rc;
@@ -1519,7 +1582,7 @@ on_return:
         g_siprec_test_ctx.response_code >= 300) {
         PJ_LOG(1, (THIS_FILE, "    expected 2xx, got %d",
                    g_siprec_test_ctx.response_code));
-        return -1806;
+        return -1809;
     }
 
     return 0;
