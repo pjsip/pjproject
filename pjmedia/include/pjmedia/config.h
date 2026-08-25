@@ -499,14 +499,6 @@
 
 
 /**
- * Max packet size for receiving direction.
- */
-#ifndef PJMEDIA_MAX_MRU                 
-#  define PJMEDIA_MAX_MRU                       2000
-#endif
-
-
-/**
  * DTMF/telephone-event duration, in timestamp. To specify the duration in
  * milliseconds, use the setting PJMEDIA_DTMF_DURATION_MSEC instead.
  *
@@ -1201,6 +1193,67 @@
 
 
 /**
+ * Use EC key on the P-256 curve for the DTLS-SRTP self-signed certificate,
+ * which is the key type commonly used by DTLS-SRTP peers and the one required
+ * by RFC 8827 for WebRTC. It also makes the certificate, and hence the
+ * handshake, significantly smaller than RSA.
+ *
+ * Disable this to use RSA 2048 bit key instead, e.g: for interoperability
+ * with peers that do not support ECDSA cipher suites.
+ *
+ * Default value: 1 (enabled)
+ */
+#ifndef PJMEDIA_SRTP_DTLS_USE_EC_KEY
+#   define PJMEDIA_SRTP_DTLS_USE_EC_KEY             1
+#endif
+
+
+/**
+ * Max packet size for receiving direction. This also bounds the RTP/RTCP
+ * UDP transport buffer and the STUN/TURN transport buffers used by ICE
+ * (see pjsua_media.c), since DTLS-SRTP keying traffic (RFC 5764) is
+ * multiplexed onto the same sockets as media. This block is placed after
+ * #PJMEDIA_SRTP_HAS_DTLS on purpose, so the dependency below is positional
+ * rather than coincidental.
+ *
+ * A DTLS-SRTP peer that reuses its full TLS server certificate (plus any
+ * intermediates) for the handshake, rather than a single self-signed
+ * leaf cert, can produce a ServerHello+Certificate+... flight larger than
+ * the default below, even with #PJMEDIA_SRTP_DTLS_USE_EC_KEY keeping our
+ * own certificate small (observed ~2500 bytes for such a flight). Since
+ * recvfrom() truncates an oversized datagram silently (see the truncation
+ * warning logged in transport_udp.c), such a peer's handshake would
+ * otherwise hang instead of failing loudly.
+ *
+ * Raising this value below 2672 is free: vid_stream.c's video jitter
+ * buffer byte size stays flat, since its slot count shrinks by the same
+ * factor this macro grows. Above that, the reassembly capacity it derives
+ * would drop below one max-size video frame, so vid_stream.c raises its
+ * MIN_CHUNKS_PER_FRM floor to compensate once the shrunk capacity would no
+ * longer hold a full frame, which pins the count and makes jitter buffer
+ * memory scale with this macro from then on. This default (3000) sits
+ * just above that free threshold, keeping the added cost to ~15% of a
+ * video stream's jitter buffer instead of the 2x an unconstrained 4000
+ * would cost. See vid_stream.c's MIN_CHUNKS_PER_FRM comment for the exact
+ * capacity margin this leaves.
+ *
+ * 3000 also matches pjnath's PJ_TURN_MAX_PKT_LEN default, so it stops
+ * pjsua_media.c's ICE TURN transport buffer from being silently lowered
+ * from that default down to this macro's value.
+ *
+ * Default: 3000 when DTLS-SRTP is enabled (#PJMEDIA_SRTP_HAS_DTLS),
+ *          2000 otherwise.
+ */
+#ifndef PJMEDIA_MAX_MRU
+#  if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
+#    define PJMEDIA_MAX_MRU                     3000
+#  else
+#    define PJMEDIA_MAX_MRU                     2000
+#  endif
+#endif
+
+
+/**
  * Set OpenSSL ciphers for DTLS-SRTP.
  *
  * Default value: "DEFAULT"
@@ -1856,6 +1909,51 @@
  */
 #ifndef PJMEDIA_VID_STREAM_DECODE_MIN_DELAY_MSEC
 #   define PJMEDIA_VID_STREAM_DECODE_MIN_DELAY_MSEC         100
+#endif
+
+
+/**
+ * Maximum sender-side pacing delay for the video send rate control in
+ * PJMEDIA_VID_STREAM_RC_SEND_THREAD mode, in milliseconds. The RC scheduler
+ * paces outgoing RTP to the (auto-derived or configured) bandwidth budget.
+ * If the encoder outpaces that budget - for example after the codec bitrate
+ * is raised mid-call via pjmedia_vid_stream_modify_codec_param() - the
+ * cumulative packet schedule would otherwise drift ahead of real time
+ * without bound. This macro caps that drift so sender latency stays bounded;
+ * the pacing baseline is re-anchored to real time once the cap is hit.
+ *
+ * Default: 1000
+ */
+#ifndef PJMEDIA_VID_STREAM_RC_MAX_DELAY_MSEC
+#   define PJMEDIA_VID_STREAM_RC_MAX_DELAY_MSEC             1000
+#endif
+
+
+/**
+ * Overhead margin, in percent, added to the auto-derived video send rate
+ * control budget (i.e. when pjmedia_vid_stream_rc_config.bandwidth is left at
+ * zero). The budget then becomes codec_max_bps * (100 + this) / 100. The
+ * margin is pacing headroom to absorb RTP/UDP/IP overhead and encoder
+ * burstiness so the pacer does not fall behind a compliant encoder; it is NOT
+ * a media bitrate increase (the encoder still runs at the codec/SDP bitrate).
+ * An application-pinned bandwidth is used as-is, without this margin.
+ *
+ * Default: 25
+ */
+#ifndef PJMEDIA_VID_STREAM_RC_OVERHEAD_PCT
+#   define PJMEDIA_VID_STREAM_RC_OVERHEAD_PCT               25
+#endif
+
+
+/**
+ * Minimum video send rate control bandwidth budget, in bps. This is a floor
+ * to guard against a zero budget (e.g. when a codec reports a zero maximum
+ * bitrate), which would otherwise cause a division by zero in the pacer.
+ *
+ * Default: 32000
+ */
+#ifndef PJMEDIA_VID_STREAM_RC_MIN_BANDWIDTH
+#   define PJMEDIA_VID_STREAM_RC_MIN_BANDWIDTH             32000
 #endif
 
 

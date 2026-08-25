@@ -583,11 +583,11 @@ void pjsua_aud_stop_stream(pjsua_call_media *call_med)
 static void dtmf_callback(pjmedia_stream *strm, void *user_data,
                           int digit)
 {
-    pjsua_call_id call_id;
+    const pjsua_call_id call_id = pjsua_med_udata_call_id(user_data);
+    const int med_idx = pjsua_med_udata_med_idx(user_data);
 
     PJ_UNUSED_ARG(strm);
 
-    call_id = (pjsua_call_id)(pj_ssize_t)user_data;
     if (pjsua_var.calls[call_id].hanging_up)
         return;
 
@@ -599,12 +599,13 @@ static void dtmf_callback(pjmedia_stream *strm, void *user_data,
         info.method = PJSUA_DTMF_METHOD_RFC2833;
         info.digit = digit;
         info.duration = PJSUA_UNKNOWN_DTMF_DURATION;
+        info.med_idx = med_idx;
         (*pjsua_var.ua_cfg.cb.on_dtmf_digit2)(call_id, &info);
     } else if (pjsua_var.ua_cfg.cb.on_dtmf_digit) {
         /* For discussions about call mutex protection related to this
          * callback, please see ticket #460:
          *      https://github.com/pjsip/pjproject/issues/460#comment:4
-         */    
+         */
         (*pjsua_var.ua_cfg.cb.on_dtmf_digit)(call_id, digit);
     }
 
@@ -617,12 +618,12 @@ static void dtmf_callback(pjmedia_stream *strm, void *user_data,
 static void dtmf_event_callback(pjmedia_stream *strm, void *user_data,
                                 const pjmedia_stream_dtmf_event *event)
 {
-    pjsua_call_id call_id;
+    const pjsua_call_id call_id = pjsua_med_udata_call_id(user_data);
+    const int med_idx = pjsua_med_udata_med_idx(user_data);
     pjsua_dtmf_event evt;
 
     PJ_UNUSED_ARG(strm);
 
-    call_id = (pjsua_call_id)(pj_ssize_t)user_data;
     if (pjsua_var.calls[call_id].hanging_up)
         return;
 
@@ -634,6 +635,7 @@ static void dtmf_event_callback(pjmedia_stream *strm, void *user_data,
         evt.digit = event->digit;
         evt.duration = event->duration;
         evt.flags = event->flags;
+        evt.med_idx = med_idx;
         (*pjsua_var.ua_cfg.cb.on_dtmf_event)(call_id, &evt);
     }
 
@@ -750,16 +752,18 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
          * callback to the session.
          */
         if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_dtmf_event) {
-            pjmedia_stream_set_dtmf_event_callback(call_med->strm.a.stream,
-                                              &dtmf_event_callback,
-                                              (void*)(pj_ssize_t)(call->index));
+            pjmedia_stream_set_dtmf_event_callback(
+                                 call_med->strm.a.stream,
+                                 &dtmf_event_callback,
+                                 pjsua_med_udata_pack(call->index, strm_idx));
         } else if (!call->hanging_up &&
-                   (pjsua_var.ua_cfg.cb.on_dtmf_digit || 
+                   (pjsua_var.ua_cfg.cb.on_dtmf_digit ||
                     pjsua_var.ua_cfg.cb.on_dtmf_digit2))
         {
-            pjmedia_stream_set_dtmf_callback(call_med->strm.a.stream,
-                                             &dtmf_callback,
-                                             (void*)(pj_ssize_t)(call->index));
+            pjmedia_stream_set_dtmf_callback(
+                                 call_med->strm.a.stream,
+                                 &dtmf_callback,
+                                 pjsua_med_udata_pack(call->index, strm_idx));
         }
 
         /* Get the port interface of the first stream in the session.

@@ -175,6 +175,24 @@
 
 
 /**
+ * Default value of the resolver's setting to DISABLE validation that a DNS
+ * response originates from one of the configured nameservers (matching address
+ * and port). When not disabled (the default), such validation defends against
+ * off-path response spoofing; it is standard resolver behavior and compatible
+ * with anycast and load-balanced DNS (which preserve the queried address as the
+ * source). It can be disabled per resolver via pj_dns_settings for unusual
+ * deployments where responses legitimately arrive from a different address. The
+ * flag is phrased as "disable" so that a zero-initialized pj_dns_settings keeps
+ * the protection enabled.
+ *
+ * Default: PJ_FALSE (validation enabled)
+ */
+#ifndef PJ_DNS_RESOLVER_DISABLE_RESPONSE_SRC_CHECK
+#   define PJ_DNS_RESOLVER_DISABLE_RESPONSE_SRC_CHECK   PJ_FALSE
+#endif
+
+
+/**
  * Maximum size of UDP packet. RFC 1035 states that maximum size of
  * DNS packet carried over UDP is 512 bytes.
  *
@@ -288,6 +306,21 @@
 #   define PJ_HTTP_DEFAULT_TIMEOUT         (60000)
 #endif
 
+/**
+ * Maximum size (in bytes) of an HTTP response body that the HTTP client will
+ * buffer internally. A response advertising a larger Content-Length is
+ * rejected before its body is allocated, and a response without Content-Length
+ * is aborted once the received body grows past this limit. This bounds memory
+ * usage against a malicious or malfunctioning server. Applications that stream
+ * the body themselves via the on_data_read() callback are not subject to this
+ * limit. Set to 0 to disable the check (not recommended).
+ *
+ * Default: 8 MB
+ */
+#ifndef PJ_HTTP_MAX_CONTENT_LENGTH
+#   define PJ_HTTP_MAX_CONTENT_LENGTH      (8 * 1024 * 1024)
+#endif
+
 /* **************************************************************************
  * CLI configuration
  */
@@ -386,6 +419,32 @@
  */
 #ifndef PJ_CLI_MAX_CMD_HISTORY
 #   define PJ_CLI_MAX_CMD_HISTORY  16
+#endif
+
+/**
+ * Maximum XML nesting depth accepted by pj_xml_parse(), to bound the parser's
+ * recursion and prevent stack exhaustion from deeply nested documents.
+ * Parsing fails with a syntax error beyond this depth.
+ *
+ * Each level costs one parser stack frame, around 112 bytes on 64bit builds
+ * and more in debug builds, so the default needs about 30KB of stack. Lower
+ * this on platforms with small thread stacks.
+ *
+ * Default: 256
+ */
+#ifndef PJ_XML_MAX_NESTING
+#   define PJ_XML_MAX_NESTING      256
+#endif
+
+/**
+ * Maximum JSON nesting depth accepted by pj_json_parse(), to bound the
+ * parser's recursion and prevent stack exhaustion from deeply nested arrays
+ * or objects. Parsing fails beyond this depth.
+ *
+ * Default: 256
+ */
+#ifndef PJ_JSON_MAX_NESTING
+#   define PJ_JSON_MAX_NESTING     256
 #endif
 
 /**

@@ -76,6 +76,8 @@ struct transport_udp
     void  (*rtcp_cb)(   void*,          /**< To report incoming RTCP.       */
                         void*,
                         pj_ssize_t);
+    pj_grp_lock_t      *cb_grp_lock;    /**< Callback owner's group lock,
+                                             ref'd across each rx callback. */
 
     unsigned            tx_drop_pct;    /**< Percent of tx pkts to drop.    */
     unsigned            rx_drop_pct;    /**< Percent of rx pkts to drop.    */
@@ -90,6 +92,7 @@ struct transport_udp
     pj_sockaddr         rtp_src_addr;   /**< Actual packet src addr.        */
     int                 rtp_addrlen;    /**< Address length.                */
     char                rtp_pkt[RTP_LEN];/**< Incoming RTP packet buffer    */
+    unsigned            rtp_trunc_cnt;  /**< Truncated RTP pkt count.        */
 
     pj_bool_t           enable_rtcp_mux;/**< Enable RTP & RTCP multiplexing?*/
     pj_bool_t           use_rtcp_mux;   /**< Use RTP & RTCP multiplexing?   */
@@ -102,6 +105,7 @@ struct transport_udp
     pj_ioqueue_op_key_t rtcp_read_op;   /**< Pending read operation         */
     pj_ioqueue_op_key_t rtcp_write_op;  /**< Pending write operation        */
     char                rtcp_pkt[RTCP_LEN];/**< Incoming RTCP packet buffer */
+    unsigned            rtcp_trunc_cnt; /**< Truncated RTCP pkt count.       */
 };
 
 
@@ -494,6 +498,30 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
     return PJ_SUCCESS;
 }
 
+/* Warn (rate-limited) when a received packet exactly fills its buffer,
+ * the tell-tale sign that recvfrom() silently truncated it. This runs on
+ * every packet reaching the socket, before any address check, SRTP auth,
+ * or RTP/RTCP validation, so a remote host can trigger it at will simply
+ * by sending oversized datagrams. *cnt is rate-limited to avoid becoming
+ * a log-flood/CPU amplifier under such traffic.
+ */
+static void warn_if_truncated(const char *name, const char *proto,
+                              pj_ssize_t bytes_read, pj_size_t buf_size,
+                              unsigned *cnt)
+{
+    if (bytes_read > 0 && (pj_size_t)bytes_read == buf_size &&
+        (*cnt)++ % 100 == 0)
+    {
+        PJ_LOG(2,(name,
+                  "Received %s packet filled the %d-byte receive buffer "
+                  "and was likely truncated by the OS (recvfrom() "
+                  "truncates silently), %u so far. Consider raising "
+                  "PJMEDIA_MAX_MRU, e.g. if the peer uses DTLS-SRTP with "
+                  "a certificate chain.",
+                  proto, (int)buf_size, *cnt));
+    }
+}
+
 /* Call RTP cb.
  *
  * src_addr is an out-param: on return, holds the snapshot of the RTP
@@ -508,6 +536,7 @@ static void call_rtp_cb(struct transport_udp *udp, pj_ssize_t bytes_read,
     void (*cb)(void*,void*,pj_ssize_t);
     void (*cb2)(pjmedia_tp_cb_param*);
     void *user_data;
+    pj_grp_lock_t *cb_grp_lock;
 
     /* Snapshot callback pointers and the RTP source address under lock.
      * pj_ioqueue_lock_key() == pj_grp_lock_acquire() for the same group
@@ -517,13 +546,25 @@ static void call_rtp_cb(struct transport_udp *udp, pj_ssize_t bytes_read,
      * to be invoked without the key lock held — without the copy, a
      * concurrent attach could bzero rtp_src_addr after we passed a
      * pointer to it into the cb, and the cb would then see sa_family=0.
+     *
+     * Also hold a reference on the callback owner's group lock (if any)
+     * across the up-call: transport_detach() clears the callbacks under
+     * this same key lock before the owner drops its own reference, so a
+     * non-NULL cb here means the owner is still alive and safe to ref, and
+     * the ref keeps it alive for the whole up-call.
      */
+    warn_if_truncated(udp->base.name, "RTP", bytes_read,
+                      sizeof(udp->rtp_pkt), &udp->rtp_trunc_cnt);
+
     if (udp->base.grp_lock)
         pj_grp_lock_acquire(udp->base.grp_lock);
 
     cb = udp->rtp_cb;
     cb2 = udp->rtp_cb2;
     user_data = udp->user_data;
+    cb_grp_lock = udp->cb_grp_lock;
+    if (cb_grp_lock)
+        pj_grp_lock_add_ref(cb_grp_lock);
     pj_memcpy(src_addr, &udp->rtp_src_addr, sizeof(*src_addr));
 
     if (udp->base.grp_lock)
@@ -546,6 +587,8 @@ static void call_rtp_cb(struct transport_udp *udp, pj_ssize_t bytes_read,
             src_addr->addr.sa_family != PJ_AF_INET &&
             src_addr->addr.sa_family != PJ_AF_INET6)
         {
+            if (cb_grp_lock)
+                pj_grp_lock_dec_ref(cb_grp_lock);
             return;
         }
 
@@ -561,6 +604,9 @@ static void call_rtp_cb(struct transport_udp *udp, pj_ssize_t bytes_read,
         /* Legacy cb doesn't consume src_addr; deliver unconditionally. */
         (*cb)(user_data, udp->rtp_pkt, bytes_read);
     }
+
+    if (cb_grp_lock)
+        pj_grp_lock_dec_ref(cb_grp_lock);
 }
 
 /* Call RTCP cb. */
@@ -568,6 +614,10 @@ static void call_rtcp_cb(struct transport_udp *udp, pj_ssize_t bytes_read)
 {
     void(*cb)(void*, void*, pj_ssize_t);
     void *user_data;
+    pj_grp_lock_t *cb_grp_lock;
+
+    warn_if_truncated(udp->base.name, "RTCP", bytes_read,
+                      sizeof(udp->rtcp_pkt), &udp->rtcp_trunc_cnt);
 
     /* See comment in call_rtp_cb() above. */
     if (udp->base.grp_lock)
@@ -575,12 +625,18 @@ static void call_rtcp_cb(struct transport_udp *udp, pj_ssize_t bytes_read)
 
     cb = udp->rtcp_cb;
     user_data = udp->user_data;
+    cb_grp_lock = udp->cb_grp_lock;
+    if (cb_grp_lock)
+        pj_grp_lock_add_ref(cb_grp_lock);
 
     if (udp->base.grp_lock)
         pj_grp_lock_release(udp->base.grp_lock);
 
     if (cb)
         (*cb)(user_data, udp->rtcp_pkt, bytes_read);
+
+    if (cb_grp_lock)
+        pj_grp_lock_dec_ref(cb_grp_lock);
 }
 
 /* Notification from ioqueue about incoming RTP packet */
@@ -905,7 +961,8 @@ static pj_status_t tp_attach          (pjmedia_transport *tp,
                                        void (*rtp_cb2)(pjmedia_tp_cb_param*),
                                        void (*rtcp_cb)(void*,
                                                        void*,
-                                                       pj_ssize_t))
+                                                       pj_ssize_t),
+                                       pj_grp_lock_t *cb_grp_lock)
 {
     struct transport_udp *udp = (struct transport_udp*) tp;
     const pj_sockaddr *rtcp_addr;
@@ -975,6 +1032,7 @@ static pj_status_t tp_attach          (pjmedia_transport *tp,
     udp->rtp_cb2 = rtp_cb2;
     udp->rtcp_cb = rtcp_cb;
     udp->user_data = user_data;
+    udp->cb_grp_lock = cb_grp_lock;
 
     /* Save address length */
     udp->addr_len = rem_addr_len;
@@ -1053,19 +1111,20 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
                                                        pj_ssize_t))
 {
     return tp_attach(tp, user_data, rem_addr, rem_rtcp, addr_len,
-                     rtp_cb, NULL, rtcp_cb);
+                     rtp_cb, NULL, rtcp_cb, NULL);
 }
 
 
 static pj_status_t transport_attach2(pjmedia_transport *tp,
                                      pjmedia_transport_attach_param *att_param)
 {
-    return tp_attach(tp, att_param->user_data, 
-                            (pj_sockaddr_t*)&att_param->rem_addr, 
-                            (pj_sockaddr_t*)&att_param->rem_rtcp, 
+    return tp_attach(tp, att_param->user_data,
+                            (pj_sockaddr_t*)&att_param->rem_addr,
+                            (pj_sockaddr_t*)&att_param->rem_rtcp,
                             att_param->addr_len, att_param->rtp_cb,
-                            att_param->rtp_cb2, 
-                            att_param->rtcp_cb);
+                            att_param->rtp_cb2,
+                            att_param->rtcp_cb,
+                            att_param->grp_lock);
 }
 
 
@@ -1108,6 +1167,7 @@ static void transport_detach( pjmedia_transport *tp,
         udp->rtp_cb2 = NULL;
         udp->rtcp_cb = NULL;
         udp->user_data = NULL;
+        udp->cb_grp_lock = NULL;
 
         /* Unlock keys before clearing, to avoid deadlock with
          * PJ_IOQUEUE_CALLBACK_NO_LOCK. When that setting is enabled,

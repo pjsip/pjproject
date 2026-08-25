@@ -64,8 +64,19 @@
  * several chunks for RTP delivery. The chunk number may vary depend on the
  * picture resolution and MTU. This constant specifies the minimum chunk
  * number to be allocated to store a picture bitstream in decoding direction.
+ *
+ * Derived from the true worst case instead of any particular PJMEDIA_MAX_MRU
+ * value: a max-size video frame (PJMEDIA_MAX_VIDEO_ENC_FRAME_SIZE, 131072
+ * bytes) split into PJMEDIA_MAX_VID_PAYLOAD_SIZE-sized packets (1336 bytes
+ * with SRTP) needs ceil(131072/1336) = 99 packets, halved since this floor
+ * bounds chunks_per_frm and rx_frame_cnt is 2x that. This only binds once
+ * PJMEDIA_MAX_MRU rises enough that frame_size/PJMEDIA_MAX_MRU alone would
+ * fall below it (above ~2672); below that, raising PJMEDIA_MAX_MRU doesn't
+ * touch reassembly capacity at all. At the current default of 50, that
+ * leaves rx_frame_cnt at 100 against a 99-packet worst case -- a thin
+ * margin, not a designed one; raise it if this ever needs more headroom.
  */
-#define MIN_CHUNKS_PER_FRM      30
+#define MIN_CHUNKS_PER_FRM      50
 
 /*  Number of send error before repeat the report. */
 #define SEND_ERR_COUNT_TO_REPORT        50
@@ -113,6 +124,11 @@ struct pjmedia_vid_stream
 
     unsigned                 frame_size;    /**< Size of encoded base frame.*/
     unsigned                 frame_ts_len;  /**< Frame length in timestamp. */
+
+    unsigned                 tx_max_bps;    /**< SDP-negotiated max TX bitrate
+                                                 in bps (0 = no limit).     */
+    pj_bool_t                rc_auto_bw;    /**< RC bandwidth budget was
+                                                 auto-derived from codec?   */
 
     unsigned                 rx_frame_cnt;  /**< # of array in rx_frames    */
     pjmedia_frame           *rx_frames;     /**< Temp. buffer for incoming
@@ -192,6 +208,8 @@ typedef struct send_stream
     pj_size_t            rc_total;
     unsigned             rc_bandwidth;
     pj_timestamp         ts_freq;
+    pj_uint64_t          rc_max_delay;  /**< Max pacing delay, in ts_freq
+                                             ticks (0 = unbounded).         */
     unsigned             rtp_tx_err_cnt;
 
 #if TRACE_RC
@@ -445,6 +463,22 @@ static void send_rtp(send_stream *ss, send_entry *entry)
         pj_get_timestamp(&ss->rc_start);
     entry->send_ts = ss->rc_start;
     pj_add_timestamp(&entry->send_ts, &send_ts);
+
+    /* Bound the pacing debt. If the scheduled send time has drifted too far
+     * ahead of real time, the encoder is outpacing the RC budget (e.g. after
+     * a mid-call bitrate increase). Cap the delay and re-anchor the pacing
+     * baseline to real time, forgiving the excess debt, so sender-side
+     * latency cannot grow without bound.
+     */
+    if (ss->rc_max_delay) {
+        pj_timestamp now;
+        pj_get_timestamp(&now);
+        if (entry->send_ts.u64 > now.u64 + ss->rc_max_delay) {
+            entry->send_ts.u64 = now.u64 + ss->rc_max_delay;
+            ss->rc_start = entry->send_ts;
+            ss->rc_total = 0;
+        }
+    }
 
     /* Reset counter to avoid overflow in calculating timestamp */
     if (ss->rc_total > 0xFF000000) {
@@ -1697,8 +1731,27 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 
     /* Initialize send rate states */
     pj_get_timestamp_freq(&stream->ts_freq);
-    if (info->rc_cfg.bandwidth == 0)
-        info->rc_cfg.bandwidth = vfd_enc->max_bps;
+
+    /* Remember the SDP-negotiated TX ceiling (0 = no limit) so that a later
+     * modify_codec_param() cannot raise the outgoing bitrate above it.
+     */
+    stream->tx_max_bps = info->rem_max_bps;
+
+    /* Auto-derive the pacing budget from the codec max bitrate when the app
+     * did not pin rc_cfg.bandwidth. A margin is added for RTP/UDP/IP overhead
+     * and encoder burstiness so the pacer does not fall behind a compliant
+     * encoder; this is pacing headroom only and does not raise the actual
+     * media bitrate (which stays bounded by the codec and the SDP ceiling).
+     */
+    stream->rc_auto_bw = (info->rc_cfg.bandwidth == 0);
+    if (info->rc_cfg.bandwidth == 0) {
+        pj_uint64_t bw = (pj_uint64_t)vfd_enc->max_bps +
+                         (pj_uint64_t)vfd_enc->max_bps *
+                         PJMEDIA_VID_STREAM_RC_OVERHEAD_PCT / 100;
+        /* Saturate to unsigned before storing. */
+        info->rc_cfg.bandwidth = (bw > 0xFFFFFFFFUL)? 0xFFFFFFFFU
+                                                    : (unsigned)bw;
+    }
 
     /* For simple blocking, need to have bandwidth large enough, otherwise
      * we can slow down the transmission too much
@@ -1708,6 +1761,12 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     {
         info->rc_cfg.bandwidth = vfd_enc->avg_bps * 3;
     }
+
+    /* Guard against a zero budget (e.g. codec reported a zero max bitrate),
+     * which would divide by zero in the send rate control pacer.
+     */
+    if (info->rc_cfg.bandwidth == 0)
+        info->rc_cfg.bandwidth = PJMEDIA_VID_STREAM_RC_MIN_BANDWIDTH;
 
     /* Override the initial framerate in the decoding direction. This initial
      * value will be used by the renderer to configure its clock, and setting
@@ -1868,17 +1927,30 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     att_param.addr_len = pj_sockaddr_get_len(&info->rem_addr);
     att_param.rtp_cb2 = &on_rx_rtp;
     att_param.rtcp_cb = &on_rx_rtcp;
+    /* Let the transport hold a reference on the stream's group lock across
+     * each rx callback, so the stream cannot be destroyed while an in-flight
+     * RTP/RTCP callback is running on it.
+     */
+    att_param.grp_lock = c_strm->grp_lock;
 
-    /* Only attach transport when stream is ready. */
-    status = pjmedia_transport_attach2(tp, &att_param);
-    if (status != PJ_SUCCESS)
-        goto err_cleanup;
-
+    /* Only attach transport when stream is ready. Publish the transport and
+     * ref its group lock before attaching: once attached, an rx callback may
+     * arrive immediately and dereference c_strm->transport.
+     */
     c_strm->transport = tp;
+    if (tp->grp_lock)
+        pj_grp_lock_add_ref(tp->grp_lock);
 
-    /* Also add ref the transport group lock */
-    if (c_strm->transport->grp_lock)
-        pj_grp_lock_add_ref(c_strm->transport->grp_lock);
+    status = pjmedia_transport_attach2(tp, &att_param);
+    if (status != PJ_SUCCESS) {
+        /* Unpublish, so cleanup below won't send RTCP BYE nor detach from a
+         * transport we are not attached to.
+         */
+        c_strm->transport = NULL;
+        if (tp->grp_lock)
+            pj_grp_lock_dec_ref(tp->grp_lock);
+        goto err_cleanup;
+    }
 
     /* Send RTCP SDES */
     if (!c_strm->rtcp_sdes_bye_disabled) {
@@ -1980,6 +2052,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
         ss->buf_size = c_strm->enc->buf_size;
         ss->ts_freq = stream->ts_freq;
         ss->rc_bandwidth = stream->info.rc_cfg.bandwidth;
+        ss->rc_max_delay = (pj_uint64_t)PJMEDIA_VID_STREAM_RC_MAX_DELAY_MSEC *
+                           stream->ts_freq.u64 / 1000;
         ss->name = c_strm->enc->port.info.name.ptr;
 
         status = attach_send_manager(ss, send_mgr);
@@ -2196,9 +2270,70 @@ PJ_DEF(pj_status_t)
 pjmedia_vid_stream_modify_codec_param(pjmedia_vid_stream *stream,
                                       const pjmedia_vid_codec_param *param)
 {
+    pjmedia_vid_codec_param mod_param;
+    pjmedia_video_format_detail *vfd;
+    pj_status_t status;
+
     PJ_ASSERT_RETURN(stream && param, PJ_EINVAL);
 
-    return pjmedia_vid_codec_modify(stream->codec, param);
+    mod_param = *param;
+    vfd = pjmedia_format_get_video_format_detail(&mod_param.enc_fmt, PJ_FALSE);
+
+    /* Do not allow the outgoing bitrate to exceed the bandwidth negotiated
+     * with the remote in SDP (b=TIAS/AS). Sending above what the peer agreed
+     * to receive is a protocol violation; the correct way to use more is to
+     * renegotiate (re-INVITE) with a higher "b=" line.
+     */
+    if (vfd && stream->tx_max_bps) {
+        /* max_bps == 0 means "unlimited" to some encoders and would bypass the
+         * SDP ceiling, so clamp both zero and over-limit values. */
+        if (vfd->max_bps == 0 || vfd->max_bps > stream->tx_max_bps) {
+            PJ_LOG(3,(THIS_FILE, "Requested TX max bitrate %u bps not within "
+                      "SDP-negotiated limit %u bps, clamping",
+                      vfd->max_bps, stream->tx_max_bps));
+            vfd->max_bps = stream->tx_max_bps;
+        }
+        if (vfd->avg_bps > stream->tx_max_bps)
+            vfd->avg_bps = stream->tx_max_bps;
+    }
+
+    status = pjmedia_vid_codec_modify(stream->codec, &mod_param);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    /* Recompute the send rate-control budget so the pacer tracks the new
+     * bitrate. Only when the pacer is in use and the budget was auto-derived
+     * (the app did not pin rc_cfg.bandwidth); an app-pinned budget is left
+     * untouched. Re-anchor the pacing baseline to avoid a scheduling jump.
+     */
+    if (vfd && stream->rc_auto_bw && stream->send_stream &&
+        stream->info.rc_cfg.method == PJMEDIA_VID_STREAM_RC_SEND_THREAD)
+    {
+        send_stream *ss = stream->send_stream;
+        pj_uint64_t bw64 = (pj_uint64_t)vfd->max_bps +
+                           (pj_uint64_t)vfd->max_bps *
+                           PJMEDIA_VID_STREAM_RC_OVERHEAD_PCT / 100;
+        unsigned bw = (bw64 > 0xFFFFFFFFUL)? 0xFFFFFFFFU : (unsigned)bw64;
+
+        if (bw < PJMEDIA_VID_STREAM_RC_MIN_BANDWIDTH)
+            bw = PJMEDIA_VID_STREAM_RC_MIN_BANDWIDTH;
+
+        pj_grp_lock_acquire(ss->grp_lock);
+        /* Re-anchor the pacing timeline to the current schedule high-water
+         * mark (computed with the old bandwidth) before applying the new
+         * bitrate, so packets already queued with a later send time are not
+         * reordered by the send worker.
+         */
+        if (ss->rc_start.u64 != 0) {
+            ss->rc_start.u64 += ss->rc_total * ss->ts_freq.u64 * 8 /
+                                ss->rc_bandwidth;
+        }
+        ss->rc_bandwidth = bw;
+        ss->rc_total = 0;
+        pj_grp_lock_release(ss->grp_lock);
+    }
+
+    return status;
 }
 
 

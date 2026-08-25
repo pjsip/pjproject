@@ -712,7 +712,34 @@ static pj_status_t apply_call_setting(pjsua_call *call,
                                       const pjsua_call_setting *opt,
                                       const pjmedia_sdp_session *rem_sdp)
 {
+    pjsua_call_setting prev_opt;
+
     pj_assert(call);
+
+    /* Remember the current setting so it can be restored if re-initializing
+     * the media channel below fails: a rejected re-offer must not leave the
+     * call holding a setting it never applied (which could e.g. drop media on
+     * the next re-offer).
+     */
+    prev_opt = call->opt;
+
+    /* Reject media counts that would overflow the call's fixed-size media
+     * arrays (pjsua_call.media[PJSUA_MAX_CALL_MEDIA]). This is application
+     * input, so fail gracefully rather than assert or overflow. The
+     * per-field checks precede the sum so the addition cannot overflow.
+     */
+    if (opt &&
+        (opt->aud_cnt > PJSUA_MAX_CALL_MEDIA ||
+         opt->vid_cnt > PJSUA_MAX_CALL_MEDIA ||
+         opt->txt_cnt > PJSUA_MAX_CALL_MEDIA ||
+         opt->aud_cnt + opt->vid_cnt + opt->txt_cnt > PJSUA_MAX_CALL_MEDIA))
+    {
+        PJ_LOG(1,(THIS_FILE, "Rejecting call setting: requested media count "
+                  "(aud=%u vid=%u txt=%u) exceeds maximum per call (%d)",
+                  opt->aud_cnt, opt->vid_cnt, opt->txt_cnt,
+                  PJSUA_MAX_CALL_MEDIA));
+        return PJ_ETOOMANY;
+    }
 
     if (!opt) {
         pjsua_call_cleanup_flag(&call->opt);
@@ -749,6 +776,8 @@ static pj_status_t apply_call_setting(pjsua_call *call,
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE, "Error re-initializing media channel",
                          status);
+            /* Restore the previous setting; this re-offer was rejected. */
+            call->opt = prev_opt;
             return status;
         }
     }
@@ -1710,6 +1739,9 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     pj_str_t st_reason = pj_str("");
     int ret_st_code = 0;
     pj_status_t status;
+#if PJSUA_HAS_SIPREC
+    pjsip_siprec_verify_setting siprec_setting;
+#endif
 
     /* Don't want to handle anything but INVITE */
     if (msg->line.req.method.id != PJSIP_INVITE_METHOD)
@@ -1983,10 +2015,15 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     /* Check if the INVITE request is a siprec
      * this function add PJSIP_INV_REQUIRE_SIPREC to options
-     * and returns the value PJ_SUCCESS 
+     * and returns the value PJ_SUCCESS
      */
+    pjsip_siprec_verify_setting_default(&siprec_setting);
+    siprec_setting.require_label = pjsua_var.acc[acc_id].cfg.siprec_require_label;
+    siprec_setting.require_metadata = pjsua_var.acc[acc_id].cfg.siprec_require_metadata;
+
     status = pjsip_siprec_verify_request(rdata, &call->siprec_metadata, offer,
-                                &options, NULL, pjsua_var.endpt, &response);
+                                &options, NULL, pjsua_var.endpt, &response,
+                                &siprec_setting);
 
     if(status != PJ_SUCCESS){
         /*
@@ -3006,8 +3043,12 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
          * the previous one.
          */
         if (!call->opt_inited) {
+            status = apply_call_setting(call, opt, NULL);
+            if (status != PJ_SUCCESS) {
+                pjsua_perror(THIS_FILE, "Failed to apply call setting", status);
+                goto on_return;
+            }
             call->opt_inited = PJ_TRUE;
-            apply_call_setting(call, opt, NULL);
         } else if (pj_memcmp(opt, &call->opt, sizeof(*opt)) != 0) {
             /* Warn application about call setting inconsistency */
             PJ_LOG(2,(THIS_FILE, "The call setting changes is ignored."));
@@ -5753,6 +5794,17 @@ static pj_status_t modify_sdp_of_call_hold(pjsua_call *call,
             if (!conn)
                 conn = sdp->conn;
 
+            /* The SDP may have no connection line at all (neither media nor
+             * session level), so create a media level one to hold the
+             * call-hold address.
+             */
+            if (!conn) {
+                conn = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_conn);
+                conn->net_type = pj_str("IN");
+                conn->addr_type = pj_str("IP4");
+                m->conn = conn;
+            }
+
             /* Modify address */
             conn->addr = pj_str("0.0.0.0");
 
@@ -6906,6 +6958,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 
                         if (is_handled) {
                             info.method = PJSUA_DTMF_METHOD_SIP_INFO;
+                            info.med_idx = -1;
                             if (pjsua_var.ua_cfg.cb.on_dtmf_event) {
                                 pjsua_dtmf_event evt;
                                 pj_timestamp begin_of_time, timestamp;
@@ -6923,6 +6976,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
                                  * duration of the digit.
                                  */
                                 evt.flags = PJMEDIA_STREAM_DTMF_IS_END;
+                                evt.med_idx = -1;
                                 (*pjsua_var.ua_cfg.cb.on_dtmf_event)(call->index,
                                                                      &evt);
                             } else {

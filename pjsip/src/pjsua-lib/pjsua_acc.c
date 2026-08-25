@@ -282,6 +282,27 @@ static void init_outbound_setting(pjsua_acc *acc)
     acc->rfc5626_status = OUTBOUND_WANTED;
 }
 
+/* Forget a 439 recorded against a first hop we may no longer be talking to,
+ * so that outbound becomes eligible again.
+ *
+ * The status is put back to UNKNOWN as well: the fallback left it at
+ * OUTBOUND_NA, and update_regc_contact() short-circuits on that, so clearing
+ * the flag on its own would still rebuild the Contact without outbound.
+ *
+ * This only makes outbound eligible; it does not change anything already
+ * sent. A live regc keeps the Contact and the Supported header it was
+ * initialised with, so outbound is actually offered again at the next regc
+ * rebuild -- immediately where the caller destroys the regc, and otherwise
+ * whenever the next one is created.
+ */
+static void reset_outbound_rejection(pjsua_acc *acc)
+{
+    if (acc->outbound_rejected && acc->rfc5626_status == OUTBOUND_NA)
+        acc->rfc5626_status = OUTBOUND_UNKNOWN;
+
+    acc->outbound_rejected = PJ_FALSE;
+}
+
 /*
  * Destroy account's registration and deinit.
  */
@@ -536,6 +557,7 @@ static pj_status_t initialize_acc(unsigned acc_id)
     }
 
     acc->ip_change_op = PJSUA_IP_CHANGE_OP_NULL;
+    acc->outbound_rejected = PJ_FALSE;
 
     return PJ_SUCCESS;
 }
@@ -785,6 +807,7 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
     pj_status_t status = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(cfg, PJ_EINVAL);
+    PJ_ASSERT_RETURN(cfg->proxy_cnt <= PJSUA_ACC_MAX_PROXIES, PJ_EINVAL);
 
     if (pjsua_var.acc_cnt >= PJ_ARRAY_SIZE(pjsua_var.acc))
         return PJ_ETOOMANY;
@@ -1228,6 +1251,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     pj_str_t acc_proxy[PJSUA_ACC_MAX_PROXIES];
     pj_bool_t update_reg = PJ_FALSE;
     pj_bool_t unreg_first = PJ_FALSE;
+    pj_bool_t first_hop_changed = PJ_FALSE;
     pj_bool_t update_mwi = PJ_FALSE;
     pj_status_t status = PJ_SUCCESS;
     /* Server-affinity (#4964) snapshots: captured before config mutation
@@ -1239,6 +1263,8 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     pj_str_t    sa_old_reg_uri = { NULL, 0 };
 
     PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
+                     PJ_EINVAL);
+    PJ_ASSERT_RETURN(cfg && cfg->proxy_cnt <= PJSUA_ACC_MAX_PROXIES,
                      PJ_EINVAL);
 
 #if !PJ_HAS_IPV6
@@ -1408,6 +1434,17 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
         update_reg = PJ_TRUE;
         unreg_first = PJ_TRUE;
+
+        /* Deliberately not treated as a first-hop change. sa_build_reg_route_set()
+         * puts the affinity Route and the global outbound proxies ahead of the
+         * account proxies, so an account proxy leads only when neither is in
+         * play, and then only proxy[0] does. Deciding that here would mean
+         * duplicating that ordering and keeping the copy in step with it.
+         * Failing to forget a rejection only leaves outbound off until one of
+         * the unambiguous triggers fires; forgetting one wrongly re-offers
+         * outbound to a hop that already refused it, which is the failure this
+         * series removes.
+         */
     }
 
 
@@ -1545,6 +1582,8 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
     /* SIPREC */
     acc->cfg.use_siprec = cfg->use_siprec;
+    acc->cfg.siprec_require_label = cfg->siprec_require_label;
+    acc->cfg.siprec_require_metadata = cfg->siprec_require_metadata;
 
     /* Transport */
     if (acc->cfg.transport_id != cfg->transport_id) {
@@ -1552,6 +1591,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
         update_reg = PJ_TRUE;
         unreg_first = PJ_TRUE;
+        first_hop_changed = PJ_TRUE;
     }
 
     /* Update keep-alive */
@@ -1620,6 +1660,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
         acc->cfg.reg_use_proxy = cfg->reg_use_proxy;
         update_reg = PJ_TRUE;
         unreg_first = PJ_TRUE;
+        first_hop_changed = PJ_TRUE;
     }
 
     /* Credential info */
@@ -1761,6 +1802,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
         } 
         update_reg = PJ_TRUE;
         unreg_first = PJ_TRUE;
+        first_hop_changed = PJ_TRUE;
     }
 
     /* SIP outbound setting */
@@ -1771,7 +1813,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
         if (acc->cfg.use_rfc5626 != cfg->use_rfc5626)
             acc->cfg.use_rfc5626 = cfg->use_rfc5626;
 
-        if (pj_strcmp(&acc->cfg.rfc5626_instance_id, 
+        if (pj_strcmp(&acc->cfg.rfc5626_instance_id,
                       &cfg->rfc5626_instance_id)) 
         {
             pj_strdup_with_null(acc->pool, &acc->cfg.rfc5626_instance_id,
@@ -1784,6 +1826,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
         init_outbound_setting(acc);
         update_reg = PJ_TRUE;
         unreg_first = PJ_TRUE;
+        first_hop_changed = PJ_TRUE;
     }
 
     /* Video settings */
@@ -1870,6 +1913,17 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
     /* Call hold type */
     acc->cfg.call_hold_type = cfg->call_hold_type;
+
+    /* Only forget a 439 when something determining the first hop, or what we
+     * advertise to it, actually changed: registrar URI, proxy, transport or
+     * the outbound settings. unreg_first is far broader -- credentials,
+     * custom headers, Contact parameters and the account ID all set it -- and
+     * offering outbound again to a hop already known to reject it would draw
+     * another 439, leaving the account unregistered where reg_retry_interval
+     * is 0.
+     */
+    if (first_hop_changed)
+        reset_outbound_rejection(acc);
 
     /* Unregister first */
     if (unreg_first) {
@@ -2105,6 +2159,10 @@ static void update_regc_contact(pjsua_acc *acc)
     if (!acc_cfg->use_rfc5626)
         goto done;
 
+    /* The first hop answered 439 to outbound, so don't ask again. */
+    if (acc->outbound_rejected)
+        goto done;
+
     /* Check if outbound has been requested and rejected */
     if (acc->rfc5626_status == OUTBOUND_NA)
         goto done;
@@ -2137,17 +2195,25 @@ done:
         if (len > acc->contact.slen) {
             reg_contact.ptr = (char*) pj_pool_alloc(acc->pool, len);
 
-            pj_strcpy(&reg_contact, &acc->contact);
-        
+            /* Must be NULL terminated: the buffer is parsed below and by
+             * pjsip_regc, and the parser requires a NULL terminated input.
+             */
+            pj_strncpy_with_null(&reg_contact, &acc->contact, len);
+
             /* Contact URI params */
             if (acc->cfg.reg_contact_uri_params.slen) {
                 pj_pool_t *pool;
                 pjsip_contact_hdr *contact_hdr;
-                pjsip_sip_uri *uri;
+                /* Only ever handed to pjsip_uri_print(), which dispatches
+                 * on the URI's own vptr, so this must not be narrowed to
+                 * pjsip_sip_uri*: a Contact may legitimately hold another
+                 * scheme and no SIP specific field is read here.
+                 */
+                pjsip_uri *uri = NULL;
                 pj_str_t uri_param = acc->cfg.reg_contact_uri_params;
                 const pj_str_t STR_CONTACT = { "Contact", 7 };
                 char tmp_uri[PJSIP_MAX_URL_SIZE];
-                pj_ssize_t tmp_len;
+                pj_ssize_t tmp_len = -1;
 
                 /* Get the URI string */
                 pool = pjsua_pool_create("tmp", 512, 512);
@@ -2155,25 +2221,41 @@ done:
                               pjsip_parse_hdr(pool, &STR_CONTACT,
                                               reg_contact.ptr,
                                               reg_contact.slen, NULL);
-                pj_assert(contact_hdr != NULL);
-                uri = (pjsip_sip_uri*) contact_hdr->uri;
-                pj_assert(uri != NULL);
-                uri = (pjsip_sip_uri*) pjsip_uri_get_uri(uri);
-                tmp_len = pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR,
-                                          uri, tmp_uri,
-                                          sizeof(tmp_uri));
-                pj_assert(tmp_len > 0);
+                if (contact_hdr && contact_hdr->uri)
+                    uri = (pjsip_uri*)pjsip_uri_get_uri(contact_hdr->uri);
+                if (uri) {
+                    tmp_len = pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR,
+                                              uri, tmp_uri,
+                                              sizeof(tmp_uri));
+                }
                 pj_pool_release(pool);
 
-                /* Regenerate Contact */
-                reg_contact.slen = pj_ansi_snprintf(
+                if (tmp_len > 0) {
+                    pj_ssize_t new_len;
+
+                    /* Regenerate Contact */
+                    new_len = pj_ansi_snprintf(
                                             reg_contact.ptr, len,
                                             "<%.*s%.*s>%.*s",
                                             (int)tmp_len, tmp_uri,
                                             (int)uri_param.slen, uri_param.ptr,
                                             (int)acc->cfg.contact_params.slen,
                                             acc->cfg.contact_params.ptr);
-                pj_assert(reg_contact.slen > 0);
+                    if (new_len > 0 && new_len < len)
+                        reg_contact.slen = new_len;
+                    else
+                        tmp_len = -1;
+                }
+
+                if (tmp_len <= 0) {
+                    /* Leave reg_contact as the plain copy of acc->contact */
+                    PJ_LOG(1,(THIS_FILE,
+                              "Unable to apply registration Contact URI "
+                              "params of acc %d to Contact '%.*s'",
+                              acc->index, (int)acc->contact.slen,
+                              acc->contact.ptr));
+                    pj_strncpy_with_null(&reg_contact, &acc->contact, len);
+                }
             }
 
             /* Outbound */
@@ -2191,7 +2273,14 @@ done:
 
             /* Contact params */
             pj_strcat(&reg_contact, &acc->cfg.reg_contact_params);
-            
+
+            /* pj_strcat() does not NULL terminate, and the buffer is later
+             * parsed by pjsip_regc. The 'len' allowance guarantees room.
+             */
+            pj_assert(reg_contact.slen < len);
+            if (reg_contact.slen < len)
+                reg_contact.ptr[reg_contact.slen] = '\0';
+
             acc->reg_contact = reg_contact;
 
             PJ_LOG(4,(THIS_FILE,
@@ -2353,12 +2442,23 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     /* Compare received and rport with the URI in our registration */
     pool = pjsua_pool_create("tmp", 512, 512);
     contact_hdr = (pjsip_contact_hdr*)
-                  pjsip_parse_hdr(pool, &STR_CONTACT, acc->contact.ptr, 
+                  pjsip_parse_hdr(pool, &STR_CONTACT, acc->contact.ptr,
                                   acc->contact.slen, NULL);
-    pj_assert(contact_hdr != NULL);
-    uri = (pjsip_sip_uri*) contact_hdr->uri;
-    pj_assert(uri != NULL);
-    uri = (pjsip_sip_uri*) pjsip_uri_get_uri(uri);
+    /* A "Contact: *" header parses fine but has no URI, and a non-SIP URI
+     * must not be cast to pjsip_sip_uri below.
+     */
+    if (contact_hdr == NULL || contact_hdr->uri == NULL ||
+        !(PJSIP_URI_SCHEME_IS_SIP(contact_hdr->uri) ||
+          PJSIP_URI_SCHEME_IS_SIPS(contact_hdr->uri)))
+    {
+        PJ_LOG(1,(THIS_FILE, "Unable to parse Contact of account %d ('%.*s'), "
+                             "skipping NAT address check",
+                             acc->index, (int)acc->contact.slen,
+                             acc->contact.ptr));
+        pj_pool_release(pool);
+        return PJ_FALSE;
+    }
+    uri = (pjsip_sip_uri*) pjsip_uri_get_uri(contact_hdr->uri);
 
     if (uri->port == 0) {
         pjsip_transport_type_e tp_type;
@@ -2444,12 +2544,6 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
               contact_rewrite_method == PJSUA_CONTACT_REWRITE_NO_UNREG ||
               contact_rewrite_method == PJSUA_CONTACT_REWRITE_ALWAYS_UPDATE);
 
-    if (contact_rewrite_method == PJSUA_CONTACT_REWRITE_UNREGISTER) {
-        /* Unregister current contact */
-        pjsua_acc_set_registration(acc->index, PJ_FALSE);
-        destroy_regc(acc, PJ_TRUE);
-    }
-
     /*
      * Build new Contact header
      */
@@ -2460,12 +2554,24 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
         char transport_param[32];
         int len;
         pj_bool_t secure;
+        pjsip_contact_hdr *new_hdr;
+        pj_in6_addr v6_addr;
 
         secure = pjsip_transport_get_flag_from_type(tp->key.type) &
                  PJSIP_TRANSPORT_SECURE;
-        
-        /* Enclose IPv6 address in square brackets */
-        if ((tp->key.type & PJSIP_TRANSPORT_IPV6) && via_addr->ptr[0] != '[') {
+
+        /* Enclose IPv6 address in square brackets. Decide based on the
+         * address itself, not on the transport type: the Via "received"
+         * param is set by the registrar and may not match the transport.
+         * Only a genuine IPv6 literal is bracketed, so that any other
+         * colon bearing token (e.g. "foo:bar", which the Via param
+         * scanner accepts) stays unbracketed and is rejected by the
+         * validation below instead of being wrapped into a Contact that
+         * parses but is meaningless.
+         */
+        if (via_addr->slen && via_addr->ptr[0] != '[' &&
+            pj_inet_pton(pj_AF_INET6(), via_addr, &v6_addr) == PJ_SUCCESS)
+        {
             beginquote = "[";
             endquote = "]";
         } else {
@@ -2499,7 +2605,8 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
                                transport_param,
                                (int)acc->cfg.contact_uri_params.slen,
                                acc->cfg.contact_uri_params.ptr,
-                               (acc->cfg.use_rfc5626? ob: ""),
+                               ((acc->cfg.use_rfc5626 &&
+                                 !acc->outbound_rejected)? ob: ""),
                                (int)acc->cfg.contact_params.slen,
                                acc->cfg.contact_params.ptr);
         if (len < 1 || len >= PJSIP_MAX_URL_SIZE) {
@@ -2507,6 +2614,33 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
             pj_pool_release(pool);
             return PJ_FALSE;
         }
+
+        /* Make sure the new Contact is usable before committing it to the
+         * account. The Via "received" param it is built from is set by the
+         * registrar and may contain characters that are valid in a token
+         * but not in a SIP URI host, which would leave acc->contact
+         * permanently unparseable.
+         */
+        new_hdr = (pjsip_contact_hdr*)
+                  pjsip_parse_hdr(pool, &STR_CONTACT, tmp, len, NULL);
+        if (new_hdr == NULL || new_hdr->uri == NULL ||
+            !(PJSIP_URI_SCHEME_IS_SIP(new_hdr->uri) ||
+              PJSIP_URI_SCHEME_IS_SIPS(new_hdr->uri)))
+        {
+            PJ_LOG(1,(THIS_FILE, "Not rewriting Contact of account %d to "
+                                 "invalid value '%s'", acc->index, tmp));
+            pj_pool_release(pool);
+            return PJ_FALSE;
+        }
+
+        if (contact_rewrite_method == PJSUA_CONTACT_REWRITE_UNREGISTER) {
+            /* Unregister current contact. Must be done before acc->contact
+             * is replaced, as the unregister uses the old Contact.
+             */
+            pjsua_acc_set_registration(acc->index, PJ_FALSE);
+            destroy_regc(acc, PJ_TRUE);
+        }
+
         pj_strdup2_with_null(acc->pool, &acc->contact, tmp);
 
         update_regc_contact(acc);
@@ -2925,6 +3059,9 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 {
 
     pjsua_acc *acc = (pjsua_acc*) param->token;
+    const pj_str_t tcp_param = pj_str(";transport=tcp");
+    const pj_str_t tls_param = pj_str(";transport=tls");
+    pj_bool_t sent_outbound;
 
     PJSUA_LOCK();
 
@@ -2932,6 +3069,23 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
         PJSUA_UNLOCK();
         return;
     }
+
+    /* Whether the REGISTER this callback reports on could have advertised SIP
+     * outbound. Captured up front because destroy_regc() below clears
+     * acc->contact. Used to tell a 439 that rejects our outbound from one
+     * returned for an unrelated reason.
+     *
+     * This mirrors the test update_regc_contact() uses to decide whether to
+     * emit outbound at all. rfc5626_status is not usable here even if read
+     * before destroy_regc() resets it: update_rfc5626_status() drops it to
+     * OUTBOUND_NA on a 200 that omits "Require: outbound" -- the normal reply
+     * from a registrar without outbound support -- while the regc goes on
+     * sending the reg-id Contact and option tag it was initialised with, so a
+     * later 439 would be missed and the account left unregistered.
+     */
+    sent_outbound = acc->cfg.use_rfc5626 &&
+                    (pj_stristr(&acc->contact, &tcp_param) != NULL ||
+                     pj_stristr(&acc->contact, &tls_param) != NULL);
 
     pj_log_push_indent();
 
@@ -3129,6 +3283,64 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 
     /* Reaching this point means no contact rewrite, so reset the flag */
     acc->contact_rewritten = PJ_FALSE;
+
+    /* A 439 (PJSIP_SC_FIRST_HOP_LACKS_OUTBOUND_SUPPORT) means the first hop
+     * does not support SIP outbound (RFC 5626 section 6). Since use_rfc5626
+     * is enabled by default, resending the same REGISTER would only draw
+     * another 439 and the account would never register at all. Remember the
+     * rejection and re-register without outbound, as permitted by RFC 5626
+     * section 4.2.1.
+     *
+     * This needs its own flag rather than rfc5626_status: the failure path
+     * above has already called destroy_regc(), which resets rfc5626_status,
+     * and update_regc_contact() recomputes it from the Contact transport on
+     * every rebuild -- so a rejection recorded there cannot survive to the
+     * next registration. cfg.use_rfc5626 is deliberately left untouched, so
+     * the account's configured intent is preserved and outbound is tried
+     * again once the path may have changed (see the resets of this flag).
+     *
+     * The sent_outbound check keeps this to requests that really did advertise
+     * outbound: use_rfc5626 may be enabled while update_regc_contact() still
+     * emits no reg-id, e.g. on a UDP account, and RFC 5626 section 6 permits
+     * a 439 only when reg-id and the outbound option tag were both present.
+     * A 439 to any other request is not ours to react to.
+     */
+    if (param->code == PJSIP_SC_FIRST_HOP_LACKS_OUTBOUND_SUPPORT &&
+        acc->cfg.use_rfc5626 && !acc->outbound_rejected && sent_outbound)
+    {
+        PJ_LOG(3,(THIS_FILE, "Acc %d: first hop lacks outbound support, "
+                             "will re-register without SIP outbound",
+                             acc->index));
+        acc->outbound_rejected = PJ_TRUE;
+
+        /* Recording the rejection is always right; driving a retry ourselves
+         * is not. An un-REGISTER also carries the outbound Contact params and
+         * can therefore be answered with 439, but retrying it as a REGISTER
+         * would bring an account the application asked to take offline back
+         * online. During an IP change the IP-change state machine owns
+         * registration, which is why the generic auto-retry below excludes
+         * that case too. The flag is set either way, so whoever registers
+         * next omits outbound.
+         *
+         * This is also a no-op when reg_retry_interval is 0, i.e. the
+         * application has asked not to be retried on its behalf. The account
+         * is no longer stuck either way: the application's own
+         * pjsua_acc_set_registration() now rebuilds the REGISTER without
+         * outbound and succeeds.
+         *
+         * The same applies during an IP change: the flow ends at
+         * pjsua_acc_end_ip_change() below without sending another REGISTER,
+         * so the account waits for the application rather than recovering by
+         * itself. Driving a registration from here would race the state
+         * machine that owns registration in that window, which is why the
+         * generic auto-retry below makes the same exclusion.
+         */
+        if (!param->is_unreg &&
+            acc->ip_change_op != PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT)
+        {
+            schedule_reregistration(acc);
+        }
+    }
 
     /* Check if we need to auto retry registration. Basically, registration
      * failure codes triggering auto-retry are those of temporal failures
@@ -3415,9 +3627,24 @@ static pj_status_t pjsua_regc_init(int acc_id)
         }
     }
 
-    /* If SIP outbound is used, add "Supported: outbound, path header" */
+    /* If SIP outbound is used, add "Supported: outbound, path" header.
+     *
+     * After a 439 only the "outbound" tag is withdrawn. "path" (RFC 3327) is
+     * a separate capability that the 439 says nothing about, and the edge
+     * proxy whose Path lacked an ";ob" parameter -- the very thing that
+     * provoked the 439 -- will keep inserting Path on the retry. RFC 3327
+     * section 5.3 recommends a registrar reject a REGISTER carrying Path from
+     * a UA that does not advertise "path" with 420 (Bad Extension), so
+     * dropping both tags together risks turning the 439 into a 420 with no
+     * further retry scheduled.
+     *
+     * Testing outbound_rejected rather than relying on rfc5626_status also
+     * keeps the option tag and the reg-id Contact parameter from disagreeing
+     * if the order in which they are decided ever changes.
+     */
     if (acc->rfc5626_status == OUTBOUND_WANTED ||
-        acc->rfc5626_status == OUTBOUND_ACTIVE)
+        acc->rfc5626_status == OUTBOUND_ACTIVE ||
+        acc->outbound_rejected)
     {
         pjsip_hdr hdr_list;
         pjsip_supported_hdr *hsup;
@@ -3426,9 +3653,14 @@ static pj_status_t pjsua_regc_init(int acc_id)
         hsup = pjsip_supported_hdr_create(pool);
         pj_list_push_back(&hdr_list, hsup);
 
-        hsup->count = 2;
-        hsup->values[0] = pj_str("outbound");
-        hsup->values[1] = pj_str("path");
+        if (acc->outbound_rejected) {
+            hsup->count = 1;
+            hsup->values[0] = pj_str("path");
+        } else {
+            hsup->count = 2;
+            hsup->values[0] = pj_str("outbound");
+            hsup->values[1] = pj_str("path");
+        }
 
         status = pjsip_regc_add_headers(acc->regc, &hdr_list);
         if (status != PJ_SUCCESS) {
@@ -4571,6 +4803,14 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
     int secure;
     const char *beginquote, *endquote;
     char transport_param[32];
+    /* RFC 5626 section 2.1: in a Contact header field value the "ob" URI
+     * parameter indicates that the UA would like other requests in the same
+     * dialog to be routed over the same flow. This Contact is used for every
+     * outgoing UAC request of the account, not just REGISTER, so suppressing
+     * it after a 439 also drops it from dialog-forming requests -- which is
+     * the intent: a first hop that does not implement SIP outbound cannot
+     * honour the flow reuse "ob" asks for.
+     */
     const char *ob = ";ob";
 
     
@@ -4626,7 +4866,8 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
                                      transport_param,
                                      (int)acc->cfg.contact_uri_params.slen,
                                      acc->cfg.contact_uri_params.ptr,
-                                     (acc->cfg.use_rfc5626? ob: ""),
+                                     ((acc->cfg.use_rfc5626 &&
+                                       !acc->outbound_rejected)? ob: ""),
                                      (int)acc->cfg.contact_params.slen,
                                      acc->cfg.contact_params.ptr);
     if (contact->slen < 1 || contact->slen >= (int)PJSIP_MAX_URL_SIZE)
@@ -4861,6 +5102,13 @@ PJ_DEF(pj_status_t) pjsua_acc_set_transport( pjsua_acc_id acc_id,
     if (acc->cfg.transport_id == tp_id)
         return PJ_SUCCESS;
 
+    /* Moving the account to another transport may put it behind a different
+     * first hop, so a 439 recorded against the old one no longer applies.
+     * Applications can call this directly, without going through
+     * pjsua_acc_modify().
+     */
+    reset_outbound_rejection(acc);
+
     acc->cfg.transport_id = tp_id;
 
     if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
@@ -4886,6 +5134,7 @@ PJ_DEF(pj_status_t) pjsua_acc_set_transport( pjsua_acc_id acc_id,
 PJ_DEF(pj_status_t) pjsua_acc_refresh_transport(pjsua_acc_id acc_id)
 {
     pjsua_acc *acc;
+    pj_bool_t had_pin;
 
     PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
 
@@ -4896,7 +5145,17 @@ PJ_DEF(pj_status_t) pjsua_acc_refresh_transport(pjsua_acc_id acc_id)
         return PJ_EINVAL;
     }
 
+    had_pin = (acc->sa_next_hop_tp != NULL);
+
     clear_sa_pin(acc);
+
+    /* Only if something was actually pinned. Dropping a cached destination
+     * means the next registration re-resolves and may land elsewhere, so the
+     * old 439 no longer applies; with nothing cached this call changes
+     * nothing and the rejection still stands.
+     */
+    if (had_pin)
+        reset_outbound_rejection(acc);
 
     PJSUA_UNLOCK();
     return PJ_SUCCESS;
@@ -4921,6 +5180,8 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
     pj_pool_t *tmp_pool = NULL;
     pjsip_tx_data dummy_tdata;
     pjsip_tx_data *tdata_ptr = NULL;
+    pj_bool_t had_pin;
+    pj_sockaddr prev_addr;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id) && addr, PJ_EINVAL);
@@ -5014,6 +5275,12 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
     }
 
     if (status == PJ_SUCCESS && tp != NULL) {
+        /* Remember what was pinned, to tell a genuine change of next hop
+         * from a caller re-pinning the address that is already in force.
+         */
+        had_pin = (acc->sa_next_hop_tp != NULL);
+        pj_memcpy(&prev_addr, &acc->sa_next_hop_addr, sizeof(prev_addr));
+
         /* Atomic swap: drop existing pin, install new pin.
          * acquire_transport already added a reference to tp.
          */
@@ -5035,6 +5302,13 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
             pjsua_init_tpselector(acc->index, &tp_sel);
             pjsip_regc_set_transport(acc->regc, &tp_sel);
         }
+        /* Only when the next hop actually moved. Re-pinning the address
+         * already in force changes nothing, and forgetting the rejection
+         * there would offer outbound again to the hop that sent the 439.
+         */
+        if (!had_pin || pj_sockaddr_cmp(&prev_addr, addr) != 0)
+            reset_outbound_rejection(acc);
+
         PJ_LOG(3,(THIS_FILE,
                   "Account %d: server affinity explicitly pinned via API "
                   "to transport %s",
@@ -5328,6 +5602,10 @@ void pjsua_acc_on_tp_state_changed(pjsip_transport *tp,
             if (acc->rfc5626_status == OUTBOUND_ACTIVE) {
                 acc->rfc5626_status = OUTBOUND_WANTED;
             }
+            /* New transport means a possibly different first hop, so a
+             * previous 439 no longer applies.
+             */
+            reset_outbound_rejection(acc);
 
             if (pjsua_var.acc[i].ip_change_op ==
                                             PJSUA_IP_CHANGE_OP_ACC_SHUTDOWN_TP)
@@ -5381,6 +5659,14 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc)
 
     /* Prepare for contact rewrite */
     acc->contact_rewritten = PJ_FALSE;
+
+    /* The IP change may have put us behind a different first hop, so make
+     * SIP outbound eligible again. Whether the REGISTER below actually
+     * carries it depends on need_unreg: with PJSUA_CONTACT_REWRITE_UNREGISTER
+     * the regc is rebuilt and outbound is offered again straight away,
+     * otherwise not until the next rebuild.
+     */
+    reset_outbound_rejection(acc);
 
     status = pjsua_acc_set_registration(acc->index, !need_unreg);
     if ((status != PJ_SUCCESS)

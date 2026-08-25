@@ -32,10 +32,11 @@ enum session_type
 
 struct offer_answer
 {                       
-    enum session_type type;     /*  LOCAL_OFFER:        REMOTE_OFFER:   */
-    char *sdp1;                 /* local offer          remote offer    */
-    char *sdp2;                 /* remote answer        initial local   */
-    char *sdp3;                 /* local active media   local answer    */
+    enum session_type type;            /*  LOCAL_OFFER:        REMOTE_OFFER:   */
+    pj_bool_t answer_multiple_codecs;  /* answer with multiple codecs?         */
+    char *sdp1;                        /* local offer          remote offer    */
+    char *sdp2;                        /* remote answer        initial local   */
+    char *sdp3;                        /* local active media   local answer    */
 };
 
 static struct test
@@ -63,6 +64,7 @@ static struct test
         {
           {
             LOCAL_OFFER,
+            PJ_FALSE,
             /* Alice sends offer: */
             "v=0\r\n"
             "o=alice 2890844526 2890844526 IN IP4 host.anywhere.com\r\n"
@@ -101,6 +103,7 @@ static struct test
           },
           {
             REMOTE_OFFER,
+            PJ_FALSE,
             /* Bob wants to change his local SDP 
              * (change local port for the first stream and add new stream)
              * Received SDP from Bob:
@@ -153,6 +156,7 @@ static struct test
         {
           {
             REMOTE_OFFER,
+            PJ_FALSE,
             /* Remote offer from Alice: */
             "v=0\r\n"
             "o=alice 2890844526 2890844526 IN IP4 host.anywhere.com\r\n"
@@ -190,6 +194,7 @@ static struct test
           },
           {
             LOCAL_OFFER,
+            PJ_FALSE,
             /* Bob wants to change his local SDP 
              * (change local port for the first stream and add new stream)
              */
@@ -251,6 +256,7 @@ static struct test
         {
           {
             LOCAL_OFFER,
+            PJ_FALSE,
             /* The initial offer from Alice to Bob indicates a single audio 
              * stream with the three audio codecs that are available in the 
              * DSP. The stream is marked as inactive, 
@@ -290,6 +296,7 @@ static struct test
           },
           {
             LOCAL_OFFER,
+            PJ_FALSE,
             /* Alice sends an updated offer with a sendrecv stream: */
             "v=0\r\n"
             "o=alice 2890844526 2890844527 IN IP4 host.anywhere.com\r\n"
@@ -342,6 +349,7 @@ static struct test
         {
           {
             REMOTE_OFFER,
+            PJ_FALSE,
             /* Bob received offer from Alice:
              */
             "v=0\r\n"
@@ -377,6 +385,7 @@ static struct test
           },
           {
             REMOTE_OFFER,
+            PJ_FALSE,
             /* Received updated Alice's SDP: offer with a sendrecv stream: */
             "v=0\r\n"
             "o=alice 2890844526 2890844527 IN IP4 host.anywhere.com\r\n"
@@ -417,6 +426,7 @@ static struct test
         {
           {
             LOCAL_OFFER,
+            PJ_FALSE,
             /* Alice's local offer: */
             "v=0\r\n"
             "o=alice 2890844526 2890844526 IN IP4 host.atlanta.example.com\r\n"
@@ -472,6 +482,7 @@ static struct test
         {
           {
             REMOTE_OFFER,
+            PJ_FALSE,
             /* Received Alice's local offer: */
             "v=0\r\n"
             "o=alice 2890844526 2890844526 IN IP4 host.atlanta.example.com\r\n"
@@ -522,6 +533,7 @@ static struct test
         {
           {
             LOCAL_OFFER,
+            PJ_FALSE,
             /* Alice sends offer: */
             "v=0\r\n"
             "o=alice 2890844526 2890844526 IN IP4 host.atlanta.example.com\r\n"
@@ -562,6 +574,7 @@ static struct test
           },
           {
             LOCAL_OFFER,
+            PJ_FALSE,
             /* Alice sends updated offer: */
             "v=0\r\n"
             "o=alice 2890844526 2890844527 IN IP4 host.atlanta.example.com\r\n"
@@ -605,10 +618,11 @@ static struct test
          *  - Bob's initial capability version number
          */
         "RFC 4317 section 2.2: Audio and Video 2 (Bob's view)",
-        2,
+        3,
         {
           {
             REMOTE_OFFER,
+            PJ_TRUE,
             /* Received offer from alice: */
             "v=0\r\n"
             "o=alice 2890844526 2890844526 IN IP4 host.atlanta.example.com\r\n"
@@ -639,6 +653,45 @@ static struct test
             "s=bob\r\n"
             "c=IN IP4 host.biloxi.example.com\r\n"
             "t=0 0\r\n"
+            "m=audio 49172 RTP/AVP 0 8\r\n"
+            "a=rtpmap:0 PCMU/8000\r\n"
+            "a=rtpmap:8 PCMA/8000\r\n"
+            "m=video 0 RTP/AVP 31\r\n"
+            "a=rtpmap:31 H261/90000\r\n"
+          },
+          {
+            REMOTE_OFFER,
+            PJ_FALSE,
+            /* Received offer from alice: */
+            "v=0\r\n"
+            "o=alice 2890844526 2890844526 IN IP4 host.atlanta.example.com\r\n"
+            "s=alice\r\n"
+            "c=IN IP4 host.atlanta.example.com\r\n"
+            "t=0 0\r\n"
+            "m=audio 49170 RTP/AVP 0 8 97\r\n"
+            "a=rtpmap:0 PCMU/8000\r\n"
+            "a=rtpmap:8 PCMA/8000\r\n"
+            "a=rtpmap:97 iLBC/8000\r\n"
+            "m=video 51372 RTP/AVP 31 32\r\n"
+            "a=rtpmap:31 H261/90000\r\n"
+            "a=rtpmap:32 MPV/90000\r\n",
+            /* Bob's initial capability: */
+            "v=0\r\n"
+            "o=bob 2808844564 2808844563 IN IP4 host.biloxi.example.com\r\n"
+            "s=bob\r\n"
+            "c=IN IP4 host.biloxi.example.com\r\n"
+            "t=0 0\r\n"
+            "m=audio 49172 RTP/AVP 0 8\r\n"
+            "a=rtpmap:0 PCMU/8000\r\n"
+            "a=rtpmap:8 PCMA/8000\r\n"
+            "m=video 0 RTP/AVP 31\r\n"
+            "a=rtpmap:31 H261/90000\r\n",
+            /* This is how Bob's answer should look like now: */
+            "v=0\r\n"
+            "o=bob 2808844564 2808844565 IN IP4 host.biloxi.example.com\r\n"
+            "s=bob\r\n"
+            "c=IN IP4 host.biloxi.example.com\r\n"
+            "t=0 0\r\n"
             "m=audio 49172 RTP/AVP 0\r\n"
             "a=rtpmap:0 PCMU/8000\r\n"
             "m=video 0 RTP/AVP 31\r\n"
@@ -646,6 +699,7 @@ static struct test
           },
           {
             REMOTE_OFFER,
+            PJ_FALSE,
             /* Received updated offer from Alice: */
             "v=0\r\n"
             "o=alice 2890844526 2890844527 IN IP4 host.atlanta.example.com\r\n"
@@ -660,7 +714,7 @@ static struct test
             NULL,
             /* This is how Bob's answer should look like: */
             "v=0\r\n"
-            "o=bob 2808844564 2808844564 IN IP4 host.biloxi.example.com\r\n"
+            "o=bob 2808844564 2808844565 IN IP4 host.biloxi.example.com\r\n"
             "s=bob\r\n"
             "c=IN IP4 host.biloxi.example.com\r\n"
             "t=0 0\r\n"
@@ -684,6 +738,7 @@ static struct test
         {
           {
             LOCAL_OFFER,
+            PJ_FALSE,
             /* Alice sends offer: */
             "v=0\r\n"
             "o=alice 2890844526 2890844526 IN IP4 host.atlanta.example.com\r\n"
@@ -739,6 +794,7 @@ static struct test
         {
           {
             REMOTE_OFFER,
+            PJ_FALSE,
             /* Received Alice's offer: */
             "v=0\r\n"
             "o=alice 2890844526 2890844526 IN IP4 host.atlanta.example.com\r\n"
@@ -789,6 +845,7 @@ static struct test
         {
           {
             LOCAL_OFFER,
+            PJ_FALSE,
             /* Alice sends offer: */
             "v=0\r\n"
             "o=alice 2890844526 2890844526 IN IP4 host.atlanta.example.com\r\n"
@@ -842,6 +899,7 @@ static struct test
         {
           {
             REMOTE_OFFER,
+            PJ_FALSE,
             /* Received Alice's offer: */
             "v=0\r\n"
             "o=alice 2890844526 2890844526 IN IP4 host.atlanta.example.com\r\n"
@@ -891,6 +949,7 @@ static struct test
         {
           {
             LOCAL_OFFER,
+            PJ_FALSE,
             /* Alice sends offer audio and video: */
             "v=0\r\n"
             "o=alice 2890844526 2890844526 IN IP4 host.atlanta.example.com\r\n"
@@ -935,6 +994,7 @@ static struct test
         {
           {
             LOCAL_OFFER,
+            PJ_FALSE,
             /* Alice sends offer audio and video: */
             "v=0\r\n"
             "o=alice 2890844526 2890844526 IN IP4 host.atlanta.example.com\r\n"
@@ -981,6 +1041,7 @@ static struct test
         {
           {
             LOCAL_OFFER,
+            PJ_FALSE,
             /* Alice sends offer: */
             "v=0\r\n"
             "o=alice 2890844526 2890844526 IN IP4 host.atlanta.example.com\r\n"
@@ -1023,6 +1084,7 @@ static struct test
           },
           {
             LOCAL_OFFER,
+            PJ_FALSE,
             /* Alice modifies offer with only specify one audio: */
             "v=0\r\n"
             "o=alice 2890844526 2890844526 IN IP4 host.atlanta.example.com\r\n"
@@ -1073,6 +1135,7 @@ static struct test
         {
           {
             LOCAL_OFFER,
+            PJ_FALSE,
             /* Alice sends offer: */
             "v=0\r\n"
             "o=alice 2890844526 2890844526 IN IP4 host.atlanta.example.com\r\n"
@@ -1109,6 +1172,7 @@ static struct test
           },
           {
             LOCAL_OFFER,
+            PJ_FALSE,
             /* Alice modifies offer with unordered m= lines: */
             "v=0\r\n"
             "o=alice 2890844526 2890844526 IN IP4 host.atlanta.example.com\r\n"
@@ -1157,6 +1221,7 @@ static struct test
         {
           {
             LOCAL_OFFER,
+            PJ_FALSE,
             /* Alice sends offer: */
             "v=0\r\n"
             "o=alice 2890844526 2890844526 IN IP4 host.atlanta.example.com\r\n"
@@ -1199,6 +1264,7 @@ static struct test
           },
           {
             LOCAL_OFFER,
+            PJ_FALSE,
             /* Alice modifies offer by specifying partial and unordered media: */
             "v=0\r\n"
             "o=alice 2890844526 2890844526 IN IP4 host.atlanta.example.com\r\n"
@@ -1247,10 +1313,11 @@ static struct test
          */
 
         "Ticket #2088: Handle multiple telephone-event formats",
-        2,
+        3,
         {
           {
             REMOTE_OFFER,
+            PJ_TRUE,
             /* Bob sends offer: */
             "v=0\r\n"
             "o=bob 2808844564 2808844563 IN IP4 host.biloxi.example.com\r\n"
@@ -1281,13 +1348,55 @@ static struct test
             "s=alice\r\n"
             "c=IN IP4 host.atlanta.example.com\r\n"
             "t=0 0\r\n"
+            "m=audio 4000 RTP/AVP 97 0 98 99\r\n"
+            "a=rtpmap:0 PCMU/8000\r\n"
+            "a=rtpmap:97 Speex/16000\r\n"
+            "a=rtpmap:98 telephone-event/8000\r\n"
+            "a=rtpmap:99 telephone-event/16000\r\n"
+            ""
+          },
+          {
+            REMOTE_OFFER,
+            PJ_FALSE,
+            /* Bob sends offer: */
+            "v=0\r\n"
+            "o=bob 2808844564 2808844563 IN IP4 host.biloxi.example.com\r\n"
+            "s=bob\r\n"
+            "c=IN IP4 host.biloxi.example.com\r\n"
+            "t=0 0\r\n"
+            "m=audio 3000 RTP/AVP 97 0 98 99\r\n"
+            "a=rtpmap:97 Speex/16000\r\n"
+            "a=rtpmap:0 PCMU/8000\r\n"
+            "a=rtpmap:98 telephone-event/8000\r\n"
+            "a=rtpmap:99 telephone-event/16000\r\n"
+            "",
+            /* Alice initial capability: */
+            "v=0\r\n"
+            "o=alice 2890844526 2890844526 IN IP4 host.atlanta.example.com\r\n"
+            "s=alice\r\n"
+            "c=IN IP4 host.atlanta.example.com\r\n"
+            "t=0 0\r\n"
+            "m=audio 4000 RTP/AVP 0 100 96 98\r\n"
+            "a=rtpmap:0 PCMU/8000\r\n"
+            "a=rtpmap:100 Speex/16000\r\n"
+            "a=rtpmap:96 telephone-event/8000\r\n"
+            "a=rtpmap:98 telephone-event/16000\r\n"
+            "",
+            /* Alice's local SDP should be: */
+            "v=0\r\n"
+            "o=alice 2890844526 2890844528 IN IP4 host.atlanta.example.com\r\n"
+            "s=alice\r\n"
+            "c=IN IP4 host.atlanta.example.com\r\n"
+            "t=0 0\r\n"
             "m=audio 4000 RTP/AVP 97 99\r\n"
             "a=rtpmap:97 Speex/16000\r\n"
             "a=rtpmap:99 telephone-event/16000\r\n"
-            "",
+            ""
           },
+
           {
             LOCAL_OFFER,
+            PJ_FALSE,
             /* Alice updates offer */
             "v=0\r\n"
             "o=alice 2890844526 2890844528 IN IP4 host.atlanta.example.com\r\n"
@@ -1312,7 +1421,7 @@ static struct test
             "",
             /* Alice's local SDP should be: */
             "v=0\r\n"
-            "o=alice 2890844526 2890844528 IN IP4 host.atlanta.example.com\r\n"
+            "o=alice 2890844526 2890844529 IN IP4 host.atlanta.example.com\r\n"
             "s=alice\r\n"
             "c=IN IP4 host.atlanta.example.com\r\n"
             "t=0 0\r\n"
@@ -1320,6 +1429,88 @@ static struct test
             "a=rtpmap:97 Speex/16000\r\n"
             "a=rtpmap:99 telephone-event/16000\r\n"
             "",
+          }
+        }
+    },
+
+    /* test 18: */
+    {
+        /*********************************************************************
+         * AMR/AMR-WB offer with QoS preconditions: answerer only supports
+         * AMR/8000 (octet-align=0) and telephone-event/8000.
+         */
+
+        "AMR/AMR-WB offer, answerer picks AMR/8000 + telephone-event",
+        1,
+        {
+          {
+            REMOTE_OFFER,
+            PJ_TRUE,
+            /* Remote offer: */
+            "v=0\r\n"
+            "o=- 3832217418 3832217418 IN IP4 10.162.173.4\r\n"
+            "s=SS VOIP\r\n"
+            "c=IN IP4 10.186.98.37\r\n"
+            "t=0 0\r\n"
+            "m=audio 4000 RTP/AVP 116 107 118 9 111 110\r\n"
+            "b=AS:41\r\n"
+            "b=RS:512\r\n"
+            "b=RR:1537\r\n"
+            "a=rtpmap:116 AMR-WB/16000\r\n"
+            "a=fmtp:116 mode-change-capability=2;max-red=220\r\n"
+            "a=rtpmap:107 AMR-WB/16000\r\n"
+            "a=fmtp:107 octet-align=1;mode-change-capability=2;max-red=220\r\n"
+            "a=rtpmap:118 AMR/8000\r\n"
+            "a=fmtp:118 octet-align=0;mode-change-capability=2;max-red=220\r\n"
+            /* For the following to work, pjmedia_codec_amr_match_sdp() must be registered first.
+               "a=rtpmap:96 AMR/8000\r\n"
+               "a=fmtp:96 octet-align=1;mode-change-capability=2;max-red=220\r\n"
+            */
+            "a=rtpmap:9 G722/8000\r\n"
+            "a=rtpmap:111 telephone-event/16000\r\n"
+            "a=fmtp:111 0-15\r\n"
+            "a=rtpmap:110 telephone-event/8000\r\n"
+            "a=fmtp:110 0-15\r\n"
+            "a=curr:qos local none\r\n"
+            "a=curr:qos remote none\r\n"
+            "a=des:qos mandatory local sendrecv\r\n"
+            "a=des:qos optional remote sendrecv\r\n"
+            "a=rtcp:4001 IN IP4 10.186.98.37\r\n"
+            "a=sendrecv\r\n"
+            "a=ptime:20\r\n"
+            "a=maxptime:240\r\n",
+            /* Answerer initial capability: */
+            "v=0\r\n"
+            "o=- 3832217418 3832217419 IN IP4 10.162.173.125\r\n"
+            "s=-\r\n"
+            "c=IN IP4 10.186.99.39\r\n"
+            "t=0 0\r\n"
+            "m=audio 4002 RTP/AVP 118 110\r\n"
+            "b=AS:29\r\n"
+            "a=rtpmap:118 AMR/8000\r\n"
+            "a=fmtp:118 octet-align=0;mode-change-capability=2;max-red=0\r\n"
+            "a=rtpmap:110 telephone-event/8000\r\n"
+            "a=fmtp:110 0-15\r\n"
+            "a=rtcp:4003 IN IP4 10.186.99.39\r\n"
+            "a=sendrecv\r\n"
+            "a=ptime:20\r\n"
+            "a=maxptime:40\r\n",
+            /* Answerer's negotiated local SDP should be: */
+            "v=0\r\n"
+            "o=- 3832217418 3832217420 IN IP4 10.162.173.125\r\n"
+            "s=-\r\n"
+            "c=IN IP4 10.186.99.39\r\n"
+            "t=0 0\r\n"
+            "m=audio 4002 RTP/AVP 118 110\r\n"
+            "b=AS:29\r\n"
+            "a=rtpmap:118 AMR/8000\r\n"
+            "a=fmtp:118 octet-align=0;mode-change-capability=2;max-red=0\r\n"
+            "a=rtpmap:110 telephone-event/8000\r\n"
+            "a=fmtp:110 0-15\r\n"
+            "a=rtcp:4003 IN IP4 10.186.99.39\r\n"
+            "a=sendrecv\r\n"
+            "a=ptime:20\r\n"
+            "a=maxptime:40\r\n",
           }
         }
     },
@@ -1455,6 +1646,8 @@ static int offer_answer_test(pj_pool_t *pool, pjmedia_sdp_neg **p_neg,
             }
         }
 
+        pjmedia_sdp_neg_set_answer_multiple_codecs(neg, oa->answer_multiple_codecs);
+
         /* Parse and validate remote answer */
         status = pjmedia_sdp_parse(pool, oa->sdp2, pj_ansi_strlen(oa->sdp2),
                                    &sdp2);
@@ -1580,6 +1773,8 @@ static int offer_answer_test(pj_pool_t *pool, pjmedia_sdp_neg **p_neg,
             }
         }
 
+        pjmedia_sdp_neg_set_answer_multiple_codecs(neg, oa->answer_multiple_codecs);
+
         /* Negotiate. */
         status = pjmedia_sdp_neg_negotiate(pool, neg, 0);
         if (status != PJ_SUCCESS) {
@@ -1643,8 +1838,8 @@ static int perform_test(pj_pool_t *pool, int test_index)
 
         rc = offer_answer_test(pool, &neg, &test[test_index].offer_answer[i]);
         if (rc != 0) {
-            PJ_LOG(3,(THIS_FILE, "  test %d offer answer %d failed with status %d",
-                      test_index, i, rc));
+            PJ_LOG(3,(THIS_FILE, "  test %s %d offer answer %d failed with status %d",
+                      test[test_index].title, test_index, i, rc));
             return rc;
         }
     }
@@ -1822,6 +2017,199 @@ static int sdp_neg_bundle_only_test(pj_pool_t *pool)
     return 0;
 }
 
+
+/* A bundle-only media is not disabled, so it must be validated as any
+ * active media, i.e. it must have format and rtpmap for dynamic payload
+ * type. Otherwise the offer must be rejected, instead of being negotiated
+ * as if it was validated.
+ */
+static int sdp_neg_bundle_only_invalid_test(pj_pool_t *pool)
+{
+    /* Bundle-only media without rtpmap for its dynamic payload type. */
+    static char no_rtpmap_str[] =
+        "v=0\r\n"
+        "o=- 0 0 IN IP4 127.0.0.1\r\n"
+        "s=-\r\n"
+        "c=IN IP4 127.0.0.1\r\n"
+        "t=0 0\r\n"
+        "a=group:BUNDLE 0 1\r\n"
+        "m=audio 4000 RTP/AVP 0\r\n"
+        "a=mid:0\r\n"
+        "m=video 0 RTP/AVP 96\r\n"
+        "a=mid:1\r\n"
+        "a=bundle-only\r\n";
+
+    /* Bundle-only media without any format. */
+    static char no_fmt_str[] =
+        "v=0\r\n"
+        "o=- 0 0 IN IP4 127.0.0.1\r\n"
+        "s=-\r\n"
+        "c=IN IP4 127.0.0.1\r\n"
+        "t=0 0\r\n"
+        "a=group:BUNDLE 0 1\r\n"
+        "m=audio 4000 RTP/AVP 0\r\n"
+        "a=mid:0\r\n"
+        "m=video 0 RTP/AVP\r\n"
+        "a=mid:1\r\n"
+        "a=bundle-only\r\n";
+
+    static char local_str[] =
+        "v=0\r\n"
+        "o=- 1 1 IN IP4 127.0.0.1\r\n"
+        "s=-\r\n"
+        "c=IN IP4 127.0.0.1\r\n"
+        "t=0 0\r\n"
+        "a=group:BUNDLE 0 1\r\n"
+        "m=audio 5000 RTP/AVP 0\r\n"
+        "a=mid:0\r\n"
+        "m=video 5002 RTP/AVP 96\r\n"
+        "a=mid:1\r\n"
+        "a=rtpmap:96 VP8/90000\r\n";
+
+    struct {
+        char        *sdp;
+        unsigned     len;
+        pj_status_t  exp_status;
+    } offers[] = {
+        { no_rtpmap_str, sizeof(no_rtpmap_str)-1, PJMEDIA_SDP_EMISSINGRTPMAP },
+        { no_fmt_str,    sizeof(no_fmt_str)-1,    PJMEDIA_SDP_ENOFMT }
+    };
+    pjmedia_sdp_session *offer, *local;
+    pjmedia_sdp_neg *neg;
+    pj_status_t status;
+    unsigned i;
+    char b1[sizeof(no_rtpmap_str) > sizeof(no_fmt_str) ?
+            sizeof(no_rtpmap_str) : sizeof(no_fmt_str)];
+    char b2[sizeof(local_str)];
+
+    pj_memcpy(b2, local_str, sizeof(local_str));
+    if (pjmedia_sdp_parse(pool, b2, pj_ansi_strlen(b2), &local) != PJ_SUCCESS)
+        return -3060;
+
+    for (i=0; i<PJ_ARRAY_SIZE(offers); ++i) {
+        pj_memcpy(b1, offers[i].sdp, offers[i].len + 1);
+
+        if (pjmedia_sdp_parse(pool, b1, offers[i].len, &offer) != PJ_SUCCESS)
+            return -3070 - i*10;
+
+        status = pjmedia_sdp_validate2(offer, PJ_FALSE);
+        if (status != offers[i].exp_status)
+            return -3072 - i*10;
+
+        status = pjmedia_sdp_neg_create_w_remote_offer(pool, local, offer,
+                                                       &neg);
+        if (status != offers[i].exp_status)
+            return -3074 - i*10;
+    }
+
+    return 0;
+}
+
+
+/* A zero port media having a=bundle-only is not a bundle-only media when
+ * its MID is missing or is not listed in the session level BUNDLE group,
+ * so it is just an ordinary disabled media, i.e. the validation relaxations
+ * still apply and it is simply rejected in the answer.
+ */
+static int sdp_neg_bundle_only_relaxed_test(pj_pool_t *pool)
+{
+    /* Zero port media with a=bundle-only, but without a=mid. */
+    static char no_mid_str[] =
+        "v=0\r\n"
+        "o=- 0 0 IN IP4 127.0.0.1\r\n"
+        "s=-\r\n"
+        "c=IN IP4 127.0.0.1\r\n"
+        "t=0 0\r\n"
+        "a=group:BUNDLE 0\r\n"
+        "m=audio 4000 RTP/AVP 0\r\n"
+        "a=mid:0\r\n"
+        "m=video 0 RTP/AVP 96\r\n"
+        "a=bundle-only\r\n";
+
+    /* Zero port media with a=bundle-only and a=mid, but the MID is not
+     * listed in the session level BUNDLE group.
+     */
+    static char no_group_str[] =
+        "v=0\r\n"
+        "o=- 0 0 IN IP4 127.0.0.1\r\n"
+        "s=-\r\n"
+        "c=IN IP4 127.0.0.1\r\n"
+        "t=0 0\r\n"
+        "a=group:BUNDLE 0\r\n"
+        "m=audio 4000 RTP/AVP 0\r\n"
+        "a=mid:0\r\n"
+        "m=video 0 RTP/AVP 96\r\n"
+        "a=mid:1\r\n"
+        "a=bundle-only\r\n";
+
+    static char local_str[] =
+        "v=0\r\n"
+        "o=- 1 1 IN IP4 127.0.0.1\r\n"
+        "s=-\r\n"
+        "c=IN IP4 127.0.0.1\r\n"
+        "t=0 0\r\n"
+        "a=group:BUNDLE 0 1\r\n"
+        "m=audio 5000 RTP/AVP 0\r\n"
+        "a=mid:0\r\n"
+        "m=video 5002 RTP/AVP 96\r\n"
+        "a=mid:1\r\n"
+        "a=rtpmap:96 VP8/90000\r\n";
+
+    struct {
+        char        *sdp;
+        unsigned     len;
+    } offers[] = {
+        { no_mid_str,   sizeof(no_mid_str)-1 },
+        { no_group_str, sizeof(no_group_str)-1 }
+    };
+    pjmedia_sdp_session *offer, *local;
+    pjmedia_sdp_neg *neg;
+    const pjmedia_sdp_session *active_local;
+    pj_status_t status;
+    unsigned i;
+    char *b1;
+    char b2[sizeof(local_str)];
+
+    pj_memcpy(b2, local_str, sizeof(local_str));
+    if (pjmedia_sdp_parse(pool, b2, pj_ansi_strlen(b2), &local) != PJ_SUCCESS)
+        return -3080;
+
+    for (i=0; i<PJ_ARRAY_SIZE(offers); ++i) {
+        b1 = (char*)pj_pool_alloc(pool, offers[i].len + 1);
+        pj_memcpy(b1, offers[i].sdp, offers[i].len + 1);
+
+        if (pjmedia_sdp_parse(pool, b1, offers[i].len, &offer) != PJ_SUCCESS)
+            return -3090 - i*10;
+
+        /* The media is not bundle-only, so the missing rtpmap for its
+         * dynamic payload type must still be tolerated.
+         */
+        status = pjmedia_sdp_validate2(offer, PJ_FALSE);
+        if (status != PJ_SUCCESS)
+            return -3092 - i*10;
+
+        status = pjmedia_sdp_neg_create_w_remote_offer(pool, local, offer,
+                                                       &neg);
+        if (status != PJ_SUCCESS)
+            return -3094 - i*10;
+
+        status = pjmedia_sdp_neg_negotiate(pool, neg, 0);
+        if (status != PJ_SUCCESS)
+            return -3096 - i*10;
+
+        pjmedia_sdp_neg_get_active_local(neg, &active_local);
+
+        /* The media must be rejected as any other disabled media. */
+        if (active_local->media_count != 2 ||
+            active_local->media[1]->desc.port != 0)
+        {
+            return -3098 - i*10;
+        }
+    }
+
+    return 0;
+}
+
 int sdp_neg_test()
 {
     unsigned i;
@@ -1868,6 +2256,14 @@ int sdp_neg_test()
 
         PJ_LOG(3,(THIS_FILE, "  sdp_neg_bundle_only_test"));
         status = sdp_neg_bundle_only_test(pool);
+        if (status == 0) {
+            PJ_LOG(3,(THIS_FILE, "  sdp_neg_bundle_only_invalid_test"));
+            status = sdp_neg_bundle_only_invalid_test(pool);
+        }
+        if (status == 0) {
+            PJ_LOG(3,(THIS_FILE, "  sdp_neg_bundle_only_relaxed_test"));
+            status = sdp_neg_bundle_only_relaxed_test(pool);
+        }
         pj_pool_release(pool);
 
         if (status != 0)

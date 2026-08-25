@@ -54,6 +54,12 @@ struct query
     pj_grp_lock_t           *grp_lock;
     pj_status_t              last_error;
 
+    /* Number of DNS queries which have not completed yet, and whether the
+     * queries are still being started, see report_result().
+     */
+    unsigned                 pending_cnt;
+    pj_bool_t                starting;
+
     /* Original request: */
     struct {
         pjsip_host_info      target;
@@ -66,6 +72,13 @@ struct query
 
     /* Query result */
     pjsip_server_addresses   server;
+
+    /* Buffers to keep the names in 'server' above. The names in the DNS
+     * address records are only valid inside the DNS callbacks, while the
+     * server addresses may only be reported to the application later, i.e.
+     * when the other DNS query completes.
+     */
+    char                     name_buf[2][PJ_MAX_HOSTNAME];
 };
 
 
@@ -178,6 +191,61 @@ PJ_DEF(void) pjsip_resolver_destroy(pjsip_resolver_t *resolver)
     }
 }
 
+#if PJSIP_HAS_RESOLVER
+/*
+ * Internal:
+ *  check whether the result of the resolution can be reported now, which is
+ *  only the case once all the DNS queries have completed and none of them can
+ *  still be started.
+ *
+ * The query state is allocated from the caller's pool, and the caller is free
+ * to release that pool as soon as it has been notified, so the result must
+ * never be reported while a DNS query is still outstanding, nor while
+ * pjsip_resolve() is still starting the queries and using the query state.
+ *
+ * Must be called with the resolver group lock held, which serializes this
+ * against pjsip_resolve() and against the DNS callbacks of the other
+ * queries.
+ */
+static pj_bool_t can_report_result(struct query *query)
+{
+    return query->pending_cnt == 0 && !query->starting;
+}
+
+
+/*
+ * Internal:
+ *  get the status of the resolution, which is a failure if no address has
+ *  been resolved. Note that the queries may all have succeeded without
+ *  yielding any usable address, e.g. when a DNS A response only contains
+ *  records of another type, in which case no error has been recorded.
+ */
+static pj_status_t get_result_status(struct query *query)
+{
+    if (query->server.count > 0)
+        return PJ_SUCCESS;
+
+    return query->last_error != PJ_SUCCESS? query->last_error:
+                                            PJLIB_UTIL_EDNSNOANSWERREC;
+}
+
+
+/*
+ * Internal:
+ *  report the result of the resolution to the caller. The query state must
+ *  not be accessed anymore after this, since the caller may release the pool
+ *  containing it.
+ */
+static void report_result(struct query *query)
+{
+    pj_status_t status = get_result_status(query);
+
+    (*query->cb)(status, query->token,
+                 status == PJ_SUCCESS? &query->server: NULL);
+}
+#endif  /* PJSIP_HAS_RESOLVER */
+
+
 /*
  * Internal:
  *  determine if an address is a valid IP address, and if it is,
@@ -218,6 +286,7 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
     pj_status_t status = PJ_SUCCESS;
     int ip_addr_ver;
     struct query *query;
+    pj_bool_t report;
     pjsip_transport_type_e type = target->type;
     int af = pj_AF_UNSPEC();
 
@@ -472,6 +541,25 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
                pjsip_transport_get_type_name(target->type),
                target->addr.port));
 
+    /* Acquire the resolver group lock, which is also acquired by the DNS
+     * callbacks, so that the result of the resolution cannot be reported
+     * while we are still starting the queries below and using the query
+     * state. Note that a DNS callback is invoked synchronously by
+     * pj_dns_resolver_start_query() when the response is available in the
+     * cache, and that the callback of a query which has just been started
+     * may already be running in another thread, e.g. when the query has
+     * been merged into an outstanding query which completes at that very
+     * moment.
+     *
+     * Note that this is the lock of the SIP resolver, not the one of the DNS
+     * resolver, so holding it while starting the queries below doesn't invert
+     * any lock order: the DNS resolver always releases its own group lock
+     * before invoking the callbacks. And since the lock is recursive, the
+     * callbacks may also acquire it in this very thread.
+     */
+    pj_grp_lock_acquire(query->grp_lock);
+    query->starting = PJ_TRUE;
+
     if (query->query_type == PJ_DNS_TYPE_SRV) {
         int opt = 0;
 
@@ -483,38 +571,38 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
         else /* af == pj_AF_INET() */
             opt = PJ_DNS_SRV_FALLBACK_A;
 
+        ++query->pending_cnt;
         status = pj_dns_srv_resolve(&query->naptr[0].name,
                                     &query->naptr[0].res_type,
                                     query->req.def_port, pool, resolver->res,
                                     opt, query, &srv_resolver_cb, NULL);
+        if (status != PJ_SUCCESS)
+            --query->pending_cnt;
 
     } else if (query->query_type == PJ_DNS_TYPE_A) {
 
         /* Resolve DNS A record if address family is not fixed to IPv6 */
         if (af != pj_AF_INET6()) {
-
-            /* If there will be DNS AAAA query too, let's setup a dummy one
-             * here, otherwise app callback may be called immediately (before
-             * DNS AAAA query is sent) when DNS A record is available in the
-             * cache.
-             */
-            if (af == pj_AF_UNSPEC())
-                query->object6 = (pj_dns_async_query*)0x1;
-
-            status = pj_dns_resolver_start_query(resolver->res, 
+            ++query->pending_cnt;
+            status = pj_dns_resolver_start_query(resolver->res,
                                                  &query->naptr[0].name,
-                                                 PJ_DNS_TYPE_A, 0, 
+                                                 PJ_DNS_TYPE_A, 0,
                                                  &dns_a_callback,
                                                  query, &query->object);
+            if (status != PJ_SUCCESS)
+                --query->pending_cnt;
         }
 
         /* Resolve DNS AAAA record if address family is not fixed to IPv4 */
         if (af != pj_AF_INET() && status == PJ_SUCCESS) {
-            status = pj_dns_resolver_start_query(resolver->res, 
+            ++query->pending_cnt;
+            status = pj_dns_resolver_start_query(resolver->res,
                                                  &query->naptr[0].name,
-                                                 PJ_DNS_TYPE_AAAA, 0, 
+                                                 PJ_DNS_TYPE_AAAA, 0,
                                                  &dns_aaaa_callback,
                                                  query, &query->object6);
+            if (status != PJ_SUCCESS)
+                --query->pending_cnt;
         }
 
     } else {
@@ -523,13 +611,61 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
     }
 
     if (status != PJ_SUCCESS)
-        goto on_error;
+        query->last_error = status;
 
+    query->starting = PJ_FALSE;
+
+    /* If a query is still outstanding, e.g. only the DNS AAAA query failed to
+     * start, its callback will report the result of the resolution later. It
+     * must not be reported here, since the caller may release the pool
+     * containing the query state as soon as it is notified, while the
+     * outstanding query still refers to it (see #5142).
+     *
+     * Note that cancelling the outstanding query instead would not be
+     * reliable, as the DNS resolver invokes the callbacks after having
+     * released its group lock, so its callback may already be about to run
+     * in another thread.
+     */
+    report = can_report_result(query);
+
+    if (!report && status != PJ_SUCCESS) {
+        /* Note that this must be logged before releasing the group lock: the
+         * outstanding query may complete as soon as it is released, and the
+         * caller may then release the pool which contains both the query
+         * state and the target host name.
+         */
+        PJ_PERROR(4,(THIS_FILE, status,
+                     "Failed to start DNS query for '%.*s', waiting for the "
+                     "outstanding query to complete",
+                     (int)target->addr.host.slen,
+                     target->addr.host.ptr));
+    }
+
+    pj_grp_lock_release(query->grp_lock);
+
+    if (!report)
+        return;
+
+    /* All queries have completed, i.e. either the responses were available in
+     * the cache, or no query could be started at all. Note that the failure
+     * is only reported if nothing has been resolved, since the DNS A record
+     * may have been available in the cache while only the DNS AAAA query
+     * failed to start.
+     */
+    if (query->server.count == 0) {
+        PJ_PERROR(4,(THIS_FILE, get_result_status(query),
+                     "Failed to resolve '%.*s'",
+                     (int)target->addr.host.slen,
+                     target->addr.host.ptr));
+    }
+
+    report_result(query);
     return;
 
 #else /* PJSIP_HAS_RESOLVER */
     PJ_UNUSED_ARG(pool);
     PJ_UNUSED_ARG(query);
+    PJ_UNUSED_ARG(report);
 #endif /* PJSIP_HAS_RESOLVER */
 
 on_error:
@@ -554,19 +690,29 @@ static void dns_a_callback(void *user_data,
 {
     struct query *query = (struct query*) user_data;
     pjsip_server_addresses *srv = &query->server;
+    pj_grp_lock_t *grp_lock = query->grp_lock;
+    pj_bool_t report;
 
-    pj_grp_lock_acquire(query->grp_lock);
+    pj_grp_lock_acquire(grp_lock);
 
     /* Reset outstanding job */
     query->object = NULL;
+    --query->pending_cnt;
 
     if (status == PJ_SUCCESS) {
         pj_dns_addr_record rec;
+        pj_str_t name;
         unsigned i;
 
         /* Parse the response */
         rec.addr_count = 0;
         status = pj_dns_parse_addr_response(pkt, &rec);
+
+        /* Keep a copy of the name, since the DNS record is only valid
+         * inside this callback.
+         */
+        name.ptr = query->name_buf[0];
+        pj_strncpy(&name, &rec.name, sizeof(query->name_buf[0]));
 
         /* Build server addresses and call callback */
         for (i = 0; i < rec.addr_count &&
@@ -576,7 +722,7 @@ static void dns_a_callback(void *user_data,
             if (rec.addr[i].af != pj_AF_INET())
                 continue;
 
-            srv->entry[srv->count].name = rec.name;
+            srv->entry[srv->count].name = name;
             srv->entry[srv->count].type = query->naptr[0].type;
             srv->entry[srv->count].priority = 0;
             srv->entry[srv->count].weight = 0;
@@ -596,15 +742,16 @@ static void dns_a_callback(void *user_data,
         query->last_error = status;
     }
 
-    /* Call the callback if all DNS queries have been completed */
-    if (query->object == NULL && query->object6 == NULL) {
-        if (srv->count > 0)
-            (*query->cb)(PJ_SUCCESS, query->token, &query->server);
-        else
-            (*query->cb)(query->last_error, query->token, NULL);
-    }
+    /* Report the result if all DNS queries have been completed. Note that
+     * this is done after having released the group lock, since the caller
+     * may release the pool containing the query state, and the query state
+     * cannot be accessed by any other thread anymore at this point.
+     */
+    report = can_report_result(query);
+    pj_grp_lock_release(grp_lock);
 
-    pj_grp_lock_release(query->grp_lock);
+    if (report)
+        report_result(query);
 }
 
 
@@ -617,19 +764,29 @@ static void dns_aaaa_callback(void *user_data,
 {
     struct query *query = (struct query*) user_data;
     pjsip_server_addresses *srv = &query->server;
+    pj_grp_lock_t *grp_lock = query->grp_lock;
+    pj_bool_t report;
 
-    pj_grp_lock_acquire(query->grp_lock);
+    pj_grp_lock_acquire(grp_lock);
 
     /* Reset outstanding job */
     query->object6 = NULL;
+    --query->pending_cnt;
 
     if (status == PJ_SUCCESS) {
         pj_dns_addr_record rec;
+        pj_str_t name;
         unsigned i;
 
         /* Parse the response */
         rec.addr_count = 0;
         status = pj_dns_parse_addr_response(pkt, &rec);
+
+        /* Keep a copy of the name, since the DNS record is only valid
+         * inside this callback.
+         */
+        name.ptr = query->name_buf[1];
+        pj_strncpy(&name, &rec.name, sizeof(query->name_buf[1]));
 
         /* Build server addresses and call callback */
         for (i = 0; i < rec.addr_count &&
@@ -639,7 +796,7 @@ static void dns_aaaa_callback(void *user_data,
             if (rec.addr[i].af != pj_AF_INET6())
                 continue;
 
-            srv->entry[srv->count].name = rec.name;
+            srv->entry[srv->count].name = name;
             srv->entry[srv->count].type = query->naptr[0].type |
                                           PJSIP_TRANSPORT_IPV6;
             srv->entry[srv->count].priority = 0;
@@ -660,15 +817,14 @@ static void dns_aaaa_callback(void *user_data,
         query->last_error = status;
     }
 
-    /* Call the callback if all DNS queries have been completed */
-    if (query->object == NULL && query->object6 == NULL) {
-        if (srv->count > 0)
-            (*query->cb)(PJ_SUCCESS, query->token, &query->server);
-        else
-            (*query->cb)(query->last_error, query->token, NULL);
-    }
+    /* Report the result if all DNS queries have been completed, see the
+     * note in dns_a_callback().
+     */
+    report = can_report_result(query);
+    pj_grp_lock_release(grp_lock);
 
-    pj_grp_lock_release(query->grp_lock);
+    if (report)
+        report_result(query);
 }
 
 
@@ -678,51 +834,61 @@ static void srv_resolver_cb(void *user_data,
                             const pj_dns_srv_record *rec)
 {
     struct query *query = (struct query*) user_data;
-    pjsip_server_addresses srv;
+    pjsip_server_addresses *srv = &query->server;
+    pj_grp_lock_t *grp_lock = query->grp_lock;
+    pj_bool_t report;
     unsigned i;
+
+    pj_grp_lock_acquire(grp_lock);
+
+    /* Reset outstanding job */
+    --query->pending_cnt;
 
     if (status != PJ_SUCCESS) {
         PJ_PERROR(4,(query->objname, status,
                      "DNS A/AAAA record resolution failed"));
 
-        /* Call the callback */
-        (*query->cb)(status, query->token, NULL);
-        return;
+        query->last_error = status;
+        goto on_return;
     }
 
-    /* Build server addresses and call callback */
-    srv.count = 0;
+    /* Build server addresses */
     for (i=0; i<rec->count; ++i) {
         const pj_dns_addr_record *s = &rec->entry[i].server;
         unsigned j;
 
         for (j = 0; j < s->addr_count &&
-                    srv.count < PJSIP_MAX_RESOLVED_ADDRESSES; ++j)
+                    srv->count < PJSIP_MAX_RESOLVED_ADDRESSES; ++j)
         {
-            srv.entry[srv.count].name = rec->entry[i].server.name;
-            srv.entry[srv.count].type = query->naptr[0].type;
-            srv.entry[srv.count].priority = rec->entry[i].priority;
-            srv.entry[srv.count].weight = rec->entry[i].weight;
+            srv->entry[srv->count].name = rec->entry[i].server.name;
+            srv->entry[srv->count].type = query->naptr[0].type;
+            srv->entry[srv->count].priority = rec->entry[i].priority;
+            srv->entry[srv->count].weight = rec->entry[i].weight;
             pj_sockaddr_init(s->addr[j].af,
-                             &srv.entry[srv.count].addr,
+                             &srv->entry[srv->count].addr,
                              0, (pj_uint16_t)rec->entry[i].port);
             if (s->addr[j].af == pj_AF_INET6())
-                srv.entry[srv.count].addr.ipv6.sin6_addr = s->addr[j].ip.v6;
+                srv->entry[srv->count].addr.ipv6.sin6_addr = s->addr[j].ip.v6;
             else
-                srv.entry[srv.count].addr.ipv4.sin_addr = s->addr[j].ip.v4;
-            srv.entry[srv.count].addr_len =
-                            pj_sockaddr_get_len(&srv.entry[srv.count].addr);
+                srv->entry[srv->count].addr.ipv4.sin_addr = s->addr[j].ip.v4;
+            srv->entry[srv->count].addr_len =
+                          pj_sockaddr_get_len(&srv->entry[srv->count].addr);
 
             /* Update transport type if this is IPv6 */
             if (s->addr[j].af == pj_AF_INET6())
-                srv.entry[srv.count].type |= PJSIP_TRANSPORT_IPV6;
+                srv->entry[srv->count].type |= PJSIP_TRANSPORT_IPV6;
 
-            ++srv.count;
+            ++srv->count;
         }
     }
 
-    /* Call the callback */
-    (*query->cb)(PJ_SUCCESS, query->token, &srv);
+on_return:
+    /* Report the result, see the note in dns_a_callback(). */
+    report = can_report_result(query);
+    pj_grp_lock_release(grp_lock);
+
+    if (report)
+        report_result(query);
 }
 
 #endif  /* PJSIP_HAS_RESOLVER */

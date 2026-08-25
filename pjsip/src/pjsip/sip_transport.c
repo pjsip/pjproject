@@ -967,13 +967,26 @@ static pj_status_t mod_on_tx_msg(pjsip_tx_data *tdata)
 /*
  * Send a SIP message using the specified transport.
  */
-PJ_DEF(pj_status_t) pjsip_transport_send(  pjsip_transport *tr, 
+PJ_DEF(pj_status_t) pjsip_transport_send(  pjsip_transport *tr,
                                            pjsip_tx_data *tdata,
                                            const pj_sockaddr_t *addr,
                                            int addr_len,
                                            void *token,
                                            pjsip_tp_send_callback cb)
 {
+    return pjsip_transport_send2(tr, tdata, addr, addr_len, token, cb, NULL);
+}
+
+
+PJ_DEF(pj_status_t) pjsip_transport_send2( pjsip_transport *tr,
+                                           pjsip_tx_data *tdata,
+                                           const pj_sockaddr_t *addr,
+                                           int addr_len,
+                                           void *token,
+                                           pjsip_tp_send_callback cb,
+                                           pj_ssize_t *sent)
+{
+    pj_ssize_t msg_size;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(tr && tdata && addr, PJ_EINVAL);
@@ -1024,8 +1037,14 @@ PJ_DEF(pj_status_t) pjsip_transport_send(  pjsip_transport *tr,
     /* Mark as pending. */
     tdata->is_pending = 1;
 
+    /* Remember the message size while the buffer is still ours. Once the
+     * message is on the wire, the peer may already answer it and another
+     * thread may invalidate and reuse this tdata (see #5176).
+     */
+    msg_size = tdata->buf.cur - tdata->buf.start;
+
     /* Send to transport. */
-    status = (*tr->send_msg)(tr, tdata,  addr, addr_len, (void*)tdata, 
+    status = (*tr->send_msg)(tr, tdata,  addr, addr_len, (void*)tdata,
                              &transport_send_callback);
 
     if (status != PJ_EPENDING) {
@@ -1033,6 +1052,9 @@ PJ_DEF(pj_status_t) pjsip_transport_send(  pjsip_transport *tr,
 
         /* Print log on successful sending */
         if (status == PJ_SUCCESS) {
+            if (sent)
+                *sent = msg_size;
+
             PJ_LOG(5,(tr->obj_name,
                       "%s sent successfully", pjsip_tx_data_get_info(tdata)));
         }

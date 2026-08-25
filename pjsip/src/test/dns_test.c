@@ -400,6 +400,22 @@ static int test_resolve(const char *title,
                 PJ_LOG(3,(THIS_FILE, "  test_resolve() error 50: transport type mismatch"));
                 return 50;
             }
+            /* Only check the name if the reference specifies one. Note that
+             * the name is filled in by the DNS A callback while the result
+             * may only be reported by the DNS AAAA callback, so this also
+             * verifies that the name is still valid by then.
+             */
+            if (ref->entry[i].name.slen &&
+                pj_strcmp(&ref->entry[i].name, &result.servers.entry[i].name))
+            {
+                PJ_LOG(3,(THIS_FILE, "  test_resolve() error 60: name mismatch: "
+                          "expecting '%.*s' but got '%.*s'",
+                          (int)ref->entry[i].name.slen,
+                          ref->entry[i].name.ptr,
+                          (int)result.servers.entry[i].name.slen,
+                          result.servers.entry[i].name.ptr));
+                return 60;
+            }
         }
     }
 
@@ -521,6 +537,7 @@ static void add_ref(pjsip_server_addresses *r,
     pj_sockaddr_in *a;
     pj_str_t tmp;
 
+    pj_bzero(&r->entry[r->count], sizeof(r->entry[r->count]));
     r->entry[r->count].type = type;
     r->entry[r->count].priority = 0;
     r->entry[r->count].weight = 0;
@@ -557,12 +574,27 @@ int resolve_test(void)
     pj_status_t status;
 
     pool = pjsip_endpt_create_pool(endpt, NULL, 4000, 4000);
+    if (!pool)
+        return -5;
 
     status = pjsip_endpt_create_resolver(endpt, &resv);
+    if (status != PJ_SUCCESS) {
+        pjsip_endpt_release_pool(endpt, pool);
+        return -7;
+    }
 
     nameserver = pj_str("192.168.0.106");
-    pj_dns_resolver_set_ns(resv, 1, &nameserver, &port);
-    pjsip_endpt_set_resolver(endpt, resv);
+    status = pj_dns_resolver_set_ns(resv, 1, &nameserver, &port);
+    if (status != PJ_SUCCESS) {
+        pjsip_endpt_release_pool(endpt, pool);
+        return -8;
+    }
+
+    status = pjsip_endpt_set_resolver(endpt, resv);
+    if (status != PJ_SUCCESS) {
+        pjsip_endpt_release_pool(endpt, pool);
+        return -9;
+    }
 
     add_dns_entries(resv);
 
@@ -577,6 +609,7 @@ int resolve_test(void)
     {
         pjsip_server_addresses ref;
         create_ref(&ref, PJSIP_TRANSPORT_UDP, "1.1.1.1", 5060);
+        ref.entry[0].name = pj_str("1.1.1.1");
         status = test_resolve("IP address with explicit port", pool, PJSIP_TRANSPORT_UNSPECIFIED, "1.1.1.1", 5060, &ref);
         if (status != PJ_SUCCESS)
             return -110;
@@ -600,6 +633,7 @@ int resolve_test(void)
     {
         pjsip_server_addresses ref;
         create_ref(&ref, PJSIP_TRANSPORT_UDP, "5.5.5.5", 5060);
+        ref.entry[0].name = pj_str("example.com");
         status = test_resolve("domain name with port should resolve to A record", pool, PJSIP_TRANSPORT_UNSPECIFIED, "example.com", 5060, &ref);
         if (status != PJ_SUCCESS)
             return -140;
@@ -611,6 +645,7 @@ int resolve_test(void)
     {
         pjsip_server_addresses ref;
         create_ref(&ref, PJSIP_TRANSPORT_UDP, "2.2.2.2", 5060);
+        ref.entry[0].name = pj_str("sip02.example.com");
         status = test_resolve("failure with SRV fallback to A record", pool, PJSIP_TRANSPORT_UNSPECIFIED, "sip02.example.com", 0, &ref);
         if (status != PJ_SUCCESS)
             return -150;
@@ -620,6 +655,7 @@ int resolve_test(void)
     {
         pjsip_server_addresses ref;
         create_ref(&ref, PJSIP_TRANSPORT_TLS, "2.2.2.2", 5061);
+        ref.entry[0].name = pj_str("sip02.example.com");
         status = test_resolve("failure with SRV fallback to A record (for TLS)", pool, PJSIP_TRANSPORT_TLS, "sip02.example.com", 0, &ref);
         if (status != PJ_SUCCESS)
             return -150;

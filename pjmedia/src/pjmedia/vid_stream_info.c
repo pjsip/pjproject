@@ -141,17 +141,36 @@ static pj_status_t get_video_codec_info_param(pjmedia_vid_stream_info *si,
     if (si->codec_param && (si->dir & PJMEDIA_DIR_ENCODING) &&
         rem_m->bandw_count)
     {
-        unsigned i, bandw = 0;
+        unsigned i, bandw = 0, bandw_as = 0;
 
         for (i = 0; i < rem_m->bandw_count; ++i) {
             const pj_str_t STR_BANDW_MODIFIER_TIAS = { "TIAS", 4 };
+            const pj_str_t STR_BANDW_MODIFIER_AS = { "AS", 2 };
             if (!pj_stricmp(&rem_m->bandw[i]->modifier,
                 &STR_BANDW_MODIFIER_TIAS))
             {
                 bandw = rem_m->bandw[i]->value;
                 break;
+            } else if (!pj_stricmp(&rem_m->bandw[i]->modifier,
+                &STR_BANDW_MODIFIER_AS))
+            {
+                /* "AS" (RFC 4566, kbps) is the total RTP session bandwidth,
+                 * including RTP/UDP/IP overhead and ~5% RTCP; "TIAS" (RFC 3890,
+                 * bps) is the payload rate and is preferred. Derive a
+                 * conservative payload ceiling from AS - the inverse of the
+                 * conversion in pjsua_media.c: drop the ~5% RTCP and ~16 kbps
+                 * overhead. Kept as a fallback when no TIAS is present. Use
+                 * 64-bit to avoid overflow on large/garbage values.
+                 */
+                pj_uint64_t as = (pj_uint64_t)rem_m->bandw[i]->value * 1000;
+                as = as * 100 / 105;
+                as = (as > 16000)? (as - 16000) : 0;
+                bandw_as = (as > 0xFFFFFFFFUL)? 0xFFFFFFFFU : (unsigned)as;
             }
         }
+
+        if (!bandw)
+            bandw = bandw_as;
 
         if (bandw) {
             pjmedia_video_format_detail *enc_vfd;
@@ -161,6 +180,11 @@ static pj_status_t get_video_codec_info_param(pjmedia_vid_stream_info *si,
                 enc_vfd->avg_bps = bandw * 3 / 4;
             if (!enc_vfd->max_bps || enc_vfd->max_bps > bandw)
                 enc_vfd->max_bps = bandw;
+
+            /* Remember the negotiated ceiling so a later
+             * modify_codec_param() cannot exceed it.
+             */
+            si->rem_max_bps = bandw;
         }
     }
 
