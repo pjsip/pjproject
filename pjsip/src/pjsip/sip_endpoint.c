@@ -1043,7 +1043,8 @@ static void endpt_respond_msg_too_large( pjsip_endpoint *endpt,
     pj_bzero(&rdata->endpt_info, sizeof(rdata->endpt_info));
 
     msg = pjsip_parse_rdata(hdr_buf, hdr_len, rdata);
-    if (msg == NULL || msg->type != PJSIP_REQUEST_MSG ||
+    if (msg == NULL || !pj_list_empty(&rdata->msg_info.parse_err) ||
+        msg->type != PJSIP_REQUEST_MSG ||
         msg->line.req.method.id == PJSIP_ACK_METHOD ||
         rdata->msg_info.via == NULL || rdata->msg_info.from == NULL ||
         rdata->msg_info.to == NULL || rdata->msg_info.cseq == NULL ||
