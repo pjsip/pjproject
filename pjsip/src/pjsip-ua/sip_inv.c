@@ -4408,6 +4408,18 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
         /* Check if this UPDATE contains SDP or is metadata-only */
         if (rdata->msg_info.msg->body != NULL) {
             pjsip_rdata_sdp_info *sdp_info = pjsip_rdata_get_sdp_info(rdata);
+
+            /* sdp_info->body.ptr is non-NULL only when content-type is SDP.
+             * If sdp is NULL in that case, it means SDP parsing failed. */
+            if (sdp_info->body.ptr != NULL && sdp_info->sdp == NULL) {
+                /* SDP content-type present but parsing/validating failed.
+                 * Respond with 488 Not Acceptable (RFC 3261). */
+                status = pjsip_dlg_create_response(inv->dlg, rdata,
+                                                   PJSIP_SC_NOT_ACCEPTABLE_HERE,
+                                                   NULL, &tdata);
+                goto on_return;
+            }
+
             has_sdp = (sdp_info->sdp != NULL);
         }
 
