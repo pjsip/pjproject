@@ -2268,6 +2268,14 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
         pj_memcpy(call->siprec_metadata.ptr, temp_metadata.ptr,
                  temp_metadata.slen);
     }
+
+    /* Notify application about initial SIPREC metadata from INVITE.
+     * This is the initial metadata, so old_metadata is NULL.
+     */
+    if (pjsua_var.ua_cfg.cb.on_call_siprec_metadata_update) {
+        (*pjsua_var.ua_cfg.cb.on_call_siprec_metadata_update)(
+            call->index, NULL, &call->siprec_metadata, rdata);
+    }
 #endif
 
     /* Store variables required for the callback after the async
