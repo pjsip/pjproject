@@ -996,7 +996,7 @@ on_return:
  * msg_info and the sender is left waiting for a response that never comes.
  * It is the body that overflows in practice while the header block still fits
  * the buffer, so parse the headers back into rdata and answer through the
- * normal stateless path - RFC 3261 section 21.4.11 defines 513 for exactly
+ * normal stateless path - RFC 3261 section 21.5.7 defines 513 for exactly
  * this. If not even the headers arrived complete there is nobody we can
  * address a response to, and the request stays silently dropped.
  */

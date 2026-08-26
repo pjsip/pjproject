@@ -615,7 +615,7 @@ on_return:
  * A stream message is assembled in rdata->pkt_info.packet, a fixed
  * PJSIP_MAX_PKT_LEN buffer. A request bigger than that can never be completed,
  * so the transport layer discards it. Without a response the sender has no way
- * of learning why its request went unanswered; RFC 3261 section 21.4.11
+ * of learning why its request went unanswered; RFC 3261 section 21.5.7
  * defines 513 for exactly this case.
  *
  * The request is written straight to a socket rather than sent through PJSIP,
