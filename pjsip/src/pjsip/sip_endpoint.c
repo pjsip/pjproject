@@ -1069,8 +1069,7 @@ static void endpt_respond_msg_too_large( pjsip_endpoint *endpt,
 
     pj_list_init(&hdr_list);
     warn = pjsip_warning_hdr_create(rdata->tp_info.pool, 399,
-                                    &rdata->tp_info.transport->local_name.host,
-                                    &warn_str);
+                                    pjsip_endpt_name(endpt), &warn_str);
     if (warn)
         pj_list_push_back(&hdr_list, (pjsip_hdr*)warn);
 
