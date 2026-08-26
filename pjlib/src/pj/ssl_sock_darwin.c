@@ -222,7 +222,18 @@ static pj_status_t create_data_from_file(CFDataRef *data,
     return (*data? PJ_SUCCESS: PJ_EINVAL);
 }
 
-static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
+/* Load the certificate configured in cert into a SecIdentityRef. The private
+ * key is not read from cert: it must come from the PKCS#12 bundle itself or
+ * already be present in the keychain.
+ *
+ * On success *p_identity is set to NULL when no certificate is configured at
+ * all, and otherwise to an identity the caller owns and must CFRelease() --
+ * in both import branches, since the dictionary branch takes its own
+ * reference to what CFDictionaryGetValue() only lends it.
+ */
+static pj_status_t create_identity_from_cert(darwinssl_sock_t *dssock,
+                                             pj_ssl_cert_t *cert,
+                                             SecIdentityRef *p_identity)
 {
     CFStringRef password = NULL;
     CFDataRef cert_data = NULL;
@@ -232,11 +243,10 @@ static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
     CFArrayRef items;
     CFIndex i, count;
     SecIdentityRef identity = NULL;
-    CFTypeRef cert_arr[1];
-    CFArrayRef cert_refs;
     OSStatus err;
     pj_status_t status;
 
+    *p_identity = NULL;
 
     if (cert->privkey_file.slen || cert->privkey_buf.slen ||
         cert->privkey_pass.slen)
@@ -357,7 +367,26 @@ static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
                                   "the cert file"));
             return PJ_EINVAL;
         }
-        
+
+        *p_identity = identity;
+    }
+
+    return PJ_SUCCESS;
+}
+
+static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
+{
+    SecIdentityRef identity = NULL;
+    CFTypeRef cert_arr[1];
+    CFArrayRef cert_refs;
+    OSStatus err;
+    pj_status_t status;
+
+    status = create_identity_from_cert(dssock, cert, &identity);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    if (identity) {
         cert_arr[0] = identity;
         cert_refs = CFArrayCreate(NULL, (const void **)cert_arr, 1,
                               &kCFTypeArrayCallBacks);
@@ -375,6 +404,41 @@ static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
     }
 
     return PJ_SUCCESS;
+}
+
+/* Eagerly load and validate the certificate on the listener socket, so that a
+ * certificate that is missing, unparsable, or has no matching private key
+ * fails pj_ssl_sock_start_accept() up front. Without this, set_cert() (via
+ * ssl_create() below) does not run until the first connection is accepted, so
+ * the listener reports success and it is every inbound connection that fails
+ * its handshake instead.
+ *
+ * The identity is released again here rather than cached: unlike the OpenSSL
+ * backend, this backend builds no shared server context, and every accepted
+ * connection loads the certificate itself in its own ssl_create(). This
+ * validates the configuration, it does not pin it.
+ *
+ * Note this covers loading only, not the SSLSetCertificate() that set_cert()
+ * goes on to make against a per-connection context. A listener can therefore
+ * still start for a configuration that every connection subsequently
+ * rejects -- the check fails open, never closed.
+ */
+static pj_status_t ssl_init_server_ctx(pj_ssl_sock_t *ssock)
+{
+    darwinssl_sock_t *dssock = (darwinssl_sock_t *)ssock;
+    SecIdentityRef identity = NULL;
+    pj_status_t status;
+
+    pj_assert(ssock->is_server && !ssock->parent);
+
+    if (!ssock->cert)
+        return PJ_SUCCESS;
+
+    status = create_identity_from_cert(dssock, ssock->cert, &identity);
+    if (identity)
+        CFRelease(identity);
+
+    return status;
 }
 
 /* Create and initialize new Darwin SSL context and instance */
