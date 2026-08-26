@@ -2568,8 +2568,10 @@ int pjsua_call_test(void)
 
     pjsua_config_default(&ua_cfg);
     ua_cfg.cb.on_incoming_call = &on_incoming_call;
+#if PJSUA_HAS_SIPREC
     ua_cfg.cb.on_call_siprec_metadata_update =
         &on_call_siprec_metadata_update;
+#endif
     ua_cfg.cb.on_call_sdp_created = &on_call_sdp_created;
     ua_cfg.cb.on_call_rx_offer = &on_call_rx_offer;
     /* Registering on_call_rx_reinvite is what makes PJSUA wire up the invite
