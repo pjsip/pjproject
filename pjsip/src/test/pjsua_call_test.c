@@ -1445,13 +1445,14 @@ on_return:
     return 0;
 }
 
-/* Test 5: SIPREC metadata UPDATE with datamode=partial element.
- * Per RFC 7865, the <datamode> element indicates whether metadata
- * is complete or partial. This test verifies proper parsing of
- * the lowercase <datamode> element.
+/* Test 5: SIPREC metadata UPDATE with alternate content.
+ * This test verifies that metadata UPDATE requests are accepted
+ * regardless of the specific metadata XML content. The rs-metadata
+ * body is passed through without parsing of individual elements
+ * (datamode parsing is deferred per RFC 7865 TODO).
  *
- * NOTE: This test validates the fix for reviewer issue #1 (if
- * pjsip_siprec_parse_data_mode() still exists).
+ * This test uses a different XML payload than Test 4 to verify
+ * that acceptance is based on content-type, not content values.
  */
 static int test_siprec_datamode_partial_element(void)
 {

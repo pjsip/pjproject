@@ -1766,6 +1766,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     pj_status_t status;
 #if PJSUA_HAS_SIPREC
     pjsip_siprec_verify_setting siprec_setting;
+    pj_str_t temp_siprec_metadata = {NULL, 0};
 #endif
 
     /* Don't want to handle anything but INVITE */
@@ -2046,7 +2047,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     siprec_setting.require_label = pjsua_var.acc[acc_id].cfg.siprec_require_label;
     siprec_setting.require_metadata = pjsua_var.acc[acc_id].cfg.siprec_require_metadata;
 
-    status = pjsip_siprec_verify_request(rdata, &call->siprec_metadata, offer,
+    status = pjsip_siprec_verify_request(rdata, &temp_siprec_metadata, offer,
                                 &options, NULL, pjsua_var.endpt, &response,
                                 &siprec_setting);
 
@@ -2074,19 +2075,10 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     }
 
     /*
-     * Copy metadata to temporary pool first.
-     * The metadata returned by pjsip_siprec_verify_request points to
-     * data in the rdata message body, which is temporary and will be freed.
-     * We copy it to rdata->tp_info.pool initially, then re-copy to the invite
-     * session's permanent pool after call->inv is assigned.
+     * Note: temp_siprec_metadata from pjsip_siprec_verify_request points
+     * to data in rdata message body, which is temporary. We'll copy to the
+     * invite session's permanent pool after call->inv is assigned.
      */
-    if (call->siprec_metadata.slen > 0) {
-        pj_str_t temp_metadata = call->siprec_metadata;
-        call->siprec_metadata.ptr = (char*)pj_pool_alloc(rdata->tp_info.pool,
-                                                         temp_metadata.slen);
-        pj_memcpy(call->siprec_metadata.ptr, temp_metadata.ptr,
-                 temp_metadata.slen);
-    }
 
 #endif
 
@@ -2256,25 +2248,17 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
 #if PJSUA_HAS_SIPREC
     /*
-     * Re-copy metadata to invite session's permanent pool.
-     * The metadata was initially copied to rdata->tp_info.pool, which is
-     * temporary. Now that call->inv is assigned, we copy to the permanent
-     * pool for the call lifetime.
+     * Copy metadata to invite session's permanent pool.
+     * The metadata from pjsip_siprec_verify_request points to data in
+     * rdata message body, which is temporary. Now that call->inv is assigned,
+     * we copy to the permanent pool for the call lifetime.
      */
-    if (call->siprec_metadata.slen > 0) {
-        pj_str_t temp_metadata = call->siprec_metadata;
+    if (temp_siprec_metadata.slen > 0) {
         call->siprec_metadata.ptr = (char*)pj_pool_alloc(call->inv->pool,
-                                                         temp_metadata.slen);
-        pj_memcpy(call->siprec_metadata.ptr, temp_metadata.ptr,
-                 temp_metadata.slen);
-    }
-
-    /* Notify application about initial SIPREC metadata from INVITE.
-     * This is the initial metadata, so old_metadata is NULL.
-     */
-    if (pjsua_var.ua_cfg.cb.on_call_siprec_metadata_update) {
-        (*pjsua_var.ua_cfg.cb.on_call_siprec_metadata_update)(
-            call->index, NULL, &call->siprec_metadata, rdata);
+                                                         temp_siprec_metadata.slen);
+        pj_memcpy(call->siprec_metadata.ptr, temp_siprec_metadata.ptr,
+                 temp_siprec_metadata.slen);
+        call->siprec_metadata.slen = temp_siprec_metadata.slen;
     }
 #endif
 
@@ -2528,6 +2512,29 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
                               NULL, NULL);
         }
     }
+
+#if PJSUA_HAS_SIPREC
+    /* Notify application about initial SIPREC metadata from INVITE.
+     * This is done after on_incoming_call() succeeds, so the call is
+     * confirmed accepted. This is the initial metadata, so old_metadata
+     * is NULL. Only notify if the call is still valid (not hung up).
+     */
+    if (call && call->inv &&
+        call->inv->state >= PJSIP_INV_STATE_EARLY &&
+        call->siprec_metadata.slen > 0 &&
+        pjsua_var.ua_cfg.cb.on_call_siprec_metadata_update)
+    {
+        /* Use the incoming_data rdata if available (it was cloned for this purpose).
+         * The incoming_data should still be valid at this point since it's
+         * freed later in the cleanup section.
+         */
+        pjsip_rx_data *siprec_rdata = call->incoming_data;
+        if (siprec_rdata) {
+            (*pjsua_var.ua_cfg.cb.on_call_siprec_metadata_update)(
+                call->index, NULL, &call->siprec_metadata, siprec_rdata);
+        }
+    }
+#endif
 
 
     /* This INVITE request has been handled. */

@@ -2378,50 +2378,80 @@ static pj_status_t inv_process_siprec_metadata_update(
 
     PJ_ASSERT_RETURN(inv && rdata, PJ_EINVAL);
 
-    /* Call callback to verify and extract metadata from the request.
-     * The callback is responsible for:
-     * 1. Extracting metadata from the request
-     * 2. Verifying according to application policy (require_label, etc.)
-     * 3. Creating error response if verification fails
-     *
-     * If callback is not implemented, accept the request without verification.
-     */
-    if (!mod_inv.cb.on_verify_siprec_update)
-        return PJ_SUCCESS;
-
     tdata = NULL;
+    meta_status = PJ_SUCCESS;
 
-    meta_status = (*mod_inv.cb.on_verify_siprec_update)(inv, rdata,
-                                                        &new_metadata,
-                                                        &tdata);
-    if (meta_status == PJ_ENOTFOUND) {
-        /* Metadata not found in request.
-         * This is normal for routine mid-dialog operations.
-         * Return PJ_SUCCESS to continue processing - the caller will
-         * check if the body has an unknown content-type.
+    /*
+     * Both callbacks are independently optional:
+     * - on_verify_siprec_update: optional, if not implemented, metadata
+     *   will be accepted without verification.
+     * - on_siprec_metadata_update: optional, called when metadata is updated.
+     *
+     * These callbacks operate independently - an application may register
+     * only on_siprec_metadata_update to receive metadata notifications
+     * without implementing verification.
+     */
+
+    if (mod_inv.cb.on_verify_siprec_update) {
+        /* Verification callback is registered - use it to extract and
+         * verify metadata. The callback is responsible for:
+         * 1. Extracting metadata from the request
+         * 2. Verifying according to application policy (require_label, etc.)
+         * 3. Creating error response if verification fails
          */
-        return PJ_SUCCESS;
-    }
+        meta_status = (*mod_inv.cb.on_verify_siprec_update)(inv, rdata,
+                                                            &new_metadata,
+                                                            &tdata);
+        if (meta_status == PJ_ENOTFOUND) {
+            /* Metadata not found in request.
+             * This is normal for routine mid-dialog operations.
+             * Return PJ_SUCCESS to continue processing - the caller will
+             * check if the body has an unknown content-type.
+             */
+            return PJ_SUCCESS;
+        }
 
-    if (meta_status != PJ_SUCCESS) {
-        /* Verification failed - send error response if provided */
-        if (tdata) {
-            pjsip_dlg_send_response(inv->dlg,
-                                    pjsip_rdata_get_tsx(rdata),
-                                    tdata);
-        } else {
-            /* Callback failed to create response - create generic error */
-            pjsip_tx_data *err_tdata;
-            pj_status_t err_status = pjsip_dlg_create_response(inv->dlg, rdata,
-                                                PJSIP_SC_INTERNAL_SERVER_ERROR,
-                                                NULL, &err_tdata);
-            if (err_status == PJ_SUCCESS) {
+        if (meta_status != PJ_SUCCESS) {
+            /* Verification failed - send error response if provided */
+            if (tdata) {
                 pjsip_dlg_send_response(inv->dlg,
                                         pjsip_rdata_get_tsx(rdata),
-                                        err_tdata);
+                                        tdata);
+            } else {
+                /* Callback failed to create response - create generic error */
+                pjsip_tx_data *err_tdata;
+                pj_status_t err_status = pjsip_dlg_create_response(inv->dlg,
+                                                    rdata,
+                                                    PJSIP_SC_INTERNAL_SERVER_ERROR,
+                                                    NULL, &err_tdata);
+                if (err_status == PJ_SUCCESS) {
+                    pjsip_dlg_send_response(inv->dlg,
+                                            pjsip_rdata_get_tsx(rdata),
+                                            err_tdata);
+                }
             }
+            return meta_status;
         }
-        return meta_status;
+
+    } else {
+        /* Verification callback not registered - extract metadata directly
+         * for the update notification. Metadata is accepted without
+         * verification (default per documentation).
+         */
+        pjsip_msg *msg = rdata->msg_info.msg;
+        if (msg && msg->body) {
+            meta_status = pjsip_siprec_get_metadata(inv->pool_prov,
+                                                     msg->body,
+                                                     &new_metadata);
+        }
+
+        if (meta_status != PJ_SUCCESS) {
+            /* Metadata not found or error extracting.
+             * Not an error - metadata update is optional in mid-dialog.
+             * Return PJ_SUCCESS to continue processing.
+             */
+            return PJ_SUCCESS;
+        }
     }
 
     /* Fire metadata update notification callback if new metadata is present.
@@ -4360,25 +4390,8 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
 
     neg_state = pjmedia_sdp_neg_get_state(inv->neg);
 
-#if PJSIP_HAS_SIPREC
-    /* Process SIPREC metadata update if present (RFC 7866 §7.1).
-     * Must be processed before SDP handling to support metadata-only
-     * UPDATE requests (body contains rs-metadata without SDP).
-     */
-    if (rdata->msg_info.msg->body != NULL) {
-        meta_status = inv_process_siprec_metadata_update(inv, rdata);
-        if (meta_status != PJ_SUCCESS) {
-            /* Metadata verification failed - error response already sent
-             * by inv_process_siprec_metadata_update().
-             */
-            return;
-        }
-    }
-#endif
-
     /* If UPDATE doesn't contain SDP, just respond with 200/OK.
      * This is a valid scenario according to session-timer draft.
-     * Also valid for SIPREC metadata-only updates per RFC 7866 §7.1.
      */
     if (rdata->msg_info.msg->body == NULL) {
 
@@ -4412,6 +4425,24 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
 
     } else {
         /* We receive new offer from remote */
+
+#if PJSIP_HAS_SIPREC
+        /* Process SIPREC metadata update if present (RFC 7866 §7.1).
+         * Must be processed here, after glare/timer checks, so the callback
+         * only fires for requests that will be accepted. This prevents the
+         * application from acting on "new" metadata for requests that will be
+         * rejected due to glare or timer state.
+         */
+        if (rdata->msg_info.msg->body != NULL) {
+            meta_status = inv_process_siprec_metadata_update(inv, rdata);
+            if (meta_status != PJ_SUCCESS) {
+                /* Metadata verification failed - error response already sent
+                 * by inv_process_siprec_metadata_update().
+                 */
+                return;
+            }
+        }
+#endif
 
         /* Check if this UPDATE contains SDP or is metadata-only */
         if (rdata->msg_info.msg->body != NULL) {
