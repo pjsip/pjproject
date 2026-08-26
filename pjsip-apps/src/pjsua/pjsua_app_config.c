@@ -1974,9 +1974,31 @@ static void cfg_add(pj_str_t *cfg, pj_size_t max, const char *src)
     if (cfg->slen < 0)
         return;
 
-    len = pj_ansi_strxcat(cfg->ptr, src, max);
-    cfg->slen = (len < 0)? -1 : len;
+    len = pj_ansi_strxcpy(cfg->ptr + cfg->slen, src,
+                          max - (pj_size_t)cfg->slen);
+    if (len < 0)
+        cfg->slen = -1;
+    else
+        cfg->slen += len;
 }
+
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+/* Length based, so a value containing a NUL is copied whole. */
+static void cfg_add_str(pj_str_t *cfg, pj_size_t max, const pj_str_t *src)
+{
+    if (cfg->slen < 0)
+        return;
+
+    if ((pj_size_t)cfg->slen + (pj_size_t)src->slen + 1 > max) {
+        cfg->slen = -1;
+        return;
+    }
+
+    pj_memcpy(cfg->ptr + cfg->slen, src->ptr, src->slen);
+    cfg->slen += src->slen;
+    cfg->ptr[cfg->slen] = '\0';
+}
+#endif
 
 static void cfg_addf(pj_str_t *cfg, pj_size_t max, const char *fmt, ...)
 {
@@ -2503,7 +2525,7 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
 
     /* Stereo mode. */
     if (config->media_cfg.channel_count == 2) {
-        cfg_addf(&cfg, max, "--stereo\n");
+        cfg_add(&cfg, max, "--stereo\n");
     }
 
     /* quality */
@@ -2528,7 +2550,7 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
                          config->avi[i].path.ptr);
     }
     if (config->avi_auto_play) {
-        cfg_addf(&cfg, max, "--auto-play-avi\n");
+        cfg_add(&cfg, max, "--auto-play-avi\n");
     }
     if (config->avi_rec.slen) {
         cfg_addf(&cfg, max, "--rec-avi %s\n",
@@ -2539,10 +2561,10 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
                          config->avi_rec_size);
     }
     if (config->avi_rec_audio) {
-        cfg_addf(&cfg, max, "--rec-avi-audio\n");
+        cfg_add(&cfg, max, "--rec-avi-audio\n");
     }
     if (config->avi_auto_rec) {
-        cfg_addf(&cfg, max, "--auto-rec-avi\n");
+        cfg_add(&cfg, max, "--auto-rec-avi\n");
     }
 
     /* ptime */
@@ -2708,7 +2730,7 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
         escaped.slen = (pj_ssize_t)(ep - ebuf);
 
         cfg_add(&cfg, max, "--custom-sdp \"");
-        cfg_addf(&cfg, max, "%.*s", (int)escaped.slen, escaped.ptr);
+        cfg_add_str(&cfg, max, &escaped);
         cfg_add(&cfg, max, "\"\n");
     }
 #endif /* !PJSUA_MEDIA_HAS_PJMEDIA */
