@@ -1858,7 +1858,7 @@ static pj_status_t cmd_show_config()
                   "Dumping configuration (%d bytes):\n%s\n",
                   len, settings));
 
-    pj_pool_release(pool);
+    pj_pool_secure_release(&pool);
     return PJ_SUCCESS;
 }
 
@@ -1903,7 +1903,7 @@ static pj_status_t cmd_write_config(pj_cli_cmd_val *cval)
         }
     }
 
-    pj_pool_release(pool);
+    pj_pool_secure_release(&pool);
     return PJ_SUCCESS;
 }
 

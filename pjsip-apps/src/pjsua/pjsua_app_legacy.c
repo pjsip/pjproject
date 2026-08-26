@@ -1792,7 +1792,7 @@ static void ui_dump_configuration()
         PJ_LOG(3,(THIS_FILE, "Dumping configuration (%d bytes):\n%s\n",
                   len, settings));
 
-    pj_pool_release(pool);
+    pj_pool_secure_release(&pool);
 }
 
 static void ui_write_settings(const char *filename)
@@ -1828,7 +1828,7 @@ static void ui_write_settings(const char *filename)
         }
     }
 
-    pj_pool_release(pool);
+    pj_pool_secure_release(&pool);
 }
 
 /*
