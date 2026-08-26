@@ -6087,6 +6087,48 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
                 return;
 #endif
 
+            /* Check if this is a metadata-only re-INVITE (RFC 7866 §7.1).
+             * Similar to UPDATE handling, accept metadata-only requests
+             * with 200 OK without SDP.
+             */
+            if (rdata->msg_info.msg->body != NULL) {
+                pjsip_rdata_sdp_info *sdp_info;
+                pj_bool_t has_sdp = PJ_TRUE;
+
+                sdp_info = pjsip_rdata_get_sdp_info(rdata);
+
+                /* sdp_info->body.ptr is non-NULL only when content-type is SDP.
+                 * If content-type is SDP but parsing failed, handle as error.
+                 * If content-type is not SDP (metadata-only), accept request.
+                 */
+                if (sdp_info->body.ptr != NULL && sdp_info->sdp == NULL) {
+                    /* SDP content-type present but parsing/validating failed.
+                     * Respond with 488 Not Acceptable (RFC 3261).
+                     */
+                    status = pjsip_dlg_create_response(inv->dlg, rdata,
+                                                       PJSIP_SC_NOT_ACCEPTABLE_HERE,
+                                                       NULL, &tdata);
+                    if (status != PJ_SUCCESS)
+                        return;
+
+                    status = pjsip_dlg_send_response(dlg, tsx, tdata);
+                    return;
+                }
+
+                has_sdp = (sdp_info->sdp != NULL);
+
+                if (!has_sdp) {
+                    /* Metadata-only re-INVITE (RFC 7866 §7.1) - no SDP to process */
+                    status = pjsip_dlg_create_response(inv->dlg, rdata,
+                                                       PJSIP_SC_OK, NULL, &tdata);
+                    if (status != PJ_SUCCESS)
+                        return;
+
+                    status = pjsip_dlg_send_response(dlg, tsx, tdata);
+                    return;
+                }
+            }
+
             /* Process SDP in incoming message. */
             status = inv_check_sdp_in_incoming_msg(inv, tsx, rdata);
 

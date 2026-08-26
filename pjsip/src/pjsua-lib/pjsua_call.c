@@ -6172,37 +6172,19 @@ static pj_status_t pjsua_call_on_verify_siprec_update(pjsip_inv_session *inv,
     status = pjsip_siprec_get_metadata(inv->pool_prov, body, metadata);
 
     if (status == PJ_ENOTFOUND) {
-        /* Metadata not found - check if it's required */
-        if (acc->cfg.siprec_require_metadata) {
-            /* Require metadata - reject if missing */
-            st_code = PJSIP_SC_BAD_REQUEST;
-
-            PJ_LOG(3,(THIS_FILE,
-                      "SIPREC metadata not found in mid-dialog request. "
-                      "To allow metadata-less updates, set "
-                      "siprec_require_metadata to PJ_FALSE."));
-
-            /* Create error response */
-            status = pjsip_dlg_create_response(inv->dlg, rdata, st_code,
-                                                 NULL, p_tdata);
-            if (status == PJ_SUCCESS && p_tdata && *p_tdata) {
-                pjsip_warning_hdr *warn_hdr;
-                pj_str_t warn_value = pj_str("SIPREC mid-dialog request must have rs-metadata");
-
-                warn_hdr = pjsip_warning_hdr_create((*p_tdata)->pool, 399,
-                                                    pjsip_endpt_name(pjsua_var.endpt),
-                                                    &warn_value);
-                pjsip_msg_add_hdr((*p_tdata)->msg, (pjsip_hdr*)warn_hdr);
-            }
-
-            return PJSIP_ERRNO_FROM_SIP_STATUS(st_code);
-        } else {
-            /* Metadata is optional - log warning and continue */
-            PJ_LOG(4,(THIS_FILE,
-                      "SIPREC metadata not found in mid-dialog request, "
-                      "continuing without metadata update"));
-            return PJ_SUCCESS;
-        }
+        /* Metadata not found in mid-dialog request.
+         * Per RFC 7866, metadata is only sent when the recording session
+         * changes. Routine mid-dialog operations (hold/resume, codec
+         * renegotiation, session-timer refresh) typically don't include
+         * metadata updates, which is normal and acceptable.
+         *
+         * The siprec_require_metadata flag only applies to initial INVITE
+         * requests, not mid-dialog updates. So we accept the request.
+         */
+        PJ_LOG(5,(THIS_FILE,
+                  "SIPREC metadata not found in mid-dialog request, "
+                  "accepting request (this is normal for routine updates)"));
+        return PJ_SUCCESS;
     }
 
     if (status != PJ_SUCCESS) {
