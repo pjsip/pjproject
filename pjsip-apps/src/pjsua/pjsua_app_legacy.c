@@ -1781,7 +1781,6 @@ static void ui_dump_configuration()
                              1024);
     if (!pool) {
         PJ_LOG(1,(THIS_FILE, "Error: unable to allocate settings buffer"));
-        pj_pool_release(pool);
         return;
     }
     settings = (char*)pj_pool_alloc(pool, PJSUA_APP_SETTINGS_SIZE);
@@ -1806,7 +1805,6 @@ static void ui_write_settings(const char *filename)
                              1024);
     if (!pool) {
         PJ_LOG(1,(THIS_FILE, "Error: unable to allocate settings buffer"));
-        pj_pool_release(pool);
         return;
     }
     settings = (char*)pj_pool_alloc(pool, PJSUA_APP_SETTINGS_SIZE);
