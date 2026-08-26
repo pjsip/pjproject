@@ -2394,6 +2394,15 @@ static pj_status_t inv_process_siprec_metadata_update(
     meta_status = (*mod_inv.cb.on_verify_siprec_update)(inv, rdata,
                                                         &new_metadata,
                                                         &tdata);
+    if (meta_status == PJ_ENOTFOUND) {
+        /* Metadata not found in request.
+         * This is normal for routine mid-dialog operations.
+         * Return PJ_SUCCESS to continue processing - the caller will
+         * check if the body has an unknown content-type.
+         */
+        return PJ_SUCCESS;
+    }
+
     if (meta_status != PJ_SUCCESS) {
         /* Verification failed - send error response if provided */
         if (tdata) {
@@ -4403,7 +4412,6 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
 
     } else {
         /* We receive new offer from remote */
-        pj_bool_t has_sdp = PJ_TRUE;
 
         /* Check if this UPDATE contains SDP or is metadata-only */
         if (rdata->msg_info.msg->body != NULL) {
@@ -4420,16 +4428,10 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
                 goto on_return;
             }
 
-            has_sdp = (sdp_info->sdp != NULL);
-        }
-
-        if (!has_sdp) {
-            /* Metadata-only UPDATE (RFC 7866 7.1) - no SDP to process */
-            status = pjsip_dlg_create_response(inv->dlg, rdata,
-                                               PJSIP_SC_OK, NULL, &tdata);
-        } else {
-            /* Process SDP offer/answer */
-            inv_check_sdp_in_incoming_msg(inv, pjsip_rdata_get_tsx(rdata), rdata);
+            if (sdp_info->sdp != NULL) {
+                /* SDP content-type present and parsed successfully.
+                 * Process SDP offer/answer directly. */
+                inv_check_sdp_in_incoming_msg(inv, pjsip_rdata_get_tsx(rdata), rdata);
 
         /* Application MUST have supplied the answer by now.
          * If so, negotiate the SDP.
@@ -4446,7 +4448,7 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
                 pjmedia_sdp_neg_cancel_offer(inv->neg);
             }
 
-            status = pjsip_dlg_create_response(inv->dlg, rdata, 
+            status = pjsip_dlg_create_response(inv->dlg, rdata,
                                                PJSIP_SC_NOT_ACCEPTABLE_HERE,
                                                NULL, &tdata);
         } else {
@@ -4460,6 +4462,38 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
                     tdata->msg->body = create_sdp_body(tdata->pool, sdp);
             }
         }
+            } else {
+                /* Body exists but no SDP content-type.
+                 * Let inv_check_sdp_in_incoming_msg() handle it -
+                 * it will reject unknown content-types with 488.
+                 */
+                status = inv_check_sdp_in_incoming_msg(inv, pjsip_rdata_get_tsx(rdata),
+                                                         rdata);
+                if (status != PJ_SUCCESS) {
+                    /* SDP check failed (unknown content-type or other error).
+                     * Create error response. */
+                    pjsip_status_code st_code;
+
+                    if (status == PJMEDIA_SDP_EINSDP) {
+                        st_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
+                    } else {
+                        st_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
+                    }
+
+                    status = pjsip_dlg_create_response(inv->dlg, rdata, st_code,
+                                                       NULL, &tdata);
+                } else {
+                    /* SDP check succeeded (shouldn't happen for no-SDP body,
+                     * but might for metadata-only if we add support). */
+                    status = pjsip_dlg_create_response(inv->dlg, rdata,
+                                                       PJSIP_SC_OK, NULL, &tdata);
+                }
+            }
+        } else {
+            /* No body - this is a session-timer refresh or similar.
+             * Accept with 200 OK without SDP. */
+            status = pjsip_dlg_create_response(inv->dlg, rdata,
+                                               PJSIP_SC_OK, NULL, &tdata);
         }
     }
 

@@ -6173,18 +6173,14 @@ static pj_status_t pjsua_call_on_verify_siprec_update(pjsip_inv_session *inv,
 
     if (status == PJ_ENOTFOUND) {
         /* Metadata not found in mid-dialog request.
-         * Per RFC 7866, metadata is only sent when the recording session
-         * changes. Routine mid-dialog operations (hold/resume, codec
-         * renegotiation, session-timer refresh) typically don't include
-         * metadata updates, which is normal and acceptable.
-         *
-         * The siprec_require_metadata flag only applies to initial INVITE
-         * requests, not mid-dialog updates. So we accept the request.
+         * Return PJ_ENOTFOUND so the caller can distinguish between:
+         * - Metadata found → PJ_SUCCESS
+         * - Metadata not found → PJ_ENOTFOUND (caller decides)
+         * - Error → reject
          */
         PJ_LOG(5,(THIS_FILE,
-                  "SIPREC metadata not found in mid-dialog request, "
-                  "accepting request (this is normal for routine updates)"));
-        return PJ_SUCCESS;
+                  "SIPREC metadata not found in mid-dialog request"));
+        return PJ_ENOTFOUND;
     }
 
     if (status != PJ_SUCCESS) {
