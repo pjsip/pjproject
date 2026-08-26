@@ -2257,6 +2257,40 @@ static void write_account_settings(int acc_index, pj_str_t *result,
 /*
  * Write settings.
  */
+char *alloc_settings(pjsua_app_config *config, pj_pool_t **p_pool,
+                     int *p_len)
+{
+    pj_pool_t *pool;
+    char *buf;
+    int len;
+
+    *p_pool = NULL;
+
+    pool = pjsua_pool_create("settings", PJSUA_APP_SETTINGS_SIZE + 1024, 1024);
+    if (!pool) {
+        PJ_LOG(1,(THIS_FILE, "Error: unable to allocate settings buffer"));
+        return NULL;
+    }
+
+    buf = (char*)pj_pool_alloc(pool, PJSUA_APP_SETTINGS_SIZE);
+    if (!buf) {
+        PJ_LOG(1,(THIS_FILE, "Error: unable to allocate settings buffer"));
+        pj_pool_secure_release(&pool);
+        return NULL;
+    }
+
+    len = write_settings(config, buf, PJSUA_APP_SETTINGS_SIZE);
+    if (len < 1) {
+        PJ_LOG(1,(THIS_FILE, "Error: not enough buffer"));
+        pj_pool_secure_release(&pool);
+        return NULL;
+    }
+
+    *p_pool = pool;
+    *p_len = len;
+    return buf;
+}
+
 int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
 {
     unsigned acc_index;

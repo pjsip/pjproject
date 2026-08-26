@@ -1777,20 +1777,12 @@ static void ui_dump_configuration()
     char *settings;
     int len;
 
-    pool = pjsua_pool_create("settings", PJSUA_APP_SETTINGS_SIZE + 1024,
-                             1024);
-    if (!pool) {
-        PJ_LOG(1,(THIS_FILE, "Error: unable to allocate settings buffer"));
+    settings = alloc_settings(&app_config, &pool, &len);
+    if (!settings)
         return;
-    }
-    settings = (char*)pj_pool_alloc(pool, PJSUA_APP_SETTINGS_SIZE);
 
-    len = write_settings(&app_config, settings, PJSUA_APP_SETTINGS_SIZE);
-    if (len < 1)
-        PJ_LOG(1,(THIS_FILE, "Error: not enough buffer"));
-    else
-        PJ_LOG(3,(THIS_FILE, "Dumping configuration (%d bytes):\n%s\n",
-                  len, settings));
+    PJ_LOG(3,(THIS_FILE, "Dumping configuration (%d bytes):\n%s\n",
+              len, settings));
 
     pj_pool_secure_release(&pool);
 }
@@ -1800,32 +1792,22 @@ static void ui_write_settings(const char *filename)
     pj_pool_t *pool;
     char *settings;
     int len;
+    pj_oshandle_t fd;
+    pj_status_t status;
 
-    pool = pjsua_pool_create("settings", PJSUA_APP_SETTINGS_SIZE + 1024,
-                             1024);
-    if (!pool) {
-        PJ_LOG(1,(THIS_FILE, "Error: unable to allocate settings buffer"));
+    settings = alloc_settings(&app_config, &pool, &len);
+    if (!settings)
         return;
-    }
-    settings = (char*)pj_pool_alloc(pool, PJSUA_APP_SETTINGS_SIZE);
 
-    len = write_settings(&app_config, settings, PJSUA_APP_SETTINGS_SIZE);
-    if (len < 1)
-        PJ_LOG(1,(THIS_FILE, "Error: not enough buffer"));
-    else {
-        pj_oshandle_t fd;
-        pj_status_t status;
+    status = pj_file_open(app_config.pool, filename, PJ_O_WRONLY, &fd);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE, "Unable to open file", status);
+    } else {
+        pj_ssize_t size = len;
+        pj_file_write(fd, settings, &size);
+        pj_file_close(fd);
 
-        status = pj_file_open(app_config.pool, filename, PJ_O_WRONLY, &fd);
-        if (status != PJ_SUCCESS) {
-            pjsua_perror(THIS_FILE, "Unable to open file", status);
-        } else {
-            pj_ssize_t size = len;
-            pj_file_write(fd, settings, &size);
-            pj_file_close(fd);
-
-            printf("Settings successfully written to '%s'\n", filename);
-        }
+        printf("Settings successfully written to '%s'\n", filename);
     }
 
     pj_pool_secure_release(&pool);
