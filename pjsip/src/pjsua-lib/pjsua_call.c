@@ -2524,15 +2524,15 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
         call->siprec_metadata.slen > 0 &&
         pjsua_var.ua_cfg.cb.on_call_siprec_metadata_update)
     {
-        /* Use the incoming_data rdata if available (it was cloned for this purpose).
-         * The incoming_data should still be valid at this point since it's
-         * freed later in the cleanup section.
+        /* Prefer the cloned rdata. Calls that replace another call (via a
+         * Replaces header) have no cloned rdata, so pass the original one;
+         * like other pjsua callbacks, it stays valid during the callback.
          */
-        pjsip_rx_data *siprec_rdata = call->incoming_data;
-        if (siprec_rdata) {
-            (*pjsua_var.ua_cfg.cb.on_call_siprec_metadata_update)(
-                call->index, NULL, &call->siprec_metadata, siprec_rdata);
-        }
+        pjsip_rx_data *siprec_rdata = call->incoming_data ?
+                                      call->incoming_data : rdata;
+
+        (*pjsua_var.ua_cfg.cb.on_call_siprec_metadata_update)(
+            call->index, NULL, &call->siprec_metadata, siprec_rdata);
     }
 #endif
 
@@ -6138,7 +6138,6 @@ static pj_status_t pjsua_call_on_verify_siprec_update(pjsip_inv_session *inv,
                                                         pjsip_tx_data **p_tdata)
 {
     pjsua_call *call;
-    pjsua_acc *acc;
     pjsip_msg *msg;
     pjsip_msg_body *body;
     pj_status_t status;
@@ -6152,8 +6151,6 @@ static pj_status_t pjsua_call_on_verify_siprec_update(pjsip_inv_session *inv,
                   "SIPREC verify callback called but call not found"));
         return PJ_SUCCESS;
     }
-
-    acc = &pjsua_var.acc[call->acc_id];
 
     /* Initialize output */
     metadata->ptr = NULL;

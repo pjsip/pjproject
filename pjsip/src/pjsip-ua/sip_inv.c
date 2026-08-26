@@ -2346,6 +2346,18 @@ static void swap_pool(pj_pool_t **p1, pj_pool_t **p2)
 
 
 #if PJSIP_HAS_SIPREC
+/* Check if message body carries SIPREC metadata, either as a single-part
+ * rs-metadata document or as a part of a multipart body (RFC 7866 §7.1).
+ */
+static pj_bool_t inv_body_has_siprec_metadata(pjsip_inv_session *inv,
+                                              pjsip_msg_body *body)
+{
+    pj_str_t metadata = {NULL, 0};
+
+    return (pjsip_siprec_get_metadata(inv->pool_prov, body,
+                                      &metadata) == PJ_SUCCESS);
+}
+
 /*
  * Process SIPREC metadata update from mid-dialog requests (re-INVITE/UPDATE).
  * This function validates metadata from the request and fires the update callback.
@@ -4464,61 +4476,58 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
                  * Process SDP offer/answer directly. */
                 inv_check_sdp_in_incoming_msg(inv, pjsip_rdata_get_tsx(rdata), rdata);
 
-        /* Application MUST have supplied the answer by now.
-         * If so, negotiate the SDP.
-         */
-        neg_state = pjmedia_sdp_neg_get_state(inv->neg);
-        if (neg_state != PJMEDIA_SDP_NEG_STATE_WAIT_NEGO ||
-            (status=inv_negotiate_sdp(inv)) != PJ_SUCCESS)
-        {
-            /* Negotiation has failed. If negotiator is still
-             * stuck at non-DONE state, cancel any ongoing offer.
-             */
-            neg_state = pjmedia_sdp_neg_get_state(inv->neg);
-            if (neg_state != PJMEDIA_SDP_NEG_STATE_DONE) {
-                pjmedia_sdp_neg_cancel_offer(inv->neg);
-            }
-
-            status = pjsip_dlg_create_response(inv->dlg, rdata,
-                                               PJSIP_SC_NOT_ACCEPTABLE_HERE,
-                                               NULL, &tdata);
-        } else {
-            /* New media has been negotiated successfully, send 200/OK */
-            status = pjsip_dlg_create_response(inv->dlg, rdata,
-                                               PJSIP_SC_OK, NULL, &tdata);
-            if (status == PJ_SUCCESS) {
-                const pjmedia_sdp_session *sdp;
-                status = pjmedia_sdp_neg_get_active_local(inv->neg, &sdp);
-                if (status == PJ_SUCCESS)
-                    tdata->msg->body = create_sdp_body(tdata->pool, sdp);
-            }
-        }
-            } else {
-                /* Body exists but no SDP content-type.
-                 * Let inv_check_sdp_in_incoming_msg() handle it -
-                 * it will reject unknown content-types with 488.
+                /* Application MUST have supplied the answer by now.
+                 * If so, negotiate the SDP.
                  */
-                status = inv_check_sdp_in_incoming_msg(inv, pjsip_rdata_get_tsx(rdata),
-                                                         rdata);
-                if (status != PJ_SUCCESS) {
-                    /* SDP check failed (unknown content-type or other error).
-                     * Create error response. */
-                    pjsip_status_code st_code;
-
-                    if (status == PJMEDIA_SDP_EINSDP) {
-                        st_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
-                    } else {
-                        st_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
+                neg_state = pjmedia_sdp_neg_get_state(inv->neg);
+                if (neg_state != PJMEDIA_SDP_NEG_STATE_WAIT_NEGO ||
+                    (status=inv_negotiate_sdp(inv)) != PJ_SUCCESS)
+                {
+                    /* Negotiation has failed. If negotiator is still
+                     * stuck at non-DONE state, cancel any ongoing offer.
+                     */
+                    neg_state = pjmedia_sdp_neg_get_state(inv->neg);
+                    if (neg_state != PJMEDIA_SDP_NEG_STATE_DONE) {
+                        pjmedia_sdp_neg_cancel_offer(inv->neg);
                     }
 
-                    status = pjsip_dlg_create_response(inv->dlg, rdata, st_code,
+                    status = pjsip_dlg_create_response(inv->dlg, rdata,
+                                                       PJSIP_SC_NOT_ACCEPTABLE_HERE,
                                                        NULL, &tdata);
                 } else {
-                    /* SDP check succeeded (shouldn't happen for no-SDP body,
-                     * but might for metadata-only if we add support). */
+                    /* New media has been negotiated successfully, send 200/OK */
                     status = pjsip_dlg_create_response(inv->dlg, rdata,
                                                        PJSIP_SC_OK, NULL, &tdata);
+                    if (status == PJ_SUCCESS) {
+                        const pjmedia_sdp_session *sdp;
+                        status = pjmedia_sdp_neg_get_active_local(inv->neg, &sdp);
+                        if (status == PJ_SUCCESS)
+                            tdata->msg->body = create_sdp_body(tdata->pool, sdp);
+                    }
                 }
+            } else {
+                /* Body exists but has no SDP content-type. Accept it as a
+                 * metadata-only UPDATE (RFC 7866 §7.1), with metadata already
+                 * processed above, or reject unknown content-types with 488
+                 * like upstream does for bodies it cannot handle.
+                 */
+#if PJSIP_HAS_SIPREC
+                if (inv_body_has_siprec_metadata(inv,
+                                                 rdata->msg_info.msg->body))
+                {
+                    status = pjsip_dlg_create_response(inv->dlg, rdata,
+                                                       PJSIP_SC_OK, NULL,
+                                                       &tdata);
+                } else {
+                    status = pjsip_dlg_create_response(inv->dlg, rdata,
+                                            PJSIP_SC_NOT_ACCEPTABLE_HERE,
+                                            NULL, &tdata);
+                }
+#else
+                status = pjsip_dlg_create_response(inv->dlg, rdata,
+                                        PJSIP_SC_NOT_ACCEPTABLE_HERE,
+                                        NULL, &tdata);
+#endif
             }
         } else {
             /* No body - this is a session-timer refresh or similar.
@@ -6150,49 +6159,32 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
             /* Process SIPREC metadata update if present */
             if (inv_process_siprec_metadata_update(inv, rdata) != PJ_SUCCESS)
                 return;
-#endif
 
-            /* Check if this is a metadata-only re-INVITE (RFC 7866 §7.1).
-             * Similar to UPDATE handling, accept metadata-only requests
-             * with 200 OK without SDP.
+            /* Check if this is a metadata-only re-INVITE carrying SIPREC
+             * metadata (RFC 7866 §7.1): respond with 200/OK without doing
+             * SDP negotiation. Any other bodies without SDP content-type
+             * are left to inv_check_sdp_in_incoming_msg() below, which
+             * rejects unrecognized content-types.
              */
             if (rdata->msg_info.msg->body != NULL) {
-                pjsip_rdata_sdp_info *sdp_info;
-                pj_bool_t has_sdp = PJ_TRUE;
-
                 sdp_info = pjsip_rdata_get_sdp_info(rdata);
 
-                /* sdp_info->body.ptr is non-NULL only when content-type is SDP.
-                 * If content-type is SDP but parsing failed, handle as error.
-                 * If content-type is not SDP (metadata-only), accept request.
-                 */
-                if (sdp_info->body.ptr != NULL && sdp_info->sdp == NULL) {
-                    /* SDP content-type present but parsing/validating failed.
-                     * Respond with 488 Not Acceptable (RFC 3261).
-                     */
+                if (sdp_info->sdp == NULL &&
+                    inv_body_has_siprec_metadata(inv,
+                                                 rdata->msg_info.msg->body))
+                {
                     status = pjsip_dlg_create_response(inv->dlg, rdata,
-                                                       PJSIP_SC_NOT_ACCEPTABLE_HERE,
-                                                       NULL, &tdata);
+                                                       PJSIP_SC_OK, NULL,
+                                                       &tdata);
                     if (status != PJ_SUCCESS)
                         return;
 
-                    status = pjsip_dlg_send_response(dlg, tsx, tdata);
-                    return;
-                }
-
-                has_sdp = (sdp_info->sdp != NULL);
-
-                if (!has_sdp) {
-                    /* Metadata-only re-INVITE (RFC 7866 §7.1) - no SDP to process */
-                    status = pjsip_dlg_create_response(inv->dlg, rdata,
-                                                       PJSIP_SC_OK, NULL, &tdata);
-                    if (status != PJ_SUCCESS)
-                        return;
-
+                    pjsip_timer_update_resp(inv, tdata);
                     status = pjsip_dlg_send_response(dlg, tsx, tdata);
                     return;
                 }
             }
+#endif
 
             /* Process SDP in incoming message. */
             status = inv_check_sdp_in_incoming_msg(inv, tsx, rdata);
