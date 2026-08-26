@@ -1162,6 +1162,9 @@ static int test_siprec_metadata_only_update_multipart(void)
     int rc = 0;
     pjsip_msg_body *metadata_body;
     pjsip_multipart_part *metadata_part;
+    pj_str_t metadata_xml;
+    pjsip_media_type multipart_ct;
+    pj_str_t boundary;
 
     PJ_LOG(3, (THIS_FILE, "  SIPREC metadata-only UPDATE (multipart)"));
 
@@ -1206,7 +1209,7 @@ static int test_siprec_metadata_only_update_multipart(void)
     }
 
     /* Create simple rs-metadata XML */
-    pj_str_t metadata_xml = pj_str(
+    metadata_xml = pj_str(
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
         "<recording xmlns='urn:ietf:params:xml:ns:recording:1'>"
         "<datamode>complete</datamode>"
@@ -1214,9 +1217,8 @@ static int test_siprec_metadata_only_update_multipart(void)
     );
 
     /* Create empty multipart body */
-    pjsip_media_type multipart_ct;
     pjsip_media_type_init2(&multipart_ct, "multipart", "mixed");
-    pj_str_t boundary = pj_str("boundary123");
+    boundary = pj_str("boundary123");
     metadata_body = pjsip_multipart_create(pool, &multipart_ct, &boundary);
 
     /* Create rs-metadata part */
@@ -1318,6 +1320,10 @@ static int test_siprec_metadata_only_update_singlepart(void)
     pj_status_t status;
     pjsua_call_id cid = PJSUA_INVALID_ID;
     int rc = 0;
+    pjsip_msg_body *metadata_body;
+    pj_str_t metadata_xml;
+    pj_str_t metadata_type;
+    pj_str_t metadata_subtype;
 
     PJ_LOG(3, (THIS_FILE, "  SIPREC metadata-only UPDATE (single-part)"));
 
@@ -1362,7 +1368,7 @@ static int test_siprec_metadata_only_update_singlepart(void)
     }
 
     /* Create simple rs-metadata XML */
-    pj_str_t metadata_xml = pj_str(
+    metadata_xml = pj_str(
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
         "<recording xmlns='urn:ietf:params:xml:ns:recording:1'>"
         "<datamode>complete</datamode>"
@@ -1370,12 +1376,12 @@ static int test_siprec_metadata_only_update_singlepart(void)
     );
 
     /* Create single-part rs-metadata body */
-    pj_str_t metadata_type = pj_str("application");
-    pj_str_t metadata_subtype = pj_str("rs-metadata+xml");
-    pjsip_msg_body *metadata_body = pjsip_msg_body_create(pool,
-                                                           &metadata_type,
-                                                           &metadata_subtype,
-                                                           &metadata_xml);
+    metadata_type = pj_str("application");
+    metadata_subtype = pj_str("rs-metadata+xml");
+    metadata_body = pjsip_msg_body_create(pool,
+                                          &metadata_type,
+                                          &metadata_subtype,
+                                          &metadata_xml);
 
     /* Create UPDATE request */
     status = pjsip_dlg_create_request(dlg, &UPDATE_METHOD, -1, &tdata);
@@ -1463,6 +1469,10 @@ static int test_siprec_datamode_partial_element(void)
     pj_status_t status;
     pjsua_call_id cid = PJSUA_INVALID_ID;
     int rc = 0;
+    pjsip_msg_body *metadata_body;
+    pj_str_t metadata_xml;
+    pj_str_t metadata_type;
+    pj_str_t metadata_subtype;
 
     PJ_LOG(3, (THIS_FILE, "  SIPREC datamode=partial element parsing"));
 
@@ -1507,7 +1517,7 @@ static int test_siprec_datamode_partial_element(void)
     }
 
     /* Create rs-metadata with datamode=partial (lowercase element) */
-    pj_str_t metadata_xml = pj_str(
+    metadata_xml = pj_str(
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
         "<recording xmlns='urn:ietf:params:xml:ns:recording:1'>"
         "<datamode>partial</datamode>"
@@ -1515,12 +1525,12 @@ static int test_siprec_datamode_partial_element(void)
     );
 
     /* Create single-part rs-metadata body */
-    pj_str_t metadata_type = pj_str("application");
-    pj_str_t metadata_subtype = pj_str("rs-metadata+xml");
-    pjsip_msg_body *metadata_body = pjsip_msg_body_create(pool,
-                                                           &metadata_type,
-                                                           &metadata_subtype,
-                                                           &metadata_xml);
+    metadata_type = pj_str("application");
+    metadata_subtype = pj_str("rs-metadata+xml");
+    metadata_body = pjsip_msg_body_create(pool,
+                                          &metadata_type,
+                                          &metadata_subtype,
+                                          &metadata_xml);
 
     /* Create UPDATE request */
     status = pjsip_dlg_create_request(dlg, &UPDATE_METHOD, -1, &tdata);
