@@ -621,7 +621,7 @@ on_return:
  * The request is written straight to a socket rather than sent through PJSIP,
  * because a pjsip_tx_data buffer is itself capped at PJSIP_MAX_PKT_LEN.
  */
-int transport_rx_overflow_test(void)
+static int rx_overflow_test(const char *last_hdr_eol, const char *branch)
 {
     enum { TIMEOUT_MSEC = 10000, CHUNK = 1024 };
     const char *EXPECTED = "SIP/2.0 513";
@@ -637,7 +637,9 @@ int transport_rx_overflow_test(void)
     int rc = 0;
     pj_status_t status;
 
-    PJ_LOG(3,(THIS_FILE, "  oversized request gets 513 Message Too Large"));
+    PJ_LOG(3,(THIS_FILE, "  oversized request gets 513 Message Too Large "
+                         "(header block ends %s)",
+              (*last_hdr_eol == '\r')? "CRLF CRLF" : "LF CRLF"));
 
     body_len = PJSIP_MAX_PKT_LEN;
     buf_size = body_len + 1024;
@@ -682,18 +684,18 @@ int transport_rx_overflow_test(void)
     req = (char*) pj_pool_alloc(pool, buf_size);
     len = pj_ansi_snprintf(req, buf_size,
                     "NOTIFY sip:overflow@127.0.0.1 SIP/2.0\r\n"
-                    "Via: SIP/2.0/TCP 127.0.0.1:5060;branch=z9hG4bK-rxovf;rport\r\n"
+                    "Via: SIP/2.0/TCP 127.0.0.1:5060;branch=%s;rport\r\n"
                     "Max-Forwards: 70\r\n"
                     "From: <sip:tester@127.0.0.1>;tag=rxovf\r\n"
                     "To: <sip:overflow@127.0.0.1>\r\n"
-                    "Call-ID: rx-overflow-test\r\n"
+                    "Call-ID: %s\r\n"
                     "CSeq: 1 NOTIFY\r\n"
                     "Event: dialog\r\n"
                     "Subscription-State: active;expires=60\r\n"
                     "Content-Type: text/plain\r\n"
-                    "Content-Length: %u\r\n"
+                    "Content-Length: %u%s"
                     "\r\n",
-                    (unsigned)body_len);
+                    branch, branch, (unsigned)body_len, last_hdr_eol);
     if (len < 0 || (pj_size_t)len + body_len > buf_size) {
         rc = -525;
         goto on_return;
@@ -779,6 +781,23 @@ on_return:
         pjsip_endpt_release_pool(endpt, pool);
 
     return rc;
+}
+
+
+/*
+ * Both header block terminators the parser accepts: pjsip_find_msg() ends
+ * the headers at "\n\r\n", so a last header line closed by a bare LF is a
+ * complete header block too.
+ */
+int transport_rx_overflow_test(void)
+{
+    int rc;
+
+    rc = rx_overflow_test("\r\n", "z9hG4bK-rxovf-crlf");
+    if (rc != 0)
+        return rc;
+
+    return rx_overflow_test("\n", "z9hG4bK-rxovf-lf");
 }
 #else   /* PJ_HAS_TCP */
 int transport_tcp_test(void)
