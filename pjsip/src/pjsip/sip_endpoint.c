@@ -1003,10 +1003,10 @@ on_return:
 static void endpt_respond_msg_too_large( pjsip_endpoint *endpt,
                                          pjsip_rx_data *rdata )
 {
-    char *buf = rdata->msg_info.msg_buf;
-    pj_size_t len = (pj_size_t)rdata->msg_info.len;
-    pj_size_t hdr_len = 0;
-    pj_size_t i;
+    const pj_str_t end_hdr = { "\n\r\n", 3 };
+    pj_str_t received;
+    pj_size_t hdr_len;
+    char *pos;
     char *hdr_buf;
     pjsip_msg *msg;
     pjsip_warning_hdr *warn;
@@ -1015,32 +1015,25 @@ static void endpt_respond_msg_too_large( pjsip_endpoint *endpt,
     pj_str_t warn_str;
     pj_status_t status;
 
-    if (buf == NULL || len == 0)
+    received.ptr = rdata->msg_info.msg_buf;
+    received.slen = rdata->msg_info.len;
+    if (received.ptr == NULL || received.slen <= 0)
         return;
 
-    /* Locate the empty line that ends the header block, and keep it: the
-     * parser needs it to see that the headers are complete.
+    /* Locate the empty line that ends the header block, with the sentinel
+     * pjsip_find_msg() uses, so the two cannot disagree on where the headers
+     * end. Keep the line: the parser needs it to see that they are complete.
      */
-    for (i = 0; i + 1 < len; ++i) {
-        if (buf[i] == '\r' && i + 3 < len && buf[i+1] == '\n' &&
-            buf[i+2] == '\r' && buf[i+3] == '\n')
-        {
-            hdr_len = i + 4;
-            break;
-        }
-        if (buf[i] == '\n' && buf[i+1] == '\n') {
-            hdr_len = i + 2;
-            break;
-        }
-    }
-    if (hdr_len == 0)
+    pos = pj_strstr(&received, &end_hdr);
+    if (pos == NULL)
         return;
+    hdr_len = (pj_size_t)(pos + 3 - received.ptr);
 
     /* Parse from a copy: the scanner writes into the buffer it is given, and
      * the transport still hands the original on to its dropped-data callback.
      */
     hdr_buf = (char*) pj_pool_alloc(rdata->tp_info.pool, hdr_len + 1);
-    pj_memcpy(hdr_buf, buf, hdr_len);
+    pj_memcpy(hdr_buf, received.ptr, hdr_len);
     hdr_buf[hdr_len] = '\0';
 
     pj_bzero(&rdata->msg_info, sizeof(rdata->msg_info));
