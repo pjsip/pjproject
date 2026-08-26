@@ -1303,10 +1303,6 @@ on_return:
  * Per RFC 7866 §7.1, a mid-dialog UPDATE can contain a single-part
  * rs-metadata document. This test verifies that such requests are
  * accepted with 200 OK.
- *
- * NOTE: This test currently FAILS because pjsip_siprec_get_metadata()
- * only handles multipart bodies and returns PJ_ENOTFOUND for single-part.
- * This is the bug described in reviewer issue #2.
  */
 static int test_siprec_metadata_only_update_singlepart(void)
 {
