@@ -6174,7 +6174,7 @@ static pj_status_t pjsua_call_on_verify_siprec_update(pjsip_inv_session *inv,
     body = msg->body;
 
     /* Try to extract metadata from multipart body */
-    status = pjsip_siprec_get_metadata(inv->pool_prov, body, metadata);
+    status = pjsip_siprec_get_metadata(rdata->tp_info.pool, body, metadata);
 
     if (status == PJ_ENOTFOUND) {
         /* Metadata not found in mid-dialog request.

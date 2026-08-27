@@ -2361,13 +2361,11 @@ static pj_bool_t inv_body_has_siprec_metadata(pjsip_msg_body *body)
  * Process SIPREC metadata update from mid-dialog requests (re-INVITE/UPDATE).
  * This function validates metadata from the request and fires the update callback.
  *
- * The metadata is passed to the callback via temporary allocation in pool_prov,
- * which will be freed after SDP negotiation. The callback must copy the data
- * to its own persistent storage if needed (e.g., application pool or long-term
- * storage).
- *
- * This design prevents memory accumulation that would occur if metadata were
- * stored in inv->pool (permanent) for every update in long recording sessions.
+ * The metadata passed to the callback points into the received request body,
+ * so nothing is allocated per update and memory stays flat in long recording
+ * sessions with frequent metadata-only updates. The callback must copy the
+ * data to its own persistent storage if needed (e.g., application pool or
+ * long-term storage).
  *
  * Parameters:
  *  @param inv          The invite session.
@@ -2451,7 +2449,7 @@ static pj_status_t inv_process_siprec_metadata_update(
          */
         pjsip_msg *msg = rdata->msg_info.msg;
         if (msg && msg->body) {
-            meta_status = pjsip_siprec_get_metadata(inv->pool_prov,
+            meta_status = pjsip_siprec_get_metadata(rdata->tp_info.pool,
                                                      msg->body,
                                                      &new_metadata);
         }
@@ -2466,28 +2464,16 @@ static pj_status_t inv_process_siprec_metadata_update(
     }
 
     /* Fire metadata update notification callback if new metadata is present.
-     * Allocate temporary copies in pool_prov for the callback duration.
-     * The callback is responsible for copying the data if it needs to persist.
-     *
-     * Using pool_prov (resettable) instead of inv->pool (permanent) prevents
-     * memory accumulation during long recording sessions with frequent updates.
+     * No copy is made: the metadata points into the received request body,
+     * which stays valid until request processing completes. Allocating in
+     * pool_prov here would leak, as pool_prov is only recycled by SDP
+     * negotiation, which metadata-only updates never trigger. The callback
+     * is responsible for copying the data if it needs to persist.
      */
     if (new_metadata.slen > 0 && new_metadata.ptr != NULL &&
         mod_inv.cb.on_siprec_metadata_update)
     {
-        pj_str_t temp_metadata;
         pj_str_t empty_metadata = {NULL, 0};
-
-        /* Copy new metadata to provisional pool for callback.
-         * This allocation will be freed when pool_prov is reset after
-         * SDP negotiation completes. The callback must copy the data
-         * to its own storage if it needs to persist beyond the callback.
-         */
-        temp_metadata.ptr = (char*)
-            pj_pool_alloc(inv->pool_prov, new_metadata.slen);
-        pj_memcpy(temp_metadata.ptr, new_metadata.ptr,
-                 new_metadata.slen);
-        temp_metadata.slen = new_metadata.slen;
 
         /* Fire callback with empty old metadata and new metadata from
          * this request. The application layer maintains its own metadata
@@ -2496,7 +2482,7 @@ static pj_status_t inv_process_siprec_metadata_update(
          */
         (*mod_inv.cb.on_siprec_metadata_update)(inv,
                                                 &empty_metadata,
-                                                &temp_metadata,
+                                                &new_metadata,
                                                 rdata);
     }
 
@@ -4439,12 +4425,16 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
 
 #if PJSIP_HAS_SIPREC
         /* Process SIPREC metadata update if present (RFC 7866 §7.1).
+         * Only for recording sessions (PJSIP_INV_REQUIRE_SIPREC), other
+         * calls keep rejecting unknown content-types with 488.
          * Must be processed here, after glare/timer checks, so the callback
          * only fires for requests that will be accepted. This prevents the
          * application from acting on "new" metadata for requests that will be
          * rejected due to glare or timer state.
          */
-        if (rdata->msg_info.msg->body != NULL) {
+        if ((inv->options & PJSIP_INV_REQUIRE_SIPREC) &&
+            rdata->msg_info.msg->body != NULL)
+        {
             meta_status = inv_process_siprec_metadata_update(inv, rdata);
             if (meta_status != PJ_SUCCESS) {
                 /* Metadata verification failed - error response already sent
@@ -4505,13 +4495,16 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
                     }
                 }
             } else {
-                /* Body exists but has no SDP content-type. Accept it as a
-                 * metadata-only UPDATE (RFC 7866 §7.1), with metadata already
-                 * processed above, or reject unknown content-types with 488
-                 * like upstream does for bodies it cannot handle.
+                /* Body exists but has no SDP content-type. On recording
+                 * sessions, accept it as a metadata-only UPDATE (RFC 7866
+                 * §7.1), with metadata already processed above, or reject
+                 * unknown content-types with 488 like upstream does for
+                 * bodies it cannot handle.
                  */
 #if PJSIP_HAS_SIPREC
-                if (inv_body_has_siprec_metadata(rdata->msg_info.msg->body)) {
+                if ((inv->options & PJSIP_INV_REQUIRE_SIPREC) &&
+                    inv_body_has_siprec_metadata(rdata->msg_info.msg->body))
+                {
                     /* Metadata-only UPDATE - nothing else to process */
                     status = pjsip_dlg_create_response(inv->dlg, rdata,
                                                        PJSIP_SC_OK, NULL,
@@ -6154,9 +6147,15 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
             }
 
 #if PJSIP_HAS_SIPREC
-            /* Process SIPREC metadata update if present */
-            if (inv_process_siprec_metadata_update(inv, rdata) != PJ_SUCCESS)
+            /* Process SIPREC metadata update if present. Only for recording
+             * sessions (PJSIP_INV_REQUIRE_SIPREC), other calls keep
+             * rejecting unknown content-types below.
+             */
+            if ((inv->options & PJSIP_INV_REQUIRE_SIPREC) &&
+                inv_process_siprec_metadata_update(inv, rdata) != PJ_SUCCESS)
+            {
                 return;
+            }
 
             /* Check if this is a metadata-only re-INVITE carrying SIPREC
              * metadata (RFC 7866 §7.1): respond with 200/OK without doing
@@ -6164,7 +6163,9 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
              * are left to inv_check_sdp_in_incoming_msg() below, which
              * rejects unrecognized content-types.
              */
-            if (rdata->msg_info.msg->body != NULL) {
+            if ((inv->options & PJSIP_INV_REQUIRE_SIPREC) &&
+                rdata->msg_info.msg->body != NULL)
+            {
                 sdp_info = pjsip_rdata_get_sdp_info(rdata);
 
                 if (sdp_info->sdp == NULL &&

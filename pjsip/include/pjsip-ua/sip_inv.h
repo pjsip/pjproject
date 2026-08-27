@@ -412,14 +412,13 @@ typedef struct pjsip_inv_callback
      * to track metadata changes during the lifetime of a recording
      * session, as required by RFC 7866.
      *
-     * The callback receives temporary copies of metadata allocated in
-     * pool_prov. The application MUST copy the data to its own storage
-     * if it needs to persist beyond the callback duration. After the
-     * callback returns, the metadata pointers become invalid when
-     * pool_prov is reset (typically after SDP negotiation).
+     * The metadata points into the received request body and is only
+     * valid during the callback. The application MUST copy the data to
+     * its own storage if it needs to persist beyond the callback
+     * duration.
      *
-     * This design prevents memory accumulation in long recording sessions
-     * with frequent metadata updates.
+     * Nothing is copied or allocated per update, so memory usage stays
+     * flat in long recording sessions with frequent metadata updates.
      *
      * This callback is optional.
      *
