@@ -1273,22 +1273,22 @@ static void digest2str(const unsigned char digest[], char *output)
     }
 }
 
-static void auth_create_digest_response(pj_str_t *result,
-                                        const pj_http_auth_cred *cred,
-                                        const pj_str_t *nonce,
-                                        const pj_str_t *nc,
-                                        const pj_str_t *cnonce,
-                                        const pj_str_t *qop,
-                                        const pj_str_t *uri,
-                                        const pj_str_t *realm,
-                                        const pj_str_t *method)
+static pj_status_t auth_create_digest_response(pj_str_t *result,
+                                               const pj_http_auth_cred *cred,
+                                               const pj_str_t *nonce,
+                                               const pj_str_t *nc,
+                                               const pj_str_t *cnonce,
+                                               const pj_str_t *qop,
+                                               const pj_str_t *uri,
+                                               const pj_str_t *realm,
+                                               const pj_str_t *method)
 {
     char ha1[MD5_STRLEN];
     char ha2[MD5_STRLEN];
     unsigned char digest[16];
     pj_md5_context pms;
 
-    pj_assert(result->slen >= MD5_STRLEN);
+    PJ_ASSERT_RETURN(result->slen >= MD5_STRLEN, PJ_ETOOSMALL);
 
     TRACE_((THIS_FILE, "Begin creating digest"));
 
@@ -1307,10 +1307,11 @@ static void auth_create_digest_response(pj_str_t *result,
         digest2str(digest, ha1);
 
     } else if (cred->data_type == 1) {
-        pj_assert(cred->data.slen == 32);
-        pj_memcpy( ha1, cred->data.ptr, cred->data.slen );
+        PJ_ASSERT_RETURN(cred->data.slen >= MD5_STRLEN, PJ_EINVAL);
+        pj_memcpy( ha1, cred->data.ptr, MD5_STRLEN );
     } else {
         pj_assert(!"Invalid data_type");
+        return PJ_EINVAL;
     }
 
     TRACE_((THIS_FILE, "  ha1=%.32s", ha1));
@@ -1358,6 +1359,8 @@ static void auth_create_digest_response(pj_str_t *result,
 
     TRACE_((THIS_FILE, "  digest=%.32s", result->ptr));
     TRACE_((THIS_FILE, "Digest created"));
+
+    return PJ_SUCCESS;
 }
 
 /* Find out if qop offer contains "auth" token */
@@ -1400,6 +1403,7 @@ static pj_status_t auth_respond_digest(pj_http_req *hreq)
     char digest_response_buf[MD5_STRLEN];
     int len;
     pj_str_t digest_response;
+    pj_status_t status;
 
     /* Check algorithm is supported. We only support MD5 */
     if (chal->algorithm.slen!=0 &&
@@ -1442,10 +1446,12 @@ static pj_status_t auth_respond_digest(pj_http_req *hreq)
         int max_len;
 
         /* Server doesn't require quality of protection. */
-        auth_create_digest_response(&digest_response, cred,
-                                    &chal->nonce, NULL, NULL,  NULL,
-                                    &hreq->hurl.path, &chal->realm,
-                                    &hreq->param.method);
+        status = auth_create_digest_response(&digest_response, cred,
+                                             &chal->nonce, NULL, NULL, NULL,
+                                             &hreq->hurl.path, &chal->realm,
+                                             &hreq->param.method);
+        if (status != PJ_SUCCESS)
+            return status;
 
         max_len = len;
         len = pj_ansi_snprintf(
@@ -1476,10 +1482,12 @@ static pj_status_t auth_respond_digest(pj_http_req *hreq)
         const pj_str_t cnonce = pj_str("b39971");
         int max_len;
 
-        auth_create_digest_response(&digest_response, cred,
-                                    &chal->nonce, &nc, &cnonce, &qop,
-                                    &hreq->hurl.path, &chal->realm,
-                                    &hreq->param.method);
+        status = auth_create_digest_response(&digest_response, cred,
+                                             &chal->nonce, &nc, &cnonce, &qop,
+                                             &hreq->hurl.path, &chal->realm,
+                                             &hreq->param.method);
+        if (status != PJ_SUCCESS)
+            return status;
         max_len = len;
         len = pj_ansi_snprintf(
                 phdr->value.ptr, max_len,
