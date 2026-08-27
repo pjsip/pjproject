@@ -4,12 +4,12 @@ ifneq ($(findstring android,$(TARGET_NAME)),)
     # no python for android
     LANG = java csharp
 else
-    ifneq ($(findstring ios,$(TARGET_NAME)),)
-  	LANG = csharp
-    else ifneq ($(findstring osx,$(TARGET_NAME)),)
-    LANG = csharp
-	else
-  	LANG = python java
+	ifneq ($(findstring macabi,$(APP_CFLAGS)),)
+    	LANG = csharp
+	else ifneq ($(findstring ios,$(TARGET_NAME)),)
+  		LANG = csharp
+    else
+  		LANG = python java
     endif
 endif
 
