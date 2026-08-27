@@ -4,11 +4,11 @@ include ../../../../../build/common.mak
 ifneq ($(findstring android,$(TARGET_NAME)),)
     MAUI_OS = android
     LIB_NAME = libpjsua2.so
-else ifneq ($(findstring ios,$(TARGET_NAME)),)
-    MAUI_OS = ios
-    LIB_NAME = libpjsua2.a
 else ifneq ($(findstring macabi,$(APP_CFLAGS)),)
     MAUI_OS = maccatalyst
+    LIB_NAME = libpjsua2.a
+else ifneq ($(findstring ios,$(TARGET_NAME)),)
+    MAUI_OS = ios
     LIB_NAME = libpjsua2.a
 else
     MAUI_OS = desktop
