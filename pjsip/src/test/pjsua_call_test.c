@@ -537,6 +537,23 @@ static void drain_all_calls(void)
     wait_until(NULL, PJSUA_INVALID_ID, PJ_IOQUEUE_KEY_FREE_DELAY + 200);
 }
 
+/* Mark every live call as a recording session (PJSIP_INV_REQUIRE_SIPREC),
+ * i.e. as if it had been established with Require: siprec. Metadata-only
+ * UPDATE/re-INVITE is only accepted on recording sessions, ordinary calls
+ * reject them with 488.
+ */
+static void siprec_test_mark_siprec_sessions(void)
+{
+    extern struct pjsua_data pjsua_var;
+    unsigned i;
+
+    for (i = 0; i < PJSUA_MAX_CALLS; ++i) {
+        pjsua_call *call = &pjsua_var.calls[i];
+        if (call->inv)
+            call->inv->options |= PJSIP_INV_REQUIRE_SIPREC;
+    }
+}
+
 /*****************************************************************************
  * Sub-tests
  *****************************************************************************/
@@ -1398,6 +1415,9 @@ static int test_siprec_metadata_only_update_multipart(void)
     }
     dlg = pjsua_var.calls[cid].inv->dlg;
 
+    /* The metadata-only UPDATE is only accepted on a recording session. */
+    siprec_test_mark_siprec_sessions();
+
     pool = pjsua_pool_create("siprec-update1", 4096, 4096);
     if (!pool) {
         PJ_LOG(1, (THIS_FILE, "    failed to create pool"));
@@ -1553,6 +1573,9 @@ static int test_siprec_metadata_only_update_singlepart(void)
     }
     dlg = pjsua_var.calls[cid].inv->dlg;
 
+    /* The metadata-only UPDATE is only accepted on a recording session. */
+    siprec_test_mark_siprec_sessions();
+
     pool = pjsua_pool_create("siprec-update2", 4096, 4096);
     if (!pool) {
         PJ_LOG(1, (THIS_FILE, "    failed to create pool"));
@@ -1702,6 +1725,9 @@ static int test_siprec_datamode_partial_element(void)
         goto on_return;
     }
     dlg = pjsua_var.calls[cid].inv->dlg;
+
+    /* The metadata-only UPDATE is only accepted on a recording session. */
+    siprec_test_mark_siprec_sessions();
 
     pool = pjsua_pool_create("siprec-update3", 4096, 4096);
     if (!pool) {
@@ -1857,6 +1883,9 @@ static int test_siprec_unknown_body_rejected(void)
     }
     dlg = pjsua_var.calls[cid].inv->dlg;
 
+    /* Rejection must also happen on a recording session. */
+    siprec_test_mark_siprec_sessions();
+
     g_siprec_test_ctx.request_seen = PJ_FALSE;
     g_siprec_test_ctx.response_code = 0;
 
@@ -1905,6 +1934,9 @@ static int test_siprec_unknown_body_rejected(void)
         goto on_return;
     }
     dlg = pjsua_var.calls[cid].inv->dlg;
+
+    /* Rejection must also happen on a recording session. */
+    siprec_test_mark_siprec_sessions();
 
     g_siprec_test_ctx.request_seen = PJ_FALSE;
     g_siprec_test_ctx.response_code = 0;
@@ -1996,6 +2028,10 @@ static int test_siprec_metadata_only_reinvite_multipart(void)
     }
 
     dlg = pjsua_var.calls[cid].inv->dlg;
+
+    /* The metadata-only re-INVITE is only accepted on a recording
+     * session. */
+    siprec_test_mark_siprec_sessions();
 
     pool = pjsua_pool_create("siprec-reinvite", 4096, 4096);
     if (!pool) {
