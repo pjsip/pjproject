@@ -999,6 +999,13 @@ on_return:
  * normal stateless path - RFC 3261 section 21.5.7 defines 513 for exactly
  * this. If not even the headers arrived complete there is nobody we can
  * address a response to, and the request stays silently dropped.
+ *
+ * The response is best-effort. With an initial timeout configured
+ * (PJSIP_TCP_INITIAL_TIMEOUT, tls_opt.initial_timeout or
+ * PJSIP_TRANSPORT_SERVER_IDLE_TIME_FIRST, all 0 by default) the caller shuts
+ * the transport down as soon as we return. The rest of the oversized body is
+ * still unread, so that close emits an RST rather than a FIN, and on BSD an
+ * RST discards what the peer has not read yet - including this 513.
  */
 static void endpt_respond_msg_too_large( pjsip_endpoint *endpt,
                                          pjsip_rx_data *rdata )
