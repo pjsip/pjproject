@@ -69,9 +69,11 @@ static void test_uas_transaction(pj_pool_t *pool, const uint8_t *data, size_t si
     rdata.msg_info.from = (pjsip_from_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_FROM, NULL);
     rdata.msg_info.to = (pjsip_to_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_TO, NULL);
     rdata.msg_info.cseq = (pjsip_cseq_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_CSEQ, NULL);
+    rdata.msg_info.cid = (pjsip_cid_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_CALL_ID, NULL);
 
-    /* Skip if required headers are missing */
-    if (!rdata.msg_info.via || !rdata.msg_info.from || !rdata.msg_info.to || !rdata.msg_info.cseq)
+    /* Skip if required headers are missing, as the transport layer does */
+    if (!rdata.msg_info.via || !rdata.msg_info.from || !rdata.msg_info.to ||
+        !rdata.msg_info.cseq || !rdata.msg_info.cid || !rdata.msg_info.cid->id.slen)
         return;
 
     /* Create UAS transaction with rdata */
