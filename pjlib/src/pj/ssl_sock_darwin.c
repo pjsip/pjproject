@@ -273,8 +273,12 @@ static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
         options = CFDictionaryCreate(NULL, (const void **)keys,
                                      (const void **)values,
                                      (password? 1: 0), NULL, NULL);
-        if (!options)
+        if (!options) {
+            if (password)
+                CFRelease(password);
+            CFRelease(cert_data);
             return PJ_ENOMEM;
+        }
         
 #if TARGET_OS_IPHONE
         err = SecPKCS12Import(cert_data, options, &items);
@@ -322,6 +326,11 @@ static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
                 identity = (SecIdentityRef)
                            CFDictionaryGetValue((CFDictionaryRef) item,
                                                 kSecImportItemIdentity);
+                /* Get rule: this reference is owned by the dictionary, which
+                 * is released along with items below, so take our own.
+                 */
+                if (identity)
+                    CFRetain(identity);
                 break;
             }
 #if !TARGET_OS_IPHONE
@@ -352,8 +361,10 @@ static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
         cert_arr[0] = identity;
         cert_refs = CFArrayCreate(NULL, (const void **)cert_arr, 1,
                               &kCFTypeArrayCallBacks);
-        if (!cert_refs)
+        if (!cert_refs) {
+            CFRelease(identity);
             return PJ_ENOMEM;
+        }
     
         err = SSLSetCertificate(dssock->ssl_ctx, cert_refs);
     
@@ -878,6 +889,12 @@ static CFDictionaryRef get_cert_oid(SecCertificateRef cert, CFStringRef oid,
 
     vals = SecCertificateCopyValues(cert, key_arr, NULL);
     dict = CFDictionaryGetValue(vals, key[0]);
+    if (!dict) {
+        CFRelease(key_arr);
+        CFRelease(vals);
+        return NULL;
+    }
+
     *value = CFDictionaryGetValue(dict, kSecPropertyKeyValue);
 
     CFRelease(key_arr);
