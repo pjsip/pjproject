@@ -2521,6 +2521,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
      */
     if (call && call->inv &&
         call->inv->state >= PJSIP_INV_STATE_EARLY &&
+        call->inv->state < PJSIP_INV_STATE_DISCONNECTED &&
         call->siprec_metadata.slen > 0 &&
         pjsua_var.ua_cfg.cb.on_call_siprec_metadata_update)
     {

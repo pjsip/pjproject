@@ -316,20 +316,33 @@ on_return:
 
 
 /**
- * Find siprec metadata from the message body.
- * Handles both multipart bodies with rs-metadata part (RFC 7866 §7.1)
- * and single-part rs-metadata documents (RFC 7866 §7.1, RFC 9806).
+ * Locate siprec metadata within the message body without producing any
+ * output such as logs. Handles both multipart bodies with an rs-metadata
+ * part (RFC 7866 §7.1) and single-part rs-metadata documents
+ * (RFC 7866 §7.1, RFC 9806).
+ *
+ * @param body              The message body.
+ * @param metadata          If metadata is found, populated with a pointer
+ *                          to the raw document data.
+ * @param is_legacy         Set to PJ_TRUE when the matching media type is
+ *                          the legacy 'application/rs-metadata', obsoleted
+ *                          by RFC 9806.
+ *
+ * @return                  PJ_SUCCESS if metadata is found, otherwise
+ *                          PJ_ENOTFOUND.
  */
-PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
-                                              pjsip_msg_body *body,
-                                              pj_str_t* metadata)
+static pj_status_t locate_siprec_metadata(pjsip_msg_body *body,
+                                          pj_str_t *metadata,
+                                          pj_bool_t *is_legacy)
 {
     pjsip_media_type app_metadata;
     pjsip_multipart_part *metadata_part;
     const pj_str_t STR_MULTIPART = {"multipart", 9};
     const pj_str_t STR_APPLICATION = {"application", 11};
+    static const pj_str_t STR_RSMETADATA_XML = {"rs-metadata+xml", 15};
+    static const pj_str_t STR_RSMETADATA = {"rs-metadata", 11};
 
-    PJ_UNUSED_ARG(pool);
+    *is_legacy = PJ_FALSE;
 
     if (!body) {
         return PJ_ENOTFOUND;
@@ -341,22 +354,13 @@ PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
         pjsip_media_type_init2(&app_metadata, "application", "rs-metadata+xml");
         metadata_part = pjsip_multipart_find_part(body, &app_metadata, NULL);
 
-        /* Fallback to legacy rs-metadata if needed (RFC 7866 - pre-9806).
-         * RFC 9806 obsoletes the use of application/rs-metadata in favor of
-         * application/rs-metadata+xml. Log a deprecation warning if legacy
-         * media type is encountered.
-         */
+        /* Fallback to legacy rs-metadata if needed (RFC 7866 - pre-9806) */
         if (!metadata_part) {
             pjsip_media_type_init2(&app_metadata, "application", "rs-metadata");
             metadata_part = pjsip_multipart_find_part(body, &app_metadata, NULL);
 
-            if (metadata_part) {
-                PJ_LOG(4,(THIS_FILE,
-                          "SIPREC metadata uses legacy media type "
-                          "'application/rs-metadata' (RFC 7866). "
-                          "This media type is obsoleted by 'application/rs-metadata+xml' "
-                          "(RFC 9806). Please update the sender to use the correct media type."));
-            }
+            if (metadata_part)
+                *is_legacy = PJ_TRUE;
         }
 
         if (metadata_part) {
@@ -369,32 +373,64 @@ PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
     /* Check if body is a single-part rs-metadata document (RFC 7866 §7.1).
      * This handles the case where UPDATE contains only rs-metadata without SDP.
      */
-    if (pj_stricmp(&body->content_type.type, &STR_APPLICATION) == 0) {
-        pj_bool_t is_rs_metadata = PJ_FALSE;
-        static const pj_str_t STR_RSMETADATA_XML = {"rs-metadata+xml", 15};
-        static const pj_str_t STR_RSMETADATA = {"rs-metadata", 11};
-
-        /* Check for rs-metadata+xml (RFC 9806) */
-        if (pj_stricmp(&body->content_type.subtype, &STR_RSMETADATA_XML) == 0) {
-            is_rs_metadata = PJ_TRUE;
-        }
-        /* Check for legacy rs-metadata (RFC 7866) */
-        else if (pj_stricmp(&body->content_type.subtype, &STR_RSMETADATA) == 0) {
-            is_rs_metadata = PJ_TRUE;
-            PJ_LOG(4,(THIS_FILE,
-                      "SIPREC metadata uses legacy media type "
-                      "'application/rs-metadata' (RFC 7866). "
-                      "This media type is obsoleted by 'application/rs-metadata+xml' "
-                      "(RFC 9806). Please update the sender to use the correct media type."));
-        }
-
-        if (is_rs_metadata) {
-            metadata->ptr  = (char*)body->data;
-            metadata->slen = body->len;
-            return PJ_SUCCESS;
-        }
+    if (pj_stricmp(&body->content_type.type, &STR_APPLICATION) == 0 &&
+        (pj_stricmp(&body->content_type.subtype, &STR_RSMETADATA_XML) == 0 ||
+         pj_stricmp(&body->content_type.subtype, &STR_RSMETADATA) == 0))
+    {
+        *is_legacy = (pj_stricmp(&body->content_type.subtype,
+                                 &STR_RSMETADATA_XML) != 0);
+        metadata->ptr  = (char*)body->data;
+        metadata->slen = body->len;
+        return PJ_SUCCESS;
     }
 
     return PJ_ENOTFOUND;
+}
+
+/**
+ * Find siprec metadata from the message body.
+ * Handles both multipart bodies with rs-metadata part (RFC 7866 §7.1)
+ * and single-part rs-metadata documents (RFC 7866 §7.1, RFC 9806).
+ */
+PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
+                                              pjsip_msg_body *body,
+                                              pj_str_t* metadata)
+{
+    pj_status_t status;
+    pj_bool_t is_legacy;
+
+    PJ_UNUSED_ARG(pool);
+
+    is_legacy = PJ_FALSE;
+    status = locate_siprec_metadata(body, metadata, &is_legacy);
+
+    if (status == PJ_SUCCESS && is_legacy) {
+        PJ_LOG(4,(THIS_FILE,
+                  "SIPREC metadata uses legacy media type "
+                  "'application/rs-metadata' (RFC 7866). "
+                  "This media type is obsoleted by 'application/rs-metadata+xml' "
+                  "(RFC 9806). Please update the sender to use the correct media type."));
+    }
+
+    return status;
+}
+
+/**
+ * Check whether a message body carries SIPREC metadata, either as a
+ * single-part rs-metadata document or as a part of a multipart body
+ * (RFC 7865 §5, RFC 7866 §7.1). Unlike pjsip_siprec_get_metadata(),
+ * this function produces no log output and extracts nothing.
+ *
+ * @param body              The message body to inspect.
+ *
+ * @return                  PJ_TRUE if the body carries SIPREC metadata.
+ */
+PJ_DEF(pj_bool_t) pjsip_siprec_body_has_metadata(pjsip_msg_body *body)
+{
+    pj_str_t metadata = {NULL, 0};
+    pj_bool_t is_legacy = PJ_FALSE;
+
+    return (locate_siprec_metadata(body, &metadata,
+                                   &is_legacy) == PJ_SUCCESS);
 }
 

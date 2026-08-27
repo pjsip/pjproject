@@ -163,6 +163,19 @@ PJ_DECL(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
                                                 pj_str_t *metadata);
 
 
+/**
+ * Check whether a message body carries SIPREC metadata, either as a
+ * single-part rs-metadata document or as a part of a multipart body
+ * (RFC 7865 §5, RFC 7866 §7.1). Unlike pjsip_siprec_get_metadata(),
+ * this function produces no log output and does not extract any data.
+ *
+ * @param body               The message body to inspect.
+ *
+ * @return                   PJ_TRUE if the body carries SIPREC metadata.
+ */
+PJ_DECL(pj_bool_t) pjsip_siprec_body_has_metadata(pjsip_msg_body *body);
+
+
 PJ_END_DECL
 
 

@@ -2348,14 +2348,13 @@ static void swap_pool(pj_pool_t **p1, pj_pool_t **p2)
 #if PJSIP_HAS_SIPREC
 /* Check if message body carries SIPREC metadata, either as a single-part
  * rs-metadata document or as a part of a multipart body (RFC 7866 §7.1).
+ * Uses the log-free predicate so classification of an already-processed
+ * body does not repeat pjsip_siprec_get_metadata()'s legacy-media-type
+ * deprecation warning.
  */
-static pj_bool_t inv_body_has_siprec_metadata(pjsip_inv_session *inv,
-                                              pjsip_msg_body *body)
+static pj_bool_t inv_body_has_siprec_metadata(pjsip_msg_body *body)
 {
-    pj_str_t metadata = {NULL, 0};
-
-    return (pjsip_siprec_get_metadata(inv->pool_prov, body,
-                                      &metadata) == PJ_SUCCESS);
+    return pjsip_siprec_body_has_metadata(body);
 }
 
 /*
@@ -4512,9 +4511,8 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
                  * like upstream does for bodies it cannot handle.
                  */
 #if PJSIP_HAS_SIPREC
-                if (inv_body_has_siprec_metadata(inv,
-                                                 rdata->msg_info.msg->body))
-                {
+                if (inv_body_has_siprec_metadata(rdata->msg_info.msg->body)) {
+                    /* Metadata-only UPDATE - nothing else to process */
                     status = pjsip_dlg_create_response(inv->dlg, rdata,
                                                        PJSIP_SC_OK, NULL,
                                                        &tdata);
@@ -6170,8 +6168,7 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
                 sdp_info = pjsip_rdata_get_sdp_info(rdata);
 
                 if (sdp_info->sdp == NULL &&
-                    inv_body_has_siprec_metadata(inv,
-                                                 rdata->msg_info.msg->body))
+                    inv_body_has_siprec_metadata(rdata->msg_info.msg->body))
                 {
                     status = pjsip_dlg_create_response(inv->dlg, rdata,
                                                        PJSIP_SC_OK, NULL,
