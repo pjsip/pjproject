@@ -989,6 +989,113 @@ on_return:
 }
 
 /*
+ * Answer an oversized request with 513 Message Too Large.
+ *
+ * The transport layer gives up on a stream message larger than
+ * PJSIP_MAX_PKT_LEN without ever parsing it, so rdata reaches us with an empty
+ * msg_info and the sender is left waiting for a response that never comes.
+ * It is the body that overflows in practice while the header block still fits
+ * the buffer, so parse the headers back into rdata and answer through the
+ * normal stateless path - RFC 3261 section 21.5.7 defines 513 for exactly
+ * this. If not even the headers arrived complete there is nobody we can
+ * address a response to, and the request stays silently dropped.
+ *
+ * The response is best-effort. With an initial timeout configured
+ * (PJSIP_TCP_INITIAL_TIMEOUT, tls_opt.initial_timeout or
+ * PJSIP_TRANSPORT_SERVER_IDLE_TIME_FIRST, all 0 by default) the caller shuts
+ * the transport down as soon as we return. The rest of the oversized body is
+ * still unread, so that close emits an RST rather than a FIN, and on BSD an
+ * RST discards what the peer has not read yet - including this 513.
+ */
+static void endpt_respond_msg_too_large( pjsip_endpoint *endpt,
+                                         pjsip_rx_data *rdata )
+{
+    const pj_str_t end_hdr = { "\n\r\n", 3 };
+    pj_str_t received;
+    pj_size_t hdr_len;
+    char *pos;
+    char *hdr_buf;
+    pjsip_msg *msg;
+    pjsip_warning_hdr *warn;
+    pjsip_hdr hdr_list;
+    char warn_text[80];
+    pj_str_t warn_str;
+    pj_status_t status;
+
+    received.ptr = rdata->msg_info.msg_buf;
+    received.slen = rdata->msg_info.len;
+    if (received.ptr == NULL || received.slen <= 0)
+        return;
+
+    /* Locate the empty line that ends the header block, with the sentinel
+     * pjsip_find_msg() uses, so the two cannot disagree on where the headers
+     * end. Keep the line: the parser needs it to see that they are complete.
+     */
+    pos = pj_strstr(&received, &end_hdr);
+    if (pos == NULL)
+        return;
+    hdr_len = (pj_size_t)(pos + 3 - received.ptr);
+
+    /* Parse from a copy: the scanner writes into the buffer it is given, and
+     * the transport still hands the original on to its dropped-data callback.
+     */
+    hdr_buf = (char*) pj_pool_alloc(rdata->tp_info.pool, hdr_len + 1);
+    pj_memcpy(hdr_buf, received.ptr, hdr_len);
+    hdr_buf[hdr_len] = '\0';
+
+    pj_bzero(&rdata->msg_info, sizeof(rdata->msg_info));
+    pj_list_init(&rdata->msg_info.parse_err);
+    rdata->msg_info.msg_buf = hdr_buf;
+    rdata->msg_info.len = (int)hdr_len;
+    pj_bzero(&rdata->endpt_info, sizeof(rdata->endpt_info));
+
+    msg = pjsip_parse_rdata(hdr_buf, hdr_len, rdata);
+    if (msg == NULL || !pj_list_empty(&rdata->msg_info.parse_err) ||
+        msg->type != PJSIP_REQUEST_MSG ||
+        msg->line.req.method.id == PJSIP_ACK_METHOD ||
+        rdata->msg_info.via == NULL || rdata->msg_info.from == NULL ||
+        rdata->msg_info.to == NULL || rdata->msg_info.cseq == NULL ||
+        rdata->msg_info.cid == NULL || rdata->msg_info.cid->id.slen == 0)
+    {
+        return;
+    }
+
+    /* The transport layer adds these for every request it accepts, and
+     * pjsip_get_response_addr() relies on them. We bypassed it, so do it here.
+     */
+    pj_strdup2(rdata->tp_info.pool, &rdata->msg_info.via->recvd_param,
+               rdata->pkt_info.src_name);
+    if (rdata->msg_info.via->rport_param == 0)
+        rdata->msg_info.via->rport_param = rdata->pkt_info.src_port;
+
+    /* Name the actual limit, so the peer learns what to stay under. */
+    pj_ansi_snprintf(warn_text, sizeof(warn_text),
+                     "Message exceeds the %d byte receive buffer",
+                     PJSIP_MAX_PKT_LEN);
+    warn_str = pj_str(warn_text);
+
+    pj_list_init(&hdr_list);
+    warn = pjsip_warning_hdr_create(rdata->tp_info.pool, 399,
+                                    pjsip_endpt_name(endpt), &warn_str);
+    if (warn)
+        pj_list_push_back(&hdr_list, (pjsip_hdr*)warn);
+
+    status = pjsip_endpt_respond_stateless(endpt, rdata,
+                                           PJSIP_SC_MESSAGE_TOO_LARGE, NULL,
+                                           &hdr_list, NULL);
+    if (status != PJ_SUCCESS) {
+        char errmsg[PJ_ERR_MSG_SIZE];
+
+        pj_strerror(status, errmsg, sizeof(errmsg));
+        PJ_LOG(3, (THIS_FILE, "Unable to respond %d to the oversized request "
+                              "from %s:%d: %s",
+                   PJSIP_SC_MESSAGE_TOO_LARGE, rdata->pkt_info.src_name,
+                   rdata->pkt_info.src_port, errmsg));
+    }
+}
+
+
+/*
  * This is the callback that is called by the transport manager when it 
  * receives a message from the network.
  */
@@ -1040,6 +1147,10 @@ static void endpt_on_rx_msg( pjsip_endpoint *endpt,
                   status,
                   (int)rdata->msg_info.len,     
                   rdata->msg_info.msg_buf));
+
+        if (status == PJSIP_ERXOVERFLOW)
+            endpt_respond_msg_too_large(endpt, rdata);
+
         return;
     }
 

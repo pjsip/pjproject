@@ -111,6 +111,7 @@ int transport_loop_multi_test(void);
 int transport_loop_resolve_error_test(void);
 int transport_tcp_test(void);
 int transport_tcp_keep_alive_test(void);
+int transport_rx_overflow_test(void);
 int resolve_test(void);
 int regc_test(void);
 int auth_async_test(void);
