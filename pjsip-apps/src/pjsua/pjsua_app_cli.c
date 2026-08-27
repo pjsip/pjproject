@@ -1838,10 +1838,19 @@ static pj_status_t cmd_stat_dump(pj_bool_t detail)
 
 static pj_status_t cmd_show_config()
 {
-    char settings[2000];
+    pj_pool_t *pool;
+    char *settings;
     int len;
 
-    len = write_settings(&app_config, settings, sizeof(settings));
+    pool = pjsua_pool_create("settings", PJSUA_APP_SETTINGS_SIZE + 1024,
+                             1024);
+    if (!pool) {
+        PJ_LOG(1,(THIS_FILE, "Error: unable to allocate settings buffer"));
+        return PJ_ENOMEM;
+    }
+    settings = (char*)pj_pool_alloc(pool, PJSUA_APP_SETTINGS_SIZE);
+
+    len = write_settings(&app_config, settings, PJSUA_APP_SETTINGS_SIZE);
     if (len < 1)
         PJ_LOG(1,(THIS_FILE, "Error: not enough buffer"));
     else
@@ -1849,19 +1858,29 @@ static pj_status_t cmd_show_config()
                   "Dumping configuration (%d bytes):\n%s\n",
                   len, settings));
 
+    pj_pool_secure_release(&pool);
     return PJ_SUCCESS;
 }
 
 static pj_status_t cmd_write_config(pj_cli_cmd_val *cval)
 {
-    char settings[2000];
+    pj_pool_t *pool;
+    char *settings;
     char buf[128] = {0};
     int len;
     pj_str_t tmp = pj_str(buf);
 
     pj_strncpy_with_null(&tmp, &cval->argv[1], sizeof(buf));
 
-    len = write_settings(&app_config, settings, sizeof(settings));
+    pool = pjsua_pool_create("settings", PJSUA_APP_SETTINGS_SIZE + 1024,
+                             1024);
+    if (!pool) {
+        PJ_LOG(1,(THIS_FILE, "Error: unable to allocate settings buffer"));
+        return PJ_ENOMEM;
+    }
+    settings = (char*)pj_pool_alloc(pool, PJSUA_APP_SETTINGS_SIZE);
+
+    len = write_settings(&app_config, settings, PJSUA_APP_SETTINGS_SIZE);
     if (len < 1)
         PJ_LOG(1,(THIS_FILE, "Error: not enough buffer"));
     else {
@@ -1884,6 +1903,7 @@ static pj_status_t cmd_write_config(pj_cli_cmd_val *cval)
         }
     }
 
+    pj_pool_secure_release(&pool);
     return PJ_SUCCESS;
 }
 
