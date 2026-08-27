@@ -6,7 +6,12 @@
     <!-- Please consult https://developer.apple.com/documentation/bundleresources/information_property_list/itsappusesnonexemptencryption -->
     <!-- <key>ITSAppUsesNonExemptEncryption</key> -->
     <!-- Please indicate <true/> or <false/> here. -->
-
+	<!-- App Sandbox must be enabled to distribute a MacCatalyst app through the Mac App Store. -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<!-- When App Sandbox is enabled, this value is required to open outgoing network connections. -->
+	<key>com.apple.security.network.client</key>
+	<true/>
     <!-- Specify the category for your app here. -->
     <!-- Please consult https://developer.apple.com/documentation/bundleresources/information_property_list/lsapplicationcategorytype -->
     <!-- <key>LSApplicationCategoryType</key> -->
