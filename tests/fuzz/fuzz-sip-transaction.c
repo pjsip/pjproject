@@ -175,9 +175,9 @@ static void test_create_response(pj_pool_t *pool, const uint8_t *data, size_t si
     rdata.msg_info.cseq = (pjsip_cseq_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_CSEQ, NULL);
     rdata.msg_info.cid = (pjsip_cid_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_CALL_ID, NULL);
 
-    /* Skip if required headers are missing */
+    /* Skip if required headers are missing, as the transport layer does */
     if (!rdata.msg_info.via || !rdata.msg_info.from || !rdata.msg_info.to ||
-        !rdata.msg_info.cseq || !rdata.msg_info.cid)
+        !rdata.msg_info.cseq || !rdata.msg_info.cid || !rdata.msg_info.cid->id.slen)
         return;
 
     pjsip_tx_data *tdata = NULL;
