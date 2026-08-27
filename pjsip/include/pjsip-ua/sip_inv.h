@@ -412,13 +412,16 @@ typedef struct pjsip_inv_callback
      * to track metadata changes during the lifetime of a recording
      * session, as required by RFC 7866.
      *
-     * The metadata points into the received request body and is only
-     * valid during the callback. The application MUST copy the data to
-     * its own storage if it needs to persist beyond the callback
-     * duration.
+     * The callback is only invoked once the request carrying the update
+     * is accepted: right before responding to a metadata-only
+     * UPDATE/re-INVITE, or after its SDP offer/answer completed
+     * successfully. The application is never notified about metadata of
+     * a request that gets rejected.
      *
-     * Nothing is copied or allocated per update, so memory usage stays
-     * flat in long recording sessions with frequent metadata updates.
+     * The metadata is a temporary copy owned by the invite session and
+     * is only valid during the callback. The application MUST copy the
+     * data to its own storage if it needs to persist beyond the callback
+     * duration.
      *
      * This callback is optional.
      *
@@ -428,7 +431,9 @@ typedef struct pjsip_inv_callback
      *                       state is maintained at the application layer.
      * @param new_metadata  New metadata from the update. Valid only during
      *                       the callback - copy if persistence is needed.
-     * @param rdata         The received request containing the update.
+     * @param rdata         The received request containing the update, or
+     *                       NULL when the request has been answered
+     *                       asynchronously (on_rx_reinvite() takeover).
      */
     void (*on_siprec_metadata_update)(pjsip_inv_session *inv,
                                       const pj_str_t *old_metadata,
@@ -584,6 +589,11 @@ struct pjsip_inv_session
     pj_atomic_t         *ref_cnt;                   /**< Reference counter. */
     pj_bool_t            updated_sdp_answer;        /**< SDP answer just been
                                                          updated?           */
+#if PJSIP_HAS_SIPREC
+    pj_str_t             siprec_metadata;           /**< SIPREC metadata update
+                                                         pending notification,
+                                                         internal.           */
+#endif
 };
 
 

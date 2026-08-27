@@ -2259,6 +2259,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
         pj_memcpy(call->siprec_metadata.ptr, temp_siprec_metadata.ptr,
                  temp_siprec_metadata.slen);
         call->siprec_metadata.slen = temp_siprec_metadata.slen;
+        call->siprec_metadata_cap = temp_siprec_metadata.slen;
     }
 #endif
 
@@ -2517,10 +2518,11 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     /* Notify application about initial SIPREC metadata from INVITE.
      * This is done after on_incoming_call() succeeds, so the call is
      * confirmed accepted. This is the initial metadata, so old_metadata
-     * is NULL. Only notify if the call is still valid (not hung up).
+     * is NULL. The state may still be INCOMING when the application
+     * defers answering, so only require the call to be valid, i.e. not
+     * hung up.
      */
     if (call && call->inv &&
-        call->inv->state >= PJSIP_INV_STATE_EARLY &&
         call->inv->state < PJSIP_INV_STATE_DISCONNECTED &&
         call->siprec_metadata.slen > 0 &&
         pjsua_var.ua_cfg.cb.on_call_siprec_metadata_update)
@@ -6131,7 +6133,9 @@ static pj_status_t pjsua_call_on_rx_reinvite(pjsip_inv_session *inv,
 #if PJSUA_HAS_SIPREC
 /*
  * Called to verify SIPREC metadata in mid-dialog requests (re-INVITE/UPDATE).
- * This callback extracts metadata and verifies according to account policy.
+ * This callback extracts metadata and re-applies the account verification
+ * policy (e.g. siprec_require_label) via pjsip_siprec_verify_update(), like
+ * pjsip_siprec_verify_request() does for the initial INVITE.
  */
 static pj_status_t pjsua_call_on_verify_siprec_update(pjsip_inv_session *inv,
                                                         pjsip_rx_data *rdata,
@@ -6139,10 +6143,8 @@ static pj_status_t pjsua_call_on_verify_siprec_update(pjsip_inv_session *inv,
                                                         pjsip_tx_data **p_tdata)
 {
     pjsua_call *call;
-    pjsip_msg *msg;
-    pjsip_msg_body *body;
+    pjsip_siprec_verify_setting setting;
     pj_status_t status;
-    pjsip_status_code st_code;
 
     PJ_ASSERT_RETURN(inv && rdata, PJ_EINVAL);
 
@@ -6163,59 +6165,28 @@ static pj_status_t pjsua_call_on_verify_siprec_update(pjsip_inv_session *inv,
     if (!(inv->options & PJSIP_INV_REQUIRE_SIPREC))
         return PJ_SUCCESS;
 
-    msg = rdata->msg_info.msg;
+    /* Re-apply the account verification policy to the update. */
+    pjsip_siprec_verify_setting_default(&setting);
+    setting.require_label =
+        pjsua_var.acc[call->acc_id].cfg.siprec_require_label;
+    setting.require_metadata =
+        pjsua_var.acc[call->acc_id].cfg.siprec_require_metadata;
 
-    /* Check if body exists */
-    if (!msg || !msg->body) {
-        /* No body - metadata update is optional, accept request */
-        return PJ_SUCCESS;
-    }
-
-    body = msg->body;
-
-    /* Try to extract metadata from multipart body */
-    status = pjsip_siprec_get_metadata(rdata->tp_info.pool, body, metadata);
-
+    status = pjsip_siprec_verify_update(rdata, metadata, inv->dlg,
+                                        pjsua_var.endpt, p_tdata,
+                                        &setting);
     if (status == PJ_ENOTFOUND) {
-        /* Metadata not found in mid-dialog request.
-         * Return PJ_ENOTFOUND so the caller can distinguish between:
-         * - Metadata found → PJ_SUCCESS
-         * - Metadata not found → PJ_ENOTFOUND (caller decides)
-         * - Error → reject
-         */
         PJ_LOG(5,(THIS_FILE,
                   "SIPREC metadata not found in mid-dialog request"));
-        return PJ_ENOTFOUND;
     }
 
-    if (status != PJ_SUCCESS) {
-        /* Error extracting metadata - create error response */
-        st_code = PJSIP_SC_BAD_REQUEST;
-
-        PJ_LOG(3,(THIS_FILE,
-                  "Error extracting SIPREC metadata from mid-dialog request"));
-
-        status = pjsip_dlg_create_response(inv->dlg, rdata, st_code,
-                                             NULL, p_tdata);
-        if (status == PJ_SUCCESS && p_tdata && *p_tdata) {
-            pj_str_t warn_value = pj_str("Error extracting SIPREC metadata from mid-dialog request");
-
-            pjsip_warning_hdr *warn_hdr = pjsip_warning_hdr_create((*p_tdata)->pool, 399,
-                                                    pjsip_endpt_name(pjsua_var.endpt),
-                                                    &warn_value);
-            pjsip_msg_add_hdr((*p_tdata)->msg, (pjsip_hdr*)warn_hdr);
-        }
-
-        return PJSIP_ERRNO_FROM_SIP_STATUS(st_code);
-    }
-
-    /* Metadata found and extracted successfully */
-    return PJ_SUCCESS;
+    return status;
 }
 
 /*
  * Called when SIPREC metadata is updated via mid-dialog re-INVITE/UPDATE.
- * This callback forwards the notification to the application.
+ * This keeps the call's cached metadata (call->siprec_metadata) current
+ * and forwards the notification to the application.
  */
 static void pjsua_call_on_siprec_metadata_update(pjsip_inv_session *inv,
                                                    const pj_str_t *old_metadata,
@@ -6223,6 +6194,7 @@ static void pjsua_call_on_siprec_metadata_update(pjsip_inv_session *inv,
                                                    pjsip_rx_data *rdata)
 {
     pjsua_call *call;
+    pj_str_t prev_metadata;
 
     PJ_UNUSED_ARG(old_metadata);
 
@@ -6233,9 +6205,30 @@ static void pjsua_call_on_siprec_metadata_update(pjsip_inv_session *inv,
         return;
     }
 
+    /* Update the call's cached metadata so it reflects the ongoing
+     * recording session. The copy lives in the call's long term pool and
+     * is only reallocated when a larger document arrives, so frequent
+     * updates do not accumulate memory. The previously cached document
+     * is the old metadata for this update.
+     */
+    prev_metadata = call->siprec_metadata;
+
+    if (new_metadata && new_metadata->slen > 0 && call->inv) {
+        if (new_metadata->slen > call->siprec_metadata_cap) {
+            call->siprec_metadata.ptr = (char*)
+                pj_pool_alloc(call->inv->pool, new_metadata->slen);
+            call->siprec_metadata_cap = new_metadata->slen;
+        }
+        pj_memcpy(call->siprec_metadata.ptr, new_metadata->ptr,
+                  new_metadata->slen);
+        call->siprec_metadata.slen = new_metadata->slen;
+    }
+
     if (pjsua_var.ua_cfg.cb.on_call_siprec_metadata_update) {
         (*pjsua_var.ua_cfg.cb.on_call_siprec_metadata_update)(
-            call->index, old_metadata, new_metadata, rdata);
+            call->index,
+            prev_metadata.slen > 0 ? &prev_metadata : NULL,
+            new_metadata, rdata);
     }
 }
 #endif

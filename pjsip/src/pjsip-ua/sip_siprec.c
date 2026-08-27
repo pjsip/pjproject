@@ -267,10 +267,10 @@ on_return:
         const pjsip_hdr *h;
 
         if (dlg) {
-            status = pjsip_dlg_create_response(dlg, rdata, code, NULL, 
+            status = pjsip_dlg_create_response(dlg, rdata, code, NULL,
                                                &tdata);
         } else {
-            status = pjsip_endpt_create_response(endpt, rdata, code, NULL, 
+            status = pjsip_endpt_create_response(endpt, rdata, code, NULL,
                                                  &tdata);
         }
 
@@ -279,7 +279,7 @@ on_return:
 
         /* Add response headers. */
         h = res_hdr_list.next;
-        while (h != &res_hdr_list) {    
+        while (h != &res_hdr_list) {
             pjsip_hdr *cloned;
 
             cloned = (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, h);
@@ -295,7 +295,7 @@ on_return:
             pjsip_warning_hdr *warn_hdr;
             pj_str_t warn_value = pj_str((char*)warn_text);
 
-            warn_hdr=pjsip_warning_hdr_create(tdata->pool, 399, 
+            warn_hdr=pjsip_warning_hdr_create(tdata->pool, 399,
                                                 pjsip_endpt_name(endpt),
                                                 &warn_value);
             pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)warn_hdr);
@@ -312,6 +312,114 @@ on_return:
     }
 
     return status;
+}
+
+
+/**
+ * Verifies a mid-dialog siprec request against the verification policy
+ * and extracts its metadata.
+ */
+PJ_DEF(pj_status_t) pjsip_siprec_verify_update(pjsip_rx_data *rdata,
+                                               pj_str_t *metadata,
+                                               pjsip_dialog *dlg,
+                                               pjsip_endpoint *endpt,
+                                               pjsip_tx_data **p_tdata,
+                                               const pjsip_siprec_verify_setting
+                                               *setting)
+{
+    int code = 200;
+    pj_status_t status;
+    const char *warn_text = NULL;
+    pjsip_rdata_sdp_info *sdp_info;
+    pjsip_siprec_verify_setting default_setting;
+    unsigned mi;
+
+    PJ_ASSERT_RETURN(rdata && metadata, PJ_EINVAL);
+
+    /* Init return arguments. */
+    if (p_tdata) *p_tdata = NULL;
+    metadata->ptr = NULL;
+    metadata->slen = 0;
+
+    /* Use default settings if not provided */
+    if (!setting) {
+        pjsip_siprec_verify_setting_default(&default_setting);
+        setting = &default_setting;
+    }
+
+    endpt = endpt ? endpt : dlg->endpt;
+
+    /* Extract the rs-metadata document, if any. Unlike session
+     * establishment, a request without metadata is not a policy
+     * violation (e.g. media hold or session refresh).
+     */
+    status = pjsip_siprec_get_metadata(rdata->tp_info.pool,
+                                       rdata->msg_info.msg->body,
+                                       metadata);
+    if (status != PJ_SUCCESS)
+        return PJ_ENOTFOUND;
+
+    /* Check that the media attribute label exists in the SDP offer,
+     * if any, like pjsip_siprec_verify_request() does for the INVITE.
+     */
+    sdp_info = pjsip_rdata_get_sdp_info(rdata);
+    if (sdp_info->sdp) {
+        if (setting->require_label) {
+            for (mi=0; mi<sdp_info->sdp->media_count; ++mi) {
+                if (!pjmedia_sdp_media_find_attr(sdp_info->sdp->media[mi],
+                                                 &STR_LABEL, NULL))
+                {
+                    code = PJSIP_SC_BAD_REQUEST;
+                    warn_text = "SDP must have label media attribute";
+                    break;
+                }
+            }
+        } else {
+            for (mi=0; mi<sdp_info->sdp->media_count; ++mi) {
+                if (!pjmedia_sdp_media_find_attr(sdp_info->sdp->media[mi],
+                                                 &STR_LABEL, NULL))
+                {
+                    PJ_LOG(3,(THIS_FILE,
+                              "SIPREC media %d missing label attribute. "
+                              "Metadata correlation will be limited. "
+                              "To require labels, set siprec_require_label "
+                              "to PJ_TRUE.", mi));
+                }
+            }
+        }
+    }
+
+    if (code == 200)
+        return PJ_SUCCESS;
+
+    /* Create error response */
+    {
+        pjsip_tx_data *tdata;
+        pj_str_t warn_value = pj_str((char*)warn_text);
+        pjsip_warning_hdr *warn_hdr;
+
+        if (dlg) {
+            status = pjsip_dlg_create_response(dlg, rdata, code, NULL,
+                                               &tdata);
+        } else {
+            status = pjsip_endpt_create_response(endpt, rdata, code, NULL,
+                                                 &tdata);
+        }
+        if (status != PJ_SUCCESS)
+            return status;
+
+        warn_hdr = pjsip_warning_hdr_create(tdata->pool, 399,
+                                            pjsip_endpt_name(endpt),
+                                            &warn_value);
+        pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)warn_hdr);
+
+        *p_tdata = tdata;
+    }
+
+    /* Can not return PJ_SUCCESS when response message is produced.
+     * Ref: PROTOS test ~#2490
+     */
+    return PJSIP_ERRNO_FROM_SIP_STATUS(code);
 }
 
 

@@ -147,6 +147,44 @@ PJ_DECL(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
 
 
 /**
+ * Extract the rs-metadata document from a mid-dialog request
+ * (re-INVITE or UPDATE) and apply the verification policy to it.
+ * This is the mid-dialog counterpart of #pjsip_siprec_verify_request(),
+ * so the same account policy keeps being enforced after the session is
+ * established, e.g. when require_label is set, every media stream in
+ * the request SDP must have the label attribute.
+ *
+ * Unlike session establishment, a request without rs-metadata is not
+ * a policy violation (RFC 7866 allows mid-dialog requests without
+ * metadata, e.g. media hold or session refresh); require_metadata
+ * only applies to the initial INVITE.
+ *
+ * @param rdata         The incoming request to be verified.
+ * @param metadata      The siprec metadata information, populated with
+ *                      the extracted data when found.
+ * @param dlg           The dialog instance, or NULL.
+ * @param endpt         The endpoint instance, or NULL to use the dialog's
+ *                      endpoint.
+ * @param p_tdata       Upon policy violation, it will be filled with the
+ *                      final response to be sent to the request sender.
+ * @param setting       Verification setting, or NULL to use defaults.
+ *
+ * @return              PJ_SUCCESS if metadata is found and the request
+ *                      complies with the policy, PJ_ENOTFOUND if the
+ *                      request carries no rs-metadata, otherwise non-
+ *                      PJ_SUCCESS and \a p_tdata contains the error
+ *                      response to be sent.
+ */
+PJ_DECL(pj_status_t) pjsip_siprec_verify_update(pjsip_rx_data *rdata,
+                                                pj_str_t *metadata,
+                                                pjsip_dialog *dlg,
+                                                pjsip_endpoint *endpt,
+                                                pjsip_tx_data **p_tdata,
+                                                const pjsip_siprec_verify_setting
+                                                *setting);
+
+
+/**
  * Find siprec metadata information from the message body
  * with "rs-metadata" Content-Type.
  *

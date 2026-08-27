@@ -1846,9 +1846,13 @@ typedef struct pjsua_callback
      * handled internally without application notification.
      *
      * @param call_id       The call index.
-     * @param old_metadata   Previous metadata (may be NULL or empty).
+     * @param old_metadata   Previous metadata: NULL for the initial
+     *                       notification, otherwise the previously cached
+     *                       metadata of the call (may be empty).
      * @param new_metadata   New metadata (temporary - copy if needed).
-     * @param rdata         The received request containing the update.
+     * @param rdata         The received request containing the update, or
+     *                       NULL when the update is delivered after the
+     *                       request has been answered asynchronously.
      */
     void (*on_call_siprec_metadata_update)(pjsua_call_id call_id,
                                            const pj_str_t *old_metadata,
