@@ -630,7 +630,7 @@ static int rx_overflow_test(const char *last_hdr_eol, const char *branch)
     pj_sock_t sock = PJ_INVALID_SOCKET;
     pj_sockaddr_in rem_addr;
     pj_time_val deadline, now;
-    pj_size_t body_len, buf_size, req_len, sent_total;
+    pj_size_t body_len, buf_size, req_len, sent_total, reply_len;
     char *req;
     char reply[512];
     int len;
@@ -725,6 +725,7 @@ static int rx_overflow_test(const char *last_hdr_eol, const char *branch)
     deadline.msec += TIMEOUT_MSEC;
     pj_time_val_normalize(&deadline);
 
+    reply_len = 0;
     for (;;) {
         pj_fd_set_t rset;
         pj_time_val zero = { 0, 0 };
@@ -737,16 +738,21 @@ static int rx_overflow_test(const char *last_hdr_eol, const char *branch)
         if (pj_sock_select((int)sock + 1, &rset, NULL, NULL, &zero) > 0 &&
             PJ_FD_ISSET(sock, &rset))
         {
-            received = sizeof(reply) - 1;
-            status = pj_sock_recv(sock, reply, &received, 0);
+            received = (pj_ssize_t)(sizeof(reply) - 1 - reply_len);
+            status = pj_sock_recv(sock, reply + reply_len, &received, 0);
             if (status != PJ_SUCCESS || received <= 0) {
                 PJ_LOG(3,(THIS_FILE, "   error: the connection was closed "
-                                     "without a response"));
+                                     "after %u bytes, without a complete "
+                                     "status line", (unsigned)reply_len));
                 rc = -535;
                 goto on_return;
             }
-            reply[received] = '\0';
-            break;
+            reply_len += (pj_size_t)received;
+            reply[reply_len] = '\0';
+
+            /* A segment boundary may split the status line. */
+            if (reply_len >= pj_ansi_strlen(EXPECTED))
+                break;
         }
 
         pj_gettimeofday(&now);
