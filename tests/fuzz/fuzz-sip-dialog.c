@@ -142,7 +142,7 @@ static void test_uas_dialog(pj_pool_t *pool, const uint8_t *data, size_t size)
 
     /* Validate required headers */
     if (!rdata.msg_info.via || !rdata.msg_info.from || !rdata.msg_info.to ||
-        !rdata.msg_info.cseq || !rdata.msg_info.cid)
+        !rdata.msg_info.cseq || !rdata.msg_info.cid || !rdata.msg_info.cid->id.slen)
         return;
 
     /* Set recvd_param required by PJSIP transport layer */

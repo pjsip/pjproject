@@ -290,6 +290,7 @@ static pj_status_t create_tsx_key_2543( pj_pool_t *pool,
     PJ_ASSERT_RETURN(rdata->msg_info.via, PJSIP_EMISSINGHDR);
     PJ_ASSERT_RETURN(rdata->msg_info.cseq, PJSIP_EMISSINGHDR);
     PJ_ASSERT_RETURN(rdata->msg_info.from, PJSIP_EMISSINGHDR);
+    PJ_ASSERT_RETURN(rdata->msg_info.cid, PJSIP_EMISSINGHDR);
 
     host = &rdata->msg_info.via->sent_by.host;
 
