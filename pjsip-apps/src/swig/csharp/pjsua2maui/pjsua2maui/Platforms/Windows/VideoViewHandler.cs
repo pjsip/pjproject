@@ -20,7 +20,7 @@ public partial class VideoViewHandler : ViewHandler<VideoView, Grid>, IVideoView
 
     protected override Grid CreatePlatformView()
     {
-        // Criamos um Grid nativo do WinUI 3 para servir de canvas/container para o vídeo
+        // using a native WinUI3 Grid as a canvas/container to video
         var videoGrid = new Grid();
         return videoGrid;
     }
