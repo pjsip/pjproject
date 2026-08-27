@@ -154,12 +154,12 @@
 
   <!-- Windows Native Linking -->
   <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
-    <None Condition="$(RuntimeIdentifier.Contains('x64')) Or '$(Platform)' == 'x64' Or '$(PlatformTarget)' == 'x64'" Update="Platforms\Windows\Native\x64\pjsua2.dll">
+    <None Condition="$(RuntimeIdentifier.Contains('x64')) Or '$(Platform)' == 'x64' Or '$(PlatformTarget)' == 'x64'" Include="Platforms\Windows\Native\x64\pjsua2.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <Visible>True</Visible>
       <TargetPath>%(Filename)%(Extension)</TargetPath>
     </None>
-    <None Condition="$(RuntimeIdentifier.Contains('arm64')) Or '$(Platform)' == 'ARM64' Or '$(PlatformTarget)' == 'ARM64'" Update="Platforms\Windows\Native\ARM64\pjsua2.dll">
+    <None Condition="$(RuntimeIdentifier.Contains('arm64')) Or '$(Platform)' == 'ARM64' Or '$(PlatformTarget)' == 'ARM64'" Include="Platforms\Windows\Native\ARM64\pjsua2.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <Visible>True</Visible>
       <TargetPath>%(Filename)%(Extension)</TargetPath>
