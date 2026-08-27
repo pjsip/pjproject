@@ -293,6 +293,11 @@ static pj_ssl_cipher ssl_get_cipher(pj_ssl_sock_t *ssock);
 static void ssl_update_certs_info(pj_ssl_sock_t *ssock);
 #if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
 static void ssl_free_cert(pj_ssl_cert_t *cert);
+/* Eagerly create/validate the server SSL_CTX (incl. certificate and
+ * private key loading) on a listener socket, instead of deferring it
+ * to the first accepted connection.
+ */
+static pj_status_t ssl_init_server_ctx(pj_ssl_sock_t *ssock);
 #endif
 
 /* SSL session functions */
