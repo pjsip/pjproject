@@ -432,8 +432,20 @@ typedef struct pjsip_inv_callback
      * @param new_metadata  New metadata from the update. Valid only during
      *                       the callback - copy if persistence is needed.
      * @param rdata         The received request containing the update, or
-     *                       NULL when the request has been answered
-     *                       asynchronously (on_rx_reinvite() takeover).
+     *                       NULL when the request is not available. The
+     *                       request is currently provided only for
+     *                       metadata-only UPDATE/re-INVITE, which the
+     *                       core answers directly. When the request
+     *                       carries both an SDP offer and rs-metadata,
+     *                       the notification is issued after the SDP
+     *                       offer/answer completes (e.g. after an
+     *                       on_rx_reinvite() takeover answered via
+     *                       pjsip_inv_answer()) and the request is not
+     *                       available. Applications that need the request
+     *                       context of a combined SDP and metadata update
+     *                       should capture it in the callbacks that
+     *                       receive the rdata: on_verify_siprec_update(),
+     *                       on_rx_reinvite(), or on_rx_offer2().
      */
     void (*on_siprec_metadata_update)(pjsip_inv_session *inv,
                                       const pj_str_t *old_metadata,
