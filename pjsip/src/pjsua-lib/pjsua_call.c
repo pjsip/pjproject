@@ -6208,12 +6208,32 @@ static void pjsua_call_on_siprec_metadata_update(pjsip_inv_session *inv,
     /* Update the call's cached metadata so it reflects the ongoing
      * recording session. The copy lives in the call's long term pool and
      * is only reallocated when a larger document arrives, so frequent
-     * updates do not accumulate memory. The previously cached document
-     * is the old metadata for this update.
+     * updates do not accumulate memory.
      */
     prev_metadata = call->siprec_metadata;
 
     if (new_metadata && new_metadata->slen > 0 && call->inv) {
+        /* Snapshot the old document, as the cache buffer may be
+         * overwritten in place below, which would otherwise make the
+         * application see the new document as old_metadata. The snapshot
+         * lives in the provisional pool, recycled after the notification.
+         */
+        if (prev_metadata.slen > 0) {
+            pj_str_t snapshot;
+
+            snapshot.ptr = (char*)
+                pj_pool_alloc(inv->pool_prov, prev_metadata.slen);
+            if (snapshot.ptr) {
+                pj_memcpy(snapshot.ptr, prev_metadata.ptr,
+                          prev_metadata.slen);
+                snapshot.slen = prev_metadata.slen;
+                prev_metadata = snapshot;
+            } else {
+                /* Pass NULL old_metadata rather than aliased bytes. */
+                prev_metadata.slen = 0;
+            }
+        }
+
         if (new_metadata->slen > call->siprec_metadata_cap) {
             call->siprec_metadata.ptr = (char*)
                 pj_pool_alloc(call->inv->pool, new_metadata->slen);
