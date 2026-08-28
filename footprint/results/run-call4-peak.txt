@@ -1,0 +1,23 @@
+PEAK: snapshot 29 t=18353ms
+  mem_heap_B       = 735077 B (717.8 KiB)
+  mem_heap_extra_B = 4483 B (4.4 KiB)
+  total            = 739560 B (722.2 KiB)
+LAST: snapshot 53 t=151072ms
+  mem_heap_B       = 0 B (0.0 KiB)
+  mem_heap_extra_B = 0 B (0.0 KiB)
+  total            = 0 B (0.0 KiB)
+STEADY(hold 97s): snapshot 38 t=51415ms
+  mem_heap_B       = 557685 B (544.6 KiB)
+  mem_heap_extra_B = 3835 B (3.7 KiB)
+  total            = 561520 B (548.4 KiB)
+TOP ALLOCATION SUBTREES (snapshot 29, depth<=2):
+       717 KiB  (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+       649 KiB  0x1F2089: default_block_alloc (pool_policy_malloc.c:45)
+       499 KiB  0x1E8C92: pj_pool_create_block (pool.c:60)
+       149 KiB  0x1E8EEF: pj_pool_create_int (pool.c:224)
+        16 KiB  0x1FC357: mbedtls_ssl_setup (ssl_tls.c:1408)
+        16 KiB  0x1ECF98: ssl_create (ssl_sock_mbedtls.c:697)
+        16 KiB  0x1FC384: mbedtls_ssl_setup (ssl_tls.c:1418)
+        16 KiB  0x1ECF98: ssl_create (ssl_sock_mbedtls.c:697)
+run-call4/a.log:  Total    444856 of    553560 (80 %) used!
+run-call4/b.log:  Total    461920 of    528792 (87 %) used!

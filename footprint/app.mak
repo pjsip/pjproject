@@ -11,4 +11,4 @@
 include $(PJDIR)/build.mak
 
 all:
-	$(PJ_CC) -o $(OUT) $(SRC) $(PJ_CFLAGS) $(PJ_LDFLAGS) $(PJ_LDLIBS)
+	$(PJ_CC) -o $(OUT) $(SRC) $(PJ_CFLAGS) $(PJ_LDFLAGS) $(PJ_LDLIBS) $(EXTRA_LDFLAGS)

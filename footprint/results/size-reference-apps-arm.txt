@@ -1,0 +1,6 @@
+simple_pjsua:
+   text	   data	    bss	    dec	    hex	filename
+1060864	  23644	 201548	1286056	 139fa8	out/simple_pjsua-arm
+pjsua app:
+   text	   data	    bss	    dec	    hex	filename
+1224142	  26596	 222284	1473022	 1679fe	wt-arm/pjsip-apps/bin/pjsua-arm-unknown-linux-gnueabihf

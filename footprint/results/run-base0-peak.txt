@@ -1,0 +1,18 @@
+PEAK: snapshot 40 t=726ms
+  mem_heap_B       = 207201 B (202.3 KiB)
+  mem_heap_extra_B = 903 B (0.9 KiB)
+  total            = 208104 B (203.2 KiB)
+LAST: snapshot 49 t=55030ms
+  mem_heap_B       = 161 B (0.2 KiB)
+  mem_heap_extra_B = 23 B (0.0 KiB)
+  total            = 184 B (0.2 KiB)
+STEADY(hold 53s): snapshot 41 t=1721ms
+  mem_heap_B       = 207201 B (202.3 KiB)
+  mem_heap_extra_B = 903 B (0.9 KiB)
+  total            = 208104 B (203.2 KiB)
+TOP ALLOCATION SUBTREES (snapshot 39, depth<=2):
+       199 KiB  (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+       188 KiB  0x1F2089: default_block_alloc (pool_policy_malloc.c:45)
+       144 KiB  0x1E8C92: pj_pool_create_block (pool.c:60)
+        44 KiB  0x1E8EEF: pj_pool_create_int (pool.c:224)
+  Total    169820 of    187428 (90 %) used!

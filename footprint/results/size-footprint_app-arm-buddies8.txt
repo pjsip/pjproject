@@ -1,0 +1,2 @@
+   text	   data	    bss	    dec	    hex	filename
+1060358	  23640	  47788	1131786	 11450a	/tmp/claude-0/-home-user-pjproject/74390c8c-4f9d-5f6c-ae50-9ae8cc6521e7/scratchpad/out/footprint_app-arm-buddies8

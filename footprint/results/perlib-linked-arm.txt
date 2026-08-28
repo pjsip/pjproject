@@ -1,0 +1,20 @@
+archive                         text+ro     data       bss
+(string constants, merged)       296111        0         0
+libmbedcrypto.a                  156432    10452      9772
+libpjmedia.a                     118766     1132      5564
+libpjsip.a                       107024     2936     13644
+libmbedtls.a                     102400     2980       692
+libpjsua.a                       102067     1036    167432
+libpjnath.a                       69232     1352         8
+libpj.a                           58088      188      3254
+libpjsip-ua.a                     44136      736        12
+libresample.a                     43323        0         0
+libpjsip-simple.a                 27810     1236        24
+libsrtp.a                         27002      404      1077
+libpjlib-util.a                   25413        0         0
+libmbedx509.a                     13188        0         0
+libpjmedia-codec.a                 7747       56        52
+libgcc.a                           3514        0         0
+(app/crt objects)                  1044      868         1
+libpjmedia-audiodev.a               324        0         0
+TOTAL                           1203621    23376    201532

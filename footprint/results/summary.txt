@@ -1,0 +1,88 @@
+PJSIP 2.17 + mbedTLS 3.6.7 footprint measurement — collected numbers
+=====================================================================
+
+BUILD A (ARM Thumb-2, -Os -mthumb -ffunction-sections -fdata-sections,
+-Wl,--gc-sections, glibc dynamic link, select ioqueue)
+
+footprint_app (canonical config, PJ_LOG_MAX_LEVEL=4):
+  text 1,060,482  data 23,640  bss 201,548
+  (.text 787,096  .rodata 246,416  .data.rel.ro 16,504  .got 856
+   .data 6,008  .bss 201,548)
+  Reproduces byte-identically across clean rebuilds.
+PJ_LOG_MAX_LEVEL=0 variant:  text 978,539   data 23,300  bss 201,492
+PJSUA_MAX_BUDDIES=8 variant: text 1,060,358 data 23,640  bss  47,788
+simple_pjsua reference:      text 1,060,864 data 23,644  bss 201,548
+full pjsua console app:      text 1,224,142 data 26,596  bss 222,284
+
+Top bss: pjsua_var 167,296; handler 5,760; status_phrase 5,680;
+         ssl_ciphers 2,048; zero_frame 1,920
+pjsua_var breakdown (32-bit sizeof probe):
+  total 167,284; buddy[256] 158,720 (620 each); acc[1] 3,848; tpdata 512
+  calls is a POINTER: the call array (17,592 x max_calls=5 = 87,960) is
+  allocated from the heap at pjsua_init (inside the 91 KB "pjsua" pool)
+
+Per-library flash attribution from the linker map (bytes actually kept
+in the ELF; merged string constants shown once): see
+perlib-linked-arm.txt. Reconciliation: lib buckets 907,510 + merged
+strings in ELF 152,972 = 1,060,482 = ELF text exactly. (String inputs
+sum to 296,111 before cross-object merging.)
+
+BUILD B (32-bit x86, valgrind massif; steady = value held across the
+quiet hold; totals = mem_heap_B + mem_heap_extra_B)
+
+run      calls massif-peak  peak-t  steady    pools(dd capacity/used)
+base0    0     208,104      0.7s    208,104   187,428 / 169,820
+call1    1     418,576      7.0s    302,776   275,600 / 243,727
+call2    2     525,736      10.3s   391,240   360,164 / 316,446
+call4    4     739,560      18.4s   561,520   528,792 / 461,920
+call4A   4(A)  835,072      19.5s   649,792   553,560 / 444,821  caller
+g711x4   4     733,312      18.3s   554,232   522,660 / 443,296  PCMU@8k
+tls4k    4     714,984      18.3s   561,520   528,792 / 461,920  4KB bufs
+
+Steady deltas: 0->1 +94,672; 1->2 +88,464; 2->4 +170,280 (85,140/call)
+Slope 1->4: (561,520-302,776)/3 = 86,248 per call
+Non-pool residue (massif steady - pool capacity):
+  base 20,676; 1c 27,176; 2c 31,076; 4c 32,728; caller-4c 96,232
+
+TLS connection lifecycle (measured): the single TLS connection carrying
+all calls is destroyed by pjsip's idle timer ~32 s after the last INVITE
+transaction ends (b.log: "destroyed due to timeout in idle timer");
+media continues on SRTP. Steady figures therefore exclude a live TLS
+connection on the callee. Live-connection cost (massif attribution):
+  mbedtls_ssl_setup 2 x 16,765 = 33,530 B (16 KB in + 16 KB out record
+  buffers) + ~6 KB transport pool. With MBEDTLS_SSL_IN/OUT_CONTENT_LEN
+  = 4096: 2 x 4,477 = 8,954 B, and the 4-call PEAK drops 739,560 ->
+  714,984 (-24.6 KB). Steady is unchanged (connection closed anyway).
+Caller keeps its client-side connection open through the hold: caller
+steady is ~88 KB above callee steady, consistent with the live TLS
+context + larger UAC dialog/tsx state (caller residue 96 KB).
+
+Peak attribution at the 4-call peak (snapshot 29):
+  pjlib pools 665,080 (90%; steady pools are 528,792 -> ~136 KB of SIP
+  transaction/tdata transients that age out ~32 s after setup)
+  mbedtls_ssl_setup 33,530; srtp_crypto_alloc 12,664 (~3.2 KB/call);
+  glibc stdio 12,288; x509/bignum ~4 KB; misc ~7.4 KB
+Handshake: TLS-ECDHE-RSA-WITH-CHACHA20-POLY1305-SHA256, RSA-2048 cert.
+
+Per-call pool growth (new pools in the 1-call dump vs base):
+  inv session 31,024+1,024; strm 16,096 (incl. jbuf, jb_max=500 ms
+  default = 25 x 20 ms frames); media transport 10,752; dlg 8,096;
+  srtp 6,024; group locks/clock/evsub etc ~4-5 KB.
+
+G.711 (PCMU, 8 kHz bridge) vs G.722 at 4 calls: steady 554,232 vs
+561,520 (-7.3 KB) — codec choice is RAM-neutral at this scale.
+
+Threads: 5 per pjsua instance (measured /proc/<pid>/task during run).
+pjlib PJ_THREAD_DEFAULT_STACK_SIZE is 8192; on an RTOS port, task
+stacks are the port's choice and are NOT in the heap numbers.
+
+FIT MATH vs STM32H563 (640 KB = 655,360 B SRAM, 2 MB flash):
+  flash: 1,084,122 B (log level 4) / 1,001,839 B (log 0) -> ~52%. FITS.
+  RAM, stock config:      static 225,188 + steady 561,520 = 786,708 B
+                          (+ peak 739,560 -> 964,748 B worst case). NO FIT.
+  RAM, buddies=8 variant: static 71,428 + steady 561,520 = 632,948 B
+                          (~22 KB margin, before stacks/RTOS/lwIP);
+                          peak-based: 71,428 + 739,560 = 810,988. OVER.
+  Peak mitigations measured: 4 KB TLS buffers -24.6 KB; the ~136 KB
+  tsx/tdata transient decays 32 s after call setup and scales with how
+  many calls are set up within a 32 s window.

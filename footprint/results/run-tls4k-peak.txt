@@ -1,0 +1,19 @@
+PEAK: snapshot 32 t=18267ms
+  mem_heap_B       = 710501 B (693.8 KiB)
+  mem_heap_extra_B = 4483 B (4.4 KiB)
+  total            = 714984 B (698.2 KiB)
+LAST: snapshot 95 t=121073ms
+  mem_heap_B       = 0 B (0.0 KiB)
+  mem_heap_extra_B = 0 B (0.0 KiB)
+  total            = 0 B (0.0 KiB)
+STEADY(hold 67s): snapshot 41 t=51332ms
+  mem_heap_B       = 557685 B (544.6 KiB)
+  mem_heap_extra_B = 3835 B (3.7 KiB)
+  total            = 561520 B (548.4 KiB)
+TOP ALLOCATION SUBTREES (snapshot 32, depth<=2):
+       693 KiB  (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+       649 KiB  0x1F2089: default_block_alloc (pool_policy_malloc.c:45)
+       499 KiB  0x1E8C92: pj_pool_create_block (pool.c:60)
+       149 KiB  0x1E8EEF: pj_pool_create_int (pool.c:224)
+run-tls4k/a.log:  Total    444850 of    553560 (80 %) used!
+run-tls4k/b.log:  Total    461920 of    528792 (87 %) used!

@@ -1,0 +1,6 @@
+pjsua_var total            : 167284
+  calls[5]                 : 87960 (each 17592)
+  buddies[256]              : 158720 (each 620)
+  acc[1]                   : 3848 (each 3848)
+  tpdata                    : 512
+  PJSUA_MAX_CONF_PORTS=254 PJSUA_MAX_PLAYERS=32 PJSUA_MAX_RECORDERS=32

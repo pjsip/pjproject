@@ -1,0 +1,445 @@
+  Dumping all active pools:
+              pjsua:    89638 of    91024 (98%) used, nblocks: 3
+        pjsua_timer:      104 of      512 (20%) used, nblocks: 1
+      pept0x4bc9318:    20027 of    20384 (98%) used, nblocks: 2
+              tpmgr:     2444 of     3024 (80%) used, nblocks: 2
+      glck0x4bc8fb0:      316 of      512 (61%) used, nblocks: 1
+          pjsua-app:      148 of     1024 (14%) used, nblocks: 1
+           tsxlayer:      368 of      512 (71%) used, nblocks: 1
+        ua0x4bd0908:      460 of      512 (89%) used, nblocks: 1
+            med-ept:    17872 of    20192 (88%) used, nblocks: 4
+          codec-mgr:      248 of      256 (96%) used, nblocks: 1
+               g711:      200 of     1024 (19%) used, nblocks: 1
+               g722:    14544 of    15024 (96%) used, nblocks: 11
+               Conf:    13336 of    13824 (96%) used, nblocks: 5
+       Master/sound:     4281 of     6012 (71%) used, nblocks: 5
+          null-port:      188 of      256 (73%) used, nblocks: 1
+            evt mgr:      584 of     1012 (57%) used, nblocks: 2
+              evsub:     1937 of     2560 (75%) used, nblocks: 5
+           ringback:      772 of     1512 (51%) used, nblocks: 2
+           ringback:     4277 of     6012 (71%) used, nblocks: 5
+      glck0x4bf3918:      348 of      512 (67%) used, nblocks: 1
+               ring:      772 of     1512 (51%) used, nblocks: 2
+               ring:     4273 of     6012 (71%) used, nblocks: 5
+      glck0x4bf5908:      348 of      512 (67%) used, nblocks: 1
+              tlstp:     1906 of     2048 (93%) used, nblocks: 4
+      glck0x4bf7500:      316 of      512 (61%) used, nblocks: 1
+   ssl_chain0x4bf7920:      104 of      512 (20%) used, nblocks: 1
+       ssl0x4bf7b30:     4356 of     4608 (94%) used, nblocks: 2
+       acc0x4bf8f60:      425 of      512 (83%) used, nblocks: 1
+       dlg0x4c13120:     8074 of     8096 (99%) used, nblocks: 2
+      glck0x4bfce20:      316 of      512 (61%) used, nblocks: 1
+       inv0x4c13120:    27680 of    31024 (89%) used, nblocks: 29
+       inv0x4c13120:      104 of     1024 (10%) used, nblocks: 1
+       udp0x4c06c00:    10012 of    10752 (93%) used, nblocks: 2
+      glck0x4c1bc40:      316 of      512 (61%) used, nblocks: 1
+      srtp0x4c1be50:     5323 of     6024 (88%) used, nblocks: 2
+          pjsua_snd:      964 of     4096 (23%) used, nblocks: 1
+     clock0x4c24ce8:      160 of      512 (31%) used, nblocks: 1
+      strm0x4c27590:    12596 of    16096 (78%) used, nblocks: 3
+      glck0x4c2c078:      348 of      512 (67%) used, nblocks: 1
+      sip:127.0.0.1:     4282 of     6012 (71%) used, nblocks: 5
+       dlg0x4c2eae0:     8074 of     8096 (99%) used, nblocks: 2
+      glck0x4c14178:      316 of      512 (61%) used, nblocks: 1
+       inv0x4c2eae0:    27680 of    31024 (89%) used, nblocks: 29
+       inv0x4c2eae0:      104 of     1024 (10%) used, nblocks: 1
+       udp0x4c14da8:    10012 of    10752 (93%) used, nblocks: 2
+      glck0x4c23968:      316 of      512 (61%) used, nblocks: 1
+      srtp0x4c36df8:     5323 of     6024 (88%) used, nblocks: 2
+      strm0x4c41700:    12596 of    16096 (78%) used, nblocks: 3
+      glck0x4c465e0:      348 of      512 (67%) used, nblocks: 1
+      sip:127.0.0.1:     4282 of     6012 (71%) used, nblocks: 5
+       dlg0x4c49048:     8074 of     8096 (99%) used, nblocks: 2
+      glck0x4c2fb38:      316 of      512 (61%) used, nblocks: 1
+       inv0x4c49048:    27680 of    31024 (89%) used, nblocks: 29
+       inv0x4c49048:      104 of     1024 (10%) used, nblocks: 1
+       udp0x4c30768:    10012 of    10752 (93%) used, nblocks: 2
+      glck0x4c3e910:      316 of      512 (61%) used, nblocks: 1
+      srtp0x4c51360:     5323 of     6024 (88%) used, nblocks: 2
+      strm0x4c5bc68:    12596 of    16096 (78%) used, nblocks: 3
+      glck0x4c60b48:      348 of      512 (67%) used, nblocks: 1
+      sip:127.0.0.1:     4282 of     6012 (71%) used, nblocks: 5
+       dlg0x4c637b8:     8074 of     8096 (99%) used, nblocks: 2
+      glck0x4c4a0a0:      316 of      512 (61%) used, nblocks: 1
+       inv0x4c637b8:    27680 of    31024 (89%) used, nblocks: 29
+       inv0x4c637b8:      104 of     1024 (10%) used, nblocks: 1
+       udp0x4c4acd0:    10012 of    10752 (93%) used, nblocks: 2
+      glck0x4c58e78:      316 of      512 (61%) used, nblocks: 1
+      srtp0x4c6bad0:     5323 of     6024 (88%) used, nblocks: 2
+      strm0x4c763d8:    12596 of    16096 (78%) used, nblocks: 3
+      glck0x4c7aec0:      348 of      512 (67%) used, nblocks: 1
+      sip:127.0.0.1:     4282 of     6012 (71%) used, nblocks: 5
+  Total    461920 of    528792 (87 %) used!
+ Endpoint pool capacity=20384, used_size=20027
+ Outstanding transmit buffers: 0
+ Dumping listeners:
+  tlstp:5071 TLS:127.0.0.1:5071
+Dumping timer heap:
+  Cur size: 5 entries, max: 62
+  Entries: 
+    _id	Id	Elapsed	Source
+    ----------------------------------
+    2	0	160.653	../src/pjsua-lib/pjsua_pres.c:2756
+    4	1	1634.983	../src/pjsip-ua/sip_timer.c:529
+    7	1	1646.324	../src/pjsip-ua/sip_timer.c:529
+    5	1	1642.266	../src/pjsip-ua/sip_timer.c:529
+    1	1	1638.255	../src/pjsip-ua/sip_timer.c:529
+Dumping PJMEDIA capabilities:
+  Total number of installed codecs: 3
+   Audio codec # 0: pt=9 (G722 @16KHz/1, 64.0Kbps, 20ms vad plc)
+   Audio codec # 1: pt=8 (PCMA @8KHz/1, 64.0Kbps, 20ms vad plc disabled)
+   Audio codec # 2: pt=0 (PCMU @8KHz/1, 64.0Kbps, 20ms vad plc disabled)
+Dumping media transports:
+ UDP: 127.0.0.1:4000
+ UDP: 127.0.0.1:4002
+ UDP: 127.0.0.1:4004
+ UDP: 127.0.0.1:4006
+Dumping transaction table:
+ Total 0 transactions
+ - none - 
+Number of dialog sets: 4
+Dumping dialog sets:
+  [in]  [est]  To: <sip:127.0.0.1>;tag=0oWrT19.vdgl6N.Du1WFKuZEXcGoBuAn
+  [in]  [est]  To: <sip:127.0.0.1>;tag=3U50JmIElZT2fTWStVgi2LspiE86qOyg
+  [in]  [est]  To: <sip:127.0.0.1>;tag=uytGtU2wh2hikVOIInG7iFGtqYJYhGPT
+  [in]  [est]  To: <sip:127.0.0.1>;tag=3J4dRVRyZL2p16iUWgiP.yecROL.7AJq
+Dumping pjsua server subscriptions:
+  <sip:127.0.0.1:5071;transport=TLS>
+  - none - 
+Dumping pjsua client subscriptions:
+  - no buddy list - 
+08:12:26.157   pjsua_core.c  Dump complete
+08:12:34.132 ssl_sock_mbedt !Mbed TLS version : Mbed TLS 3.6.7
+08:12:34.414 ssl_sock_mbedt  ssl_tls.c:9898: Certificate verification without having set hostname
+
+08:12:34.414 ssl_sock_mbedt  Self-signed or not signed by a trusted CA!
+08:12:34.415 ssl_sock_mbedt  ssl_tls.c:9993: x509_verify_cert() returned -9984 (-0x2700)
+
+08:12:34.568     tlstp:5071  TLS listener 127.0.0.1:5071: got incoming TLS connection from 127.0.0.1:46715, sock=0x4c24f0c
+08:12:34.568  tlss0x4c3bd34  TLS server transport created
+08:12:34.568    pjsua_app.c  SIP TLS transport is connected to 127.0.0.1:46715
+08:12:34.568    pjsua_app.c  TLS cipher used: 0x00CCA8/TLS-ECDHE-RSA-WITH-CHACHA20-POLY1305-SHA256
+08:12:34.568    pjsua_app.c  TLS cert info of 127.0.0.1:46715:
+  Version    : v3
+  Serial     : 5A 63 C2 52 1B 3B C5 01 4E 92 B6 96 04 77 CD 4B BD 75 EC DE
+  Subject    : 127.0.0.1
+               CN=127.0.0.1
+  Issuer     : 127.0.0.1
+               CN=127.0.0.1
+  Valid from : Fri 2026-08-28 07:39:52.000 GMT
+  Valid to   : Sun 2026-09-27 07:39:52.000 GMT
+  subjectAltName extension
+          IP : 127.0.0.1
+         DNS : localhost
+
+08:12:34.568    pjsua_app.c  TLS cert verification result of 127.0.0.1:46715 : The certificate is untrusted
+08:12:34.568    pjsua_app.c  PJSUA is configured to ignore TLS cert verification errors
+08:12:34.569   pjsua_core.c  .RX 424 bytes Request msg BYE/cseq=30351 (rdata0x4c3c234) from TLS 127.0.0.1:46715:
+BYE sip:127.0.0.1:5071;transport=TLS SIP/2.0
+Via: SIP/2.0/TLS 127.0.0.1:51403;rport;branch=z9hG4bKPjEZ6aajywdWrruHnUHn2BWcH8WJMNftyz;alias
+Max-Forwards: 70
+From: <sip:127.0.0.1>;tag=0oWrT19.vdgl6N.Du1WFKuZEXcGoBuAn
+To: sip:footprint@127.0.0.1;tag=uxcDZs-GJlOJDkk6RPkZjSAB2eCYNTLY
+Call-ID: -KcH0oBKbh.MXLdGn2DPkokQH4TRHpgn
+CSeq: 30351 BYE
+User-Agent: PJSUA/v2.17 Linux-6.18.44 x86_64 glibc-2.39
+Content-Length:  0
+
+
+--end msg--
+08:12:34.574   pjsua_core.c  .......TX 346 bytes Response msg 200/BYE/cseq=30351 (tdta0x4c70a60) to TLS 127.0.0.1:46715:
+SIP/2.0 200 OK
+Via: SIP/2.0/TLS 127.0.0.1:51403;rport=46715;received=127.0.0.1;branch=z9hG4bKPjEZ6aajywdWrruHnUHn2BWcH8WJMNftyz;alias
+Call-ID: -KcH0oBKbh.MXLdGn2DPkokQH4TRHpgn
+From: <sip:127.0.0.1>;tag=0oWrT19.vdgl6N.Du1WFKuZEXcGoBuAn
+To: <sip:footprint@127.0.0.1>;tag=uxcDZs-GJlOJDkk6RPkZjSAB2eCYNTLY
+CSeq: 30351 BYE
+Content-Length:  0
+
+
+--end msg--
+08:12:34.577  pjsua_media.c  ......Call 0: deinitializing media..
+08:12:34.603  pjsua_media.c  .......
+  [DISCONNECTED] To: <sip:127.0.0.1>;tag=0oWrT19.vdgl6N.Du1WFKuZEXcGoBuAn
+    Call time: 00h:02m:21s, 1st res in 241 ms, conn in 345ms
+    #0 audio G722 @16kHz, sendrecv, peer=127.0.0.1:4200
+       SRTP status: Active Crypto-suite: AES_256_CM_HMAC_SHA1_80
+       RX pt=9, last update:00h:00m:09.686s ago
+          total 7.0Kpkt 1.12MB (1.41MB +IP hdr) @avg=63.7Kbps/79.7Kbps
+          pkt loss=0 (0.0%), discrd=0 (0.0%), dup=0 (0.0%), reord=0 (0.0%)
+                (msec)    min     avg     max     last    dev
+          loss period:   0.000   0.000   0.000   0.000   0.000
+          jitter     :   0.000   0.687   9.250   0.750   0.727
+       TX pt=9, ptime=20, last update:00h:00m:00.467s ago
+          total 7.0Kpkt 1.13MB (1.41MB +IP hdr) @avg=63.9Kbps/79.9Kbps
+          pkt loss=0 (0.0%), dup=0 (0.0%), reorder=0 (0.0%)
+                (msec)    min     avg     max     last    dev 
+          loss period:   0.000   0.000   0.000   0.000   0.000
+          jitter     :   0.000   0.276   0.625   0.500   0.174
+       RTT msec      :   0.717   0.910   1.953   0.915   0.283
+08:12:34.607   conference.c  .........Remove port 3 queued
+08:12:34.608  strm0x4c275f8  ........Stream destroying
+08:12:34.610   udp0x4c06c00  ........UDP media transport detached
+08:12:34.611  pjsua_media.c  ........Media stream call00:0 is destroyed
+08:12:34.619  srtp0x4c1be50  .......Destroying SRTP transport
+08:12:34.619   udp0x4c06c00  .......UDP media transport destroying
+08:12:34.621    pjsua_app.c  ......Call 0 is DISCONNECTED [reason=200 (Normal call clearing)]
+08:12:34.624   pjsua_core.c  .RX 424 bytes Request msg BYE/cseq=18819 (rdata0x4c3c234) from TLS 127.0.0.1:46715:
+BYE sip:127.0.0.1:5071;transport=TLS SIP/2.0
+Via: SIP/2.0/TLS 127.0.0.1:51403;rport;branch=z9hG4bKPj0mv02QG1esIDkIlIl7n2dqzVJ1lXuNOw;alias
+Max-Forwards: 70
+From: <sip:127.0.0.1>;tag=3J4dRVRyZL2p16iUWgiP.yecROL.7AJq
+To: sip:footprint@127.0.0.1;tag=C3q9xUd0b-cFSZwG0cZB10cjX4gpdGZD
+Call-ID: 4gMRZ2XhCtJPtfMjRY0ieeXNqDyaFuCI
+CSeq: 18819 BYE
+User-Agent: PJSUA/v2.17 Linux-6.18.44 x86_64 glibc-2.39
+Content-Length:  0
+
+
+--end msg--
+08:12:34.624   pjsua_core.c  .......TX 346 bytes Response msg 200/BYE/cseq=18819 (tdta0x4c25f70) to TLS 127.0.0.1:46715:
+SIP/2.0 200 OK
+Via: SIP/2.0/TLS 127.0.0.1:51403;rport=46715;received=127.0.0.1;branch=z9hG4bKPj0mv02QG1esIDkIlIl7n2dqzVJ1lXuNOw;alias
+Call-ID: 4gMRZ2XhCtJPtfMjRY0ieeXNqDyaFuCI
+From: <sip:127.0.0.1>;tag=3J4dRVRyZL2p16iUWgiP.yecROL.7AJq
+To: <sip:footprint@127.0.0.1>;tag=C3q9xUd0b-cFSZwG0cZB10cjX4gpdGZD
+CSeq: 18819 BYE
+Content-Length:  0
+
+
+--end msg--
+08:12:34.626   conference.c !.Stop any transmission to port 3 (sip:127.0.0.1)
+08:12:34.626   conference.c  .Port 0 (Master/sound) stop transmitting to port 3 (sip:127.0.0.1)
+08:12:34.626   conference.c  .Stop any transmission from port 3 (sip:127.0.0.1)
+08:12:34.627   conference.c  .Port 3 (sip:127.0.0.1) stop transmitting to port 0 (Master/sound)
+08:12:34.627   conference.c  .Removing port 3 (sip:127.0.0.1)
+08:12:34.627   conference.c  .Removed port 3, port count=6
+08:12:34.630   udp0x4c06c00 !.UDP media transport destroyed
+08:12:34.630  srtp0x4c1be50  .SRTP transport destroyed
+08:12:34.631  strm0x4c275f8  .Stream destroyed
+08:12:34.628  pjsua_media.c !......Call 1: deinitializing media..
+08:12:34.633  pjsua_media.c !.......
+  [DISCONNECTED] To: <sip:127.0.0.1>;tag=3J4dRVRyZL2p16iUWgiP.yecROL.7AJq
+    Call time: 00h:02m:18s, 1st res in 64 ms, conn in 109ms
+    #0 audio G722 @16kHz, sendrecv, peer=127.0.0.1:4202
+       SRTP status: Active Crypto-suite: AES_256_CM_HMAC_SHA1_80
+       RX pt=9, last update:00h:00m:09.333s ago
+          total 6.8Kpkt 1.10MB (1.37MB +IP hdr) @avg=63.7Kbps/79.6Kbps
+          pkt loss=0 (0.0%), discrd=0 (0.0%), dup=0 (0.0%), reord=0 (0.0%)
+                (msec)    min     avg     max     last    dev
+          loss period:   0.000   0.000   0.000   0.000   0.000
+          jitter     :   0.000   0.675   9.375   0.875   0.759
+       TX pt=9, ptime=20, last update:00h:00m:00.500s ago
+          total 6.9Kpkt 1.10MB (1.38MB +IP hdr) @avg=63.9Kbps/79.9Kbps
+          pkt loss=0 (0.0%), dup=0 (0.0%), reorder=0 (0.0%)
+                (msec)    min     avg     max     last    dev 
+          loss period:   0.000   0.000   0.000   0.000   0.000
+          jitter     :   0.000   0.265   0.625   0.625   0.170
+       RTT msec      :   0.701   1.072   1.831   1.831   0.277
+08:12:34.634   conference.c  .........Remove port 4 queued
+08:12:34.634  strm0x4c41768  ........Stream destroying
+08:12:34.634   udp0x4c14da8  ........UDP media transport detached
+08:12:34.634  pjsua_media.c  ........Media stream call01:0 is destroyed
+08:12:34.635  srtp0x4c36df8  .......Destroying SRTP transport
+08:12:34.635   udp0x4c14da8  .......UDP media transport destroying
+08:12:34.635    pjsua_app.c  ......Call 1 is DISCONNECTED [reason=200 (Normal call clearing)]
+08:12:34.637   pjsua_core.c  .RX 424 bytes Request msg BYE/cseq=19491 (rdata0x4c3c234) from TLS 127.0.0.1:46715:
+BYE sip:127.0.0.1:5071;transport=TLS SIP/2.0
+Via: SIP/2.0/TLS 127.0.0.1:51403;rport;branch=z9hG4bKPjaFuH0eAO9TZp8XDsAbPBQvtDpiFcW0Vv;alias
+Max-Forwards: 70
+From: <sip:127.0.0.1>;tag=uytGtU2wh2hikVOIInG7iFGtqYJYhGPT
+To: sip:footprint@127.0.0.1;tag=PB..EouXlp8Uf5thagBfdiwh7xg4ZQCx
+Call-ID: Ax002clxag5oWQvYjPEiSqQzKT2ODOet
+CSeq: 19491 BYE
+User-Agent: PJSUA/v2.17 Linux-6.18.44 x86_64 glibc-2.39
+Content-Length:  0
+
+
+--end msg--
+08:12:34.637   pjsua_core.c  .......TX 346 bytes Response msg 200/BYE/cseq=19491 (tdta0x4c3fce8) to TLS 127.0.0.1:46715:
+SIP/2.0 200 OK
+Via: SIP/2.0/TLS 127.0.0.1:51403;rport=46715;received=127.0.0.1;branch=z9hG4bKPjaFuH0eAO9TZp8XDsAbPBQvtDpiFcW0Vv;alias
+Call-ID: Ax002clxag5oWQvYjPEiSqQzKT2ODOet
+From: <sip:127.0.0.1>;tag=uytGtU2wh2hikVOIInG7iFGtqYJYhGPT
+To: <sip:footprint@127.0.0.1>;tag=PB..EouXlp8Uf5thagBfdiwh7xg4ZQCx
+CSeq: 19491 BYE
+Content-Length:  0
+
+
+--end msg--
+08:12:34.637   conference.c !.Stop any transmission to port 4 (sip:127.0.0.1)
+08:12:34.637   conference.c  .Port 0 (Master/sound) stop transmitting to port 4 (sip:127.0.0.1)
+08:12:34.637   conference.c  .Stop any transmission from port 4 (sip:127.0.0.1)
+08:12:34.637   conference.c  .Port 4 (sip:127.0.0.1) stop transmitting to port 0 (Master/sound)
+08:12:34.637   conference.c  .Removing port 4 (sip:127.0.0.1)
+08:12:34.637   conference.c  .Removed port 4, port count=5
+08:12:34.637   udp0x4c14da8  .UDP media transport destroyed
+08:12:34.637  srtp0x4c36df8  .SRTP transport destroyed
+08:12:34.637  strm0x4c41768  .Stream destroyed
+08:12:34.638  pjsua_media.c !......Call 2: deinitializing media..
+08:12:34.638  pjsua_media.c  .......
+  [DISCONNECTED] To: <sip:127.0.0.1>;tag=uytGtU2wh2hikVOIInG7iFGtqYJYhGPT
+    Call time: 00h:02m:14s, 1st res in 48 ms, conn in 92ms
+    #0 audio G722 @16kHz, sendrecv, peer=127.0.0.1:4204
+       SRTP status: Active Crypto-suite: AES_256_CM_HMAC_SHA1_80
+       RX pt=9, last update:00h:00m:07.258s ago
+          total 6.6Kpkt 1.06MB (1.33MB +IP hdr) @avg=63.7Kbps/79.6Kbps
+          pkt loss=0 (0.0%), discrd=0 (0.0%), dup=0 (0.0%), reord=0 (0.0%)
+                (msec)    min     avg     max     last    dev
+          loss period:   0.000   0.000   0.000   0.000   0.000
+          jitter     :   0.000   0.644   9.500   0.875   0.750
+       TX pt=9, ptime=20, last update:00h:00m:00.503s ago
+          total 6.7Kpkt 1.07MB (1.34MB +IP hdr) @avg=63.9Kbps/79.9Kbps
+          pkt loss=0 (0.0%), dup=0 (0.0%), reorder=0 (0.0%)
+                (msec)    min     avg     max     last    dev 
+          loss period:   0.000   0.000   0.000   0.000   0.000
+          jitter     :   0.000   0.632   4.375   0.625   1.004
+       RTT msec      :   1.037   1.767   4.135   3.387   1.068
+08:12:34.639   conference.c  .........Remove port 5 queued
+08:12:34.639  strm0x4c5bcd0  ........Stream destroying
+08:12:34.640   udp0x4c30768  ........UDP media transport detached
+08:12:34.640  pjsua_media.c  ........Media stream call02:0 is destroyed
+08:12:34.641  srtp0x4c51360  .......Destroying SRTP transport
+08:12:34.641   udp0x4c30768  .......UDP media transport destroying
+08:12:34.641    pjsua_app.c  ......Call 2 is DISCONNECTED [reason=200 (Normal call clearing)]
+08:12:34.641   conference.c !.Stop any transmission to port 5 (sip:127.0.0.1)
+08:12:34.641   conference.c  .Port 0 (Master/sound) stop transmitting to port 5 (sip:127.0.0.1)
+08:12:34.641   conference.c  .Stop any transmission from port 5 (sip:127.0.0.1)
+08:12:34.641   conference.c  .Port 5 (sip:127.0.0.1) stop transmitting to port 0 (Master/sound)
+08:12:34.641   conference.c  .Removing port 5 (sip:127.0.0.1)
+08:12:34.641   conference.c  .Removed port 5, port count=4
+08:12:34.641   udp0x4c30768  .UDP media transport destroyed
+08:12:34.641  srtp0x4c51360  .SRTP transport destroyed
+08:12:34.641  strm0x4c5bcd0  .Stream destroyed
+08:12:34.643   pjsua_core.c !.RX 424 bytes Request msg BYE/cseq=16339 (rdata0x4c3c234) from TLS 127.0.0.1:46715:
+BYE sip:127.0.0.1:5071;transport=TLS SIP/2.0
+Via: SIP/2.0/TLS 127.0.0.1:51403;rport;branch=z9hG4bKPjO6gx40skM6WJxggJ7Kf6zDsSHTeGIJId;alias
+Max-Forwards: 70
+From: <sip:127.0.0.1>;tag=3U50JmIElZT2fTWStVgi2LspiE86qOyg
+To: sip:footprint@127.0.0.1;tag=OGlT0nQY9dq47zF1CWQjxhql6BjA3Qud
+Call-ID: XI0GU88V9Ot9S3HbDFp3HsVu-FI6nHrA
+CSeq: 16339 BYE
+User-Agent: PJSUA/v2.17 Linux-6.18.44 x86_64 glibc-2.39
+Content-Length:  0
+
+
+--end msg--
+08:12:34.643   pjsua_core.c  .......TX 346 bytes Response msg 200/BYE/cseq=16339 (tdta0x4c3d598) to TLS 127.0.0.1:46715:
+SIP/2.0 200 OK
+Via: SIP/2.0/TLS 127.0.0.1:51403;rport=46715;received=127.0.0.1;branch=z9hG4bKPjO6gx40skM6WJxggJ7Kf6zDsSHTeGIJId;alias
+Call-ID: XI0GU88V9Ot9S3HbDFp3HsVu-FI6nHrA
+From: <sip:127.0.0.1>;tag=3U50JmIElZT2fTWStVgi2LspiE86qOyg
+To: <sip:footprint@127.0.0.1>;tag=OGlT0nQY9dq47zF1CWQjxhql6BjA3Qud
+CSeq: 16339 BYE
+Content-Length:  0
+
+
+--end msg--
+08:12:34.644  pjsua_media.c  ......Call 3: deinitializing media..
+08:12:34.645  pjsua_media.c  .......
+  [DISCONNECTED] To: <sip:127.0.0.1>;tag=3U50JmIElZT2fTWStVgi2LspiE86qOyg
+    Call time: 00h:02m:10s, 1st res in 75 ms, conn in 119ms
+    #0 audio G722 @16kHz, sendrecv, peer=127.0.0.1:4206
+       SRTP status: Active Crypto-suite: AES_256_CM_HMAC_SHA1_80
+       RX pt=9, last update:00h:00m:03.203s ago
+          total 6.4Kpkt 1.03MB (1.29MB +IP hdr) @avg=63.7Kbps/79.6Kbps
+          pkt loss=0 (0.0%), discrd=0 (0.0%), dup=0 (0.0%), reord=0 (0.0%)
+                (msec)    min     avg     max     last    dev
+          loss period:   0.000   0.000   0.000   0.000   0.000
+          jitter     :   0.000   0.660   9.500   0.750   0.765
+       TX pt=9, ptime=20, last update:00h:00m:00.506s ago
+          total 6.5Kpkt 1.04MB (1.30MB +IP hdr) @avg=63.9Kbps/79.9Kbps
+          pkt loss=0 (0.0%), dup=0 (0.0%), reorder=0 (0.0%)
+                (msec)    min     avg     max     last    dev 
+          loss period:   0.000   0.000   0.000   0.000   0.000
+          jitter     :   0.000   0.449   1.250   0.625   0.332
+       RTT msec      :   1.251   1.829   4.800   4.800   1.099
+08:12:34.646   conference.c  .........Remove port 6 queued
+08:12:34.646  strm0x4c76440  ........Stream destroying
+08:12:34.646   udp0x4c4acd0  ........UDP media transport detached
+08:12:34.646  pjsua_media.c  ........Media stream call03:0 is destroyed
+08:12:34.647  srtp0x4c6bad0 !.......Destroying SRTP transport
+08:12:34.647   udp0x4c4acd0  .......UDP media transport destroying
+08:12:34.647    pjsua_app.c  ......Call 3 is DISCONNECTED [reason=200 (Normal call clearing)]
+08:12:34.646   conference.c !.Stop any transmission to port 6 (sip:127.0.0.1)
+08:12:34.654   conference.c !.Port 0 (Master/sound) stop transmitting to port 6 (sip:127.0.0.1)
+08:12:34.654   conference.c  .Stop any transmission from port 6 (sip:127.0.0.1)
+08:12:34.654   conference.c  .Port 6 (sip:127.0.0.1) stop transmitting to port 0 (Master/sound)
+08:12:34.654   conference.c  .Removing port 6 (sip:127.0.0.1)
+08:12:34.654   conference.c  .Removed port 6, port count=3
+08:12:34.654   udp0x4c4acd0  .UDP media transport destroyed
+08:12:34.654  srtp0x4c6bad0  .SRTP transport destroyed
+08:12:34.655  strm0x4c76440  .Stream destroyed
+08:12:35.145  tlss0x4c3bd34 !TLS connection closed
+08:12:35.145    pjsua_app.c  SIP TLS transport is disconnected from 127.0.0.1:46715: Unknown pjlib error 70016 [status=70016]
+08:12:35.145    pjsua_app.c  TLS cipher used: 0x00CCA8/TLS-ECDHE-RSA-WITH-CHACHA20-POLY1305-SHA256
+08:12:35.145    pjsua_app.c  TLS cert info of 127.0.0.1:46715:
+  Version    : v3
+  Serial     : 5A 63 C2 52 1B 3B C5 01 4E 92 B6 96 04 77 CD 4B BD 75 EC DE
+  Subject    : 127.0.0.1
+               CN=127.0.0.1
+  Issuer     : 127.0.0.1
+               CN=127.0.0.1
+  Valid from : Fri 2026-08-28 07:39:52.000 GMT
+  Valid to   : Sun 2026-09-27 07:39:52.000 GMT
+  subjectAltName extension
+          IP : 127.0.0.1
+         DNS : localhost
+
+08:12:35.145    pjsua_app.c  TLS cert verification result of 127.0.0.1:46715 : The certificate is untrusted
+08:12:35.145    pjsua_app.c  PJSUA is configured to ignore TLS cert verification errors
+08:12:35.145    pjsua_acc.c  Disconnected notification for transport tlss0x4c3bd34
+08:12:35.145 sip_transport.  .Transport tlss0x4c3bd34 shutting down, force=0
+08:12:35.145 sip_transport.  Transport tlss0x4c3bd34 is being destroyed due to timeout in idle timer
+08:12:35.147  tlss0x4c3bd34  TLS transport destroyed with reason 70016: Unknown pjlib error 70016
+08:12:35.646    pjsua_aud.c  Closing sound device after idle for 1 second(s)
+08:12:35.646    pjsua_app.c  .Turning sound device -99 -99 OFF
+08:12:35.646    pjsua_aud.c  .Closing null sound device..
+08:12:36.133   conference.c !.Remove port 1 queued
+08:12:36.134   conference.c  .Remove port 2 queued
+08:12:36.134   pjsua_core.c  Shutting down, flags=0...
+08:12:36.134   pjsua_core.c  PJSUA state changed: RUNNING --> CLOSING
+08:12:36.136   pjsua_call.c  .Hangup all calls..
+08:12:36.137   pjsua_pres.c  .Shutting down presence..
+08:12:37.145   pjsua_core.c  .Destroying...
+08:12:37.147     tlstp:5071  .SIP TLS listener destroyed
+08:12:37.148  pjsua_media.c  .Shutting down media..
+08:12:37.151   conference.c  ...Stop any transmission to port 1 (ringback)
+08:12:37.151   conference.c  ...Stop any transmission from port 1 (ringback)
+08:12:37.151   conference.c  ...Removing port 1 (ringback)
+08:12:37.151   conference.c  ...Removed port 1, port count=2
+08:12:37.151   conference.c  ...Stop any transmission to port 2 (ring)
+08:12:37.151   conference.c  ...Stop any transmission from port 2 (ring)
+08:12:37.151   conference.c  ...Removing port 2 (ring)
+08:12:37.151   conference.c  ...Removed port 2, port count=1
+08:12:37.152   conference.c  ...Stop any transmission to port 0 (Master/sound)
+08:12:37.152   conference.c  ...Stop any transmission from port 0 (Master/sound)
+08:12:37.152   conference.c  ...Removing port 0 (Master/sound)
+08:12:37.152   conference.c  ...Removed port 0, port count=0
+08:12:37.153   conference.c  ..Audio conference bridge destroyed
+08:12:37.162 sip_transactio  .Stopping transaction layer module
+08:12:37.162 sip_transactio  .Stopped transaction layer module
+08:12:37.163 sip_endpoint.c  .Module "mod-default-handler" unregistered
+08:12:37.163 sip_endpoint.c  .Module "mod-pjsua-options" unregistered
+08:12:37.163 sip_endpoint.c  .Module "mod-pjsua-im" unregistered
+08:12:37.163 sip_endpoint.c  .Module "mod-unsolicited-mwi" unregistered
+08:12:37.163 sip_endpoint.c  .Module "mod-pjsua-pres" unregistered
+08:12:37.163 sip_endpoint.c  .Module "mod-pjsua" unregistered
+08:12:37.163 sip_endpoint.c  .Module "mod-stateful-util" unregistered
+08:12:37.163 sip_endpoint.c  .Module "mod-refer" unregistered
+08:12:37.163 sip_endpoint.c  .Module "mod-mwi" unregistered
+08:12:37.163 sip_endpoint.c  .Module "mod-dlg_even" unregistered
+08:12:37.163 sip_endpoint.c  .Module "mod-presence" unregistered
+08:12:37.164 sip_endpoint.c  .Module "mod-evsub" unregistered
+08:12:37.164 sip_endpoint.c  .Module "mod-invite" unregistered
+08:12:37.164 sip_endpoint.c  .Module "mod-100rel" unregistered
+08:12:37.164 sip_endpoint.c  .Module "mod-ua" unregistered
+08:12:37.165 sip_transactio  .Transaction layer module destroyed
+08:12:37.165 sip_endpoint.c  .Module "mod-tsx-layer" unregistered
+08:12:37.165 sip_endpoint.c  .Module "mod-msg-print" unregistered
+08:12:37.165 sip_endpoint.c  .Module "mod-pjsua-log" unregistered
+08:12:37.166        timer.c  .Dumping timer heap:
+08:12:37.166        timer.c  .  Cur size: 0 entries, max: 62
+08:12:37.168 sip_endpoint.c  .Endpoint 0x4bc9380 destroyed
+08:12:37.169   pjsua_core.c  .PJSUA state changed: CLOSING --> NULL
+08:12:37.169   pjsua_core.c  .PJSUA destroyed...
