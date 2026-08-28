@@ -2424,23 +2424,32 @@ static pj_status_t inv_verify_siprec_metadata_update(
 
         if (meta_status != PJ_SUCCESS) {
             /* Verification failed - send error response if provided */
+            pj_status_t status;
+
             if (tdata) {
-                pjsip_dlg_send_response(inv->dlg,
-                                        pjsip_rdata_get_tsx(rdata),
-                                        tdata);
+                status = pjsip_dlg_send_response(inv->dlg,
+                                                 pjsip_rdata_get_tsx(rdata),
+                                                 tdata);
             } else {
                 /* Callback failed to create response - create generic error */
                 pjsip_tx_data *err_tdata;
-                pj_status_t err_status = pjsip_dlg_create_response(inv->dlg,
-                                                    rdata,
-                                                    PJSIP_SC_INTERNAL_SERVER_ERROR,
-                                                    NULL, &err_tdata);
-                if (err_status == PJ_SUCCESS) {
-                    pjsip_dlg_send_response(inv->dlg,
-                                            pjsip_rdata_get_tsx(rdata),
-                                            err_tdata);
+
+                status = pjsip_dlg_create_response(inv->dlg, rdata,
+                                                   PJSIP_SC_INTERNAL_SERVER_ERROR,
+                                                   NULL, &err_tdata);
+                if (status == PJ_SUCCESS) {
+                    status = pjsip_dlg_send_response(inv->dlg,
+                                                     pjsip_rdata_get_tsx(rdata),
+                                                     err_tdata);
                 }
             }
+
+            if (status != PJ_SUCCESS) {
+                PJ_PERROR(1, (THIS_FILE, status,
+                              "Error sending rejection response for SIPREC "
+                              "metadata update"));
+            }
+
             return meta_status;
         }
 
