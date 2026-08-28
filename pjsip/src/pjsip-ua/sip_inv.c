@@ -4532,6 +4532,12 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
                         pjmedia_sdp_neg_cancel_offer(inv->neg);
                     }
 
+#if PJSIP_HAS_SIPREC
+                    /* The negotiator is done now, any pending metadata
+                     * update of this rejected request can be dropped. */
+                    inv_discard_siprec_metadata_update(inv);
+#endif
+
                     status = pjsip_dlg_create_response(inv->dlg, rdata,
                                                        PJSIP_SC_NOT_ACCEPTABLE_HERE,
                                                        NULL, &tdata);
