@@ -6217,9 +6217,11 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 
             /* Check if this is a metadata-only re-INVITE carrying SIPREC
              * metadata (RFC 7866 §7.1): respond with 200/OK without doing
-             * SDP negotiation. Any other bodies without SDP content-type
-             * are left to inv_check_sdp_in_incoming_msg() below, which
-             * rejects unrecognized content-types.
+             * SDP negotiation. sdp_info->body.ptr is non-NULL only when an
+             * SDP part is present, so a broken SDP part is not metadata-only
+             * and falls through to rejection below. Other bodies without
+             * SDP content-type are left to inv_check_sdp_in_incoming_msg(),
+             * which rejects unrecognized content-types.
              */
             if ((inv->options & PJSIP_INV_REQUIRE_SIPREC) &&
                 rdata->msg_info.msg->body != NULL)
@@ -6227,6 +6229,7 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
                 sdp_info = pjsip_rdata_get_sdp_info(rdata);
 
                 if (sdp_info->sdp == NULL &&
+                    sdp_info->body.ptr == NULL &&
                     inv_body_has_siprec_metadata(rdata->msg_info.msg->body))
                 {
                     inv_notify_siprec_metadata_update(inv, rdata);
