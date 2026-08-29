@@ -107,6 +107,63 @@ struct pjsip_inv_on_rx_offer_cb_param
 
 
 /**
+ * Structure to hold parameters when calling the callback
+ * on_verify_siprec_update().
+ */
+struct pjsip_inv_on_verify_siprec_cb_param
+{
+    pjsip_rx_data    *rdata;     /**< The received request (re-INVITE or
+                                      UPDATE) carrying the metadata.  */
+    pj_str_t         *metadata;  /**< Output parameter to be filled with
+                                      the extracted metadata.         */
+    pjsip_tx_data   **p_tdata;   /**< Optional output parameter to be
+                                      filled with error response if
+                                      verification fails.             */
+};
+
+
+/**
+ * Structure to hold parameters when calling the callback
+ * on_siprec_metadata_update().
+ */
+struct pjsip_inv_on_siprec_metadata_cb_param
+{
+    const pj_str_t  *old_metadata;  /**< Previous metadata (may be NULL
+                                         or empty). For the core layer,
+                                         this is always empty since
+                                         metadata state is maintained at
+                                         the application layer.         */
+    const pj_str_t  *new_metadata;  /**< New metadata from the update.
+                                         Valid only during the callback
+                                         - copy if persistence is
+                                         needed.                        */
+    pjsip_rx_data   *rdata;         /**< The received request containing
+                                         the update, or NULL when the
+                                         request is not available. The
+                                         request is currently provided
+                                         only for metadata-only
+                                         UPDATE/re-INVITE, which the
+                                         core answers directly. When the
+                                         request carries both an SDP
+                                         offer and rs-metadata, the
+                                         notification is issued after
+                                         the SDP offer/answer completes
+                                         (e.g. after an on_rx_reinvite()
+                                         takeover answered via
+                                         pjsip_inv_answer()) and the
+                                         request is not available.
+                                         Applications that need the
+                                         request context of a combined
+                                         SDP and metadata update should
+                                         capture it in the callbacks
+                                         that receive the rdata:
+                                         on_verify_siprec_update(),
+                                         on_rx_reinvite(), or
+                                         on_rx_offer2().                */
+};
+
+
+/**
  * This structure contains callbacks to be registered by application to 
  * receive notifications from the framework about various events in
  * the invite session.
@@ -386,25 +443,20 @@ typedef struct pjsip_inv_callback
      *
      * The callback should extract the metadata from the request and
      * verify it according to the application's policy. If verification
-     * fails, the callback may create an error response in p_tdata.
+     * fails, the callback may create an error response in
+     * param->p_tdata.
      *
      * This callback is optional. If not implemented, metadata will be
      * accepted without verification.
      *
      * @param inv           The invite session.
-     * @param rdata         The received request (re-INVITE or UPDATE).
-     * @param metadata      Output parameter to be filled with the
-     *                      extracted metadata.
-     * @param p_tdata       Optional output parameter to be filled with
-     *                      error response if verification fails.
+     * @param param         The callback parameters.
      *
      * @return              PJ_SUCCESS to accept the request, or error
      *                      code to reject it.
      */
     pj_status_t (*on_verify_siprec_update)(pjsip_inv_session *inv,
-                                            pjsip_rx_data *rdata,
-                                            pj_str_t *metadata,
-                                            pjsip_tx_data **p_tdata);
+        struct pjsip_inv_on_verify_siprec_cb_param *param);
 
     /**
      * This callback is called when SIPREC rs-metadata is updated via
@@ -426,31 +478,10 @@ typedef struct pjsip_inv_callback
      * This callback is optional.
      *
      * @param inv           The invite session.
-     * @param old_metadata  Previous metadata (may be NULL or empty). For the
-     *                       core layer, this is always empty since metadata
-     *                       state is maintained at the application layer.
-     * @param new_metadata  New metadata from the update. Valid only during
-     *                       the callback - copy if persistence is needed.
-     * @param rdata         The received request containing the update, or
-     *                       NULL when the request is not available. The
-     *                       request is currently provided only for
-     *                       metadata-only UPDATE/re-INVITE, which the
-     *                       core answers directly. When the request
-     *                       carries both an SDP offer and rs-metadata,
-     *                       the notification is issued after the SDP
-     *                       offer/answer completes (e.g. after an
-     *                       on_rx_reinvite() takeover answered via
-     *                       pjsip_inv_answer()) and the request is not
-     *                       available. Applications that need the request
-     *                       context of a combined SDP and metadata update
-     *                       should capture it in the callbacks that
-     *                       receive the rdata: on_verify_siprec_update(),
-     *                       on_rx_reinvite(), or on_rx_offer2().
+     * @param param         The callback parameters.
      */
     void (*on_siprec_metadata_update)(pjsip_inv_session *inv,
-                                      const pj_str_t *old_metadata,
-                                      const pj_str_t *new_metadata,
-                                      pjsip_rx_data *rdata);
+        struct pjsip_inv_on_siprec_metadata_cb_param *param);
 
 } pjsip_inv_callback;
 

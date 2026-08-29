@@ -129,17 +129,13 @@ static pj_bool_t pjsua_call_on_uac_tsx_terminate_session(
  * SIPREC metadata verification handler.
  */
 static pj_status_t pjsua_call_on_verify_siprec_update(pjsip_inv_session *inv,
-                                                        pjsip_rx_data *rdata,
-                                                        pj_str_t *metadata,
-                                                        pjsip_tx_data **p_tdata);
+        struct pjsip_inv_on_verify_siprec_cb_param *param);
 
 /*
  * SIPREC metadata update notification handler.
  */
 static void pjsua_call_on_siprec_metadata_update(pjsip_inv_session *inv,
-                                                   const pj_str_t *old_metadata,
-                                                   const pj_str_t *new_metadata,
-                                                   pjsip_rx_data *rdata);
+        struct pjsip_inv_on_siprec_metadata_cb_param *param);
 #endif
 
 
@@ -6140,13 +6136,14 @@ static pj_status_t pjsua_call_on_rx_reinvite(pjsip_inv_session *inv,
  * pjsip_siprec_verify_request() does for the initial INVITE.
  */
 static pj_status_t pjsua_call_on_verify_siprec_update(pjsip_inv_session *inv,
-                                                        pjsip_rx_data *rdata,
-                                                        pj_str_t *metadata,
-                                                        pjsip_tx_data **p_tdata)
+        struct pjsip_inv_on_verify_siprec_cb_param *param)
 {
     pjsua_call *call;
     pjsip_siprec_verify_setting setting;
     pj_status_t status;
+    pjsip_rx_data *rdata = param->rdata;
+    pj_str_t *metadata = param->metadata;
+    pjsip_tx_data **p_tdata = param->p_tdata;
 
     PJ_ASSERT_RETURN(inv && rdata, PJ_EINVAL);
 
@@ -6191,12 +6188,13 @@ static pj_status_t pjsua_call_on_verify_siprec_update(pjsip_inv_session *inv,
  * and forwards the notification to the application.
  */
 static void pjsua_call_on_siprec_metadata_update(pjsip_inv_session *inv,
-                                                   const pj_str_t *old_metadata,
-                                                   const pj_str_t *new_metadata,
-                                                   pjsip_rx_data *rdata)
+        struct pjsip_inv_on_siprec_metadata_cb_param *param)
 {
     pjsua_call *call;
     pj_str_t prev_metadata;
+    const pj_str_t *old_metadata = param->old_metadata;
+    const pj_str_t *new_metadata = param->new_metadata;
+    pjsip_rx_data *rdata = param->rdata;
 
     PJ_UNUSED_ARG(old_metadata);
 

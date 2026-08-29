@@ -2410,9 +2410,12 @@ static pj_status_t inv_verify_siprec_metadata_update(
          * 2. Verifying according to application policy (require_label, etc.)
          * 3. Creating error response if verification fails
          */
-        meta_status = (*mod_inv.cb.on_verify_siprec_update)(inv, rdata,
-                                                            &new_metadata,
-                                                            &tdata);
+        struct pjsip_inv_on_verify_siprec_cb_param param;
+
+        param.rdata = rdata;
+        param.metadata = &new_metadata;
+        param.p_tdata = &tdata;
+        meta_status = (*mod_inv.cb.on_verify_siprec_update)(inv, &param);
         if (meta_status == PJ_ENOTFOUND) {
             /* Metadata not found in request.
              * This is normal for routine mid-dialog operations.
@@ -2504,10 +2507,12 @@ static void inv_notify_siprec_metadata_update(pjsip_inv_session *inv,
         return;
 
     if (mod_inv.cb.on_siprec_metadata_update) {
-        (*mod_inv.cb.on_siprec_metadata_update)(inv,
-                                                &empty_metadata,
-                                                &inv->siprec_metadata,
-                                                rdata);
+        struct pjsip_inv_on_siprec_metadata_cb_param param;
+
+        param.old_metadata = &empty_metadata;
+        param.new_metadata = &inv->siprec_metadata;
+        param.rdata = rdata;
+        (*mod_inv.cb.on_siprec_metadata_update)(inv, &param);
     }
 
     inv->siprec_metadata.ptr = NULL;
