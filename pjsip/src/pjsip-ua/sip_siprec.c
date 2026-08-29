@@ -137,6 +137,35 @@ PJ_DEF(void) pjsip_siprec_verify_setting_default(
 }
 
 /**
+ * Check that every media stream in the SDP carries a label attribute.
+ * Depending on require_label, an unlabeled media stream either fails
+ * verification (returns PJ_ENOTFOUND) or is merely logged.
+ */
+static pj_status_t pjsip_siprec_check_media_labels(
+                                        const pjmedia_sdp_session *sdp,
+                                        pj_bool_t require_label)
+{
+    unsigned mi;
+
+    for (mi=0; mi<sdp->media_count; ++mi) {
+        if (pjmedia_sdp_media_find_attr(sdp->media[mi], &STR_LABEL, NULL))
+            continue;
+
+        if (require_label)
+            return PJ_ENOTFOUND;
+
+        PJ_LOG(3,(THIS_FILE,
+                  "SIPREC media %d missing label attribute. "
+                  "Metadata correlation will be limited. "
+                  "To require labels, set siprec_require_label to PJ_TRUE.",
+                  mi));
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/**
  * Verifies that the incoming request is a siprec request or not.
  */
 PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
@@ -152,7 +181,6 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
     pj_status_t status = PJ_SUCCESS;
     const char *warn_text = NULL;
     pjsip_hdr res_hdr_list;
-    unsigned mi;
     pjsip_siprec_verify_setting default_setting;
 
     /* Init return arguments. */
@@ -199,33 +227,12 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
         goto on_return;
     }
 
-    /* Check that the media attribute label exists in the SDP
-     * Behavior depends on require_label:
-     * - PJ_TRUE (require): Reject if any media lacks label
-     * - PJ_FALSE (optional): Accept, but log warning for unlabeled media
-     */
-    if (setting->require_label) {
-        /* Require labels - reject if any media stream lacks one */
-        for (mi=0; mi<sdp_offer->media_count; ++mi) {
-            if (!pjmedia_sdp_media_find_attr(sdp_offer->media[mi],
-                                                &STR_LABEL, NULL)){
-                code = PJSIP_SC_BAD_REQUEST;
-                warn_text = "SDP must have label media attribute";
-                goto on_return;
-            }
-        }
-    } else {
-        /* Labels are optional - log warnings for missing labels */
-        for (mi=0; mi<sdp_offer->media_count; ++mi) {
-            if (!pjmedia_sdp_media_find_attr(sdp_offer->media[mi],
-                                                &STR_LABEL, NULL)){
-                PJ_LOG(3,(THIS_FILE,
-                          "SIPREC media %d missing label attribute. "
-                          "Metadata correlation will be limited. "
-                          "To require labels, set siprec_require_label to PJ_TRUE.",
-                          mi));
-            }
-        }
+    if (pjsip_siprec_check_media_labels(sdp_offer,
+                                        setting->require_label) != PJ_SUCCESS)
+    {
+        code = PJSIP_SC_BAD_REQUEST;
+        warn_text = "SDP must have label media attribute";
+        goto on_return;
     }
 
     /* Check that rs-metadata exists in the multipart body
@@ -332,7 +339,6 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_update(pjsip_rx_data *rdata,
     const char *warn_text = NULL;
     pjsip_rdata_sdp_info *sdp_info;
     pjsip_siprec_verify_setting default_setting;
-    unsigned mi;
 
     PJ_ASSERT_RETURN(rdata && metadata, PJ_EINVAL);
 
@@ -359,33 +365,14 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_update(pjsip_rx_data *rdata,
     if (status != PJ_SUCCESS)
         return PJ_ENOTFOUND;
 
-    /* Check that the media attribute label exists in the SDP offer,
-     * if any, like pjsip_siprec_verify_request() does for the INVITE.
-     */
+    /* Check that the media attribute label exists in the SDP offer, if any. */
     sdp_info = pjsip_rdata_get_sdp_info(rdata);
     if (sdp_info->sdp) {
-        if (setting->require_label) {
-            for (mi=0; mi<sdp_info->sdp->media_count; ++mi) {
-                if (!pjmedia_sdp_media_find_attr(sdp_info->sdp->media[mi],
-                                                 &STR_LABEL, NULL))
-                {
-                    code = PJSIP_SC_BAD_REQUEST;
-                    warn_text = "SDP must have label media attribute";
-                    break;
-                }
-            }
-        } else {
-            for (mi=0; mi<sdp_info->sdp->media_count; ++mi) {
-                if (!pjmedia_sdp_media_find_attr(sdp_info->sdp->media[mi],
-                                                 &STR_LABEL, NULL))
-                {
-                    PJ_LOG(3,(THIS_FILE,
-                              "SIPREC media %d missing label attribute. "
-                              "Metadata correlation will be limited. "
-                              "To require labels, set siprec_require_label "
-                              "to PJ_TRUE.", mi));
-                }
-            }
+        status = pjsip_siprec_check_media_labels(sdp_info->sdp,
+                                                 setting->require_label);
+        if (status != PJ_SUCCESS) {
+            code = PJSIP_SC_BAD_REQUEST;
+            warn_text = "SDP must have label media attribute";
         }
     }
 
