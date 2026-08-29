@@ -601,11 +601,12 @@ struct pjsip_inv_session
     pj_atomic_t         *ref_cnt;                   /**< Reference counter. */
     pj_bool_t            updated_sdp_answer;        /**< SDP answer just been
                                                          updated?           */
-#if PJSIP_HAS_SIPREC
+    /* Declared unconditionally so the struct layout does not depend on
+     * PJSIP_HAS_SIPREC. Kept unused when SIPREC is disabled.
+     */
     pj_str_t             siprec_metadata;           /**< SIPREC metadata update
                                                          pending notification,
                                                          internal.           */
-#endif
 };
 
 
