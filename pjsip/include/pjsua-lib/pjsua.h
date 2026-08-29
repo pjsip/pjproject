@@ -1838,6 +1838,14 @@ typedef struct pjsua_callback
      * to track metadata changes during the lifetime of a recording
      * session, as required by RFC 7866.
      *
+     * The callback also delivers the initial rs-metadata carried by an
+     * incoming INVITE, with old_metadata set to NULL. This initial
+     * notification is sent once, right after on_incoming_call(), for
+     * any call that was not hung up there, so it may arrive while the
+     * call is still ringing (not yet answered). Mid-dialog updates, in
+     * contrast, are notified only after the re-INVITE/UPDATE carrying
+     * them has been accepted.
+     *
      * The metadata is temporary and valid only during the callback.
      * Applications must copy the data to their own storage if persistence
      * is needed.

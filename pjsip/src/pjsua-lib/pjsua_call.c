@@ -2516,11 +2516,13 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
 #if PJSUA_HAS_SIPREC
     /* Notify application about initial SIPREC metadata from INVITE.
-     * This is done after on_incoming_call() succeeds, so the call is
-     * confirmed accepted. This is the initial metadata, so old_metadata
-     * is NULL. The state may still be INCOMING when the application
-     * defers answering, so only require the call to be valid, i.e. not
-     * hung up.
+     * This is done after on_incoming_call() and any deferred answer/
+     * hangup have been processed, so the notification is skipped when
+     * the call was hung up. The call may not be answered yet (deferred
+     * answer or pending media channel init), which is intentional so
+     * the initial metadata is always delivered exactly once. Unlike
+     * mid-dialog updates, it does not wait for the request to be
+     * accepted. This is the initial metadata, so old_metadata is NULL.
      */
     if (call && call->inv &&
         call->inv->state < PJSIP_INV_STATE_DISCONNECTED &&
