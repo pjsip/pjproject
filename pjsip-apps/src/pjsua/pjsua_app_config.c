@@ -2291,6 +2291,42 @@ char *alloc_settings(pjsua_app_config *config, pj_pool_t **p_pool,
     return buf;
 }
 
+/* PJ_LOG truncates a message at PJ_LOG_MAX_SIZE, which the settings buffer
+ * can exceed, so emit the dump in chunks broken at option boundaries.
+ */
+pj_status_t dump_settings(pjsua_app_config *config)
+{
+    enum { CHUNK = (PJ_LOG_MAX_SIZE > 1024)? PJ_LOG_MAX_SIZE - 512 : 512 };
+    pj_pool_t *pool;
+    char *settings;
+    int len, pos;
+
+    settings = alloc_settings(config, &pool, &len);
+    if (!settings)
+        return PJ_ENOMEM;
+
+    PJ_LOG(3,(THIS_FILE, "Dumping configuration (%d bytes):", len));
+
+    for (pos = 0; pos < len; ) {
+        int n = len - pos;
+
+        if (n > CHUNK) {
+            n = CHUNK;
+            while (n > 0 && settings[pos + n - 1] != '\n')
+                --n;
+            if (n == 0)
+                n = CHUNK;
+        }
+
+        PJ_LOG(3,(THIS_FILE, "%.*s", n, settings + pos));
+        pos += n;
+    }
+
+    pj_pool_secure_release(&pool);
+    return PJ_SUCCESS;
+}
+
+
 int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
 {
     unsigned acc_index;

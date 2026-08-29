@@ -1773,18 +1773,7 @@ static void ui_dump_call_quality()
 
 static void ui_dump_configuration()
 {
-    pj_pool_t *pool;
-    char *settings;
-    int len;
-
-    settings = alloc_settings(&app_config, &pool, &len);
-    if (!settings)
-        return;
-
-    PJ_LOG(3,(THIS_FILE, "Dumping configuration (%d bytes):\n%s\n",
-              len, settings));
-
-    pj_pool_secure_release(&pool);
+    dump_settings(&app_config);
 }
 
 static void ui_write_settings(const char *filename)

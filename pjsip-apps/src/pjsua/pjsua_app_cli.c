@@ -1838,19 +1838,7 @@ static pj_status_t cmd_stat_dump(pj_bool_t detail)
 
 static pj_status_t cmd_show_config()
 {
-    pj_pool_t *pool;
-    char *settings;
-    int len;
-
-    settings = alloc_settings(&app_config, &pool, &len);
-    if (!settings)
-        return PJ_ENOMEM;
-
-    PJ_LOG(3,(THIS_FILE, "Dumping configuration (%d bytes):\n%s\n",
-              len, settings));
-
-    pj_pool_secure_release(&pool);
-    return PJ_SUCCESS;
+    return dump_settings(&app_config);
 }
 
 static pj_status_t cmd_write_config(pj_cli_cmd_val *cval)
