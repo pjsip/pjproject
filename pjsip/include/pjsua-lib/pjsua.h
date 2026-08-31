@@ -490,7 +490,7 @@ typedef struct pj_stun_resolve_result pj_stun_resolve_result;
  * Default: 0 (disabled)
  */
 #ifndef PJSUA_HAS_SIPREC
-#   define PJSUA_HAS_SIPREC              0
+#   define PJSUA_HAS_SIPREC              PJSIP_HAS_SIPREC
 #endif
 
 
@@ -1832,6 +1832,40 @@ typedef struct pjsua_callback
                              void *reserved,
                              pjsua_call_setting *opt);
 
+    /**
+     * Notify application when SIPREC rs-metadata is updated via
+     * mid-dialog re-INVITE or UPDATE request. This allows applications
+     * to track metadata changes during the lifetime of a recording
+     * session, as required by RFC 7866.
+     *
+     * The callback also delivers the initial rs-metadata carried by an
+     * incoming INVITE, with old_metadata set to NULL. This initial
+     * notification is sent once, right after on_incoming_call(), for
+     * any call that was not hung up there, so it may arrive while the
+     * call is still ringing (not yet answered). Mid-dialog updates, in
+     * contrast, are notified only after the re-INVITE/UPDATE carrying
+     * them has been accepted.
+     *
+     * The metadata is temporary and valid only during the callback.
+     * Applications must copy the data to their own storage if persistence
+     * is needed.
+     *
+     * This callback is optional. When not set, metadata updates are
+     * handled internally without application notification.
+     *
+     * @param call_id       The call index.
+     * @param old_metadata   Previous metadata: NULL for the initial
+     *                       notification, otherwise the previously cached
+     *                       metadata of the call (may be empty).
+     * @param new_metadata   New metadata (temporary - copy if needed).
+     * @param rdata         The received request containing the update, or
+     *                       NULL when the update is delivered after the
+     *                       request has been answered asynchronously.
+     */
+    void (*on_call_siprec_metadata_update)(pjsua_call_id call_id,
+                                           const pj_str_t *old_metadata,
+                                           const pj_str_t *new_metadata,
+                                           pjsip_rx_data *rdata);
 
     /**
      * Notify application when registration or unregistration has been
