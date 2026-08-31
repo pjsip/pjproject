@@ -128,14 +128,16 @@ static pj_bool_t pjsua_call_on_uac_tsx_terminate_session(
 /*
  * SIPREC metadata verification handler.
  */
-static pj_status_t pjsua_call_on_verify_siprec_update(pjsip_inv_session *inv,
-        struct pjsip_inv_on_verify_siprec_cb_param *param);
+static pj_status_t pjsua_call_on_verify_siprec_update(
+                                    pjsip_inv_session *inv,
+                                    struct pjsip_inv_on_verify_siprec_cb_param *param);
 
 /*
  * SIPREC metadata update notification handler.
  */
-static void pjsua_call_on_siprec_metadata_update(pjsip_inv_session *inv,
-        struct pjsip_inv_on_siprec_metadata_cb_param *param);
+static void pjsua_call_on_siprec_metadata_update(
+                                    pjsip_inv_session *inv,
+                                    struct pjsip_inv_on_siprec_metadata_cb_param *param);
 #endif
 
 
@@ -6135,8 +6137,9 @@ static pj_status_t pjsua_call_on_rx_reinvite(pjsip_inv_session *inv,
  * policy (e.g. siprec_require_label) via pjsip_siprec_verify_update(), like
  * pjsip_siprec_verify_request() does for the initial INVITE.
  */
-static pj_status_t pjsua_call_on_verify_siprec_update(pjsip_inv_session *inv,
-        struct pjsip_inv_on_verify_siprec_cb_param *param)
+static pj_status_t pjsua_call_on_verify_siprec_update(
+                                    pjsip_inv_session *inv,
+                                    struct pjsip_inv_on_verify_siprec_cb_param *param)
 {
     pjsua_call *call;
     pjsip_siprec_verify_setting setting;
@@ -6187,8 +6190,9 @@ static pj_status_t pjsua_call_on_verify_siprec_update(pjsip_inv_session *inv,
  * This keeps the call's cached metadata (call->siprec_metadata) current
  * and forwards the notification to the application.
  */
-static void pjsua_call_on_siprec_metadata_update(pjsip_inv_session *inv,
-        struct pjsip_inv_on_siprec_metadata_cb_param *param)
+static void pjsua_call_on_siprec_metadata_update(
+                                    pjsip_inv_session *inv,
+                                    struct pjsip_inv_on_siprec_metadata_cb_param *param)
 {
     pjsua_call *call;
     pj_str_t prev_metadata;

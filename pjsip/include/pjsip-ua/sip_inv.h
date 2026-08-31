@@ -456,7 +456,7 @@ typedef struct pjsip_inv_callback
      *                      code to reject it.
      */
     pj_status_t (*on_verify_siprec_update)(pjsip_inv_session *inv,
-        struct pjsip_inv_on_verify_siprec_cb_param *param);
+                                           struct pjsip_inv_on_verify_siprec_cb_param *param);
 
     /**
      * This callback is called when SIPREC rs-metadata is updated via
@@ -481,7 +481,7 @@ typedef struct pjsip_inv_callback
      * @param param         The callback parameters.
      */
     void (*on_siprec_metadata_update)(pjsip_inv_session *inv,
-        struct pjsip_inv_on_siprec_metadata_cb_param *param);
+                                      struct pjsip_inv_on_siprec_metadata_cb_param *param);
 
 } pjsip_inv_callback;
 

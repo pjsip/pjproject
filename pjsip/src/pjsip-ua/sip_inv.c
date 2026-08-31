@@ -2437,9 +2437,10 @@ static pj_status_t inv_verify_siprec_metadata_update(
                 /* Callback failed to create response - create generic error */
                 pjsip_tx_data *err_tdata;
 
-                status = pjsip_dlg_create_response(inv->dlg, rdata,
-                                                   PJSIP_SC_INTERNAL_SERVER_ERROR,
-                                                   NULL, &err_tdata);
+                status = pjsip_dlg_create_response(
+                                    inv->dlg, rdata,
+                                    PJSIP_SC_INTERNAL_SERVER_ERROR,
+                                    NULL, &err_tdata);
                 if (status == PJ_SUCCESS) {
                     status = pjsip_dlg_send_response(inv->dlg,
                                                      pjsip_rdata_get_tsx(rdata),
