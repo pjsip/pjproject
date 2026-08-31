@@ -23,7 +23,8 @@
 /**
  * @file sip_siprec.h
  * @brief SIP Session Recording Protocol (siprec)
- * support (RFC 7866 - Session Recording Protocol in SIP)
+ * support (RFC 7866 - Session Recording Protocol in SIP,
+ *          RFC 7865 - Metadata Format, RFC 9806 - Media Type Update)
  */
 
 
@@ -43,6 +44,11 @@
  *  - <A HREF="http://www.ietf.org/rfc/rfc7866.txt">
  *    RFC 7866: Session Recording Protocol (siprec)
  *    in the Session Initiation Protocol (SIP)</A>
+ *  - <A HREF="http://www.ietf.org/rfc/rfc7865.txt">
+ *    RFC 7865: Metadata Format for Session Recording</A>
+ *  - <A HREF="http://www.ietf.org/rfc/rfc9806.txt">
+ *    RFC 9806: Updates to SIP-Based Media Recording (SIPREC)
+ *    to Correct Metadata Media Type</A>
  */
 PJ_BEGIN_DECL
 
@@ -136,7 +142,46 @@ PJ_DECL(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
                                                 pjsip_dialog *dlg,
                                                 pjsip_endpoint *endpt,
                                                 pjsip_tx_data **p_tdata,
-                                                const pjsip_siprec_verify_setting *setting);
+                                                const pjsip_siprec_verify_setting
+                                                *setting);
+
+
+/**
+ * Extract the rs-metadata document from a mid-dialog request
+ * (re-INVITE or UPDATE) and apply the verification policy to it.
+ * This is the mid-dialog counterpart of #pjsip_siprec_verify_request(),
+ * so the same account policy keeps being enforced after the session is
+ * established, e.g. when require_label is set, every media stream in
+ * the request SDP must have the label attribute.
+ *
+ * Unlike session establishment, a request without rs-metadata is not
+ * a policy violation (RFC 7866 allows mid-dialog requests without
+ * metadata, e.g. media hold or session refresh); require_metadata
+ * only applies to the initial INVITE.
+ *
+ * @param rdata         The incoming request to be verified.
+ * @param metadata      The siprec metadata information, populated with
+ *                      the extracted data when found.
+ * @param dlg           The dialog instance, or NULL.
+ * @param endpt         The endpoint instance, or NULL to use the dialog's
+ *                      endpoint.
+ * @param p_tdata       Upon policy violation, it will be filled with the
+ *                      final response to be sent to the request sender.
+ * @param setting       Verification setting, or NULL to use defaults.
+ *
+ * @return              PJ_SUCCESS if metadata is found and the request
+ *                      complies with the policy, PJ_ENOTFOUND if the
+ *                      request carries no rs-metadata, otherwise non-
+ *                      PJ_SUCCESS and \a p_tdata contains the error
+ *                      response to be sent.
+ */
+PJ_DECL(pj_status_t) pjsip_siprec_verify_update(pjsip_rx_data *rdata,
+                                                pj_str_t *metadata,
+                                                pjsip_dialog *dlg,
+                                                pjsip_endpoint *endpt,
+                                                pjsip_tx_data **p_tdata,
+                                                const pjsip_siprec_verify_setting
+                                                *setting);
 
 
 /**
@@ -153,7 +198,20 @@ PJ_DECL(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
  */
 PJ_DECL(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
                                                 pjsip_msg_body *body,
-                                                pj_str_t* metadata);
+                                                pj_str_t *metadata);
+
+
+/**
+ * Check whether a message body carries SIPREC metadata, either as a
+ * single-part rs-metadata document or as a part of a multipart body
+ * (RFC 7865 §5, RFC 7866 §7.1). Unlike pjsip_siprec_get_metadata(),
+ * this function produces no log output and does not extract any data.
+ *
+ * @param body               The message body to inspect.
+ *
+ * @return                   PJ_TRUE if the body carries SIPREC metadata.
+ */
+PJ_DECL(pj_bool_t) pjsip_siprec_body_has_metadata(pjsip_msg_body *body);
 
 
 PJ_END_DECL

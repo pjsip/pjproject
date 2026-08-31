@@ -124,6 +124,22 @@ static pj_bool_t pjsua_call_on_uac_tsx_terminate_session(
                                             pjsip_transaction *tsx,
                                             pjsip_event *e);
 
+#if PJSUA_HAS_SIPREC
+/*
+ * SIPREC metadata verification handler.
+ */
+static pj_status_t pjsua_call_on_verify_siprec_update(
+                                    pjsip_inv_session *inv,
+                                    struct pjsip_inv_on_verify_siprec_cb_param *param);
+
+/*
+ * SIPREC metadata update notification handler.
+ */
+static void pjsua_call_on_siprec_metadata_update(
+                                    pjsip_inv_session *inv,
+                                    struct pjsip_inv_on_siprec_metadata_cb_param *param);
+#endif
+
 
 /* Create SDP for call hold. */
 static pj_status_t create_sdp_of_call_hold(pjsua_call *call,
@@ -258,6 +274,13 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
         inv_cb.on_uac_tsx_terminate_session =
                                     &pjsua_call_on_uac_tsx_terminate_session;
     }
+
+#if PJSUA_HAS_SIPREC
+    inv_cb.on_verify_siprec_update = &pjsua_call_on_verify_siprec_update;
+    if (pjsua_var.ua_cfg.cb.on_call_siprec_metadata_update) {
+        inv_cb.on_siprec_metadata_update = &pjsua_call_on_siprec_metadata_update;
+    }
+#endif
 
     /* Initialize invite session module: */
     status = pjsip_inv_usage_init(pjsua_var.endpt, &inv_cb);
@@ -1741,6 +1764,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     pj_status_t status;
 #if PJSUA_HAS_SIPREC
     pjsip_siprec_verify_setting siprec_setting;
+    pj_str_t temp_siprec_metadata = {NULL, 0};
 #endif
 
     /* Don't want to handle anything but INVITE */
@@ -2021,7 +2045,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     siprec_setting.require_label = pjsua_var.acc[acc_id].cfg.siprec_require_label;
     siprec_setting.require_metadata = pjsua_var.acc[acc_id].cfg.siprec_require_metadata;
 
-    status = pjsip_siprec_verify_request(rdata, &call->siprec_metadata, offer,
+    status = pjsip_siprec_verify_request(rdata, &temp_siprec_metadata, offer,
                                 &options, NULL, pjsua_var.endpt, &response,
                                 &siprec_setting);
 
@@ -2047,6 +2071,12 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
         goto on_return;
     }
+
+    /*
+     * Note: temp_siprec_metadata from pjsip_siprec_verify_request points
+     * to data in rdata message body, which is temporary. We'll copy to the
+     * invite session's permanent pool after call->inv is assigned.
+     */
 
 #endif
 
@@ -2213,6 +2243,23 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     /* Create and attach pjsua_var data to the dialog */
     call->inv = inv;
+
+#if PJSUA_HAS_SIPREC
+    /*
+     * Copy metadata to invite session's permanent pool.
+     * The metadata from pjsip_siprec_verify_request points to data in
+     * rdata message body, which is temporary. Now that call->inv is assigned,
+     * we copy to the permanent pool for the call lifetime.
+     */
+    if (temp_siprec_metadata.slen > 0) {
+        call->siprec_metadata.ptr = (char*)pj_pool_alloc(call->inv->pool,
+                                                         temp_siprec_metadata.slen);
+        pj_memcpy(call->siprec_metadata.ptr, temp_siprec_metadata.ptr,
+                 temp_siprec_metadata.slen);
+        call->siprec_metadata.slen = temp_siprec_metadata.slen;
+        call->siprec_metadata_cap = temp_siprec_metadata.slen;
+    }
+#endif
 
     /* Store variables required for the callback after the async
      * media transport creation is completed.
@@ -2464,6 +2511,33 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
                               NULL, NULL);
         }
     }
+
+#if PJSUA_HAS_SIPREC
+    /* Notify application about initial SIPREC metadata from INVITE.
+     * This is done after on_incoming_call() and any deferred answer/
+     * hangup have been processed, so the notification is skipped when
+     * the call was hung up. The call may not be answered yet (deferred
+     * answer or pending media channel init), which is intentional so
+     * the initial metadata is always delivered exactly once. Unlike
+     * mid-dialog updates, it does not wait for the request to be
+     * accepted. This is the initial metadata, so old_metadata is NULL.
+     */
+    if (call && call->inv &&
+        call->inv->state < PJSIP_INV_STATE_DISCONNECTED &&
+        call->siprec_metadata.slen > 0 &&
+        pjsua_var.ua_cfg.cb.on_call_siprec_metadata_update)
+    {
+        /* Prefer the cloned rdata. Calls that replace another call (via a
+         * Replaces header) have no cloned rdata, so pass the original one;
+         * like other pjsua callbacks, it stays valid during the callback.
+         */
+        pjsip_rx_data *siprec_rdata = call->incoming_data ?
+                                      call->incoming_data : rdata;
+
+        (*pjsua_var.ua_cfg.cb.on_call_siprec_metadata_update)(
+            call->index, NULL, &call->siprec_metadata, siprec_rdata);
+    }
+#endif
 
 
     /* This INVITE request has been handled. */
@@ -6054,6 +6128,134 @@ static pj_status_t pjsua_call_on_rx_reinvite(pjsip_inv_session *inv,
 
     return (async? PJ_SUCCESS: !PJ_SUCCESS);
 }
+
+
+#if PJSUA_HAS_SIPREC
+/*
+ * Called to verify SIPREC metadata in mid-dialog requests (re-INVITE/UPDATE).
+ * This callback extracts metadata and re-applies the account verification
+ * policy (e.g. siprec_require_label) via pjsip_siprec_verify_update(), like
+ * pjsip_siprec_verify_request() does for the initial INVITE.
+ */
+static pj_status_t pjsua_call_on_verify_siprec_update(
+                                    pjsip_inv_session *inv,
+                                    struct pjsip_inv_on_verify_siprec_cb_param *param)
+{
+    pjsua_call *call;
+    pjsip_siprec_verify_setting setting;
+    pj_status_t status;
+    pjsip_rx_data *rdata = param->rdata;
+    pj_str_t *metadata = param->metadata;
+    pjsip_tx_data **p_tdata = param->p_tdata;
+
+    PJ_ASSERT_RETURN(inv && rdata, PJ_EINVAL);
+
+    call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+    if (!call) {
+        PJ_LOG(3,(THIS_FILE,
+                  "SIPREC verify callback called but call not found"));
+        return PJ_SUCCESS;
+    }
+
+    /* Initialize output */
+    metadata->ptr = NULL;
+    metadata->slen = 0;
+    if (p_tdata)
+        *p_tdata = NULL;
+
+    /* Only process if SIPREC is required for this call */
+    if (!(inv->options & PJSIP_INV_REQUIRE_SIPREC))
+        return PJ_SUCCESS;
+
+    /* Re-apply the account verification policy to the update. */
+    pjsip_siprec_verify_setting_default(&setting);
+    setting.require_label =
+        pjsua_var.acc[call->acc_id].cfg.siprec_require_label;
+    setting.require_metadata =
+        pjsua_var.acc[call->acc_id].cfg.siprec_require_metadata;
+
+    status = pjsip_siprec_verify_update(rdata, metadata, inv->dlg,
+                                        pjsua_var.endpt, p_tdata,
+                                        &setting);
+    if (status == PJ_ENOTFOUND) {
+        PJ_LOG(5,(THIS_FILE,
+                  "SIPREC metadata not found in mid-dialog request"));
+    }
+
+    return status;
+}
+
+/*
+ * Called when SIPREC metadata is updated via mid-dialog re-INVITE/UPDATE.
+ * This keeps the call's cached metadata (call->siprec_metadata) current
+ * and forwards the notification to the application.
+ */
+static void pjsua_call_on_siprec_metadata_update(
+                                    pjsip_inv_session *inv,
+                                    struct pjsip_inv_on_siprec_metadata_cb_param *param)
+{
+    pjsua_call *call;
+    pj_str_t prev_metadata;
+    const pj_str_t *old_metadata = param->old_metadata;
+    const pj_str_t *new_metadata = param->new_metadata;
+    pjsip_rx_data *rdata = param->rdata;
+
+    PJ_UNUSED_ARG(old_metadata);
+
+    call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+    if (!call) {
+        PJ_LOG(3,(THIS_FILE,
+                  "SIPREC metadata update callback called but call not found"));
+        return;
+    }
+
+    /* Update the call's cached metadata so it reflects the ongoing
+     * recording session. The copy lives in the call's long term pool and
+     * is only reallocated when a larger document arrives, so frequent
+     * updates do not accumulate memory.
+     */
+    prev_metadata = call->siprec_metadata;
+
+    if (new_metadata && new_metadata->slen > 0 && call->inv) {
+        /* Snapshot the old document, as the cache buffer may be
+         * overwritten in place below, which would otherwise make the
+         * application see the new document as old_metadata. The snapshot
+         * lives in the provisional pool, recycled after the notification.
+         */
+        if (prev_metadata.slen > 0) {
+            pj_str_t snapshot;
+
+            snapshot.ptr = (char*)
+                pj_pool_alloc(inv->pool_prov, prev_metadata.slen);
+            if (snapshot.ptr) {
+                pj_memcpy(snapshot.ptr, prev_metadata.ptr,
+                          prev_metadata.slen);
+                snapshot.slen = prev_metadata.slen;
+                prev_metadata = snapshot;
+            } else {
+                /* Pass NULL old_metadata rather than aliased bytes. */
+                prev_metadata.slen = 0;
+            }
+        }
+
+        if (new_metadata->slen > call->siprec_metadata_cap) {
+            call->siprec_metadata.ptr = (char*)
+                pj_pool_alloc(call->inv->pool, new_metadata->slen);
+            call->siprec_metadata_cap = new_metadata->slen;
+        }
+        pj_memcpy(call->siprec_metadata.ptr, new_metadata->ptr,
+                  new_metadata->slen);
+        call->siprec_metadata.slen = new_metadata->slen;
+    }
+
+    if (pjsua_var.ua_cfg.cb.on_call_siprec_metadata_update) {
+        (*pjsua_var.ua_cfg.cb.on_call_siprec_metadata_update)(
+            call->index,
+            prev_metadata.slen > 0 ? &prev_metadata : NULL,
+            new_metadata, rdata);
+    }
+}
+#endif
 
 
 /*
