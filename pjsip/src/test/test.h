@@ -89,6 +89,7 @@ extern pj_caching_pool caching_pool;
 #define INCLUDE_TSX_TEST        INCLUDE_TSX_GROUP
 #define INCLUDE_TSX_DESTROY_TEST INCLUDE_TSX_GROUP
 #define INCLUDE_INV_OA_TEST     INCLUDE_INV_GROUP
+#define INCLUDE_DLG_TARGET_REFRESH_TEST INCLUDE_INV_GROUP
 #define INCLUDE_REGC_TEST       INCLUDE_REGC_GROUP
 #define INCLUDE_AUTH_ASYNC_TEST INCLUDE_REGC_GROUP
 #define INCLUDE_PJSUA_AUTH_TEST INCLUDE_REGC_GROUP
@@ -120,6 +121,7 @@ int pjsua_call_test(void);
 int pjsua_acc_test(void);
 int inv_offer_answer_test(void);
 int dlg_core_test(void);
+int dlg_target_refresh_test(void);
 
 #define MAX_TSX_TESTS   10
 

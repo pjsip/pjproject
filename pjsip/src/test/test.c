@@ -332,6 +332,10 @@ int test_main(int argc, char *argv[])
     UT_ADD_TEST(&test_app.ut_app, inv_offer_answer_test, 0);
 #endif
 
+#if INCLUDE_DLG_TARGET_REFRESH_TEST
+    UT_ADD_TEST(&test_app.ut_app, dlg_target_refresh_test, 0);
+#endif
+
 #if INCLUDE_TSX_TEST
     PJ_TEST_SUCCESS(rc=pjsip_udp_transport_start(endpt, NULL, NULL, 1, &tp),
                     NULL, goto on_return);
