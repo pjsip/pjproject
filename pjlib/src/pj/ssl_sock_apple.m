@@ -527,8 +527,12 @@ static pj_status_t create_identity_from_cert(applessl_sock_t *assock,
         options = CFDictionaryCreate(NULL, (const void **)keys,
                                      (const void **)values,
                                      (password? 1: 0), NULL, NULL);
-        if (!options)
+        if (!options) {
+            if (password)
+                CFRelease(password);
+            CFRelease(cert_data);
             return PJ_ENOMEM;
+        }
         
 #if TARGET_OS_IPHONE
         err = SecPKCS12Import(cert_data, options, &items);
@@ -576,7 +580,13 @@ static pj_status_t create_identity_from_cert(applessl_sock_t *assock,
                 identity = (SecIdentityRef)
                            CFDictionaryGetValue((CFDictionaryRef) item,
                                                 kSecImportItemIdentity);
-                CFRetain(identity);
+                /* Get rule: this reference is owned by the dictionary, which
+                 * is released along with items below, so take our own. A
+                 * PKCS#12 carrying certificates but no private key yields no
+                 * identity here, and CFRetain(NULL) would abort.
+                 */
+                if (identity)
+                    CFRetain(identity);
                 break;
             }
 #if !TARGET_OS_IPHONE
@@ -605,6 +615,10 @@ static pj_status_t create_identity_from_cert(applessl_sock_t *assock,
         }
 
         *p_identity = sec_identity_create(identity);
+        if (!*p_identity) {
+            CFRelease(identity);
+            return PJ_ENOMEM;
+        }
     
         CFRelease(identity);
     }
