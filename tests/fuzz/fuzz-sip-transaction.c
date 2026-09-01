@@ -42,38 +42,81 @@ static void on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
     PJ_UNUSED_ARG(e);
 }
 
-/* Test server-side (UAS) transaction creation and message handling */
-static void test_uas_transaction(pj_pool_t *pool, const uint8_t *data, size_t size)
+/* Parse the input as a received request and populate rdata the way the
+ * transport layer does. Returns PJ_FALSE if the stack would have dropped it.
+ */
+static pj_bool_t init_rx_data(pj_pool_t *pool, const uint8_t *data, size_t size,
+                              pjsip_rx_data *rdata)
 {
+    pj_str_t src_addr = pj_str("127.0.0.1");
+    pjsip_parser_err_report err_list;
+    pjsip_msg *msg;
+    char *data_copy;
+
     /* Null-terminate input for parser (required by pjsip_parse_msg API) */
-    char *data_copy = (char*)pj_pool_alloc(pool, size + 1);
+    data_copy = (char*)pj_pool_alloc(pool, size + 1);
     pj_memcpy(data_copy, data, size);
     data_copy[size] = '\0';
 
-    pjsip_parser_err_report err_list;
     pj_list_init(&err_list);
-
-    pjsip_msg *msg = pjsip_parse_msg(pool, data_copy, size, &err_list);
+    msg = pjsip_parse_msg(pool, data_copy, size, &err_list);
     if (!msg || msg->type != PJSIP_REQUEST_MSG)
-        return;
+        return PJ_FALSE;
 
-    /* Setup received message data structure before creating transaction */
-    pjsip_rx_data rdata;
-    pj_bzero(&rdata, sizeof(rdata));
-    rdata.msg_info.msg = msg;
-    rdata.tp_info.pool = pool;
-    rdata.tp_info.transport = loop_transport;
+    /* Neither a UAS transaction nor a response is ever created for ACK */
+    if (msg->line.req.method.id == PJSIP_ACK_METHOD)
+        return PJ_FALSE;
+
+    pj_bzero(rdata, sizeof(*rdata));
+    rdata->msg_info.msg = msg;
+    rdata->tp_info.pool = pool;
+    rdata->tp_info.transport = loop_transport;
 
     /* Populate message info fields from parsed message headers */
-    rdata.msg_info.via = (pjsip_via_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_VIA, NULL);
-    rdata.msg_info.from = (pjsip_from_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_FROM, NULL);
-    rdata.msg_info.to = (pjsip_to_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_TO, NULL);
-    rdata.msg_info.cseq = (pjsip_cseq_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_CSEQ, NULL);
-    rdata.msg_info.cid = (pjsip_cid_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_CALL_ID, NULL);
+    rdata->msg_info.via = (pjsip_via_hdr*)
+                          pjsip_msg_find_hdr(msg, PJSIP_H_VIA, NULL);
+    rdata->msg_info.from = (pjsip_from_hdr*)
+                           pjsip_msg_find_hdr(msg, PJSIP_H_FROM, NULL);
+    rdata->msg_info.to = (pjsip_to_hdr*)
+                         pjsip_msg_find_hdr(msg, PJSIP_H_TO, NULL);
+    rdata->msg_info.cseq = (pjsip_cseq_hdr*)
+                           pjsip_msg_find_hdr(msg, PJSIP_H_CSEQ, NULL);
+    rdata->msg_info.cid = (pjsip_cid_hdr*)
+                          pjsip_msg_find_hdr(msg, PJSIP_H_CALL_ID, NULL);
 
     /* Skip if required headers are missing, as the transport layer does */
-    if (!rdata.msg_info.via || !rdata.msg_info.from || !rdata.msg_info.to ||
-        !rdata.msg_info.cseq || !rdata.msg_info.cid || !rdata.msg_info.cid->id.slen)
+    if (!rdata->msg_info.via || !rdata->msg_info.from || !rdata->msg_info.to ||
+        !rdata->msg_info.cseq || !rdata->msg_info.cid ||
+        !rdata->msg_info.cid->id.slen)
+    {
+        return PJ_FALSE;
+    }
+
+    /* Fake the source address and the Via params that the transport layer
+     * adds to every request it accepts, which pjsip_get_response_addr()
+     * relies on.
+     */
+    pj_sockaddr_in_init((pj_sockaddr_in*)&rdata->pkt_info.src_addr,
+                        &src_addr, 5060);
+    rdata->pkt_info.src_addr_len = sizeof(pj_sockaddr_in);
+    pj_ansi_strxcpy(rdata->pkt_info.src_name, src_addr.ptr,
+                    sizeof(rdata->pkt_info.src_name));
+    rdata->pkt_info.src_port = 5060;
+
+    pj_strdup2(pool, &rdata->msg_info.via->recvd_param,
+               rdata->pkt_info.src_name);
+    if (rdata->msg_info.via->rport_param == 0)
+        rdata->msg_info.via->rport_param = rdata->pkt_info.src_port;
+
+    return PJ_TRUE;
+}
+
+/* Test server-side (UAS) transaction creation and message handling */
+static void test_uas_transaction(pj_pool_t *pool, const uint8_t *data, size_t size)
+{
+    pjsip_rx_data rdata;
+
+    if (!init_rx_data(pool, data, size, &rdata))
         return;
 
     /* Create UAS transaction with rdata */
@@ -149,35 +192,9 @@ static void test_create_request(pj_pool_t *pool, const uint8_t *data, size_t siz
 /* Test sip_util.c response creation functions */
 static void test_create_response(pj_pool_t *pool, const uint8_t *data, size_t size)
 {
-    /* Null-terminate input for parser */
-    char *data_copy = (char*)pj_pool_alloc(pool, size + 1);
-    pj_memcpy(data_copy, data, size);
-    data_copy[size] = '\0';
-
-    pjsip_parser_err_report err_list;
-    pj_list_init(&err_list);
-
-    pjsip_msg *msg = pjsip_parse_msg(pool, data_copy, size, &err_list);
-    if (!msg || msg->type != PJSIP_REQUEST_MSG)
-        return;
-
-    /* Initialize rdata with parsed message and required fields */
     pjsip_rx_data rdata;
-    pj_bzero(&rdata, sizeof(rdata));
-    rdata.msg_info.msg = msg;
-    rdata.tp_info.pool = pool;
-    rdata.tp_info.transport = loop_transport;
 
-    /* Populate message info fields from parsed message headers */
-    rdata.msg_info.via = (pjsip_via_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_VIA, NULL);
-    rdata.msg_info.from = (pjsip_from_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_FROM, NULL);
-    rdata.msg_info.to = (pjsip_to_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_TO, NULL);
-    rdata.msg_info.cseq = (pjsip_cseq_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_CSEQ, NULL);
-    rdata.msg_info.cid = (pjsip_cid_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_CALL_ID, NULL);
-
-    /* Skip if required headers are missing, as the transport layer does */
-    if (!rdata.msg_info.via || !rdata.msg_info.from || !rdata.msg_info.to ||
-        !rdata.msg_info.cseq || !rdata.msg_info.cid || !rdata.msg_info.cid->id.slen)
+    if (!init_rx_data(pool, data, size, &rdata))
         return;
 
     pjsip_tx_data *tdata = NULL;
