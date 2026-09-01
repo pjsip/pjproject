@@ -301,11 +301,35 @@ elseif(PJLIB_WITH_SSL STREQUAL "mbedtls")
       MbedTLS::mbedx509
   )
 elseif(PJLIB_WITH_SSL STREQUAL "darwin")
-  message(FATAL_ERROR "TODO")
-elseif(PJLIB_WITH_SSL STREQUAL "darwin")
-  message(FATAL_ERROR "TODO")
+  if(NOT APPLE)
+    message(FATAL_ERROR "PJLIB_WITH_SSL=darwin requires an Apple platform")
+  endif()
+  find_library(Security_LIBRARY Security REQUIRED)
+  target_link_libraries(pjlib-ssl INTERFACE "${Security_LIBRARY}")
 elseif(PJLIB_WITH_SSL STREQUAL "apple")
-  message(FATAL_ERROR "TODO")
+  if(NOT APPLE)
+    message(FATAL_ERROR "PJLIB_WITH_SSL=apple requires an Apple platform")
+  endif()
+  # ssl_sock_apple.m delivers every asynchronous event through
+  # ssl_network_event_poll(), which is only called from ioqueue_select.c.
+  # With any other ioqueue the Network.framework event queue is never
+  # drained and no connection ever completes, so reject the combination
+  # here rather than at runtime.
+  if(NOT PJLIB_WITH_IOQUEUE STREQUAL "select")
+    message(FATAL_ERROR
+      "PJLIB_WITH_SSL=apple requires PJLIB_WITH_IOQUEUE=select "
+      "(got '${PJLIB_WITH_IOQUEUE}')")
+  endif()
+  find_library(Security_LIBRARY Security REQUIRED)
+  find_library(Network_LIBRARY Network REQUIRED)
+  # ssl_sock_apple.m uses NSLock
+  find_library(Foundation_LIBRARY Foundation REQUIRED)
+  target_link_libraries(pjlib-ssl
+    INTERFACE
+      "${Security_LIBRARY}"
+      "${Network_LIBRARY}"
+      "${Foundation_LIBRARY}"
+  )
 elseif(PJLIB_WITH_SSL STREQUAL "schannel")
   message(FATAL_ERROR "TODO")
 endif()
