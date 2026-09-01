@@ -155,13 +155,22 @@ static pj_ssl_sock_t *ssl_alloc(pj_pool_t *pool)
     return (pj_ssl_sock_t *)PJ_POOL_ZALLOC_T(pool, darwinssl_sock_t);
 }
 
+/* Certificates and PKCS#12 bundles are small. This bound is far above any
+ * legitimate one and exists so that a cert_file or CA_file which is not a
+ * regular file -- a FIFO with no writer, or /dev/zero -- cannot block the
+ * calling thread indefinitely or grow the buffer until the process dies.
+ */
+#define MAX_CERT_FILE_SIZE      (1024 * 1024)
+
 static pj_status_t create_data_from_file(CFDataRef *data,
                                          pj_str_t *fname, pj_str_t *path)
 {
     CFURLRef file;
     CFReadStreamRef read_stream;
+    CFMutableDataRef buf;
     UInt8 data_buf[8192];
     CFIndex nbytes = 0;
+    pj_bool_t too_big = PJ_FALSE;
     
     if (path) {
         CFURLRef filepath;
@@ -209,17 +218,50 @@ static pj_status_t create_data_from_file(CFDataRef *data,
         return PJ_EINVAL;
     }
     
-    nbytes = CFReadStreamRead(read_stream, data_buf,
-                              sizeof(data_buf));
-    if (nbytes > 0)
-        *data = CFDataCreate(NULL, data_buf, nbytes);
-    else
-        *data = NULL;
-    
+    *data = NULL;
+
+    buf = CFDataCreateMutable(NULL, 0);
+    if (!buf) {
+        CFReadStreamClose(read_stream);
+        CFRelease(read_stream);
+        return PJ_ENOMEM;
+    }
+
+    /* Read until end of stream: one CFReadStreamRead() returns at most
+     * sizeof(data_buf) bytes and is not obliged to fill the buffer even
+     * when more is available, so a single call would silently truncate.
+     * Bounded so that a stream which never ends cannot run us out of memory;
+     * every iteration that continues has appended at least one byte, so the
+     * size limit bounds the iteration count too.
+     */
+    while ((nbytes = CFReadStreamRead(read_stream, data_buf,
+                                      sizeof(data_buf))) > 0)
+    {
+        if (CFDataGetLength(buf) + nbytes > MAX_CERT_FILE_SIZE) {
+            PJ_LOG(2, (THIS_FILE, "Certificate file exceeds %d bytes",
+                       MAX_CERT_FILE_SIZE));
+            too_big = PJ_TRUE;
+            break;
+        }
+        CFDataAppendBytes(buf, data_buf, nbytes);
+    }
+
     CFReadStreamClose(read_stream);
     CFRelease(read_stream);
-    
-    return (*data? PJ_SUCCESS: PJ_EINVAL);
+
+    if (too_big) {
+        CFRelease(buf);
+        return PJ_ETOOBIG;
+    }
+
+    if (nbytes < 0 || CFDataGetLength(buf) == 0) {
+        CFRelease(buf);
+        return PJ_EINVAL;
+    }
+
+    *data = buf;
+
+    return PJ_SUCCESS;
 }
 
 /* Load the certificate configured in cert into a SecIdentityRef. The private
