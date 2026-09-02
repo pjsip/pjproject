@@ -821,16 +821,17 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_request( pjsip_endpoint *endpt,
  *                  the previously registered token and the event that triggers
  *                  the completion of the transaction.
  * @param p_tsx     Optional pointer to receive the transaction which was
- *                  created to send the request. If it is not NULL, on
- *                  success it will be set to the transaction with its
+ *                  created to send the request. On failure it will be set
+ *                  to NULL, on success to the transaction with its
  *                  reference counter incremented, so application must
  *                  release it using pj_grp_lock_dec_ref(tsx->grp_lock) once
- *                  it no longer needs the transaction, e.g. after the
- *                  callback \a cb is called. On failure, it will be set to
- *                  NULL. Note that the callback \a cb may already be called
- *                  before this function returns, so application must be
- *                  ready for the transaction to be already completed by the
- *                  time it inspects this argument.
+ *                  it no longer needs the transaction. The reference is
+ *                  handed over only after this function returns PJ_SUCCESS,
+ *                  so it must not be released from within the callback
+ *                  \a cb, which may be called before this function returns,
+ *                  i.e. the transaction may already be completed by the time
+ *                  application inspects this argument. The transaction is
+ *                  also available in the event given to the callback.
  *
  * @return          PJ_SUCCESS, or the appropriate error code.
  */
