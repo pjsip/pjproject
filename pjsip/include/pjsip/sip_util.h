@@ -807,6 +807,11 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_request( pjsip_endpoint *endpt,
  * safe to be called from any thread, including from within the callback
  * \a cb itself. Terminating an already completed transaction is harmless.
  *
+ * Note that unlike the \a p_tsx output of #pjsip_endpt_respond(), which is
+ * returned without any reference added, the transaction returned by this
+ * function has its reference counter incremented, so application must
+ * release it once it no longer needs the transaction.
+ *
  * @param endpt     The endpoint instance.
  * @param tdata     The transmit data to be sent.
  * @param timeout   Optional timeout for final response to be received, or -1

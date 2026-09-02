@@ -104,14 +104,17 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request2( pjsip_endpoint *endpt,
     struct tsx_data *tsx_data;
     pj_status_t status;
 
+    /* Reset the output first, so it is also reset when the checks below
+     * fail.
+     */
+    if (p_tsx) *p_tsx = NULL;
+
     PJ_ASSERT_RETURN(endpt && tdata && (timeout==-1 || timeout>0), PJ_EINVAL);
 
     /* Check that transaction layer module is registered to endpoint */
     PJ_ASSERT_RETURN(mod_stateful_util.id != -1, PJ_EINVALIDOP);
 
     PJ_UNUSED_ARG(timeout);
-
-    if (p_tsx) *p_tsx = NULL;
 
     status = pjsip_tsx_create_uac(&mod_stateful_util, tdata, &tsx);
     if (status != PJ_SUCCESS) {
