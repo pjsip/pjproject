@@ -9705,6 +9705,8 @@ esac
 fi
 
 
+ac_ssl_disabled_by_user=$enable_ssl
+
 if test "x$ac_cross_compile" != "x" -a "x$with_ssl" = "xno" -a "x$with_gnutls" = "xno" -a "x$with_mbedtls" = "xno"; then
     enable_ssl=no
 fi
@@ -9727,6 +9729,16 @@ else case e in #(
   e)
         case $target in
             *darwin*)
+              if test "x$ac_ssl_disabled_by_user" = "xno"; then
+                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Checking if Darwin SSL is available... skipped (--disable-ssl)" >&5
+printf "%s\n" "Checking if Darwin SSL is available... skipped (--disable-ssl)" >&6; }
+              elif test "x$with_gnutls" != "xno" -a "x$with_gnutls" != "x"; then
+                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Checking if Darwin SSL is available... skipped (--with-gnutls)" >&5
+printf "%s\n" "Checking if Darwin SSL is available... skipped (--with-gnutls)" >&6; }
+              elif test "x$with_mbedtls" != "xno" -a "x$with_mbedtls" != "x"; then
+                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Checking if Darwin SSL is available... skipped (--with-mbedtls)" >&5
+printf "%s\n" "Checking if Darwin SSL is available... skipped (--with-mbedtls)" >&6; }
+              else
                 SAVED_CFLAGS="$CFLAGS"
                 CFLAGS="-Werror"
                 SAVED_LIBS="$LIBS"
@@ -9741,7 +9753,7 @@ int
 main (void)
 {
 if (__builtin_available(macOS 10.12, iOS 10.0, *)) {
-                                SSLContextRef ssl_ctx;
+                                SSLContextRef ssl_ctx = NULL;
                                 SSLReHandshake(ssl_ctx);
                             }
   ;
@@ -9769,6 +9781,7 @@ printf "%s\n" "Checking if Darwin SSL is available... yes" >&6; }
                         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Checking if Darwin SSL is available... no" >&5
 printf "%s\n" "Checking if Darwin SSL is available... no" >&6; }
                 fi
+              fi
             ;;
         esac
 
