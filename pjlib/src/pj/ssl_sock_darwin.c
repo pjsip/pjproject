@@ -445,15 +445,27 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
         min_proto = kTLSProtocol13;
     }
 
-    /* According to the doc, we can't set min/max proto for TLS protocol
-     * higher than 1.0. The runtime error given is -9830 (Illegal parameter).
+    /* SecureTransport.h documents kSSLProtocol3, kTLSProtocol1,
+     * kTLSProtocol11 and kTLSProtocol12 as legal for these two setters.
+     * TLS 1.3 is not among them, so clamp it to 1.2 rather than leaving the
+     * bound unset -- an unset bound falls back to the stack default, which is
+     * lower than whatever the caller asked for.
      */
-    if (min_proto != kSSLProtocolUnknown && min_proto <= kTLSProtocol1) {
+    if (min_proto == kTLSProtocol13 || max_proto == kTLSProtocol13) {
+        PJ_LOG(3, (THIS_FILE, "TLS 1.3 is not supported by this backend, "
+                              "limiting to TLS 1.2"));
+        if (min_proto == kTLSProtocol13)
+            min_proto = kTLSProtocol12;
+        if (max_proto == kTLSProtocol13)
+            max_proto = kTLSProtocol12;
+    }
+
+    if (min_proto != kSSLProtocolUnknown) {
         err = SSLSetProtocolVersionMin(ssl_ctx, min_proto);
         if (err != noErr) pj_status_from_err(dssock, "SetVersionMin", err);
     }
 
-    if (max_proto != kSSLProtocolUnknown && max_proto <= kTLSProtocol1) {
+    if (max_proto != kSSLProtocolUnknown) {
         err = SSLSetProtocolVersionMax(ssl_ctx, max_proto);
         if (err != noErr) pj_status_from_err(dssock, "SetVersionMax", err);
     }
