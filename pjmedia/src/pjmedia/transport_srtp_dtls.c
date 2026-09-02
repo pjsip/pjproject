@@ -29,6 +29,7 @@
 #include <openssl/bn.h>
 #include <openssl/ec.h>
 #include <openssl/err.h>
+#include <openssl/evp.h>
 #include <openssl/obj_mac.h>
 #include <openssl/rsa.h>
 #include <openssl/ssl.h>
@@ -419,9 +420,28 @@ static pj_status_t ssl_get_fingerprint(X509 *cert, pj_bool_t is_sha256,
 /* Generate private key for the self-signed cert */
 static pj_status_t ssl_generate_key(EVP_PKEY **p_priv_key)
 {
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+
+#  if PJMEDIA_SRTP_DTLS_USE_EC_KEY
+    /* Refer to the curve by name, as some peers reject certificates with
+     * explicit curve parameters.
+     */
+    EVP_PKEY *priv_key = EVP_EC_gen("P-256");
+#  else
+    EVP_PKEY *priv_key = EVP_RSA_gen(2048);
+#  endif
+
+    if (!priv_key)
+        return PJ_EUNKNOWN;
+
+    *p_priv_key = priv_key;
+    return PJ_SUCCESS;
+
+#else
+
     EVP_PKEY *priv_key = NULL;
 
-#if PJMEDIA_SRTP_DTLS_USE_EC_KEY
+#  if PJMEDIA_SRTP_DTLS_USE_EC_KEY
 
     EC_KEY *ec_key;
 
@@ -451,7 +471,7 @@ on_error:
     if (priv_key) EVP_PKEY_free(priv_key);
     return PJ_EUNKNOWN;
 
-#else
+#  else
 
     BIGNUM *bne = NULL;
     RSA *rsa_key = NULL;
@@ -485,6 +505,8 @@ on_error:
     if (rsa_key) RSA_free(rsa_key);
     if (priv_key) EVP_PKEY_free(priv_key);
     return PJ_EUNKNOWN;
+
+#  endif
 
 #endif
 }
