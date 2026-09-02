@@ -2118,6 +2118,17 @@ AC_ARG_WITH(mbedtls,
     [with_mbedtls=no]
 )
 
+dnl # Remember an explicit --disable-ssl before the cross-compile default
+dnl # below overwrites enable_ssl, so the two cannot be confused later.
+dnl #
+dnl # The Darwin probe deliberately keys off this rather than off enable_ssl:
+dnl # the cross-compile default exists to stop a cross build picking up *host*
+dnl # OpenSSL/GnuTLS/MbedTLS installations, whereas Secure Transport is a
+dnl # system framework on the target with nothing to detect on the host. So a
+dnl # cross build still probes for it; only an explicit --disable-ssl suppresses
+dnl # it.
+ac_ssl_disabled_by_user=$enable_ssl
+
 dnl # Do not use default SSL installation if we are cross-compiling
 if test "x$ac_cross_compile" != "x" -a "x$with_ssl" = "xno" -a "x$with_gnutls" = "xno" -a "x$with_mbedtls" = "xno"; then
     enable_ssl=no
@@ -2138,7 +2149,20 @@ AC_ARG_ENABLE(darwin-ssl,
     [
         case $target in
             *darwin*)
+              if test "x$ac_ssl_disabled_by_user" = "xno"; then
+                AC_MSG_RESULT([Checking if Darwin SSL is available... skipped (--disable-ssl)])
+              elif test "x$with_gnutls" != "xno" -a "x$with_gnutls" != "x"; then
+                AC_MSG_RESULT([Checking if Darwin SSL is available... skipped (--with-gnutls)])
+              elif test "x$with_mbedtls" != "xno" -a "x$with_mbedtls" != "x"; then
+                AC_MSG_RESULT([Checking if Darwin SSL is available... skipped (--with-mbedtls)])
+              else
                 SAVED_CFLAGS="$CFLAGS"
+dnl # The probe replaces CFLAGS rather than inheriting them, deliberately.
+dnl # Several flags a caller may pass decide the answer rather than describe
+dnl # the target: -w and -Wno-deprecated-declarations suppress the deprecation
+dnl # this probe trips over, and a deployment target predating the deprecation
+dnl # (-m*-version-min=, or a triple carrying one) does the same. Inheriting
+dnl # any of them would let an unrelated flag choose the TLS backend.
                 CFLAGS="-Werror"
                 SAVED_LIBS="$LIBS"
 
@@ -2148,7 +2172,7 @@ AC_ARG_ENABLE(darwin-ssl,
                         AC_LANG_PROGRAM([
                             [#include <Security/SecureTransport.h>]],
                             [if (__builtin_available(macOS 10.12, iOS 10.0, *)) {
-                                SSLContextRef ssl_ctx;
+                                SSLContextRef ssl_ctx = NULL;
                                 SSLReHandshake(ssl_ctx);
                             }])
                     ],
@@ -2165,6 +2189,7 @@ AC_ARG_ENABLE(darwin-ssl,
                     else
                         AC_MSG_RESULT([Checking if Darwin SSL is available... no])
                 fi
+              fi
             ;;
         esac
     ]
