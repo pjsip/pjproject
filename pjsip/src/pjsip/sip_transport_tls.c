@@ -818,7 +818,14 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart2(pjsip_tpfactory *factory,
     pj_status_t status = PJ_SUCCESS;
     struct tls_listener *listener = (struct tls_listener *)factory;
 
-    /* Just update the published address if currently no listener */
+#if defined(PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER) && \
+    PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER != 0
+    /* This build never creates a listener, so a restart can only mean
+     * updating the published address. Where listeners are created normally,
+     * a registered factory without a socket means an earlier restart closed
+     * the listener and failed to bring it back, and the restart below is the
+     * only way to recover it -- so do not take this shortcut there.
+     */
     if (!listener->ssock) {
         PJ_LOG(3,(factory->obj_name,
                       "TLS restart requested while no listener created, "
@@ -842,12 +849,16 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart2(pjsip_tpfactory *factory,
 
        return PJ_SUCCESS;
     }
+#endif
 
     /* Close the listener socket only; keep the factory registered so it
      * stays usable for outgoing transports if the restart below fails.
+     * It is already gone if an earlier restart failed to restart it.
      */
-    pj_ssl_sock_close(listener->ssock);
-    listener->ssock = NULL;
+    if (listener->ssock) {
+        pj_ssl_sock_close(listener->ssock);
+        listener->ssock = NULL;
+    }
 
     /* Update TLS settings if provided */
     if (opt) {
