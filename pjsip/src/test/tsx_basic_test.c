@@ -23,11 +23,23 @@
 
 #define THIS_FILE   "tsx_basic_test.c"
 
+struct send_request2_data
+{
+    pj_bool_t   cb_called;
+    int         status_code;
+};
+
 static struct tsx_basic_test_global_t
 {
     char TARGET_URI[PJSIP_MAX_URL_SIZE];
     char FROM_URI[PJSIP_MAX_URL_SIZE];
     pjsip_transport *tp;
+
+    /* Must outlive the test function, as the callback may still be called
+     * after the test returns, e.g. when the test fails to terminate the
+     * transaction.
+     */
+    struct send_request2_data sr;
 } g[MAX_TSX_TESTS];
 
 
@@ -159,6 +171,116 @@ static int double_terminate(unsigned tid)
     return PJ_SUCCESS;
 }
 
+static void send_request2_cb(void *token, pjsip_event *e)
+{
+    struct send_request2_data *sr = (struct send_request2_data*)token;
+
+    sr->cb_called = PJ_TRUE;
+    if (e->type == PJSIP_EVENT_TSX_STATE && e->body.tsx_state.tsx)
+        sr->status_code = e->body.tsx_state.tsx->status_code;
+}
+
+/* Test terminating a request sent using pjsip_endpt_send_request2(), e.g.
+ * to stop the retransmissions before any response is received.
+ */
+static int send_request2_test(unsigned tid)
+{
+    struct send_request2_data *sr = &g[tid].sr;
+    pj_str_t target, from, tsx_key;
+    pjsip_tx_data *tdata;
+    pjsip_transaction *tsx = NULL;
+    pjsip_tpselector tp_sel;
+    pj_bool_t prev_discard;
+    pj_status_t status;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  send request2 and terminate test"));
+
+    target = pj_str(g[tid].TARGET_URI);
+    from = pj_str(g[tid].FROM_URI);
+
+    /* Discard the outgoing request, so it will never be answered. */
+    pjsip_loop_set_discard(g[tid].tp, PJ_TRUE, &prev_discard);
+
+    status = pjsip_endpt_create_request(endpt, &pjsip_options_method, &target,
+                                        &from, &target, NULL, NULL, -1, NULL,
+                                        &tdata);
+    if (status != PJ_SUCCESS) {
+        app_perror("   error: unable to create request", status);
+        rc = -200;
+        goto on_return;
+    }
+
+    pj_bzero(&tp_sel, sizeof(tp_sel));
+    tp_sel.type = PJSIP_TPSELECTOR_TRANSPORT;
+    tp_sel.u.transport = g[tid].tp;
+    pjsip_tx_data_set_transport(tdata, &tp_sel);
+
+    pj_bzero(sr, sizeof(*sr));
+
+    status = pjsip_endpt_send_request2(endpt, tdata, -1, sr,
+                                       &send_request2_cb, &tsx);
+    if (status != PJ_SUCCESS) {
+        app_perror("   error: unable to send request", status);
+        rc = -210;
+        goto on_return;
+    }
+
+    if (tsx == NULL) {
+        PJ_LOG(3,(THIS_FILE, "   error: transaction is not returned"));
+        rc = -220;
+        goto on_return;
+    }
+
+    /* Save the key, to verify that the transaction is unregistered later. */
+    pj_strdup_with_null(tsx->pool, &tsx_key, &tsx->transaction_key);
+
+    /* Nothing should complete the transaction by itself. */
+    flush_events(100);
+    if (sr->cb_called) {
+        PJ_LOG(3,(THIS_FILE, "   error: transaction completed prematurely"));
+        rc = -230;
+        goto on_dec_ref;
+    }
+
+    status = pjsip_tsx_terminate_async(tsx, PJSIP_SC_REQUEST_TERMINATED);
+    if (status != PJ_SUCCESS) {
+        app_perror("   error: unable to terminate transaction", status);
+        rc = -240;
+        goto on_dec_ref;
+    }
+
+    flush_events(1000);
+
+    if (!sr->cb_called) {
+        PJ_LOG(3,(THIS_FILE, "   error: callback is not called"));
+        rc = -250;
+        goto on_dec_ref;
+    }
+
+    if (sr->status_code != PJSIP_SC_REQUEST_TERMINATED) {
+        PJ_LOG(3,(THIS_FILE, "   error: unexpected status code %d",
+                  sr->status_code));
+        rc = -260;
+        goto on_dec_ref;
+    }
+
+    /* The transaction must have been unregistered from the transaction
+     * layer, while our reference keeps the instance alive.
+     */
+    if (pjsip_tsx_layer_find_tsx2(&tsx_key, PJ_FALSE) != NULL) {
+        PJ_LOG(3,(THIS_FILE, "   error: transaction is still registered"));
+        rc = -270;
+    }
+
+on_dec_ref:
+    pj_grp_lock_dec_ref(tsx->grp_lock);
+
+on_return:
+    pjsip_loop_set_discard(g[tid].tp, prev_discard, NULL);
+    return rc;
+}
+
 int tsx_basic_test(unsigned tid)
 {
     struct tsx_test_param *param = &tsx_test[tid];
@@ -186,6 +308,13 @@ int tsx_basic_test(unsigned tid)
     status = double_terminate(tid);
     if (status != 0)
         goto on_return;
+
+    /* This test needs the loop transport to blackhole the request. */
+    if (g[tid].tp) {
+        status = send_request2_test(tid);
+        if (status != 0)
+            goto on_return;
+    }
 
     status = 0;
 

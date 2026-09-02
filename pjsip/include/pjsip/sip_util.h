@@ -794,6 +794,60 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_request( pjsip_endpoint *endpt,
                                                pjsip_endpt_send_callback cb);
 
 /**
+ * Variant of #pjsip_endpt_send_request() which can also return the
+ * transaction created to send the request. Application may use the
+ * transaction, for example, to terminate the request before any response
+ * is received, e.g. to stop the retransmissions of an out-of-dialog request
+ * such as OPTIONS. Note that terminating the transaction only abandons the
+ * request locally, nothing is sent to the network, as CANCEL is not
+ * applicable to non-INVITE requests (see RFC 3261 section 9.1).
+ *
+ * To terminate the transaction, application should use
+ * #pjsip_tsx_terminate_async() or #pjsip_tsx_terminate_async2(), which are
+ * safe to be called from any thread, including from within the callback
+ * \a cb itself. Terminating an already completed transaction is harmless.
+ *
+ * Note that unlike the \a p_tsx output of #pjsip_endpt_respond(), which is
+ * returned without any reference added, the transaction returned by this
+ * function has its reference counter incremented, so application must
+ * release it once it no longer needs the transaction.
+ *
+ * @param endpt     The endpoint instance.
+ * @param tdata     The transmit data to be sent.
+ * @param timeout   Optional timeout for final response to be received, or -1
+ *                  if the transaction should not have a timeout restriction.
+ *                  The value is in miliseconds. Note that this is not
+ *                  implemented yet, so application needs to use its own timer
+ *                  to handle timeout.
+ * @param token     Optional token to be associated with the transaction, and
+ *                  to be passed to the callback.
+ * @param cb        Optional callback to be called when the transaction has
+ *                  received a final response. The callback will be called with
+ *                  the previously registered token and the event that triggers
+ *                  the completion of the transaction.
+ * @param p_tsx     Optional pointer to receive the transaction which was
+ *                  created to send the request. On failure it will be set
+ *                  to NULL, on success to the transaction with its
+ *                  reference counter incremented, so application must
+ *                  release it using pj_grp_lock_dec_ref(tsx->grp_lock) once
+ *                  it no longer needs the transaction. The reference is
+ *                  handed over only after this function returns PJ_SUCCESS,
+ *                  so it must not be released from within the callback
+ *                  \a cb, which may be called before this function returns,
+ *                  i.e. the transaction may already be completed by the time
+ *                  application inspects this argument. The transaction is
+ *                  also available in the event given to the callback.
+ *
+ * @return          PJ_SUCCESS, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_endpt_send_request2(pjsip_endpoint *endpt,
+                                               pjsip_tx_data *tdata,
+                                               pj_int32_t timeout,
+                                               void *token,
+                                               pjsip_endpt_send_callback cb,
+                                               pjsip_transaction **p_tsx);
+
+/**
  * @}
  */
 
