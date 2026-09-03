@@ -522,12 +522,25 @@ static pj_status_t oh264_codec_open(pjmedia_vid_codec *codec,
      * oh264_codec_modify() call, which does set ENCODER_OPTION_MAX_BITRATE.
      * OpenH264 requires the ceiling to be at least the target, so on conflict
      * lower the target instead of raising the ceiling above what the remote
-     * agreed to receive.
+     * agreed to receive. An unset max_bps is zero, which is OpenH264's own
+     * UNSPECIFIED_BIT_RATE, so it passes through as "no ceiling".
      */
     eprm.iMaxBitrate                    = param->enc_fmt.det.vid.max_bps;
-    if (eprm.iMaxBitrate > 0 && eprm.iMaxBitrate < eprm.iTargetBitrate) {
-        eprm.iTargetBitrate             = eprm.iMaxBitrate;
-        param->enc_fmt.det.vid.avg_bps  = eprm.iMaxBitrate;
+    if (eprm.iMaxBitrate != UNSPECIFIED_BIT_RATE &&
+        eprm.iMaxBitrate < eprm.iTargetBitrate)
+    {
+        if ((float)eprm.iMaxBitrate >= eprm.fMaxFrameRate) {
+            eprm.iTargetBitrate         = eprm.iMaxBitrate;
+            param->enc_fmt.det.vid.avg_bps = eprm.iMaxBitrate;
+        } else {
+            /* OpenH264 rejects a target below one bit per frame, which would
+             * fail codec open. Drop the ceiling instead of the whole stream.
+             */
+            PJ_LOG(3,(THIS_FILE, "Ignoring unusable max bitrate %d bps "
+                                 "(below %d fps)", eprm.iMaxBitrate,
+                                 (int)eprm.fMaxFrameRate));
+            eprm.iMaxBitrate            = UNSPECIFIED_BIT_RATE;
+        }
     }
     eprm.bEnableFrameSkip               = 1;
     eprm.bEnableDenoise                 = 0;
