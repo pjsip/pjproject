@@ -187,14 +187,25 @@ void cli_get_info(char *info, pj_size_t size)
                      telnet_info.port);
 }
 
+/* The CLI can only take the log once a front end has been registered:
+ * pj_cli_create() leaves the front end list empty, and pj_cli_telnet_create()
+ * logs its bind failures before registering itself.
+ */
+static pj_bool_t cli_log_ready(void)
+{
+    return (cli && (telnet_front_end || cli_cons_sess));
+}
+
 static void cli_log_writer(int level, const char *buffer, int len)
 {
-    if (cli)
+    pj_bool_t to_cli = cli_log_ready();
+
+    if (to_cli)
         pj_cli_write_log(cli, level, buffer, len);
 
     if (app_log_writer)
         (*app_log_writer)(level, buffer, len);
-    else if (!cli)
+    else if (!to_cli)
         pj_log_write(level, buffer, len);
 
 #ifdef USE_GUI
@@ -292,6 +303,8 @@ void cli_destroy(void)
     if (cli) {
         pj_cli_destroy(cli);
         cli = NULL;
+        telnet_front_end = NULL;
+        cli_cons_sess = NULL;
     }
 
     /* Destroy CLI caching pool factory */
