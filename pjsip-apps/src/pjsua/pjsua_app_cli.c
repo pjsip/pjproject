@@ -182,10 +182,12 @@ void cli_get_info(char *info, pj_size_t size)
                      telnet_info.port);
 }
 
-static void cli_log_writer(int level, const char *buffer, int len)
+void cli_log_writer(int level, const char *buffer, int len)
 {
     if (cli)
         pj_cli_write_log(cli, level, buffer, len);
+    else
+        pj_log_write(level, buffer, len);
 #ifdef USE_GUI
     displayLog(buffer, len);
 #endif
@@ -243,18 +245,6 @@ pj_status_t cli_init(void)
             goto on_error;
     }
 
-    /* Redirect logging to the CLI frontends here (before pjsua_start() is
-     * called by the caller), NOT in cli_main(). pjsua_reconfigure_logging()
-     * unregisters/re-registers the SIP message logging module, and doing
-     * that after the stack is already processing traffic can race with
-     * pjsip_endpt_process_rx_data()/endpt_on_tx_msg() and self-deadlock on
-     * endpt->mod_mutex (a thread re-entering the read lock while another
-     * thread is waiting for the write lock in register/unregister_module).
-     */
-    app_config.log_cfg.cb = &cli_log_writer;
-    status = pjsua_reconfigure_logging(&app_config.log_cfg);
-    if (status != PJ_SUCCESS)
-        goto on_error;
     return PJ_SUCCESS;
 
 on_error:
