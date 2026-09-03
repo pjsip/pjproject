@@ -508,6 +508,7 @@ pj_status_t pjsua_aud_subsys_destroy()
 
 void pjsua_aud_stop_stream(pjsua_call_media *call_med)
 {
+    pj_bool_t preserve_slot = call_med->preserve_conf_slot;
     pjmedia_stream *strm = call_med->strm.a.stream;
     pjmedia_rtcp_stat stat;
 
@@ -524,10 +525,30 @@ void pjsua_aud_stop_stream(pjsua_call_media *call_med)
         pjmedia_stream_send_rtcp_bye(strm);
 
         if (call_med->strm.a.conf_slot != PJSUA_INVALID_ID) {
-            if (pjsua_var.mconf) {
-                pjsua_conf_remove_port(call_med->strm.a.conf_slot);
+            pj_status_t det_st = PJ_ENOTSUP;
+
+            if (pjsua_var.mconf && preserve_slot) {
+                /* Keep the slot and its connections/settings; detach the old
+                 * port only. The slot id is retained so the rebuild re-attaches
+                 * via pjmedia_conf_replace_port().
+                 */
+                det_st = pjmedia_conf_detach_port(pjsua_var.mconf,
+                                                  (unsigned)
+                                                  call_med->strm.a.conf_slot);
+                if (det_st != PJ_SUCCESS) {
+                    PJ_PERROR(3, (THIS_FILE, det_st, "Conf slot detach failed, "
+                                  "falling back to remove/add"));
+                }
             }
-            call_med->strm.a.conf_slot = PJSUA_INVALID_ID;
+
+            /* Not preserving (or detach not supported/failed): remove the slot
+             * as before and let the rebuild add a fresh one.
+             */
+            if (det_st != PJ_SUCCESS) {
+                if (pjsua_var.mconf)
+                    pjsua_conf_remove_port(call_med->strm.a.conf_slot);
+                call_med->strm.a.conf_slot = PJSUA_INVALID_ID;
+            }
         }
 
         /* Don't check for direction and transmitted packets count as we
@@ -572,6 +593,19 @@ void pjsua_aud_stop_stream(pjsua_call_media *call_med)
 
         pjmedia_stream_destroy(strm);
         call_med->strm.a.stream = NULL;
+    }
+
+    /* A retained (detached) conference slot can be left behind if a media
+     * update failed to rebuild the stream: strm is NULL here, so the block
+     * above did not run to remove it. Unless we are preserving it for a pending
+     * replace, remove it now so it is not leaked for the call's lifetime.
+     */
+    if (!strm && !preserve_slot &&
+        call_med->strm.a.conf_slot != PJSUA_INVALID_ID)
+    {
+        if (pjsua_var.mconf)
+            pjsua_conf_remove_port(call_med->strm.a.conf_slot);
+        call_med->strm.a.conf_slot = PJSUA_INVALID_ID;
     }
 
     pjsua_check_snd_dev_idle();
@@ -812,12 +846,34 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
                                  call->index, strm_idx);
                 port_name = pj_str(tmp);
             }
-            status = pjmedia_conf_add_port(pjsua_var.mconf,
-                                           call->inv->pool,
-                                           call_med->strm.a.media_port,
-                                           &port_name,
-                                           (unsigned*)
-                                           &call_med->strm.a.conf_slot);
+            if (call_med->strm.a.conf_slot != PJSUA_INVALID_ID) {
+                /* A slot was preserved (detached) from the previous stream;
+                 * re-attach the new port to it, keeping its connections and
+                 * settings, instead of allocating a fresh slot.
+                 */
+                status = pjmedia_conf_replace_port(pjsua_var.mconf,
+                                                   call->inv->pool,
+                                                   (unsigned)
+                                                   call_med->strm.a.conf_slot,
+                                                   call_med->strm.a.media_port);
+                if (status != PJ_SUCCESS) {
+                    /* Replace not supported/failed: drop the preserved slot
+                     * and fall back to adding a fresh one below.
+                     */
+                    PJ_PERROR(3, (THIS_FILE, status, "Conf slot replace failed,"
+                                  " falling back to add"));
+                    pjsua_conf_remove_port(call_med->strm.a.conf_slot);
+                    call_med->strm.a.conf_slot = PJSUA_INVALID_ID;
+                }
+            }
+            if (call_med->strm.a.conf_slot == PJSUA_INVALID_ID) {
+                status = pjmedia_conf_add_port(pjsua_var.mconf,
+                                               call->inv->pool,
+                                               call_med->strm.a.media_port,
+                                               &port_name,
+                                               (unsigned*)
+                                               &call_med->strm.a.conf_slot);
+            }
             if (status != PJ_SUCCESS) {
                 goto on_return;
             }

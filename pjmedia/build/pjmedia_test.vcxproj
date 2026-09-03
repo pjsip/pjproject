@@ -560,6 +560,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\src\test\codec_vectors.c" />
+    <ClCompile Include="..\src\test\conf_test.c" />
     <ClCompile Include="..\src\test\jbuf_test.c" />
     <ClCompile Include="..\src\test\main.c" />
     <ClCompile Include="..\src\test\mips_test.c" />
