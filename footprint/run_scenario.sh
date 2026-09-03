@@ -13,6 +13,16 @@
 #   NCALLS       0..5 concurrent calls to place
 #   MASSIF_SIDE  B (callee), A (caller), or none
 #   CODEC        g722 | g711  (the only codec left enabled for the run)
+#                mixed5: the prospect's exact scenario -- calls 1-2 G.722,
+#                calls 3-4 G.711 (codec priority switched live on the
+#                caller), plus a 5th call put on hold by the caller so the
+#                callee carries a receive-only (decode-only) RTP stream.
+#                NCALLS is forced to 5 in this mode.
+#
+# Optional env: A_WRAP / B_WRAP  -- command prefix for each instance
+#                                   (e.g. "qemu-arm-static -L /usr/arm-linux-gnueabihf")
+#               B_ENV / A_ENV    -- "VAR=val VAR2=val" applied to that instance
+#                                   (e.g. LD_PRELOAD=hwm.so HWM_OUT=file)
 #   HOLD         steady-state hold time in seconds
 #   BIN          pjsua binary (default: 32-bit build in $SP/wt-m32)
 #
@@ -33,11 +43,15 @@ KEY=$SP/certs/key.pem
 
 rm -rf "$OUT"; mkdir -p "$OUT"
 
+MIXED=0
 case $CODEC in
-    g722) DIS="--dis-codec PCMU --dis-codec PCMA"; CLOCK=16000;;
-    g711) DIS="--dis-codec G722"; CLOCK=8000;;
+    g722)   DIS="--dis-codec PCMU --dis-codec PCMA"; CLOCK=16000;;
+    g711)   DIS="--dis-codec G722"; CLOCK=8000;;
+    mixed5) DIS=""; CLOCK=16000; MIXED=1; N=5;;
     *) echo "bad codec $CODEC"; exit 1;;
 esac
+A_WRAP=${A_WRAP:-}; B_WRAP=${B_WRAP:-}; A_ENV=${A_ENV:-}; B_ENV=${B_ENV:-}
+B_BIN=${B_BIN:-$BIN}   # callee binary override (e.g. ARM build run under qemu)
 
 # NB: --use-tls must precede --no-udp/--no-tcp (pjsua validates in order)
 COMMON="--null-audio --no-vad --max-calls 5 --use-srtp 2 --srtp-secure 1 \
@@ -50,11 +64,14 @@ VG="valgrind --tool=massif --time-unit=ms --max-snapshots=100 \
 
 mkfifo "$OUT/b.in" "$OUT/a.in"
 
-B_CMD="$BIN $COMMON --local-port 5070 --rtp-port 4000 --auto-answer 200 --log-file $OUT/b.log"
+B_CMD="$B_BIN $COMMON --local-port 5070 --rtp-port 4000 --auto-answer 200 --log-file $OUT/b.log"
 A_CMD="$BIN $COMMON --local-port 5080 --rtp-port 4200 --log-file $OUT/a.log"
 
+# valgrind must wrap the pjsua binary itself (it does not follow env's exec)
 [ "$MASSIF" = "B" ] && B_CMD="$VG --massif-out-file=$OUT/massif.b $B_CMD"
 [ "$MASSIF" = "A" ] && A_CMD="$VG --massif-out-file=$OUT/massif.a $A_CMD"
+B_CMD="env $B_ENV $B_WRAP $B_CMD"
+A_CMD="env $A_ENV $A_WRAP $A_CMD"
 
 # wait until a local TCP port is in LISTEN state (0A) per /proc/net/tcp
 wait_listen() { # port timeout_s
@@ -92,14 +109,24 @@ if [ "$N" -gt 0 ]; then
     exec 9> "$OUT/a.in"
     wait_listen 5081 180 || true
     sleep 2
+    # mixed5: start with G.722 preferred on the caller
+    [ "$MIXED" = 1 ] && { printf 'Cp\n' >&9; sleep 2; printf 'G722 200\n' >&9; sleep 2; }
     c=1
     while [ $c -le "$N" ]; do
+        # mixed5: from the 3rd call on, offer G.711 only (G.722 priority 0)
+        [ "$MIXED" = 1 ] && [ $c -eq 3 ] && { printf 'Cp\n' >&9; sleep 2; printf 'G722 0\n' >&9; sleep 2; }
         printf 'm\n' >&9; sleep 2
         printf 'sip:footprint@127.0.0.1:5071;transport=tls\n' >&9
         sleep 2
         nudge_wait "$OUT/a.in" "$OUT/a.con" "state changed to CONFIRMED" "$c" 180 || true
         c=$((c+1))
     done
+    # mixed5: put the 5th (current) call on hold -> callee side becomes recvonly
+    if [ "$MIXED" = 1 ]; then
+        # (the "status is Remote hold" line is log level 4, so it is not on
+        #  the console; give the re-INVITE time to complete instead)
+        sleep 3; printf 'H\n' >&9; sleep 12; printf '\n' > "$OUT/b.in"
+    fi
 fi
 
 echo "holding $N call(s) for ${HOLD}s..."
