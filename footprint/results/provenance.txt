@@ -1,0 +1,18 @@
+PRIMARY-SOURCE PROVENANCE (facts otherwise only in summary.txt)
+================================================================
+== toolchains ==
+arm-linux-gnueabihf-gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+== TLS cert key size (prospect scenario used this cert) ==
+        Signature Algorithm: sha256WithRSAEncryption
+                Public-Key: (2048 bit)
+== pjsip idle-timer constant (the ~32 s transient decay) ==
+676:#   define PJSIP_TRANSPORT_IDLE_TIME    33
+== negotiated TLS cipher (from a run log, primary) ==
+pjsua_app.c  TLS cipher used: 0x00CCA8/TLS-ECDHE-RSA-WITH-CHACHA20-POLY1305-SHA256
+== live TLS transport pool ~6 KB (primary: mixed5 dd dump, connection up) ==
+      sip:127.0.0.1:     6398 of     7512 (85%) used, nblocks: 7
+== 4-call peak snapshot 29 (primary: massif) ==
+total mem_heap_B=735,077 ; pjlib-pool subtree (default_block_alloc)=665080 ; pools are ~90% of total heap
+== byte-identical rebuild check (primary) ==
+footprint_app-arm text/data/bss reproduced across 2 clean builds: 1060482/23640/201548 (size-footprint_app-arm.txt)
