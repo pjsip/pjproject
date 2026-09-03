@@ -87,16 +87,34 @@ PJ_DEF(pjmedia_clock_src *) pjmedia_port_get_clock_src( pjmedia_port *port,
         return NULL;
 }
 
+/* Snapshot type for get_frame()/put_frame() pointers, see below. */
+typedef pj_status_t (*port_frame_op)(pjmedia_port *this_port,
+                                     pjmedia_frame *frame);
+
 /**
  * Get a frame from the port (and subsequent downstream ports).
  */
 PJ_DEF(pj_status_t) pjmedia_port_get_frame( pjmedia_port *port,
                                             pjmedia_frame *frame )
 {
+    port_frame_op get_frame;
+
     PJ_ASSERT_RETURN(port && frame, PJ_EINVAL);
 
-    if (port->get_frame)
-        return port->get_frame(port, frame);
+    /* Read the pointer exactly once. Stream destroy clears it without
+     * locking to stop the streaming while other threads (e.g. conf bridge
+     * clock) may still be polling this port, so a plain check-then-call
+     * could re-read it as NULL and call through it.
+     *
+     * Formally still a data race, but aligned pointer loads/stores do
+     * not tear on supported platforms, so the snapshot is either the old
+     * value or NULL, never garbage. Atomics or a lock here would cost a
+     * barrier on every media frame for a shutdown-only hazard.
+     */
+    get_frame = *(port_frame_op volatile *)&port->get_frame;
+
+    if (get_frame)
+        return (*get_frame)(port, frame);
     else {
         frame->type = PJMEDIA_FRAME_TYPE_NONE;
         return PJ_EINVALIDOP;
@@ -110,10 +128,15 @@ PJ_DEF(pj_status_t) pjmedia_port_get_frame( pjmedia_port *port,
 PJ_DEF(pj_status_t) pjmedia_port_put_frame( pjmedia_port *port,
                                             pjmedia_frame *frame )
 {
+    port_frame_op put_frame;
+
     PJ_ASSERT_RETURN(port && frame, PJ_EINVAL);
 
-    if (port->put_frame)
-        return port->put_frame(port, frame);
+    /* See the comment in pjmedia_port_get_frame() above. */
+    put_frame = *(port_frame_op volatile *)&port->put_frame;
+
+    if (put_frame)
+        return (*put_frame)(port, frame);
     else
         return PJ_EINVALIDOP;
 }

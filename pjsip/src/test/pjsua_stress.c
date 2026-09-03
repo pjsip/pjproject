@@ -962,6 +962,22 @@ static void *crash_fault_pc(void *uctx)
 #endif
 }
 
+/* Best-effort call site of a call through a NULL function pointer. With
+ * PC==0 the unwinder cannot step past the signal frame, so the backtrace
+ * never shows the caller; but the 'call' pushed the return address at SP
+ * (x86_64), or left it in LR (aarch64). */
+static void *crash_null_call_site(void *uctx)
+{
+#if defined(PJSUA_STRESS_HAS_FAULT_PC) && defined(__x86_64__)
+    return *(void**)((ucontext_t*)uctx)->uc_mcontext.gregs[REG_RSP];
+#elif defined(PJSUA_STRESS_HAS_FAULT_PC) && defined(__aarch64__)
+    return (void*)((ucontext_t*)uctx)->uc_mcontext.regs[30];
+#else
+    (void)uctx;
+    return NULL;
+#endif
+}
+
 /* Async-signal-safe handler: dumps a native backtrace, then re-raises
  * the signal with the default disposition so the process still dies
  * with the original status (e.g. 134 for SIGABRT). The build links
@@ -970,6 +986,7 @@ static void crash_signal_handler(int sig, siginfo_t *info, void *uctx)
 {
     static const char header[] = "\n=== pjsua_stress backtrace ===\n";
     static const char pchdr[] = "faulting frame:\n";
+    static const char nullhdr[] = "NULL fn ptr called from:\n";
     void *frames[64];
     void *pc;
     int n;
@@ -984,6 +1001,14 @@ static void crash_signal_handler(int sig, siginfo_t *info, void *uctx)
     if (pc) {
         (void)!write(STDERR_FILENO, pchdr, sizeof(pchdr) - 1);
         backtrace_symbols_fd(&pc, 1, STDERR_FILENO);
+    } else if (sig == SIGSEGV) {
+        /* PC==0: a call through a NULL function pointer. Dump the return
+         * address so the call site still lands in the log. */
+        pc = crash_null_call_site(uctx);
+        if (pc) {
+            (void)!write(STDERR_FILENO, nullhdr, sizeof(nullhdr) - 1);
+            backtrace_symbols_fd(&pc, 1, STDERR_FILENO);
+        }
     }
 
     n = backtrace(frames, (int)(sizeof(frames) / sizeof(frames[0])));

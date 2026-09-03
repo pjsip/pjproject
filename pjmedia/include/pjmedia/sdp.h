@@ -783,7 +783,10 @@ PJ_DECL(pj_status_t) pjmedia_sdp_validate(const pjmedia_sdp_session *sdp);
  *
  * @param sdp       The SDP session descriptor to validate.
  * @param strict    Flag whether the check should be strict, i.e: allow
- *                  media without connection line when port is zero.
+ *                  media without connection line when port is zero. Note
+ *                  that this relaxation, along with the format and rtpmap
+ *                  checks, is not applied to bundle-only media, as such
+ *                  media is not disabled despite having zero port.
  *
  * @return          PJ_SUCCESS on success.
  */

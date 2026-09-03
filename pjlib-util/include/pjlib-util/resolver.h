@@ -195,6 +195,12 @@ typedef struct pj_dns_settings
                                      value is zero, caching is disabled.    */
     unsigned    good_ns_ttl;    /**< See #PJ_DNS_RESOLVER_GOOD_NS_TTL       */
     unsigned    bad_ns_ttl;     /**< See #PJ_DNS_RESOLVER_BAD_NS_TTL        */
+    pj_bool_t   disable_response_src_check;
+                                /**< Disable the check that a response comes
+                                     from a configured nameserver (anti-spoofing
+                                     is on by default; a zero-initialized struct
+                                     keeps it on).
+                                     See #PJ_DNS_RESOLVER_DISABLE_RESPONSE_SRC_CHECK */
 } pj_dns_settings;
 
 
@@ -429,7 +435,9 @@ PJ_DECL(pj_status_t) pj_dns_resolver_start_query(pj_dns_resolver *resolver,
  *
  * @param query     The pending asynchronous query to be cancelled.
  * @param notify    If non-zero, the callback will be called with failure
- *                  status to notify that the query has been cancelled.
+ *                  status to notify that the query has been cancelled,
+ *                  unless the query has already completed and its callback
+ *                  has already been invoked.
  *
  * @return          PJ_SUCCESS on success, or the appropriate error code,
  */

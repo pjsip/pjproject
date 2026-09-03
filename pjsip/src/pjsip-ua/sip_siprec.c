@@ -137,6 +137,35 @@ PJ_DEF(void) pjsip_siprec_verify_setting_default(
 }
 
 /**
+ * Check that every media stream in the SDP carries a label attribute.
+ * Depending on require_label, an unlabeled media stream either fails
+ * verification (returns PJ_ENOTFOUND) or is merely logged.
+ */
+static pj_status_t pjsip_siprec_check_media_labels(
+                                        const pjmedia_sdp_session *sdp,
+                                        pj_bool_t require_label)
+{
+    unsigned mi;
+
+    for (mi=0; mi<sdp->media_count; ++mi) {
+        if (pjmedia_sdp_media_find_attr(sdp->media[mi], &STR_LABEL, NULL))
+            continue;
+
+        if (require_label)
+            return PJ_ENOTFOUND;
+
+        PJ_LOG(3,(THIS_FILE,
+                  "SIPREC media %d missing label attribute. "
+                  "Metadata correlation will be limited. "
+                  "To require labels, set siprec_require_label to PJ_TRUE.",
+                  mi));
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/**
  * Verifies that the incoming request is a siprec request or not.
  */
 PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
@@ -152,7 +181,6 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
     pj_status_t status = PJ_SUCCESS;
     const char *warn_text = NULL;
     pjsip_hdr res_hdr_list;
-    unsigned mi;
     pjsip_siprec_verify_setting default_setting;
 
     /* Init return arguments. */
@@ -199,33 +227,12 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
         goto on_return;
     }
 
-    /* Check that the media attribute label exists in the SDP
-     * Behavior depends on require_label:
-     * - PJ_TRUE (require): Reject if any media lacks label
-     * - PJ_FALSE (optional): Accept, but log warning for unlabeled media
-     */
-    if (setting->require_label) {
-        /* Require labels - reject if any media stream lacks one */
-        for (mi=0; mi<sdp_offer->media_count; ++mi) {
-            if (!pjmedia_sdp_media_find_attr(sdp_offer->media[mi],
-                                                &STR_LABEL, NULL)){
-                code = PJSIP_SC_BAD_REQUEST;
-                warn_text = "SDP must have label media attribute";
-                goto on_return;
-            }
-        }
-    } else {
-        /* Labels are optional - log warnings for missing labels */
-        for (mi=0; mi<sdp_offer->media_count; ++mi) {
-            if (!pjmedia_sdp_media_find_attr(sdp_offer->media[mi],
-                                                &STR_LABEL, NULL)){
-                PJ_LOG(3,(THIS_FILE,
-                          "SIPREC media %d missing label attribute. "
-                          "Metadata correlation will be limited. "
-                          "To require labels, set siprec_require_label to PJ_TRUE.",
-                          mi));
-            }
-        }
+    if (pjsip_siprec_check_media_labels(sdp_offer,
+                                        setting->require_label) != PJ_SUCCESS)
+    {
+        code = PJSIP_SC_BAD_REQUEST;
+        warn_text = "SDP must have label media attribute";
+        goto on_return;
     }
 
     /* Check that rs-metadata exists in the multipart body
@@ -267,10 +274,10 @@ on_return:
         const pjsip_hdr *h;
 
         if (dlg) {
-            status = pjsip_dlg_create_response(dlg, rdata, code, NULL, 
+            status = pjsip_dlg_create_response(dlg, rdata, code, NULL,
                                                &tdata);
         } else {
-            status = pjsip_endpt_create_response(endpt, rdata, code, NULL, 
+            status = pjsip_endpt_create_response(endpt, rdata, code, NULL,
                                                  &tdata);
         }
 
@@ -279,7 +286,7 @@ on_return:
 
         /* Add response headers. */
         h = res_hdr_list.next;
-        while (h != &res_hdr_list) {    
+        while (h != &res_hdr_list) {
             pjsip_hdr *cloned;
 
             cloned = (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, h);
@@ -295,7 +302,7 @@ on_return:
             pjsip_warning_hdr *warn_hdr;
             pj_str_t warn_value = pj_str((char*)warn_text);
 
-            warn_hdr=pjsip_warning_hdr_create(tdata->pool, 399, 
+            warn_hdr=pjsip_warning_hdr_create(tdata->pool, 399,
                                                 pjsip_endpt_name(endpt),
                                                 &warn_value);
             pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)warn_hdr);
@@ -316,41 +323,209 @@ on_return:
 
 
 /**
- * Find siprec metadata from the message body
+ * Verifies a mid-dialog siprec request against the verification policy
+ * and extracts its metadata.
+ */
+PJ_DEF(pj_status_t) pjsip_siprec_verify_update(pjsip_rx_data *rdata,
+                                               pj_str_t *metadata,
+                                               pjsip_dialog *dlg,
+                                               pjsip_endpoint *endpt,
+                                               pjsip_tx_data **p_tdata,
+                                               const pjsip_siprec_verify_setting
+                                               *setting)
+{
+    int code = 200;
+    pj_status_t status;
+    const char *warn_text = NULL;
+    pjsip_rdata_sdp_info *sdp_info;
+    pjsip_siprec_verify_setting default_setting;
+
+    PJ_ASSERT_RETURN(rdata && metadata, PJ_EINVAL);
+
+    /* Init return arguments. */
+    if (p_tdata) *p_tdata = NULL;
+    metadata->ptr = NULL;
+    metadata->slen = 0;
+
+    /* Use default settings if not provided */
+    if (!setting) {
+        pjsip_siprec_verify_setting_default(&default_setting);
+        setting = &default_setting;
+    }
+
+    endpt = endpt ? endpt : dlg->endpt;
+
+    /* Extract the rs-metadata document, if any. Unlike session
+     * establishment, a request without metadata is not a policy
+     * violation (e.g. media hold or session refresh).
+     */
+    status = pjsip_siprec_get_metadata(rdata->tp_info.pool,
+                                       rdata->msg_info.msg->body,
+                                       metadata);
+    if (status != PJ_SUCCESS)
+        return PJ_ENOTFOUND;
+
+    /* Check that the media attribute label exists in the SDP offer, if any. */
+    sdp_info = pjsip_rdata_get_sdp_info(rdata);
+    if (sdp_info->sdp) {
+        status = pjsip_siprec_check_media_labels(sdp_info->sdp,
+                                                 setting->require_label);
+        if (status != PJ_SUCCESS) {
+            code = PJSIP_SC_BAD_REQUEST;
+            warn_text = "SDP must have label media attribute";
+        }
+    }
+
+    if (code == 200)
+        return PJ_SUCCESS;
+
+    /* Create error response */
+    {
+        pjsip_tx_data *tdata;
+        pj_str_t warn_value = pj_str((char*)warn_text);
+        pjsip_warning_hdr *warn_hdr;
+
+        if (dlg) {
+            status = pjsip_dlg_create_response(dlg, rdata, code, NULL,
+                                               &tdata);
+        } else {
+            status = pjsip_endpt_create_response(endpt, rdata, code, NULL,
+                                                 &tdata);
+        }
+        if (status != PJ_SUCCESS)
+            return status;
+
+        warn_hdr = pjsip_warning_hdr_create(tdata->pool, 399,
+                                            pjsip_endpt_name(endpt),
+                                            &warn_value);
+        pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)warn_hdr);
+
+        *p_tdata = tdata;
+    }
+
+    /* Can not return PJ_SUCCESS when response message is produced.
+     * Ref: PROTOS test ~#2490
+     */
+    return PJSIP_ERRNO_FROM_SIP_STATUS(code);
+}
+
+
+/**
+ * Locate siprec metadata within the message body without producing any
+ * output such as logs. Handles both multipart bodies with an rs-metadata
+ * part (RFC 7866 §7.1) and single-part rs-metadata documents
+ * (RFC 7866 §7.1, RFC 9806).
+ *
+ * @param body              The message body.
+ * @param metadata          If metadata is found, populated with a pointer
+ *                          to the raw document data.
+ * @param is_legacy         Set to PJ_TRUE when the matching media type is
+ *                          the legacy 'application/rs-metadata', obsoleted
+ *                          by RFC 9806.
+ *
+ * @return                  PJ_SUCCESS if metadata is found, otherwise
+ *                          PJ_ENOTFOUND.
+ */
+static pj_status_t locate_siprec_metadata(pjsip_msg_body *body,
+                                          pj_str_t *metadata,
+                                          pj_bool_t *is_legacy)
+{
+    pjsip_media_type app_metadata;
+    pjsip_multipart_part *metadata_part;
+    const pj_str_t STR_MULTIPART = {"multipart", 9};
+    const pj_str_t STR_APPLICATION = {"application", 11};
+    static const pj_str_t STR_RSMETADATA_XML = {"rs-metadata+xml", 15};
+    static const pj_str_t STR_RSMETADATA = {"rs-metadata", 11};
+
+    *is_legacy = PJ_FALSE;
+
+    if (!body) {
+        return PJ_ENOTFOUND;
+    }
+
+    /* Check if body is multipart (with rs-metadata part) */
+    if (pj_stricmp(&body->content_type.type, &STR_MULTIPART) == 0) {
+        /* Try rs-metadata+xml first (RFC 9806 - correct media type) */
+        pjsip_media_type_init2(&app_metadata, "application", "rs-metadata+xml");
+        metadata_part = pjsip_multipart_find_part(body, &app_metadata, NULL);
+
+        /* Fallback to legacy rs-metadata if needed (RFC 7866 - pre-9806) */
+        if (!metadata_part) {
+            pjsip_media_type_init2(&app_metadata, "application", "rs-metadata");
+            metadata_part = pjsip_multipart_find_part(body, &app_metadata, NULL);
+
+            if (metadata_part)
+                *is_legacy = PJ_TRUE;
+        }
+
+        if (metadata_part) {
+            metadata->ptr  = (char*)metadata_part->body->data;
+            metadata->slen = metadata_part->body->len;
+            return PJ_SUCCESS;
+        }
+    }
+
+    /* Check if body is a single-part rs-metadata document (RFC 7866 §7.1).
+     * This handles the case where UPDATE contains only rs-metadata without SDP.
+     */
+    if (pj_stricmp(&body->content_type.type, &STR_APPLICATION) == 0 &&
+        (pj_stricmp(&body->content_type.subtype, &STR_RSMETADATA_XML) == 0 ||
+         pj_stricmp(&body->content_type.subtype, &STR_RSMETADATA) == 0))
+    {
+        *is_legacy = (pj_stricmp(&body->content_type.subtype,
+                                 &STR_RSMETADATA_XML) != 0);
+        metadata->ptr  = (char*)body->data;
+        metadata->slen = body->len;
+        return PJ_SUCCESS;
+    }
+
+    return PJ_ENOTFOUND;
+}
+
+/**
+ * Find siprec metadata from the message body.
+ * Handles both multipart bodies with rs-metadata part (RFC 7866 §7.1)
+ * and single-part rs-metadata documents (RFC 7866 §7.1, RFC 9806).
  */
 PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
                                               pjsip_msg_body *body,
                                               pj_str_t* metadata)
 {
-    pjsip_media_type app_metadata;
-    pjsip_multipart_part *metadata_part;
-    const pj_str_t STR_MULTIPART = {"multipart", 9};
+    pj_status_t status;
+    pj_bool_t is_legacy;
 
     PJ_UNUSED_ARG(pool);
 
-    /* Check if body is multipart to avoid assertion failure
-     * when INVITE only contains SDP (not multipart/mixed) */
-    if (!body ||
-        pj_stricmp(&body->content_type.type, &STR_MULTIPART) != 0)
-    {
-        return PJ_ENOTFOUND;
+    is_legacy = PJ_FALSE;
+    status = locate_siprec_metadata(body, metadata, &is_legacy);
+
+    if (status == PJ_SUCCESS && is_legacy) {
+        PJ_LOG(4,(THIS_FILE,
+                  "SIPREC metadata uses legacy media type "
+                  "'application/rs-metadata' (RFC 7866). "
+                  "This media type is obsoleted by 'application/rs-metadata+xml' "
+                  "(RFC 9806). Please update the sender to use the correct media type."));
     }
 
-    pjsip_media_type_init2(&app_metadata, "application", "rs-metadata");
-    metadata_part = pjsip_multipart_find_part(body, &app_metadata, NULL);
-
-    /* Fallback to XML extension rs-metadata+xml if needed per rfc*/
-    if (!metadata_part) {
-        pjsip_media_type_init2(&app_metadata, "application",
-                               "rs-metadata+xml");
-        metadata_part = pjsip_multipart_find_part(body, &app_metadata, NULL);
-    }
-
-    if(!metadata_part)
-        return PJ_ENOTFOUND;
-
-    metadata->ptr  = (char*)metadata_part->body->data;
-    metadata->slen = metadata_part->body->len;
-    
-    return PJ_SUCCESS;
+    return status;
 }
+
+/**
+ * Check whether a message body carries SIPREC metadata, either as a
+ * single-part rs-metadata document or as a part of a multipart body
+ * (RFC 7865 §5, RFC 7866 §7.1). Unlike pjsip_siprec_get_metadata(),
+ * this function produces no log output and extracts nothing.
+ *
+ * @param body              The message body to inspect.
+ *
+ * @return                  PJ_TRUE if the body carries SIPREC metadata.
+ */
+PJ_DEF(pj_bool_t) pjsip_siprec_body_has_metadata(pjsip_msg_body *body)
+{
+    pj_str_t metadata = {NULL, 0};
+    pj_bool_t is_legacy = PJ_FALSE;
+
+    return (locate_siprec_metadata(body, &metadata,
+                                   &is_legacy) == PJ_SUCCESS);
+}
+

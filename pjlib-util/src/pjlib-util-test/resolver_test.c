@@ -74,6 +74,23 @@ static volatile pj_bool_t cb_after_destroy;
 static pj_dns_resolver *start_during_destroy_res;
 static pj_status_t start_during_destroy_status;
 static pj_dns_async_query *start_during_destroy_query;
+static int cancel_in_cb_count;
+static pj_dns_async_query *cancel_in_cb_query;
+static pj_bool_t cancel_in_cb_cancelled;
+static int cancel_in_tocb_count;
+static pj_dns_async_query *cancel_in_tocb_query;
+static pj_bool_t cancel_in_tocb_cancelled;
+static pj_status_t cancel_in_tocb_status;
+static int cancel_child_parent_count;
+static int cancel_child_child_count;
+static pj_dns_async_query *cancel_child_query;
+static pj_bool_t cancel_child_cancelled;
+static pj_status_t cancel_child_status;
+static pj_dns_resolver *cancel_unlocked_res;
+static pj_sem_t *cancel_unlocked_entered;
+static pj_sem_t *cancel_unlocked_probed;
+static pj_bool_t cancel_unlocked_probe_seen;
+static int cancel_unlocked_count;
 
 #define MAX_LABEL   32
 
@@ -287,9 +304,11 @@ static int print_packet(const pj_dns_parsed_packet *rec, pj_uint8_t *pkt,
     if (size < (int)sizeof(pj_dns_hdr))
         return -1;
 
-    /* Initialize header */
+    /* Initialize header. This mock server only serializes responses, so set
+     * the QR bit as a real server would.
+     */
     write16(p+0,  rec->hdr.id);
-    write16(p+2,  rec->hdr.flags);
+    write16(p+2,  (pj_uint16_t)(rec->hdr.flags | PJ_DNS_SET_QR(1)));
     write16(p+4,  rec->hdr.qdcount);
     write16(p+6,  rec->hdr.anscount);
     write16(p+8,  rec->hdr.nscount);
@@ -1207,6 +1226,373 @@ static int dns_start_during_destroy_test(void)
 }
 
 
+/* Callback for the cancel-in-callback test: on the first delivery it cancels
+ * its own query with notify=PJ_TRUE. Before the callback is captured and
+ * cleared under the group lock, the query still held a live cb, so cancel
+ * delivered a second (PJ_ECANCELLED) callback for the same query.
+ */
+static void dns_callback_cancel_in_cb(void *user_data,
+                                      pj_status_t status,
+                                      pj_dns_parsed_packet *resp)
+{
+    PJ_UNUSED_ARG(user_data);
+    PJ_UNUSED_ARG(status);
+    PJ_UNUSED_ARG(resp);
+
+    cancel_in_cb_count++;
+
+    if (cancel_in_cb_count == 1 && cancel_in_cb_query) {
+        pj_dns_async_query *q = cancel_in_cb_query;
+        cancel_in_cb_query = NULL;
+        cancel_in_cb_cancelled = PJ_TRUE;
+        pj_dns_resolver_cancel_query(q, PJ_TRUE);
+    }
+
+    pj_sem_post(sem);
+}
+
+
+/* Cancelling a query from inside its own completion callback must not deliver
+ * the callback a second time (the cb is captured and cleared under the lock
+ * before it is invoked). Asserts the callback runs exactly once.
+ */
+static int dns_cancel_in_callback_test(void)
+{
+    pj_str_t name = pj_str("name_cancel_in_cb");
+
+    PJ_LOG(3,(THIS_FILE, "  cancel query from within its callback test"));
+
+    cancel_in_cb_count = 0;
+    cancel_in_cb_query = NULL;
+    cancel_in_cb_cancelled = PJ_FALSE;
+
+    /* Servers answer so the query completes and the callback fires. */
+    g_server[0].action = PJ_DNS_RCODE_NXDOMAIN;
+    g_server[1].action = PJ_DNS_RCODE_NXDOMAIN;
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(
+                        resolver, &name, PJ_DNS_TYPE_A, 0,
+                        &dns_callback_cancel_in_cb, NULL, &cancel_in_cb_query),
+                    NULL, return -670);
+
+    pj_sem_wait(sem);
+
+    /* Guard against a vacuous pass: the assertions below only pin the
+     * behavior if the cancel actually ran inside the callback.
+     */
+    PJ_TEST_EQ(cancel_in_cb_cancelled, PJ_TRUE, NULL, return -672);
+    PJ_TEST_EQ(cancel_in_cb_count, 1, NULL, return -674);
+
+    return 0;
+}
+
+
+/* Same as dns_callback_cancel_in_cb, but for the timeout variant below. */
+static void dns_callback_cancel_in_tocb(void *user_data,
+                                        pj_status_t status,
+                                        pj_dns_parsed_packet *resp)
+{
+    PJ_UNUSED_ARG(user_data);
+    PJ_UNUSED_ARG(resp);
+
+    cancel_in_tocb_count++;
+
+    if (cancel_in_tocb_count == 1) {
+        cancel_in_tocb_status = status;
+        if (cancel_in_tocb_query) {
+            pj_dns_async_query *q = cancel_in_tocb_query;
+            cancel_in_tocb_query = NULL;
+            cancel_in_tocb_cancelled = PJ_TRUE;
+            pj_dns_resolver_cancel_query(q, PJ_TRUE);
+        }
+    }
+
+    pj_sem_post(sem);
+}
+
+
+/* Same as dns_cancel_in_callback_test, but through the timeout path: the
+ * servers do not respond, so the callback is delivered by on_timeout()
+ * rather than on_read_complete(). Uses a dedicated resolver with short
+ * retransmission settings to keep the timeout fast.
+ */
+static int dns_cancel_in_timeout_callback_test(void)
+{
+    pj_str_t name = pj_str("name_cancel_in_tocb");
+    pj_str_t nameservers[2];
+    pj_uint16_t ports[2];
+    pj_dns_settings lset;
+    pj_dns_resolver *res;
+
+    PJ_LOG(3,(THIS_FILE, "  cancel query from within its timeout callback test"));
+
+    cancel_in_tocb_count = 0;
+    cancel_in_tocb_query = NULL;
+    cancel_in_tocb_cancelled = PJ_FALSE;
+    cancel_in_tocb_status = PJ_SUCCESS;
+
+    /* Servers ignore the query so it times out. */
+    g_server[0].action = ACTION_IGNORE;
+    g_server[1].action = ACTION_IGNORE;
+
+    nameservers[0] = nameservers[1] = pj_str("127.0.0.1");
+    ports[0] = g_server[0].port;
+    ports[1] = g_server[1].port;
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_create(mem, NULL, 0, timer_heap, ioqueue,
+                                           &res),
+                    NULL, return -650);
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(res, 2, nameservers, ports),
+                    NULL, return -651);
+
+    pj_dns_resolver_get_settings(res, &lset);
+    lset.qretr_delay = 200;
+    lset.qretr_count = 1;
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_settings(res, &lset),
+                    NULL, return -652);
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(
+                        res, &name, PJ_DNS_TYPE_A, 0,
+                        &dns_callback_cancel_in_tocb, NULL,
+                        &cancel_in_tocb_query),
+                    NULL, return -653);
+
+    pj_sem_wait(sem);
+
+    PJ_TEST_EQ(cancel_in_tocb_status, PJ_ETIMEDOUT, NULL, return -654);
+    PJ_TEST_EQ(cancel_in_tocb_cancelled, PJ_TRUE, NULL, return -655);
+    PJ_TEST_EQ(cancel_in_tocb_count, 1, NULL, return -656);
+
+    pj_dns_resolver_destroy(res, PJ_FALSE);
+
+    return 0;
+}
+
+
+static void dns_callback_cancel_child_parent(void *user_data,
+                                             pj_status_t status,
+                                             pj_dns_parsed_packet *resp)
+{
+    PJ_UNUSED_ARG(user_data);
+    PJ_UNUSED_ARG(status);
+    PJ_UNUSED_ARG(resp);
+
+    cancel_child_parent_count++;
+
+    pj_sem_post(sem);
+}
+
+/* Callback of the coalesced child query; cancels its own query on the first
+ * delivery, like dns_callback_cancel_in_cb.
+ */
+static void dns_callback_cancel_child(void *user_data,
+                                      pj_status_t status,
+                                      pj_dns_parsed_packet *resp)
+{
+    PJ_UNUSED_ARG(user_data);
+    PJ_UNUSED_ARG(resp);
+
+    cancel_child_child_count++;
+
+    if (cancel_child_child_count == 1) {
+        cancel_child_status = status;
+        if (cancel_child_query) {
+            pj_dns_async_query *q = cancel_child_query;
+            cancel_child_query = NULL;
+            cancel_child_cancelled = PJ_TRUE;
+            pj_dns_resolver_cancel_query(q, PJ_TRUE);
+        }
+    }
+
+    pj_sem_post(sem);
+}
+
+
+/* Same again, but cancelling a coalesced CHILD query from inside its own
+ * callback, to cover the child (ccb) capture loop. The servers ignore the
+ * query, so the parent stays pending in the resolver's hash tables until
+ * its timeout fires; the second start_query() below is therefore guaranteed
+ * to join it as a child, and both callbacks are delivered by the same
+ * on_timeout() pass.
+ */
+static int dns_cancel_child_in_callback_test(void)
+{
+    pj_str_t name = pj_str("name_cancel_child_tocb");
+    pj_str_t nameservers[2];
+    pj_uint16_t ports[2];
+    pj_dns_settings lset;
+    pj_dns_resolver *res;
+
+    PJ_LOG(3,(THIS_FILE, "  cancel child query from within its callback test"));
+
+    cancel_child_parent_count = 0;
+    cancel_child_child_count = 0;
+    cancel_child_query = NULL;
+    cancel_child_cancelled = PJ_FALSE;
+    cancel_child_status = PJ_SUCCESS;
+
+    /* Servers ignore the query so it times out. */
+    g_server[0].action = ACTION_IGNORE;
+    g_server[1].action = ACTION_IGNORE;
+
+    nameservers[0] = nameservers[1] = pj_str("127.0.0.1");
+    ports[0] = g_server[0].port;
+    ports[1] = g_server[1].port;
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_create(mem, NULL, 0, timer_heap, ioqueue,
+                                           &res),
+                    NULL, return -660);
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(res, 2, nameservers, ports),
+                    NULL, return -661);
+
+    pj_dns_resolver_get_settings(res, &lset);
+    lset.qretr_delay = 200;
+    lset.qretr_count = 1;
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_settings(res, &lset),
+                    NULL, return -662);
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(
+                        res, &name, PJ_DNS_TYPE_A, 0,
+                        &dns_callback_cancel_child_parent, NULL, NULL),
+                    NULL, return -663);
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(
+                        res, &name, PJ_DNS_TYPE_A, 0,
+                        &dns_callback_cancel_child, NULL,
+                        &cancel_child_query),
+                    NULL, return -664);
+
+    /* One delivery for the parent, one for the child. */
+    pj_sem_wait(sem);
+    pj_sem_wait(sem);
+
+    PJ_TEST_EQ(cancel_child_status, PJ_ETIMEDOUT, NULL, return -665);
+    PJ_TEST_EQ(cancel_child_cancelled, PJ_TRUE, NULL, return -666);
+    PJ_TEST_EQ(cancel_child_child_count, 1, NULL, return -667);
+    PJ_TEST_EQ(cancel_child_parent_count, 1, NULL, return -668);
+
+    pj_dns_resolver_destroy(res, PJ_FALSE);
+
+    return 0;
+}
+
+
+
+/* Probe thread for the cancel-unlocked test: once the callback signals that
+ * it is running, take the resolver group lock through a read-only API. This
+ * blocks until the callback returns if the callback still holds the lock.
+ */
+static int cancel_unlocked_probe_thread(void *arg)
+{
+    pj_dns_settings lset;
+
+    PJ_UNUSED_ARG(arg);
+
+    pj_sem_wait(cancel_unlocked_entered);
+    pj_dns_resolver_get_settings(cancel_unlocked_res, &lset);
+    pj_sem_post(cancel_unlocked_probed);
+
+    return 0;
+}
+
+
+/* Callback delivered by pj_dns_resolver_cancel_query(): signals the probe
+ * thread, then waits for it to acquire the resolver lock. The probe can only
+ * succeed while this callback is running if the lock was released before the
+ * callback was invoked.
+ */
+static void dns_callback_cancel_unlocked(void *user_data,
+                                         pj_status_t status,
+                                         pj_dns_parsed_packet *resp)
+{
+    unsigned i;
+
+    PJ_UNUSED_ARG(user_data);
+    PJ_UNUSED_ARG(status);
+    PJ_UNUSED_ARG(resp);
+
+    cancel_unlocked_count++;
+
+    pj_sem_post(cancel_unlocked_entered);
+
+    /* Bounded wait, so the test fails rather than hangs when the callback
+     * is invoked under the lock.
+     */
+    for (i=0; i<500; ++i) {
+        if (pj_sem_trywait(cancel_unlocked_probed) == PJ_SUCCESS) {
+            cancel_unlocked_probe_seen = PJ_TRUE;
+            break;
+        }
+        pj_thread_sleep(10);
+    }
+}
+
+
+/* pj_dns_resolver_cancel_query() must invoke the application callback with
+ * the group lock released, as every other delivery site does, so that a
+ * callback re-entering the resolver or taking another lock cannot deadlock
+ * or invert the lock order.
+ */
+static int dns_cancel_unlocked_test(void)
+{
+    pj_str_t name = pj_str("name_cancel_unlocked");
+    pj_str_t nameservers[2];
+    pj_uint16_t ports[2];
+    pj_dns_async_query *q = NULL;
+    pj_thread_t *probe = NULL;
+
+    PJ_LOG(3,(THIS_FILE, "  cancel query delivers callback unlocked test"));
+
+    cancel_unlocked_count = 0;
+    cancel_unlocked_probe_seen = PJ_FALSE;
+
+    /* Servers ignore the query so it stays pending until cancelled. */
+    g_server[0].action = ACTION_IGNORE;
+    g_server[1].action = ACTION_IGNORE;
+
+    nameservers[0] = nameservers[1] = pj_str("127.0.0.1");
+    ports[0] = g_server[0].port;
+    ports[1] = g_server[1].port;
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_create(mem, NULL, 0, timer_heap, ioqueue,
+                                           &cancel_unlocked_res),
+                    NULL, return -760);
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(cancel_unlocked_res, 2,
+                                           nameservers, ports),
+                    NULL, return -761);
+
+    PJ_TEST_SUCCESS(pj_sem_create(pool, NULL, 0, 1, &cancel_unlocked_entered),
+                    NULL, return -762);
+    PJ_TEST_SUCCESS(pj_sem_create(pool, NULL, 0, 1, &cancel_unlocked_probed),
+                    NULL, return -763);
+    PJ_TEST_SUCCESS(pj_thread_create(pool, NULL, &cancel_unlocked_probe_thread,
+                                     NULL, 0, 0, &probe),
+                    NULL, return -764);
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(
+                        cancel_unlocked_res, &name, PJ_DNS_TYPE_A, 0,
+                        &dns_callback_cancel_unlocked, NULL, &q),
+                    NULL, return -765);
+
+    pj_dns_resolver_cancel_query(q, PJ_TRUE);
+
+    pj_thread_join(probe);
+    pj_thread_destroy(probe);
+    pj_sem_destroy(cancel_unlocked_entered);
+    pj_sem_destroy(cancel_unlocked_probed);
+    pj_dns_resolver_destroy(cancel_unlocked_res, PJ_FALSE);
+
+    /* The cancelled query was already on the wire. Let the servers consume it
+     * while they are still ignoring, so that it is not mistaken for the first
+     * query of whichever test installs an action_cb next.
+     */
+    pj_thread_sleep(1000);
+
+    PJ_TEST_EQ(cancel_unlocked_count, 1, NULL, return -766);
+    PJ_TEST_EQ(cancel_unlocked_probe_seen, PJ_TRUE, NULL, return -767);
+
+    return 0;
+}
+
 /* DNS test */
 static int dns_test(void)
 {
@@ -2088,6 +2474,21 @@ int resolver_test(void)
     if (rc != 0)
         goto on_error;
 
+    PJ_LOG(3,(THIS_FILE, "dns_cancel_in_callback_test"));
+    rc = dns_cancel_in_callback_test();
+    if (rc != 0)
+        goto on_error;
+
+    PJ_LOG(3,(THIS_FILE, "dns_cancel_in_timeout_callback_test"));
+    rc = dns_cancel_in_timeout_callback_test();
+    if (rc != 0)
+        goto on_error;
+
+    PJ_LOG(3,(THIS_FILE, "dns_cancel_child_in_callback_test"));
+    rc = dns_cancel_child_in_callback_test();
+    if (rc != 0)
+        goto on_error;
+
     PJ_LOG(3,(THIS_FILE, "srv_resolver_test"));
     rc = srv_resolver_test();
     if (rc != 0)
@@ -2105,6 +2506,11 @@ int resolver_test(void)
 
     PJ_LOG(3,(THIS_FILE, "dns_destroy_pending_test"));
     rc = dns_destroy_pending_test();
+    if (rc != 0)
+        goto on_error;
+
+    PJ_LOG(3,(THIS_FILE, "dns_cancel_unlocked_test"));
+    rc = dns_cancel_unlocked_test();
     if (rc != 0)
         goto on_error;
 

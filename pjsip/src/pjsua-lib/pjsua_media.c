@@ -31,7 +31,8 @@
 #   define PJSUA_RESET_SRTP_ROC_ON_REM_ADDRESS_CHANGE   0
 #endif
 
-static void stop_media_stream(pjsua_call *call, unsigned med_idx);
+static void stop_media_stream(pjsua_call *call, unsigned med_idx,
+                              pj_bool_t preserve_slot);
 
 char *pjsua_get_basename(const char* path, unsigned len)
 {
@@ -1919,7 +1920,7 @@ pj_status_t call_media_on_event(pjmedia_event *event,
             break;
     }
 
-    if (pjsua_var.ua_cfg.cb.on_call_media_event) {
+    if (pjsua_var.ua_cfg.cb.on_call_media_event && !call->hanging_up) {
         pjsua_event_list *eve = NULL;
  
         pj_mutex_lock(pjsua_var.timer_mutex);
@@ -1932,9 +1933,6 @@ pj_status_t call_media_on_event(pjmedia_event *event,
         }
 
         pj_mutex_unlock(pjsua_var.timer_mutex);
-
-        if (call->hanging_up)
-            return status;
 
         eve->call_id = call->index;
         eve->med_idx = call_med->idx;
@@ -3450,10 +3448,11 @@ on_error:
 }
 
 
-static void stop_media_stream(pjsua_call *call, unsigned med_idx)
+static void stop_media_stream(pjsua_call *call, unsigned med_idx,
+                              pj_bool_t preserve_slot)
 {
     pjsua_call_media *call_med;
-    
+
     if (pjsua_call_media_is_changing(call)) {
         call_med = &call->media_prov[med_idx];
         if (med_idx >= call->med_prov_cnt)
@@ -3468,6 +3467,10 @@ static void stop_media_stream(pjsua_call *call, unsigned med_idx)
 
     call_med->prev_type = call_med->type;
     if (call_med->type == PJMEDIA_TYPE_AUDIO) {
+        /* Pass the preserve-slot request via a transient flag rather than a
+         * new argument, so the alternate audio backend (alt_pjsua_aud.c) keeps
+         * the same pjsua_aud_stop_stream() signature. */
+        call_med->preserve_conf_slot = preserve_slot;
         pjsua_aud_stop_stream(call_med);
     }
 
@@ -3531,7 +3534,7 @@ static void stop_media_session(pjsua_call_id call_id)
     unsigned mi;
 
     for (mi=0; mi<call->med_cnt; ++mi) {
-        stop_media_stream(call, mi);
+        stop_media_stream(call, mi, PJ_FALSE);
     }
 }
 
@@ -4216,7 +4219,7 @@ static pj_bool_t is_media_changed(const pjsua_call *call,
 
 /* Apply media update. */
 static pj_status_t apply_med_update(pjsua_call_media *call_med,
-                                    const pjmedia_sdp_session *local_sdp,
+                                    const pjmedia_sdp_session **local_sdp_ref,
                                     const pjmedia_sdp_session *remote_sdp,
                                     pj_bool_t *need_renego_sdp)
 {
@@ -4225,6 +4228,7 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
     const char *STR_RECVONLY = "recvonly";
     const char *STR_INACTIVE = "inactive";
 
+    const pjmedia_sdp_session *local_sdp = *local_sdp_ref;
     pjsua_call *call = call_med->call;
     pjsua_acc *acc = &pjsua_var.acc[call->acc_id];
     pjsua_call_id call_id = call->index;
@@ -4241,7 +4245,7 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     pjmedia_vid_stream_info vsi = {0};
 #endif
-    pjmedia_txt_stream_info tsi;
+    pjmedia_txt_stream_info tsi = {0};
     pjmedia_stream_info_common *si = NULL;
     pjsua_stream_info stream_info = {0};
     pj_str_t *enc_name = NULL;
@@ -4251,7 +4255,6 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
         status = pjmedia_stream_info_from_sdp(
                                     &asi, tmp_pool, pjsua_var.med_endpt,
                                     local_sdp, remote_sdp, mi);
-        stream_info.info.aud = asi;
         enc_name = &asi.fmt.encoding_name;
 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
@@ -4260,7 +4263,6 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
         status = pjmedia_vid_stream_info_from_sdp(
                                     &vsi, tmp_pool, pjsua_var.med_endpt,
                                     local_sdp, remote_sdp, mi);
-        stream_info.info.vid = vsi;
         enc_name = &vsi.codec_info.encoding_name;
 #endif
     } else if (call_med->type == PJMEDIA_TYPE_TEXT) {
@@ -4268,7 +4270,6 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
         status = pjmedia_txt_stream_info_from_sdp(
                                     &tsi, tmp_pool, pjsua_var.med_endpt,
                                     local_sdp, remote_sdp, mi);
-        stream_info.info.txt = tsi;
         enc_name = &tsi.fmt.encoding_name;
     }
     else {
@@ -4348,10 +4349,10 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
             pjmedia_sdp_media *m;
 
             if (!*need_renego_sdp) {
-                pjmedia_sdp_session *local_sdp_renego;
-                local_sdp_renego =
+                const pjmedia_sdp_session *local_sdp_renego =
                     pjmedia_sdp_session_clone(tmp_pool, local_sdp);
                 local_sdp = local_sdp_renego;
+                *local_sdp_ref = local_sdp_renego;
                 *need_renego_sdp = PJ_TRUE;
             }
 
@@ -4377,6 +4378,17 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
         }
     }
 
+    /* Copy stream info only now, so is_media_changed() sees the adjustments above. */
+    if (call_med->type == PJMEDIA_TYPE_AUDIO) {
+        stream_info.info.aud = asi;
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+    } else if (call_med->type == PJMEDIA_TYPE_VIDEO) {
+        stream_info.info.vid = vsi;
+#endif
+    } else if (call_med->type == PJMEDIA_TYPE_TEXT) {
+        stream_info.info.txt = tsi;
+    }
+
     stream_info.type = call_med->type;
 
 #if PJSUA_MEDIA_HAS_PJMEDIA || PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO
@@ -4390,9 +4402,19 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
     if (pjsua_var.media_cfg.no_smart_media_update ||
         is_media_changed(call, mi, &stream_info))
     {
+        /* Preserve the conference slot (detach + replace instead of
+         * remove + add) only when enabled, and only when the media stays
+         * active audio in the new answer. Removed/deactivated media
+         * (port 0) or a change to non-audio still uses remove.
+         */
+        pj_bool_t preserve_slot =
+            pjsua_var.acc[call->acc_id].cfg.preserve_conf_slot &&
+            local_sdp->media[mi]->desc.port != 0 &&
+            pj_stricmp2(&local_sdp->media[mi]->desc.media, "audio") == 0;
+
         media_changed = PJ_TRUE;
         /* Stop the media */
-        stop_media_stream(call, mi);
+        stop_media_stream(call, mi, preserve_slot);
     } else {
         PJ_LOG(4,(THIS_FILE, "Call %d: stream #%d (%s) unchanged.",
                   call_id, mi, pjmedia_type_name(call_med->type)));
@@ -4720,8 +4742,10 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
              * its re-offer.
              */
 
-            /* Stop stream */
-            stop_media_stream(call, mi);
+            /* Stop stream (media removed from the offer -> do not preserve
+             * the conference slot).
+             */
+            stop_media_stream(call, mi, PJ_FALSE);
 
             /* Close the media transport */
             if (call_med->tp) {
@@ -4741,18 +4765,20 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 
         /* Apply media update action */
         if (call_med->type==PJMEDIA_TYPE_AUDIO) {
-            status = apply_med_update(call_med, local_sdp, remote_sdp, &need_renego_sdp);
+            status = apply_med_update(call_med, &local_sdp, remote_sdp,
+                                      &need_renego_sdp);
             if (status != PJ_SUCCESS)
                 goto on_check_med_status;
 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
         } else if (call_med->type==PJMEDIA_TYPE_VIDEO) {
-            status = apply_med_update(call_med, local_sdp, remote_sdp, &need_renego_sdp);
+            status = apply_med_update(call_med, &local_sdp, remote_sdp,
+                                      &need_renego_sdp);
             if (status != PJ_SUCCESS)
                 goto on_check_med_status;
 #endif
         } else if (call_med->type==PJMEDIA_TYPE_TEXT) {
-            status = apply_med_update(call_med, local_sdp, remote_sdp,
+            status = apply_med_update(call_med, &local_sdp, remote_sdp,
                                       &need_renego_sdp);
             if (status != PJ_SUCCESS)
                 goto on_check_med_status;
@@ -4772,8 +4798,8 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 
 on_check_med_status:
         if (status != PJ_SUCCESS) {
-            /* Stop stream */
-            stop_media_stream(call, mi);
+            /* Stop stream (error path -> do not preserve the conf slot) */
+            stop_media_stream(call, mi, PJ_FALSE);
 
             /* Close the media transport */
             if (call_med->tp) {

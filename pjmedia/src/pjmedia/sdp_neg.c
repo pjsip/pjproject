@@ -22,6 +22,7 @@
 #include <pjmedia/stream_common.h>
 #include <pjmedia/vid_codec.h>
 #include <pjmedia/errno.h>
+#include "sdp_internal.h"
 #include <pj/assert.h>
 #include <pj/pool.h>
 #include <pj/string.h>
@@ -1273,84 +1274,6 @@ static void apply_answer_symmetric_pt(pj_pool_t *pool,
 }
 
 
-/* Return PJ_TRUE if a session-level group attribute contains the supplied MID
- * in a BUNDLE group.
- */
-static pj_bool_t bundle_group_contains_mid(const pjmedia_sdp_session *sdp,
-                                           const pj_str_t *mid)
-{
-    unsigned i;
-
-    for (i = 0; i < sdp->attr_count; ++i) {
-        const pjmedia_sdp_attr *attr = sdp->attr[i];
-        const char *pos, *end;
-        unsigned token_index = 0;
-        pj_bool_t is_bundle = PJ_FALSE;
-
-        if (pj_stricmp2(&attr->name, "group") != 0)
-            continue;
-
-        if (attr->value.ptr == NULL || attr->value.slen == 0)
-            continue;
-
-        pos = attr->value.ptr;
-        end = attr->value.ptr + attr->value.slen;
-        while (pos < end) {
-            const char *token_start;
-            pj_str_t token;
-
-            while (pos < end && (*pos == ' ' || *pos == '\t'))
-                ++pos;
-            if (pos == end)
-                break;
-
-            token_start = pos;
-            while (pos < end && *pos != ' ' && *pos != '\t')
-                ++pos;
-
-            token.ptr = (char *)token_start;
-            token.slen = pos - token_start;
-
-            if (token_index++ == 0) {
-                is_bundle = (pj_stricmp2(&token, "BUNDLE") == 0);
-                if (!is_bundle)
-                    break;
-                continue;
-            }
-
-            if (is_bundle && pj_strcmp(&token, mid) == 0)
-                return PJ_TRUE;
-        }
-    }
-
-    return PJ_FALSE;
-}
-
-
-/* RFC 9143 allows a bundled m= section in an offer to use port zero when
- * a=bundle-only is present.  The exception only applies when the section has
- * a MID and that MID is actually listed in a session-level group:BUNDLE
- * attribute.
- */
-static pj_bool_t is_bundle_only_offer(const pjmedia_sdp_session *sdp,
-                                      const pjmedia_sdp_media *media)
-{
-    const pjmedia_sdp_attr *mid;
-
-    if (media->desc.port != 0 ||
-        !pjmedia_sdp_media_find_attr2(media, "bundle-only", NULL))
-    {
-        return PJ_FALSE;
-    }
-
-    mid = pjmedia_sdp_media_find_attr2(media, "mid", NULL);
-    if (!mid)
-        return PJ_FALSE;
-
-    return bundle_group_contains_mid(sdp, &mid->value);
-}
-
-
 /* Try to match offer with answer. */
 static pj_status_t match_offer(pj_pool_t *pool,
                                pj_bool_t prefer_remote_codec_order,
@@ -1842,7 +1765,7 @@ static pj_status_t create_answer( pj_pool_t *pool,
         unsigned j;
 
         om = offer->media[i];
-        bundle_only = is_bundle_only_offer(offer, om);
+        bundle_only = pjmedia_sdp_media_is_bundle_only(offer, om);
 
         om_tp = pjmedia_sdp_transport_get_proto(&om->desc.transport);
         PJMEDIA_TP_PROTO_TRIM_FLAG(om_tp, PJMEDIA_TP_PROFILE_RTCP_FB);

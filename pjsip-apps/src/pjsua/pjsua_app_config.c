@@ -1963,82 +1963,127 @@ pj_status_t load_config(int argc,
 /*
  * Save account settings
  */
-static void write_account_settings(int acc_index, pj_str_t *result)
+/* Bounded appends into the caller's buffer. Once the buffer is full slen is
+ * set negative and further appends are ignored, so write_settings() returns
+ * an error instead of emitting a partial line.
+ */
+static void cfg_add(pj_str_t *cfg, pj_size_t max, const char *src)
+{
+    int len;
+
+    if (cfg->slen < 0)
+        return;
+
+    len = pj_ansi_strxcpy(cfg->ptr + cfg->slen, src,
+                          max - (pj_size_t)cfg->slen);
+    if (len < 0)
+        cfg->slen = -1;
+    else
+        cfg->slen += len;
+}
+
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+/* Length based, so a value containing a NUL is copied whole. */
+static void cfg_add_str(pj_str_t *cfg, pj_size_t max, const pj_str_t *src)
+{
+    if (cfg->slen < 0)
+        return;
+
+    if ((pj_size_t)cfg->slen + (pj_size_t)src->slen + 1 > max) {
+        cfg->slen = -1;
+        return;
+    }
+
+    pj_memcpy(cfg->ptr + cfg->slen, src->ptr, src->slen);
+    cfg->slen += src->slen;
+    cfg->ptr[cfg->slen] = '\0';
+}
+#endif
+
+static void cfg_addf(pj_str_t *cfg, pj_size_t max, const char *fmt, ...)
+{
+    va_list ap;
+    int len;
+
+    if (cfg->slen < 0)
+        return;
+
+    va_start(ap, fmt);
+    len = pj_ansi_vsnprintf(cfg->ptr + cfg->slen, max - (pj_size_t)cfg->slen,
+                            fmt, ap);
+    va_end(ap);
+
+    if (len < 0 || (pj_size_t)(cfg->slen + len) >= max)
+        cfg->slen = -1;
+    else
+        cfg->slen += len;
+}
+
+static void write_account_settings(int acc_index, pj_str_t *result,
+                                   pj_size_t max)
 {
     unsigned i;
-    char line[128];
     pjsua_acc_config *acc_cfg = &app_config.acc_cfg[acc_index];
 
 
-    pj_ansi_snprintf(line, sizeof(line), "\n#\n# Account %d:\n#\n", acc_index);
-    pj_strcat2(result, line);
+    cfg_addf(result, max, "\n#\n# Account %d:\n#\n", acc_index);
 
 
     /* Identity */
     if (acc_cfg->id.slen) {
-        pj_ansi_snprintf(line, sizeof(line), "--id %.*s\n",
+        cfg_addf(result, max, "--id %.*s\n",
                         (int)acc_cfg->id.slen,
                         acc_cfg->id.ptr);
-        pj_strcat2(result, line);
     }
 
     /* Registrar server */
     if (acc_cfg->reg_uri.slen) {
-        pj_ansi_snprintf(line, sizeof(line), "--registrar %.*s\n",
+        cfg_addf(result, max, "--registrar %.*s\n",
                               (int)acc_cfg->reg_uri.slen,
                               acc_cfg->reg_uri.ptr);
-        pj_strcat2(result, line);
 
-        pj_ansi_snprintf(line, sizeof(line), "--reg-timeout %u\n",
+        cfg_addf(result, max, "--reg-timeout %u\n",
                               acc_cfg->reg_timeout);
-        pj_strcat2(result, line);
     }
 
     /* Contact */
     if (acc_cfg->force_contact.slen) {
-        pj_ansi_snprintf(line, sizeof(line), "--contact %.*s\n",
+        cfg_addf(result, max, "--contact %.*s\n",
                         (int)acc_cfg->force_contact.slen,
                         acc_cfg->force_contact.ptr);
-        pj_strcat2(result, line);
     }
 
     /* Contact header parameters */
     if (acc_cfg->contact_params.slen) {
-        pj_ansi_snprintf(line, sizeof(line), "--contact-params %.*s\n",
+        cfg_addf(result, max, "--contact-params %.*s\n",
                         (int)acc_cfg->contact_params.slen,
                         acc_cfg->contact_params.ptr);
-        pj_strcat2(result, line);
     }
 
     /* Contact URI parameters */
     if (acc_cfg->contact_uri_params.slen) {
-        pj_ansi_snprintf(line, sizeof(line), "--contact-uri-params %.*s\n",
+        cfg_addf(result, max, "--contact-uri-params %.*s\n",
                         (int)acc_cfg->contact_uri_params.slen,
                         acc_cfg->contact_uri_params.ptr);
-        pj_strcat2(result, line);
     }
 
-    /* Appended directly: line[] is shorter than the config reader's buffer
-     * and would truncate a long value such as a push token.
-     */
     if (acc_cfg->reg_contact_params.slen) {
-        pj_strcat2(result, "--reg-contact-params ");
-        pj_strcat(result, &acc_cfg->reg_contact_params);
-        pj_strcat2(result, "\n");
+        cfg_addf(result, max, "--reg-contact-params %.*s\n",
+                 (int)acc_cfg->reg_contact_params.slen,
+                 acc_cfg->reg_contact_params.ptr);
     }
 
     if (acc_cfg->reg_contact_uri_params.slen) {
-        pj_strcat2(result, "--reg-contact-uri-params ");
-        pj_strcat(result, &acc_cfg->reg_contact_uri_params);
-        pj_strcat2(result, "\n");
+        cfg_addf(result, max, "--reg-contact-uri-params %.*s\n",
+                 (int)acc_cfg->reg_contact_uri_params.slen,
+                 acc_cfg->reg_contact_uri_params.ptr);
     }
 
     /*  */
     if (acc_cfg->allow_contact_rewrite!=1)
     {
-        pj_ansi_snprintf(line, sizeof(line), "--auto-update-nat %i\n",
+        cfg_addf(result, max, "--auto-update-nat %i\n",
                         (int)acc_cfg->allow_contact_rewrite);
-        pj_strcat2(result, line);
     }
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
@@ -2050,47 +2095,41 @@ static void write_account_settings(int acc_index, pj_str_t *result)
         {
             use_srtp = 3;
         }
-        pj_ansi_snprintf(line, sizeof(line), "--use-srtp %i\n", use_srtp);
-        pj_strcat2(result, line);
+        cfg_addf(result, max, "--use-srtp %i\n", use_srtp);
     }
     if (acc_cfg->srtp_secure_signaling !=
         PJSUA_DEFAULT_SRTP_SECURE_SIGNALING)
     {
-        pj_ansi_snprintf(line, sizeof(line), "--srtp-secure %d\n",
+        cfg_addf(result, max, "--srtp-secure %d\n",
                         acc_cfg->srtp_secure_signaling);
-        pj_strcat2(result, line);
     }
 #endif
 
     /* Proxy */
     for (i=0; i<acc_cfg->proxy_cnt; ++i) {
-        pj_ansi_snprintf(line, sizeof(line), "--proxy %.*s\n",
+        cfg_addf(result, max, "--proxy %.*s\n",
                               (int)acc_cfg->proxy[i].slen,
                               acc_cfg->proxy[i].ptr);
-        pj_strcat2(result, line);
     }
 
     /* Credentials */
     for (i=0; i<acc_cfg->cred_count; ++i) {
         if (acc_cfg->cred_info[i].realm.slen) {
-            pj_ansi_snprintf(line, sizeof(line), "--realm %.*s\n",
+            cfg_addf(result, max, "--realm %.*s\n",
                                   (int)acc_cfg->cred_info[i].realm.slen,
                                   acc_cfg->cred_info[i].realm.ptr);
-            pj_strcat2(result, line);
         }
 
         if (acc_cfg->cred_info[i].username.slen) {
-            pj_ansi_snprintf(line, sizeof(line), "--username %.*s\n",
+            cfg_addf(result, max, "--username %.*s\n",
                                   (int)acc_cfg->cred_info[i].username.slen,
                                   acc_cfg->cred_info[i].username.ptr);
-            pj_strcat2(result, line);
         }
 
         if (acc_cfg->cred_info[i].data.slen) {
-            pj_ansi_snprintf(line, sizeof(line), "--password %.*s\n",
+            cfg_addf(result, max, "--password %.*s\n",
                                   (int)acc_cfg->cred_info[i].data.slen,
                                   acc_cfg->cred_info[i].data.ptr);
-            pj_strcat2(result, line);
         }
 
 #if PJSIP_HAS_DIGEST_AKA_AUTH
@@ -2100,9 +2139,8 @@ static void write_account_settings(int acc_index, pj_str_t *result)
             pj_assert(aka_op->slen <= PJSIP_AKA_OPLEN);
             my_octet_array_to_hex_string(aka_op->ptr, aka_op->slen, hex);
             
-            pj_ansi_snprintf(line, sizeof(line), "--aka-op %.*s\n",
+            cfg_addf(result, max, "--aka-op %.*s\n",
                                   (int)aka_op->slen*2, hex);
-            pj_strcat2(result, line);
         }
 
         if (acc_cfg->cred_info[i].ext.aka.amf.slen) {
@@ -2111,313 +2149,354 @@ static void write_account_settings(int acc_index, pj_str_t *result)
             pj_assert(aka_amf->slen <= PJSIP_AKA_AMFLEN);
             my_octet_array_to_hex_string(aka_amf->ptr, aka_amf->slen, hex);
             
-            pj_ansi_snprintf(line, sizeof(line), "--aka-amf %.*s\n",
+            cfg_addf(result, max, "--aka-amf %.*s\n",
                                   (int)aka_amf->slen*2, hex);
-            pj_strcat2(result, line);
         }
 #endif
 
         if (i != acc_cfg->cred_count - 1)
-            pj_strcat2(result, "--next-cred\n");
+            cfg_add(result, max, "--next-cred\n");
     }
 
     /* reg-use-proxy */
     if (acc_cfg->reg_use_proxy != 3) {
-        pj_ansi_snprintf(line, sizeof(line), "--reg-use-proxy %d\n",
+        cfg_addf(result, max, "--reg-use-proxy %d\n",
                               acc_cfg->reg_use_proxy);
-        pj_strcat2(result, line);
     }
 
     /* rereg-delay */
     if (acc_cfg->reg_retry_interval != PJSUA_REG_RETRY_INTERVAL) {
-        pj_ansi_snprintf(line, sizeof(line), "--rereg-delay %d\n",
+        cfg_addf(result, max, "--rereg-delay %d\n",
                               acc_cfg->reg_retry_interval);
-        pj_strcat2(result, line);
     }
 
     /* 100rel extension */
     if (acc_cfg->require_100rel == PJSUA_100REL_MANDATORY) {
-        pj_strcat2(result, "--use-100rel\n");
+        cfg_add(result, max, "--use-100rel\n");
     }
 
     /* Session Timer extension */
     if (acc_cfg->use_timer) {
-        pj_ansi_snprintf(line, sizeof(line), "--use-timer %d\n",
+        cfg_addf(result, max, "--use-timer %d\n",
                               acc_cfg->use_timer);
-        pj_strcat2(result, line);
     }
     if (acc_cfg->timer_setting.min_se != 90) {
-        pj_ansi_snprintf(line, sizeof(line), "--timer-min-se %d\n",
+        cfg_addf(result, max, "--timer-min-se %d\n",
                               acc_cfg->timer_setting.min_se);
-        pj_strcat2(result, line);
     }
     if (acc_cfg->timer_setting.sess_expires != PJSIP_SESS_TIMER_DEF_SE) {
-        pj_ansi_snprintf(line, sizeof(line), "--timer-se %d\n",
+        cfg_addf(result, max, "--timer-se %d\n",
                               acc_cfg->timer_setting.sess_expires);
-        pj_strcat2(result, line);
     }
 
     /* Publish */
     if (acc_cfg->publish_enabled)
-        pj_strcat2(result, "--publish\n");
+        cfg_add(result, max, "--publish\n");
 
     /* MWI */
     if (acc_cfg->mwi_enabled)
-        pj_strcat2(result, "--mwi\n");
+        cfg_add(result, max, "--mwi\n");
 
     if (acc_cfg->sip_stun_use != PJSUA_STUN_USE_DEFAULT ||
         acc_cfg->media_stun_use != PJSUA_STUN_USE_DEFAULT)
     {
-        pj_strcat2(result, "--disable-stun\n");
+        cfg_add(result, max, "--disable-stun\n");
     }
 
     /* Media Transport*/
     if (acc_cfg->ice_cfg.enable_ice)
-        pj_strcat2(result, "--use-ice\n");
+        cfg_add(result, max, "--use-ice\n");
 
     if (acc_cfg->ice_cfg.ice_opt.aggressive == PJ_FALSE)
-        pj_strcat2(result, "--ice-regular\n");
+        cfg_add(result, max, "--ice-regular\n");
 
     if (acc_cfg->ice_cfg.ice_opt.trickle > 0) {
-        pj_ansi_snprintf(line, sizeof(line), "--ice-trickle %d\n",
+        cfg_addf(result, max, "--ice-trickle %d\n",
                         acc_cfg->ice_cfg.ice_opt.trickle);
-        pj_strcat2(result, line);
     }
 
     if (acc_cfg->turn_cfg.enable_turn)
-        pj_strcat2(result, "--use-turn\n");
+        cfg_add(result, max, "--use-turn\n");
 
     if (acc_cfg->ice_cfg.ice_max_host_cands >= 0) {
-        pj_ansi_snprintf(line, sizeof(line), "--ice_max_host_cands %d\n",
+        cfg_addf(result, max, "--ice_max_host_cands %d\n",
                         acc_cfg->ice_cfg.ice_max_host_cands);
-        pj_strcat2(result, line);
     }
 
     if (acc_cfg->ice_cfg.ice_no_rtcp)
-        pj_strcat2(result, "--ice-no-rtcp\n");
+        cfg_add(result, max, "--ice-no-rtcp\n");
 
     if (acc_cfg->turn_cfg.turn_server.slen) {
-        pj_ansi_snprintf(line, sizeof(line), "--turn-srv %.*s\n",
+        cfg_addf(result, max, "--turn-srv %.*s\n",
                         (int)acc_cfg->turn_cfg.turn_server.slen,
                         acc_cfg->turn_cfg.turn_server.ptr);
-        pj_strcat2(result, line);
     }
 
     if (acc_cfg->turn_cfg.turn_conn_type == PJ_TURN_TP_TCP)
-        pj_strcat2(result, "--turn-tcp\n");
+        cfg_add(result, max, "--turn-tcp\n");
 
     if (acc_cfg->turn_cfg.turn_auth_cred.data.static_cred.username.slen) {
-        pj_ansi_snprintf(line, sizeof(line), "--turn-user %.*s\n",
+        cfg_addf(result, max, "--turn-user %.*s\n",
                         (int)acc_cfg->turn_cfg.turn_auth_cred.data.static_cred.username.slen,
                         acc_cfg->turn_cfg.turn_auth_cred.data.static_cred.username.ptr);
-        pj_strcat2(result, line);
     }
 
     if (acc_cfg->turn_cfg.turn_auth_cred.data.static_cred.data.slen) {
-        pj_ansi_snprintf(line, sizeof(line), "--turn-passwd %.*s\n",
+        cfg_addf(result, max, "--turn-passwd %.*s\n",
                         (int)acc_cfg->turn_cfg.turn_auth_cred.data.static_cred.data.slen,
                         acc_cfg->turn_cfg.turn_auth_cred.data.static_cred.data.ptr);
-        pj_strcat2(result, line);
     }
 
     if (acc_cfg->enable_rtcp_mux)
-        pj_strcat2(result, "--rtcp-mux\n");
+        cfg_add(result, max, "--rtcp-mux\n");
 
     if (acc_cfg->enable_rtcp_xr)
-        pj_strcat2(result, "--rtcp-xr\n");
+        cfg_add(result, max, "--rtcp-xr\n");
 }
 
 /*
  * Write settings.
  */
+char *alloc_settings(pjsua_app_config *config, pj_pool_t **p_pool,
+                     int *p_len)
+{
+    pj_pool_t *pool;
+    char *buf;
+    int len;
+
+    *p_pool = NULL;
+
+    pool = pjsua_pool_create("settings", PJSUA_APP_SETTINGS_SIZE + 1024, 1024);
+    if (!pool) {
+        PJ_LOG(1,(THIS_FILE, "Error: unable to allocate settings buffer"));
+        return NULL;
+    }
+
+    buf = (char*)pj_pool_alloc(pool, PJSUA_APP_SETTINGS_SIZE);
+    if (!buf) {
+        PJ_LOG(1,(THIS_FILE, "Error: unable to allocate settings buffer"));
+        pj_pool_secure_release(&pool);
+        return NULL;
+    }
+
+    len = write_settings(config, buf, PJSUA_APP_SETTINGS_SIZE);
+    if (len < 1) {
+        PJ_LOG(1,(THIS_FILE, "Error: not enough buffer"));
+        pj_pool_secure_release(&pool);
+        return NULL;
+    }
+
+    *p_pool = pool;
+    *p_len = len;
+    return buf;
+}
+
+/* PJ_LOG truncates a message at PJ_LOG_MAX_SIZE, which the settings buffer
+ * can exceed, so emit the dump in chunks broken at option boundaries.
+ */
+pj_status_t dump_settings(pjsua_app_config *config)
+{
+    enum { CHUNK = (PJ_LOG_MAX_SIZE > 1024)? PJ_LOG_MAX_SIZE - 512 : 512 };
+    pj_pool_t *pool;
+    char *settings;
+    int len, pos;
+
+    settings = alloc_settings(config, &pool, &len);
+    if (!settings)
+        return PJ_ENOMEM;
+
+    PJ_LOG(3,(THIS_FILE, "Dumping configuration (%d bytes):", len));
+
+    for (pos = 0; pos < len; ) {
+        int n = len - pos;
+
+        if (n > CHUNK) {
+            n = CHUNK;
+            while (n > 0 && settings[pos + n - 1] != '\n')
+                --n;
+            if (n == 0)
+                n = CHUNK;
+        }
+
+        PJ_LOG(3,(THIS_FILE, "%.*s", n, settings + pos));
+        pos += n;
+    }
+
+    pj_pool_secure_release(&pool);
+    return PJ_SUCCESS;
+}
+
+
 int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
 {
     unsigned acc_index;
     unsigned i;
     pj_str_t cfg;
-    char line[128];
-
-    PJ_UNUSED_ARG(max);
 
     cfg.ptr = buf;
     cfg.slen = 0;
+    buf[0] = '\0';
 
     /* Logging. */
-    pj_strcat2(&cfg, "#\n# Logging options:\n#\n");
-    pj_ansi_snprintf(line, sizeof(line), "--log-level %d\n",
+    cfg_add(&cfg, max, "#\n# Logging options:\n#\n");
+    cfg_addf(&cfg, max, "--log-level %d\n",
                     config->log_cfg.level);
-    pj_strcat2(&cfg, line);
 
-    pj_ansi_snprintf(line, sizeof(line), "--app-log-level %d\n",
+    cfg_addf(&cfg, max, "--app-log-level %d\n",
                     config->log_cfg.console_level);
-    pj_strcat2(&cfg, line);
 
     if (config->log_cfg.log_filename.slen) {
-        pj_ansi_snprintf(line, sizeof(line), "--log-file %.*s\n",
+        cfg_addf(&cfg, max, "--log-file %.*s\n",
                         (int)config->log_cfg.log_filename.slen,
                         config->log_cfg.log_filename.ptr);
-        pj_strcat2(&cfg, line);
     }
 
     if (config->log_cfg.log_file_flags & PJ_O_APPEND) {
-        pj_strcat2(&cfg, "--log-append\n");
+        cfg_add(&cfg, max, "--log-append\n");
     }
 
     /* Save account settings. */
     for (acc_index=0; acc_index < config->acc_cnt; ++acc_index) {
 
-        write_account_settings(acc_index, &cfg);
+        write_account_settings(acc_index, &cfg, max);
 
         if (acc_index < config->acc_cnt-1)
-            pj_strcat2(&cfg, "--next-account\n");
+            cfg_add(&cfg, max, "--next-account\n");
     }
 
-    pj_strcat2(&cfg, "\n#\n# Network settings:\n#\n");
+    cfg_add(&cfg, max, "\n#\n# Network settings:\n#\n");
 
     /* Nameservers */
     for (i=0; i<config->cfg.nameserver_count; ++i) {
-        pj_ansi_snprintf(line, sizeof(line), "--nameserver %.*s\n",
+        cfg_addf(&cfg, max, "--nameserver %.*s\n",
                               (int)config->cfg.nameserver[i].slen,
                               config->cfg.nameserver[i].ptr);
-        pj_strcat2(&cfg, line);
     }
 
     /* Outbound proxy */
     for (i=0; i<config->cfg.outbound_proxy_cnt; ++i) {
-        pj_ansi_snprintf(line, sizeof(line), "--outbound %.*s\n",
+        cfg_addf(&cfg, max, "--outbound %.*s\n",
                               (int)config->cfg.outbound_proxy[i].slen,
                               config->cfg.outbound_proxy[i].ptr);
-        pj_strcat2(&cfg, line);
     }
 
     /* Transport options */
     if (config->ipv6) {
-        pj_strcat2(&cfg, "--ipv6\n");
+        cfg_add(&cfg, max, "--ipv6\n");
     }
     if (config->enable_qos) {
-        pj_strcat2(&cfg, "--set-qos\n");
+        cfg_add(&cfg, max, "--set-qos\n");
     }
     /* When there are no registered accounts, --rtcp-mux is not written by
      * write_account_settings(), so emit it here from the global flag. */
     if (config->acc_cnt == 0 && config->enable_rtcp_mux) {
-        pj_strcat2(&cfg, "--rtcp-mux\n");
+        cfg_add(&cfg, max, "--rtcp-mux\n");
     }
     if (config->acc_cnt == 0 && config->enable_rtcp_xr) {
-        pj_strcat2(&cfg, "--rtcp-xr\n");
+        cfg_add(&cfg, max, "--rtcp-xr\n");
     }
 
     /* Message Composition Indication */
     if (config->no_mci) {
-        pj_strcat2(&cfg, "--no-mci\n");
+        cfg_add(&cfg, max, "--no-mci\n");
     }
 
     /* UDP Transport. */
-    pj_ansi_snprintf(line, sizeof(line), "--local-port %d\n",
+    cfg_addf(&cfg, max, "--local-port %d\n",
                      config->udp_cfg.port);
-    pj_strcat2(&cfg, line);
 
     /* IP address, if any. */
     if (config->udp_cfg.public_addr.slen) {
-        pj_ansi_snprintf(line, sizeof(line), "--ip-addr %.*s\n",
+        cfg_addf(&cfg, max, "--ip-addr %.*s\n",
                         (int)config->udp_cfg.public_addr.slen,
                         config->udp_cfg.public_addr.ptr);
-        pj_strcat2(&cfg, line);
     }
 
     /* Bound IP address, if any. */
     if (config->udp_cfg.bound_addr.slen) {
-        pj_ansi_snprintf(line, sizeof(line), "--bound-addr %.*s\n",
+        cfg_addf(&cfg, max, "--bound-addr %.*s\n",
                         (int)config->udp_cfg.bound_addr.slen,
                         config->udp_cfg.bound_addr.ptr);
-        pj_strcat2(&cfg, line);
     }
 
     /* No TCP ? */
     if (config->no_tcp) {
-        pj_strcat2(&cfg, "--no-tcp\n");
+        cfg_add(&cfg, max, "--no-tcp\n");
     }
 
     /* No UDP ? */
     if (config->no_udp) {
-        pj_strcat2(&cfg, "--no-udp\n");
+        cfg_add(&cfg, max, "--no-udp\n");
     }
 
     /* STUN */
     for (i=0; i<config->cfg.stun_srv_cnt; ++i) {
-        pj_ansi_snprintf(line, sizeof(line), "--stun-srv %.*s\n",
+        cfg_addf(&cfg, max, "--stun-srv %.*s\n",
                         (int)config->cfg.stun_srv[i].slen,
                         config->cfg.stun_srv[i].ptr);
-        pj_strcat2(&cfg, line);
     }
 
 #if defined(PJSIP_HAS_TLS_TRANSPORT) && (PJSIP_HAS_TLS_TRANSPORT != 0)
     /* TLS */
     if (config->use_tls)
-        pj_strcat2(&cfg, "--use-tls\n");
+        cfg_add(&cfg, max, "--use-tls\n");
     if (config->udp_cfg.tls_setting.ca_list_file.slen) {
-        pj_ansi_snprintf(line, sizeof(line), "--tls-ca-file %.*s\n",
+        cfg_addf(&cfg, max, "--tls-ca-file %.*s\n",
                         (int)config->udp_cfg.tls_setting.ca_list_file.slen,
                         config->udp_cfg.tls_setting.ca_list_file.ptr);
-        pj_strcat2(&cfg, line);
     }
     if (config->udp_cfg.tls_setting.cert_file.slen) {
-        pj_ansi_snprintf(line, sizeof(line), "--tls-cert-file %.*s\n",
+        cfg_addf(&cfg, max, "--tls-cert-file %.*s\n",
                         (int)config->udp_cfg.tls_setting.cert_file.slen,
                         config->udp_cfg.tls_setting.cert_file.ptr);
-        pj_strcat2(&cfg, line);
     }
     if (config->udp_cfg.tls_setting.privkey_file.slen) {
-        pj_ansi_snprintf(line, sizeof(line), "--tls-privkey-file %.*s\n",
+        cfg_addf(&cfg, max, "--tls-privkey-file %.*s\n",
                         (int)config->udp_cfg.tls_setting.privkey_file.slen,
                         config->udp_cfg.tls_setting.privkey_file.ptr);
-        pj_strcat2(&cfg, line);
     }
 
     if (config->udp_cfg.tls_setting.password.slen) {
-        pj_ansi_snprintf(line, sizeof(line), "--tls-password %.*s\n",
+        cfg_addf(&cfg, max, "--tls-password %.*s\n",
                         (int)config->udp_cfg.tls_setting.password.slen,
                         config->udp_cfg.tls_setting.password.ptr);
-        pj_strcat2(&cfg, line);
     }
 
     if (config->udp_cfg.tls_setting.verify_server)
-        pj_strcat2(&cfg, "--tls-verify-server\n");
+        cfg_add(&cfg, max, "--tls-verify-server\n");
 
     if (config->udp_cfg.tls_setting.verify_client)
-        pj_strcat2(&cfg, "--tls-verify-client\n");
+        cfg_add(&cfg, max, "--tls-verify-client\n");
 
     if (config->udp_cfg.tls_setting.timeout.sec) {
-        pj_ansi_snprintf(line, sizeof(line), "--tls-neg-timeout %d\n",
+        cfg_addf(&cfg, max, "--tls-neg-timeout %d\n",
                         (int)config->udp_cfg.tls_setting.timeout.sec);
-        pj_strcat2(&cfg, line);
     }
 
     for (i=0; i<config->udp_cfg.tls_setting.ciphers_num; ++i) {
-        pj_ansi_snprintf(line, sizeof(line), "--tls-cipher 0x%06X # %s\n",
+        cfg_addf(&cfg, max, "--tls-cipher 0x%06X # %s\n",
                         config->udp_cfg.tls_setting.ciphers[i],
                         pj_ssl_cipher_name(config->udp_cfg.tls_setting.ciphers[i]));
-        pj_strcat2(&cfg, line);
     }
 #endif
 
-    pj_strcat2(&cfg, "\n#\n# Media settings:\n#\n");
+    cfg_add(&cfg, max, "\n#\n# Media settings:\n#\n");
 
     /* Video & extra audio */
     for (i=0; i<config->vid.vid_cnt; ++i) {
-        pj_strcat2(&cfg, "--video\n");
+        cfg_add(&cfg, max, "--video\n");
     }
     for (i=1; i<config->aud_cnt; ++i) {
-        pj_strcat2(&cfg, "--extra-audio\n");
+        cfg_add(&cfg, max, "--extra-audio\n");
     }
 
     /* Text */
     if (config->txt_cnt) {
-        pj_strcat2(&cfg, "--text\n");
+        cfg_add(&cfg, max, "--text\n");
     }
     if (config->txt_red_level) {
-        pj_ansi_snprintf(line, sizeof(line), "--text-red %d\n",
+        cfg_addf(&cfg, max, "--text-red %d\n",
                         (int)config->txt_red_level);
-        pj_strcat2(&cfg, line);
     }
 
     /* SRTP */
@@ -2429,312 +2508,267 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
         {
             use_srtp = 3;
         }
-        pj_ansi_snprintf(line, sizeof(line), "--use-srtp %d\n", use_srtp);
-        pj_strcat2(&cfg, line);
+        cfg_addf(&cfg, max, "--use-srtp %d\n", use_srtp);
     }
     if (app_config.cfg.srtp_secure_signaling !=
         PJSUA_DEFAULT_SRTP_SECURE_SIGNALING)
     {
-        pj_ansi_snprintf(line, sizeof(line), "--srtp-secure %d\n",
+        cfg_addf(&cfg, max, "--srtp-secure %d\n",
                         app_config.cfg.srtp_secure_signaling);
-        pj_strcat2(&cfg, line);
     }
     if (app_config.srtp_keying >= 0 && app_config.srtp_keying <= 1)
     {
-        pj_ansi_snprintf(line, sizeof(line), "--srtp-keying %d\n",
+        cfg_addf(&cfg, max, "--srtp-keying %d\n",
                         app_config.srtp_keying);
-        pj_strcat2(&cfg, line);
     }
 #endif
 
     /* Media */
     if (config->null_audio)
-        pj_strcat2(&cfg, "--null-audio\n");
+        cfg_add(&cfg, max, "--null-audio\n");
     if (config->auto_play)
-        pj_strcat2(&cfg, "--auto-play\n");
+        cfg_add(&cfg, max, "--auto-play\n");
     if (config->auto_loop)
-        pj_strcat2(&cfg, "--auto-loop\n");
+        cfg_add(&cfg, max, "--auto-loop\n");
     if (config->auto_conf)
-        pj_strcat2(&cfg, "--auto-conf\n");
+        cfg_add(&cfg, max, "--auto-conf\n");
     for (i=0; i<config->wav_count; ++i) {
-        pj_ansi_snprintf(line, sizeof(line), "--play-file %s\n",
+        cfg_addf(&cfg, max, "--play-file %s\n",
                         config->wav_files[i].ptr);
-        pj_strcat2(&cfg, line);
     }
     for (i=0; i<config->tone_count; ++i) {
-        pj_ansi_snprintf(line, sizeof(line), "--play-tone %d,%d,%d,%d\n",
+        cfg_addf(&cfg, max, "--play-tone %d,%d,%d,%d\n",
                         config->tones[i].freq1, config->tones[i].freq2,
                         config->tones[i].on_msec, config->tones[i].off_msec);
-        pj_strcat2(&cfg, line);
     }
     if (config->rec_file.slen) {
-        pj_ansi_snprintf(line, sizeof(line), "--rec-file %s\n",
+        cfg_addf(&cfg, max, "--rec-file %s\n",
                         config->rec_file.ptr);
-        pj_strcat2(&cfg, line);
     }
     if (config->auto_rec)
-        pj_strcat2(&cfg, "--auto-rec\n");
+        cfg_add(&cfg, max, "--auto-rec\n");
     if (config->capture_dev != PJSUA_INVALID_ID) {
-        pj_ansi_snprintf(line, sizeof(line), "--capture-dev %d\n",
+        cfg_addf(&cfg, max, "--capture-dev %d\n",
                          config->capture_dev);
-        pj_strcat2(&cfg, line);
     }
     if (config->playback_dev != PJSUA_INVALID_ID) {
-        pj_ansi_snprintf(line, sizeof(line), "--playback-dev %d\n",
+        cfg_addf(&cfg, max, "--playback-dev %d\n",
                          config->playback_dev);
-        pj_strcat2(&cfg, line);
     }
     if (config->media_cfg.snd_auto_close_time != -1) {
-        pj_ansi_snprintf(line, sizeof(line), "--snd-auto-close %d\n",
+        cfg_addf(&cfg, max, "--snd-auto-close %d\n",
                         config->media_cfg.snd_auto_close_time);
-        pj_strcat2(&cfg, line);
     }
     if (config->no_tones) {
-        pj_strcat2(&cfg, "--no-tones\n");
+        cfg_add(&cfg, max, "--no-tones\n");
     }
     if (config->media_cfg.jb_max != -1) {
-        pj_ansi_snprintf(line, sizeof(line), "--jb-max-size %d\n",
+        cfg_addf(&cfg, max, "--jb-max-size %d\n",
                         config->media_cfg.jb_max);
-        pj_strcat2(&cfg, line);
     }
 
     /* Sound device latency */
     if (config->capture_lat != PJMEDIA_SND_DEFAULT_REC_LATENCY) {
-        pj_ansi_snprintf(line, sizeof(line), "--capture-lat %d\n",
+        cfg_addf(&cfg, max, "--capture-lat %d\n",
                          config->capture_lat);
-        pj_strcat2(&cfg, line);
     }
     if (config->playback_lat != PJMEDIA_SND_DEFAULT_PLAY_LATENCY) {
-        pj_ansi_snprintf(line, sizeof(line), "--playback-lat %d\n",
+        cfg_addf(&cfg, max, "--playback-lat %d\n",
                          config->playback_lat);
-        pj_strcat2(&cfg, line);
     }
 
     /* Media clock rate. */
     if (config->media_cfg.clock_rate != PJSUA_DEFAULT_CLOCK_RATE) {
-        pj_ansi_snprintf(line, sizeof(line), "--clock-rate %d\n",
+        cfg_addf(&cfg, max, "--clock-rate %d\n",
                         config->media_cfg.clock_rate);
-        pj_strcat2(&cfg, line);
     } else {
-        pj_ansi_snprintf(line, sizeof(line), "#using default --clock-rate %d\n",
+        cfg_addf(&cfg, max, "#using default --clock-rate %d\n",
                         config->media_cfg.clock_rate);
-        pj_strcat2(&cfg, line);
     }
 
     if (config->media_cfg.snd_clock_rate &&
         config->media_cfg.snd_clock_rate != config->media_cfg.clock_rate)
     {
-        pj_ansi_snprintf(line, sizeof(line), "--snd-clock-rate %d\n",
+        cfg_addf(&cfg, max, "--snd-clock-rate %d\n",
                         config->media_cfg.snd_clock_rate);
-        pj_strcat2(&cfg, line);
     }
 
     /* Stereo mode. */
     if (config->media_cfg.channel_count == 2) {
-        pj_ansi_snprintf(line, sizeof(line), "--stereo\n");
-        pj_strcat2(&cfg, line);
+        cfg_add(&cfg, max, "--stereo\n");
     }
 
     /* quality */
     if (config->media_cfg.quality != PJSUA_DEFAULT_CODEC_QUALITY) {
-        pj_ansi_snprintf(line, sizeof(line), "--quality %d\n",
+        cfg_addf(&cfg, max, "--quality %d\n",
                         config->media_cfg.quality);
-        pj_strcat2(&cfg, line);
     } else {
-        pj_ansi_snprintf(line, sizeof(line), "#using default --quality %d\n",
+        cfg_addf(&cfg, max, "#using default --quality %d\n",
                         config->media_cfg.quality);
-        pj_strcat2(&cfg, line);
     }
 
     if (config->vid.vcapture_dev != PJMEDIA_VID_DEFAULT_CAPTURE_DEV) {
-        pj_ansi_snprintf(line, sizeof(line), "--vcapture-dev %d\n",
+        cfg_addf(&cfg, max, "--vcapture-dev %d\n",
                          config->vid.vcapture_dev);
-        pj_strcat2(&cfg, line);
     }
     if (config->vid.vrender_dev != PJMEDIA_VID_DEFAULT_RENDER_DEV) {
-        pj_ansi_snprintf(line, sizeof(line), "--vrender-dev %d\n",
+        cfg_addf(&cfg, max, "--vrender-dev %d\n",
                          config->vid.vrender_dev);
-        pj_strcat2(&cfg, line);
     }
     for (i=0; i<config->avi_cnt; ++i) {
-        pj_ansi_snprintf(line, sizeof(line), "--play-avi %s\n",
+        cfg_addf(&cfg, max, "--play-avi %s\n",
                          config->avi[i].path.ptr);
-        pj_strcat2(&cfg, line);
     }
     if (config->avi_auto_play) {
-        pj_ansi_snprintf(line, sizeof(line), "--auto-play-avi\n");
-        pj_strcat2(&cfg, line);
+        cfg_add(&cfg, max, "--auto-play-avi\n");
     }
     if (config->avi_rec.slen) {
-        pj_ansi_snprintf(line, sizeof(line), "--rec-avi %s\n",
+        cfg_addf(&cfg, max, "--rec-avi %s\n",
                          config->avi_rec.ptr);
-        pj_strcat2(&cfg, line);
     }
     if (config->avi_rec_size) {
-        pj_ansi_snprintf(line, sizeof(line), "--rec-avi-size %d\n",
+        cfg_addf(&cfg, max, "--rec-avi-size %d\n",
                          config->avi_rec_size);
-        pj_strcat2(&cfg, line);
     }
     if (config->avi_rec_audio) {
-        pj_ansi_snprintf(line, sizeof(line), "--rec-avi-audio\n");
-        pj_strcat2(&cfg, line);
+        cfg_add(&cfg, max, "--rec-avi-audio\n");
     }
     if (config->avi_auto_rec) {
-        pj_ansi_snprintf(line, sizeof(line), "--auto-rec-avi\n");
-        pj_strcat2(&cfg, line);
+        cfg_add(&cfg, max, "--auto-rec-avi\n");
     }
 
     /* ptime */
     if (config->media_cfg.ptime) {
-        pj_ansi_snprintf(line, sizeof(line), "--ptime %d\n",
+        cfg_addf(&cfg, max, "--ptime %d\n",
                         config->media_cfg.ptime);
-        pj_strcat2(&cfg, line);
     }
 
     /* no-vad */
     if (config->media_cfg.no_vad) {
-        pj_strcat2(&cfg, "--no-vad\n");
+        cfg_add(&cfg, max, "--no-vad\n");
     }
 
     /* ec-tail */
     if (config->media_cfg.ec_tail_len != PJSUA_DEFAULT_EC_TAIL_LEN) {
-        pj_ansi_snprintf(line, sizeof(line), "--ec-tail %d\n",
+        cfg_addf(&cfg, max, "--ec-tail %d\n",
                         config->media_cfg.ec_tail_len);
-        pj_strcat2(&cfg, line);
     } else {
-        pj_ansi_snprintf(line, sizeof(line), "#using default --ec-tail %d\n",
+        cfg_addf(&cfg, max, "#using default --ec-tail %d\n",
                         config->media_cfg.ec_tail_len);
-        pj_strcat2(&cfg, line);
     }
 
     /* ec-opt */
     if (config->media_cfg.ec_options != 0) {
-        pj_ansi_snprintf(line, sizeof(line), "--ec-opt %d\n",
+        cfg_addf(&cfg, max, "--ec-opt %d\n",
                         config->media_cfg.ec_options);
-        pj_strcat2(&cfg, line);
     }
 
     /* ilbc-mode */
     if (config->media_cfg.ilbc_mode != PJSUA_DEFAULT_ILBC_MODE) {
-        pj_ansi_snprintf(line, sizeof(line), "--ilbc-mode %d\n",
+        cfg_addf(&cfg, max, "--ilbc-mode %d\n",
                         config->media_cfg.ilbc_mode);
-        pj_strcat2(&cfg, line);
     } else {
-        pj_ansi_snprintf(line, sizeof(line), "#using default --ilbc-mode %d\n",
+        cfg_addf(&cfg, max, "#using default --ilbc-mode %d\n",
                         config->media_cfg.ilbc_mode);
-        pj_strcat2(&cfg, line);
     }
 
     /* RTP drop */
     if (config->media_cfg.tx_drop_pct) {
-        pj_ansi_snprintf(line, sizeof(line), "--tx-drop-pct %d\n",
+        cfg_addf(&cfg, max, "--tx-drop-pct %d\n",
                         config->media_cfg.tx_drop_pct);
-        pj_strcat2(&cfg, line);
 
     }
     if (config->media_cfg.rx_drop_pct) {
-        pj_ansi_snprintf(line, sizeof(line), "--rx-drop-pct %d\n",
+        cfg_addf(&cfg, max, "--rx-drop-pct %d\n",
                         config->media_cfg.rx_drop_pct);
-        pj_strcat2(&cfg, line);
 
     }
 
     /* Start RTP port. */
-    pj_ansi_snprintf(line, sizeof(line), "--rtp-port %d\n",
+    cfg_addf(&cfg, max, "--rtp-port %d\n",
                     config->rtp_cfg.port);
-    pj_strcat2(&cfg, line);
 
     /* Disable codec */
     for (i=0; i<config->codec_dis_cnt; ++i) {
-        pj_ansi_snprintf(line, sizeof(line), "--dis-codec %s\n",
+        cfg_addf(&cfg, max, "--dis-codec %s\n",
                     config->codec_dis[i].ptr);
-        pj_strcat2(&cfg, line);
     }
     /* Add codec. */
     for (i=0; i<config->codec_cnt; ++i) {
-        pj_ansi_snprintf(line, sizeof(line), "--add-codec %s\n",
+        cfg_addf(&cfg, max, "--add-codec %s\n",
                     config->codec_arg[i].ptr);
-        pj_strcat2(&cfg, line);
     }
 
-    pj_strcat2(&cfg, "\n#\n# User agent:\n#\n");
+    cfg_add(&cfg, max, "\n#\n# User agent:\n#\n");
 
     /* Auto-answer. */
     if (config->auto_answer != 0) {
-        pj_ansi_snprintf(line, sizeof(line), "--auto-answer %d\n",
+        cfg_addf(&cfg, max, "--auto-answer %d\n",
                         config->auto_answer);
-        pj_strcat2(&cfg, line);
     }
 
     /* accept-redirect */
     if (config->redir_op != PJSIP_REDIRECT_ACCEPT_REPLACE) {
-        pj_ansi_snprintf(line, sizeof(line), "--accept-redirect %d\n",
+        cfg_addf(&cfg, max, "--accept-redirect %d\n",
                         config->redir_op);
-        pj_strcat2(&cfg, line);
     }
 
     /* Max calls. */
-    pj_ansi_snprintf(line, sizeof(line), "--max-calls %d\n",
+    cfg_addf(&cfg, max, "--max-calls %d\n",
                     config->cfg.max_calls);
-    pj_strcat2(&cfg, line);
 
     /* Uas-duration. */
     if (config->duration != PJSUA_APP_NO_LIMIT_DURATION) {
-        pj_ansi_snprintf(line, sizeof(line), "--duration %d\n",
+        cfg_addf(&cfg, max, "--duration %d\n",
                         config->duration);
-        pj_strcat2(&cfg, line);
     }
 
     /* norefersub ? */
     if (config->no_refersub) {
-        pj_strcat2(&cfg, "--norefersub\n");
+        cfg_add(&cfg, max, "--norefersub\n");
     }
 
     /* no-supported-norefersub ? */
     if (!config->cfg.no_refer_sub) {
-        pj_strcat2(&cfg, "--no-supported-norefersub\n");
+        cfg_add(&cfg, max, "--no-supported-norefersub\n");
     }
 
     if (pjsip_cfg()->endpt.use_compact_form)
     {
-        pj_strcat2(&cfg, "--use-compact-form\n");
+        cfg_add(&cfg, max, "--use-compact-form\n");
     }
 
     if (!config->cfg.force_lr) {
-        pj_strcat2(&cfg, "--no-force-lr\n");
+        cfg_add(&cfg, max, "--no-force-lr\n");
     }
 
-    pj_strcat2(&cfg, "\n#\n# Buddies:\n#\n");
+    cfg_add(&cfg, max, "\n#\n# Buddies:\n#\n");
 
     /* Add buddies. */
     for (i=0; i<config->buddy_cnt; ++i) {
-        pj_ansi_snprintf(line, sizeof(line), "--add-buddy %.*s\n",
+        cfg_addf(&cfg, max, "--add-buddy %.*s\n",
                               (int)config->buddy_cfg[i].uri.slen,
                               config->buddy_cfg[i].uri.ptr);
-        pj_strcat2(&cfg, line);
     }
 
     /* SIP extensions. */
-    pj_strcat2(&cfg, "\n#\n# SIP extensions:\n#\n");
+    cfg_add(&cfg, max, "\n#\n# SIP extensions:\n#\n");
     /* 100rel extension */
     if (config->cfg.require_100rel == PJSUA_100REL_MANDATORY) {
-        pj_strcat2(&cfg, "--use-100rel\n");
+        cfg_add(&cfg, max, "--use-100rel\n");
     }
     /* Session Timer extension */
     if (config->cfg.use_timer) {
-        pj_ansi_snprintf(line, sizeof(line), "--use-timer %d\n",
+        cfg_addf(&cfg, max, "--use-timer %d\n",
                               config->cfg.use_timer);
-        pj_strcat2(&cfg, line);
     }
     if (config->cfg.timer_setting.min_se != 90) {
-        pj_ansi_snprintf(line, sizeof(line), "--timer-min-se %d\n",
+        cfg_addf(&cfg, max, "--timer-min-se %d\n",
                               config->cfg.timer_setting.min_se);
-        pj_strcat2(&cfg, line);
     }
     if (config->cfg.timer_setting.sess_expires != PJSIP_SESS_TIMER_DEF_SE) {
-        pj_ansi_snprintf(line, sizeof(line), "--timer-se %d\n",
+        cfg_addf(&cfg, max, "--timer-se %d\n",
                               config->cfg.timer_setting.sess_expires);
-        pj_strcat2(&cfg, line);
     }
 
 #if !PJSUA_MEDIA_HAS_PJMEDIA
@@ -2765,12 +2799,11 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
         escaped.ptr = ebuf;
         escaped.slen = (pj_ssize_t)(ep - ebuf);
 
-        pj_strcat2(&cfg, "--custom-sdp \"");
-        pj_strcat(&cfg, &escaped);
-        pj_strcat2(&cfg, "\"\n");
+        cfg_add(&cfg, max, "--custom-sdp \"");
+        cfg_add_str(&cfg, max, &escaped);
+        cfg_add(&cfg, max, "\"\n");
     }
 #endif /* !PJSUA_MEDIA_HAS_PJMEDIA */
 
-    *(cfg.ptr + cfg.slen) = '\0';
     return (int)cfg.slen;
 }

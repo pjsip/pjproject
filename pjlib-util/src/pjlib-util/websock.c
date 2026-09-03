@@ -974,6 +974,30 @@ static void process_rx_frame(pj_websock *ws, pj_uint8_t *data,
         pj_size_t payload_len;
         pj_size_t consumed;
 
+        /* RFC 6455 section 5.1: a client MUST fail the connection upon
+         * receiving a masked frame. This is a client-only implementation, so
+         * a masked frame (MASK bit in the second header byte) from the server
+         * is a protocol error. Check as soon as that byte is available.
+         */
+        if (len >= 2 && (data[1] & 0x80)) {
+            pj_str_t reason;
+
+            reason.ptr = (char*)"masked frame";
+            reason.slen = 12;
+            PJ_LOG(3, (THIS_FILE,
+                       "Received masked frame from server; failing connection"));
+
+            pj_grp_lock_acquire(ws->grp_lock);
+            if (ws->state == PJ_WEBSOCK_STATE_OPEN)
+                send_close_frame(ws, 1002 /* protocol error */, &reason);
+            ws->state = PJ_WEBSOCK_STATE_CLOSED;
+            pj_grp_lock_release(ws->grp_lock);
+
+            if (!ws->destroying && ws->cb.on_close)
+                ws->cb.on_close(ws, 1002, &reason);
+            return;
+        }
+
         consumed = decode_frame_header(data, len, &fin, &opcode,
                                        &payload, &payload_len);
         if (consumed == 0) {

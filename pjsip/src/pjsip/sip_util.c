@@ -1766,6 +1766,7 @@ PJ_DEF(pj_status_t) pjsip_get_response_addr( pj_pool_t *pool,
                                              pjsip_response_addr *res_addr )
 {
     pjsip_transport *src_transport = rdata->tp_info.transport;
+    const pj_str_t *recvd;
 
     /* Check arguments. */
     PJ_ASSERT_RETURN(pool && rdata && res_addr, PJ_EINVAL);
@@ -1774,10 +1775,16 @@ PJ_DEF(pj_status_t) pjsip_get_response_addr( pj_pool_t *pool,
     PJ_ASSERT_RETURN(rdata->msg_info.msg->type == PJSIP_REQUEST_MSG,
                      PJ_EINVAL);
 
-    /* All requests must have "received" parameter.
-     * This must always be done in transport layer.
+    /* The Via header is required to calculate the response address. */
+    PJ_ASSERT_RETURN(rdata->msg_info.via, PJSIP_EMISSINGHDR);
+
+    /* The transport layer adds the "received" parameter to every request it
+     * accepts. Fall back to sent-by, as RFC 3261 Section 18.2.2 specifies,
+     * for rdata that did not come from there.
      */
-    pj_assert(rdata->msg_info.via->recvd_param.slen != 0);
+    recvd = rdata->msg_info.via->recvd_param.slen ?
+            &rdata->msg_info.via->recvd_param :
+            &rdata->msg_info.via->sent_by.host;
 
     /* Do the calculation based on RFC 3261 Section 18.2.2 and RFC 3581 */
 
@@ -1800,8 +1807,7 @@ PJ_DEF(pj_status_t) pjsip_get_response_addr( pj_pool_t *pool,
         res_addr->addr_len = rdata->pkt_info.src_addr_len;
         res_addr->dst_host.type=(pjsip_transport_type_e)src_transport->key.type;
         res_addr->dst_host.flag = src_transport->flag;
-        pj_strdup( pool, &res_addr->dst_host.addr.host, 
-                   &rdata->msg_info.via->recvd_param);
+        pj_strdup( pool, &res_addr->dst_host.addr.host, recvd);
         res_addr->dst_host.addr.port = rdata->msg_info.via->sent_by.port;
         if (res_addr->dst_host.addr.port == 0) {
             res_addr->dst_host.addr.port = 
@@ -1838,8 +1844,7 @@ PJ_DEF(pj_status_t) pjsip_get_response_addr( pj_pool_t *pool,
         res_addr->addr_len = rdata->pkt_info.src_addr_len;
         res_addr->dst_host.type=(pjsip_transport_type_e)src_transport->key.type;
         res_addr->dst_host.flag = src_transport->flag;
-        pj_strdup( pool, &res_addr->dst_host.addr.host, 
-                   &rdata->msg_info.via->recvd_param);
+        pj_strdup( pool, &res_addr->dst_host.addr.host, recvd);
         res_addr->dst_host.addr.port = rdata->msg_info.via->sent_by.port;
         if (res_addr->dst_host.addr.port == 0) {
             res_addr->dst_host.addr.port = 
@@ -1850,8 +1855,7 @@ PJ_DEF(pj_status_t) pjsip_get_response_addr( pj_pool_t *pool,
         res_addr->transport = NULL;
         res_addr->dst_host.type=(pjsip_transport_type_e)src_transport->key.type;
         res_addr->dst_host.flag = src_transport->flag;
-        pj_strdup( pool, &res_addr->dst_host.addr.host, 
-                   &rdata->msg_info.via->recvd_param);
+        pj_strdup( pool, &res_addr->dst_host.addr.host, recvd);
         res_addr->dst_host.addr.port = rdata->msg_info.via->sent_by.port;
         if (res_addr->dst_host.addr.port == 0) {
             res_addr->dst_host.addr.port = 

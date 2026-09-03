@@ -1773,40 +1773,33 @@ static void ui_dump_call_quality()
 
 static void ui_dump_configuration()
 {
-    char settings[2000];
-    int len;
-
-    len = write_settings(&app_config, settings, sizeof(settings));
-    if (len < 1)
-        PJ_LOG(1,(THIS_FILE, "Error: not enough buffer"));
-    else
-        PJ_LOG(3,(THIS_FILE, "Dumping configuration (%d bytes):\n%s\n",
-                  len, settings));
+    dump_settings(&app_config);
 }
 
 static void ui_write_settings(const char *filename)
 {
-    char settings[2000];
+    pj_pool_t *pool;
+    char *settings;
     int len;
+    pj_oshandle_t fd;
+    pj_status_t status;
 
-    len = write_settings(&app_config, settings, sizeof(settings));
-    if (len < 1)
-        PJ_LOG(1,(THIS_FILE, "Error: not enough buffer"));
-    else {
-        pj_oshandle_t fd;
-        pj_status_t status;
+    settings = alloc_settings(&app_config, &pool, &len);
+    if (!settings)
+        return;
 
-        status = pj_file_open(app_config.pool, filename, PJ_O_WRONLY, &fd);
-        if (status != PJ_SUCCESS) {
-            pjsua_perror(THIS_FILE, "Unable to open file", status);
-        } else {
-            pj_ssize_t size = len;
-            pj_file_write(fd, settings, &size);
-            pj_file_close(fd);
+    status = pj_file_open(app_config.pool, filename, PJ_O_WRONLY, &fd);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE, "Unable to open file", status);
+    } else {
+        pj_ssize_t size = len;
+        pj_file_write(fd, settings, &size);
+        pj_file_close(fd);
 
-            printf("Settings successfully written to '%s'\n", filename);
-        }
+        printf("Settings successfully written to '%s'\n", filename);
     }
+
+    pj_pool_secure_release(&pool);
 }
 
 /*

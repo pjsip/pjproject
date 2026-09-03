@@ -44,6 +44,7 @@ int session_test(void);
 int rtp_test(void);
 int sdp_test(void);
 int jbuf_test(void);
+int conf_test(void);
 int sdp_neg_test(void);
 int sdp_attr_test(void);
 int mips_test(void);

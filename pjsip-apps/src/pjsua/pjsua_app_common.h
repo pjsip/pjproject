@@ -28,6 +28,12 @@ PJ_BEGIN_DECL
 #define PJSUA_APP_MAX_AVI               4
 #define PJSUA_APP_NO_NB                 -2
 
+/* Buffer for write_settings(), taken from a temporary pool. Sized for the
+ * per-account section (42 fields, up to PJSUA_MAX_ACC accounts) plus the
+ * global options.
+ */
+#define PJSUA_APP_SETTINGS_SIZE         (64 * 1024)
+
 typedef struct input_result
 {
     int   nb_result;
@@ -219,6 +225,8 @@ pj_bool_t find_prev_call(void);
 void send_request(char *cstr_method, const pj_str_t *dst_uri);
 void log_call_dump(int call_id);
 int write_settings(pjsua_app_config *cfg, char *buf, pj_size_t max);
+char *alloc_settings(pjsua_app_config *cfg, pj_pool_t **p_pool, int *p_len);
+pj_status_t dump_settings(pjsua_app_config *cfg);
 void app_config_init_video(pjsua_acc_config *acc_cfg);
 void arrange_window(pjsua_vid_win_id wid);
 

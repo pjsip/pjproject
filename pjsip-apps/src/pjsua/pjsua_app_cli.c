@@ -1846,52 +1846,41 @@ static pj_status_t cmd_stat_dump(pj_bool_t detail)
 
 static pj_status_t cmd_show_config()
 {
-    char settings[2000];
-    int len;
-
-    len = write_settings(&app_config, settings, sizeof(settings));
-    if (len < 1)
-        PJ_LOG(1,(THIS_FILE, "Error: not enough buffer"));
-    else
-        PJ_LOG(3,(THIS_FILE,
-                  "Dumping configuration (%d bytes):\n%s\n",
-                  len, settings));
-
-    return PJ_SUCCESS;
+    return dump_settings(&app_config);
 }
 
 static pj_status_t cmd_write_config(pj_cli_cmd_val *cval)
 {
-    char settings[2000];
+    pj_pool_t *pool;
+    char *settings;
     char buf[128] = {0};
     int len;
+    pj_oshandle_t fd;
+    pj_status_t status;
     pj_str_t tmp = pj_str(buf);
 
     pj_strncpy_with_null(&tmp, &cval->argv[1], sizeof(buf));
 
-    len = write_settings(&app_config, settings, sizeof(settings));
-    if (len < 1)
-        PJ_LOG(1,(THIS_FILE, "Error: not enough buffer"));
-    else {
-        pj_oshandle_t fd;
-        pj_status_t status;
+    settings = alloc_settings(&app_config, &pool, &len);
+    if (!settings)
+        return PJ_ENOMEM;
 
-        status = pj_file_open(app_config.pool, buf, PJ_O_WRONLY, &fd);
-        if (status != PJ_SUCCESS) {
-            pjsua_perror(THIS_FILE, "Unable to open file", status);
-        } else {
-            char out_str[256];
-            pj_ssize_t size = len;
-            pj_file_write(fd, settings, &size);
-            pj_file_close(fd);
+    status = pj_file_open(app_config.pool, buf, PJ_O_WRONLY, &fd);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE, "Unable to open file", status);
+    } else {
+        char out_str[256];
+        pj_ssize_t size = len;
+        pj_file_write(fd, settings, &size);
+        pj_file_close(fd);
 
-            pj_ansi_snprintf(out_str, sizeof(out_str),
-                             "Settings successfully written to '%s'\n", buf);
+        pj_ansi_snprintf(out_str, sizeof(out_str),
+                         "Settings successfully written to '%s'\n", buf);
 
-            pj_cli_sess_write_msg(cval->sess, out_str, pj_ansi_strlen(out_str));
-        }
+        pj_cli_sess_write_msg(cval->sess, out_str, pj_ansi_strlen(out_str));
     }
 
+    pj_pool_secure_release(&pool);
     return PJ_SUCCESS;
 }
 

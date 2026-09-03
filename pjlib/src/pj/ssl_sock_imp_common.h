@@ -294,6 +294,14 @@ static void ssl_update_certs_info(pj_ssl_sock_t *ssock);
 #if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
 static void ssl_free_cert(pj_ssl_cert_t *cert);
 #endif
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL) || \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_DARWIN)
+/* Eagerly create/validate the server credentials -- for OpenSSL the whole
+ * SSL_CTX, including certificate and private key loading -- on a listener
+ * socket, instead of deferring it to the first accepted connection.
+ */
+static pj_status_t ssl_init_server_ctx(pj_ssl_sock_t *ssock);
+#endif
 
 /* SSL session functions */
 static void ssl_set_state(pj_ssl_sock_t *ssock, pj_bool_t is_server);

@@ -18,10 +18,12 @@
  */
 #include <pjlib-util/resolver.h>
 #include <pjlib-util/errno.h>
+#include <pjlib-util/hmac_sha1.h>
 #include <pj/compat/socket.h>
 #include <pj/assert.h>
 #include <pj/ctype.h>
 #include <pj/except.h>
+#include <pj/guid.h>
 #include <pj/hash.h>
 #include <pj/ioqueue.h>
 #include <pj/log.h>
@@ -204,8 +206,16 @@ struct pj_dns_resolver
     unsigned             ns_count;      /**< Number of name servers.        */
     struct nameserver    ns[PJ_DNS_RESOLVER_MAX_NS];    /**< Array of NS.   */
 
-    /* Last DNS transaction ID used. */
-    pj_uint16_t          last_id;
+    /* Transaction ID generator: id = truncated HMAC-SHA1 of a counter under a
+     * per-resolver secret key, so observed IDs do not reveal the generator
+     * state. The key is seeded with entropy at create.
+     */
+    pj_uint8_t           id_key[20];
+    pj_uint32_t          id_counter;
+
+    /* Throttle for logging dropped suspicious (likely forged) responses. */
+    pj_time_val          susp_last_log;
+    unsigned             susp_count;
 
     /* Hash table for cached response */
     pj_hash_table_t     *hrescache;     /**< Cached response in hash table  */
@@ -374,6 +384,7 @@ PJ_DEF(void) pj_dns_settings_default(pj_dns_settings *s)
     s->cache_max_ttl = PJ_DNS_RESOLVER_MAX_TTL;
     s->good_ns_ttl = PJ_DNS_RESOLVER_GOOD_NS_TTL;
     s->bad_ns_ttl = PJ_DNS_RESOLVER_BAD_NS_TTL;
+    s->disable_response_src_check = PJ_DNS_RESOLVER_DISABLE_RESPONSE_SRC_CHECK;
 }
 
 
@@ -420,7 +431,35 @@ PJ_DEF(pj_status_t) pj_dns_resolver_create( pj_pool_factory *pf,
     /* Timer, ioqueue, and settings */
     resv->timer = timer;
     resv->ioqueue = ioqueue;
-    resv->last_id = 1;
+
+    /* Seed the transaction ID key with entropy. Fresh GUID(s) provide OS
+     * entropy on platforms with a real UUID backend; a high-resolution
+     * timestamp and the instance address (ASLR) are mixed in as a fallback.
+     */
+    {
+        char guidbuf[PJ_GUID_MAX_LENGTH];
+        pj_str_t guid;
+        pj_timestamp ts;
+        pj_size_t self = (pj_size_t)resv;
+        unsigned i, n, k = 0;
+
+        pj_bzero(resv->id_key, sizeof(resv->id_key));
+        pj_get_timestamp(&ts);
+        for (i = 0; i < sizeof(ts); ++i)
+            resv->id_key[(k++) % sizeof(resv->id_key)] ^= ((pj_uint8_t*)&ts)[i];
+        for (i = 0; i < sizeof(self); ++i)
+            resv->id_key[(k++) % sizeof(resv->id_key)] ^= ((pj_uint8_t*)&self)[i];
+        for (n = 0; n < 2; ++n) {
+            guid.ptr = guidbuf;
+            guid.slen = 0;
+            if (pj_generate_unique_string(&guid) != NULL && guid.slen > 0) {
+                for (i = 0; i < (unsigned)guid.slen; ++i)
+                    resv->id_key[(k++) % sizeof(resv->id_key)] ^=
+                        (pj_uint8_t)guidbuf[i];
+            }
+        }
+        resv->id_counter = ts.u32.lo;
+    }
 
     pj_dns_settings_default(&resv->settings);
     resv->settings.options = options;
@@ -714,6 +753,81 @@ static pj_dns_async_query *alloc_qnode(pj_dns_resolver *resolver,
     pj_list_init(&q->child_head);
 
     return q;
+}
+
+
+/* Generate an unpredictable transaction ID that is not currently in use. */
+/* Returns a free transaction ID, or 0 if none could be found (ID space
+ * exhausted), in which case the caller should fail the query.
+ */
+static pj_uint16_t get_query_id(pj_dns_resolver *resolver)
+{
+    unsigned n;
+
+    for (n = 0; n < 1000; ++n) {
+        pj_uint8_t digest[20];
+        pj_uint32_t ctr = resolver->id_counter++;
+        pj_uint16_t id;
+
+        pj_hmac_sha1((const pj_uint8_t*)&ctr, sizeof(ctr),
+                     resolver->id_key, sizeof(resolver->id_key), digest);
+        id = (pj_uint16_t)((digest[0] << 8) | digest[1]);
+        if (id != 0 &&
+            pj_hash_get(resolver->hquerybyid, &id, sizeof(id), NULL) == NULL)
+        {
+            return id;
+        }
+    }
+
+    return 0;
+}
+
+
+/* Anti-forgery: a response is only accepted if it comes from one of the
+ * configured nameservers (matching address and port). Any configured
+ * nameserver is accepted (not only the one queried), since a query may be
+ * sent to, or retried against, several nameservers.
+ */
+static pj_bool_t is_response_from_ns(pj_dns_resolver *resolver,
+                                     const pj_sockaddr *src_addr)
+{
+    unsigned i;
+
+    for (i = 0; i < resolver->ns_count; ++i) {
+        if (pj_sockaddr_cmp(&resolver->ns[i].addr, src_addr) == 0)
+            return PJ_TRUE;
+    }
+
+    return PJ_FALSE;
+}
+
+
+/* Throttled logging for dropped suspicious (likely forged) responses, so an
+ * attacker flooding forged packets cannot flood the log. Reports at most once
+ * per second, with a count of drops since the previous message.
+ */
+static void log_suspicious_drop(pj_dns_resolver *resolver, const char *reason,
+                                const pj_sockaddr *src_addr)
+{
+    char addr[PJ_INET6_ADDRSTRLEN];
+    pj_time_val now, diff;
+
+    ++resolver->susp_count;
+
+    pj_gettimeofday(&now);
+    diff = now;
+    PJ_TIME_VAL_SUB(diff, resolver->susp_last_log);
+
+    if (resolver->susp_last_log.sec == 0 || diff.sec >= 1) {
+        PJ_LOG(4,(resolver->name.ptr,
+                  "Discarded %u suspicious DNS response(s); latest from "
+                  "%s:%d (%s)",
+                  resolver->susp_count,
+                  pj_sockaddr_print(src_addr, addr, sizeof(addr), 2),
+                  pj_sockaddr_get_port(src_addr), reason));
+        resolver->susp_count = 0;
+        resolver->susp_last_log = now;
+    }
 }
 
 
@@ -1063,10 +1177,13 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
     q = alloc_qnode(resolver, options, user_data, cb);
 
     /* Save the ID and key */
-    /* TODO: dnsext-forgery-resilient: randomize id for security */
-    q->id = resolver->last_id++;
-    if (resolver->last_id == 0)
-        resolver->last_id = 1;
+    q->id = get_query_id(resolver);
+    if (q->id == 0) {
+        /* No free transaction ID available. */
+        pj_list_push_back(&resolver->query_free_nodes, q);
+        status = PJ_EBUSY;
+        goto on_return;
+    }
     pj_memcpy(&q->key, &key, sizeof(struct res_key));
 
     /* Send the query */
@@ -1099,24 +1216,35 @@ on_return:
 PJ_DEF(pj_status_t) pj_dns_resolver_cancel_query(pj_dns_async_query *query,
                                                  pj_bool_t notify)
 {
+    pj_grp_lock_t *grp_lock;
     pj_dns_callback *cb;
+    void *user_data;
 
     PJ_ASSERT_RETURN(query, PJ_EINVAL);
 
-    pj_grp_lock_acquire(query->resolver->grp_lock);
+    grp_lock = query->resolver->grp_lock;
+    pj_grp_lock_acquire(grp_lock);
 
     if (query->timer_entry.id == 1) {
         pj_timer_heap_cancel_if_active(query->resolver->timer,
                                        &query->timer_entry, 0);
     }
 
+    /* Capture the callback and its user data under the lock. Unlike the
+     * other delivery sites, this one does not remove the query from the
+     * hash tables, so it may be completed and recycled once the lock is
+     * released.
+     */
     cb = query->cb;
+    user_data = query->user_data;
     query->cb = NULL;
 
-    if (notify && cb)
-        (*cb)(query->user_data, PJ_ECANCELLED, NULL);
+    pj_grp_lock_release(grp_lock);
 
-    pj_grp_lock_release(query->resolver->grp_lock);
+    /* Invoke the callback unlocked, as the other delivery sites do. */
+    if (notify && cb)
+        (*cb)(user_data, PJ_ECANCELLED, NULL);
+
     return PJ_SUCCESS;
 }
 
@@ -1460,10 +1588,21 @@ static pj_status_t select_nameservers(pj_dns_resolver *resolver,
 }
 
 
-/* Update name server status */
+/* Update name server status.
+ *
+ * 'validated' indicates whether the response has been matched to an outstanding
+ * query (transaction ID and question). Only a validated response may change a
+ * nameserver's availability decisively: mark it BAD, or bring it back from BAD.
+ * An unvalidated (but well-formed, from a configured nameserver) response may
+ * only refresh a nameserver that is not currently BAD, keeping liveness
+ * tracking working for genuine duplicate/late responses. Otherwise a packet
+ * merely spoofed from the nameserver's address could force a healthy nameserver
+ * out of rotation, or keep a dead one in rotation (RFC 5452).
+ */
 static void report_nameserver_status(pj_dns_resolver *resolver,
                                      const pj_sockaddr *ns_addr,
-                                     const pj_dns_parsed_packet *pkt)
+                                     const pj_dns_parsed_packet *pkt,
+                                     pj_bool_t validated)
 {
     unsigned i;
     int rcode;
@@ -1512,8 +1651,10 @@ static void report_nameserver_status(pj_dns_resolver *resolver,
                 ns->rt_delay = rt;
                 ns->q_id = 0;
             }
-            set_nameserver_state(resolver, i, 
-                                 (is_good ? STATE_ACTIVE : STATE_BAD), &now);
+            if (is_good && (validated || ns->state != STATE_BAD))
+                set_nameserver_state(resolver, i, STATE_ACTIVE, &now);
+            else if (!is_good && validated)
+                set_nameserver_state(resolver, i, STATE_BAD, &now);
             break;
         }
     }
@@ -1638,6 +1779,7 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
 {
     pj_dns_resolver *resolver;
     pj_dns_async_query *q, *cq;
+    pj_dns_callback *cb;
     pj_status_t status;
 
     PJ_UNUSED_ARG(timer_heap);
@@ -1679,19 +1821,31 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
     pj_hash_set(NULL, resolver->hquerybyid, &q->id, sizeof(q->id), 0, NULL);
     pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key), 0, NULL);
 
+    /* Capture and clear the callback under the lock; invoke it unlocked. */
+    cb = q->cb;
+    q->cb = NULL;
+
     /* Workaround for deadlock problem in #1565 (similar to #1108) */
     pj_grp_lock_release(resolver->grp_lock);
 
-    /* Call application callback, if any. */
-    if (q->cb)
-        (*q->cb)(q->user_data, PJ_ETIMEDOUT, NULL);
+    if (cb)
+        (*cb)(q->user_data, PJ_ETIMEDOUT, NULL);
 
     /* Call application callback for child queries. */
     cq = q->child_head.next;
     while (cq != (void*)&q->child_head) {
-        if (cq->cb)
-            (*cq->cb)(cq->user_data, PJ_ETIMEDOUT, NULL);
-        cq = cq->next;
+        pj_dns_async_query *next = cq->next;
+        pj_dns_callback *ccb;
+
+        pj_grp_lock_acquire(resolver->grp_lock);
+        ccb = cq->cb;
+        cq->cb = NULL;
+        pj_grp_lock_release(resolver->grp_lock);
+
+        if (ccb)
+            (*ccb)(cq->user_data, PJ_ETIMEDOUT, NULL);
+
+        cq = next;
     }
 
     /* Workaround for deadlock problem in #1565 (similar to #1108) */
@@ -1725,6 +1879,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     pj_pool_t *pool = NULL;
     pj_dns_parsed_packet *dns_pkt;
     pj_dns_async_query *q;
+    pj_dns_callback *cb;
     char addr[PJ_INET6_ADDRSTRLEN];
     pj_sockaddr *src_addr;
     int *src_addr_len;
@@ -1774,6 +1929,17 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     if (bytes_read == 0)
         goto read_next_packet;
 
+    /* Anti-forgery: only accept responses from a configured nameserver. Done
+     * before parsing so packets from other sources are dropped cheaply and
+     * cannot affect nameserver status (RFC 5452 section 5.2).
+     */
+    if (!resolver->settings.disable_response_src_check &&
+        !is_response_from_ns(resolver, src_addr))
+    {
+        log_suspicious_drop(resolver, "unrecognized source", src_addr);
+        goto read_next_packet;
+    }
+
     /* Create temporary pool from a fixed buffer */
     pool = pj_pool_create_on_buf("restmp", resolver->tmp_pool, 
                                  sizeof(resolver->tmp_pool));
@@ -1789,9 +1955,6 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     }
     PJ_END;
 
-    /* Update nameserver status */
-    report_nameserver_status(resolver, src_addr, dns_pkt);
-
     /* Handle parse error */
     if (status != PJ_SUCCESS) {
         PJ_PERROR(3,(resolver->name.ptr, status,
@@ -1801,8 +1964,22 @@ static void on_read_complete(pj_ioqueue_key_t *key,
         goto read_next_packet;
     }
 
+    /* Anti-forgery: must be a response (QR bit set), not a request. */
+    if (PJ_DNS_GET_QR(dns_pkt->hdr.flags) == 0) {
+        log_suspicious_drop(resolver, "not a response", src_addr);
+        goto read_next_packet;
+    }
+
+    /* Update nameserver liveness. The source is validated above and this is at
+     * least a well-formed response (QR set), so it may promote the nameserver
+     * to ACTIVE. It must not mark it bad, nor resurrect a BAD nameserver, as
+     * the response is not yet matched to an outstanding query (see
+     * report_nameserver_status()).
+     */
+    report_nameserver_status(resolver, src_addr, dns_pkt, PJ_FALSE);
+
     /* Find the query based on the transaction ID */
-    q = (pj_dns_async_query*) 
+    q = (pj_dns_async_query*)
         pj_hash_get(resolver->hquerybyid, &dns_pkt->hdr.id,
                     sizeof(dns_pkt->hdr.id), NULL);
     if (!q) {
@@ -1817,6 +1994,30 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     /* Map DNS Rcode in the response into PJLIB status name space */
     status = PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_GET_RCODE(dns_pkt->hdr.flags));
 
+    /* Anti-forgery: the response question must match the outstanding query (the
+     * resolver only issues IN-class queries). A response without a question is
+     * tolerated only when it carries an error rcode, which some minimal servers
+     * return without echoing the question.
+     */
+    if (dns_pkt->hdr.qdcount >= 1) {
+        if (dns_pkt->q[0].dnsclass != PJ_DNS_CLASS_IN ||
+            dns_pkt->q[0].type != q->key.qtype ||
+            pj_stricmp2(&dns_pkt->q[0].name, q->key.name) != 0)
+        {
+            log_suspicious_drop(resolver, "mismatched question", src_addr);
+            goto read_next_packet;
+        }
+    } else if (status == PJ_SUCCESS) {
+        log_suspicious_drop(resolver, "missing question", src_addr);
+        goto read_next_packet;
+    }
+
+    /* The response is now validated (matched an outstanding query). Only such a
+     * response may mark the nameserver bad or bring it back from bad, so
+     * re-report it now that the match is confirmed.
+     */
+    report_nameserver_status(resolver, src_addr, dns_pkt, PJ_TRUE);
+
     /* Cancel query timeout timer. */
     pj_assert(q->timer_entry.id != 0);
     pj_timer_heap_cancel(resolver->timer, &q->timer_entry);
@@ -1826,14 +2027,18 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     pj_hash_set(NULL, resolver->hquerybyid, &q->id, sizeof(q->id), 0, NULL);
     pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key), 0, NULL);
 
+    /* Notify applications first, to allow application to modify the
+     * record before it is saved to the hash table. Capture and clear
+     * the callback under the lock; invoke it unlocked.
+     */
+    cb = q->cb;
+    q->cb = NULL;
+
     /* Workaround for deadlock problem in #1108 */
     pj_grp_lock_release(resolver->grp_lock);
 
-    /* Notify applications first, to allow application to modify the 
-     * record before it is saved to the hash table.
-     */
-    if (q->cb)
-        (*q->cb)(q->user_data, status, dns_pkt);
+    if (cb)
+        (*cb)(q->user_data, status, dns_pkt);
 
     /* If query has subqueries, notify subqueries's application callback */
     if (!pj_list_empty(&q->child_head)) {
@@ -1841,9 +2046,18 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
         child_q = q->child_head.next;
         while (child_q != (pj_dns_async_query*)&q->child_head) {
-            if (child_q->cb)
-                (*child_q->cb)(child_q->user_data, status, dns_pkt);
-            child_q = child_q->next;
+            pj_dns_async_query *next = child_q->next;
+            pj_dns_callback *ccb;
+
+            pj_grp_lock_acquire(resolver->grp_lock);
+            ccb = child_q->cb;
+            child_q->cb = NULL;
+            pj_grp_lock_release(resolver->grp_lock);
+
+            if (ccb)
+                (*ccb)(child_q->user_data, status, dns_pkt);
+
+            child_q = next;
         }
     }
 

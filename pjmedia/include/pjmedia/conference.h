@@ -125,7 +125,20 @@ typedef enum pjmedia_conf_op_type
     /**
      * The adjust connection level operation.
      */
-    PJMEDIA_CONF_OP_ADJUST_CONN_LEVEL
+    PJMEDIA_CONF_OP_ADJUST_CONN_LEVEL,
+
+    /**
+     * The detach port operation: detach the media port from a slot without
+     * freeing the slot or its connections/settings (see
+     * #pjmedia_conf_detach_port()).
+     */
+    PJMEDIA_CONF_OP_DETACH_PORT,
+
+    /**
+     * The replace port operation: re-attach a new media port to a
+     * previously-detached slot (see #pjmedia_conf_replace_port()).
+     */
+    PJMEDIA_CONF_OP_REPLACE_PORT
 
 } pjmedia_conf_op_type;
 
@@ -176,6 +189,22 @@ typedef union pjmedia_conf_op_param
         unsigned sink;      /**< The destination port id.               */
         int adj_level;      /**< The adjustment level.                  */
     } adjust_conn_level;
+
+    /**
+     * The information for detaching port operation.
+     */
+    struct {
+        unsigned port;      /**< The port id.                           */
+    } detach_port;
+
+    /**
+     * The information for replacing port operation.
+     */
+    struct {
+        unsigned      port;      /**< The port id.                      */
+        pjmedia_port *new_port;  /**< The new media port to attach.     */
+        pj_pool_t    *pool;      /**< Pool for the new port's resources.*/
+    } replace_port;
 
 } pjmedia_conf_op_param;
 
@@ -727,6 +756,51 @@ PJ_DECL(unsigned) pjmedia_conf_get_connect_count(pjmedia_conf *conf);
  */
 PJ_DECL(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
                                                unsigned slot );
+
+
+/**
+ * Detach the media port from a slot without freeing the slot or its
+ * connections and settings (mute, adjustment level, enable/disable). The slot
+ * keeps its identity and produces silence until a new port is attached via
+ * #pjmedia_conf_replace_port(). This lets an application preserve a call's
+ * conference configuration across media renegotiation (the stream port is
+ * recreated, but the slot and its connections survive).
+ *
+ * The operation is asynchronous (executed at a safe point in the bridge); use
+ * the callback set via #pjmedia_conf_set_op_cb() to know when it is complete.
+ * The application must keep the old media port valid until then, and is
+ * responsible for destroying it afterwards.
+ *
+ * @param conf          The conference bridge.
+ * @param slot          The port index to detach.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_conf_detach_port( pjmedia_conf *conf,
+                                               unsigned slot );
+
+
+/**
+ * Attach a new media port to a slot that was previously detached with
+ * #pjmedia_conf_detach_port() (or replace the port of an active slot),
+ * preserving the slot's connections and settings. Resamplers and buffers are
+ * rebuilt only if the new port's clock rate, samples-per-frame, or channel
+ * count differ from the slot's current configuration.
+ *
+ * The operation is asynchronous (executed at a safe point in the bridge); use
+ * the callback set via #pjmedia_conf_set_op_cb() to know when it is complete.
+ *
+ * @param conf          The conference bridge.
+ * @param pool          Pool to allocate the new port's resources.
+ * @param slot          The port index to attach the new port to.
+ * @param strm_port     The new media port.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_conf_replace_port( pjmedia_conf *conf,
+                                                pj_pool_t *pool,
+                                                unsigned slot,
+                                                pjmedia_port *strm_port );
 
 
 
