@@ -50,7 +50,11 @@
 
 #define DEFAULT_FPS             15
 #define DEFAULT_AVG_BITRATE     256000
-#define DEFAULT_MAX_BITRATE     256000
+/* Leave 25% headroom above the average, so the rate control has room for
+ * keyframes and scene changes. Compare vid_toolbox.m, which also defaults
+ * its maximum above its average.
+ */
+#define DEFAULT_MAX_BITRATE     320000
 
 #define MAX_RX_WIDTH            1200
 #define MAX_RX_HEIGHT           800
@@ -511,6 +515,20 @@ static pj_status_t oh264_codec_open(pjmedia_vid_codec *codec,
     eprm.iMultipleThreadIdc             = 1;
     //eprm.bEnableRc                    = 1;
     eprm.iTargetBitrate                 = param->enc_fmt.det.vid.avg_bps;
+    /* Apply the negotiated maximum bitrate as the rate control ceiling, so
+     * bursts such as keyframes and scene changes stay within what was agreed
+     * in SDP. Without this the encoder keeps the library default of
+     * UNSPECIFIED_BIT_RATE, i.e. no ceiling at all, until the first
+     * oh264_codec_modify() call, which does set ENCODER_OPTION_MAX_BITRATE.
+     * OpenH264 requires the ceiling to be at least the target, so on conflict
+     * lower the target instead of raising the ceiling above what the remote
+     * agreed to receive.
+     */
+    eprm.iMaxBitrate                    = param->enc_fmt.det.vid.max_bps;
+    if (eprm.iMaxBitrate > 0 && eprm.iMaxBitrate < eprm.iTargetBitrate) {
+        eprm.iTargetBitrate             = eprm.iMaxBitrate;
+        param->enc_fmt.det.vid.avg_bps  = eprm.iMaxBitrate;
+    }
     eprm.bEnableFrameSkip               = 1;
     eprm.bEnableDenoise                 = 0;
     eprm.bEnableSceneChangeDetect       = 1;
@@ -547,6 +565,10 @@ static pj_status_t oh264_codec_open(pjmedia_vid_codec *codec,
     elayer->fFrameRate                  = eprm.fMaxFrameRate;
     elayer->uiProfileIdc                = eprm.sSpatialLayers[0].uiProfileIdc;
     elayer->iSpatialBitrate             = eprm.iTargetBitrate;
+    /* The per layer ceiling must mirror the global one, otherwise OpenH264
+     * rejects the parameter set.
+     */
+    elayer->iMaxSpatialBitrate          = eprm.iMaxBitrate;
     elayer->iDLayerQp                   = elayer_ctx.iDLayerQp;
     elayer->sSliceArgument.uiSliceMode = elayer_ctx.sSliceArgument.uiSliceMode;
 
