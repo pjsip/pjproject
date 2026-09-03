@@ -1,0 +1,244 @@
+<title>Does PJSIP fit in 640 KB?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #F7F8F6; --panel: #EFF3F0; --ink: #1F2C29; --ink2: #55655F;
+  --line: #D3DDD7; --accent: #0E6E62; --on-accent: #F2F7F5; --tint: #E3EEE9;
+  --ok: #2E7D32; --bad: #AC4428; --warn: #A8791C;
+  --seg-static: #35544D; --stripe: rgba(172, 68, 40, 0.30); --code-bg: #ECF1EE;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1613; --panel: #16201C; --ink: #DCE7E2; --ink2: #93A69F;
+    --line: #29362F; --accent: #52B3A4; --on-accent: #0C1512; --tint: #1D2E29;
+    --ok: #7BC67E; --bad: #E28B70; --warn: #D6B25A;
+    --seg-static: #4A7268; --stripe: rgba(226, 139, 112, 0.34); --code-bg: #131C18;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1613; --panel: #16201C; --ink: #DCE7E2; --ink2: #93A69F;
+  --line: #29362F; --accent: #52B3A4; --on-accent: #0C1512; --tint: #1D2E29;
+  --ok: #7BC67E; --bad: #E28B70; --warn: #D6B25A;
+  --seg-static: #4A7268; --stripe: rgba(226, 139, 112, 0.34); --code-bg: #131C18;
+}
+* { margin: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink);
+  font-family: "Source Serif 4", Georgia, "Times New Roman", serif; font-size: 1.02rem; line-height: 1.62; }
+.wrap { max-width: 62rem; margin: 0 auto; padding: 2.5rem 1.25rem 5rem; }
+.col { max-width: 42rem; }
+h1, h2, h3 { font-family: Archivo, "Helvetica Neue", Arial, sans-serif; text-wrap: balance; }
+h1 { font-size: clamp(1.9rem, 4.5vw, 2.7rem); font-weight: 700; letter-spacing: -0.015em; line-height: 1.12; }
+h2 { font-size: 1.32rem; font-weight: 650; letter-spacing: -0.01em; margin: 0 0 0.9rem; }
+h3 { font-size: 1.02rem; font-weight: 600; margin: 1.4rem 0 0.5rem; }
+p { margin: 0 0 1rem; } .col p, .col ul { max-width: 65ch; }
+a { color: var(--accent); } strong { font-weight: 600; }
+.eyebrow { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.72rem;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); display: block; margin-bottom: 0.55rem; }
+header.top { border-bottom: 1px solid var(--line); padding-bottom: 1.8rem; margin-bottom: 2rem; }
+.meta-row { display: flex; flex-wrap: wrap; gap: 0.4rem 1.6rem; margin-top: 1rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.78rem; color: var(--ink2); }
+.meta-row b { color: var(--ink); font-weight: 500; }
+section { margin: 2.6rem 0; }
+.secno { font-family: "IBM Plex Mono", ui-monospace, monospace; color: var(--ink2); font-weight: 400; margin-right: 0.5rem; font-size: 0.9em; }
+.figs { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+  border: 1px solid var(--line); border-radius: 4px; overflow: hidden; margin: 1.6rem 0 0; }
+.fig { padding: 0.85rem 1rem; border-top: 1px solid var(--line); border-left: 1px solid var(--line); margin: -1px 0 0 -1px; background: var(--panel); }
+.fig .k { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink2); display: block; margin-bottom: 0.3rem; }
+.fig .v { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 1.12rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.fig .u { font-size: 0.72rem; color: var(--ink2); font-weight: 400; }
+.fits { color: var(--ok); } .over { color: var(--bad); } .warnc { color: var(--warn); }
+.bars { margin: 1.8rem 0 0.6rem; display: flex; flex-direction: column; gap: 1.15rem; }
+.bar-row .lbl { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.76rem; margin-bottom: 0.35rem; }
+.bar-row .lbl .num { font-variant-numeric: tabular-nums; }
+.track { position: relative; height: 22px; background: var(--panel); border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+.seg { position: absolute; top: 0; bottom: 0; }
+.seg.static { background: var(--seg-static); } .seg.heap { background: var(--accent); } .seg.flash { background: var(--accent); }
+.overflow { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(-45deg, var(--stripe) 0 5px, transparent 5px 10px); }
+.budget-line { position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--ink); opacity: 0.75; }
+.track-outer { position: relative; padding: 4px 0; }
+.budget-tag { position: absolute; top: -0.15rem; transform: translateX(-100%);
+  font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.62rem; letter-spacing: 0.06em; color: var(--ink2); padding-right: 0.4rem; }
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; margin-top: 0.9rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.7rem; color: var(--ink2); }
+.sw { display: inline-block; width: 0.72em; height: 0.72em; border-radius: 2px; margin-right: 0.45em; vertical-align: -0.05em; }
+.tblwrap { overflow-x: auto; margin: 1.1rem 0 1.4rem; border: 1px solid var(--line); border-radius: 4px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.86rem; }
+th, td { padding: 0.5rem 0.85rem; text-align: left; border-top: 1px solid var(--line); }
+thead th { border-top: 0; background: var(--panel); font-family: Archivo, sans-serif; font-size: 0.72rem;
+  letter-spacing: 0.07em; text-transform: uppercase; font-weight: 600; color: var(--ink2); white-space: nowrap; }
+td.n, th.n { text-align: right; font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 0.82rem; }
+td.hl { font-weight: 600; } tr.total td { background: var(--tint); font-weight: 600; }
+.chip { display: inline-block; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.66rem;
+  letter-spacing: 0.06em; text-transform: uppercase; padding: 0.12rem 0.5rem; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.chip.ok { color: var(--ok); } .chip.no { color: var(--bad); } .chip.warn { color: var(--warn); }
+.note { border-left: 3px solid var(--accent); background: var(--tint); padding: 0.9rem 1.1rem; border-radius: 0 4px 4px 0; margin: 1.3rem 0; max-width: 46rem; }
+.note.flag { border-left-color: var(--bad); }
+.note p:last-child { margin-bottom: 0; }
+blockquote.caveat { border: 1px solid var(--line); border-left: 3px solid var(--ink2); padding: 1rem 1.2rem; margin: 1.2rem 0;
+  border-radius: 0 4px 4px 0; font-style: italic; color: var(--ink); max-width: 46rem; background: var(--panel); }
+code, pre { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace; font-size: 0.83em; background: var(--code-bg); border-radius: 3px; }
+code { padding: 0.08em 0.35em; }
+pre { padding: 0.9rem 1.1rem; overflow-x: auto; line-height: 1.5; border: 1px solid var(--line); margin: 1rem 0; }
+pre code { background: none; padding: 0; }
+details { margin: 1rem 0; }
+summary { cursor: pointer; font-family: Archivo, sans-serif; font-size: 0.88rem; font-weight: 600; color: var(--accent); }
+summary:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+ul { padding-left: 1.2rem; margin: 0 0 1rem; } li { margin-bottom: 0.45rem; }
+footer { border-top: 1px solid var(--line); margin-top: 3rem; padding-top: 1.2rem; font-size: 0.85rem; color: var(--ink2); }
+@media (max-width: 640px) { .figs { grid-template-columns: repeat(2, 1fr); } }
+</style>
+
+<div class="wrap">
+<header class="top">
+  <span class="eyebrow">Measured footprint · pjproject 2.17 + mbedTLS 3.6.7</span>
+  <h1>Does PJSIP fit in 640&nbsp;KB?</h1>
+  <div class="col">
+    <p style="margin-top:1rem; font-size:1.08rem;">For SIP Spectrum's exact target — <strong>4 concurrent bidirectional TLS+SRTP calls with G.711 and G.722 mixed, plus one receive-only stream</strong>, on an STM32H563 (Cortex-M33, 2&nbsp;MB flash, 640&nbsp;KB RAM). We measured a real build instead of guessing. <strong>Flash fits at ~52&nbsp;%. RAM does not fit 640&nbsp;KB — not even after tuning.</strong> Static plus heap totals ~704&nbsp;KB tuned and ~0.9–1.1&nbsp;MB at the call-setup peak. This corrects an earlier, more optimistic read that had modeled a lighter single-codec scenario.</p>
+  </div>
+  <div class="meta-row">
+    <span>pjproject <b>2.17</b></span>
+    <span>mbedTLS <b>3.6.7 LTS</b></span>
+    <span>heap: <b>peak malloc HWM</b>, massif + LD_PRELOAD shim, x86-32 &amp; ARM32</span>
+    <span>flash: <b>ARM Thumb-2 · -Os · --gc-sections</b></span>
+    <span>updated 2026-09-03</span>
+  </div>
+</header>
+
+<section>
+  <span class="eyebrow">The verdict at a glance — prospect's 4+1 mixed scenario</span>
+  <div class="figs">
+    <div class="fig"><span class="k">Flash used</span><span class="v fits">1.03<span class="u"> MiB</span></span><span class="u">of 2 MB · 52% · fits</span></div>
+    <div class="fig"><span class="k">RAM, tuned steady</span><span class="v over">704<span class="u"> KB</span></span><span class="u">of 640 · over by 49</span></div>
+    <div class="fig"><span class="k">RAM, setup peak</span><span class="v over">0.9–1.1<span class="u"> MB</span></span><span class="u">needs a ~1 MB part</span></div>
+    <div class="fig"><span class="k">CPU, G.722 vs G.711</span><span class="v warnc">23–105×</span><span class="u">codec cost ratio</span></div>
+  </div>
+  <p class="col" style="margin-top:1.4rem;">Flash is comfortable. The RAM bars below share one scale; the dashed line is the 640&nbsp;KB budget. Every bar clears it — stock and tuned, steady and peak.</p>
+  <div class="bars">
+    <div class="bar-row">
+      <div class="lbl"><span>RAM — stock defaults, steady (static + heap)</span><span class="num over">877,864 B · over by ~223 KB</span></div>
+      <div class="track-outer"><div class="track">
+        <div class="seg static" style="left:0; width:18.77%"></div>
+        <div class="seg heap" style="left:18.77%; width:54.39%"></div>
+        <div class="overflow" style="left:54.61%; width:18.56%"></div>
+        <div class="budget-line" style="left:54.61%"></div>
+      </div><span class="budget-tag" style="left:54.61%">640 KB</span></div>
+    </div>
+    <div class="bar-row">
+      <div class="lbl"><span>RAM — embedded-tuned, steady (static + heap)</span><span class="num over">704,104 B · over by ~49 KB</span></div>
+      <div class="track-outer"><div class="track">
+        <div class="seg static" style="left:0; width:5.95%"></div>
+        <div class="seg heap" style="left:5.95%; width:52.72%"></div>
+        <div class="overflow" style="left:54.61%; width:4.06%"></div>
+        <div class="budget-line" style="left:54.61%"></div>
+      </div></div>
+    </div>
+    <div class="bar-row">
+      <div class="lbl"><span>RAM — embedded-tuned, call-setup peak</span><span class="num over">914,080 B</span></div>
+      <div class="track-outer"><div class="track">
+        <div class="seg static" style="left:0; width:5.95%"></div>
+        <div class="seg heap" style="left:5.95%; width:70.22%"></div>
+        <div class="overflow" style="left:54.61%; width:21.56%"></div>
+        <div class="budget-line" style="left:54.61%"></div>
+      </div></div>
+    </div>
+    <div class="bar-row">
+      <div class="lbl"><span>RAM — stock defaults, call-setup peak</span><span class="num over">1,115,720 B · worst case</span></div>
+      <div class="track-outer"><div class="track">
+        <div class="seg static" style="left:0; width:18.77%"></div>
+        <div class="seg heap" style="left:18.77%; width:74.21%"></div>
+        <div class="overflow" style="left:54.61%; width:38.37%"></div>
+        <div class="budget-line" style="left:54.61%"></div>
+      </div></div>
+    </div>
+  </div>
+  <div class="legend">
+    <span><span class="sw" style="background:var(--seg-static)"></span>static (.data + .bss)</span>
+    <span><span class="sw" style="background:var(--accent)"></span>heap malloc HWM (measured)</span>
+    <span><span class="sw" style="background:repeating-linear-gradient(-45deg, var(--stripe) 0 4px, transparent 4px 8px)"></span>past 640 KB</span>
+    <span>track = 1.2 MB full scale</span>
+  </div>
+  <div class="col">
+    <p style="margin-top:1.2rem;">Static and heap are separate, additive SRAM regions, plus ~40&nbsp;KB of thread stacks and lwIP pools on top. To fit 640&nbsp;KB you would drop below <code>pjsua-lib</code> to raw <code>pjsip</code>+<code>pjmedia</code> (removing the 88&nbsp;KB preallocated call array and the conference-bridge/resampler ports), cut the jitter buffer hard, or pick a part with ~1&nbsp;MB SRAM.</p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="secno">1</span>Peak heap high-water mark — not a pool-fill percentage</h2>
+  <div class="col">
+    <p>The old public page reported pool utilization against a preallocated size. That is not the number that decides a part. Here is the peak malloc high-water mark and the settled steady level for the exact scenario, captured two independent ways that agree to within 0.2&nbsp;%: valgrind massif, and an <code>LD_PRELOAD</code> allocator shim that records live and peak malloc'd bytes the same way an instrumented allocator does. Both count every library's heap — pjlib pools, mbedTLS, libsrtp, glibc.</p>
+  </div>
+  <div class="tblwrap"><table>
+    <thead><tr><th>Build</th><th class="n">peak heap HWM</th><th class="n">settled steady</th></tr></thead>
+    <tbody>
+      <tr><td>x86-32, stock config</td><td class="n">891 KB</td><td class="n">653 KB</td></tr>
+      <tr><td class="hl">ARM32 (real ARM build, qemu), stock</td><td class="n hl">891 KB</td><td class="n hl">653 KB</td></tr>
+      <tr><td>x86-32, embedded-tuned</td><td class="n">843 KB</td><td class="n">633 KB</td></tr>
+    </tbody>
+  </table></div>
+  <div class="col">
+    <p>The ARM32 and x86-32 figures are identical to within 0.2&nbsp;% — both are 32-bit, and the heap is dominated by buffers of the same size on either ISA. This is the modern-ARM figure requested; a Cortex-M part itself was not run, because there is no in-tree RTOS or bare-metal port. "Embedded-tuned" is <code>PJSUA_MAX_BUDDIES 8</code> + mbedTLS 4&nbsp;KB record buffers + 200&nbsp;ms jitter buffer; it moves the heap only ~20&nbsp;KB, because the buddy table is <em>static</em> RAM and the heap is dominated by the preallocated call array and per-call pools those knobs don't touch.</p>
+    <p>The peak is a call-<strong>setup</strong> transient: all five streams came up within ~20&nbsp;s, so their SIP transaction buffers stacked, then aged out ~32&nbsp;s later, leaving steady ~210–240&nbsp;KB lower. Staggered arrival lowers the peak; four simultaneous incoming INVITEs sit near it.</p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="secno">2</span>Why it does not fit — the additive RAM math</h2>
+  <div class="tblwrap"><table>
+    <thead><tr><th>Config (vs 655,360 B)</th><th class="n">static</th><th class="n">heap steady</th><th class="n">total steady</th><th class="n">total peak</th><th>fit</th></tr></thead>
+    <tbody>
+      <tr><td>Stock defaults</td><td class="n">225,188</td><td class="n">652,676</td><td class="n">877,864</td><td class="n">1,115,720</td><td><span class="chip no">no</span></td></tr>
+      <tr><td class="hl">Embedded-tuned</td><td class="n">71,428</td><td class="n">632,676</td><td class="n hl">704,104</td><td class="n">914,080</td><td><span class="chip no">no</span></td></tr>
+    </tbody>
+  </table></div>
+  <div class="col">
+    <p>Static (<code>.data</code>+<code>.bss</code>) and heap (malloc) are separate memory: the 88&nbsp;KB call array is on the heap, the 158&nbsp;KB buddy table is static, no overlap. Even the tuned steady total is ~49&nbsp;KB over 640&nbsp;KB, and sizing for the setup peak needs ~0.9–1.1&nbsp;MB — before ~40&nbsp;KB of thread stacks and lwIP. Flash, by contrast, is comfortable: ~1.03&nbsp;MiB of 2&nbsp;MB.</p>
+  </div>
+  <div class="note flag">
+    <p><strong>This corrects the earlier read.</strong> A first pass modeled 4 <em>single-codec</em> G.722 calls (heap 561&nbsp;KB) and found that <code>buddies=8</code> fit with ~22&nbsp;KB spare. The prospect's <strong>4+1 mixed</strong> scenario carries ~92&nbsp;KB more heap — the fifth stream plus resampler state for the 8&nbsp;kHz G.711 ports on the 16&nbsp;kHz bridge — so the same tuned config lands at 704&nbsp;KB and no longer fits. The heavier scenario is the one that governs the part choice.</p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="secno">3</span>Calibrating against libre's ~25 KB</h2>
+  <div class="col">
+    <p>A ~25&nbsp;KB steady libre figure and this ~653&nbsp;KB PJSIP figure differ ~26×. The gap is real and mostly architectural, but part of it is the denominator, and it is worth being explicit so the comparison is fair.</p>
+    <ul>
+      <li><strong>What the PJSIP bytes buy</strong> (peak attribution): pjlib pools 813&nbsp;KB — the 88&nbsp;KB preallocated call array, ~16&nbsp;KB/stream jitter buffers at the 500&nbsp;ms default, and INVITE/dialog/transaction pools; mbedTLS record buffers 33.5&nbsp;KB; libsrtp ~16&nbsp;KB; glibc stdio 12&nbsp;KB.</li>
+      <li><strong>Likely not apples-to-apples.</strong> An allocator that instruments only libre's own <code>mem_alloc</code>/<code>mem_deref</code> will not see OpenSSL/mbedTLS record buffers, libsrtp contexts, or static arrays at all. If the 25&nbsp;KB is libre-core-only, the honest comparison to our all-in 653&nbsp;KB is our pjlib-pools-only figure of ~460–530&nbsp;KB — still ~20×, but not 26×.</li>
+      <li><strong>The gap is design, not measurement error.</strong> PJSIP via <code>pjsua-lib</code> is a batteries-included high-level stack that preallocates and pools; libre is a lean core. If 640&nbsp;KB is a hard constraint, that difference is exactly what decides the part.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2><span class="secno">4</span>G.711-vs-G.722 CPU — the DSP-vs-MCU question</h2>
+  <div class="col">
+    <p>Measured on PJSIP's own codecs (<code>codec_bench.c</code>): encode + decode of one 10&nbsp;ms frame, counted by callgrind instruction reads and native wall-clock.</p>
+  </div>
+  <div class="tblwrap"><table>
+    <thead><tr><th>Codec</th><th class="n">instructions / frame</th><th class="n">µs / frame (x86-32)</th></tr></thead>
+    <tbody>
+      <tr><td>G.722 @ 16 kHz</td><td class="n">219,481</td><td class="n">28.2</td></tr>
+      <tr><td>G.711 computed (minimal-size default)</td><td class="n">9,613</td><td class="n">1.02</td></tr>
+      <tr><td>G.711 table-based</td><td class="n">2,096</td><td class="n">0.35</td></tr>
+    </tbody>
+  </table></div>
+  <div class="col">
+    <p><strong>The ratio is 23× with computed G.711 and 105× with table-based G.711.</strong> The old "~55× on ARM9" figure sits between, consistent with a table build. The reason it swings so much: G.722 is the fixed cost — plain-C fixed-point, a 24-tap QMF filter and full sub-band ADPCM at twice G.711's sample rate, no DSP intrinsics — so the ratio is governed entirely by whether G.711 is a lookup or computed. The minimal-size preset compiles the tables out, which is why the default ratio is ~23×.</p>
+    <p><strong>For the decision:</strong> four G.722 calls run ~88&nbsp;M instructions/s of codec work — roughly a third to half of a 200–250&nbsp;MHz Cortex-M core, before RTP, SRTP, jitter and mixing. Four G.711 calls run ~3.8&nbsp;M/s: negligible. That is the gap that justifies a DSP or hardware codec path — G.722 in software is a real MCU load; G.711 is not. Two adjacent notes: a mixed device also pays software resampling and packet-loss concealment, and the H563's on-chip AES/HASH could offload the SRTP crypto, which libsrtp is not wired to by default.</p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="secno">5</span>Caveats — for the record</h2>
+  <blockquote class="caveat">
+    Measured on pjproject 2.17 + mbedTLS 3.6.7 in the exact feature set described (G.711/G.722 + telephone-event, SDES-SRTP, SIP over TLS via mbedTLS, no video, no ICE/STUN/TURN). Heap high-water marks are from 32-bit x86 and a 32-bit ARM build under user-mode emulation, both under a heap profiler with real TLS+SRTP calls up; a bare-metal malloc differs slightly in per-allocation overhead. Flash and static RAM come from an ARM Thumb-2 cross build at -Os with dead-code elimination — a close proxy for Cortex-M33 code size, but linked against Linux glibc, so C-library, RTOS and IP-stack footprint are not included. There is no in-tree Zephyr or FreeRTOS port, so PJLIB's OS abstraction would need porting on the customer side, and neither its footprint nor lwIP's is in these numbers. The receive-only fifth stream is a SIP-signalled held call, an upper bound; a raw RTP listener would cost less.
+  </blockquote>
+</section>
+
+<footer>
+  <p>Full report, configuration, measurement harness and raw results: branch <code>claude/execute-plan-3h0x0y</code> of <code>pjsip/pjproject</code> — <code>footprint-report.md</code> §0 and <code>footprint/</code> (mixed-codec scenario driver, allocator shim, codec benchmark, per-run data). Every figure here reconciles to a raw file in <code>footprint/results/</code>; the two heap instruments agree within 0.2&nbsp;%.</p>
+</footer>
+</div>
