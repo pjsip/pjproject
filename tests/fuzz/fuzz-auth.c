@@ -130,7 +130,7 @@ static void test_auth_server_challenge(pj_pool_t *pool, pjsip_msg *msg)
     rdata.msg_info.cseq = (pjsip_cseq_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_CSEQ, NULL);
     rdata.msg_info.cid = (pjsip_cid_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_CALL_ID, NULL);
     if (!rdata.msg_info.via || !rdata.msg_info.from || !rdata.msg_info.to ||
-        !rdata.msg_info.cseq || !rdata.msg_info.cid)
+        !rdata.msg_info.cseq || !rdata.msg_info.cid || !rdata.msg_info.cid->id.slen)
         return;
 
     if (msg->line.req.method.id == PJSIP_ACK_METHOD)

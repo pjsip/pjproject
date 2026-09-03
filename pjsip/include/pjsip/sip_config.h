@@ -1644,6 +1644,26 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 
 /**
+ * Enable SIPREC (RFC 7866, RFC 7865) support for session recording.
+ * When enabled, the library can handle SIPREC-specific functionality
+ * including rs-metadata parsing and verification.
+ *
+ * Default: 0 (disabled)
+ * Note: If PJSUA_HAS_SIPREC is defined (e.g., in config_site.h), that
+ * value will be used as the default for PJSIP_HAS_SIPREC.
+ */
+#include <pj/config.h>
+
+#ifndef PJSIP_HAS_SIPREC
+#   ifdef PJSUA_HAS_SIPREC
+#       define PJSIP_HAS_SIPREC                PJSUA_HAS_SIPREC
+#   else
+#       define PJSIP_HAS_SIPREC                0
+#   endif
+#endif
+
+
+/**
  * Dump configuration to log with verbosity equal to info(3).
  */
 PJ_DECL(void) pjsip_dump_config(void);
@@ -1653,9 +1673,6 @@ PJ_END_DECL
 /**
  * @}
  */
-
-
-#include <pj/config.h>
 
 
 #endif  /* __PJSIP_SIP_CONFIG_H__ */

@@ -107,6 +107,12 @@ struct pjsua_call_media
     pjsua_med_tp_st      tp_st;     /**< Media transport state              */
     pj_bool_t            use_custom_med_tp;/**< Use custom media transport? */
     pj_bool_t            enable_rtcp_mux;/**< Enable RTP& RTCP multiplexing?*/
+    pj_bool_t            preserve_conf_slot;
+                                       /**< Transient: on the next stream stop,
+                                            detach (keep) the conference slot
+                                            instead of removing it, so it can
+                                            be re-attached to the recreated
+                                            stream. Set by the media update. */
     pj_sockaddr          rtp_addr;  /**< Current RTP source address
                                             (used to update ICE default
                                             address)                        */
@@ -285,6 +291,8 @@ struct pjsua_call
     pj_str_t             hangup_reason; /**< Hangup reason.                 */
     pjsua_msg_data      *hangup_msg_data;/**< Hangup message data.          */
     pj_str_t             siprec_metadata;/** siprec metadata in body        */
+    unsigned             siprec_metadata_cap;
+                                    /**< Allocated size of siprec_metadata */
 
     pjmedia_av_sync     *av_sync;       /**< Media stream synchronizer      */
 };
