@@ -1731,10 +1731,11 @@ static pj_status_t app_init(void)
 
     /* Direct logging to the CLI front ends already here, so that the SIP
      * message logging module doesn't need to be re-registered later, which
-     * would happen while the endpoint is already processing messages.
+     * would happen while the endpoint is already processing messages. Any
+     * writer the application has configured above keeps receiving the log.
      */
     if (app_config.use_cli)
-        app_config.log_cfg.cb = &cli_log_writer;
+        cli_setup_log_writer(&app_config.log_cfg);
 
     /* Initialize pjsua */
     status = pjsua_init(&app_config.cfg, &app_config.log_cfg,

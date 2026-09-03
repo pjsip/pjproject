@@ -163,6 +163,11 @@ static pj_cli_t            *cli = NULL;
 static pj_cli_sess         *cli_cons_sess = NULL;
 static pj_cli_front_end    *telnet_front_end = NULL;
 
+/* Log writer configured by the application, if any. The CLI log writer
+ * forwards to it, so that it keeps receiving the log as well.
+ */
+static void (*app_log_writer)(int level, const char *data, int len);
+
 #ifdef USE_GUI
 void displayLog(const char *msg, int len);
 #endif
@@ -182,15 +187,25 @@ void cli_get_info(char *info, pj_size_t size)
                      telnet_info.port);
 }
 
-void cli_log_writer(int level, const char *buffer, int len)
+static void cli_log_writer(int level, const char *buffer, int len)
 {
     if (cli)
         pj_cli_write_log(cli, level, buffer, len);
-    else
+
+    if (app_log_writer)
+        (*app_log_writer)(level, buffer, len);
+    else if (!cli)
         pj_log_write(level, buffer, len);
+
 #ifdef USE_GUI
     displayLog(buffer, len);
 #endif
+}
+
+void cli_setup_log_writer(pjsua_logging_config *log_cfg)
+{
+    app_log_writer = log_cfg->cb;
+    log_cfg->cb = &cli_log_writer;
 }
 
 pj_status_t cli_init(void)
