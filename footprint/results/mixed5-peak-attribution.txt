@@ -1,0 +1,7 @@
+ n2: 813384 0x1F2089: default_block_alloc (pool_policy_malloc.c:45)
+ n1: 16765 0x1FC384: mbedtls_ssl_setup (ssl_tls.c:1418)
+ n1: 16765 0x1FC357: mbedtls_ssl_setup (ssl_tls.c:1408)
+ n3: 15996 0x1DCC44: srtp_crypto_alloc (alloc.c:78)
+ n1: 12288 0x4A05F72: _IO_file_doallocate (in /usr/lib32/libc.so.6)
+ n0: 9059 in 43 places, all below massif's threshold (0.20%)
+ n1: 2456 0x2167A2: mbedtls_mpi_grow (bignum.c:218)

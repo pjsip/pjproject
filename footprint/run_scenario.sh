@@ -57,7 +57,7 @@ B_BIN=${B_BIN:-$BIN}   # callee binary override (e.g. ARM build run under qemu)
 COMMON="--null-audio --no-vad --max-calls 5 --use-srtp 2 --srtp-secure 1 \
  --use-tls --tls-cert-file $CERT --tls-privkey-file $KEY --no-udp --no-tcp \
  --ip-addr 127.0.0.1 --bound-addr 127.0.0.1 \
- --clock-rate $CLOCK $DIS --log-level 4 --app-log-level 3"
+ --clock-rate $CLOCK $DIS --log-level 4 --app-log-level 3 ${EXTRA_OPTS:-}"
 
 VG="valgrind --tool=massif --time-unit=ms --max-snapshots=100 \
  --detailed-freq=4 --threshold=0.2"

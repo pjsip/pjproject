@@ -1,0 +1,16 @@
+samples=119 duration=118s peak_hwm=890532 B (869.7 KiB)
+  plateau live~848596 B (828.7 KiB)  7s  t=36..42
+  plateau live~842976 B (823.2 KiB)  5s  t=31..35
+  plateau live~829920 B (810.5 KiB)  4s  t=43..46
+  plateau live~811244 B (792.2 KiB)  8s  t=47..54
+  plateau live~792568 B (774.0 KiB)  4s  t=55..58
+  plateau live~773892 B (755.8 KiB)  4s  t=59..62
+  plateau live~755216 B (737.5 KiB)  4s  t=63..66
+  plateau live~734684 B (717.5 KiB)  4s  t=27..30
+  plateau live~652532 B (637.2 KiB)  46s  t=69..114
+  plateau live~626392 B (611.7 KiB)  4s  t=23..26
+  plateau live~513596 B (501.6 KiB)  8s  t=15..22
+  plateau live~402788 B (393.3 KiB)  4s  t=11..14
+  plateau live~204360 B (199.6 KiB)  8s  t=2..9
+STEADY (settled, post-transient) = 652532 B (637.2 KiB)  t=69..114
+SETUP-BURST high plateau = 848596 B (828.7 KiB)

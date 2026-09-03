@@ -1,0 +1,20 @@
+G722_16000-4000 Ir=878389180
+G722_16000-400 Ir=88255973
+PCMU_8000-4000 Ir=38881518
+PCMU_8000-400 Ir=4273990
+PCMA_8000-4000 Ir=39841806
+PCMA_8000-400 Ir=4370122
+
+Per-frame Ir (enc+dec of one 10 ms frame; slope between 4000 and 400 frames,
+x86 -m32 -Os, PJ_CONFIG_MINIMAL_SIZE => PJMEDIA_HAS_ALAW_ULAW_TABLE 0):
+  G722/16000 : 219,481 Ir/frame
+  PCMU/8000  :   9,613 Ir/frame
+  PCMA/8000  :   9,853 Ir/frame
+  ratio G722/PCMU = 22.8x ; G722/PCMA = 22.3x
+Native wall-clock (same binary, 50,000 frames): G722 28.24 us/frame,
+  PCMU 1.02 us/frame, PCMA 1.10 us/frame => 27.7x / 25.7x
+tables-PCMU_8000-4000 Ir=8813421
+tables-PCMU_8000-400 Ir=1267115
+tables-PCMA_8000-4000 Ir=8797703
+tables-PCMA_8000-400 Ir=1265539
+PCMU/8000: 50000 frames of 80 samples (10 ms) enc+dec in 17658 us (0.35 us/frame, 80 enc bytes/frame)

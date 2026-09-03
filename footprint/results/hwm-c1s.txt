@@ -1,0 +1,6 @@
+samples=65 duration=64s peak_hwm=418520 B (408.7 KiB)
+  plateau live~398776 B (389.4 KiB)  32s  t=7..38
+  plateau live~295788 B (288.9 KiB)  23s  t=40..62
+  plateau live~203936 B (199.2 KiB)  5s  t=2..6
+STEADY (settled, post-transient) = 295788 B (288.9 KiB)  t=40..62
+SETUP-BURST high plateau = 398776 B (389.4 KiB)

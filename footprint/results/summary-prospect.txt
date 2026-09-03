@@ -1,0 +1,148 @@
+PROSPECT-SCENARIO MEASUREMENTS (Scott Godin / SIP Spectrum asks)
+================================================================
+Question: peak heap HIGH-WATER MARK (not pool-fill %) for 4 concurrent
+bidirectional calls + 1 receive-only RTP stream, G.711 AND G.722 mixed,
+no video/ICE/AEC, on something closer to the target than a 2007 desktop.
+Libre calibration cited by prospect: ~25 KB steady, high-30s KB peak.
+
+Scenario "mixed5": 4 bidirectional TLS+SRTP calls (calls 1-2 G.722,
+calls 3-4 G.711/PCMA via live codec-priority switch on the caller) +
+a 5th call placed on hold by the caller, so the callee carries one
+receive-only (decode-only) RTP stream.  Callee is the measured side.
+
+Two independent instruments, three builds -- all agree within ~0.2%:
+
+  scenario            instrument         PEAK hwm      STEADY (settled)
+  ------------------  -----------------   -----------   ----------------
+  mixed 4+1 (prospect) i386 massif        892,240 B     654,416 B
+  mixed 4+1 (prospect) i386 malloc-shim   890,532 B     652,676 B *
+  mixed 4+1 (prospect) ARM  malloc-shim   890,532 B     652,532 B  (qemu, ARM build)
+  4 calls G.722        i386 massif        739,560 B     561,520 B
+  4 calls G.722        i386 malloc-shim   738,844 B     559,964 B
+  4 calls G.722        ARM  malloc-shim   738,388 B     559,964 B  (qemu, ARM build)
+  1 call  G.722        i386 massif        418,576 B     302,776 B
+  1 call  G.722        i386 malloc-shim   418,520 B     295,788 B
+  idle (0 calls)       i386 massif        208,104 B     208,104 B
+  idle (0 calls)       ARM  malloc-shim   213,076 B     204,360 B  (qemu, ARM build)
+  * mixed5s shim: settled 652,676 B at t=69..107 after ~32 s transient decay
+
+HEADLINE FOR THE PROSPECT (4 calls + 1 recvonly, mixed G.711/G.722):
+  Peak malloc'd heap high-water mark   ~= 891 KB  (~870 KiB)
+  Settled steady-state malloc'd heap   ~= 653 KB  (~637 KiB)
+  32-bit ARM and 32-bit x86 are within 0.2% -- 32-bit pointer size, and
+  heap is dominated by identically-sized buffers on both arches.
+
+The PEAK is a setup-burst artifact: all 5 calls set up inside ~20 s, so
+their SIP transaction / tx_data transients stack.  They age out ~32 s
+after the last INVITE; steady is ~238 KB below peak.  Staggered call
+admission keeps peak near steady.
+
+WHAT THE BYTES BUY (mixed5 peak attribution, massif):
+  pjlib pools               813,384 B (91%)   <- see breakdown below
+  mbedTLS record buffers     33,530 B         (2 x 16 KB in/out, ONE shared TLS conn)
+  libsrtp contexts           15,996 B         (~3.2 KB x 5 streams)
+  glibc stdio                12,288 B
+  x509 / bignum handshake    ~4-9 KB
+pjlib pool total when all 5 calls up: 617,856 B capacity / 525,778 B used (85%).
+
+WHY PJSIP IS ~26x LIBRE'S 25 KB, AND THE APPLES-TO-APPLES CAVEAT:
+- Preallocated call array: pjsua-lib allocates all max_calls slots at
+  pjsua_init: 17,592 B x 5 = 87,960 B, present at idle (before any call).
+  libre allocates per call, on demand.
+- Jitter buffers: pjsua default jb_max = 500 ms of frames PER STREAM,
+  preallocated at stream open (~16 KB stream pool per call).
+- One shared TLS connection's mbedTLS buffers = 33.5 KB (16+16 KB records).
+  A prospect allocator that instrumented only libre's own mem_alloc would
+  NOT see OpenSSL/mbedTLS/libsrtp heap at all -- so his 25 KB is very
+  likely libre-core-only, while our 653 KB is TOTAL process malloc (every
+  library included, via LD_PRELOAD).  Not the same denominator.
+- pjsua-lib is a batteries-included high-level layer (conference bridge,
+  presence buddy table, account mgr, media transport abstraction).
+
+LIKE-FOR-LIKE FIGURE if excluding the TLS library + libsrtp (closer to
+what a libre-core allocator captures): pjlib pools only ~ 462-529 KB used.
+Still ~20x libre -- the gap is architectural (pool preallocation + JB),
+not measurement noise.
+
+SHRINK KNOBS (measured elsewhere in this report):
+  PJSUA_MAX_BUDDIES 8         -154 KB static (not heap, but total RAM)
+  max_calls 5 -> 4            -17.6 KB heap (one fewer preallocated slot)
+  jb_max 500 -> ~120 ms       shrinks the ~16 KB/stream stream pool
+  mbedTLS 4 KB TLS records    -24.6 KB peak (measured)
+  Dropping pjsua-lib for raw pjmedia+pjsip would remove the 88 KB call
+  array + conference bridge overhead, at the cost of writing that glue.
+
+CODEC CPU RATIO (Scott's DSP-vs-MCU question; PJSIP's own G.722/G.711):
+Microbenchmark: encode+decode of one 10 ms frame, x86 -m32 -Os, under
+valgrind callgrind (instruction reads, Ir) and native wall-clock.
+  codec                         Ir/frame     us/frame (native)
+  G.722/16000                   219,481      28.24
+  G.711 PCMU, computed (default)  9,613       1.02
+  G.711 PCMA, computed (default)  9,853       1.10
+  G.711 PCMU, table-based         2,096       0.35
+  ratio G.722 / G.711 computed  = 22.8x (Ir), 27.7x (wall clock)
+  ratio G.722 / G.711 table     = 104.7x (Ir)
+INTERPRETATION: G.722 is the fixed cost (fixed-point, 24-tap QMF analysis
++ synthesis, full sub-band ADPCM, at 2x the sample rate of G.711).  The
+RATIO is governed entirely by how cheap G.711 is.  The 2007 "~55x on
+ARM9" figure is consistent with a TABLE-based G.711 (near-free lookups):
+the ratio lands between our 23x (computed) and 105x (table).  PJSIP's
+PJ_CONFIG_MINIMAL_SIZE preset sets PJMEDIA_HAS_ALAW_ULAW_TABLE 0, making
+G.711 computed and the ratio ~23x -- but that is a flash/RAM-vs-CPU knob:
+enabling the 2x 256-byte tables restores near-free G.711 and a ~100x ratio.
+For a DSP-vs-MCU decision (order of magnitude): one bidirectional G.722
+call = 1 encode + 1 decode per 10 ms frame = 219,481 Ir/frame = 21.9 MIr/s.
+Four G.722 calls ~= 87.8 MIr/s.  On an in-order M-class core near 1 IPC
+that is ~88 MHz-equivalent of pure codec work -- i.e. roughly a third to
+a half of a 200-250 MHz Cortex-M just for the four G.722 legs, before
+RTP/SRTP/jitter/mixing.  Four G.711 calls (computed) ~= 3.8 MIr/s;
+negligible.  This is the gap that motivates a DSP/HW codec path: G.722 in
+software is real load on an MCU; G.711 is not.
+
+EMBEDDED-TUNED VARIANT (measured, run-tuned5): PJSUA_MAX_BUDDIES 8 +
+mbedTLS 4 KB record buffers + --jb-max-size 200 ms, same mixed 4+1 scenario.
+  PEAK heap   = 842,652 B (822.9 KiB)   (stock mixed5 peak 890,532)
+  STEADY heap = 632,676 B (617.8 KiB)   (stock mixed5 steady 652,676)
+  47 s settled plateau t=69..115; codecs confirmed 2xG722 + 2xPCMA
+  bidirectional + 1 PCMA recvonly (held).
+  Tuning moved heap only ~20 KB steady / ~48 KB peak: buddies is STATIC
+  RAM (not heap); jb 500->200 ms trims the per-stream pool; 4 KB TLS is a
+  peak-only saving.  Heap is dominated by the 88 KB preallocated call
+  array + per-call INVITE/dialog/stream pools, which these knobs don't touch.
+
+CORRECTED FIT ANALYSIS -- prospect's exact scenario, STM32H563 (655,360 B):
+Static (.data+.bss) and heap (malloc) are ADDITIVE, separate memory.
+The 88 KB call array is on the heap (pjsua_var.calls is a pointer);
+buddy[256]=158 KB is in static .bss.  No double count.
+
+  config    static     heap-steady   TOTAL steady   heap-peak   TOTAL peak
+  --------  ---------   -----------   ------------   ---------   ----------
+  stock      225,188      652,676        877,864      890,532    1,115,720
+  tuned       71,428      632,676        704,104      842,652      914,080
+  (+ 5 thread stacks ~40 KB @ 8 KB default, + lwIP pools = prospect's side)
+
+vs 655,360 B (640 KB): tuned STEADY total 704 KB is ~49 KB OVER; peak
+totals are ~900 KB-1.1 MB.  => At the prospect's exact scenario, PJSIP
+does NOT fit 640 KB even tuned.  Realistic RAM need is ~0.9-1.1 MB.
+
+This CORRECTS the original report's Section 5, which modelled 4 single-
+codec G.722 calls (heap steady 561 KB) and concluded "fits with 22 KB
+spare after buddies=8".  The prospect's 4+1 MIXED scenario has ~92 KB
+more heap (the 5th stream + per-stream resamplers for the 8 kHz G.711
+ports on the 16 kHz bridge), so tuned total is 704 KB, not 633 KB.
+
+The 5th (recvonly) stream here is a SIP-signalled HELD call -- an UPPER
+BOUND; a raw RTP listener (no dialog/tsx, decode+jitter+SRTP only) would
+cost less.  Marginal cost of the 5th stream: stock 652,676 - 561,520
+(4-call g722) is not directly comparable (mixed vs single codec); within
+mixed5 the per-call steps are ~110-120 KB during setup, settling lower.
+
+BOTTOM LINE FOR THE PART DECISION:
+  - Flash: fine (~1.03 MiB of 2 MB).
+  - RAM at this scenario: ~0.9-1.1 MB needed; 640 KB is short by a wide
+    margin even after tuning.  Options: (a) a part with ~1 MB+ SRAM;
+    (b) drop below pjsua-lib to raw pjsip+pjmedia (removes the 88 KB call
+    array + conference bridge/resamplers, biggest single heap item);
+    (c) aggressive jitter-buffer + fewer preallocated calls; (d) a lighter
+    stack.  This is why libre's ~25 KB matters: it is a different class of
+    footprint, and if 640 KB is fixed, that gap decides the part number.
