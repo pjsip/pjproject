@@ -529,18 +529,21 @@ static pj_status_t oh264_codec_open(pjmedia_vid_codec *codec,
     if (eprm.iMaxBitrate != UNSPECIFIED_BIT_RATE &&
         eprm.iMaxBitrate < eprm.iTargetBitrate)
     {
-        if ((float)eprm.iMaxBitrate >= eprm.fMaxFrameRate) {
-            eprm.iTargetBitrate         = eprm.iMaxBitrate;
-            param->enc_fmt.det.vid.avg_bps = eprm.iMaxBitrate;
-        } else {
-            /* OpenH264 rejects a target below one bit per frame, which would
-             * fail codec open. Drop the ceiling instead of the whole stream.
-             */
-            PJ_LOG(3,(THIS_FILE, "Ignoring unusable max bitrate %d bps "
-                                 "(below %d fps)", eprm.iMaxBitrate,
-                                 (int)eprm.fMaxFrameRate));
-            eprm.iMaxBitrate            = UNSPECIFIED_BIT_RATE;
+        /* OpenH264 rejects a target below one bit per frame, so a ceiling
+         * that low cannot be honored as stated. Raise it to the lowest the
+         * encoder does accept, rather than dropping it and letting the
+         * stream run unconstrained.
+         */
+        if ((float)eprm.iMaxBitrate < eprm.fMaxFrameRate) {
+            PJ_LOG(3,(THIS_FILE, "Max bitrate %d bps is below the encoder "
+                                 "minimum, raising it to %d bps",
+                                 eprm.iMaxBitrate,
+                                 (int)eprm.fMaxFrameRate + 1));
+            eprm.iMaxBitrate            = (int)eprm.fMaxFrameRate + 1;
         }
+        eprm.iTargetBitrate             = eprm.iMaxBitrate;
+        param->enc_fmt.det.vid.avg_bps  = eprm.iMaxBitrate;
+        param->enc_fmt.det.vid.max_bps  = eprm.iMaxBitrate;
     }
     eprm.bEnableFrameSkip               = 1;
     eprm.bEnableDenoise                 = 0;
