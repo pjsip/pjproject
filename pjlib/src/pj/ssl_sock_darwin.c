@@ -446,28 +446,40 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     }
 
     /* SecureTransport.h documents kSSLProtocol3, kTLSProtocol1,
-     * kTLSProtocol11 and kTLSProtocol12 as legal for these two setters.
-     * TLS 1.3 is not among them, so clamp it to 1.2 rather than leaving the
-     * bound unset -- an unset bound falls back to the stack default, which is
-     * lower than whatever the caller asked for.
+     * kTLSProtocol11 and kTLSProtocol12 as legal for these two setters;
+     * TLS 1.3 is not among them.
      */
-    if (min_proto == kTLSProtocol13 || max_proto == kTLSProtocol13) {
-        PJ_LOG(3, (THIS_FILE, "TLS 1.3 is not supported by this backend, "
-                              "limiting to TLS 1.2"));
-        if (min_proto == kTLSProtocol13)
-            min_proto = kTLSProtocol12;
-        if (max_proto == kTLSProtocol13)
-            max_proto = kTLSProtocol12;
+    if (min_proto == kTLSProtocol13) {
+        /* The caller accepts nothing below TLS 1.3, which this backend
+         * cannot provide. Lowering the floor would complete a TLS 1.2
+         * handshake while pj_ssl_sock_get_info() still reported TLS 1.3,
+         * so refuse rather than downgrade the caller's policy silently.
+         */
+        PJ_LOG(3, (THIS_FILE, "TLS 1.3 is not supported by this backend"));
+        return PJ_EINVAL;
+    }
+
+    if (max_proto == kTLSProtocol13) {
+        /* A lower version is acceptable to the caller, so lowering the
+         * ceiling stays within the requested policy. This is the default
+         * configuration -- PJ_SSL_SOCK_PROTO_DEFAULT sets the TLS 1.3 bit --
+         * so it is a trace, not a warning.
+         */
+        PJ_LOG(5, (THIS_FILE, "TLS 1.3 is not supported by this backend, "
+                              "limiting the maximum version to TLS 1.2"));
+        max_proto = kTLSProtocol12;
     }
 
     if (min_proto != kSSLProtocolUnknown) {
         err = SSLSetProtocolVersionMin(ssl_ctx, min_proto);
-        if (err != noErr) pj_status_from_err(dssock, "SetVersionMin", err);
+        if (err != noErr)
+            return pj_status_from_err(dssock, "SetVersionMin", err);
     }
 
     if (max_proto != kSSLProtocolUnknown) {
         err = SSLSetProtocolVersionMax(ssl_ctx, max_proto);
-        if (err != noErr) pj_status_from_err(dssock, "SetVersionMax", err);
+        if (err != noErr)
+            return pj_status_from_err(dssock, "SetVersionMax", err);
     }
 
     /* SSL verification options */
