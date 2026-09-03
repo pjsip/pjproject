@@ -477,8 +477,8 @@ depends on peak behaviour.** Against the 655,360 B budget:
 | `PJSUA_MAX_BUDDIES 8`, setup-burst peak | 71,428 | 739,560 | 810,988 | over by ~156 KB |
 
 …and the total must still leave room for task stacks (5 threads here;
-budget 32–64 KB), newlib static data, and lwIP pools (their domain,
-typically 30–80 KB). So the honest engineering answer for the prospect:
+budget ~40 KB measured at 5 × 8 KB default, allow 32–64 KB), newlib
+static data, and lwIP pools (their domain; a typical estimate is 30–80 KB). So the honest engineering answer for the prospect:
 
 * The **feature set fits**, but RAM needs a deliberate configuration
   pass, not default settings. The levers, all quantified above:
@@ -489,12 +489,12 @@ typically 30–80 KB). So the honest engineering answer for the prospect:
   peak shaving: the ~136 KB setup transient scales with how many calls
   are *set up* inside a ~32 s window — 4 calls arriving staggered, or
   admission control on simultaneous setups, keeps peak near steady.
-* With buddy table fixed and either 4 KB TLS buffers + staggered setup
-  or a modest jitter-buffer reduction, steady-state sits ≈ 630 KB
-  worst-case-peak ≈ 660–700 KB — i.e. the last ~10 % has to come from
-  the tuning pass and stack/lwIP budgeting on their side. It is close
-  enough that we should say "yes, with a documented configuration, and
-  here is the measured breakdown", not an unconditional yes.
+* **Superseded by the measured result in §0.2.** This bullet's earlier
+  arithmetic (an *estimated* tuned steady of ≈ 630 KB) assumed the
+  4-call single-codec heap. The prospect's actual 4+1 mixed config was
+  since measured end-to-end: tuned steady **704 KB**, tuned peak
+  **843 KB** — over 640 KB. Treat §0.2's measured figures, not this
+  estimate, as the answer for his workload.
 
 The prospect's 5th receive-only RTP stream was **not** measured (pjsua
 cannot easily pin a decode-only stream); budget it at up to one call's
