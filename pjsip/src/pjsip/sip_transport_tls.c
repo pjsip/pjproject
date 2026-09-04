@@ -54,7 +54,20 @@ struct tls_listener
     pjsip_endpoint          *endpt;
     pjsip_tpmgr             *tpmgr;
     pj_ssl_sock_t           *ssock;
+
+    /* PJ_TRUE once a listener has been asked for, i.e. once
+     * pjsip_tls_transport_lis_start() has been entered. It stays set whether
+     * or not that start succeeded, and whether or not the socket was later
+     * lost, so a restart can tell "no listener was ever wanted here" from
+     * "one was wanted and is not up".
+     */
+    pj_bool_t                lis_wanted;
+
     pj_sockaddr              bound_addr;
+
+    /* Assign only via load_listener_cert(), never by calling one of the
+     * pj_ssl_cert_load_from_*() functions directly.
+     */
     pj_ssl_cert_t           *cert;
     pjsip_tls_setting        tls_setting;    
     unsigned                 async_cnt;    
@@ -513,6 +526,13 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_lis_start(pjsip_tpfactory *factory,
     struct tls_listener *listener = (struct tls_listener *)factory;
     pj_sockaddr *listener_addr = &listener->factory.local_addr;
 
+    /* A listener has been asked for. Record it before anything can fail, so
+     * that a first start which does not succeed -- credentials not yet
+     * available, for instance -- is still distinguishable from a factory
+     * that never wanted a listener at all.
+     */
+    listener->lis_wanted = PJ_TRUE;
+
     if (listener->ssock)
         return PJ_SUCCESS;
 
@@ -571,6 +591,124 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_lis_start(pjsip_tpfactory *factory,
     update_transport_info(listener);
 
     return status;    
+}
+
+
+/* Load the listener's credentials from its pjsip_tls_setting.
+ *
+ * This is the only place that assigns listener->cert. It wipes the previous
+ * credentials first and leaves the field NULL when a load fails, so a caller
+ * must come through here rather than invoking pj_ssl_cert_load_from_files2(),
+ * pj_ssl_cert_load_from_buffer(), pj_ssl_cert_load_from_store() or
+ * pj_ssl_cert_load_direct() for a listener itself.
+ *
+ * The four sources are cumulative rather than exclusive: each loader adds to
+ * the same pj_ssl_cert_t, which is why they are separate "if" blocks and not
+ * an if/else chain.
+ */
+/* Publish the address after a restart that could not bring the listener up.
+ * The listener is down either way, but the factory stays usable for outgoing
+ * transports, so the caller's error is what propagates and a failure here is
+ * only logged.
+ */
+static void publish_addr_after_failure(struct tls_listener *listener,
+                                       const pjsip_host_port *a_name)
+{
+    pj_status_t status = update_factory_addr(listener, a_name);
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(3,(listener->factory.obj_name, status,
+                     "Failed to update published address"));
+    }
+
+    update_transport_info(listener);
+}
+
+
+static pj_status_t load_listener_cert(struct tls_listener *listener)
+{
+    pj_pool_t *pool = listener->factory.pool;
+    pj_status_t status;
+
+    /* Wipe the previous credentials before replacing them */
+    if (listener->cert) {
+        pj_ssl_cert_wipe_keys(listener->cert);
+        listener->cert = NULL;
+    }
+
+    if (listener->tls_setting.cert_file.slen ||
+        listener->tls_setting.ca_list_file.slen ||
+        listener->tls_setting.ca_list_path.slen ||
+        listener->tls_setting.privkey_file.slen)
+    {
+        status = pj_ssl_cert_load_from_files2(pool,
+                        &listener->tls_setting.ca_list_file,
+                        &listener->tls_setting.ca_list_path,
+                        &listener->tls_setting.cert_file,
+                        &listener->tls_setting.privkey_file,
+                        &listener->tls_setting.password,
+                        &listener->cert);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(2,(listener->factory.obj_name, status,
+                         "Failed to set TLS credentials from files"));
+            goto on_error;
+        }
+    }
+
+    if (listener->tls_setting.ca_buf.slen ||
+        listener->tls_setting.cert_buf.slen ||
+        listener->tls_setting.privkey_buf.slen)
+    {
+        status = pj_ssl_cert_load_from_buffer(pool,
+                        &listener->tls_setting.ca_buf,
+                        &listener->tls_setting.cert_buf,
+                        &listener->tls_setting.privkey_buf,
+                        &listener->tls_setting.password,
+                        &listener->cert);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(2,(listener->factory.obj_name, status,
+                         "Failed to set TLS credentials from buffer"));
+            goto on_error;
+        }
+    }
+
+    if (listener->tls_setting.cert_lookup.type != PJ_SSL_CERT_LOOKUP_NONE &&
+        listener->tls_setting.cert_lookup.keyword.slen)
+    {
+        status = pj_ssl_cert_load_from_store(
+                                pool,
+                                &listener->tls_setting.cert_lookup,
+                                &listener->cert);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(2,(listener->factory.obj_name, status,
+                         "Failed to set TLS credentials from store"));
+            goto on_error;
+        }
+    }
+
+    if (listener->tls_setting.cert_direct.type != PJ_SSL_CERT_DIRECT_NONE) {
+        status = pj_ssl_cert_load_direct(
+                                pool,
+                                &listener->tls_setting.cert_direct,
+                                &listener->cert);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(2,(listener->factory.obj_name, status,
+                         "Failed to set direct TLS credentials"));
+            goto on_error;
+        }
+    }
+
+    return PJ_SUCCESS;
+
+on_error:
+    /* The sources are cumulative, so an earlier block may have succeeded.
+     * Do not leave a partially populated credential behind: callers test
+     * listener->cert to decide whether a reload is still needed.
+     */
+    if (listener->cert) {
+        pj_ssl_cert_wipe_keys(listener->cert);
+        listener->cert = NULL;
+    }
+    return status;
 }
 
 
@@ -639,68 +777,9 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
                             &lis_on_destroy);
 
     /* Set SSL/TLS credentials */
-
-    if (listener->tls_setting.cert_file.slen ||
-        listener->tls_setting.ca_list_file.slen ||
-        listener->tls_setting.ca_list_path.slen || 
-        listener->tls_setting.privkey_file.slen) 
-    {
-        status = pj_ssl_cert_load_from_files2(pool,
-                        &listener->tls_setting.ca_list_file,
-                        &listener->tls_setting.ca_list_path,
-                        &listener->tls_setting.cert_file,
-                        &listener->tls_setting.privkey_file,
-                        &listener->tls_setting.password,
-                        &listener->cert);
-        if (status != PJ_SUCCESS) {
-            PJ_PERROR(2,(listener->factory.obj_name, status,
-                         "Failed to set TLS credentials from files"));
-            goto on_error;
-        }
-    }
-    
-    if (listener->tls_setting.ca_buf.slen ||
-        listener->tls_setting.cert_buf.slen||
-        listener->tls_setting.privkey_buf.slen)
-    {
-        status = pj_ssl_cert_load_from_buffer(pool,
-                        &listener->tls_setting.ca_buf,
-                        &listener->tls_setting.cert_buf,
-                        &listener->tls_setting.privkey_buf,
-                        &listener->tls_setting.password,
-                        &listener->cert);
-        if (status != PJ_SUCCESS) {
-            PJ_PERROR(2,(listener->factory.obj_name, status,
-                         "Failed to set TLS credentials from buffer"));
-            goto on_error;    
-        }
-    }
-    
-    if (listener->tls_setting.cert_lookup.type != PJ_SSL_CERT_LOOKUP_NONE &&
-        listener->tls_setting.cert_lookup.keyword.slen)
-    {
-        status = pj_ssl_cert_load_from_store(
-                                pool,
-                                &listener->tls_setting.cert_lookup,
-                                &listener->cert);
-        if (status != PJ_SUCCESS) {
-            PJ_PERROR(2,(listener->factory.obj_name, status,
-                         "Failed to set TLS credentials from store"));
-            goto on_error;
-        }
-    }
-
-    if (listener->tls_setting.cert_direct.type != PJ_SSL_CERT_DIRECT_NONE) {
-        status = pj_ssl_cert_load_direct(
-                                pool,
-                                &listener->tls_setting.cert_direct,
-                                &listener->cert);
-        if (status != PJ_SUCCESS) {
-            PJ_PERROR(2,(listener->factory.obj_name, status,
-                         "Failed to set direct TLS credentials"));
-            goto on_error;
-        }
-    }
+    status = load_listener_cert(listener);
+    if (status != PJ_SUCCESS)
+        goto on_error;
 
     /* Register to transport manager */
     listener->endpt = endpt;
@@ -818,19 +897,45 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart2(pjsip_tpfactory *factory,
     pj_status_t status = PJ_SUCCESS;
     struct tls_listener *listener = (struct tls_listener *)factory;
 
-    /* Just update the published address if currently no listener */
-    if (!listener->ssock) {
+    /* A listener nobody ever asked for has nothing to bring back, so a
+     * restart can only mean updating the published address. That is the
+     * PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER case, where start2() never
+     * calls lis_start() at all.
+     *
+     * Once a listener has been asked for, no shortcut: having no socket then
+     * means either the first start failed or a later restart failed to bring
+     * it back, and the restart below is the only way to recover either.
+     */
+    if (!listener->lis_wanted) {
         PJ_LOG(3,(factory->obj_name,
-                      "TLS restart requested while no listener created, "
-                      "update the published address only"));
+                  "TLS restart requested while no listener created, "
+                  "update the published address only"));
 
         /* Update TLS settings if provided */
         if (opt) {
             /* Wipe old certificate keys for security */
             pjsip_tls_setting_wipe_keys(&listener->tls_setting);
-            
+
             /* Copy new settings */
-            pjsip_tls_setting_copy(listener->factory.pool, &listener->tls_setting, opt);
+            pjsip_tls_setting_copy(listener->factory.pool,
+                                   &listener->tls_setting, opt);
+        }
+
+        /* Keep the credentials in step with the settings, on the same
+         * condition the restart path below uses. Without this the listener
+         * would still hold the old ones, and the next
+         * pjsip_tls_transport_lis_start() -- the only way to bring a listener
+         * up in a PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER build -- would bind
+         * with them. Reloading when the listener holds none as well keeps a
+         * failed load recoverable through a plain restart, which carries no
+         * settings of its own.
+         */
+        if (opt || !listener->cert) {
+            status = load_listener_cert(listener);
+            if (status != PJ_SUCCESS) {
+                publish_addr_after_failure(listener, a_name);
+                return status;
+            }
         }
 
         status = update_factory_addr(listener, a_name);
@@ -838,77 +943,48 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart2(pjsip_tpfactory *factory,
             return status;
 
         /* Set transport info. */
-       update_transport_info(listener);
+        update_transport_info(listener);
 
-       return PJ_SUCCESS;
+        return PJ_SUCCESS;
     }
 
     /* Close the listener socket only; keep the factory registered so it
      * stays usable for outgoing transports if the restart below fails.
+     * It is already gone if an earlier restart failed to restart it.
      */
-    pj_ssl_sock_close(listener->ssock);
-    listener->ssock = NULL;
+    if (listener->ssock) {
+        pj_ssl_sock_close(listener->ssock);
+        listener->ssock = NULL;
+    }
 
     /* Update TLS settings if provided */
     if (opt) {
         /* Wipe old certificate keys for security */
         pjsip_tls_setting_wipe_keys(&listener->tls_setting);
-        
+
         /* Copy new settings */
-        pjsip_tls_setting_copy(listener->factory.pool, &listener->tls_setting, opt);
-        
-        /* Free old certificate if present */
-        if (listener->cert) {
-            pj_ssl_cert_wipe_keys(listener->cert);
-            listener->cert = NULL;
-        }
-        
-        /* Load new certificate based on updated settings */
-        if (listener->tls_setting.cert_file.slen ||
-            listener->tls_setting.ca_list_file.slen ||
-            listener->tls_setting.ca_list_path.slen || 
-            listener->tls_setting.privkey_file.slen) 
-        {
-            status = pj_ssl_cert_load_from_files2(listener->factory.pool,
-                            &listener->tls_setting.ca_list_file,
-                            &listener->tls_setting.ca_list_path,
-                            &listener->tls_setting.cert_file,
-                            &listener->tls_setting.privkey_file,
-                            &listener->tls_setting.password,
-                            &listener->cert);
-            if (status != PJ_SUCCESS) {
-                tls_perror(listener->factory.obj_name,
-                           "Failed to load certificate from files", status, NULL);
-                return status;
-            }
-        } else if (listener->tls_setting.ca_buf.slen ||
-                   listener->tls_setting.cert_buf.slen ||
-                   listener->tls_setting.privkey_buf.slen)
-        {
-            status = pj_ssl_cert_load_from_buffer(listener->factory.pool,
-                            &listener->tls_setting.ca_buf,
-                            &listener->tls_setting.cert_buf,
-                            &listener->tls_setting.privkey_buf,
-                            &listener->tls_setting.password,
-                            &listener->cert);
-            if (status != PJ_SUCCESS) {
-                tls_perror(listener->factory.obj_name,
-                           "Failed to load certificate from buffer", status, NULL);
-                return status;
-            }
-        } else if (listener->tls_setting.cert_lookup.type !=
-                                                    PJ_SSL_CERT_LOOKUP_NONE &&
-                   listener->tls_setting.cert_lookup.keyword.slen)
-        {
-            status = pj_ssl_cert_load_from_store(
-                                    listener->factory.pool,
-                                    &listener->tls_setting.cert_lookup,
-                                    &listener->cert);
-            if (status != PJ_SUCCESS) {
-                tls_perror(listener->factory.obj_name,
-                           "Failed to load certificate from store", status, NULL);
-                return status;
-            }
+        pjsip_tls_setting_copy(listener->factory.pool, &listener->tls_setting,
+                               opt);
+    }
+
+    /* Reload the credentials when the settings changed, and also when the
+     * listener is holding none: an earlier restart that failed to bring the
+     * listener back leaves listener->cert NULL, and a later restart carrying
+     * no new settings would otherwise start a listener with no server
+     * certificate.
+     */
+    if (opt || !listener->cert) {
+        status = load_listener_cert(listener);
+        if (status != PJ_SUCCESS) {
+            /* Publish the address anyway, as the lis_start() failure path
+             * below does. update_bound_addr() runs first because lis_start()
+             * would have run it before failing, and without it
+             * update_factory_addr() re-derives from the previous bind address
+             * and republishes the old one.
+             */
+            update_bound_addr(listener, local);
+            publish_addr_after_failure(listener, a_name);
+            return status;
         }
     }
 
@@ -918,8 +994,7 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart2(pjsip_tpfactory *factory,
                    "Unable to start listener after closing it", status, NULL);
 
         /* Update the published address anyway (client only) */
-        update_factory_addr(listener, a_name);
-        update_transport_info(listener);
+        publish_addr_after_failure(listener, a_name);
     }
 
     return status;
