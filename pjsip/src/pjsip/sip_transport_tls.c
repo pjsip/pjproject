@@ -606,6 +606,24 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_lis_start(pjsip_tpfactory *factory,
  * the same pj_ssl_cert_t, which is why they are separate "if" blocks and not
  * an if/else chain.
  */
+/* Publish the address after a restart that could not bring the listener up.
+ * The listener is down either way, but the factory stays usable for outgoing
+ * transports, so the caller's error is what propagates and a failure here is
+ * only logged.
+ */
+static void publish_addr_after_failure(struct tls_listener *listener,
+                                       const pjsip_host_port *a_name)
+{
+    pj_status_t status = update_factory_addr(listener, a_name);
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(3,(listener->factory.obj_name, status,
+                     "Failed to update published address"));
+    }
+
+    update_transport_info(listener);
+}
+
+
 static pj_status_t load_listener_cert(struct tls_listener *listener)
 {
     pj_pool_t *pool = listener->factory.pool;
@@ -632,7 +650,7 @@ static pj_status_t load_listener_cert(struct tls_listener *listener)
         if (status != PJ_SUCCESS) {
             PJ_PERROR(2,(listener->factory.obj_name, status,
                          "Failed to set TLS credentials from files"));
-            return status;
+            goto on_error;
         }
     }
 
@@ -649,7 +667,7 @@ static pj_status_t load_listener_cert(struct tls_listener *listener)
         if (status != PJ_SUCCESS) {
             PJ_PERROR(2,(listener->factory.obj_name, status,
                          "Failed to set TLS credentials from buffer"));
-            return status;
+            goto on_error;
         }
     }
 
@@ -663,7 +681,7 @@ static pj_status_t load_listener_cert(struct tls_listener *listener)
         if (status != PJ_SUCCESS) {
             PJ_PERROR(2,(listener->factory.obj_name, status,
                          "Failed to set TLS credentials from store"));
-            return status;
+            goto on_error;
         }
     }
 
@@ -675,11 +693,22 @@ static pj_status_t load_listener_cert(struct tls_listener *listener)
         if (status != PJ_SUCCESS) {
             PJ_PERROR(2,(listener->factory.obj_name, status,
                          "Failed to set direct TLS credentials"));
-            return status;
+            goto on_error;
         }
     }
 
     return PJ_SUCCESS;
+
+on_error:
+    /* The sources are cumulative, so an earlier block may have succeeded.
+     * Do not leave a partially populated credential behind: callers test
+     * listener->cert to decide whether a reload is still needed.
+     */
+    if (listener->cert) {
+        pj_ssl_cert_wipe_keys(listener->cert);
+        listener->cert = NULL;
+    }
+    return status;
 }
 
 
@@ -891,19 +920,21 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart2(pjsip_tpfactory *factory,
             pjsip_tls_setting_copy(listener->factory.pool,
                                    &listener->tls_setting, opt);
 
-            /* Keep the credentials in step with the settings. Without this
-             * the listener would still hold the old ones, and the next
-             * pjsip_tls_transport_lis_start() -- the only way to bring a
-             * listener up in a PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER
-             * build -- would bind with them.
-             */
+        }
+
+        /* Keep the credentials in step with the settings, on the same
+         * condition the restart path below uses. Without this the listener
+         * would still hold the old ones, and the next
+         * pjsip_tls_transport_lis_start() -- the only way to bring a listener
+         * up in a PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER build -- would bind
+         * with them. Reloading when the listener holds none as well keeps a
+         * failed load recoverable through a plain restart, which carries no
+         * settings of its own.
+         */
+        if (opt || !listener->cert) {
             status = load_listener_cert(listener);
             if (status != PJ_SUCCESS) {
-                /* Publish the new address anyway; the factory is still
-                 * usable for outgoing transports.
-                 */
-                update_factory_addr(listener, a_name);
-                update_transport_info(listener);
+                publish_addr_after_failure(listener, a_name);
                 return status;
             }
         }
@@ -946,12 +977,14 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart2(pjsip_tpfactory *factory,
     if (opt || !listener->cert) {
         status = load_listener_cert(listener);
         if (status != PJ_SUCCESS) {
-            /* Update the published address anyway, as the lis_start()
-             * failure path below does: the listener is down either way, and
-             * the factory stays usable for outgoing transports.
+            /* Publish the address anyway, as the lis_start() failure path
+             * below does. update_bound_addr() runs first because lis_start()
+             * would have run it before failing, and without it
+             * update_factory_addr() re-derives from the previous bind address
+             * and republishes the old one.
              */
-            update_factory_addr(listener, a_name);
-            update_transport_info(listener);
+            update_bound_addr(listener, local);
+            publish_addr_after_failure(listener, a_name);
             return status;
         }
     }
