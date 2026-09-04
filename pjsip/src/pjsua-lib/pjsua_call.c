@@ -2809,6 +2809,10 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
             }
             info->media[info->media_cnt].stream.vid.cap_dev = cap_dev;
         } else if (call_med->type == PJMEDIA_TYPE_TEXT) {
+        } else if (call_med->type == PJMEDIA_TYPE_UNKNOWN) {
+            /* Media that pjsua does not manage as a stream, e.g. app-managed
+             * T.38. Report it, the app needs to see the media it owns.
+             */
         } else {
             continue;
         }
@@ -6043,8 +6047,14 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
         call->opt = opt;
     }
 
-    /* Re-init media for the new remote offer before creating SDP */
+    /* Re-init media for the new remote offer before creating SDP. When the
+     * app answers the re-INVITE itself (async), it may accept media that
+     * pjsua does not manage (e.g. T.38), so such offer must not be rejected
+     * here as "no media".
+     */
+    call->offer_app_managed = async;
     status = apply_call_setting(call, &call->opt, offer);
+    call->offer_app_managed = PJ_FALSE;
     if (status != PJ_SUCCESS)
         goto on_return;
 

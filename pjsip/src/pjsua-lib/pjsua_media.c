@@ -2446,28 +2446,29 @@ void pjsua_media_prov_revert(pjsua_call_id call_id)
     call->med_prov_cnt = call->med_cnt;
 }
 
-
-/* Detect T.38 (image/udptl) media: app-managed, as pjmedia has no T.38
- * engine. Such a line is let through channel_init and treated as disabled
- * media so the app can answer it on its own UDPTL socket. */
-static pj_bool_t pjsua_sdp_media_is_udptl(const pjmedia_sdp_media *m)
-{
-    return (m && pj_stricmp2(&m->desc.media, "image") == 0 &&
-            pj_stricmp2(&m->desc.transport, "udptl") == 0);
-}
-
-static pj_bool_t pjsua_sdp_has_udptl(const pjmedia_sdp_session *sdp)
+/* Does the SDP have any media line with non-zero port? */
+static pj_bool_t sdp_has_active_media(const pjmedia_sdp_session *sdp)
 {
     unsigned i;
-    if (!sdp)
-        return PJ_FALSE;
+
     for (i = 0; i < sdp->media_count; ++i) {
-        if (pjsua_sdp_media_is_udptl(sdp->media[i]))
+        if (sdp->media[i]->desc.port != 0)
             return PJ_TRUE;
     }
     return PJ_FALSE;
 }
 
+/* Is the media type of the SDP media line one that pjsua manages as a stream
+ * (audio/video/text)? Anything else, e.g. T.38 image/udptl, is left to the
+ * application.
+ */
+static pj_bool_t is_managed_media(const pjmedia_sdp_media *m)
+{
+    pjmedia_type type = pjmedia_get_type(&m->desc.media);
+
+    return (type == PJMEDIA_TYPE_AUDIO || type == PJMEDIA_TYPE_VIDEO ||
+            type == PJMEDIA_TYPE_TEXT);
+}
 
 pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
                                      pjsip_role_e role,
@@ -2581,8 +2582,13 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
         sort_media(rem_sdp, &STR_TEXT, acc->cfg.use_srtp,
                    mtxtidx, &mtxtcnt, &mtottxtcnt);
 
-        if (maudcnt + mvidcnt + mtxtcnt == 0 && !pjsua_sdp_has_udptl(rem_sdp)) {
-            /* Expecting media, unless it is an app-managed T.38 offer. */
+        if (maudcnt + mvidcnt + mtxtcnt == 0 &&
+            !(call->offer_app_managed && sdp_has_active_media(rem_sdp)))
+        {
+            /* Expecting media in the offer, unless the app is answering the
+             * offer itself and may accept active media that pjsua does not
+             * manage (e.g. T.38), see pjsua_media_channel_update().
+             */
             if (sip_err_code)
                 *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
             status = PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_NOT_ACCEPTABLE_HERE);
@@ -2900,16 +2906,8 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
                 pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_DISABLED);
             }
 
-            /* Force app-managed T.38 to NONE so the media update won't build
-             * an audio stream on it (a stale AUDIO type would assert on
-             * sa_family); the update then reports it as disabled media. */
-            if (rem_sdp && mi < rem_sdp->media_count &&
-                pjsua_sdp_media_is_udptl(rem_sdp->media[mi]))
-            {
-                call_med->type = PJMEDIA_TYPE_NONE;
-            }
             /* Put media type just for info if not yet defined */
-            else if (call_med->type == PJMEDIA_TYPE_NONE)
+            if (call_med->type == PJMEDIA_TYPE_NONE)
                 call_med->type = media_type;
         }
     }
@@ -4793,6 +4791,37 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 #endif
         }
 
+        /* Media not managed by pjsua (e.g. T.38 image/udptl) is left to the
+         * app. The remote media type is the authoritative one here: the slot
+         * may still carry the type of a previous negotiation (e.g. audio
+         * re-offered as image), and the local SDP for a disabled slot is
+         * generated from that stale type, so match against the remote offer.
+         * Not an error: stop any stream still on the slot (while call_med->type
+         * is still that stale type, as stop_media_stream() dispatches on it),
+         * release our transport, and report the slot as disabled media. If the
+         * (app-supplied) answer keeps the line active, count it as media so the
+         * call is not dropped for having no media.
+         */
+        if (!is_managed_media(remote_sdp->media[mi])) {
+            stop_media_stream(call, mi, PJ_FALSE);
+            if (call_med->tp) {
+                pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_NULL);
+                pjmedia_transport_close(call_med->tp);
+                call_med->tp = call_med->tp_orig = NULL;
+            }
+            call_med->type = PJMEDIA_TYPE_UNKNOWN;
+            call_med->state = PJSUA_CALL_MEDIA_NONE;
+            call_med->dir = PJMEDIA_DIR_NONE;
+            if (local_sdp->media[mi]->desc.port != 0) {
+                PJ_LOG(4,(THIS_FILE, "Call %d: media %d (%.*s) is left to "
+                          "the application", call_id, mi,
+                          (int)remote_sdp->media[mi]->desc.media.slen,
+                          remote_sdp->media[mi]->desc.media.ptr));
+                got_media = PJ_TRUE;
+            }
+            continue;
+        }
+
         /* Apply media update action */
         if (call_med->type==PJMEDIA_TYPE_AUDIO) {
             status = apply_med_update(call_med, &local_sdp, remote_sdp,
@@ -4812,26 +4841,6 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
                                       &need_renego_sdp);
             if (status != PJ_SUCCESS)
                 goto on_check_med_status;
-        } else if (mi < remote_sdp->media_count &&
-                   pjsua_sdp_media_is_udptl(remote_sdp->media[mi]))
-        {
-            /* App-managed T.38: no pjsua stream to build. Tear down leftovers
-             * and mark the slot disabled (not error) so the call isn't
-             * dropped. */
-            stop_media_stream(call, mi);
-            if (call_med->tp) {
-                pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_NULL);
-                pjmedia_transport_close(call_med->tp);
-                call_med->tp = call_med->tp_orig = NULL;
-            }
-            call_med->state = PJSUA_CALL_MEDIA_NONE;
-            call_med->dir = PJMEDIA_DIR_NONE;
-
-            /* Count active app-managed media so the call stays answerable. */
-            if (local_sdp->media[mi]->desc.port != 0)
-                got_media = PJ_TRUE;
-
-            continue;
         } else {
             status = PJMEDIA_EUNSUPMEDIATYPE;
         }
