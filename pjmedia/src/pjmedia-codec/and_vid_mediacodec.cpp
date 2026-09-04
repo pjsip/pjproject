@@ -231,9 +231,9 @@ typedef struct and_media_codec_data
     pjmedia_rect_size            new_size;
     int                          new_stride;
 
-    pj_bool_t                    dec_fatal_error;/**< Decoder hit a fatal,
-                                                       unrecoverable error and
-                                                       must be recreated.    */
+    volatile pj_bool_t           dec_fatal_error;/**< Decoder hit an error
+                                                       that leaves it unusable
+                                                       and must be recreated.*/
 } and_media_codec_data;
 
 /* Custom callbacks. */
@@ -364,21 +364,20 @@ static void and_med_on_error(AMediaCodec *codec,
     if (codec != and_media_data->dec)
         return;
 
-    /* Per NDK docs, if the action code is neither recoverable nor transient,
-     * the error is fatal and the codec instance must be deleted and
-     * recreated. Just raise a flag here; the actual AMediaCodec calls are
-     * deferred to the decode path since this callback runs on MediaCodec's
-     * own internal thread.
+    /* Per NDK docs, a transient error may simply be retried later. Any other
+     * action code leaves the codec in Error state, recoverable only by
+     * reconfiguring (recoverable) or by deleting and recreating (fatal) the
+     * instance; recreate_decoder() covers both. Just raise a flag here, the
+     * actual AMediaCodec calls are deferred to the decode path since this
+     * callback runs on MediaCodec's own internal thread. The guard must be
+     * the runtime one, __ANDROID_API__ is only the compile-time minimum.
      */
-#if __ANDROID_API__ >= 28
-    if (!AMediaCodecActionCode_isRecoverable(actionCode) &&
-        !AMediaCodecActionCode_isTransient(actionCode))
-    {
-        and_media_data->dec_fatal_error = PJ_TRUE;
+    if (API_AT_LEAST(28)) {
+        if (AMediaCodecActionCode_isTransient(actionCode))
+            return;
     }
-#else
+
     and_media_data->dec_fatal_error = PJ_TRUE;
-#endif
 }
 
 /* Custom callback implementation. */
@@ -647,14 +646,35 @@ static pj_status_t recreate_decoder(and_media_codec_data *and_media_data)
                                                      &and_med_on_output_avail,
                                                      &and_med_on_format_changed,
                                                      &and_med_on_error};
+        media_status_t am_status;
 
-        AMediaCodec_setAsyncNotifyCallback(and_media_data->dec, async_cb,
-                                           and_media_data);
+        /* The whole decode path is fed by these callbacks, so a failure here
+         * would leave the new instance permanently mute.
+         */
+        am_status = AMediaCodec_setAsyncNotifyCallback(and_media_data->dec,
+                                                       async_cb,
+                                                       and_media_data);
+        if (am_status != AMEDIA_OK) {
+            PJ_LOG(4, (THIS_FILE, "Decoder setAsyncNotifyCallback failed, "
+                       "status=%d", am_status));
+            return PJMEDIA_CODEC_EFAILED;
+        }
     }
 
+    /* Buffer indices of the deleted instance are meaningless now. */
+    and_media_data->dec_input_buf = NULL;
+    and_media_data->dec_input_buf_len = 0;
+    and_media_data->dec_input_buf_idx = 0;
+    and_media_data->dec_input_buf_max_size = 0;
+
+    /* Clear before configure/start, so an error reported by the new instance
+     * while it is being set up is not overwritten afterwards.
+     */
+    and_media_data->dec_fatal_error = PJ_FALSE;
+
     status = configure_decoder(and_media_data);
-    if (status == PJ_SUCCESS)
-        and_media_data->dec_fatal_error = PJ_FALSE;
+    if (status != PJ_SUCCESS)
+        and_media_data->dec_fatal_error = PJ_TRUE;
 
     return status;
 }
