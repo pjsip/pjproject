@@ -8,8 +8,11 @@ import inc_const as const
 
 PJSUA = ["--null-audio --max-calls=1 --auto-answer=200 --no-tcp"]
 
+MED0_UNMANAGED = r"Call [0-9]+ media 0 \[type=unknown\], status is None"
+MED1_AUDIO     = r"Call [0-9]+ media 1 \[type=audio\], status is Active"
+
 PJSUA_EXPECTS = [[0, const.MEDIA_ACTIVE, ""],
-                 [0, r"Call [0-9]+ media 0 \[type=unknown\], status is None", ""],
-                 [0, r"Call [0-9]+ media 1 \[type=audio\], status is Active", ""],
+                 [0, MED0_UNMANAGED, ""],
+                 [0, MED1_AUDIO, ""],
                  [0, const.STATE_DISCONNECTED, ""]
                 ]
