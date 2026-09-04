@@ -358,58 +358,18 @@ static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
  * still start for a configuration that every connection subsequently
  * rejects -- the check fails open, never closed.
  */
-static pj_status_t ssl_init_server_ctx(pj_ssl_sock_t *ssock)
+/* Map ssock->param.proto onto the Secure Transport version bounds.
+ *
+ * Returns PJ_EINVAL when the requested range cannot be served at all, so an
+ * unusable configuration can be rejected once at listener setup instead of on
+ * every accepted connection.
+ */
+static pj_status_t get_proto_bounds(pj_ssl_sock_t *ssock,
+                                    SSLProtocol *p_min,
+                                    SSLProtocol *p_max)
 {
-    darwinssl_sock_t *dssock = (darwinssl_sock_t *)ssock;
-    SecIdentityRef identity = NULL;
-    pj_status_t status;
-
-    pj_assert(ssock->is_server && !ssock->parent);
-
-    if (!ssock->cert)
-        return PJ_SUCCESS;
-
-    status = create_identity_from_cert(dssock, ssock->cert, &identity);
-    if (identity)
-        CFRelease(identity);
-
-    return status;
-}
-
-/* Create and initialize new Darwin SSL context and instance */
-static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
-{
-    darwinssl_sock_t *dssock = (darwinssl_sock_t *)ssock;
-    SSLContextRef ssl_ctx;
     SSLProtocol min_proto = kSSLProtocolUnknown;
     SSLProtocol max_proto = kSSLProtocolUnknown;
-    OSStatus err;
-    pj_status_t status;
-
-   /* Initialize input circular buffer */
-    status = circ_init(ssock->pool->factory, &ssock->ssl_read_buf, 8192);
-    if (status != PJ_SUCCESS)
-        return status;
-
-    /* Initialize output circular buffer */
-    status = circ_init(ssock->pool->factory, &ssock->ssl_write_buf, 8192);
-    if (status != PJ_SUCCESS)
-        return status;
-
-    /* Create SSL context */
-    ssl_ctx = SSLCreateContext(NULL, (ssock->is_server? kSSLServerSide:
-                                      kSSLClientSide), kSSLStreamType);
-    if (ssl_ctx == NULL)
-        return PJ_ENOMEM;
-
-    dssock->ssl_ctx = ssl_ctx;
-
-    /* Set certificate */
-    if (ssock->cert)  {
-        status = set_cert(dssock, ssock->cert);
-        if (status != PJ_SUCCESS)
-            return status;
-    }
 
     /* Set min and max protocol version */
     if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT) {
@@ -469,6 +429,81 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
                               "limiting the maximum version to TLS 1.2"));
         max_proto = kTLSProtocol12;
     }
+
+    *p_min = min_proto;
+    *p_max = max_proto;
+
+    return PJ_SUCCESS;
+}
+
+
+static pj_status_t ssl_init_server_ctx(pj_ssl_sock_t *ssock)
+{
+    darwinssl_sock_t *dssock = (darwinssl_sock_t *)ssock;
+    SecIdentityRef identity = NULL;
+    SSLProtocol min_proto, max_proto;
+    pj_status_t status;
+
+    pj_assert(ssock->is_server && !ssock->parent);
+
+    /* Reject a protocol range this backend cannot serve here, once, rather
+     * than once per accepted connection in ssl_create(). A listener asking
+     * for TLS 1.3 alone would otherwise start successfully and then fail
+     * every inbound handshake, emitting a log line any unauthenticated peer
+     * can trigger while the operator never sees a startup error.
+     */
+    status = get_proto_bounds(ssock, &min_proto, &max_proto);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    if (!ssock->cert)
+        return PJ_SUCCESS;
+
+    status = create_identity_from_cert(dssock, ssock->cert, &identity);
+    if (identity)
+        CFRelease(identity);
+
+    return status;
+}
+
+/* Create and initialize new Darwin SSL context and instance */
+static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
+{
+    darwinssl_sock_t *dssock = (darwinssl_sock_t *)ssock;
+    SSLContextRef ssl_ctx;
+    SSLProtocol min_proto = kSSLProtocolUnknown;
+    SSLProtocol max_proto = kSSLProtocolUnknown;
+    OSStatus err;
+    pj_status_t status;
+
+   /* Initialize input circular buffer */
+    status = circ_init(ssock->pool->factory, &ssock->ssl_read_buf, 8192);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    /* Initialize output circular buffer */
+    status = circ_init(ssock->pool->factory, &ssock->ssl_write_buf, 8192);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    /* Create SSL context */
+    ssl_ctx = SSLCreateContext(NULL, (ssock->is_server? kSSLServerSide:
+                                      kSSLClientSide), kSSLStreamType);
+    if (ssl_ctx == NULL)
+        return PJ_ENOMEM;
+
+    dssock->ssl_ctx = ssl_ctx;
+
+    /* Set certificate */
+    if (ssock->cert)  {
+        status = set_cert(dssock, ssock->cert);
+        if (status != PJ_SUCCESS)
+            return status;
+    }
+
+    status = get_proto_bounds(ssock, &min_proto, &max_proto);
+    if (status != PJ_SUCCESS)
+        return status;
 
     if (min_proto != kSSLProtocolUnknown) {
         err = SSLSetProtocolVersionMin(ssl_ctx, min_proto);
