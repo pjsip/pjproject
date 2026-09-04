@@ -2739,6 +2739,28 @@ PJ_DEF(pj_status_t) pj_ssl_cert_load_direct(
 
     cert->direct = *cert_direct;
 
+    /* For OpenSSL version >= 3.0, add ref EVP_PKEY & X509.
+     *
+     * The credential now holds its own reference, which pj_ssl_cert_wipe_keys()
+     * releases through ssl_free_cert(). Without this the credential borrows the
+     * application's reference while the wipe still releases one, so wiping a
+     * credential loaded this way would drop the application's last reference and
+     * leave pj_ssl_cert_direct pointing at freed objects.
+     */
+#   if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
+    if ((cert->direct.type & PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY) &&
+        cert->direct.privkey)
+    {
+        EVP_PKEY_up_ref(cert->direct.privkey);
+    }
+
+    if ((cert->direct.type & PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT) &&
+        cert->direct.cert)
+    {
+        X509_up_ref(cert->direct.cert);
+    }
+#   endif
+
     *p_cert = cert;
 
     return PJ_SUCCESS;

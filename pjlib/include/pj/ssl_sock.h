@@ -457,10 +457,14 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_store(
  *
  * Application should maintain the objects lifetime until the credential
  * instance is no longer used (e.g: SSL socket is destroyed).
- * In OpenSSL version 3, the SSL socket utilizes the reference counting
- * feature to manage object lifetimes. Specifically,
- * pj_ssl_sock_set_certificate() increments the reference count and
- * pj_ssl_sock_close() decrements it.
+ * In OpenSSL version 3, reference counting is used to manage object
+ * lifetimes, and every holder takes its own reference: this function
+ * increments the count for the credential it fills in and
+ * pj_ssl_cert_wipe_keys() decrements it again, while
+ * pj_ssl_sock_set_certificate() increments it for the socket and
+ * pj_ssl_sock_close() decrements that one. The application's own reference
+ * is never consumed by any of them, so it remains the application's to
+ * release.
  *
  * @param pool          The pool.
  * @param cert_direct   The backend specific objects.
@@ -513,6 +517,11 @@ PJ_DECL(pj_status_t) pj_ssl_cert_get_verify_status_strings(
 
 /** 
  * Wipe out the keys in the SSL certificate. 
+ *
+ * For a credential carrying backend specific objects (see
+ * pj_ssl_cert_load_direct()), this also releases the reference that the
+ * credential holds on them. It does not touch the application's own
+ * reference.
  *
  * @param cert          The SSL certificate. 
  *
