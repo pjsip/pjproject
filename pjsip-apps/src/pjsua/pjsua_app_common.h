@@ -245,6 +245,7 @@ void cli_on_stopped(pj_bool_t restart, int argc, char **argv);
 void legacy_on_stopped(pj_bool_t restart);
 
 /** Pjsua cli method **/
+void cli_setup_log_writer(pjsua_logging_config *log_cfg);
 pj_status_t cli_init(void);
 pj_status_t cli_main(pj_bool_t wait_telnet_cli);
 void cli_destroy(void);
