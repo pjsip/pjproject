@@ -69,6 +69,14 @@
 #define MAX_RX_WIDTH            1280
 #define MAX_RX_HEIGHT           800
 
+/* Minimum interval between two decoder recreation attempts, and the maximum
+ * number of consecutive failed attempts before giving up. Re-acquiring a
+ * reclaimed codec can keep failing for as long as the reclaiming app holds
+ * it, so the attempts must not be made once per decoded frame.
+ */
+#define RECREATE_DEC_INTERVAL   1000
+#define RECREATE_DEC_MAX_RETRY  30
+
 /* Maximum duration from one key frame to the next (in seconds). */
 #define KEYFRAME_INTERVAL       1
 
@@ -202,7 +210,7 @@ typedef struct and_media_codec_data
     void                        *ex_data;
 
     /* Encoder state */
-    AMediaCodec                 *enc;
+    AMediaCodec         * volatile enc;
     unsigned                     enc_input_size;
     pj_uint8_t                  *enc_frame_whole;
     unsigned                     enc_frame_size;
@@ -211,7 +219,7 @@ typedef struct and_media_codec_data
     int                          enc_output_buf_idx;
 
     /* Decoder state */
-    AMediaCodec                 *dec;
+    AMediaCodec         * volatile dec;
     pj_uint8_t                  *dec_buf;
     pj_uint8_t                  *dec_input_buf;
     unsigned                     dec_input_buf_len;
@@ -230,6 +238,14 @@ typedef struct and_media_codec_data
     pj_bool_t                    format_changed;
     pjmedia_rect_size            new_size;
     int                          new_stride;
+
+    volatile pj_bool_t           dec_fatal_error;/**< Decoder hit an error
+                                                       that leaves it unusable
+                                                       and must be recreated.*/
+    pj_timestamp                 dec_recreate_time;/**< Last recreation
+                                                        attempt.            */
+    unsigned                     dec_recreate_cnt;/**< Consecutive failed
+                                                       recreation attempts. */
 } and_media_codec_data;
 
 /* Custom callbacks. */
@@ -271,11 +287,22 @@ static void and_med_on_input_avail(AMediaCodec *codec,
     and_med_buf_info buf_info;
     pj_atomic_queue_t *buf_queue;
 
+    /* Match against the currently live enc/dec instance explicitly, rather
+     * than assuming "not enc => dec". The decoder can be recreated
+     * mid-stream (see recreate_decoder()), so ->dec may be NULL here, and a
+     * callback for the encoder must not be misfiled into the decoder queue.
+     * Note that this cannot by itself reject a callback of an already
+     * deleted instance, as the address may be reused. What guarantees that
+     * is destroy_codec_instance(), which unregisters the callback before
+     * deleting the instance.
+     */
     pj_bzero(&buf_info, sizeof(buf_info));
     if (codec == and_media_data->enc) {
         buf_queue = and_media_data->enc_avail_input_buf;
-    } else {
+    } else if (codec == and_media_data->dec) {
         buf_queue = and_media_data->dec_avail_input_buf;
+    } else {
+        return;
     }
     buf_info.index = index;
     pj_atomic_queue_put(buf_queue, &buf_info);
@@ -293,11 +320,14 @@ static void and_med_on_output_avail(AMediaCodec *codec,
     and_med_buf_info buf_info;
     pj_atomic_queue_t *buf_queue;
 
+    /* See and_med_on_input_avail() for why this must match explicitly. */
     pj_bzero(&buf_info, sizeof(buf_info));
     if (codec == and_media_data->enc) {
         buf_queue = and_media_data->enc_avail_output_buf;
-    } else {
+    } else if (codec == and_media_data->dec) {
         buf_queue = and_media_data->dec_avail_output_buf;
+    } else {
+        return;
     }
     buf_info.index = index;
     buf_info.size = bufferInfo->size;
@@ -345,6 +375,24 @@ static void and_med_on_error(AMediaCodec *codec,
                         "[%s] On Media error : err[%d] code[%d] msg[%s]\r\n",
                         (codec==and_media_data->enc)?"encoder":"decoder", error,
                         actionCode, detail);
+
+    if (codec != and_media_data->dec)
+        return;
+
+    /* Per NDK docs, a transient error may simply be retried later. Any other
+     * action code leaves the codec in Error state, recoverable only by
+     * reconfiguring (recoverable) or by deleting and recreating (fatal) the
+     * instance; recreate_decoder() covers both. Just raise a flag here, the
+     * actual AMediaCodec calls are deferred to the decode path since this
+     * callback runs on MediaCodec's own internal thread. The guard must be
+     * the runtime one, __ANDROID_API__ is only the compile-time minimum.
+     */
+    if (API_AT_LEAST(28)) {
+        if (AMediaCodecActionCode_isTransient(actionCode))
+            return;
+    }
+
+    and_media_data->dec_fatal_error = PJ_TRUE;
 }
 
 /* Custom callback implementation. */
@@ -566,6 +614,134 @@ static pj_status_t configure_decoder(and_media_codec_data *and_media_data) {
         return PJMEDIA_CODEC_EFAILED;
     }
     return PJ_SUCCESS;
+}
+
+/* Delete a codec instance. The async callback is unregistered first, otherwise
+ * a callback already dispatched by MediaCodec's own thread may still reference
+ * the codec data after this returns.
+ *
+ * Set stop to PJ_FALSE if the instance has not been started or is already in
+ * the Error state, where stop() would just return an error after a needless
+ * round trip to the codec's looper.
+ */
+static void destroy_codec_instance(AMediaCodec * volatile *codec,
+                                   pj_bool_t stop)
+{
+    if (!*codec)
+        return;
+
+    if (API_AT_LEAST(28)) {
+        AMediaCodecOnAsyncNotifyCallback null_cb = {NULL, NULL, NULL, NULL};
+
+        /* The NULL userdata is required, not just tidiness: the dispatcher
+         * only skips the callback if both it and the userdata are NULL.
+         */
+        AMediaCodec_setAsyncNotifyCallback(*codec, null_cb, NULL);
+    }
+    if (stop)
+        AMediaCodec_stop(*codec);
+
+    AMediaCodec_delete(*codec);
+    *codec = NULL;
+}
+
+/* Recreate the decoder from scratch after an AMediaCodec error that leaves it
+ * in Error state (see and_med_on_error()). A plain flush/restart is not enough
+ * per the NDK docs, the codec instance itself has to be deleted and recreated.
+ */
+static pj_status_t do_recreate_decoder(and_media_codec_data *and_media_data)
+{
+    and_med_buf_info buf_info;
+    pj_str_t *dec_name;
+    pj_status_t status;
+
+    PJ_LOG(3, (THIS_FILE, "Recreating decoder after codec error"));
+
+    destroy_codec_instance(&and_media_data->dec, PJ_FALSE);
+
+    /* Buffer indices of the deleted instance are meaningless now. */
+    and_media_data->dec_input_buf = NULL;
+    and_media_data->dec_input_buf_len = 0;
+    and_media_data->dec_input_buf_idx = 0;
+    and_media_data->dec_input_buf_max_size = 0;
+
+    /* Discard any buffer indices left over from the old codec instance. */
+    while (pj_atomic_queue_get(and_media_data->dec_avail_input_buf,
+                               &buf_info) == PJ_SUCCESS)
+    {}
+    while (pj_atomic_queue_get(and_media_data->dec_avail_output_buf,
+                               &buf_info) == PJ_SUCCESS)
+    {}
+
+    dec_name = and_media_codec[and_media_data->codec_idx].decoder_name;
+    and_media_data->dec = AMediaCodec_createCodecByName(dec_name->ptr);
+    if (!and_media_data->dec) {
+        PJ_LOG(4, (THIS_FILE, "Failed recreating decoder: %s", dec_name->ptr));
+        return PJMEDIA_CODEC_EFAILED;
+    }
+
+    if (API_AT_LEAST(28)) {
+        AMediaCodecOnAsyncNotifyCallback async_cb = {&and_med_on_input_avail,
+                                                     &and_med_on_output_avail,
+                                                     &and_med_on_format_changed,
+                                                     &and_med_on_error};
+        media_status_t am_status;
+
+        /* The whole decode path is fed by these callbacks, so a failure here
+         * would leave the new instance permanently mute.
+         */
+        am_status = AMediaCodec_setAsyncNotifyCallback(and_media_data->dec,
+                                                       async_cb,
+                                                       and_media_data);
+        if (am_status != AMEDIA_OK) {
+            PJ_LOG(4, (THIS_FILE, "Decoder setAsyncNotifyCallback failed, "
+                       "status=%d", am_status));
+            return PJMEDIA_CODEC_EFAILED;
+        }
+    }
+
+    /* Clear before configure/start, so an error reported by the new instance
+     * while it is being set up is not overwritten afterwards.
+     */
+    and_media_data->dec_fatal_error = PJ_FALSE;
+
+    status = configure_decoder(and_media_data);
+    if (status != PJ_SUCCESS)
+        and_media_data->dec_fatal_error = PJ_TRUE;
+
+    return status;
+}
+
+/* Rate limit the recreation, see RECREATE_DEC_INTERVAL. Failure just leaves
+ * the fatal flag set, so the stream reports no output for the frame.
+ */
+static pj_status_t recreate_decoder(and_media_codec_data *and_media_data)
+{
+    pj_timestamp now;
+    pj_status_t status;
+
+    if (and_media_data->dec_recreate_cnt >= RECREATE_DEC_MAX_RETRY)
+        return PJMEDIA_CODEC_EFAILED;
+
+    pj_get_timestamp(&now);
+    if (and_media_data->dec_recreate_cnt > 0 &&
+        pj_elapsed_msec(&and_media_data->dec_recreate_time, &now) <
+            RECREATE_DEC_INTERVAL)
+    {
+        return PJMEDIA_CODEC_EFAILED;
+    }
+    and_media_data->dec_recreate_time = now;
+    ++and_media_data->dec_recreate_cnt;
+
+    status = do_recreate_decoder(and_media_data);
+    if (status == PJ_SUCCESS) {
+        and_media_data->dec_recreate_cnt = 0;
+    } else if (and_media_data->dec_recreate_cnt >= RECREATE_DEC_MAX_RETRY) {
+        PJ_LOG(2, (THIS_FILE, "Giving up recreating the decoder after %d "
+                   "failed attempts", RECREATE_DEC_MAX_RETRY));
+    }
+
+    return status;
 }
 
 PJ_DEF(pj_status_t) pjmedia_codec_and_media_vid_init(
@@ -1013,6 +1189,12 @@ static pj_status_t and_media_alloc_codec(pjmedia_vid_codec_factory *factory,
     return PJ_SUCCESS;
 
 on_error:
+    /* Nothing has been started yet, so skip stop() before deleting. The
+     * teardown in and_media_dealloc_codec() then just no-ops on the codecs
+     * and goes on to destroy the queues.
+     */
+    destroy_codec_instance(&and_media_data->enc, PJ_FALSE);
+    destroy_codec_instance(&and_media_data->dec, PJ_FALSE);
     and_media_dealloc_codec(factory, codec);
     return PJMEDIA_CODEC_EFAILED;
 }
@@ -1027,22 +1209,27 @@ static pj_status_t and_media_dealloc_codec(pjmedia_vid_codec_factory *factory,
     PJ_UNUSED_ARG(factory);
 
     and_media_data = (and_media_codec_data*) codec->codec_data;
-    if (and_media_data->enc) {
-        AMediaCodec_stop(and_media_data->enc);
-        AMediaCodec_delete(and_media_data->enc);
-        and_media_data->enc = NULL;
+
+    /* The queues are not allocated from the pool, so they must be destroyed
+     * even when the codec instance itself is already gone, e.g. after a
+     * failed recreation left ->dec NULL.
+     */
+    destroy_codec_instance(&and_media_data->enc, PJ_TRUE);
+    if (and_media_data->enc_avail_input_buf) {
         pj_atomic_queue_destroy(and_media_data->enc_avail_input_buf);
         and_media_data->enc_avail_input_buf = NULL;
+    }
+    if (and_media_data->enc_avail_output_buf) {
         pj_atomic_queue_destroy(and_media_data->enc_avail_output_buf);
         and_media_data->enc_avail_output_buf = NULL;
     }
 
-    if (and_media_data->dec) {
-        AMediaCodec_stop(and_media_data->dec);
-        AMediaCodec_delete(and_media_data->dec);
-        and_media_data->dec = NULL;
+    destroy_codec_instance(&and_media_data->dec, PJ_TRUE);
+    if (and_media_data->dec_avail_input_buf) {
         pj_atomic_queue_destroy(and_media_data->dec_avail_input_buf);
         and_media_data->dec_avail_input_buf = NULL;
+    }
+    if (and_media_data->dec_avail_output_buf) {
         pj_atomic_queue_destroy(and_media_data->dec_avail_output_buf);
         and_media_data->dec_avail_output_buf = NULL;
     }
@@ -1543,6 +1730,13 @@ static pj_status_t and_media_codec_decode(pjmedia_vid_codec *codec,
     PJ_ASSERT_RETURN(output->buf, PJ_EINVAL);
 
     and_media_data = (and_media_codec_data*) codec->codec_data;
+
+    if (and_media_data->dec_fatal_error) {
+        status = recreate_decoder(and_media_data);
+        if (status != PJ_SUCCESS)
+            return status;
+    }
+
     and_media_data->dec_has_output_frame = PJ_FALSE;
     and_media_data->dec_input_buf = NULL;
     and_media_data->dec_input_buf_len = 0;
