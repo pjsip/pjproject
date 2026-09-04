@@ -141,8 +141,7 @@ typedef void* (pjsip_parse_uri_func)(pj_scanner *scanner, pj_pool_t *pool,
 
 /**
  * Register header parser handler. The parser handler MUST follow the 
- * specification of header parser handler function. New registration 
- * overwrites previous registration with the same name.
+ * specification of header parser handler function.
  *
  * @param hname         The header name.
  * @param hshortname    The short header name or NULL.
