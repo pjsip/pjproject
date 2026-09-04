@@ -31,6 +31,7 @@
 #include <pjmedia/rtp.h>
 #include <pjmedia/sdp_neg.h>
 #include <pjmedia/transport.h>
+#include <pjmedia/transport_ice.h>
 #include <pjmedia/txt_stream.h>
 
 #define THIS_FILE "txt_stream.c"
@@ -77,6 +78,10 @@
 /* Maximum size of a single text frame in bytes */
 #define MAX_TEXT_FRAME_SIZE PJMEDIA_MAX_MTU
 
+/* Sanity bounds for the start-of-stream keep-alive settings. */
+#define START_KA_MAX_CNT 10
+#define START_KA_MIN_INTERVAL_MSEC 500
+
 /* Buffer to store redundancy and primary data. */
 typedef struct red_buf {
     unsigned timestamp;
@@ -91,12 +96,15 @@ typedef struct pjmedia_txt_stream {
     pjmedia_clock *clock; /**< Clock.                 */
     unsigned buf_time;    /**< Buffering time.        */
     pj_bool_t is_idle;    /**< Is idle?               */
-    unsigned start_ka_left; /**< Remaining number of automatic
-                                 start-of-stream keep-alives to
-                                 send (for NAT hole punching).  */
 
     pj_timestamp rtcp_last_tx;   /**< Last RTCP tx time.     */
     pj_timestamp tx_last_ts;     /**< Timestamp of last tx.  */
+
+    unsigned start_ka_cnt;         /**< Remaining start-of-stream
+                                        keep-alives to send.      */
+    unsigned start_ka_interval;    /**< Start keep-alive interval
+                                        in msec.                  */
+    pj_timestamp start_ka_last_tx; /**< Last start keep-alive tx. */
     red_buf tx_buf[NUM_BUFFERS]; /**< Tx buffer.         */
     int tx_nred;                 /**< Num of redundant data. */
 
@@ -111,6 +119,46 @@ typedef struct pjmedia_txt_stream {
 static void clock_cb(const pj_timestamp *ts, void *user_data);
 
 #include "stream_imp_common.c"
+
+/*
+ * Set up the start-of-stream keep-alive burst, see check_start_ka().
+ * Must be called after the transport is attached.
+ */
+static void init_start_ka(pjmedia_txt_stream *stream,
+                          const pjmedia_txt_stream_info *info)
+{
+    pjmedia_stream_common *c_strm = &stream->base;
+    pjmedia_transport_info tpinfo;
+    pjmedia_ice_transport_info *ice_info;
+
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
+    stream->start_ka_cnt = info->use_ka ? info->ka_cfg.start_count : 0;
+    stream->start_ka_interval = info->ka_cfg.start_interval;
+#else
+    PJ_UNUSED_ARG(info);
+    stream->start_ka_cnt = PJMEDIA_STREAM_START_KA_CNT;
+    stream->start_ka_interval = PJMEDIA_STREAM_START_KA_INTERVAL_MSEC;
+#endif
+
+    if (stream->start_ka_cnt > START_KA_MAX_CNT)
+        stream->start_ka_cnt = START_KA_MAX_CNT;
+    if (stream->start_ka_interval < START_KA_MIN_INTERVAL_MSEC)
+        stream->start_ka_interval = START_KA_MIN_INTERVAL_MSEC;
+
+    if (stream->start_ka_cnt == 0)
+        return;
+
+    /* ICE connectivity checks already create the NAT bindings. */
+    pjmedia_transport_info_init(&tpinfo);
+    if (pjmedia_transport_get_info(c_strm->transport, &tpinfo) == PJ_SUCCESS)
+    {
+        ice_info = (pjmedia_ice_transport_info *)
+                   pjmedia_transport_info_get_spc_info(
+                       &tpinfo, PJMEDIA_TRANSPORT_TYPE_ICE);
+        if (ice_info && ice_info->active)
+            stream->start_ka_cnt = 0;
+    }
+}
 
 static void on_stream_destroy(void *arg)
 {
@@ -244,13 +292,6 @@ pjmedia_txt_stream_create(pjmedia_endpt *endpt, pj_pool_t *pool,
     c_strm->rtcp_fb_nack.pid = -1;
     stream->rx_last_seq = -1;
     stream->is_idle = PJ_TRUE;
-
-    /* Unconditionally (regardless of PJMEDIA_STREAM_ENABLE_KA) send a
-     * short burst of empty packets right after stream start, to help with
-     * NAT hole punching even if the user hasn't typed anything yet. This
-     * reuses the existing start-keep-alive count/interval settings.
-     */
-    stream->start_ka_left = PJMEDIA_STREAM_START_KA_CNT;
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
     c_strm->use_ka = info->use_ka;
@@ -414,6 +455,8 @@ pjmedia_txt_stream_create(pjmedia_endpt *endpt, pj_pool_t *pool,
     if (c_strm->use_ka)
         send_keep_alive_packet(c_strm);
 #endif
+
+    init_start_ka(stream, info);
 
     /* Success! */
     *p_stream = stream;
@@ -833,26 +876,11 @@ static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
             rtp_ts_len = 1;
     }
 
-    /* Keep-alive check.
-     * The very first packet is always sent, even if empty, so that an
-     * initial RTP packet goes out immediately at stream start to help
-     * with NAT hole punching. On top of that, up to
-     * PJMEDIA_STREAM_START_KA_CNT more empty packets are sent, spaced
-     * PJMEDIA_STREAM_START_KA_INTERVAL_MSEC apart, so the hole punch
-     * survives losing any single packet. Once that budget is spent,
-     * fall back to the normal 10-second idle keep-alive.
-     */
+    /* Keep-alive check */
     if (stream->is_idle && stream->tx_buf[0].length == 0) {
-        unsigned idle_msec = pj_elapsed_msec(&stream->tx_last_ts, &now);
-        pj_bool_t start_burst =
-            stream->start_ka_left > 0 &&
-            idle_msec >= PJMEDIA_STREAM_START_KA_INTERVAL_MSEC;
-
-        if (is_first_packet || start_burst || idle_msec >= 10000)
-        {
+        if (!is_first_packet &&
+            pj_elapsed_msec(&stream->tx_last_ts, &now) >= 10000) {
             is_keepalive = PJ_TRUE;
-            if (stream->start_ka_left > 0)
-                stream->start_ka_left--;
         } else {
             return PJ_SUCCESS; /* Clean return */
         }
@@ -959,13 +987,6 @@ static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
             pj_mutex_lock(c_strm->jb_mutex);
         }
 
-        /* Record time of this transmission so that is_first_packet,
-         * the keep-alive gate above, and the RTP timestamp calculation
-         * are based on the actual last-send time instead of always
-         * comparing against a zeroed timestamp.
-         */
-        stream->tx_last_ts = now;
-
         /* Prepare second pass if needed */
         pass++;
         if (pass == 1 && has_deferred_char) {
@@ -1014,6 +1035,58 @@ static void check_tx_rtcp(pjmedia_txt_stream *stream)
     }
 }
 
+/*
+ * check_start_ka()
+ * Punch NAT holes at stream start by sending a few empty RTP packets (plus
+ * RTCP) spaced start_ka_interval apart, so the bindings exist before any
+ * text is typed and survive a lost packet. Kept out of send_text_locked()
+ * so it doesn't disturb the first-packet (BOM) logic there.
+ */
+static void check_start_ka(pjmedia_txt_stream *stream)
+{
+    pjmedia_stream_common *c_strm = &stream->base;
+    pjmedia_channel *channel = c_strm->enc;
+    pjmedia_rtp_hdr hdr;
+    const void *rtphdr;
+    int hdrlen;
+    pj_timestamp now;
+    pj_status_t status;
+
+    if (stream->start_ka_cnt == 0)
+        return;
+
+    pj_get_timestamp(&now);
+    if (stream->start_ka_last_tx.u64 != 0 &&
+        pj_elapsed_msec(&stream->start_ka_last_tx, &now) <
+            stream->start_ka_interval)
+    {
+        return;
+    }
+    stream->start_ka_last_tx = now;
+
+    /* The RTP session is shared with send_text_locked(). */
+    pj_mutex_lock(c_strm->jb_mutex);
+    status = pjmedia_rtp_encode_rtp(&channel->rtp, channel->pt, 0, 1, 0,
+                                    &rtphdr, &hdrlen);
+    if (status == PJ_SUCCESS)
+        pj_memcpy(&hdr, rtphdr, sizeof(hdr));
+    pj_mutex_unlock(c_strm->jb_mutex);
+    if (status != PJ_SUCCESS)
+        return;
+
+    TRC_((c_strm->port.info.name.ptr, "Sending start keep-alive"));
+
+    /* On failure (e.g. SRTP keys not ready yet), retry at next interval. */
+    status = pjmedia_transport_send_rtp(c_strm->transport, &hdr, sizeof(hdr));
+    if (status != PJ_SUCCESS)
+        return;
+
+    send_rtcp(c_strm, !c_strm->rtcp_sdes_bye_disabled, PJ_FALSE, PJ_FALSE,
+              PJ_FALSE, PJ_FALSE, PJ_FALSE);
+
+    stream->start_ka_cnt--;
+}
+
 /* Clock callback */
 static void clock_cb(const pj_timestamp *ts, void *user_data)
 {
@@ -1036,6 +1109,8 @@ static void clock_cb(const pj_timestamp *ts, void *user_data)
 
     /* Check if now is the time to transmit RTCP SR/RR report. */
     check_tx_rtcp(stream);
+
+    check_start_ka(stream);
 }
 
 PJ_DEF(pj_status_t)
