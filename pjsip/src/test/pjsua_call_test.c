@@ -69,6 +69,12 @@
 
 #define THIS_FILE   "pjsua_call_test.c"
 
+/* UDPTL ports used by the app-managed T.38 test: the port the (simulated)
+ * gateway offers, and the different one the answering app terminates on.
+ */
+#define OFFER_UDPTL_PORT    4000
+#define APP_UDPTL_PORT      4002
+
 /* SIP user for the loopback account. */
 #define TEST_USER   "pjsua-call-test"
 
@@ -297,7 +303,7 @@ static void on_call_sdp_created(pjsua_call_id call_id,
         m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
         pj_strdup2(pool, &m->desc.media, "image");
         pj_strdup2(pool, &m->desc.transport, "udptl");
-        m->desc.port = 4000;
+        m->desc.port = OFFER_UDPTL_PORT;
         m->desc.port_count = 1;
         m->desc.fmt_count = 1;
         pj_strdup2(pool, &m->desc.fmt[0], "t38");
@@ -2716,6 +2722,8 @@ static int test_app_managed_media(void)
     pj_status_t status;
     pjsua_call_id caller = PJSUA_INVALID_ID, callee = PJSUA_INVALID_ID;
     pjmedia_sdp_session *answer;
+    const pjmedia_sdp_session *active;
+    unsigned i, img_idx;
     int rc;
 
     PJ_LOG(3, (THIS_FILE, "  media not managed by pjsua (T.38) in re-INVITE"));
@@ -2809,9 +2817,25 @@ static int test_app_managed_media(void)
         goto on_return;
     }
 
-    /* Answer with the offer itself, on the app's own (fake) UDPTL port. */
+    /* Answer with the offer itself, moving the image line to the app's own
+     * (fake) UDPTL port. The audio line stays deactivated, media[0] is that
+     * zeroed audio line so the image has to be located by media name.
+     */
     answer = pjmedia_sdp_session_clone(g_ctx.app_med_pool, g_ctx.app_med_offer);
-    answer->media[0]->desc.port = 4002;
+    img_idx = answer->media_count;
+    for (i = 0; i < answer->media_count; ++i) {
+        if (pj_stricmp2(&answer->media[i]->desc.media, "image") == 0) {
+            answer->media[i]->desc.port = APP_UDPTL_PORT;
+            img_idx = i;
+            break;
+        }
+    }
+    if (img_idx >= answer->media_count) {
+        PJ_LOG(1, (THIS_FILE, "    no image line in the offer to answer"));
+        rc = -1821;
+        goto on_return;
+    }
+
     status = pjsua_call_answer_with_sdp(callee, answer, NULL, 200, NULL, NULL);
     if (status != PJ_SUCCESS) {
         PJ_LOG(1, (THIS_FILE, "    answer_with_sdp (T.38) failed (%d)",
@@ -2860,6 +2884,20 @@ static int test_app_managed_media(void)
                           PJSUA_CALL_MEDIA_NONE, -1838);
     if (rc != 0)
         goto on_return;
+
+    /* The app's own UDPTL port must be what actually went on the wire, i.e.
+     * the answer was used as supplied and not normalized away.
+     */
+    if (pjmedia_sdp_neg_get_active_local(pjsua_var.calls[callee].inv->neg,
+                                         &active) != PJ_SUCCESS ||
+        img_idx >= active->media_count ||
+        active->media[img_idx]->desc.port != APP_UDPTL_PORT)
+    {
+        PJ_LOG(1, (THIS_FILE, "    negotiated local SDP does not carry the "
+                   "app's UDPTL port %d", APP_UDPTL_PORT));
+        rc = -1840;
+        goto on_return;
+    }
 
     /* The audio stream that was on the slot must be gone, on both legs. */
     if (g_ctx.strm_destroyed[callee] != 1 || g_ctx.strm_created[callee] != 1 ||
