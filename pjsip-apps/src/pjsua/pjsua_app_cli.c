@@ -168,6 +168,16 @@ static pj_cli_front_end    *telnet_front_end = NULL;
  */
 static void (*app_log_writer)(int level, const char *data, int len);
 
+/* Set once every configured front end has been registered, and cleared
+ * before they are destroyed. pj_cli_write_log() walks the front end list
+ * without locking, so the log must not be routed to the CLI while
+ * cli_init() is still adding to that list: the worker threads created by
+ * pjsua_init() are already logging by then. Until this is set the log goes
+ * to app_log_writer()/stdout instead, which also keeps the bind failures
+ * that pj_cli_telnet_create() reports before it registers itself.
+ */
+static pj_bool_t            cli_log_ready = PJ_FALSE;
+
 #ifdef USE_GUI
 void displayLog(const char *msg, int len);
 #endif
@@ -187,18 +197,9 @@ void cli_get_info(char *info, pj_size_t size)
                      telnet_info.port);
 }
 
-/* The CLI can only take the log once a front end has been registered:
- * pj_cli_create() leaves the front end list empty, and pj_cli_telnet_create()
- * logs its bind failures before registering itself.
- */
-static pj_bool_t cli_log_ready(void)
-{
-    return (cli && (telnet_front_end || cli_cons_sess));
-}
-
 static void cli_log_writer(int level, const char *buffer, int len)
 {
-    pj_bool_t to_cli = cli_log_ready();
+    pj_bool_t to_cli = cli_log_ready;
 
     if (to_cli)
         pj_cli_write_log(cli, level, buffer, len);
@@ -271,6 +272,8 @@ pj_status_t cli_init(void)
             goto on_error;
     }
 
+    cli_log_ready = PJ_TRUE;
+
     return PJ_SUCCESS;
 
 on_error:
@@ -300,6 +303,7 @@ pj_status_t cli_main(pj_bool_t wait_telnet_cli)
 void cli_destroy(void)
 {
     /* Destroy CLI, it will automatically destroy any FEs */
+    cli_log_ready = PJ_FALSE;
     if (cli) {
         pj_cli_destroy(cli);
         cli = NULL;
