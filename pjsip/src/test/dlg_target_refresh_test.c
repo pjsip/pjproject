@@ -440,9 +440,12 @@ int dlg_target_refresh_test(void)
         pjsip_ua_init_module(endpt, &ua_param);
     }
 
-    pjsip_endpt_register_module(endpt, &mod_dlg_tr_test);
-    pjsip_endpt_register_module(endpt, &mod_dlg_usage);
-    pjsip_endpt_register_module(endpt, &mod_dlg_tr_logger);
+    PJ_TEST_SUCCESS(pjsip_endpt_register_module(endpt, &mod_dlg_tr_test),
+                    NULL, return -2);
+    PJ_TEST_SUCCESS(pjsip_endpt_register_module(endpt, &mod_dlg_usage),
+                    NULL, return -3);
+    PJ_TEST_SUCCESS(pjsip_endpt_register_module(endpt, &mod_dlg_tr_logger),
+                    NULL, return -4);
 
     /* Create SIP UDP transport on ephemeral port */
     {
