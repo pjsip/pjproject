@@ -2422,8 +2422,7 @@ int ssl_sock_test(void)
         return PJ_EBUG;
 #endif
 
-/* We can't set min/max proto for TLS protocol higher than 1.0. */
-#if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_DARWIN && PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_SCHANNEL)
+#if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_SCHANNEL)
     PJ_LOG(3,("", "..echo test w/ incompatible proto: server TLSv1.2 vs client TLSv1.3"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1_2, PJ_SSL_SOCK_PROTO_TLS1_3, 
                     -1, -1,
