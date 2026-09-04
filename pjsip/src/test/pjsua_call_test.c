@@ -69,6 +69,12 @@
 
 #define THIS_FILE   "pjsua_call_test.c"
 
+/* UDPTL ports used by the app-managed T.38 test: the port the (simulated)
+ * gateway offers, and the different one the answering app terminates on.
+ */
+#define OFFER_UDPTL_PORT    4000
+#define APP_UDPTL_PORT      4002
+
 /* SIP user for the loopback account. */
 #define TEST_USER   "pjsua-call-test"
 
@@ -205,6 +211,24 @@ static struct
     pj_bool_t     narrow_dir_armed;
     pjsua_call_id narrow_dir_call_id;
     pj_bool_t     narrow_dir_reinvite_seen;
+
+    /* ---- media not managed by pjsua (T.38) ---- */
+
+    /* When armed, on_call_sdp_created turns the first m= line of every offer
+     * created on app_med_caller into T.38 (image/udptl), on_call_rx_reinvite
+     * on app_med_callee records the offer and, if app_med_take_over is set,
+     * defers the answer to the test, and on_call_tsx_state records the final
+     * status of the re-INVITE transaction on app_med_caller. */
+    pj_bool_t     app_med_armed;
+    pj_bool_t     app_med_take_over;
+    pjsua_call_id app_med_caller;
+    pjsua_call_id app_med_callee;
+    pj_bool_t     app_med_reinvite_seen;
+    int           app_med_reinv_code;
+    pj_pool_t    *app_med_pool;
+    pjmedia_sdp_session *app_med_offer;
+    /* Snapshot of med_state_cnt[], to wait for the next media update. */
+    unsigned      med_state_base[PJSUA_MAX_CALLS];
 } g_ctx;
 
 
@@ -264,6 +288,33 @@ static void on_call_sdp_created(pjsua_call_id call_id,
                                 const pjmedia_sdp_session *rem_sdp)
 {
     pjmedia_sdp_media *m;
+
+    /* Turn the offer of the armed caller leg into a T.38 handover offer: the
+     * audio line is deactivated and an image/udptl line appended, which is
+     * what a fax gateway sends. PJSUA syncs med_prov_cnt up to the media
+     * count of the SDP this callback returns, so appending is supported.
+     */
+    if (g_ctx.app_med_armed && rem_sdp == NULL &&
+        call_id == g_ctx.app_med_caller && sdp->media_count > 0 &&
+        sdp->media_count < PJMEDIA_MAX_SDP_MEDIA)
+    {
+        sdp->media[0]->desc.port = 0;
+
+        m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
+        pj_strdup2(pool, &m->desc.media, "image");
+        pj_strdup2(pool, &m->desc.transport, "udptl");
+        m->desc.port = OFFER_UDPTL_PORT;
+        m->desc.port_count = 1;
+        m->desc.fmt_count = 1;
+        pj_strdup2(pool, &m->desc.fmt[0], "t38");
+        if (sdp->media[0]->conn)
+            m->conn = pjmedia_sdp_conn_clone(pool, sdp->media[0]->conn);
+        else if (sdp->conn)
+            m->conn = pjmedia_sdp_conn_clone(pool, sdp->conn);
+
+        sdp->media[sdp->media_count++] = m;
+        return;
+    }
 
     /* Advertise RTP/RTCP multiplexing on every m= line, in offers as well as
      * in answers, so both legs of a loopback call see a=rtcp-mux in the SDP
@@ -430,9 +481,22 @@ static void on_call_rx_reinvite(pjsua_call_id call_id,
                                 pjsip_status_code *code,
                                 pjsua_call_setting *opt)
 {
-    PJ_UNUSED_ARG(offer);
     PJ_UNUSED_ARG(rdata);
     PJ_UNUSED_ARG(reserved);
+
+    /* T.38 offer on the armed callee leg: record it and, when taking over,
+     * defer the answer to the test (see test_app_managed_media()).
+     */
+    if (g_ctx.app_med_armed && call_id == g_ctx.app_med_callee) {
+        g_ctx.app_med_reinvite_seen = PJ_TRUE;
+        if (g_ctx.app_med_take_over) {
+            g_ctx.app_med_offer =
+                pjmedia_sdp_session_clone(g_ctx.app_med_pool, offer);
+            *async = PJ_TRUE;
+            *code = PJSIP_SC_OK;
+        }
+        return;
+    }
 
     /* One-shot: a second re-INVITE must not re-enter and leave the leg
      * with an offer nobody answers.
@@ -450,6 +514,22 @@ static void on_call_rx_reinvite(pjsua_call_id call_id,
     opt->media_dir[0] = PJMEDIA_DIR_DECODING;
 
     g_ctx.narrow_dir_reinvite_seen = PJ_TRUE;
+}
+
+/* Record the final status of the re-INVITE sent on the armed caller leg. */
+static void on_call_tsx_state(pjsua_call_id call_id,
+                              pjsip_transaction *tsx,
+                              pjsip_event *e)
+{
+    PJ_UNUSED_ARG(e);
+
+    if (g_ctx.app_med_armed && call_id == g_ctx.app_med_caller &&
+        tsx->role == PJSIP_ROLE_UAC &&
+        tsx->method.id == PJSIP_INVITE_METHOD &&
+        tsx->status_code >= 200 && g_ctx.app_med_reinv_code == 0)
+    {
+        g_ctx.app_med_reinv_code = tsx->status_code;
+    }
 }
 
 
@@ -502,6 +582,28 @@ static pj_bool_t reinvite_was_received(pjsua_call_id call_id)
 {
     PJ_UNUSED_ARG(call_id);
     return g_ctx.narrow_dir_reinvite_seen;
+}
+
+static pj_bool_t app_med_reinvite_seen(pjsua_call_id call_id)
+{
+    PJ_UNUSED_ARG(call_id);
+    return g_ctx.app_med_reinvite_seen;
+}
+
+static pj_bool_t app_med_reinvite_done(pjsua_call_id call_id)
+{
+    PJ_UNUSED_ARG(call_id);
+    return g_ctx.app_med_reinv_code != 0;
+}
+
+/* True once the given leg has completed a media update since the snapshot
+ * taken into med_state_base[].
+ */
+static pj_bool_t media_state_advanced(pjsua_call_id call_id)
+{
+    if (call_id < 0 || call_id >= (int)PJ_ARRAY_SIZE(g_ctx.med_state_cnt))
+        return PJ_FALSE;
+    return g_ctx.med_state_cnt[call_id] > g_ctx.med_state_base[call_id];
 }
 
 static pj_bool_t call_is_confirmed(pjsua_call_id call_id)
@@ -2569,6 +2671,261 @@ on_return:
 }
 
 
+/* Check the call is still confirmed, has exactly med_cnt media, and that
+ * media[idx] has the given type and status.
+ */
+static int check_call_media(pjsua_call_id call_id, const char *leg,
+                            unsigned med_cnt, unsigned idx,
+                            pjmedia_type type, pjsua_call_media_status st,
+                            int err)
+{
+    pjsua_call_info ci;
+    pj_status_t status;
+
+    status = pjsua_call_get_info(call_id, &ci);
+    if (status != PJ_SUCCESS || ci.state != PJSIP_INV_STATE_CONFIRMED) {
+        PJ_LOG(1, (THIS_FILE, "    %s leg not confirmed after re-INVITE "
+                   "(status=%d)", leg, status));
+        return err;
+    }
+    if (ci.media_cnt != med_cnt) {
+        PJ_LOG(1, (THIS_FILE, "    %s leg has %u media, expected %u", leg,
+                   ci.media_cnt, med_cnt));
+        return err - 1;
+    }
+    if (ci.media[idx].type != type || ci.media[idx].status != st) {
+        PJ_LOG(1, (THIS_FILE, "    %s leg media[%u]: type=%s status=%d, "
+                   "expected type=%s status=%d", leg, idx,
+                   pjmedia_type_name(ci.media[idx].type),
+                   ci.media[idx].status, pjmedia_type_name(type), st));
+        return err - 2;
+    }
+    return 0;
+}
+
+/* Media that pjsua does not manage (T.38 image/udptl) offered mid-call, by
+ * turning the audio m-line of a re-INVITE into image/udptl.
+ *
+ * 1. Plain pjsua: the re-INVITE is rejected with 488 and the running audio is
+ *    preserved on both legs, as before.
+ * 2. App-managed: the callee takes over answering (on_call_rx_reinvite with
+ *    async) and answers with an SDP keeping the image line active. Both legs
+ *    must stay up with that slot reported as unmanaged (UNKNOWN/NONE), and
+ *    the audio stream previously on the slot must be destroyed exactly once
+ *    on each leg: when the answer arrives on the caller leg, and when the
+ *    callee applies its own answer, the slot still carries the audio type and
+ *    stream of the previous negotiation.
+ */
+static int test_app_managed_media(void)
+{
+    pjsua_call_setting opt;
+    pj_status_t status;
+    pjsua_call_id caller = PJSUA_INVALID_ID, callee = PJSUA_INVALID_ID;
+    pjmedia_sdp_session *answer;
+    const pjmedia_sdp_session *active;
+    unsigned i, img_idx;
+    int rc;
+
+    PJ_LOG(3, (THIS_FILE, "  media not managed by pjsua (T.38) in re-INVITE"));
+
+    g_ctx.app_med_pool = pjsua_pool_create("app-med-test", 1024, 1024);
+    if (!g_ctx.app_med_pool) {
+        PJ_LOG(1, (THIS_FILE, "    failed to create pool"));
+        return -1800;
+    }
+
+    rc = establish_self_call(&caller, &callee, -1801);
+    if (rc != 0)
+        goto on_return;
+
+    g_ctx.app_med_caller = caller;
+    g_ctx.app_med_callee = callee;
+    g_ctx.app_med_take_over = PJ_FALSE;
+    g_ctx.app_med_reinvite_seen = PJ_FALSE;
+    g_ctx.app_med_reinv_code = 0;
+    g_ctx.app_med_offer = NULL;
+    g_ctx.app_med_armed = PJ_TRUE;
+
+    pjsua_call_setting_default(&opt);
+    opt.aud_cnt = 1;
+    opt.vid_cnt = 0;
+    opt.txt_cnt = 0;
+
+    /* 1. Plain pjsua rejects the T.38 offer and keeps the audio. */
+    status = pjsua_call_reinvite2(caller, &opt, NULL);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    reinvite2 (T.38) failed (%d)", status));
+        rc = -1810;
+        goto on_return;
+    }
+    if (!wait_until(&app_med_reinvite_done, PJSUA_INVALID_ID, 8000)) {
+        PJ_LOG(1, (THIS_FILE, "    T.38 re-INVITE got no final response"));
+        rc = -1811;
+        goto on_return;
+    }
+    if (!g_ctx.app_med_reinvite_seen) {
+        PJ_LOG(1, (THIS_FILE, "    on_call_rx_reinvite never ran on the "
+                   "callee leg"));
+        rc = -1812;
+        goto on_return;
+    }
+    if (g_ctx.app_med_reinv_code != PJSIP_SC_NOT_ACCEPTABLE_HERE) {
+        PJ_LOG(1, (THIS_FILE, "    plain pjsua answered the T.38 re-INVITE "
+                   "with %d, expected 488", g_ctx.app_med_reinv_code));
+        rc = -1813;
+        goto on_return;
+    }
+    rc = check_call_media(callee, "callee", 1, 0, PJMEDIA_TYPE_AUDIO,
+                          PJSUA_CALL_MEDIA_ACTIVE, -1814);
+    if (rc != 0)
+        goto on_return;
+    rc = check_call_media(caller, "caller", 1, 0, PJMEDIA_TYPE_AUDIO,
+                          PJSUA_CALL_MEDIA_ACTIVE, -1816);
+    if (rc != 0)
+        goto on_return;
+    if (g_ctx.strm_destroyed[callee] != 0 || g_ctx.strm_destroyed[caller] != 0)
+    {
+        PJ_LOG(1, (THIS_FILE, "    audio stream destroyed by the rejected "
+                   "re-INVITE (callee=%u caller=%u)",
+                   g_ctx.strm_destroyed[callee],
+                   g_ctx.strm_destroyed[caller]));
+        rc = -1818;
+        goto on_return;
+    }
+
+    /* 2. The callee answers the T.38 offer itself, keeping the line active. */
+    g_ctx.app_med_take_over = PJ_TRUE;
+    g_ctx.app_med_reinvite_seen = PJ_FALSE;
+    g_ctx.app_med_reinv_code = 0;
+    g_ctx.app_med_offer = NULL;
+    pj_memcpy(g_ctx.med_state_base, g_ctx.med_state_cnt,
+              sizeof(g_ctx.med_state_cnt));
+
+    status = pjsua_call_reinvite2(caller, &opt, NULL);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    reinvite2 (T.38, app-managed) failed (%d)",
+                   status));
+        rc = -1820;
+        goto on_return;
+    }
+    if (!wait_until(&app_med_reinvite_seen, PJSUA_INVALID_ID, 8000) ||
+        g_ctx.app_med_offer == NULL)
+    {
+        PJ_LOG(1, (THIS_FILE, "    on_call_rx_reinvite never ran on the "
+                   "callee leg"));
+        rc = -1821;
+        goto on_return;
+    }
+
+    /* Answer with the offer itself, moving the image line to the app's own
+     * (fake) UDPTL port. The audio line stays deactivated, media[0] is that
+     * zeroed audio line so the image has to be located by media name.
+     */
+    answer = pjmedia_sdp_session_clone(g_ctx.app_med_pool, g_ctx.app_med_offer);
+    img_idx = answer->media_count;
+    for (i = 0; i < answer->media_count; ++i) {
+        if (pj_stricmp2(&answer->media[i]->desc.media, "image") == 0) {
+            answer->media[i]->desc.port = APP_UDPTL_PORT;
+            img_idx = i;
+            break;
+        }
+    }
+    if (img_idx >= answer->media_count) {
+        PJ_LOG(1, (THIS_FILE, "    no image line in the offer to answer"));
+        rc = -1821;
+        goto on_return;
+    }
+
+    status = pjsua_call_answer_with_sdp(callee, answer, NULL, 200, NULL, NULL);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    answer_with_sdp (T.38) failed (%d)",
+                   status));
+        rc = -1822;
+        goto on_return;
+    }
+
+    if (!wait_until(&app_med_reinvite_done, PJSUA_INVALID_ID, 8000)) {
+        PJ_LOG(1, (THIS_FILE, "    app-managed T.38 re-INVITE got no final "
+                   "response"));
+        rc = -1823;
+        goto on_return;
+    }
+    if (g_ctx.app_med_reinv_code != PJSIP_SC_OK) {
+        PJ_LOG(1, (THIS_FILE, "    app-managed T.38 re-INVITE answered with "
+                   "%d, expected 200", g_ctx.app_med_reinv_code));
+        rc = -1824;
+        goto on_return;
+    }
+    if (!wait_until(&media_state_advanced, callee, 8000) ||
+        !wait_until(&media_state_advanced, caller, 8000))
+    {
+        PJ_LOG(1, (THIS_FILE, "    app-managed T.38 media update did not "
+                   "complete"));
+        rc = -1825;
+        goto on_return;
+    }
+
+    /* The audio line was deactivated by the offer, and the appended image
+     * line is reported as media pjsua does not manage.
+     */
+    rc = check_call_media(callee, "callee", 2, 0, PJMEDIA_TYPE_AUDIO,
+                          PJSUA_CALL_MEDIA_NONE, -1826);
+    if (rc != 0)
+        goto on_return;
+    rc = check_call_media(callee, "callee", 2, 1, PJMEDIA_TYPE_UNKNOWN,
+                          PJSUA_CALL_MEDIA_NONE, -1830);
+    if (rc != 0)
+        goto on_return;
+    rc = check_call_media(caller, "caller", 2, 0, PJMEDIA_TYPE_AUDIO,
+                          PJSUA_CALL_MEDIA_NONE, -1834);
+    if (rc != 0)
+        goto on_return;
+    rc = check_call_media(caller, "caller", 2, 1, PJMEDIA_TYPE_UNKNOWN,
+                          PJSUA_CALL_MEDIA_NONE, -1838);
+    if (rc != 0)
+        goto on_return;
+
+    /* The app's own UDPTL port must be what actually went on the wire, i.e.
+     * the answer was used as supplied and not normalized away.
+     */
+    if (pjmedia_sdp_neg_get_active_local(pjsua_var.calls[callee].inv->neg,
+                                         &active) != PJ_SUCCESS ||
+        img_idx >= active->media_count ||
+        active->media[img_idx]->desc.port != APP_UDPTL_PORT)
+    {
+        PJ_LOG(1, (THIS_FILE, "    negotiated local SDP does not carry the "
+                   "app's UDPTL port %d", APP_UDPTL_PORT));
+        rc = -1840;
+        goto on_return;
+    }
+
+    /* The audio stream that was on the slot must be gone, on both legs. */
+    if (g_ctx.strm_destroyed[callee] != 1 || g_ctx.strm_created[callee] != 1 ||
+        g_ctx.strm_destroyed[caller] != 1 || g_ctx.strm_created[caller] != 1)
+    {
+        PJ_LOG(1, (THIS_FILE, "    audio stream not destroyed exactly once: "
+                   "callee created=%u destroyed=%u, caller created=%u "
+                   "destroyed=%u",
+                   g_ctx.strm_created[callee], g_ctx.strm_destroyed[callee],
+                   g_ctx.strm_created[caller], g_ctx.strm_destroyed[caller]));
+        rc = -1842;
+        goto on_return;
+    }
+
+on_return:
+    g_ctx.app_med_armed = PJ_FALSE;
+    g_ctx.app_med_take_over = PJ_FALSE;
+    g_ctx.app_med_offer = NULL;
+    drain_all_calls();
+    if (g_ctx.app_med_pool) {
+        pj_pool_release(g_ctx.app_med_pool);
+        g_ctx.app_med_pool = NULL;
+    }
+
+    return rc;
+}
+
+
 /*****************************************************************************
  * Main entry point
  *****************************************************************************/
@@ -2621,6 +2978,7 @@ int pjsua_call_test(void)
     ua_cfg.cb.on_stream_created2 = &on_stream_created2;
     ua_cfg.cb.on_stream_destroyed = &on_stream_destroyed;
     ua_cfg.cb.on_call_media_state = &on_call_media_state;
+    ua_cfg.cb.on_call_tsx_state = &on_call_tsx_state;
     /* Single-threaded: event pumping happens on this thread, so callbacks
      * run here too and no locking races arise in the test itself. */
     ua_cfg.thread_cnt = 0;
@@ -2757,6 +3115,9 @@ int pjsua_call_test(void)
     if (rc != 0) goto on_return;
 
     rc = test_dir_narrowing_restarts_stream();
+    if (rc != 0) goto on_return;
+
+    rc = test_app_managed_media();
     if (rc != 0) goto on_return;
 
 on_return:
