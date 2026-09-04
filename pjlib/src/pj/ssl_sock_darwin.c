@@ -358,13 +358,103 @@ static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
  * still start for a configuration that every connection subsequently
  * rejects -- the check fails open, never closed.
  */
+/* Map ssock->param.proto onto the Secure Transport version bounds.
+ *
+ * Returns PJ_EINVAL when the requested range cannot be served at all, so an
+ * unusable configuration can be rejected once at listener setup instead of on
+ * every accepted connection.
+ */
+static pj_status_t get_proto_bounds(pj_ssl_sock_t *ssock,
+                                    SSLProtocol *p_min,
+                                    SSLProtocol *p_max)
+{
+    SSLProtocol min_proto = kSSLProtocolUnknown;
+    SSLProtocol max_proto = kSSLProtocolUnknown;
+
+    /* Set min and max protocol version */
+    if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT) {
+        /* SSL 2.0 is deprecated. */
+        ssock->param.proto = PJ_SSL_SOCK_PROTO_ALL &
+                             ~PJ_SSL_SOCK_PROTO_SSL2;
+    }
+
+    if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_3) {
+        max_proto = kTLSProtocol13;
+    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_2) {
+        max_proto = kTLSProtocol12;
+    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_1) {
+        max_proto = kTLSProtocol11;
+    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1) {
+        max_proto = kTLSProtocol1;
+    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_SSL3) {
+        max_proto = kSSLProtocol3;
+    } else {
+        PJ_LOG(3, (THIS_FILE, "Unsupported TLS/SSL protocol"));
+        return PJ_EINVAL;
+    }
+
+    if (ssock->param.proto & PJ_SSL_SOCK_PROTO_SSL3) {
+        min_proto = kSSLProtocol3;
+    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1) {
+        min_proto = kTLSProtocol1;
+    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_1) {
+        min_proto = kTLSProtocol11;
+    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_2) {
+        min_proto = kTLSProtocol12;
+    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_3) {
+        min_proto = kTLSProtocol13;
+    }
+
+    /* SecureTransport.h documents kSSLProtocol3, kTLSProtocol1,
+     * kTLSProtocol11 and kTLSProtocol12 as legal for these two setters;
+     * TLS 1.3 is not among them.
+     */
+    if (min_proto == kTLSProtocol13) {
+        /* The caller accepts nothing below TLS 1.3, which this backend
+         * cannot provide. Lowering the floor would complete a TLS 1.2
+         * handshake while pj_ssl_sock_get_info() still reported TLS 1.3,
+         * so refuse rather than downgrade the caller's policy silently.
+         */
+        PJ_LOG(3, (THIS_FILE, "TLS 1.3 is not supported by this backend"));
+        return PJ_EINVAL;
+    }
+
+    if (max_proto == kTLSProtocol13) {
+        /* A lower version is acceptable to the caller, so lowering the
+         * ceiling stays within the requested policy. This is the default
+         * configuration -- PJ_SSL_SOCK_PROTO_DEFAULT sets the TLS 1.3 bit --
+         * so it is a trace, not a warning.
+         */
+        PJ_LOG(5, (THIS_FILE, "TLS 1.3 is not supported by this backend, "
+                              "limiting the maximum version to TLS 1.2"));
+        max_proto = kTLSProtocol12;
+    }
+
+    *p_min = min_proto;
+    *p_max = max_proto;
+
+    return PJ_SUCCESS;
+}
+
+
 static pj_status_t ssl_init_server_ctx(pj_ssl_sock_t *ssock)
 {
     darwinssl_sock_t *dssock = (darwinssl_sock_t *)ssock;
     SecIdentityRef identity = NULL;
+    SSLProtocol min_proto, max_proto;
     pj_status_t status;
 
     pj_assert(ssock->is_server && !ssock->parent);
+
+    /* Reject a protocol range this backend cannot serve here, once, rather
+     * than once per accepted connection in ssl_create(). A listener asking
+     * for TLS 1.3 alone would otherwise start successfully and then fail
+     * every inbound handshake, emitting a log line any unauthenticated peer
+     * can trigger while the operator never sees a startup error.
+     */
+    status = get_proto_bounds(ssock, &min_proto, &max_proto);
+    if (status != PJ_SUCCESS)
+        return status;
 
     if (!ssock->cert)
         return PJ_SUCCESS;
@@ -411,51 +501,20 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
             return status;
     }
 
-    /* Set min and max protocol version */
-    if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT) {
-        /* SSL 2.0 is deprecated. */
-        ssock->param.proto = PJ_SSL_SOCK_PROTO_ALL &
-                             ~PJ_SSL_SOCK_PROTO_SSL2;
-    }
+    status = get_proto_bounds(ssock, &min_proto, &max_proto);
+    if (status != PJ_SUCCESS)
+        return status;
 
-    if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_3) {
-        max_proto = kTLSProtocol13;
-    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_2) {
-        max_proto = kTLSProtocol12;
-    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_1) {
-        max_proto = kTLSProtocol11;
-    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1) {
-        max_proto = kTLSProtocol1;
-    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_SSL3) {
-        max_proto = kSSLProtocol3;
-    } else {
-        PJ_LOG(3, (THIS_FILE, "Unsupported TLS/SSL protocol"));
-        return PJ_EINVAL;
-    }
-
-    if (ssock->param.proto & PJ_SSL_SOCK_PROTO_SSL3) {
-        min_proto = kSSLProtocol3;
-    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1) {
-        min_proto = kTLSProtocol1;
-    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_1) {
-        min_proto = kTLSProtocol11;
-    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_2) {
-        min_proto = kTLSProtocol12;
-    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_3) {
-        min_proto = kTLSProtocol13;
-    }
-
-    /* According to the doc, we can't set min/max proto for TLS protocol
-     * higher than 1.0. The runtime error given is -9830 (Illegal parameter).
-     */
-    if (min_proto != kSSLProtocolUnknown && min_proto <= kTLSProtocol1) {
+    if (min_proto != kSSLProtocolUnknown) {
         err = SSLSetProtocolVersionMin(ssl_ctx, min_proto);
-        if (err != noErr) pj_status_from_err(dssock, "SetVersionMin", err);
+        if (err != noErr)
+            return pj_status_from_err(dssock, "SetVersionMin", err);
     }
 
-    if (max_proto != kSSLProtocolUnknown && max_proto <= kTLSProtocol1) {
+    if (max_proto != kSSLProtocolUnknown) {
         err = SSLSetProtocolVersionMax(ssl_ctx, max_proto);
-        if (err != noErr) pj_status_from_err(dssock, "SetVersionMax", err);
+        if (err != noErr)
+            return pj_status_from_err(dssock, "SetVersionMax", err);
     }
 
     /* SSL verification options */

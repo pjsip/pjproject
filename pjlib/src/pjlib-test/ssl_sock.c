@@ -2371,12 +2371,18 @@ int ssl_sock_test(void)
     if (ret != 0)
         return ret;
 
+/* The Darwin backend cannot set a TLS 1.3 floor -- Secure Transport's
+ * SSLSetProtocolVersionMin() does not accept it -- so a TLS 1.3-only
+ * request is rejected at socket creation rather than downgraded.
+ */
+#if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_DARWIN)
     PJ_LOG(3,("", "..echo test w/ TLSv1.3 and PJ_TLS_AES_128_GCM_SHA256 cipher"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1_3, PJ_SSL_SOCK_PROTO_TLS1_3,
                     PJ_TLS_AES_128_GCM_SHA256, PJ_TLS_AES_128_GCM_SHA256,
                     PJ_FALSE, PJ_FALSE);
     if (ret != 0)
         return ret;
+#endif
 
 #if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
     PJ_LOG(3,("", "..TLSv1.3 session resumption test"));
@@ -2394,12 +2400,18 @@ int ssl_sock_test(void)
         return ret;
 
 #if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_SCHANNEL)
+/* The Darwin backend cannot set a TLS 1.3 floor -- Secure Transport's
+ * SSLSetProtocolVersionMin() does not accept it -- so a TLS 1.3-only
+ * request is rejected at socket creation rather than downgraded.
+ */
+#if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_DARWIN)
     PJ_LOG(3,("", "..echo test w/ compatible proto: server TLSv1.2+1.3 vs client TLSv1.3"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1_2 | PJ_SSL_SOCK_PROTO_TLS1_3, PJ_SSL_SOCK_PROTO_TLS1_3, 
                     -1, -1,
                     PJ_FALSE, PJ_FALSE);
     if (ret != 0)
         return ret;
+#endif
 
     PJ_LOG(3,("", "..echo test w/ incompatible proto: server TLSv1.3 vs client TLSv1.2"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1_3, PJ_SSL_SOCK_PROTO_TLS1_2,
@@ -2410,8 +2422,7 @@ int ssl_sock_test(void)
         return PJ_EBUG;
 #endif
 
-/* We can't set min/max proto for TLS protocol higher than 1.0. */
-#if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_DARWIN && PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_SCHANNEL)
+#if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_SCHANNEL)
     PJ_LOG(3,("", "..echo test w/ incompatible proto: server TLSv1.2 vs client TLSv1.3"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1_2, PJ_SSL_SOCK_PROTO_TLS1_3, 
                     -1, -1,
