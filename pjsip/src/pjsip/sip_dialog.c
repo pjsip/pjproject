@@ -922,6 +922,14 @@ PJ_DEF(pj_status_t) pjsip_dlg_terminate( pjsip_dialog *dlg )
     /* MUST not have pending transactions. */
     PJ_ASSERT_RETURN(dlg->tsx_count==0, PJ_EINVALIDOP);
 
+    /* Claim the teardown. If another path (e.g. pjsip_dlg_dec_lock() or a
+     * repeated terminate) has already started destroying this dialog, do
+     * not unregister/destroy it again. See #1886.
+     */
+    if (dlg->destroying)
+        return PJ_SUCCESS;
+    dlg->destroying = PJ_TRUE;
+
     return unregister_and_destroy_dialog(dlg, PJ_FALSE);
 }
 
@@ -1046,7 +1054,14 @@ PJ_DEF(void) pjsip_dlg_dec_lock(pjsip_dialog *dlg)
     pj_assert(dlg->sess_count > 0);
     --dlg->sess_count;
 
-    if (dlg->sess_count==0 && dlg->tsx_count==0) {
+    if (dlg->sess_count==0 && dlg->tsx_count==0 && !dlg->destroying) {
+        /* Claim the teardown before dropping the lock. Another thread
+         * holding a reference (e.g. a concurrent transaction's
+         * on_tsx_state) can acquire the group lock during the
+         * release/acquire window below and also observe zero counts;
+         * this flag makes sure only one thread destroys the dialog.
+         */
+        dlg->destroying = PJ_TRUE;
         pj_grp_lock_release(dlg->grp_lock_);
         pj_grp_lock_acquire(dlg->grp_lock_);
         /* We are holding the dialog group lock here, so before we destroy
@@ -1764,6 +1779,42 @@ PJ_DEF(pj_status_t) pjsip_dlg_respond(  pjsip_dialog *dlg,
 }
 
 
+/* Check whether a Contact received in a target refresh is acceptable as
+ * the dialog's new remote target. A secure (SIPS) dialog must not be
+ * downgraded by a target refresh that supplies a non-SIPS Contact
+ * (RFC 5630). Honors the same disable_secure_dlg_check interop escape
+ * hatch as the existing secure-dialog check in pjsip-ua/sip_inv.c
+ * (ticket #1735), so an app that opted out of that check isn't left with
+ * an inconsistent, unconditionally-enforced check here.
+ *
+ * This ignores a disallowed Contact rather than raising any error -- the
+ * target simply isn't updated. See the log at PJ_LOG(3, ...) below if
+ * the app wants to detect that a peer attempted one. It's used at:
+ *  - both response-path target-refresh sites in
+ *    pjsip_dlg_on_rx_response(), where a response can't be rejected the
+ *    way a request can (there's nothing to answer), and
+ *  - the request-path target-refresh site in pjsip_dlg_on_rx_request(),
+ *    as a fallback for the one case its own reject-with-400 check
+ *    (right after the CSeq check) can't cover: a forged ACK carrying a
+ *    mismatched CSeq method (see that check's comment for why), which
+ *    also can't be answered.
+ * Everywhere else on the request path, the earlier check rejects the
+ * request outright with 400 instead (RFC 5630 Section 5.1.2).
+ */
+static pj_bool_t dlg_target_refresh_allowed(const pjsip_dialog *dlg,
+                                            const pjsip_contact_hdr *contact)
+{
+    if (pjsip_cfg()->endpt.disable_secure_dlg_check == PJ_FALSE &&
+        dlg->secure && !PJSIP_URI_SCHEME_IS_SIPS(contact->uri))
+    {
+        PJ_LOG(3, (dlg->obj_name, "Ignoring non-SIPS Contact in target "
+                                  "refresh for a secure dialog"));
+        return PJ_FALSE;
+    }
+    return PJ_TRUE;
+}
+
+
 /* This function is called by user agent upon receiving incoming request
  * message.
  */
@@ -1801,6 +1852,55 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
                                       rdata, 500, &warn_text, NULL, NULL);
         pj_log_pop_indent();
         return;
+    }
+
+    /* Reject a target refresh request that carries a non-SIPS Contact on
+     * a secure dialog (RFC 5630 Section 5.1.2), before dialog usages get
+     * to see it. Checked independently of whether the Contact differs
+     * from the current target -- an invalid Contact is invalid whether
+     * or not it would actually change anything, so this must not sit
+     * behind the pjsip_uri_cmp() dedup check below. Placed before
+     * "Update CSeq" (not after) so a rejected request doesn't advance
+     * dlg->remote.cseq: since the 400 is sent statelessly, there's no
+     * transaction to absorb a retransmission, and if remote.cseq had
+     * already moved past it, the retransmit would trip the CSeq check
+     * above and get a misleading "500 Invalid CSeq" instead of a
+     * consistent 400.
+     *
+     * This only catches methods identified by the request line, which
+     * covers the normal case. It does NOT cover a forged ACK carrying a
+     * spoofed CSeq method (e.g. "CSeq: n INVITE") -- ACK never creates a
+     * UAS transaction, so it skips pjsip_tsx_create_uas()'s CSeq/request
+     * line method match check, and an ACK can't be answered anyway. That
+     * variant is instead caught by dlg_target_refresh_allowed() at the
+     * target-refresh block below, which keys on the CSeq method and can
+     * only ignore (not reject) since there's nothing to respond to.
+     */
+    if (pjsip_cfg()->endpt.disable_secure_dlg_check == PJ_FALSE &&
+        dlg->secure &&
+        pjsip_method_creates_dialog(&rdata->msg_info.msg->line.req.method))
+    {
+        pjsip_contact_hdr *contact = (pjsip_contact_hdr*)
+            pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT, NULL);
+
+        if (contact && contact->uri &&
+            !PJSIP_URI_SCHEME_IS_SIPS(contact->uri))
+        {
+            pj_str_t warn_text = pj_str("Non-SIPS Contact in secure dialog");
+
+            PJ_LOG(3, (dlg->obj_name, "Rejecting %s: non-SIPS Contact in "
+                                      "a secure dialog",
+                                      pjsip_rx_data_get_info(rdata)));
+
+            /* Unlock dialog and dec session, may destroy dialog. */
+            pjsip_dlg_dec_lock(dlg);
+
+            pj_assert(pjsip_rdata_get_tsx(rdata) == NULL);
+            pjsip_endpt_respond_stateless(dlg->endpt, rdata, 400,
+                                          &warn_text, NULL, NULL);
+            pj_log_pop_indent();
+            return;
+        }
     }
 
     /* Update CSeq. */
@@ -1872,6 +1972,18 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
      * we would still need to update the target URI, otherwise our
      * target URI would be wrong, wouldn't it).
      */
+    /* A non-SIPS Contact on a secure dialog is normally already rejected
+     * above (right after the CSeq check), which keys on the request
+     * line's method. This block keys on the CSeq header's method
+     * instead -- normally identical, but not for a forged ACK carrying a
+     * mismatched CSeq method, since ACK skips the tsx-creation path that
+     * would otherwise enforce the two match (see the reject check above
+     * for details). dlg_target_refresh_allowed() catches that remaining
+     * case; it can only ignore the Contact here, not reject, since
+     * there's no response to send for an ACK (or once we've already
+     * decided, above, that this particular request doesn't warrant a
+     * reject).
+     */
     if (pjsip_method_creates_dialog(&rdata->msg_info.cseq->method)) {
         pjsip_contact_hdr *contact;
 
@@ -1882,7 +1994,8 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
             (dlg->remote.contact==NULL ||
              pjsip_uri_cmp(PJSIP_URI_IN_REQ_URI,
                            dlg->remote.contact->uri,
-                           contact->uri)))
+                           contact->uri)) &&
+            dlg_target_refresh_allowed(dlg, contact))
         {
             pj_str_t tmp;
             enum { TMP_LEN=PJSIP_MAX_URL_SIZE };
@@ -2159,7 +2272,8 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
             (dlg->remote.contact==NULL ||
              pjsip_uri_cmp(PJSIP_URI_IN_REQ_URI,
                            dlg->remote.contact->uri,
-                           contact->uri)))
+                           contact->uri)) &&
+            dlg_target_refresh_allowed(dlg, contact))
         {
             dlg->remote.contact = (pjsip_contact_hdr*)
                                   pjsip_hdr_clone(dlg->pool, contact);
@@ -2210,7 +2324,8 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
             (dlg->remote.contact==NULL ||
              pjsip_uri_cmp(PJSIP_URI_IN_REQ_URI,
                            dlg->remote.contact->uri,
-                           contact->uri)))
+                           contact->uri)) &&
+            dlg_target_refresh_allowed(dlg, contact))
         {
             dlg->remote.contact = (pjsip_contact_hdr*)
                                   pjsip_hdr_clone(dlg->pool, contact);

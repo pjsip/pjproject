@@ -18,6 +18,9 @@
     <ClCompile Include="..\src\test\dlg_core_test.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\test\dlg_target_refresh_test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\test\dns_test.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -82,6 +85,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\test\pjsua_auth_test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\test\pjsua_call_test.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

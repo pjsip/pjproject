@@ -292,7 +292,6 @@ PJ_DECL(pj_status_t) pjmedia_wav_writer_port_create(pj_pool_t *pool,
                                                     pj_ssize_t buff_size,
                                                     pjmedia_port **p_port );
 
-
 /**
  * Get current writing position. Note that this does not necessarily match
  * the size written to the file, since the WAV writer employs some internal
@@ -350,7 +349,7 @@ pjmedia_wav_writer_port_set_cb( pjmedia_port *port,
  *
  * @return              PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pjmedia_wav_writer_port_set_cb2(pjmedia_port *port,
                                 pj_size_t pos,
                                 void *user_data,
@@ -361,6 +360,7 @@ pjmedia_wav_writer_port_set_cb2(pjmedia_port *port,
 /**
  * @}
  */
+
 
 
 PJ_END_DECL

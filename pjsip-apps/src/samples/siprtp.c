@@ -1579,8 +1579,16 @@ static void print_avg_stat(void)
     char stx_min[16], stx_avg[16], stx_max[16];
     char btx_min[16], btx_avg[16], btx_max[16];
 
+    double rx_loss_min, rx_loss_avg, rx_loss_max;
+    double tx_loss_min, tx_loss_avg, tx_loss_max;
 
     unsigned i, count;
+
+    /* Compute percent loss, guarding against zero packet counters (which
+     * would otherwise produce NaN or Inf when no RTP has been received/sent
+     * yet on a confirmed call).
+     */
+#define PERCENT_LOSS(loss, denom)  ((denom) > 0 ? (loss)*100.0/(denom) : 0.0)
 
     pj_bzero(&call_dur, sizeof(call_dur)); 
     call_dur.min = BIGVAL;
@@ -1716,6 +1724,17 @@ static void print_avg_stat(void)
         return;
     }
 
+    rx_loss_min = PERCENT_LOSS(min_stat.rx.loss,
+                               min_stat.rx.pkt + min_stat.rx.loss);
+    rx_loss_avg = PERCENT_LOSS(avg_stat.rx.loss,
+                               avg_stat.rx.pkt + avg_stat.rx.loss);
+    rx_loss_max = PERCENT_LOSS(max_stat.rx.loss,
+                               max_stat.rx.pkt + max_stat.rx.loss);
+
+    tx_loss_min = PERCENT_LOSS(min_stat.tx.loss, min_stat.tx.pkt);
+    tx_loss_avg = PERCENT_LOSS(avg_stat.tx.loss, avg_stat.tx.pkt);
+    tx_loss_max = PERCENT_LOSS(max_stat.tx.loss, max_stat.tx.pkt);
+
     printf("Total %d call(s) active.\n"
            "                    Average Statistics\n"
            "                    min     avg     max \n"
@@ -1762,9 +1781,7 @@ static void print_avg_stat(void)
            min_stat.rx.loss, avg_stat.rx.loss, max_stat.rx.loss,
            "packets",
            
-           min_stat.rx.loss*100.0/(min_stat.rx.pkt+min_stat.rx.loss),
-           avg_stat.rx.loss*100.0/(avg_stat.rx.pkt+avg_stat.rx.loss),
-           max_stat.rx.loss*100.0/(max_stat.rx.pkt+max_stat.rx.loss),
+           rx_loss_min, rx_loss_avg, rx_loss_max,
            "%",
 
 
@@ -1794,9 +1811,7 @@ static void print_avg_stat(void)
            min_stat.tx.loss, avg_stat.tx.loss, max_stat.tx.loss,
            "packets",
            
-           min_stat.tx.loss*100.0/(min_stat.tx.pkt),
-           avg_stat.tx.loss*100.0/(avg_stat.tx.pkt),
-           max_stat.tx.loss*100.0/(max_stat.tx.pkt),
+           tx_loss_min, tx_loss_avg, tx_loss_max,
            "%",
 
            min_stat.tx.dup, avg_stat.tx.dup, max_stat.tx.dup,

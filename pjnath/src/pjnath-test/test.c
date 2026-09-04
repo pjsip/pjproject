@@ -247,6 +247,10 @@ static int test_inner(int argc, char *argv[])
     UT_ADD_TEST(&test_app.ut_app, trickle_ice_test, 0);
 #endif
 
+#if INCLUDE_ICE_TEST
+    UT_ADD_TEST(&test_app.ut_app, ice_wait_valid_pair_test, 0);
+#endif
+
 #if INCLUDE_TURN_SOCK_TEST
     UT_ADD_TEST1(&test_app.ut_app, turn_sock_test, (void*)(intptr_t)0, 0);
     UT_ADD_TEST1(&test_app.ut_app, turn_sock_test, (void*)(intptr_t)1, 0);

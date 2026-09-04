@@ -671,11 +671,38 @@ typedef struct pj_ice_sess_options
      * its checklist have been completed and there is at least one successful
      * (but not nominated) check for every component.
      *
-     * Default value for this option is 
+     * Default value for this option is
      * ICE_CONTROLLED_AGENT_WAIT_NOMINATION_TIMEOUT. Specify -1 to disable
      * this timer.
      */
     int                 controlled_agent_want_nom_timeout;
+
+    /**
+     * Specify how long an agent wants to wait (in milliseconds) for a valid
+     * pair to be created from incoming connectivity checks, after it has
+     * found that all connectivity checks in its checklist have been completed
+     * but one or more components still lack a valid pair.
+     *
+     * This is useful when the agent's own connectivity checks cannot be sent
+     * (e.g. the local routing or firewall rejects the remote candidate
+     * address), while the remote agent may still be able to reach this agent
+     * and trigger a valid pair via incoming checks. It applies to both
+     * controlling and controlled agents.
+     *
+     * This timer starts after all of the agent's own checks have completed.
+     * Note that, for an answerer, this may happen before the remote agent has
+     * received the SDP answer and started sending its checks, especially when
+     * the agent's own checks fail immediately (e.g. due to local
+     * routing/firewall rejecting the remote candidate address). The timeout
+     * should therefore also accommodate the time until the remote receives the
+     * answer and its first incoming check arrives, similar to the
+     * consideration for controlled_agent_want_nom_timeout.
+     *
+     * Default value for this option is PJ_ICE_WAIT_VALID_PAIR_TIMEOUT.
+     * Specify -1 to disable this timer, in which case ICE will fail
+     * immediately when all checks have completed without any valid pair.
+     */
+    int                 wait_valid_pair_timeout;
 
     /**
      * Trickle ICE mode. Note that, when enabled, aggressive nomination will

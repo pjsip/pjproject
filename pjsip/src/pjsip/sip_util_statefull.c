@@ -23,6 +23,7 @@
 #include <pjsip/sip_event.h>
 #include <pjsip/sip_errno.h>
 #include <pj/assert.h>
+#include <pj/lock.h>
 #include <pj/log.h>
 #include <pj/pool.h>
 #include <pj/string.h>
@@ -88,9 +89,25 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request(  pjsip_endpoint *endpt,
                                                void *token,
                                                pjsip_endpt_send_callback cb)
 {
+    return pjsip_endpt_send_request2(endpt, tdata, timeout, token, cb, NULL);
+}
+
+
+PJ_DEF(pj_status_t) pjsip_endpt_send_request2( pjsip_endpoint *endpt,
+                                               pjsip_tx_data *tdata,
+                                               pj_int32_t timeout,
+                                               void *token,
+                                               pjsip_endpt_send_callback cb,
+                                               pjsip_transaction **p_tsx)
+{
     pjsip_transaction *tsx;
     struct tsx_data *tsx_data;
     pj_status_t status;
+
+    /* Reset the output first, so it is also reset when the checks below
+     * fail.
+     */
+    if (p_tsx) *p_tsx = NULL;
 
     PJ_ASSERT_RETURN(endpt && tdata && (timeout==-1 || timeout>0), PJ_EINVAL);
 
@@ -113,12 +130,29 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request(  pjsip_endpoint *endpt,
 
     tsx->mod_data[mod_stateful_util.id] = tsx_data;
 
+    /* Prevent the transaction from being deleted before we have a chance
+     * to terminate it if sending fails.
+     */
+    pj_grp_lock_add_ref(tsx->grp_lock);
+
     status = pjsip_tsx_send_msg(tsx, NULL);
-    if (status != PJ_SUCCESS) {
+    if (status == PJ_SUCCESS) {
+        /* Only hand over the transaction after a successful send, as the
+         * send may fail after the callback has been called. Our reference
+         * above keeps the transaction alive here, even when it has already
+         * been completed by the callback.
+         */
+        if (p_tsx) {
+            pj_grp_lock_add_ref(tsx->grp_lock);
+            *p_tsx = tsx;
+        }
+    } else {
         pjsip_tx_data_dec_ref(tdata);
         pjsip_tsx_terminate(tsx, tsx->status_code? tsx->status_code:
                             PJSIP_SC_SERVICE_UNAVAILABLE);
     }
+
+    pj_grp_lock_dec_ref(tsx->grp_lock);
 
     return status;
 }
@@ -177,6 +211,11 @@ PJ_DEF(pj_status_t) pjsip_endpt_respond(  pjsip_endpoint *endpt,
         return status;
     }
 
+    /* Prevent the transaction from being deleted before we have a chance
+     * to terminate it if sending fails.
+     */
+    pj_grp_lock_add_ref(tsx->grp_lock);
+
     /* Feed the request to the transaction. */
     pjsip_tsx_recv_msg(tsx, rdata);
 
@@ -189,6 +228,8 @@ PJ_DEF(pj_status_t) pjsip_endpt_respond(  pjsip_endpoint *endpt,
     } else if (p_tsx) {
         *p_tsx = tsx;
     }
+
+    pj_grp_lock_dec_ref(tsx->grp_lock);
 
     return status;
 }

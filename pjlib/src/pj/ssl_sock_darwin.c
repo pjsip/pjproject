@@ -155,74 +155,20 @@ static pj_ssl_sock_t *ssl_alloc(pj_pool_t *pool)
     return (pj_ssl_sock_t *)PJ_POOL_ZALLOC_T(pool, darwinssl_sock_t);
 }
 
-static pj_status_t create_data_from_file(CFDataRef *data,
-                                         pj_str_t *fname, pj_str_t *path)
-{
-    CFURLRef file;
-    CFReadStreamRef read_stream;
-    UInt8 data_buf[8192];
-    CFIndex nbytes = 0;
-    
-    if (path) {
-        CFURLRef filepath;
-        CFStringRef path_str;
-        
-        path_str = CFStringCreateWithBytes(NULL, (const UInt8 *)path->ptr,
-                                           path->slen,
-                                           kCFStringEncodingUTF8, false);
-        if (!path_str) return PJ_ENOMEM;
-    
-        filepath = CFURLCreateWithFileSystemPath(NULL, path_str,
-                                                 kCFURLPOSIXPathStyle, true);
-        CFRelease(path_str);
-        if (!filepath) return PJ_ENOMEM;
-    
-        path_str = CFStringCreateWithBytes(NULL, (const UInt8 *)fname->ptr,
-                                           fname->slen,
-                                           kCFStringEncodingUTF8, false);
-        if (!path_str) {
-            CFRelease(filepath);
-            return PJ_ENOMEM;
-        }
-    
-        file = CFURLCreateCopyAppendingPathComponent(NULL, filepath,
-                                                     path_str, false);
-        CFRelease(path_str);
-        CFRelease(filepath);
-    } else {
-        file = CFURLCreateFromFileSystemRepresentation(NULL,
-               (const UInt8 *)fname->ptr, fname->slen, false);
-    }
-    
-    if (!file)
-        return PJ_ENOMEM;
-    
-    read_stream = CFReadStreamCreateWithFile(NULL, file);
-    CFRelease(file);
-    
-    if (!read_stream)
-        return PJ_ENOTFOUND;
-    
-    if (!CFReadStreamOpen(read_stream)) {
-        PJ_LOG(2, (THIS_FILE, "Failed opening file"));
-        CFRelease(read_stream);
-        return PJ_EINVAL;
-    }
-    
-    nbytes = CFReadStreamRead(read_stream, data_buf,
-                              sizeof(data_buf));
-    if (nbytes > 0)
-        *data = CFDataCreate(NULL, data_buf, nbytes);
-    else
-        *data = NULL;
-    
-    CFReadStreamClose(read_stream);
-    CFRelease(read_stream);
-    
-    return (*data? PJ_SUCCESS: PJ_EINVAL);
-}
+#include "ssl_sock_apple_common.c"
 
-static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
+/* Load the certificate configured in cert into a SecIdentityRef. The private
+ * key is not read from cert: it must come from the PKCS#12 bundle itself or
+ * already be present in the keychain.
+ *
+ * On success *p_identity is set to NULL when no certificate is configured at
+ * all, and otherwise to an identity the caller owns and must CFRelease() --
+ * in both import branches, since the dictionary branch takes its own
+ * reference to what CFDictionaryGetValue() only lends it.
+ */
+static pj_status_t create_identity_from_cert(darwinssl_sock_t *dssock,
+                                             pj_ssl_cert_t *cert,
+                                             SecIdentityRef *p_identity)
 {
     CFStringRef password = NULL;
     CFDataRef cert_data = NULL;
@@ -232,11 +178,10 @@ static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
     CFArrayRef items;
     CFIndex i, count;
     SecIdentityRef identity = NULL;
-    CFTypeRef cert_arr[1];
-    CFArrayRef cert_refs;
     OSStatus err;
     pj_status_t status;
 
+    *p_identity = NULL;
 
     if (cert->privkey_file.slen || cert->privkey_buf.slen ||
         cert->privkey_pass.slen)
@@ -273,8 +218,12 @@ static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
         options = CFDictionaryCreate(NULL, (const void **)keys,
                                      (const void **)values,
                                      (password? 1: 0), NULL, NULL);
-        if (!options)
+        if (!options) {
+            if (password)
+                CFRelease(password);
+            CFRelease(cert_data);
             return PJ_ENOMEM;
+        }
         
 #if TARGET_OS_IPHONE
         err = SecPKCS12Import(cert_data, options, &items);
@@ -322,6 +271,11 @@ static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
                 identity = (SecIdentityRef)
                            CFDictionaryGetValue((CFDictionaryRef) item,
                                                 kSecImportItemIdentity);
+                /* Get rule: this reference is owned by the dictionary, which
+                 * is released along with items below, so take our own.
+                 */
+                if (identity)
+                    CFRetain(identity);
                 break;
             }
 #if !TARGET_OS_IPHONE
@@ -348,12 +302,33 @@ static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
                                   "the cert file"));
             return PJ_EINVAL;
         }
-        
+
+        *p_identity = identity;
+    }
+
+    return PJ_SUCCESS;
+}
+
+static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
+{
+    SecIdentityRef identity = NULL;
+    CFTypeRef cert_arr[1];
+    CFArrayRef cert_refs;
+    OSStatus err;
+    pj_status_t status;
+
+    status = create_identity_from_cert(dssock, cert, &identity);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    if (identity) {
         cert_arr[0] = identity;
         cert_refs = CFArrayCreate(NULL, (const void **)cert_arr, 1,
                               &kCFTypeArrayCallBacks);
-        if (!cert_refs)
+        if (!cert_refs) {
+            CFRelease(identity);
             return PJ_ENOMEM;
+        }
     
         err = SSLSetCertificate(dssock->ssl_ctx, cert_refs);
     
@@ -364,6 +339,41 @@ static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
     }
 
     return PJ_SUCCESS;
+}
+
+/* Eagerly load and validate the certificate on the listener socket, so that a
+ * certificate that is missing, unparsable, or has no matching private key
+ * fails pj_ssl_sock_start_accept() up front. Without this, set_cert() (via
+ * ssl_create() below) does not run until the first connection is accepted, so
+ * the listener reports success and it is every inbound connection that fails
+ * its handshake instead.
+ *
+ * The identity is released again here rather than cached: unlike the OpenSSL
+ * backend, this backend builds no shared server context, and every accepted
+ * connection loads the certificate itself in its own ssl_create(). This
+ * validates the configuration, it does not pin it.
+ *
+ * Note this covers loading only, not the SSLSetCertificate() that set_cert()
+ * goes on to make against a per-connection context. A listener can therefore
+ * still start for a configuration that every connection subsequently
+ * rejects -- the check fails open, never closed.
+ */
+static pj_status_t ssl_init_server_ctx(pj_ssl_sock_t *ssock)
+{
+    darwinssl_sock_t *dssock = (darwinssl_sock_t *)ssock;
+    SecIdentityRef identity = NULL;
+    pj_status_t status;
+
+    pj_assert(ssock->is_server && !ssock->parent);
+
+    if (!ssock->cert)
+        return PJ_SUCCESS;
+
+    status = create_identity_from_cert(dssock, ssock->cert, &identity);
+    if (identity)
+        CFRelease(identity);
+
+    return status;
 }
 
 /* Create and initialize new Darwin SSL context and instance */
@@ -822,311 +832,6 @@ static pj_ssl_cipher ssl_get_cipher(pj_ssl_sock_t *ssock)
     return (err == noErr)? cipher: PJ_TLS_UNKNOWN_CIPHER;
 }
 
-
-#if !TARGET_OS_IPHONE
-static void get_info_and_cn(CFArrayRef array, CFMutableStringRef info,
-                            CFStringRef *cn)
-{
-    const void *keys[] = {kSecOIDOrganizationalUnitName, kSecOIDCountryName,
-                          kSecOIDStateProvinceName, kSecOIDLocalityName,
-                          kSecOIDOrganizationName, kSecOIDCommonName};
-    const char *labels[] = { "OU=", "C=", "ST=", "L=", "O=", "CN="};
-    pj_bool_t add_separator = PJ_FALSE;
-    int i, n;
-
-    *cn = NULL;
-    for(i = 0; i < (int)PJ_ARRAY_SIZE(keys);  i++) {
-        for (n = 0 ; n < CFArrayGetCount(array); n++) {
-            CFDictionaryRef dict;
-            CFTypeRef dictkey;
-            CFStringRef str;
-
-            dict = CFArrayGetValueAtIndex(array, n);
-            if (CFGetTypeID(dict) != CFDictionaryGetTypeID())
-                continue;
-            dictkey = CFDictionaryGetValue(dict, kSecPropertyKeyLabel);
-            if (!CFEqual(dictkey, keys[i]))
-                continue;
-            str = (CFStringRef) CFDictionaryGetValue(dict,
-                                                     kSecPropertyKeyValue);
-                                                     
-            if (CFStringGetLength(str) > 0) {
-                if (add_separator) {
-                    CFStringAppendCString(info, "/", kCFStringEncodingUTF8);
-                }
-                CFStringAppendCString(info, labels[i], kCFStringEncodingUTF8);
-                CFStringAppend(info, str);
-                add_separator = PJ_TRUE;
-                
-                if (CFEqual(keys[i], kSecOIDCommonName))
-                    *cn = str;
-            }
-        }
-    }
-}
-
-static CFDictionaryRef get_cert_oid(SecCertificateRef cert, CFStringRef oid,
-                                    CFTypeRef *value)
-{
-    void *key[1];
-    CFArrayRef key_arr;
-    CFDictionaryRef vals, dict;
-
-    key[0] = (void *)oid;
-    key_arr = CFArrayCreate(NULL, (const void **)key, 1,
-                            &kCFTypeArrayCallBacks);
-
-    vals = SecCertificateCopyValues(cert, key_arr, NULL);
-    dict = CFDictionaryGetValue(vals, key[0]);
-    *value = CFDictionaryGetValue(dict, kSecPropertyKeyValue);
-
-    CFRelease(key_arr);
-
-    return vals;
-}
-
-#endif
-
-/* Get certificate info; in case the certificate info is already populated,
- * this function will check if the contents need updating by inspecting the
- * issuer and the serial number. */
-static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
-                          SecCertificateRef cert)
-{
-    pj_bool_t update_needed;
-    char buf[512];
-    size_t bufsize = sizeof(buf);
-    const pj_uint8_t *serial_no = NULL;
-    size_t serialsize = 0;
-    CFMutableStringRef issuer_info;
-    CFStringRef str;
-    CFDataRef serial = NULL;
-#if !TARGET_OS_IPHONE
-    CFStringRef issuer_cn = NULL;
-    CFDictionaryRef dict;
-#endif
-
-    pj_assert(pool && ci && cert);
-
-    /* Get issuer */
-    issuer_info = CFStringCreateMutable(NULL, 0);
-#if !TARGET_OS_IPHONE
-{
-    /* Unfortunately, unlike on Mac, on iOS we don't have these APIs
-     * to query the certificate info such as the issuer, version,
-     * validity, and alt names.
-     */
-    CFArrayRef issuer_vals;
-    
-    dict = get_cert_oid(cert, kSecOIDX509V1IssuerName,
-                        (CFTypeRef *)&issuer_vals);
-    if (dict) {
-        get_info_and_cn(issuer_vals, issuer_info, &issuer_cn);
-        if (issuer_cn)
-            issuer_cn = CFStringCreateCopy(NULL, issuer_cn);
-        CFRelease(dict);
-    }
-}
-#endif
-    CFStringGetCString(issuer_info, buf, bufsize, kCFStringEncodingUTF8);
-
-    /* Get serial no */
-    if (__builtin_available(macOS 10.13, iOS 11.0, *)) {
-        serial = SecCertificateCopySerialNumberData(cert, NULL);
-        if (serial) {
-            serial_no = CFDataGetBytePtr(serial);
-            serialsize = CFDataGetLength(serial);
-        }
-    }
-
-    /* Check if the contents need to be updated */
-    update_needed = pj_strcmp2(&ci->issuer.info, buf) ||
-                    pj_memcmp(ci->serial_no, serial_no, serialsize);
-    if (!update_needed) {
-        CFRelease(issuer_info);
-        return;
-    }
-
-    /* Update cert info */
-
-    pj_bzero(ci, sizeof(pj_ssl_cert_info));
-
-    /* Version */
-#if !TARGET_OS_IPHONE
-{
-    CFStringRef version;
-    
-    dict = get_cert_oid(cert, kSecOIDX509V1Version,
-                        (CFTypeRef *)&version);
-    if (dict) {
-        ci->version = CFStringGetIntValue(version);
-        CFRelease(dict);
-    }
-}
-#endif
-
-    /* Issuer */
-    pj_strdup2(pool, &ci->issuer.info, buf);
-#if !TARGET_OS_IPHONE
-    if (issuer_cn) {
-        CFStringGetCString(issuer_cn, buf, bufsize, kCFStringEncodingUTF8);
-        pj_strdup2(pool, &ci->issuer.cn, buf);
-        CFRelease(issuer_cn);
-    }
-#endif
-    CFRelease(issuer_info);
-
-    /* Serial number */
-    if (serial) {
-        if (serialsize > sizeof(ci->serial_no))
-            serialsize = sizeof(ci->serial_no);
-        pj_memcpy(ci->serial_no, serial_no, serialsize);
-        CFRelease(serial);
-    }
-
-    /* Subject */
-    str = SecCertificateCopySubjectSummary(cert);
-    CFStringGetCString(str, buf, bufsize, kCFStringEncodingUTF8);
-    pj_strdup2(pool, &ci->subject.cn, buf);
-    CFRelease(str);
-#if !TARGET_OS_IPHONE
-{
-    CFArrayRef subject;
-    CFMutableStringRef subject_info;
-    
-    dict = get_cert_oid(cert, kSecOIDX509V1SubjectName,
-                        (CFTypeRef *)&subject);
-    if (dict) {
-        subject_info = CFStringCreateMutable(NULL, 0);
-
-        get_info_and_cn(subject, subject_info, &str);
-    
-        CFStringGetCString(subject_info, buf, bufsize, kCFStringEncodingUTF8);
-        pj_strdup2(pool, &ci->subject.info, buf);
-    
-        CFRelease(dict);
-        CFRelease(subject_info);
-    }
-}
-#endif
-
-    /* Validity */
-#if !TARGET_OS_IPHONE
-{
-    CFNumberRef validity;
-    double interval;
-    
-    dict = get_cert_oid(cert, kSecOIDX509V1ValidityNotBefore,
-                        (CFTypeRef *)&validity);
-    if (dict) {
-        if (CFNumberGetValue(validity, CFNumberGetType(validity),
-                             &interval))
-        {
-            /* Darwin's absolute reference date is 1 Jan 2001 00:00:00 GMT */
-            ci->validity.start.sec = (unsigned long)interval + 978278400L;
-        }
-        CFRelease(dict);
-    }
-
-    dict = get_cert_oid(cert, kSecOIDX509V1ValidityNotAfter,
-                        (CFTypeRef *)&validity);
-    if (dict) {
-        if (CFNumberGetValue(validity, CFNumberGetType(validity),
-                             &interval))
-        {
-            ci->validity.end.sec = (unsigned long)interval + 978278400L;
-        }
-        CFRelease(dict);
-    }
-}
-#endif
-
-    /* Subject Alternative Name extension */
-#if !TARGET_OS_IPHONE
-{
-    CFArrayRef altname;
-    CFIndex i;
-
-    dict = get_cert_oid(cert, kSecOIDSubjectAltName, (CFTypeRef *)&altname);
-    if (!dict || !CFArrayGetCount(altname))
-        return;
-
-    ci->subj_alt_name.entry = pj_pool_calloc(pool, CFArrayGetCount(altname),
-                                             sizeof(*ci->subj_alt_name.entry));
-
-    for (i = 0; i < CFArrayGetCount(altname); ++i) {
-        CFDictionaryRef item;
-        CFStringRef label, value;
-        pj_ssl_cert_name_type type = PJ_SSL_CERT_NAME_UNKNOWN;
-        
-        item = CFArrayGetValueAtIndex(altname, i);
-        if (CFGetTypeID(item) != CFDictionaryGetTypeID())
-            continue;
-        
-        label = (CFStringRef)CFDictionaryGetValue(item, kSecPropertyKeyLabel);
-        if (CFGetTypeID(label) != CFStringGetTypeID())
-            continue;
-
-        value = (CFStringRef)CFDictionaryGetValue(item, kSecPropertyKeyValue);
-
-        if (!CFStringCompare(label, CFSTR("DNS Name"),
-                             kCFCompareCaseInsensitive))
-        {
-            if (CFGetTypeID(value) != CFStringGetTypeID())
-                continue;
-            CFStringGetCString(value, buf, bufsize, kCFStringEncodingUTF8);
-            type = PJ_SSL_CERT_NAME_DNS;
-        } else if (!CFStringCompare(label, CFSTR("IP Address"),
-                                    kCFCompareCaseInsensitive))
-        {
-            if (CFGetTypeID(value) != CFStringGetTypeID())
-                continue;
-            CFStringGetCString(value, buf, bufsize, kCFStringEncodingUTF8);
-            type = PJ_SSL_CERT_NAME_IP;
-        } else if (!CFStringCompare(label, CFSTR("Email Address"),
-                                    kCFCompareCaseInsensitive))
-        {
-            if (CFGetTypeID(value) != CFStringGetTypeID())
-                continue;
-            CFStringGetCString(value, buf, bufsize, kCFStringEncodingUTF8);
-            type = PJ_SSL_CERT_NAME_RFC822;
-        } else if (!CFStringCompare(label, CFSTR("URI"),
-                                    kCFCompareCaseInsensitive))
-        {
-            CFStringRef uri;
-
-            if (CFGetTypeID(value) != CFURLGetTypeID())
-                continue;
-            uri = CFURLGetString((CFURLRef)value);
-            CFStringGetCString(uri, buf, bufsize, kCFStringEncodingUTF8);
-            type = PJ_SSL_CERT_NAME_URI;
-        }
-
-        if (type != PJ_SSL_CERT_NAME_UNKNOWN) {
-            ci->subj_alt_name.entry[ci->subj_alt_name.cnt].type = type;
-            if (type == PJ_SSL_CERT_NAME_IP) {
-                char ip_buf[PJ_INET6_ADDRSTRLEN+10];
-                int len = CFStringGetLength(value);
-                int af = pj_AF_INET();
-
-                if (len == sizeof(pj_in6_addr)) af = pj_AF_INET6();
-                pj_inet_ntop2(af, buf, ip_buf, sizeof(ip_buf));
-                pj_strdup2(pool,
-                    &ci->subj_alt_name.entry[ci->subj_alt_name.cnt].name,
-                    ip_buf);
-            } else {
-                pj_strdup2(pool,
-                    &ci->subj_alt_name.entry[ci->subj_alt_name.cnt].name,
-                    buf);
-            }
-            ci->subj_alt_name.cnt++;
-        }
-    }
-
-    CFRelease(dict);
-}
-#endif
-}
 
 /* Update local & remote certificates info. This function should be
  * called after handshake or renegotiation successfully completed. */

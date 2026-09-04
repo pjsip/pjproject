@@ -215,6 +215,9 @@
     <ClCompile Include="..\src\pjmedia\wav_writer.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pjmedia\tone_detector.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\pjmedia\wave.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -419,6 +422,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pjmedia\vid_tee.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjmedia\tone_detector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pjmedia\wav_playlist.h">

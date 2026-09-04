@@ -194,6 +194,7 @@ PJ_DEF(pj_status_t) pjsip_100rel_init_module(pjsip_endpoint *endpt)
 PJ_DEF(pj_status_t) pjsip_100rel_attach(pjsip_inv_session *inv)
 {
     dlg_data *dd;
+    pj_status_t status;
 
     /* Check that 100rel module has been initialized */
     PJ_ASSERT_RETURN(mod_100rel.mod.id >= 0, PJ_EINVALIDOP);
@@ -201,7 +202,9 @@ PJ_DEF(pj_status_t) pjsip_100rel_attach(pjsip_inv_session *inv)
     /* Create and attach as dialog usage */
     dd = PJ_POOL_ZALLOC_T(inv->dlg->pool, dlg_data);
     dd->inv = inv;
-    pjsip_dlg_add_usage(inv->dlg, &mod_100rel.mod, (void*)dd);
+    status = pjsip_dlg_add_usage(inv->dlg, &mod_100rel.mod, (void*)dd);
+    if (status != PJ_SUCCESS)
+        return status;
 
     PJ_LOG(5,(dd->inv->dlg->obj_name, "100rel module attached"));
 

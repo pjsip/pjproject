@@ -297,6 +297,7 @@ if(BUILD_TESTING)
   # pjsip test application
   add_executable(pjsip-test
     src/test/dlg_core_test.c
+    src/test/dlg_target_refresh_test.c
     src/test/dns_test.c
     src/test/msg_err_test.c
     src/test/msg_logger.c
@@ -317,6 +318,8 @@ if(BUILD_TESTING)
     src/test/inv_offer_answer_test.c
     src/test/auth_async_test.c
     src/test/pjsua_auth_test.c
+    src/test/pjsua_call_test.c
+    src/test/pjsua_acc_test.c
     src/test/${PJ_TEST_MAIN}
   )
 

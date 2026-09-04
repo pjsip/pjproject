@@ -395,8 +395,10 @@ void AccountCallConfig::readObject(const ContainerNode &node)
     NODE_READ_NUM_T   ( this_node, pjsua_100rel_use, prackUse);
     NODE_READ_NUM_T   ( this_node, pjsua_sip_timer_use, timerUse);
     NODE_READ_NUM_T   ( this_node, pjsua_sip_siprec_use, siprecUse);
+    NODE_READ_BOOL    ( this_node, siprecRequireLabel);
     NODE_READ_UNSIGNED( this_node, timerMinSESec);
     NODE_READ_UNSIGNED( this_node, timerSessExpiresSec);
+    NODE_READ_BOOL_OPT( this_node, siprecRequireMetadata);
 }
 
 void AccountCallConfig::writeObject(ContainerNode &node) const
@@ -408,8 +410,10 @@ void AccountCallConfig::writeObject(ContainerNode &node) const
     NODE_WRITE_NUM_T   ( this_node, pjsua_100rel_use, prackUse);
     NODE_WRITE_NUM_T   ( this_node, pjsua_sip_timer_use, timerUse);
     NODE_WRITE_NUM_T   ( this_node, pjsua_sip_siprec_use, siprecUse);
+    NODE_WRITE_BOOL    ( this_node, siprecRequireLabel);
     NODE_WRITE_UNSIGNED( this_node, timerMinSESec);
     NODE_WRITE_UNSIGNED( this_node, timerSessExpiresSec);
+    NODE_WRITE_BOOL    ( this_node, siprecRequireMetadata);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -556,6 +560,9 @@ void AccountMediaConfig::readObject(const ContainerNode &node)
     NODE_READ_BOOL    ( this_node, useLoopMedTp);
     NODE_READ_BOOL    ( this_node, enableLoopback);
     NODE_READ_BOOL    ( this_node, rtcpXrEnabled);
+    /* Append new fields at the end and use the _OPT variant so older config
+     * files (and older readers) remain compatible - see persistent.hpp. */
+    NODE_READ_BOOL_OPT( this_node, preserveConfSlot);
 }
 
 void AccountMediaConfig::writeObject(ContainerNode &node) const
@@ -574,6 +581,8 @@ void AccountMediaConfig::writeObject(ContainerNode &node) const
     NODE_WRITE_BOOL    ( this_node, useLoopMedTp);
     NODE_WRITE_BOOL    ( this_node, enableLoopback);
     NODE_WRITE_BOOL    ( this_node, rtcpXrEnabled);
+    /* Keep appended last to match readObject() and the append-only convention. */
+    NODE_WRITE_BOOL    ( this_node, preserveConfSlot);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -735,6 +744,8 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.require_100rel          = callConfig.prackUse;
     ret.use_timer               = callConfig.timerUse;
     ret.use_siprec              = callConfig.siprecUse;
+    ret.siprec_require_label    = callConfig.siprecRequireLabel;
+    ret.siprec_require_metadata = callConfig.siprecRequireMetadata;
     ret.timer_setting.min_se    = callConfig.timerMinSESec;
     ret.timer_setting.sess_expires = callConfig.timerSessExpiresSec;
 
@@ -825,6 +836,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.srtp_opt                = mediaConfig.srtpOpt.toPj();
     ret.ipv6_media_use          = mediaConfig.ipv6Use;
     ret.enable_rtcp_mux         = mediaConfig.rtcpMuxEnabled;
+    ret.preserve_conf_slot      = mediaConfig.preserveConfSlot;
     ret.rtcp_fb_cfg             = mediaConfig.rtcpFbConfig.toPj();
     ret.use_loop_med_tp         = mediaConfig.useLoopMedTp;
     ret.enable_loopback         = mediaConfig.enableLoopback;
@@ -925,6 +937,8 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     callConfig.prackUse         = prm.require_100rel;
     callConfig.timerUse         = prm.use_timer;
     callConfig.siprecUse        = prm.use_siprec;
+    callConfig.siprecRequireLabel = PJ2BOOL(prm.siprec_require_label);
+    callConfig.siprecRequireMetadata = PJ2BOOL(prm.siprec_require_metadata);
     callConfig.timerMinSESec    = prm.timer_setting.min_se;
     callConfig.timerSessExpiresSec = prm.timer_setting.sess_expires;
 
@@ -1039,6 +1053,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     mediaConfig.srtpOpt.fromPj(prm.srtp_opt);
     mediaConfig.ipv6Use         = prm.ipv6_media_use;
     mediaConfig.rtcpMuxEnabled  = PJ2BOOL(prm.enable_rtcp_mux);
+    mediaConfig.preserveConfSlot = PJ2BOOL(prm.preserve_conf_slot);
     mediaConfig.rtcpFbConfig.fromPj(prm.rtcp_fb_cfg);
     mediaConfig.useLoopMedTp    = PJ2BOOL(prm.use_loop_med_tp);
     mediaConfig.enableLoopback  = PJ2BOOL(prm.enable_loopback);

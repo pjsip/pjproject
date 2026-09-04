@@ -118,6 +118,16 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
                                                   pjsip_transaction *tsx,
                                                   pjsip_rx_data *rdata);
 static pj_status_t inv_negotiate_sdp( pjsip_inv_session *inv );
+
+#if PJSIP_HAS_SIPREC
+static pj_status_t inv_verify_siprec_metadata_update(
+                                pjsip_inv_session *inv,
+                                pjsip_rx_data *rdata);
+static void inv_notify_siprec_metadata_update(pjsip_inv_session *inv,
+                                              pjsip_rx_data *rdata);
+static void inv_discard_siprec_metadata_update(pjsip_inv_session *inv);
+#endif
+
 static pjsip_msg_body *create_sdp_body(pj_pool_t *pool,
                                        const pjmedia_sdp_session *c_sdp);
 static pj_status_t process_answer( pjsip_inv_session *inv,
@@ -1134,11 +1144,15 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
         return status;
     }
 
+    /* Create 100rel handler */
+    status = pjsip_100rel_attach(inv);
+    if (status != PJ_SUCCESS) {
+        pjsip_dlg_dec_lock(dlg);
+        return status;
+    }
+
     /* Increment dialog session */
     pjsip_dlg_inc_session(dlg, &mod_inv.mod);
-
-    /* Create 100rel handler */
-    pjsip_100rel_attach(inv);
 
     /* Done */
     pjsip_inv_add_ref(inv);
@@ -1928,6 +1942,15 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
         return status;
     }
 
+    /* Create 100rel handler */
+    if (inv->options & PJSIP_INV_REQUIRE_100REL) {
+        status = pjsip_100rel_attach(inv);
+        if (status != PJ_SUCCESS) {
+            pjsip_dlg_dec_lock(dlg);
+            return status;
+        }
+    }
+
     /* Increment session in the dialog. */
     pjsip_dlg_inc_session(dlg, &mod_inv.mod);
 
@@ -1939,11 +1962,6 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
     tsx_inv_data->inv = inv;
     tsx_inv_data->has_sdp = (sdp_info->sdp!=NULL);
     inv->invite_tsx->mod_data[mod_inv.mod.id] = tsx_inv_data;
-
-    /* Create 100rel handler */
-    if (inv->options & PJSIP_INV_REQUIRE_100REL) {
-        pjsip_100rel_attach(inv);
-    }
 
     /* Done */
     pjsip_inv_add_ref(inv);
@@ -2338,6 +2356,196 @@ static void swap_pool(pj_pool_t **p1, pj_pool_t **p2)
 }
 
 
+#if PJSIP_HAS_SIPREC
+/* Check if message body carries SIPREC metadata, either as a single-part
+ * rs-metadata document or as a part of a multipart body (RFC 7866 §7.1).
+ * Uses the log-free predicate so classification of an already-processed
+ * body does not repeat pjsip_siprec_get_metadata()'s legacy-media-type
+ * deprecation warning.
+ */
+static pj_bool_t inv_body_has_siprec_metadata(pjsip_msg_body *body)
+{
+    return pjsip_siprec_body_has_metadata(body);
+}
+
+/*
+ * Verify the SIPREC metadata update carried by a mid-dialog request
+ * (re-INVITE/UPDATE): extract the rs-metadata and run the verification
+ * callback, sending the error response on failure. The update notification
+ * is NOT fired here: it is deferred until the request is accepted, see
+ * inv_notify_siprec_metadata_update().
+ *
+ * Returns:
+ *  @return             PJ_SUCCESS if the request may proceed, with the
+ *                      verified metadata stashed in inv->siprec_metadata
+ *                      when present, or an error code after the error
+ *                      response has been sent.
+ */
+static pj_status_t inv_verify_siprec_metadata_update(
+                                        pjsip_inv_session *inv,
+                                        pjsip_rx_data *rdata)
+{
+    pj_str_t new_metadata = {NULL, 0};
+    pj_status_t meta_status;
+    pjsip_tx_data *tdata;
+
+    PJ_ASSERT_RETURN(inv && rdata, PJ_EINVAL);
+
+    /* A pending update from a previous request that never completed is
+     * superseded. The negotiator is done here, so its copy can be
+     * reclaimed.
+     */
+    inv_discard_siprec_metadata_update(inv);
+
+    tdata = NULL;
+    meta_status = PJ_SUCCESS;
+
+    /*
+     * Both callbacks are independently optional:
+     * - on_verify_siprec_update: optional, if not implemented, metadata
+     *   will be accepted without verification.
+     * - on_siprec_metadata_update: optional, called when metadata is updated.
+     *
+     * These callbacks operate independently - an application may register
+     * only on_siprec_metadata_update to receive metadata notifications
+     * without implementing verification.
+     */
+
+    if (mod_inv.cb.on_verify_siprec_update) {
+        /* Verification callback is registered - use it to extract and
+         * verify metadata. The callback is responsible for:
+         * 1. Extracting metadata from the request
+         * 2. Verifying according to application policy (require_label, etc.)
+         * 3. Creating error response if verification fails
+         */
+        struct pjsip_inv_on_verify_siprec_cb_param param;
+
+        param.rdata = rdata;
+        param.metadata = &new_metadata;
+        param.p_tdata = &tdata;
+        meta_status = (*mod_inv.cb.on_verify_siprec_update)(inv, &param);
+        if (meta_status == PJ_ENOTFOUND) {
+            /* Metadata not found in request.
+             * This is normal for routine mid-dialog operations.
+             * Return PJ_SUCCESS to continue processing - the caller will
+             * check if the body has an unknown content-type.
+             */
+            return PJ_SUCCESS;
+        }
+
+        if (meta_status != PJ_SUCCESS) {
+            /* Verification failed - send error response if provided */
+            pj_status_t status;
+
+            if (tdata) {
+                status = pjsip_dlg_send_response(inv->dlg,
+                                                 pjsip_rdata_get_tsx(rdata),
+                                                 tdata);
+            } else {
+                /* Callback failed to create response - create generic error */
+                pjsip_tx_data *err_tdata;
+
+                status = pjsip_dlg_create_response(
+                                    inv->dlg, rdata,
+                                    PJSIP_SC_INTERNAL_SERVER_ERROR,
+                                    NULL, &err_tdata);
+                if (status == PJ_SUCCESS) {
+                    status = pjsip_dlg_send_response(inv->dlg,
+                                                     pjsip_rdata_get_tsx(rdata),
+                                                     err_tdata);
+                }
+            }
+
+            if (status != PJ_SUCCESS) {
+                PJ_PERROR(1, (THIS_FILE, status,
+                              "Error sending rejection response for SIPREC "
+                              "metadata update"));
+            }
+
+            return meta_status;
+        }
+
+    } else {
+        /* Verification callback not registered - extract metadata directly
+         * for the update notification. Metadata is accepted without
+         * verification (default per documentation).
+         */
+        pjsip_msg *msg = rdata->msg_info.msg;
+        if (msg && msg->body) {
+            meta_status = pjsip_siprec_get_metadata(rdata->tp_info.pool,
+                                                     msg->body,
+                                                     &new_metadata);
+        }
+
+        if (meta_status != PJ_SUCCESS) {
+            /* Metadata not found or error extracting.
+             * Not an error - metadata update is optional in mid-dialog.
+             * Return PJ_SUCCESS to continue processing.
+             */
+            return PJ_SUCCESS;
+        }
+    }
+
+    /* Stash the verified metadata for the deferred notification. The copy
+     * in pool_prov keeps it valid even when the request is answered after
+     * rdata is released (e.g. async on_rx_reinvite() takeover); the
+     * flip-flop pool recycling in inv_negotiate_sdp() reclaims it.
+     */
+    if (new_metadata.slen > 0 && new_metadata.ptr != NULL) {
+        pj_strdup(inv->pool_prov, &inv->siprec_metadata, &new_metadata);
+        if (inv->siprec_metadata.ptr == NULL)
+            inv->siprec_metadata.slen = 0;
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Fire the deferred SIPREC metadata update notification, if any. Called
+ * once the request carrying the update is accepted: right before
+ * responding to a metadata-only UPDATE/re-INVITE, and from
+ * inv_negotiate_sdp() after the offer/answer completed successfully.
+ */
+static void inv_notify_siprec_metadata_update(pjsip_inv_session *inv,
+                                              pjsip_rx_data *rdata)
+{
+    pj_str_t empty_metadata = {NULL, 0};
+
+    if (inv->siprec_metadata.slen <= 0 || inv->siprec_metadata.ptr == NULL)
+        return;
+
+    if (mod_inv.cb.on_siprec_metadata_update) {
+        struct pjsip_inv_on_siprec_metadata_cb_param param;
+
+        param.old_metadata = &empty_metadata;
+        param.new_metadata = &inv->siprec_metadata;
+        param.rdata = rdata;
+        (*mod_inv.cb.on_siprec_metadata_update)(inv, &param);
+    }
+
+    inv->siprec_metadata.ptr = NULL;
+    inv->siprec_metadata.slen = 0;
+}
+
+
+/*
+ * Drop a pending SIPREC metadata update and reclaim its copy, when the
+ * request carrying it is rejected before its offer/answer completes.
+ * Only call when the SDP negotiator holds no pending offer, as the
+ * negotiator stores its offers in the provisional pool.
+ */
+static void inv_discard_siprec_metadata_update(pjsip_inv_session *inv)
+{
+    if (inv->siprec_metadata.slen > 0) {
+        inv->siprec_metadata.ptr = NULL;
+        inv->siprec_metadata.slen = 0;
+        pj_pool_reset(inv->pool_prov);
+    }
+}
+#endif
+
+
 /*
  * Initiate SDP negotiation in the SDP negotiator.
  */
@@ -2352,6 +2560,21 @@ static pj_status_t inv_negotiate_sdp( pjsip_inv_session *inv )
     status = pjmedia_sdp_neg_negotiate(inv->pool_prov, inv->neg, 0);
 
     PJ_PERROR(4,(inv->obj_name, status, "SDP negotiation done"));
+
+#if PJSIP_HAS_SIPREC
+    /* The request carrying a pending SIPREC metadata update has just been
+     * accepted or rejected: deliver or drop the notification here, before
+     * the pool recycling below frees its copy. This keeps the application
+     * from being notified about metadata of a request that ends up
+     * rejected (e.g. unacceptable SDP offer).
+     */
+    if (status == PJ_SUCCESS) {
+        inv_notify_siprec_metadata_update(inv, NULL);
+    } else {
+        inv->siprec_metadata.ptr = NULL;
+        inv->siprec_metadata.slen = 0;
+    }
+#endif
 
     if (mod_inv.cb.on_media_update && inv->notify)
         (*mod_inv.cb.on_media_update)(inv, status);
@@ -4209,6 +4432,9 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
 {
     pjmedia_sdp_neg_state neg_state;
     pj_status_t status;
+#if PJSIP_HAS_SIPREC
+    pj_status_t meta_status;
+#endif
     pjsip_tx_data *tdata = NULL;
     pjsip_rx_data *rdata;
     pjsip_status_code st_code;
@@ -4236,16 +4462,16 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
      */
     if (rdata->msg_info.msg->body == NULL) {
 
-        status = pjsip_dlg_create_response(inv->dlg, rdata, 
+        status = pjsip_dlg_create_response(inv->dlg, rdata,
                                            200, NULL, &tdata);
     }
     /* Send 491 if we receive UPDATE while we're waiting for an answer */
     else if (neg_state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER) {
-        status = pjsip_dlg_create_response(inv->dlg, rdata, 
+        status = pjsip_dlg_create_response(inv->dlg, rdata,
                                            PJSIP_SC_REQUEST_PENDING, NULL,
                                            &tdata);
     }
-    /* Send 500 with Retry-After header set randomly between 0 and 10 if we 
+    /* Send 500 with Retry-After header set randomly between 0 and 10 if we
      * receive UPDATE while we haven't sent answer.
      */
     else if (neg_state == PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER ||
@@ -4254,10 +4480,10 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
         pjsip_retry_after_hdr *ra_hdr;
         int val;
 
-        status = pjsip_dlg_create_response(inv->dlg, rdata, 
+        status = pjsip_dlg_create_response(inv->dlg, rdata,
                                            PJSIP_SC_INTERNAL_SERVER_ERROR,
                                            NULL, &tdata);
-    
+
         if (status == PJ_SUCCESS) {
             val = (pj_rand() % 10);
             ra_hdr = pjsip_retry_after_hdr_create(tdata->pool, val);
@@ -4266,36 +4492,124 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
 
     } else {
         /* We receive new offer from remote */
-        inv_check_sdp_in_incoming_msg(inv, pjsip_rdata_get_tsx(rdata), rdata);
 
-        /* Application MUST have supplied the answer by now.
-         * If so, negotiate the SDP.
+#if PJSIP_HAS_SIPREC
+        /* Extract and verify SIPREC metadata update if present (RFC 7866
+         * §7.1). Only for recording sessions (PJSIP_INV_REQUIRE_SIPREC),
+         * other calls keep rejecting unknown content-types with 488.
+         * Verified here, after glare/timer checks, so requests rejected
+         * due to glare or timer state never reach the application. The
+         * update notification is deferred until the request is accepted:
+         * inv_negotiate_sdp() delivers it when the offer/answer completes,
+         * or it is delivered below for metadata-only updates.
          */
-        neg_state = pjmedia_sdp_neg_get_state(inv->neg);
-        if (neg_state != PJMEDIA_SDP_NEG_STATE_WAIT_NEGO ||
-            (status=inv_negotiate_sdp(inv)) != PJ_SUCCESS)
+        if ((inv->options & PJSIP_INV_REQUIRE_SIPREC) &&
+            rdata->msg_info.msg->body != NULL)
         {
-            /* Negotiation has failed. If negotiator is still
-             * stuck at non-DONE state, cancel any ongoing offer.
-             */
-            neg_state = pjmedia_sdp_neg_get_state(inv->neg);
-            if (neg_state != PJMEDIA_SDP_NEG_STATE_DONE) {
-                pjmedia_sdp_neg_cancel_offer(inv->neg);
+            meta_status = inv_verify_siprec_metadata_update(inv, rdata);
+            if (meta_status != PJ_SUCCESS) {
+                /* Metadata verification failed - error response already sent
+                 * by inv_verify_siprec_metadata_update().
+                 */
+                return;
+            }
+        }
+#endif
+
+        /* Check if this UPDATE contains SDP or is metadata-only */
+        if (rdata->msg_info.msg->body != NULL) {
+            pjsip_rdata_sdp_info *sdp_info = pjsip_rdata_get_sdp_info(rdata);
+
+            /* sdp_info->body.ptr is non-NULL only when content-type is SDP.
+             * If sdp is NULL in that case, it means SDP parsing failed. */
+            if (sdp_info->body.ptr != NULL && sdp_info->sdp == NULL) {
+                /* SDP content-type present but parsing/validating failed.
+                 * Respond with 488 Not Acceptable (RFC 3261). */
+#if PJSIP_HAS_SIPREC
+                /* The UPDATE is rejected before its offer/answer runs. */
+                inv_discard_siprec_metadata_update(inv);
+#endif
+                status = pjsip_dlg_create_response(inv->dlg, rdata,
+                                                   PJSIP_SC_NOT_ACCEPTABLE_HERE,
+                                                   NULL, &tdata);
+                goto on_return;
             }
 
-            status = pjsip_dlg_create_response(inv->dlg, rdata, 
-                                               PJSIP_SC_NOT_ACCEPTABLE_HERE,
-                                               NULL, &tdata);
-        } else {
-            /* New media has been negotiated successfully, send 200/OK */
-            status = pjsip_dlg_create_response(inv->dlg, rdata, 
-                                               PJSIP_SC_OK, NULL, &tdata);
-            if (status == PJ_SUCCESS) {
-                const pjmedia_sdp_session *sdp;
-                status = pjmedia_sdp_neg_get_active_local(inv->neg, &sdp);
-                if (status == PJ_SUCCESS)
-                    tdata->msg->body = create_sdp_body(tdata->pool, sdp);
+            if (sdp_info->sdp != NULL) {
+                /* SDP content-type present and parsed successfully.
+                 * Process SDP offer/answer directly. */
+                inv_check_sdp_in_incoming_msg(inv, pjsip_rdata_get_tsx(rdata), rdata);
+
+                /* Application MUST have supplied the answer by now.
+                 * If so, negotiate the SDP.
+                 */
+                neg_state = pjmedia_sdp_neg_get_state(inv->neg);
+                if (neg_state != PJMEDIA_SDP_NEG_STATE_WAIT_NEGO ||
+                    (status=inv_negotiate_sdp(inv)) != PJ_SUCCESS)
+                {
+                    /* Negotiation has failed. If negotiator is still
+                     * stuck at non-DONE state, cancel any ongoing offer.
+                     */
+                    neg_state = pjmedia_sdp_neg_get_state(inv->neg);
+                    if (neg_state != PJMEDIA_SDP_NEG_STATE_DONE) {
+                        pjmedia_sdp_neg_cancel_offer(inv->neg);
+                    }
+
+#if PJSIP_HAS_SIPREC
+                    /* The negotiator is done now, any pending metadata
+                     * update of this rejected request can be dropped. */
+                    inv_discard_siprec_metadata_update(inv);
+#endif
+
+                    status = pjsip_dlg_create_response(inv->dlg, rdata,
+                                                       PJSIP_SC_NOT_ACCEPTABLE_HERE,
+                                                       NULL, &tdata);
+                } else {
+                    /* New media has been negotiated successfully, send 200/OK */
+                    status = pjsip_dlg_create_response(inv->dlg, rdata,
+                                                       PJSIP_SC_OK, NULL, &tdata);
+                    if (status == PJ_SUCCESS) {
+                        const pjmedia_sdp_session *sdp;
+                        status = pjmedia_sdp_neg_get_active_local(inv->neg, &sdp);
+                        if (status == PJ_SUCCESS)
+                            tdata->msg->body = create_sdp_body(tdata->pool, sdp);
+                    }
+                }
+            } else {
+                /* Body exists but has no SDP content-type. On recording
+                 * sessions, accept it as a metadata-only UPDATE (RFC 7866
+                 * §7.1), with metadata already processed above, or reject
+                 * unknown content-types with 488 like upstream does for
+                 * bodies it cannot handle.
+                 */
+#if PJSIP_HAS_SIPREC
+                if ((inv->options & PJSIP_INV_REQUIRE_SIPREC) &&
+                    inv_body_has_siprec_metadata(rdata->msg_info.msg->body))
+                {
+                    /* Metadata-only UPDATE - nothing else to process */
+                    inv_notify_siprec_metadata_update(inv, rdata);
+                    /* The negotiator is done here and the provisional pool
+                     * only holds the metadata copy, so it can be reused. */
+                    pj_pool_reset(inv->pool_prov);
+                    status = pjsip_dlg_create_response(inv->dlg, rdata,
+                                                       PJSIP_SC_OK, NULL,
+                                                       &tdata);
+                } else {
+                    status = pjsip_dlg_create_response(inv->dlg, rdata,
+                                            PJSIP_SC_NOT_ACCEPTABLE_HERE,
+                                            NULL, &tdata);
+                }
+#else
+                status = pjsip_dlg_create_response(inv->dlg, rdata,
+                                        PJSIP_SC_NOT_ACCEPTABLE_HERE,
+                                        NULL, &tdata);
+#endif
             }
+        } else {
+            /* No body - this is a session-timer refresh or similar.
+             * Accept with 200 OK without SDP. */
+            status = pjsip_dlg_create_response(inv->dlg, rdata,
+                                               PJSIP_SC_OK, NULL, &tdata);
         }
     }
 
@@ -5917,6 +6231,53 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
                 return;
             }
 
+#if PJSIP_HAS_SIPREC
+            /* Extract and verify SIPREC metadata update if present. Only
+             * for recording sessions (PJSIP_INV_REQUIRE_SIPREC), other
+             * calls keep rejecting unknown content-types below. The update
+             * notification is deferred until the request is accepted, see
+             * inv_verify_siprec_metadata_update().
+             */
+            if ((inv->options & PJSIP_INV_REQUIRE_SIPREC) &&
+                inv_verify_siprec_metadata_update(inv, rdata) != PJ_SUCCESS)
+            {
+                return;
+            }
+
+            /* Check if this is a metadata-only re-INVITE carrying SIPREC
+             * metadata (RFC 7866 §7.1): respond with 200/OK without doing
+             * SDP negotiation. sdp_info->body.ptr is non-NULL only when an
+             * SDP part is present, so a broken SDP part is not metadata-only
+             * and falls through to rejection below. Other bodies without
+             * SDP content-type are left to inv_check_sdp_in_incoming_msg(),
+             * which rejects unrecognized content-types.
+             */
+            if ((inv->options & PJSIP_INV_REQUIRE_SIPREC) &&
+                rdata->msg_info.msg->body != NULL)
+            {
+                sdp_info = pjsip_rdata_get_sdp_info(rdata);
+
+                if (sdp_info->sdp == NULL &&
+                    sdp_info->body.ptr == NULL &&
+                    inv_body_has_siprec_metadata(rdata->msg_info.msg->body))
+                {
+                    inv_notify_siprec_metadata_update(inv, rdata);
+                    /* The negotiator is done here and the provisional pool
+                     * only holds the metadata copy, so it can be reused. */
+                    pj_pool_reset(inv->pool_prov);
+                    status = pjsip_dlg_create_response(inv->dlg, rdata,
+                                                       PJSIP_SC_OK, NULL,
+                                                       &tdata);
+                    if (status != PJ_SUCCESS)
+                        return;
+
+                    pjsip_timer_update_resp(inv, tdata);
+                    status = pjsip_dlg_send_response(dlg, tsx, tdata);
+                    return;
+                }
+            }
+#endif
+
             /* Process SDP in incoming message. */
             status = inv_check_sdp_in_incoming_msg(inv, tsx, rdata);
 
@@ -5982,7 +6343,13 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
                         pjmedia_sdp_neg_cancel_offer(inv->neg);
                     }
 
-                    status = pjsip_dlg_create_response(inv->dlg, rdata, 
+#if PJSIP_HAS_SIPREC
+                    /* The negotiator is done now, any pending metadata
+                     * update of this rejected request can be dropped. */
+                    inv_discard_siprec_metadata_update(inv);
+#endif
+
+                    status = pjsip_dlg_create_response(inv->dlg, rdata,
                                          (status == PJMEDIA_SDP_EINSDP)?415:488,
                                           NULL, &tdata);
 

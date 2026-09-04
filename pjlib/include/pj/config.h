@@ -606,6 +606,27 @@
 #endif
 
 /**
+ * If enabled, the hash TABLE (pj_hash_table_t) computes its bucket index with
+ * a keyed hash (SipHash) using a per-process random key, instead of the plain
+ * djb2 hash. This defends against hash-flooding denial-of-service, where an
+ * attacker who controls keys inserted into a table (e.g. SIP transaction keys
+ * derived from the Via branch, or dialog keys from Call-ID/tags) crafts many
+ * keys that collide into one bucket, degrading lookups from O(1) to O(n).
+ *
+ * This only affects the internal table bucketing. The public pj_hash_calc()
+ * remains the deterministic djb2 hash (it is used to derive stable values such
+ * as the SIP +sip.instance id and ICE foundations, which must not be keyed).
+ *
+ * Requires 64-bit integer support (PJ_HAS_INT64); otherwise the table falls
+ * back to djb2 regardless of this setting.
+ *
+ * Default: 1 (enabled)
+ */
+#ifndef PJ_HASH_TABLE_USE_SIPHASH
+#  define PJ_HASH_TABLE_USE_SIPHASH   1
+#endif
+
+/**
  * Set this to 1 to enable debugging on the group lock. Default: 0
  */
 #ifndef PJ_GRP_LOCK_DEBUG
@@ -1213,10 +1234,20 @@
 #define PJ_SSL_SOCK_IMP_MBEDTLS     6
 
 /**
- * Select which SSL socket implementation to use. Currently pjlib supports
- * PJ_SSL_SOCK_IMP_OPENSSL, which uses OpenSSL, and PJ_SSL_SOCK_IMP_GNUTLS,
- * which uses GnuTLS. Setting this to PJ_SSL_SOCK_IMP_NONE will disable
- * secure socket.
+ * Select which SSL socket implementation to use. Setting this to
+ * PJ_SSL_SOCK_IMP_NONE will disable secure socket. The available
+ * implementations are:
+ *  - PJ_SSL_SOCK_IMP_OPENSSL, which uses OpenSSL,
+ *  - PJ_SSL_SOCK_IMP_GNUTLS, which uses GnuTLS,
+ *  - PJ_SSL_SOCK_IMP_MBEDTLS, which uses Mbed TLS,
+ *  - PJ_SSL_SOCK_IMP_SCHANNEL, which uses Windows Schannel,
+ *  - PJ_SSL_SOCK_IMP_APPLE, which uses Apple's Network framework, and
+ *  - PJ_SSL_SOCK_IMP_DARWIN, which uses Apple's Secure Transport
+ *    (deprecated by Apple in macOS 10.15 and iOS 13.0).
+ *
+ * Note that PJ_SSL_SOCK_IMP_APPLE requires PJ_IOQUEUE_IMP_SELECT: it
+ * delivers its events through ssl_network_event_poll(), which only the
+ * select() ioqueue calls.
  *
  * Default is PJ_SSL_SOCK_IMP_NONE if PJ_HAS_SSL_SOCK is not set, otherwise
  * it is PJ_SSL_SOCK_IMP_OPENSSL.
@@ -1227,6 +1258,20 @@
 #   else
 #       define PJ_SSL_SOCK_IMP              PJ_SSL_SOCK_IMP_OPENSSL
 #   endif
+#endif
+
+
+/* The Apple Network framework backend delivers every asynchronous event
+ * through ssl_network_event_poll(), whose only caller is the select()
+ * ioqueue. With any other ioqueue the event queue is never drained, so the
+ * build links and then no connection ever completes. Reject it here, where
+ * both macros are final regardless of whether they came from autoconf,
+ * CMake or config_site.h.
+ */
+#if defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK != 0 && \
+    PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_APPLE && \
+    PJ_IOQUEUE_IMP != PJ_IOQUEUE_IMP_SELECT
+#   error PJ_SSL_SOCK_IMP_APPLE requires PJ_IOQUEUE_IMP_SELECT
 #endif
 
 
@@ -1271,6 +1316,18 @@
 #   define PJ_SSL_SOCK_OSSL_USE_THREAD_CB   1
 #else
 #   define PJ_SSL_SOCK_OSSL_USE_THREAD_CB   0
+#endif
+
+
+/**
+ * Maximum number of TLS client sessions cached for resumption by the OpenSSL
+ * backend when pj_ssl_sock_param.enable_session_reuse is set. Sessions are
+ * cached per server name; the oldest entry is evicted when the cache is full.
+ *
+ * Default: 64
+ */
+#ifndef PJ_SSL_SOCK_OSSL_SESS_CACHE_SIZE
+#   define PJ_SSL_SOCK_OSSL_SESS_CACHE_SIZE   64
 #endif
 
 

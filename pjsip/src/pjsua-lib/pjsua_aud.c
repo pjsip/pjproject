@@ -508,6 +508,7 @@ pj_status_t pjsua_aud_subsys_destroy()
 
 void pjsua_aud_stop_stream(pjsua_call_media *call_med)
 {
+    pj_bool_t preserve_slot = call_med->preserve_conf_slot;
     pjmedia_stream *strm = call_med->strm.a.stream;
     pjmedia_rtcp_stat stat;
 
@@ -524,10 +525,30 @@ void pjsua_aud_stop_stream(pjsua_call_media *call_med)
         pjmedia_stream_send_rtcp_bye(strm);
 
         if (call_med->strm.a.conf_slot != PJSUA_INVALID_ID) {
-            if (pjsua_var.mconf) {
-                pjsua_conf_remove_port(call_med->strm.a.conf_slot);
+            pj_status_t det_st = PJ_ENOTSUP;
+
+            if (pjsua_var.mconf && preserve_slot) {
+                /* Keep the slot and its connections/settings; detach the old
+                 * port only. The slot id is retained so the rebuild re-attaches
+                 * via pjmedia_conf_replace_port().
+                 */
+                det_st = pjmedia_conf_detach_port(pjsua_var.mconf,
+                                                  (unsigned)
+                                                  call_med->strm.a.conf_slot);
+                if (det_st != PJ_SUCCESS) {
+                    PJ_PERROR(3, (THIS_FILE, det_st, "Conf slot detach failed, "
+                                  "falling back to remove/add"));
+                }
             }
-            call_med->strm.a.conf_slot = PJSUA_INVALID_ID;
+
+            /* Not preserving (or detach not supported/failed): remove the slot
+             * as before and let the rebuild add a fresh one.
+             */
+            if (det_st != PJ_SUCCESS) {
+                if (pjsua_var.mconf)
+                    pjsua_conf_remove_port(call_med->strm.a.conf_slot);
+                call_med->strm.a.conf_slot = PJSUA_INVALID_ID;
+            }
         }
 
         /* Don't check for direction and transmitted packets count as we
@@ -574,6 +595,19 @@ void pjsua_aud_stop_stream(pjsua_call_media *call_med)
         call_med->strm.a.stream = NULL;
     }
 
+    /* A retained (detached) conference slot can be left behind if a media
+     * update failed to rebuild the stream: strm is NULL here, so the block
+     * above did not run to remove it. Unless we are preserving it for a pending
+     * replace, remove it now so it is not leaked for the call's lifetime.
+     */
+    if (!strm && !preserve_slot &&
+        call_med->strm.a.conf_slot != PJSUA_INVALID_ID)
+    {
+        if (pjsua_var.mconf)
+            pjsua_conf_remove_port(call_med->strm.a.conf_slot);
+        call_med->strm.a.conf_slot = PJSUA_INVALID_ID;
+    }
+
     pjsua_check_snd_dev_idle();
 }
 
@@ -583,11 +617,11 @@ void pjsua_aud_stop_stream(pjsua_call_media *call_med)
 static void dtmf_callback(pjmedia_stream *strm, void *user_data,
                           int digit)
 {
-    pjsua_call_id call_id;
+    const pjsua_call_id call_id = pjsua_med_udata_call_id(user_data);
+    const int med_idx = pjsua_med_udata_med_idx(user_data);
 
     PJ_UNUSED_ARG(strm);
 
-    call_id = (pjsua_call_id)(pj_ssize_t)user_data;
     if (pjsua_var.calls[call_id].hanging_up)
         return;
 
@@ -599,12 +633,13 @@ static void dtmf_callback(pjmedia_stream *strm, void *user_data,
         info.method = PJSUA_DTMF_METHOD_RFC2833;
         info.digit = digit;
         info.duration = PJSUA_UNKNOWN_DTMF_DURATION;
+        info.med_idx = med_idx;
         (*pjsua_var.ua_cfg.cb.on_dtmf_digit2)(call_id, &info);
     } else if (pjsua_var.ua_cfg.cb.on_dtmf_digit) {
         /* For discussions about call mutex protection related to this
          * callback, please see ticket #460:
          *      https://github.com/pjsip/pjproject/issues/460#comment:4
-         */    
+         */
         (*pjsua_var.ua_cfg.cb.on_dtmf_digit)(call_id, digit);
     }
 
@@ -617,12 +652,12 @@ static void dtmf_callback(pjmedia_stream *strm, void *user_data,
 static void dtmf_event_callback(pjmedia_stream *strm, void *user_data,
                                 const pjmedia_stream_dtmf_event *event)
 {
-    pjsua_call_id call_id;
+    const pjsua_call_id call_id = pjsua_med_udata_call_id(user_data);
+    const int med_idx = pjsua_med_udata_med_idx(user_data);
     pjsua_dtmf_event evt;
 
     PJ_UNUSED_ARG(strm);
 
-    call_id = (pjsua_call_id)(pj_ssize_t)user_data;
     if (pjsua_var.calls[call_id].hanging_up)
         return;
 
@@ -634,6 +669,7 @@ static void dtmf_event_callback(pjmedia_stream *strm, void *user_data,
         evt.digit = event->digit;
         evt.duration = event->duration;
         evt.flags = event->flags;
+        evt.med_idx = med_idx;
         (*pjsua_var.ua_cfg.cb.on_dtmf_event)(call_id, &evt);
     }
 
@@ -750,16 +786,18 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
          * callback to the session.
          */
         if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_dtmf_event) {
-            pjmedia_stream_set_dtmf_event_callback(call_med->strm.a.stream,
-                                              &dtmf_event_callback,
-                                              (void*)(pj_ssize_t)(call->index));
+            pjmedia_stream_set_dtmf_event_callback(
+                                 call_med->strm.a.stream,
+                                 &dtmf_event_callback,
+                                 pjsua_med_udata_pack(call->index, strm_idx));
         } else if (!call->hanging_up &&
-                   (pjsua_var.ua_cfg.cb.on_dtmf_digit || 
+                   (pjsua_var.ua_cfg.cb.on_dtmf_digit ||
                     pjsua_var.ua_cfg.cb.on_dtmf_digit2))
         {
-            pjmedia_stream_set_dtmf_callback(call_med->strm.a.stream,
-                                             &dtmf_callback,
-                                             (void*)(pj_ssize_t)(call->index));
+            pjmedia_stream_set_dtmf_callback(
+                                 call_med->strm.a.stream,
+                                 &dtmf_callback,
+                                 pjsua_med_udata_pack(call->index, strm_idx));
         }
 
         /* Get the port interface of the first stream in the session.
@@ -808,12 +846,34 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
                                  call->index, strm_idx);
                 port_name = pj_str(tmp);
             }
-            status = pjmedia_conf_add_port(pjsua_var.mconf,
-                                           call->inv->pool,
-                                           call_med->strm.a.media_port,
-                                           &port_name,
-                                           (unsigned*)
-                                           &call_med->strm.a.conf_slot);
+            if (call_med->strm.a.conf_slot != PJSUA_INVALID_ID) {
+                /* A slot was preserved (detached) from the previous stream;
+                 * re-attach the new port to it, keeping its connections and
+                 * settings, instead of allocating a fresh slot.
+                 */
+                status = pjmedia_conf_replace_port(pjsua_var.mconf,
+                                                   call->inv->pool,
+                                                   (unsigned)
+                                                   call_med->strm.a.conf_slot,
+                                                   call_med->strm.a.media_port);
+                if (status != PJ_SUCCESS) {
+                    /* Replace not supported/failed: drop the preserved slot
+                     * and fall back to adding a fresh one below.
+                     */
+                    PJ_PERROR(3, (THIS_FILE, status, "Conf slot replace failed,"
+                                  " falling back to add"));
+                    pjsua_conf_remove_port(call_med->strm.a.conf_slot);
+                    call_med->strm.a.conf_slot = PJSUA_INVALID_ID;
+                }
+            }
+            if (call_med->strm.a.conf_slot == PJSUA_INVALID_ID) {
+                status = pjmedia_conf_add_port(pjsua_var.mconf,
+                                               call->inv->pool,
+                                               call_med->strm.a.media_port,
+                                               &port_name,
+                                               (unsigned*)
+                                               &call_med->strm.a.conf_slot);
+            }
             if (status != PJ_SUCCESS) {
                 goto on_return;
             }
@@ -986,6 +1046,21 @@ PJ_DEF(pj_status_t) pjsua_conf_connect2( pjsua_conf_port_id source,
 
     PJ_ASSERT_RETURN(source >= 0 && sink >= 0, PJ_EINVAL);
 
+    /* Reject out-of-range port IDs gracefully. An upper-bound violation can
+     * occur at run-time (e.g. a port removed by another thread), so return
+     * PJ_EINVAL instead of letting pjmedia_conf_connect_port() abort on its
+     * PJ_ASSERT_RETURN in debug/ASan builds.
+     */
+    if ((unsigned)source >= pjsua_var.media_cfg.max_media_ports ||
+        (unsigned)sink >= pjsua_var.media_cfg.max_media_ports)
+    {
+        PJ_LOG(3,(THIS_FILE, "pjsua_conf_connect(%d, %d) failed: port ID out "
+                             "of range (max_media_ports=%u)",
+                             source, sink,
+                             pjsua_var.media_cfg.max_media_ports));
+        return PJ_EINVAL;
+    }
+
     pj_log_push_indent();
 
     PJSUA_LOCK();
@@ -1142,6 +1217,18 @@ PJ_DEF(pj_status_t) pjsua_conf_disconnect( pjsua_conf_port_id source,
               source, sink));
 
     PJ_ASSERT_RETURN(source >= 0 && sink >= 0, PJ_EINVAL);
+
+    /* Reject out-of-range port IDs gracefully; see pjsua_conf_connect2(). */
+    if ((unsigned)source >= pjsua_var.media_cfg.max_media_ports ||
+        (unsigned)sink >= pjsua_var.media_cfg.max_media_ports)
+    {
+        PJ_LOG(3,(THIS_FILE, "pjsua_conf_disconnect(%d, %d) failed: port ID "
+                             "out of range (max_media_ports=%u)",
+                             source, sink,
+                             pjsua_var.media_cfg.max_media_ports));
+        return PJ_EINVAL;
+    }
+
     pj_log_push_indent();
 
     status = pjmedia_conf_disconnect_port(pjsua_var.mconf, source, sink);
@@ -1512,6 +1599,101 @@ PJ_DEF(pj_status_t) pjsua_player_destroy(pjsua_player_id id)
     return PJ_SUCCESS;
 }
 
+/*
+ * Create a tone detector and connect it to the conference bridge.
+ * Uses the recorder slot table for bookkeeping.
+ */
+PJ_DEF(pj_status_t) pjsua_tone_detector_create(
+				   void (*cb)(pjmedia_port *port,
+					      void *usr_data,
+					      const pjmedia_tone_detect_event *event),
+				   void *usr_data,
+				   const unsigned *freqs,
+				   unsigned n_freqs,
+				   pjsua_recorder_id *p_id)
+{
+    unsigned slot, file_id;
+    pj_pool_t *pool = NULL;
+    pj_status_t status;
+    pjmedia_port *port = NULL;
+    pj_str_t port_name = pj_str("tone_det");
+
+    PJ_ASSERT_RETURN(cb != NULL && freqs != NULL, PJ_EINVAL);
+    PJ_ASSERT_RETURN(n_freqs >= 1 && n_freqs <= PJMEDIA_TONE_DETECT_MAX_FREQS,
+		     PJ_EINVAL);
+
+    PJ_LOG(4,(THIS_FILE, "Creating tone detector.."));
+    pj_log_push_indent();
+
+    PJSUA_LOCK();
+
+    if (pjsua_var.rec_cnt >= PJ_ARRAY_SIZE(pjsua_var.recorder)) {
+	status = PJ_ETOOMANY;
+	goto on_return;
+    }
+
+    for (file_id=0; file_id<PJ_ARRAY_SIZE(pjsua_var.recorder); ++file_id) {
+	if (pjsua_var.recorder[file_id].port == NULL)
+	    break;
+    }
+
+    if (file_id == PJ_ARRAY_SIZE(pjsua_var.recorder)) {
+	pj_assert(0);
+	status = PJ_EBUG;
+	goto on_return;
+    }
+
+    pool = pjsua_pool_create("tone_det", 1000, 1000);
+    if (!pool) {
+	status = PJ_ENOMEM;
+	goto on_return;
+    }
+
+    status = pjmedia_tone_detector_port_create(pool,
+					    pjsua_var.media_cfg.clock_rate,
+					    pjsua_var.mconf_cfg.channel_count,
+					    pjsua_var.mconf_cfg.samples_per_frame,
+					    pjsua_var.mconf_cfg.bits_per_sample,
+					    freqs, n_freqs,
+					    &port, cb, usr_data);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to create tone detector port", status);
+	goto on_return;
+    }
+
+    status = pjmedia_conf_add_port(pjsua_var.mconf, pool, port, &port_name, &slot);
+    if (status != PJ_SUCCESS) {
+	pjmedia_port_destroy(port);
+	goto on_return;
+    }
+
+    pjsua_var.recorder[file_id].port = port;
+    pjsua_var.recorder[file_id].slot = slot;
+    pjsua_var.recorder[file_id].pool = pool;
+
+    if (p_id) *p_id = file_id;
+
+    ++pjsua_var.rec_cnt;
+
+    PJSUA_UNLOCK();
+
+    PJ_LOG(4,(THIS_FILE, "Tone detector created, id=%d, slot=%d", file_id, slot));
+
+    pj_log_pop_indent();
+    return PJ_SUCCESS;
+
+on_return:
+    PJSUA_UNLOCK();
+    if (pool) pj_pool_release(pool);
+    pj_log_pop_indent();
+    return status;
+}
+
+PJ_DEF(pj_status_t) pjsua_tone_detector_destroy(pjsua_recorder_id id)
+{
+    /* The detector lives in the recorder slot table; cleanup is identical. */
+    return pjsua_recorder_destroy(id);
+}
 
 /*****************************************************************************
  * File recorder.

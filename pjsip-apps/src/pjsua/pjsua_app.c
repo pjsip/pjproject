@@ -747,8 +747,9 @@ static void call_on_dtmf_callback2(pjsua_call_id call_id,
                          info->duration);
         break;
     };    
-    PJ_LOG(3,(THIS_FILE, "Incoming DTMF on call %d: %c%s, using %s method", 
-           call_id, info->digit, duration, method));
+    PJ_LOG(3,(THIS_FILE, "Incoming DTMF on call %d: %c%s, using %s method, "
+           "stream %d", call_id, info->digit, duration, method,
+           info->med_idx));
 }
 
 /* Incoming text stream callback. */
@@ -756,11 +757,12 @@ static void call_on_rx_text(pjsua_call_id call_id,
                             const pjsua_txt_stream_data *data)
 {
     if (data->text.slen == 0) {
-        PJ_LOG(4, (THIS_FILE, "Received empty T140 block with seq %d",
-                              data->seq));
+        PJ_LOG(4, (THIS_FILE, "Received empty T140 block on stream %d "
+                              "with seq %d", data->med_idx, data->seq));
     } else {
-        PJ_LOG(3, (THIS_FILE, "Incoming text on call %d, seq %d: %.*s "
-                              "(%d bytes)", call_id, data->seq,
+        PJ_LOG(3, (THIS_FILE, "Incoming text on call %d stream %d, "
+                              "seq %d: %.*s (%d bytes)",
+                              call_id, data->med_idx, data->seq,
                               (int)data->text.slen, data->text.ptr,
                               (int)data->text.slen));
     }
@@ -1727,6 +1729,14 @@ static pj_status_t app_init(void)
     if (app_cfg.on_config_init)
         (*app_cfg.on_config_init)(&app_config);
 
+    /* Direct logging to the CLI front ends already here, so that the SIP
+     * message logging module doesn't need to be re-registered later, which
+     * would happen while the endpoint is already processing messages. Any
+     * writer the application has configured above keeps receiving the log.
+     */
+    if (app_config.use_cli)
+        cli_setup_log_writer(&app_config.log_cfg);
+
     /* Initialize pjsua */
     status = pjsua_init(&app_config.cfg, &app_config.log_cfg,
                         &app_config.media_cfg);
@@ -1966,6 +1976,7 @@ static pj_status_t app_init(void)
             acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             acc_cfg.enable_rtcp_mux = app_config.enable_rtcp_mux;
+            acc_cfg.enable_rtcp_xr = app_config.enable_rtcp_xr;
             pjsua_acc_modify(aid, &acc_cfg);
         }
 
@@ -2012,6 +2023,7 @@ static pj_status_t app_init(void)
             acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             acc_cfg.enable_rtcp_mux = app_config.enable_rtcp_mux;
+            acc_cfg.enable_rtcp_xr = app_config.enable_rtcp_xr;
             // acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
             pjsua_acc_modify(aid, &acc_cfg);
         }
@@ -2049,6 +2061,7 @@ static pj_status_t app_init(void)
             acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             acc_cfg.enable_rtcp_mux = app_config.enable_rtcp_mux;
+            acc_cfg.enable_rtcp_xr = app_config.enable_rtcp_xr;
             pjsua_acc_modify(aid, &acc_cfg);
         }
 
@@ -2081,6 +2094,7 @@ static pj_status_t app_init(void)
             acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             acc_cfg.enable_rtcp_mux = app_config.enable_rtcp_mux;
+            acc_cfg.enable_rtcp_xr = app_config.enable_rtcp_xr;
             // acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
             pjsua_acc_modify(aid, &acc_cfg);
         }
@@ -2122,6 +2136,7 @@ static pj_status_t app_init(void)
             acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             acc_cfg.enable_rtcp_mux = app_config.enable_rtcp_mux;
+            acc_cfg.enable_rtcp_xr = app_config.enable_rtcp_xr;
             pjsua_acc_modify(acc_id, &acc_cfg);
         }
 
@@ -2153,6 +2168,7 @@ static pj_status_t app_init(void)
             acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             acc_cfg.enable_rtcp_mux = app_config.enable_rtcp_mux;
+            acc_cfg.enable_rtcp_xr = app_config.enable_rtcp_xr;
             // acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
             pjsua_acc_modify(aid, &acc_cfg);
         }
@@ -2313,8 +2329,10 @@ pj_status_t pjsua_app_run(pj_bool_t wait_telnet_cli)
         call_opt.vid_cnt = app_config.vid.vid_cnt;
         call_opt.txt_cnt = app_config.txt_cnt;
 
-        pjsua_call_make_call(current_acc, &uri_arg, &call_opt, NULL, 
-                             NULL, NULL);
+        status = pjsua_call_make_call(current_acc, &uri_arg, &call_opt, NULL,
+                                      NULL, NULL);
+        if (status != PJ_SUCCESS)
+            pjsua_perror(THIS_FILE, "Unable to make call", status);
     }   
 
     app_running = PJ_TRUE;

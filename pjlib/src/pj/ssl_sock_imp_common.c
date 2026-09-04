@@ -1807,6 +1807,13 @@ PJ_DEF(pj_status_t) pj_ssl_sock_get_info (pj_ssl_sock_t *ssock,
     {
         ossl_sock_t *ossock = (ossl_sock_t *)ssock;
         info->native_ssl = ossock->ossl_ssl;
+        if (info->established && ossock->ossl_ssl)
+            info->session_reused = SSL_session_reused(ossock->ossl_ssl);
+
+        if (!ssock->is_server) {
+            /* OCSP response stapled by the peer (client side) */
+            info->ocsp_resp = ossock->ocsp_resp;
+        }
     }
 #endif
 
@@ -2226,6 +2233,17 @@ pj_ssl_sock_start_accept2(pj_ssl_sock_t *ssock,
 
     ssock->is_server = PJ_TRUE;
 
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL) || \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_DARWIN)
+    /* Eagerly load and validate the certificate/private key now, instead
+     * of leaving it to the first accepted connection, so that a bad
+     * credential fails the listener startup itself.
+     */
+    status = ssl_init_server_ctx(ssock);
+    if (status != PJ_SUCCESS)
+        goto on_error;
+#endif
+
 #ifdef SSL_SOCK_IMP_USE_OWN_NETWORK
     status = network_start_accept(ssock, pool, localaddr, addr_len,
                                   newsock_param);
@@ -2525,6 +2543,7 @@ PJ_DEF(void) pj_ssl_cert_wipe_keys(pj_ssl_cert_t *cert)
         wipe_buf(&cert->CA_buf);
         wipe_buf(&cert->cert_buf);
         wipe_buf(&cert->privkey_buf);
+        wipe_buf(&cert->ocsp_resp_buf);
 #else
         cert->criteria.type = PJ_SSL_CERT_LOOKUP_NONE;
         wipe_buf(&cert->criteria.keyword);
@@ -2648,6 +2667,29 @@ PJ_DEF(pj_status_t) pj_ssl_cert_load_from_buffer(pj_pool_t *pool,
 }
 
 
+PJ_DEF(pj_status_t) pj_ssl_cert_set_ocsp_resp(
+                                pj_pool_t *pool,
+                                pj_ssl_cert_t *cert,
+                                const pj_ssl_cert_buffer *ocsp_resp)
+{
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+    PJ_ASSERT_RETURN(pool && cert && ocsp_resp, PJ_EINVAL);
+
+    if (ocsp_resp->slen)
+        pj_strdup(pool, &cert->ocsp_resp_buf, ocsp_resp);
+    else
+        pj_bzero(&cert->ocsp_resp_buf, sizeof(cert->ocsp_resp_buf));
+
+    return PJ_SUCCESS;
+#else
+    PJ_UNUSED_ARG(pool);
+    PJ_UNUSED_ARG(cert);
+    PJ_UNUSED_ARG(ocsp_resp);
+    return PJ_ENOTSUP;
+#endif
+}
+
+
 PJ_DEF(pj_status_t) pj_ssl_cert_load_from_store(
                                 pj_pool_t *pool,
                                 const pj_ssl_cert_lookup_criteria *criteria,
@@ -2732,6 +2774,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_set_certificate(
     pj_strdup(pool, &cert_->CA_buf, &cert->CA_buf);
     pj_strdup(pool, &cert_->cert_buf, &cert->cert_buf);
     pj_strdup(pool, &cert_->privkey_buf, &cert->privkey_buf);
+    pj_strdup(pool, &cert_->ocsp_resp_buf, &cert->ocsp_resp_buf);
 
     /* For OpenSSL version >= 3.0, add ref EVP_PKEY & X509 */
 #   if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL) && \
@@ -2758,4 +2801,3 @@ PJ_DEF(pj_status_t) pj_ssl_sock_set_certificate(
 
     return PJ_SUCCESS;
 }
-

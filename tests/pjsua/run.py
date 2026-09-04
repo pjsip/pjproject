@@ -115,6 +115,12 @@ else:
 
 G_EXE = G_EXE.rstrip("\n\r \t")
 
+# Expose the resolved executable path to config scripts (loaded further
+# below via inc_cfg's "from inc_cfg import *"), so a test can query the
+# actual binary under test (e.g. via "<exe> --version") instead of
+# assuming a particular build system's generated header layout.
+inc.G_EXE = G_EXE
+
 ###################################
 # Poor man's 'expect'-like class
 class Expect(threading.Thread):

@@ -163,6 +163,21 @@ static pj_cli_t            *cli = NULL;
 static pj_cli_sess         *cli_cons_sess = NULL;
 static pj_cli_front_end    *telnet_front_end = NULL;
 
+/* Log writer configured by the application, if any. The CLI log writer
+ * forwards to it, so that it keeps receiving the log as well.
+ */
+static void (*app_log_writer)(int level, const char *data, int len);
+
+/* Set once every configured front end has been registered, and cleared
+ * before they are destroyed. pj_cli_write_log() walks the front end list
+ * without locking, so the log must not be routed to the CLI while
+ * cli_init() is still adding to that list: the worker threads created by
+ * pjsua_init() are already logging by then. Until this is set the log goes
+ * to app_log_writer()/stdout instead, which also keeps the bind failures
+ * that pj_cli_telnet_create() reports before it registers itself.
+ */
+static pj_bool_t            cli_log_ready = PJ_FALSE;
+
 #ifdef USE_GUI
 void displayLog(const char *msg, int len);
 #endif
@@ -184,11 +199,25 @@ void cli_get_info(char *info, pj_size_t size)
 
 static void cli_log_writer(int level, const char *buffer, int len)
 {
-    if (cli)
+    pj_bool_t to_cli = cli_log_ready;
+
+    if (to_cli)
         pj_cli_write_log(cli, level, buffer, len);
+
+    if (app_log_writer)
+        (*app_log_writer)(level, buffer, len);
+    else if (!to_cli)
+        pj_log_write(level, buffer, len);
+
 #ifdef USE_GUI
     displayLog(buffer, len);
 #endif
+}
+
+void cli_setup_log_writer(pjsua_logging_config *log_cfg)
+{
+    app_log_writer = log_cfg->cb;
+    log_cfg->cb = &cli_log_writer;
 }
 
 pj_status_t cli_init(void)
@@ -243,6 +272,8 @@ pj_status_t cli_init(void)
             goto on_error;
     }
 
+    cli_log_ready = PJ_TRUE;
+
     return PJ_SUCCESS;
 
 on_error:
@@ -253,10 +284,6 @@ on_error:
 pj_status_t cli_main(pj_bool_t wait_telnet_cli)
 {
     char cmdline[PJ_CLI_MAX_CMDBUF];
-
-    /* ReInit logging */
-    app_config.log_cfg.cb = &cli_log_writer;
-    pjsua_reconfigure_logging(&app_config.log_cfg);
 
     if (app_config.cli_cfg.cli_fe & CLI_FE_CONSOLE) {
         /* Main loop for CLI FE console */
@@ -276,9 +303,12 @@ pj_status_t cli_main(pj_bool_t wait_telnet_cli)
 void cli_destroy(void)
 {
     /* Destroy CLI, it will automatically destroy any FEs */
+    cli_log_ready = PJ_FALSE;
     if (cli) {
         pj_cli_destroy(cli);
         cli = NULL;
+        telnet_front_end = NULL;
+        cli_cons_sess = NULL;
     }
 
     /* Destroy CLI caching pool factory */
@@ -1838,52 +1868,41 @@ static pj_status_t cmd_stat_dump(pj_bool_t detail)
 
 static pj_status_t cmd_show_config()
 {
-    char settings[2000];
-    int len;
-
-    len = write_settings(&app_config, settings, sizeof(settings));
-    if (len < 1)
-        PJ_LOG(1,(THIS_FILE, "Error: not enough buffer"));
-    else
-        PJ_LOG(3,(THIS_FILE,
-                  "Dumping configuration (%d bytes):\n%s\n",
-                  len, settings));
-
-    return PJ_SUCCESS;
+    return dump_settings(&app_config);
 }
 
 static pj_status_t cmd_write_config(pj_cli_cmd_val *cval)
 {
-    char settings[2000];
+    pj_pool_t *pool;
+    char *settings;
     char buf[128] = {0};
     int len;
+    pj_oshandle_t fd;
+    pj_status_t status;
     pj_str_t tmp = pj_str(buf);
 
     pj_strncpy_with_null(&tmp, &cval->argv[1], sizeof(buf));
 
-    len = write_settings(&app_config, settings, sizeof(settings));
-    if (len < 1)
-        PJ_LOG(1,(THIS_FILE, "Error: not enough buffer"));
-    else {
-        pj_oshandle_t fd;
-        pj_status_t status;
+    settings = alloc_settings(&app_config, &pool, &len);
+    if (!settings)
+        return PJ_ENOMEM;
 
-        status = pj_file_open(app_config.pool, buf, PJ_O_WRONLY, &fd);
-        if (status != PJ_SUCCESS) {
-            pjsua_perror(THIS_FILE, "Unable to open file", status);
-        } else {
-            char out_str[256];
-            pj_ssize_t size = len;
-            pj_file_write(fd, settings, &size);
-            pj_file_close(fd);
+    status = pj_file_open(app_config.pool, buf, PJ_O_WRONLY, &fd);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE, "Unable to open file", status);
+    } else {
+        char out_str[256];
+        pj_ssize_t size = len;
+        pj_file_write(fd, settings, &size);
+        pj_file_close(fd);
 
-            pj_ansi_snprintf(out_str, sizeof(out_str),
-                             "Settings successfully written to '%s'\n", buf);
+        pj_ansi_snprintf(out_str, sizeof(out_str),
+                         "Settings successfully written to '%s'\n", buf);
 
-            pj_cli_sess_write_msg(cval->sess, out_str, pj_ansi_strlen(out_str));
-        }
+        pj_cli_sess_write_msg(cval->sess, out_str, pj_ansi_strlen(out_str));
     }
 
+    pj_pool_secure_release(&pool);
     return PJ_SUCCESS;
 }
 
@@ -1920,6 +1939,7 @@ static pj_status_t cmd_make_single_call(pj_cli_cmd_val *cval)
     char out_str[128];
     pj_str_t tmp = pj_str(dest);
     pj_bool_t loop = PJ_FALSE;
+    pj_status_t status;
 
     pj_strncpy_with_null(&tmp, &cval->argv[1], sizeof(dest));
 
@@ -1958,8 +1978,10 @@ static pj_status_t cmd_make_single_call(pj_cli_cmd_val *cval)
 
         pjsua_msg_data_init(&msg_data);
         TEST_MULTIPART(&msg_data);
-        pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL,
-                             &msg_data, &current_call);
+        status = pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL,
+                                      &msg_data, &current_call);
+        if (status != PJ_SUCCESS)
+            pjsua_perror(THIS_FILE, "Unable to make call", status);
 
         result.nb_result++;
     } while (loop);

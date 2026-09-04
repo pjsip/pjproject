@@ -22,6 +22,7 @@
 #include <pjmedia/stream_common.h>
 #include <pjmedia/vid_codec.h>
 #include <pjmedia/errno.h>
+#include "sdp_internal.h"
 #include <pj/assert.h>
 #include <pj/pool.h>
 #include <pj/string.h>
@@ -1277,6 +1278,7 @@ static void apply_answer_symmetric_pt(pj_pool_t *pool,
 static pj_status_t match_offer(pj_pool_t *pool,
                                pj_bool_t prefer_remote_codec_order,
                                pj_bool_t answer_with_multiple_codecs,
+                               pj_bool_t bundle_only,
                                const pjmedia_sdp_media *offer,
                                const pjmedia_sdp_media *preanswer,
                                const pjmedia_sdp_session *preanswer_sdp,
@@ -1298,8 +1300,11 @@ static pj_status_t match_offer(pj_pool_t *pool,
     unsigned nclockrate = 0, clockrate[PJMEDIA_MAX_SDP_FMT];
     unsigned ntel_clockrate = 0, tel_clockrate[PJMEDIA_MAX_SDP_FMT];
 
-    /* If offer has zero port, just clone the offer */
-    if (offer->desc.port == 0) {
+    /* A zero port normally disables an offered media section. RFC 9143
+     * defines an exception for a valid bundle-only section, which must be
+     * answered using the BUNDLE transport rather than being rejected.
+     */
+    if (offer->desc.port == 0 && !bundle_only) {
         answer = sdp_media_clone_deactivate(pool, offer, preanswer,
                                             preanswer_sdp);
         *p_answer = answer;
@@ -1559,10 +1564,13 @@ static pj_status_t match_offer(pj_pool_t *pool,
             unsigned pt;
             pj_status_t status;
 
-            /* Get the rtpmap. */
+            /* Get the rtpmap. Static payload types (e.g. PCMU/PCMA) may not
+             * have an rtpmap attribute and can never be RED, so skip them.
+             */
             a = pjmedia_sdp_media_find_attr2(preanswer, "rtpmap",
                                              &preanswer->desc.fmt[i]);
-            pj_assert(a);
+            if (!a)
+                continue;
             pjmedia_sdp_attr_get_rtpmap(a, &r);
 
             /* Only care for redundancy format */
@@ -1584,10 +1592,11 @@ static pj_status_t match_offer(pj_pool_t *pool,
                                                  &preanswer->desc.fmt[i]);
                 if (a) {
                     int lvl = 0;
-                    for (i = 0; i < (unsigned)a->value.slen; i++) {
-                        if (*(a->value.ptr + i) == '/') {
+                    unsigned j;
+                    for (j = 0; j < (unsigned)a->value.slen; j++) {
+                        if (*(a->value.ptr + j) == '/') {
                             if (lvl++ >= o_red_level) {
-                                a->value.slen = i;
+                                a->value.slen = j;
                                 break;
                             }
                         }
@@ -1617,10 +1626,16 @@ static pj_status_t match_offer(pj_pool_t *pool,
                 continue;
             }
 
-            /* Get the rtpmap for format. */
+            /* Get the rtpmap for format. A dynamic PT without an rtpmap
+             * attribute can never be telephone-event, so skip it instead of
+             * dereferencing NULL (pj_assert() is a no-op in release builds).
+             */
             a = pjmedia_sdp_media_find_attr2(preanswer, "rtpmap",
                                              &pt_answer[i]);
-            pj_assert(a);
+            if (!a) {
+                ++i;
+                continue;
+            }
             pjmedia_sdp_attr_get_rtpmap(a, &r);
 
             /* Only care for telephone-event format */
@@ -1745,10 +1760,12 @@ static pj_status_t create_answer( pj_pool_t *pool,
         const pjmedia_sdp_media *om;    /* offer */
         const pjmedia_sdp_media *im;    /* initial media */
         pjmedia_sdp_media *am = NULL;   /* answer/result */
+        pj_bool_t bundle_only;
         pj_uint32_t om_tp;
         unsigned j;
 
         om = offer->media[i];
+        bundle_only = pjmedia_sdp_media_is_bundle_only(offer, om);
 
         om_tp = pjmedia_sdp_transport_get_proto(&om->desc.transport);
         PJMEDIA_TP_PROTO_TRIM_FLAG(om_tp, PJMEDIA_TP_PROFILE_RTCP_FB);
@@ -1773,7 +1790,7 @@ static pj_status_t create_answer( pj_pool_t *pool,
 
                 /* See if it has matching codec. */
                 status2 = match_offer(pool, prefer_remote_codec_order,
-                                      answer_with_multiple_codecs,
+                                      answer_with_multiple_codecs, bundle_only,
                                       om, im, initial, &am);
                 if (status2 == PJ_SUCCESS) {
                     /* Mark media as used. */

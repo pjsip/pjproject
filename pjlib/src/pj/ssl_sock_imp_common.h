@@ -182,6 +182,9 @@ struct pj_ssl_cert_t
     pj_ssl_cert_buffer cert_buf;
     pj_ssl_cert_buffer privkey_buf;
 
+    /* DER-encoded OCSP response to be stapled by a server socket. */
+    pj_ssl_cert_buffer ocsp_resp_buf;
+
     /* Certificate direct (backend specific instances). */
     pj_ssl_cert_direct direct;
 #else
@@ -290,6 +293,14 @@ static pj_ssl_cipher ssl_get_cipher(pj_ssl_sock_t *ssock);
 static void ssl_update_certs_info(pj_ssl_sock_t *ssock);
 #if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
 static void ssl_free_cert(pj_ssl_cert_t *cert);
+#endif
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL) || \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_DARWIN)
+/* Eagerly create/validate the server credentials -- for OpenSSL the whole
+ * SSL_CTX, including certificate and private key loading -- on a listener
+ * socket, instead of deferring it to the first accepted connection.
+ */
+static pj_status_t ssl_init_server_ctx(pj_ssl_sock_t *ssock);
 #endif
 
 /* SSL session functions */

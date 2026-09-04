@@ -323,8 +323,14 @@ PJ_DEF(void) pj_scan_get_unescape( pj_scanner *scanner,
                 ++dst;
                 s += 3;
             } else {
+                /* Not a valid "%XX" escape: copy the '%' (and the next
+                 * character if any) literally. Guard the second copy so a
+                 * '%' at the very end does not read past the buffer and
+                 * leave curptr beyond scanner->end.
+                 */
                 *dst++ = *s++;
-                *dst++ = *s++;
+                if (PJ_SCAN_CHECK_EOF(s))
+                    *dst++ = *s++;
                 break;
             }
         }
@@ -366,10 +372,17 @@ PJ_DEF(void) pj_scan_get_quotes(pj_scanner *scanner,
                                 int qsize, pj_str_t *out)
 {
     register char *s = scanner->curptr;
+    char *r;
+    unsigned nbackslash;
     int qpair = -1;
     int i;
 
     pj_assert(qsize > 0);
+
+    if (pj_scan_is_eof(scanner)) {
+        pj_scan_syntax_err(scanner);
+        return;
+    }
 
     /* Check and eat the begin_quote. */
     for (i = 0; i < qsize; ++i) {
@@ -392,32 +405,31 @@ PJ_DEF(void) pj_scan_get_quotes(pj_scanner *scanner,
             ++s;
         }
 
-        /* check that no backslash character precedes the end_quote. */
-        if (*s == end_quote[qpair]) {
-            if (*(s-1) == '\\') {
-                char *q = s-2;
-                char *r = s-2;
-
-                while (r != scanner->begin && *r == '\\') {
-                    --r;
-                }
-                /* break from main loop if we have odd number of backslashes */
-                if (((unsigned)(q-r) & 0x01) == 1) {
-                    break;
-                }
-                ++s;
-            } else {
-                /* end_quote is not preceeded by backslash. break now. */
-                break;
-            }
-        } else {
-            /* loop ended by non-end_quote character. break now. */
+        if (!PJ_SCAN_CHECK_EOF(s) || *s != end_quote[qpair]) {
+            /* loop ended by EOF or non-end_quote character. break now. */
             break;
         }
+
+        /* Count the backslashes immediately preceding the end_quote. Stop at
+         * the opening quote, so that neither the opening quote itself nor any
+         * input before it is mistaken for escaping content.
+         */
+        nbackslash = 0;
+        for (r = s; r > scanner->curptr + 1 && *(r-1) == '\\'; --r) {
+            ++nbackslash;
+        }
+
+        /* The end_quote is escaped only if it is preceded by an odd number of
+         * backslashes. Otherwise this is the real end_quote, so break now.
+         */
+        if ((nbackslash & 0x01) == 0) {
+            break;
+        }
+        ++s;
     } while (1);
 
     /* Check and eat the end quote. */
-    if (*s != end_quote[qpair]) {
+    if (!PJ_SCAN_CHECK_EOF(s) || *s != end_quote[qpair]) {
         pj_scan_syntax_err(scanner);
         return;
     }

@@ -18,6 +18,7 @@
  */
 #include <pjmedia/sdp.h>
 #include <pjmedia/errno.h>
+#include "sdp_internal.h"
 #include <pjlib-util/scanner.h>
 #include <pj/array.h>
 #include <pj/except.h>
@@ -257,11 +258,40 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_remove( unsigned *count,
 }
 
 
+/* Parse a decimal token into a 32 bit unsigned value.
+ *
+ * pj_strtoul() performs no overflow detection: it accumulates into an
+ * unsigned long, which silently wraps, and the result is then narrowed to
+ * the 32 bit field of the attribute. On LP64 platforms a clock rate of
+ * "4294975296" (2^32 + 8000) would end up stored as 8000. Reject values
+ * that don't fit rather than storing a wrapped one.
+ */
+static pj_status_t parse_uint32(const pj_str_t *str, pj_uint32_t *value)
+{
+    unsigned long ul;
+    pj_status_t status;
+
+    status = pj_strtoul3(str, &ul, 10);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    /* Note that unsigned long is 32 bit on some platforms, in which case
+     * pj_strtoul3() has already rejected the out of range values.
+     */
+    if (ul != (unsigned long)(pj_uint32_t)ul)
+        return PJ_ETOOBIG;
+
+    *value = (pj_uint32_t)ul;
+    return PJ_SUCCESS;
+}
+
+
 PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtpmap( const pjmedia_sdp_attr *attr,
                                                  pjmedia_sdp_rtpmap *rtpmap)
 {
     pj_scanner scanner;
     pj_str_t token;
+    pj_uint32_t uval;
     pj_status_t status = -1;
     char term = 0;
     PJ_USE_EXCEPTION;
@@ -321,7 +351,9 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtpmap( const pjmedia_sdp_attr *attr,
 
         /* Get the clock rate. */
         pj_scan_get(&scanner, &cs_digit, &token);
-        rtpmap->clock_rate = pj_strtoul(&token);
+        if (parse_uint32(&token, &uval) != PJ_SUCCESS)
+            PJ_THROW(PJMEDIA_SDP_EINRTPMAP);
+        rtpmap->clock_rate = uval;
 
         /* Expecting either '/' or EOF */
         if (*scanner.curptr == '/') {
@@ -393,6 +425,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtcp(const pjmedia_sdp_attr *attr,
 {
     pj_scanner scanner;
     pj_str_t token;
+    pj_uint32_t uval;
     pj_status_t status = -1;
     PJ_USE_EXCEPTION;
 
@@ -414,6 +447,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtcp(const pjmedia_sdp_attr *attr,
                  PJ_SCAN_AUTOSKIP_WS, &on_scanner_error);
 
     /* Init */
+    rtcp->port = 0;
     rtcp->net_type.slen = rtcp->addr_type.slen = rtcp->addr.slen = 0;
 
     /* Parse */
@@ -421,9 +455,9 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtcp(const pjmedia_sdp_attr *attr,
 
         /* Get the port */
         pj_scan_get(&scanner, &cs_digit, &token);
-        rtcp->port = pj_strtoul(&token);
-        if (rtcp->port > 0xFFFF)
+        if (parse_uint32(&token, &uval) != PJ_SUCCESS || uval > 0xFFFF)
             PJ_THROW(PJMEDIA_SDP_EINRTCP);
+        rtcp->port = uval;
 
         /* Have address? */
         if (!pj_scan_is_eof(&scanner)) {
@@ -524,7 +558,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_ssrc(const pjmedia_sdp_attr *attr,
 
         /* Get the ssrc */
         pj_scan_get(&scanner, &cs_digit, &token);
-        ssrc->ssrc = pj_strtoul(&token);
+        if (parse_uint32(&token, &ssrc->ssrc) != PJ_SUCCESS)
+            PJ_THROW(PJMEDIA_SDP_EINSSRC);
 
         pj_scan_get_char(&scanner);
         pj_scan_get(&scanner, &cs_token, &scan_attr);
@@ -1660,6 +1695,79 @@ static pj_status_t validate_sdp_conn(const pjmedia_sdp_conn *c)
 }
 
 
+/* Return PJ_TRUE if a session level group attribute lists the supplied MID
+ * in a BUNDLE group.
+ */
+static pj_bool_t bundle_group_contains_mid(const pjmedia_sdp_session *sdp,
+                                           const pj_str_t *mid)
+{
+    unsigned i;
+
+    for (i = 0; i < sdp->attr_count; ++i) {
+        const pjmedia_sdp_attr *attr = sdp->attr[i];
+        const char *pos, *end;
+        unsigned token_index = 0;
+        pj_bool_t is_bundle = PJ_FALSE;
+
+        if (pj_stricmp2(&attr->name, "group") != 0)
+            continue;
+
+        if (attr->value.ptr == NULL || attr->value.slen == 0)
+            continue;
+
+        pos = attr->value.ptr;
+        end = attr->value.ptr + attr->value.slen;
+        while (pos < end) {
+            const char *token_start;
+            pj_str_t token;
+
+            while (pos < end && (*pos == ' ' || *pos == '\t'))
+                ++pos;
+            if (pos == end)
+                break;
+
+            token_start = pos;
+            while (pos < end && *pos != ' ' && *pos != '\t')
+                ++pos;
+
+            token.ptr = (char *)token_start;
+            token.slen = pos - token_start;
+
+            if (token_index++ == 0) {
+                is_bundle = (pj_stricmp2(&token, "BUNDLE") == 0);
+                if (!is_bundle)
+                    break;
+                continue;
+            }
+
+            if (is_bundle && pj_strcmp(&token, mid) == 0)
+                return PJ_TRUE;
+        }
+    }
+
+    return PJ_FALSE;
+}
+
+
+pj_bool_t pjmedia_sdp_media_is_bundle_only(const pjmedia_sdp_session *sdp,
+                                           const pjmedia_sdp_media *media)
+{
+    const pjmedia_sdp_attr *mid;
+
+    if (media->desc.port != 0 ||
+        !pjmedia_sdp_media_find_attr2(media, "bundle-only", NULL))
+    {
+        return PJ_FALSE;
+    }
+
+    mid = pjmedia_sdp_media_find_attr2(media, "mid", NULL);
+    if (!mid)
+        return PJ_FALSE;
+
+    return bundle_group_contains_mid(sdp, &mid->value);
+}
+
+
 /* Validate SDP session descriptor. */
 PJ_DEF(pj_status_t) pjmedia_sdp_validate(const pjmedia_sdp_session *sdp)
 {
@@ -1700,12 +1808,20 @@ PJ_DEF(pj_status_t) pjmedia_sdp_validate2(const pjmedia_sdp_session *sdp,
     /* Validate each media. */
     for (i=0; i<sdp->media_count; ++i) {
         const pjmedia_sdp_media *m = sdp->media[i];
+        pj_bool_t is_active;
         unsigned j;
 
         /* Validate the m= line. */
         CHECK( m->desc.media.slen != 0, PJMEDIA_SDP_EINMEDIA);
         CHECK( m->desc.transport.slen != 0, PJMEDIA_SDP_EINMEDIA);
-        CHECK( m->desc.fmt_count != 0 || m->desc.port==0, PJMEDIA_SDP_ENOFMT);
+
+        /* Zero port media is disabled, so the checks below are relaxed for
+         * it, except for bundle-only media which is still usable (RFC 9143).
+         */
+        is_active = (m->desc.port != 0) ||
+                    pjmedia_sdp_media_is_bundle_only(sdp, m);
+
+        CHECK( m->desc.fmt_count != 0 || !is_active, PJMEDIA_SDP_ENOFMT);
 
         /* If media level connection info is present, validate it. */
         if (m->conn) {
@@ -1719,7 +1835,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_validate2(const pjmedia_sdp_session *sdp,
          */
         if (m->conn == NULL) {
             if (sdp->conn == NULL)
-                if (strict || m->desc.port != 0)
+                if (strict || is_active)
                     return PJMEDIA_SDP_EMISSINGCONN;
         }
 
@@ -1737,10 +1853,10 @@ PJ_DEF(pj_status_t) pjmedia_sdp_validate2(const pjmedia_sdp_session *sdp,
                  */
                 CHECK( status == PJ_SUCCESS && pt <= 127, PJMEDIA_SDP_EINPT);
 
-                /* If port is not zero, then for each dynamic payload type, an
+                /* If media is active, then for each dynamic payload type, an
                  * rtpmap attribute must be specified.
                  */
-                if (m->desc.port != 0 && pt >= 96) {
+                if (is_active && pt >= 96) {
                     const pjmedia_sdp_attr *a;
 
                     a = pjmedia_sdp_media_find_attr(m, &STR_RTPMAP, 

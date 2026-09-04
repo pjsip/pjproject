@@ -627,6 +627,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_stream_set_cap(
      */
     if (cap == PJMEDIA_VID_DEV_CAP_SWITCH) {
         pjmedia_vid_dev_factory *f;
+        pjmedia_vid_dev_info dev_info;
         unsigned local_idx;
         pj_status_t status;
         pjmedia_vid_dev_switch_param p = *(pjmedia_vid_dev_switch_param*)value;
@@ -638,6 +639,9 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_stream_set_cap(
         /* Make sure that current & target devices share the same factory */
         if (f->sys.drv_idx != strm->sys.drv_idx)
             return PJMEDIA_EVID_INVDEV;
+
+        if (f->op->get_dev_info(f, local_idx, &dev_info) == PJ_SUCCESS)
+            PJ_LOG(4, (THIS_FILE, "Switching camera to %s..", dev_info.name));
 
         p.target_id = local_idx;
         return strm->op->set_cap(strm, cap, &p);

@@ -261,7 +261,45 @@ on_return:
     return rc;
 }
 
-/* Test function to drain the pool's space. 
+/* Verify pj_pool_create_on_buf() correctly aligns a deliberately misaligned
+ * buffer: the pool struct sits at the start of the (aligned) buffer, so a
+ * misaligned start must be rounded up. Regression test for the pool_buf
+ * alignment fix.
+ */
+static int pool_buf_misaligned_test(void)
+{
+    pj_pool_t *pool;
+    char bufmem[512];
+    char *buf;
+    void *ptr;
+    int rc = 0;
+
+    PJ_LOG(3,("test", "...pool_buf misaligned buffer test"));
+
+    /* Offset by 1 to guarantee the start is not PJ_POOL_ALIGNMENT-aligned. */
+    buf = bufmem + 1;
+
+    pool = pj_pool_create_on_buf(NULL, buf, sizeof(bufmem) - 1);
+    PJ_TEST_NOT_NULL(pool, NULL, return -450);
+
+    /* The pool struct is placed at the start of the buffer, which must have
+     * been aligned by pj_pool_create_on_buf().
+     */
+    PJ_TEST_TRUE(((pj_size_t)pool & (PJ_POOL_ALIGNMENT - 1)) == 0, NULL,
+                 { rc = -451; goto on_return; });
+
+    ptr = pj_pool_alloc(pool, 1);
+    PJ_TEST_TRUE(IS_ALIGNED(ptr), NULL, { rc = -455; goto on_return; });
+
+    ptr = pj_pool_alloc(pool, 32);
+    PJ_TEST_TRUE(IS_ALIGNED(ptr), NULL, { rc = -456; goto on_return; });
+
+on_return:
+    pj_pool_release(pool);
+    return rc;
+}
+
+/* Test function to drain the pool's space.
  */
 static int drain_test(pj_size_t size, pj_size_t increment)
 {
@@ -368,6 +406,9 @@ int pool_test(void)
     if (rc) return rc;
 
     rc = pool_buf_alignment_test();
+    if (rc) return rc;
+
+    rc = pool_buf_misaligned_test();
     if (rc) return rc;
 
 #if PJ_HAS_POOL_ALT_API == 0
