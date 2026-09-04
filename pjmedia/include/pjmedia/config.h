@@ -1460,11 +1460,13 @@
  *
  * Setting this to 0 will disable it.
  *
- * Note that text streams always use this setting (along with
- * PJMEDIA_STREAM_START_KA_INTERVAL_MSEC) for NAT hole punching at stream
- * start, regardless of PJMEDIA_STREAM_ENABLE_KA, unless ICE is active.
- * When PJMEDIA_STREAM_ENABLE_KA is enabled, the runtime keep-alive settings
- * of the stream take precedence.
+ * Note that text streams also send this start-of-stream keep-alive burst
+ * (using this setting and PJMEDIA_STREAM_START_KA_INTERVAL_MSEC) when
+ * PJMEDIA_STREAM_ENABLE_KA is disabled, as they have no other way to punch
+ * a NAT hole before the first text is typed. When PJMEDIA_STREAM_ENABLE_KA
+ * is enabled, the stream's runtime use_ka and ka_cfg settings apply
+ * instead. In both cases the burst is skipped when ICE is active, and the
+ * count is capped at 10 and the interval floored at 500 ms.
  *
  * Default : 2
  */

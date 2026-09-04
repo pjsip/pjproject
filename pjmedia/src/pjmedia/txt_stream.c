@@ -450,13 +450,15 @@ pjmedia_txt_stream_create(pjmedia_endpt *endpt, pj_pool_t *pool,
         pjmedia_stream_common_send_rtcp_sdes(c_strm);
     }
 
+    init_start_ka(stream, info);
+
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
     /* NAT hole punching by sending KA packet via RTP transport. */
-    if (c_strm->use_ka)
+    if (c_strm->use_ka) {
         send_keep_alive_packet(c_strm);
+        pj_get_timestamp(&stream->start_ka_last_tx);
+    }
 #endif
-
-    init_start_ka(stream, info);
 
     /* Success! */
     *p_stream = stream;
