@@ -334,7 +334,6 @@ static void inv_session_destroy(pjsip_inv_session *inv)
     }
     pjsip_100rel_end_session(inv);
     pjsip_timer_end_session(inv);
-    pjsip_dlg_dec_session(inv->dlg, &mod_inv.mod);
 
     /* Release the flip-flop pools */
     pj_pool_release(inv->pool_prov);
@@ -344,6 +343,13 @@ static void inv_session_destroy(pjsip_inv_session *inv)
 
     pj_atomic_destroy(inv->ref_cnt);
     inv->ref_cnt = NULL;
+
+    /* This must be the last thing we do with inv. The session is allocated
+     * from the dialog pool, and decrementing the dialog session count may
+     * destroy the dialog if it has no other session and no transaction,
+     * which frees inv along with it.
+     */
+    pjsip_dlg_dec_session(inv->dlg, &mod_inv.mod);
 }
 
 static pj_status_t inv_async_auth_send_impl(
