@@ -601,10 +601,28 @@ static pj_status_t configure_decoder(and_media_codec_data *and_media_data) {
     return PJ_SUCCESS;
 }
 
-/* Recreate the decoder from scratch after a fatal, unrecoverable
- * AMediaCodec error (see and_med_on_error()). A plain flush/restart is not
- * enough for a fatal error per the NDK docs, the codec instance itself has
- * to be deleted and recreated.
+/* Stop and delete a codec instance. The async callback is unregistered first,
+ * otherwise a callback already dispatched by MediaCodec's own thread may still
+ * reference the codec data after this returns.
+ */
+static void destroy_codec_instance(AMediaCodec **codec)
+{
+    if (!*codec)
+        return;
+
+    if (API_AT_LEAST(28)) {
+        AMediaCodecOnAsyncNotifyCallback null_cb = {NULL, NULL, NULL, NULL};
+
+        AMediaCodec_setAsyncNotifyCallback(*codec, null_cb, NULL);
+    }
+    AMediaCodec_stop(*codec);
+    AMediaCodec_delete(*codec);
+    *codec = NULL;
+}
+
+/* Recreate the decoder from scratch after an AMediaCodec error that leaves it
+ * in Error state (see and_med_on_error()). A plain flush/restart is not enough
+ * per the NDK docs, the codec instance itself has to be deleted and recreated.
  */
 static pj_status_t recreate_decoder(and_media_codec_data *and_media_data)
 {
@@ -612,19 +630,9 @@ static pj_status_t recreate_decoder(and_media_codec_data *and_media_data)
     pj_str_t *dec_name;
     pj_status_t status;
 
-    PJ_LOG(3, (THIS_FILE, "Recreating decoder after fatal codec error"));
+    PJ_LOG(3, (THIS_FILE, "Recreating decoder after codec error"));
 
-    if (and_media_data->dec) {
-        if (API_AT_LEAST(28)) {
-            AMediaCodecOnAsyncNotifyCallback null_cb = {NULL, NULL, NULL, NULL};
-
-            AMediaCodec_setAsyncNotifyCallback(and_media_data->dec, null_cb,
-                                               NULL);
-        }
-        AMediaCodec_stop(and_media_data->dec);
-        AMediaCodec_delete(and_media_data->dec);
-        and_media_data->dec = NULL;
-    }
+    destroy_codec_instance(&and_media_data->dec);
 
     /* Discard any buffer indices left over from the old codec instance. */
     while (pj_atomic_queue_get(and_media_data->dec_avail_input_buf,
@@ -1139,9 +1147,7 @@ static pj_status_t and_media_dealloc_codec(pjmedia_vid_codec_factory *factory,
 
     and_media_data = (and_media_codec_data*) codec->codec_data;
     if (and_media_data->enc) {
-        AMediaCodec_stop(and_media_data->enc);
-        AMediaCodec_delete(and_media_data->enc);
-        and_media_data->enc = NULL;
+        destroy_codec_instance(&and_media_data->enc);
         pj_atomic_queue_destroy(and_media_data->enc_avail_input_buf);
         and_media_data->enc_avail_input_buf = NULL;
         pj_atomic_queue_destroy(and_media_data->enc_avail_output_buf);
@@ -1149,9 +1155,7 @@ static pj_status_t and_media_dealloc_codec(pjmedia_vid_codec_factory *factory,
     }
 
     if (and_media_data->dec) {
-        AMediaCodec_stop(and_media_data->dec);
-        AMediaCodec_delete(and_media_data->dec);
-        and_media_data->dec = NULL;
+        destroy_codec_instance(&and_media_data->dec);
         pj_atomic_queue_destroy(and_media_data->dec_avail_input_buf);
         and_media_data->dec_avail_input_buf = NULL;
         pj_atomic_queue_destroy(and_media_data->dec_avail_output_buf);
