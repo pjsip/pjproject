@@ -2104,8 +2104,9 @@ static int concurrent_send_test(void)
         }
 
         PJ_LOG(3, ("", "...concurrent_send_test: threads=%d "
-                   "total_sends=%d recv=%lu/%lu",
-                   CS_SENDER_THREADS, total_sends,
+                   "total_sends=%d pending=%d sent=%lu recv=%lu/%lu",
+                   CS_SENDER_THREADS, total_sends, total_pending,
+                   (unsigned long)total_sent,
                    (unsigned long)state_cli.recv,
                    (unsigned long)total_expected));
     }

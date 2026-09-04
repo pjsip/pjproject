@@ -1144,11 +1144,15 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
         return status;
     }
 
+    /* Create 100rel handler */
+    status = pjsip_100rel_attach(inv);
+    if (status != PJ_SUCCESS) {
+        pjsip_dlg_dec_lock(dlg);
+        return status;
+    }
+
     /* Increment dialog session */
     pjsip_dlg_inc_session(dlg, &mod_inv.mod);
-
-    /* Create 100rel handler */
-    pjsip_100rel_attach(inv);
 
     /* Done */
     pjsip_inv_add_ref(inv);
@@ -1938,6 +1942,15 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
         return status;
     }
 
+    /* Create 100rel handler */
+    if (inv->options & PJSIP_INV_REQUIRE_100REL) {
+        status = pjsip_100rel_attach(inv);
+        if (status != PJ_SUCCESS) {
+            pjsip_dlg_dec_lock(dlg);
+            return status;
+        }
+    }
+
     /* Increment session in the dialog. */
     pjsip_dlg_inc_session(dlg, &mod_inv.mod);
 
@@ -1949,11 +1962,6 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
     tsx_inv_data->inv = inv;
     tsx_inv_data->has_sdp = (sdp_info->sdp!=NULL);
     inv->invite_tsx->mod_data[mod_inv.mod.id] = tsx_inv_data;
-
-    /* Create 100rel handler */
-    if (inv->options & PJSIP_INV_REQUIRE_100REL) {
-        pjsip_100rel_attach(inv);
-    }
 
     /* Done */
     pjsip_inv_add_ref(inv);

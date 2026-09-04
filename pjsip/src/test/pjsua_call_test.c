@@ -537,6 +537,7 @@ static void drain_all_calls(void)
     wait_until(NULL, PJSUA_INVALID_ID, PJ_IOQUEUE_KEY_FREE_DELAY + 200);
 }
 
+#if PJSUA_HAS_SIPREC
 /* Mark every live call as a recording session (PJSIP_INV_REQUIRE_SIPREC),
  * i.e. as if it had been established with Require: siprec. Metadata-only
  * UPDATE/re-INVITE is only accepted on recording sessions, ordinary calls
@@ -553,6 +554,7 @@ static void siprec_test_mark_siprec_sessions(void)
             call->inv->options |= PJSIP_INV_REQUIRE_SIPREC;
     }
 }
+#endif
 
 /*****************************************************************************
  * Sub-tests
