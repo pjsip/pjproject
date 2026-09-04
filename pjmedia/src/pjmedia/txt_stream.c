@@ -477,11 +477,11 @@ PJ_DEF(pj_status_t) pjmedia_txt_stream_start(pjmedia_txt_stream *stream)
     pj_status_t status;
 
     pjmedia_stream_common_start(c_strm);
-    if (!c_strm->enc->paused || !c_strm->dec->paused) {
-        status = pjmedia_clock_start(stream->clock);
-    } else {
-        status = pjmedia_clock_stop(stream->clock);
-    }
+
+    /* Run the clock even for inactive direction, RTCP and start-of-stream
+     * keep-alives are still needed (RFC 3264 5.1, RFC 6263 1).
+     */
+    status = pjmedia_clock_start(stream->clock);
 
     return status;
 }
