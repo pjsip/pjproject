@@ -1513,6 +1513,14 @@
  *
  * Setting this to 0 will disable it.
  *
+ * Note that text streams also send this start-of-stream keep-alive burst
+ * (using this setting and PJMEDIA_STREAM_START_KA_INTERVAL_MSEC) when
+ * PJMEDIA_STREAM_ENABLE_KA is disabled, as they have no other way to punch
+ * a NAT hole before the first text is typed. When PJMEDIA_STREAM_ENABLE_KA
+ * is enabled, the stream's runtime use_ka and ka_cfg settings apply
+ * instead. In both cases the burst is skipped when ICE is active, and the
+ * count is capped at 10 and the interval floored at 500 ms.
+ *
  * Default : 2
  */
 #ifndef PJMEDIA_STREAM_START_KA_CNT
