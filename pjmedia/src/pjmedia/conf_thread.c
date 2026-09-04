@@ -3176,6 +3176,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_get_ports_info(pjmedia_conf *conf,
                                                 pjmedia_conf_port_info info[])
 {
     unsigned i, count=0;
+    pj_status_t status;
 
     PJ_ASSERT_RETURN(conf && size && info, PJ_EINVAL);
 
@@ -3186,8 +3187,9 @@ PJ_DEF(pj_status_t) pjmedia_conf_get_ports_info(pjmedia_conf *conf,
         if (!conf->ports[i])
             continue;
 
-        pjmedia_conf_get_port_info(conf, i, &info[count]);
-        ++count;
+        status = pjmedia_conf_get_port_info(conf, i, &info[count]);
+        if (status == PJ_SUCCESS)
+            ++count;
     }
 
     /* Unlock mutex */

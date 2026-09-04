@@ -1340,7 +1340,9 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
                 const CGFloat cap_ori[4] = { 0, 90, 180, 270};
                 int idx;
                 int rotation;
+#if TARGET_OS_IPHONE
                 int effective_portrait_angle;
+#endif
 
                 if (strm->param.orient < PJMEDIA_ORIENT_NATURAL ||
                     strm->param.orient > PJMEDIA_ORIENT_ROTATE_270DEG)
