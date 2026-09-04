@@ -2737,6 +2737,12 @@ PJ_DEF(pj_status_t) pj_ssl_cert_load_direct(
     if (!cert)
         return PJ_ENOMEM;
 
+    /* Release any reference this credential already holds, so that loading
+     * twice into the same pj_ssl_cert_t replaces the pair rather than
+     * stranding it. On a freshly allocated credential this is a no-op.
+     */
+    ssl_free_cert(cert);
+
     cert->direct = *cert_direct;
 
     /* For OpenSSL version >= 3.0, add ref EVP_PKEY & X509.
@@ -2744,8 +2750,8 @@ PJ_DEF(pj_status_t) pj_ssl_cert_load_direct(
      * The credential now holds its own reference, which pj_ssl_cert_wipe_keys()
      * releases through ssl_free_cert(). Without this the credential borrows the
      * application's reference while the wipe still releases one, so wiping a
-     * credential loaded this way would drop the application's last reference and
-     * leave pj_ssl_cert_direct pointing at freed objects.
+     * credential loaded this way would drop the application's last
+     * reference and leave pj_ssl_cert_direct pointing at freed objects.
      */
 #   if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
     if ((cert->direct.type & PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY) &&

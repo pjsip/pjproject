@@ -380,6 +380,24 @@ static void update_transport_info(struct tcp_listener *listener)
     }
 }
 
+
+/* Publish the address after a restart that could not bring the listener up.
+ * The listener is down either way, but the factory stays usable for outgoing
+ * transports, so the caller's error is what propagates and a failure here is
+ * only logged.
+ */
+static void publish_addr_after_failure(struct tcp_listener *listener,
+                                       const pjsip_host_port *a_name)
+{
+    pj_status_t status = update_factory_addr(listener, a_name);
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(3,(listener->factory.obj_name, status,
+                     "Failed to update published address"));
+    }
+
+    update_transport_info(listener);
+}
+
 /*
  * This is the public API to create, initialize, register, and start the
  * TCP listener.
@@ -1929,8 +1947,7 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_restart(pjsip_tpfactory *factory,
                    "Unable to start listener after closing it", status);
 
         /* Update the published address anyway (client only) */
-        update_factory_addr(listener, a_name);
-        update_transport_info(listener);
+        publish_addr_after_failure(listener, a_name);
     }
 
     return status;

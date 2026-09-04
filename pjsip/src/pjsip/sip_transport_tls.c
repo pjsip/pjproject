@@ -919,7 +919,6 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart2(pjsip_tpfactory *factory,
             /* Copy new settings */
             pjsip_tls_setting_copy(listener->factory.pool,
                                    &listener->tls_setting, opt);
-
         }
 
         /* Keep the credentials in step with the settings, on the same
@@ -995,8 +994,7 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart2(pjsip_tpfactory *factory,
                    "Unable to start listener after closing it", status, NULL);
 
         /* Update the published address anyway (client only) */
-        update_factory_addr(listener, a_name);
-        update_transport_info(listener);
+        publish_addr_after_failure(listener, a_name);
     }
 
     return status;
