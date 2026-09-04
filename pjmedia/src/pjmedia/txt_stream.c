@@ -100,10 +100,10 @@ typedef struct pjmedia_txt_stream {
     pj_timestamp rtcp_last_tx;   /**< Last RTCP tx time.     */
     pj_timestamp tx_last_ts;     /**< Timestamp of last tx.  */
 
-    unsigned start_ka_cnt;         /**< Remaining start-of-stream
+    unsigned start_ka_left;        /**< Remaining start-of-stream
                                         keep-alives to send.      */
-    unsigned start_ka_interval;    /**< Start keep-alive interval
-                                        in msec.                  */
+    unsigned start_ka_msec;        /**< Effective start keep-alive
+                                        interval, in msec.        */
     pj_timestamp start_ka_last_tx; /**< Last start keep-alive tx. */
     red_buf tx_buf[NUM_BUFFERS]; /**< Tx buffer.         */
     int tx_nred;                 /**< Num of redundant data. */
@@ -124,28 +124,28 @@ static void clock_cb(const pj_timestamp *ts, void *user_data);
  * Set up the start-of-stream keep-alive burst, see check_start_ka().
  * Must be called after the transport is attached.
  */
-static void init_start_ka(pjmedia_txt_stream *stream,
-                          const pjmedia_txt_stream_info *info)
+static void init_start_ka(pjmedia_txt_stream *stream)
 {
     pjmedia_stream_common *c_strm = &stream->base;
     pjmedia_transport_info tpinfo;
     pjmedia_ice_transport_info *ice_info;
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
-    stream->start_ka_cnt = info->use_ka ? info->ka_cfg.start_count : 0;
-    stream->start_ka_interval = info->ka_cfg.start_interval;
+    /* Take the runtime settings, already set from info->ka_cfg above. */
+    stream->start_ka_left = c_strm->use_ka ? c_strm->start_ka_count : 0;
+    stream->start_ka_msec = c_strm->start_ka_interval;
 #else
-    PJ_UNUSED_ARG(info);
-    stream->start_ka_cnt = PJMEDIA_STREAM_START_KA_CNT;
-    stream->start_ka_interval = PJMEDIA_STREAM_START_KA_INTERVAL_MSEC;
+    /* No runtime settings in this build, they are compiled out. */
+    stream->start_ka_left = PJMEDIA_STREAM_START_KA_CNT;
+    stream->start_ka_msec = PJMEDIA_STREAM_START_KA_INTERVAL_MSEC;
 #endif
 
-    if (stream->start_ka_cnt > START_KA_MAX_CNT)
-        stream->start_ka_cnt = START_KA_MAX_CNT;
-    if (stream->start_ka_interval < START_KA_MIN_INTERVAL_MSEC)
-        stream->start_ka_interval = START_KA_MIN_INTERVAL_MSEC;
+    if (stream->start_ka_left > START_KA_MAX_CNT)
+        stream->start_ka_left = START_KA_MAX_CNT;
+    if (stream->start_ka_msec < START_KA_MIN_INTERVAL_MSEC)
+        stream->start_ka_msec = START_KA_MIN_INTERVAL_MSEC;
 
-    if (stream->start_ka_cnt == 0)
+    if (stream->start_ka_left == 0)
         return;
 
     /* ICE connectivity checks already create the NAT bindings. */
@@ -156,7 +156,7 @@ static void init_start_ka(pjmedia_txt_stream *stream,
                    pjmedia_transport_info_get_spc_info(
                        &tpinfo, PJMEDIA_TRANSPORT_TYPE_ICE);
         if (ice_info && ice_info->active)
-            stream->start_ka_cnt = 0;
+            stream->start_ka_left = 0;
     }
 }
 
@@ -450,7 +450,7 @@ pjmedia_txt_stream_create(pjmedia_endpt *endpt, pj_pool_t *pool,
         pjmedia_stream_common_send_rtcp_sdes(c_strm);
     }
 
-    init_start_ka(stream, info);
+    init_start_ka(stream);
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
     /* NAT hole punching by sending KA packet via RTP transport. */
@@ -1040,7 +1040,7 @@ static void check_tx_rtcp(pjmedia_txt_stream *stream)
 /*
  * check_start_ka()
  * Punch NAT holes at stream start by sending a few empty RTP packets (plus
- * RTCP) spaced start_ka_interval apart, so the bindings exist before any
+ * RTCP) spaced start_ka_msec apart, so the bindings exist before any
  * text is typed and survive a lost packet. Kept out of send_text_locked()
  * so it doesn't disturb the first-packet (BOM) logic there.
  */
@@ -1054,13 +1054,13 @@ static void check_start_ka(pjmedia_txt_stream *stream)
     pj_timestamp now;
     pj_status_t status;
 
-    if (stream->start_ka_cnt == 0)
+    if (stream->start_ka_left == 0)
         return;
 
     pj_get_timestamp(&now);
     if (stream->start_ka_last_tx.u64 != 0 &&
         pj_elapsed_msec(&stream->start_ka_last_tx, &now) <
-            stream->start_ka_interval)
+            stream->start_ka_msec)
     {
         return;
     }
@@ -1083,10 +1083,14 @@ static void check_start_ka(pjmedia_txt_stream *stream)
     if (status != PJ_SUCCESS)
         return;
 
-    send_rtcp(c_strm, !c_strm->rtcp_sdes_bye_disabled, PJ_FALSE, PJ_FALSE,
-              PJ_FALSE, PJ_FALSE, PJ_FALSE);
+    status = send_rtcp(c_strm, !c_strm->rtcp_sdes_bye_disabled, PJ_FALSE,
+                       PJ_FALSE, PJ_FALSE, PJ_FALSE, PJ_FALSE);
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(4, (c_strm->port.info.name.ptr, status,
+                      "Error sending start keep-alive RTCP"));
+    }
 
-    stream->start_ka_cnt--;
+    stream->start_ka_left--;
 }
 
 /* Clock callback */
