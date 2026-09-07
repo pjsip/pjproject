@@ -596,6 +596,7 @@ static pj_status_t load_cert_direct(pj_pool_t *pool,
 {
     BIO *in;
     pj_ssl_cert_direct cd;
+    pj_status_t status;
 
     PJ_UNUSED_ARG(pool);
 
@@ -637,7 +638,18 @@ static pj_status_t load_cert_direct(pj_pool_t *pool,
     }
 
     /* Create credential */
-    return pj_ssl_cert_load_direct(pool, &cd, p_cert);
+    status = pj_ssl_cert_load_direct(pool, &cd, p_cert);
+
+    /* The credential holds its own reference on success, so drop the one
+     * taken by PEM_read_bio_*() here. On failure it holds none and this is
+     * still the release that frees them.
+     */
+    if (cd.privkey)
+        EVP_PKEY_free(cd.privkey);
+    if (cd.cert)
+        X509_free(cd.cert);
+
+    return status;
 }
 #else
 #   define load_cert_direct(pool,p_cert)
