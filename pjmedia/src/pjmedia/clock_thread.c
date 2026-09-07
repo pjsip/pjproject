@@ -209,15 +209,15 @@ PJ_DEF(pj_status_t) pjmedia_clock_create2(pj_pool_t *pool,
      * *both* return success, leading to double pj_thread_destroy()
      * and double pj_pool_reset().
      *
-     * Allocated from clock->pool — not the caller's pool — so the
-     * lock and the memory it guards share one lifetime and are torn
-     * down together in pjmedia_clock_destroy() by a single owner.
-     * pj_mutex_destroy(destroy_lock) runs immediately before
-     * pj_pool_safe_release(&clock->pool) there. This relies on the
-     * caller not issuing concurrent destroy on the same handle —
-     * which the higher-layer is_destroying flag + dec_vid_win under
-     * PJSUA_LOCK guarantees for the pjsua video path. */
-    status = pj_mutex_create_recursive(clock->pool, "clockdestroy",
+     * Allocated from the caller's pool, which outlives the clock:
+     * clock->pool is reset by pjmedia_clock_stop() to reclaim the
+     * clock thread descriptor, so nothing but that descriptor may
+     * live there. The lock itself is destroyed in
+     * pjmedia_clock_destroy(). This relies on the caller not issuing
+     * concurrent destroy on the same handle — which the higher-layer
+     * is_destroying flag + dec_vid_win under PJSUA_LOCK guarantees
+     * for the pjsua video path. */
+    status = pj_mutex_create_recursive(pool, "clockdestroy",
                                        &clock->destroy_lock);
     if (status != PJ_SUCCESS) {
         pj_lock_destroy(clock->lock);
@@ -506,9 +506,7 @@ PJ_DEF(pj_status_t) pjmedia_clock_destroy(pjmedia_clock *clock)
         clock->lock = NULL;
     }
 
-    /* destroy_lock memory lives in clock->pool, so tear it down here
-     * before pool release. Caller must not race stop/destroy past
-     * this point. */
+    /* Caller must not race stop/destroy past this point. */
     pj_mutex_unlock(clock->destroy_lock);
     pj_mutex_destroy(clock->destroy_lock);
     clock->destroy_lock = NULL;
