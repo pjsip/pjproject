@@ -1702,6 +1702,16 @@ PJ_DEF(pj_status_t) pj_event_wait(pj_event_t *event)
 }
 
 /*
+ * pj_event_timedwait()
+ */
+PJ_DEF(pj_status_t) pj_event_timedwait(pj_event_t *event, unsigned timeout)
+{
+    PJ_ASSERT_RETURN(event, PJ_EINVAL);
+
+    return pj_event_wait_for(event, timeout);
+}
+
+/*
  * pj_event_trywait()
  */
 PJ_DEF(pj_status_t) pj_event_trywait(pj_event_t *event)
