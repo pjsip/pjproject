@@ -2854,6 +2854,10 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
             }
             info->prov_media[info->prov_media_cnt].stream.vid.cap_dev=cap_dev;
         } else if (call_med->type == PJMEDIA_TYPE_TEXT) {
+        } else if (call_med->type == PJMEDIA_TYPE_UNKNOWN) {
+            /* Media that pjsua does not manage as a stream, e.g. app-managed
+             * T.38. Report it, the app needs to see the media it owns.
+             */
         } else {
             continue;
         }

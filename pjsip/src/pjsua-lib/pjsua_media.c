@@ -2458,11 +2458,14 @@ static pj_bool_t sdp_has_active_media(const pjmedia_sdp_session *sdp)
     return PJ_FALSE;
 }
 
-/* Is the media type of the SDP media line one that pjsua manages as a stream
- * (audio/video/text)? Anything else, e.g. T.38 image/udptl, is left to the
- * application.
+/* Is the media type of the SDP media line one of the types pjsua implements a
+ * stream for, i.e. handled by the type dispatch in
+ * pjsua_media_channel_update()? Anything else, e.g. T.38 image/udptl, is left
+ * to the application. Video is included regardless of PJMEDIA_HAS_VIDEO, so a
+ * build without video keeps reporting an offered video line as unsupported
+ * media instead of silently treating it as media the application owns.
  */
-static pj_bool_t is_managed_media(const pjmedia_sdp_media *m)
+static pj_bool_t is_stream_media(const pjmedia_sdp_media *m)
 {
     pjmedia_type type = pjmedia_get_type(&m->desc.media);
 
@@ -4611,6 +4614,16 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
 }
 
 
+/* Release the media transport of a call media, if any. */
+static void close_call_med_tp(pjsua_call_media *call_med)
+{
+    if (call_med->tp) {
+        pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_NULL);
+        pjmedia_transport_close(call_med->tp);
+        call_med->tp = call_med->tp_orig = NULL;
+    }
+}
+
 pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
                                        const pjmedia_sdp_session *local_sdp,
                                        const pjmedia_sdp_session *remote_sdp)
@@ -4776,11 +4789,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
             stop_media_stream(call, mi, PJ_FALSE);
 
             /* Close the media transport */
-            if (call_med->tp) {
-                pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_NULL);
-                pjmedia_transport_close(call_med->tp);
-                call_med->tp = call_med->tp_orig = NULL;
-            }
+            close_call_med_tp(call_med);
             continue;
 #if 0
             /* Something is wrong */
@@ -4802,13 +4811,9 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
          * (app-supplied) answer keeps the line active, count it as media so the
          * call is not dropped for having no media.
          */
-        if (!is_managed_media(remote_sdp->media[mi])) {
+        if (!is_stream_media(remote_sdp->media[mi])) {
             stop_media_stream(call, mi, PJ_FALSE);
-            if (call_med->tp) {
-                pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_NULL);
-                pjmedia_transport_close(call_med->tp);
-                call_med->tp = call_med->tp_orig = NULL;
-            }
+            close_call_med_tp(call_med);
             call_med->type = PJMEDIA_TYPE_UNKNOWN;
             call_med->state = PJSUA_CALL_MEDIA_NONE;
             call_med->dir = PJMEDIA_DIR_NONE;
@@ -4849,11 +4854,8 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
          * can be deactivated by the SDP negotiation and the max media count
          * (account) setting.
          */
-        if (local_sdp->media[mi]->desc.port==0 && call_med->tp) {
-            pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_NULL);
-            pjmedia_transport_close(call_med->tp);
-            call_med->tp = call_med->tp_orig = NULL;
-        }
+        if (local_sdp->media[mi]->desc.port==0)
+            close_call_med_tp(call_med);
 
 on_check_med_status:
         if (status != PJ_SUCCESS) {
@@ -4861,11 +4863,7 @@ on_check_med_status:
             stop_media_stream(call, mi, PJ_FALSE);
 
             /* Close the media transport */
-            if (call_med->tp) {
-                pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_NULL);
-                pjmedia_transport_close(call_med->tp);
-                call_med->tp = call_med->tp_orig = NULL;
-            }
+            close_call_med_tp(call_med);
 
             /* Update media states */
             call_med->state = PJSUA_CALL_MEDIA_ERROR;
