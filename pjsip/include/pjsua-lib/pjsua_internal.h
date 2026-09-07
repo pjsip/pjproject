@@ -264,6 +264,14 @@ struct pjsua_call
                                             offer.                          */
     
     pj_bool_t            rx_reinv_async;/**< on_call_rx_reinvite() async.   */
+    pj_bool_t            offer_app_managed;
+                                       /**< App is answering the current
+                                            remote offer itself, so media it
+                                            may accept but pjsua does not
+                                            manage (e.g. T.38) must not be
+                                            rejected as "no media". Transient,
+                                            set around the media re-init in
+                                            on_rx_offer.                     */
     pj_timer_entry       reinv_timer;  /**< Reinvite retry timer.           */
     pj_bool_t            reinv_pending;/**< Pending until CONFIRMED state.  */
     pj_bool_t            reinv_ice_sent;/**< Has reinvite for ICE upd sent? */

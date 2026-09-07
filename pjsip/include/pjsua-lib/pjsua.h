@@ -1788,6 +1788,14 @@ typedef struct pjsua_callback
      * Note: on_call_rx_offer() will still be called after this callback,
      * but only if async is PJ_FALSE and code is 200. 
      *
+     * Answering manually also allows application to accept media that
+     * pjsua does not manage (e.g. T.38 image/udptl), by answering with its
+     * own SDP that keeps such media active. Such media is then reported as
+     * disabled (status PJSUA_CALL_MEDIA_NONE, type PJMEDIA_TYPE_UNKNOWN)
+     * and is handled entirely by the application, which should also keep it
+     * active in the offers pjsua generates later on the call (e.g. hold),
+     * as pjsua deactivates it there, see on_call_sdp_created().
+     *
      * @param call_id   The call index.
      * @param offer     Remote offer.
      * @param rdata     The received re-INVITE request.
