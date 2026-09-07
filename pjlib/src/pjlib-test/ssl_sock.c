@@ -625,13 +625,17 @@ static pj_status_t load_cert_direct(pj_pool_t *pool,
         X509* x = NULL;
 
         in = BIO_new_file(CERT_FILE, "r");
-        if (!in)
-            return PJ_ENOTFOUND;
+        if (!in) {
+            status = PJ_ENOTFOUND;
+            goto on_error;
+        }
 
         x = PEM_read_bio_X509(in, NULL, 0, NULL);
         BIO_free(in);
-        if (!x)
-            return PJ_EINVAL;
+        if (!x) {
+            status = PJ_EINVAL;
+            goto on_error;
+        }
 
         cd.type |= PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT;
         cd.cert = x;
@@ -655,6 +659,16 @@ static pj_status_t load_cert_direct(pj_pool_t *pool,
     if (cd.cert)
         X509_free(cd.cert);
 #endif
+
+    return status;
+
+on_error:
+    /* No credential was created, so nothing else can be holding these and
+     * the release is correct on every OpenSSL version -- unlike the tail
+     * above, which is surplus only where the credential took its own.
+     */
+    if (cd.privkey)
+        EVP_PKEY_free(cd.privkey);
 
     return status;
 }
