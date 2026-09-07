@@ -286,10 +286,20 @@ static int event_test(pj_pool_t *pool)
         return -183;
     }
 
+    /* A zero timeout on an unsignaled event only polls it. */
+    pj_event_reset(event);
+    status = pj_event_timedwait(event, 0);
+    if (status != PJ_ETIMEDOUT) {
+        app_perror("...error: pj_event_timedwait() with zero timeout did "
+                   "not time out", status);
+        pj_event_destroy(event);
+        return -185;
+    }
+
     status = pj_event_destroy(event);
     if (status != PJ_SUCCESS) {
         app_perror("...error: pj_event_destroy()", status);
-        return -185;
+        return -187;
     }
 
     return 0;

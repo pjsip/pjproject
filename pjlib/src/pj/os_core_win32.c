@@ -1708,6 +1708,12 @@ PJ_DEF(pj_status_t) pj_event_timedwait(pj_event_t *event, unsigned timeout)
 {
     PJ_ASSERT_RETURN(event, PJ_EINVAL);
 
+    /* INFINITE is the all-ones value, so the largest timeout would wait
+     * forever here while it is finite everywhere else.
+     */
+    if (timeout == INFINITE)
+        --timeout;
+
     return pj_event_wait_for(event, timeout);
 }
 
