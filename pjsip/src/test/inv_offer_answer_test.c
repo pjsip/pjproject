@@ -737,6 +737,77 @@ static void on_new_session(pjsip_inv_session *inv, pjsip_event *e)
 }
 
 
+
+/*
+ * Regression test for the use-after-free in inv_session_destroy() (#5241).
+ *
+ * pjsip_inv_session is zalloc'd from dlg->pool, and so is inv->ref_cnt
+ * (pjsip_inv_create_uac/uas). The session holds exactly one dialog session
+ * count for its whole life, released by inv_session_destroy() through
+ * pjsip_dlg_dec_session(). When that call takes dlg->sess_count to zero with
+ * no transaction outstanding, pjsip_dlg_dec_lock() destroys the dialog and
+ * releases dlg->pool synchronously, via dlg_on_destroy() on the group lock's
+ * destroy list. Everything inv_session_destroy() reads from `inv` after that
+ * point is read from freed memory.
+ *
+ * sip_inv.h documents no locking requirement on pjsip_inv_dec_ref(), so an
+ * application that takes its own reference and drops the last one outside the
+ * dialog lock, once the session is already DISCONNECTED, lands exactly there.
+ * No second thread and no network are involved: this is an ordering defect,
+ * not a race, so the test is deterministic.
+ *
+ * Detection is by AddressSanitizer, which pjsip-test already runs under in
+ * CI. For ASan to see anything the dialog pool must be freed rather than
+ * recycled, so the test first grows dlg->pool past the caching pool's largest
+ * cached size -- see the comment on the pj_pool_alloc() below.
+ */
+static int inv_dec_ref_unlocked_test(void)
+{
+    pjsip_dialog *dlg;
+    pjsip_inv_session *inv;
+    pj_str_t uri = contact_uri;
+
+    PJ_LOG(3,(THIS_FILE, "  dropping the last inv reference unlocked"));
+
+    PJ_TEST_SUCCESS(pjsip_dlg_create_uac(pjsip_ua_instance(),
+                                         &uri, &uri, &uri, &uri, &dlg),
+                    NULL, return -400);
+
+    /* pj_caching_pool recycles a released pool unless its capacity exceeds
+     * the largest cached size, in which case cpool_release_pool() destroys it
+     * outright. A recycled pool is only reset, so the stale reads still
+     * return their old values and the defect stays invisible -- which is why
+     * it has gone unnoticed. Grow the dialog pool past that bound so that the
+     * release is a real free and the sanitizer can see the access.
+     */
+    PJ_TEST_NOT_NULL(pj_pool_alloc(dlg->pool, 128 * 1024), NULL, return -410);
+
+    PJ_TEST_SUCCESS(pjsip_inv_create_uac(dlg, NULL, 0, &inv), NULL,
+                    return -420);
+
+    /* The invite session must be the dialog's only session holder, otherwise
+     * the dec_session() below cannot reach zero and the test proves nothing. */
+    PJ_TEST_EQ(dlg->sess_count, 1, "unexpected dialog session count",
+               return -430);
+
+    /* The application takes its own reference, as sip_inv.h invites it to. */
+    PJ_TEST_SUCCESS(pjsip_inv_add_ref(inv), NULL, return -440);
+
+    /* End the session. This drops the stack's own reference from
+     * inv_set_state(), under the lock pjsip_inv_terminate() holds. */
+    pjsip_inv_terminate(inv, PJSIP_SC_REQUEST_TERMINATED, PJ_FALSE);
+    PJ_TEST_EQ(dlg->sess_count, 1, "invite session count released too early",
+               return -450);
+
+    /* Drop the last reference with no dialog lock held. inv_session_destroy()
+     * must not touch `inv` after pjsip_dlg_dec_session() has freed the dialog
+     * that `inv` is allocated from. */
+    PJ_TEST_EQ(pjsip_inv_dec_ref(inv), PJ_EGONE,
+               "invite session was not destroyed", return -460);
+
+    return 0;
+}
+
 int inv_offer_answer_test(void)
 {
     unsigned i;
@@ -791,6 +862,10 @@ int inv_offer_answer_test(void)
         if (rc != 0)
             goto on_return;
     }
+
+    rc = inv_dec_ref_unlocked_test();
+    if (rc != 0)
+        goto on_return;
 
 
 on_return:
