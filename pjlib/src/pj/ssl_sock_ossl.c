@@ -2101,10 +2101,13 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
  * connection, and with server context reuse enabled, whatever context gets
  * built there is then cached and reused by every subsequent connection.
  */
-static pj_status_t ssl_init_server_ctx(pj_ssl_sock_t *ssock)
+static pj_status_t ssl_init_server_ctx(pj_ssl_sock_t *ssock,
+                                       const pj_ssl_sock_param *newsock_param)
 {
     ossl_sock_t *ossock = (ossl_sock_t *)ssock;
     pj_status_t status;
+
+    PJ_UNUSED_ARG(newsock_param);
 
     pj_assert(ssock->is_server && !ssock->parent);
 

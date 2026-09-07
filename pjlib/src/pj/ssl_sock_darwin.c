@@ -341,67 +341,52 @@ static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
     return PJ_SUCCESS;
 }
 
-/* Eagerly load and validate the certificate on the listener socket, so that a
- * certificate that is missing, unparsable, or has no matching private key
- * fails pj_ssl_sock_start_accept() up front. Without this, set_cert() (via
- * ssl_create() below) does not run until the first connection is accepted, so
- * the listener reports success and it is every inbound connection that fails
- * its handshake instead.
- *
- * The identity is released again here rather than cached: unlike the OpenSSL
- * backend, this backend builds no shared server context, and every accepted
- * connection loads the certificate itself in its own ssl_create(). This
- * validates the configuration, it does not pin it.
- *
- * Note this covers loading only, not the SSLSetCertificate() that set_cert()
- * goes on to make against a per-connection context. A listener can therefore
- * still start for a configuration that every connection subsequently
- * rejects -- the check fails open, never closed.
- */
-/* Map ssock->param.proto onto the Secure Transport version bounds.
+/* Map a PJ_SSL_SOCK_PROTO_* set onto the Secure Transport version bounds.
  *
  * Returns PJ_EINVAL when the requested range cannot be served at all, so an
  * unusable configuration can be rejected once at listener setup instead of on
  * every accepted connection.
+ *
+ * Takes the protocol set by value rather than reading it from the socket, so
+ * that a caller can validate a parameter set the socket does not own -- the
+ * newsock_param of a listener, for instance.
  */
-static pj_status_t get_proto_bounds(pj_ssl_sock_t *ssock,
+static pj_status_t get_proto_bounds(pj_ssl_sock_proto proto,
                                     SSLProtocol *p_min,
                                     SSLProtocol *p_max)
 {
     SSLProtocol min_proto = kSSLProtocolUnknown;
     SSLProtocol max_proto = kSSLProtocolUnknown;
 
-    /* Set min and max protocol version */
-    if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT) {
+    if (proto == PJ_SSL_SOCK_PROTO_DEFAULT) {
         /* SSL 2.0 is deprecated. */
-        ssock->param.proto = PJ_SSL_SOCK_PROTO_ALL &
-                             ~PJ_SSL_SOCK_PROTO_SSL2;
+        proto = PJ_SSL_SOCK_PROTO_ALL & ~PJ_SSL_SOCK_PROTO_SSL2;
     }
 
-    if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_3) {
+    if (proto & PJ_SSL_SOCK_PROTO_TLS1_3) {
         max_proto = kTLSProtocol13;
-    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_2) {
+    } else if (proto & PJ_SSL_SOCK_PROTO_TLS1_2) {
         max_proto = kTLSProtocol12;
-    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_1) {
+    } else if (proto & PJ_SSL_SOCK_PROTO_TLS1_1) {
         max_proto = kTLSProtocol11;
-    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1) {
+    } else if (proto & PJ_SSL_SOCK_PROTO_TLS1) {
         max_proto = kTLSProtocol1;
-    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_SSL3) {
+    } else if (proto & PJ_SSL_SOCK_PROTO_SSL3) {
         max_proto = kSSLProtocol3;
     } else {
         PJ_LOG(3, (THIS_FILE, "Unsupported TLS/SSL protocol"));
         return PJ_EINVAL;
     }
 
-    if (ssock->param.proto & PJ_SSL_SOCK_PROTO_SSL3) {
+    if (proto & PJ_SSL_SOCK_PROTO_SSL3) {
         min_proto = kSSLProtocol3;
-    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1) {
+    } else if (proto & PJ_SSL_SOCK_PROTO_TLS1) {
         min_proto = kTLSProtocol1;
-    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_1) {
+    } else if (proto & PJ_SSL_SOCK_PROTO_TLS1_1) {
         min_proto = kTLSProtocol11;
-    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_2) {
+    } else if (proto & PJ_SSL_SOCK_PROTO_TLS1_2) {
         min_proto = kTLSProtocol12;
-    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_3) {
+    } else if (proto & PJ_SSL_SOCK_PROTO_TLS1_3) {
         min_proto = kTLSProtocol13;
     }
 
@@ -437,7 +422,31 @@ static pj_status_t get_proto_bounds(pj_ssl_sock_t *ssock,
 }
 
 
-static pj_status_t ssl_init_server_ctx(pj_ssl_sock_t *ssock)
+/* Eagerly load and validate the certificate on the listener socket, so that a
+ * certificate that is missing, unparsable, or has no matching private key
+ * fails pj_ssl_sock_start_accept() up front. Without this, set_cert() (via
+ * ssl_create() below) does not run until the first connection is accepted, so
+ * the listener reports success and it is every inbound connection that fails
+ * its handshake instead.
+ *
+ * The protocol range is checked here for the same reason, against
+ * newsock_param, which carries the parameters the accepted sockets are built
+ * from -- not ssock->param, which pj_ssl_sock_start_accept2() lets a caller
+ * set independently. The bounds it yields are discarded: ssl_create() derives
+ * its own per connection, so this call is validation only.
+ *
+ * The identity is released again here rather than cached: unlike the OpenSSL
+ * backend, this backend builds no shared server context, and every accepted
+ * connection loads the certificate itself in its own ssl_create(). This
+ * validates the configuration, it does not pin it.
+ *
+ * Note this covers loading only, not the SSLSetCertificate() that set_cert()
+ * goes on to make against a per-connection context. A listener can therefore
+ * still start for a configuration that every connection subsequently
+ * rejects -- the check fails open, never closed.
+ */
+static pj_status_t ssl_init_server_ctx(pj_ssl_sock_t *ssock,
+                                      const pj_ssl_sock_param *newsock_param)
 {
     darwinssl_sock_t *dssock = (darwinssl_sock_t *)ssock;
     SecIdentityRef identity = NULL;
@@ -446,13 +455,7 @@ static pj_status_t ssl_init_server_ctx(pj_ssl_sock_t *ssock)
 
     pj_assert(ssock->is_server && !ssock->parent);
 
-    /* Reject a protocol range this backend cannot serve here, once, rather
-     * than once per accepted connection in ssl_create(). A listener asking
-     * for TLS 1.3 alone would otherwise start successfully and then fail
-     * every inbound handshake, emitting a log line any unauthenticated peer
-     * can trigger while the operator never sees a startup error.
-     */
-    status = get_proto_bounds(ssock, &min_proto, &max_proto);
+    status = get_proto_bounds(newsock_param->proto, &min_proto, &max_proto);
     if (status != PJ_SUCCESS)
         return status;
 
@@ -501,7 +504,16 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
             return status;
     }
 
-    status = get_proto_bounds(ssock, &min_proto, &max_proto);
+    /* Set min and max protocol version. The expansion is written back
+     * because pj_ssl_sock_get_info() reports ssock->param.proto.
+     */
+    if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT) {
+        /* SSL 2.0 is deprecated. */
+        ssock->param.proto = PJ_SSL_SOCK_PROTO_ALL &
+                             ~PJ_SSL_SOCK_PROTO_SSL2;
+    }
+
+    status = get_proto_bounds(ssock->param.proto, &min_proto, &max_proto);
     if (status != PJ_SUCCESS)
         return status;
 

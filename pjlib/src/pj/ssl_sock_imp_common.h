@@ -300,7 +300,8 @@ static void ssl_free_cert(pj_ssl_cert_t *cert);
  * SSL_CTX, including certificate and private key loading -- on a listener
  * socket, instead of deferring it to the first accepted connection.
  */
-static pj_status_t ssl_init_server_ctx(pj_ssl_sock_t *ssock);
+static pj_status_t ssl_init_server_ctx(pj_ssl_sock_t *ssock,
+                                       const pj_ssl_sock_param *newsock_param);
 #endif
 
 /* SSL session functions */
