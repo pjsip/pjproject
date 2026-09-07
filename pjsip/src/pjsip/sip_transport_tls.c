@@ -594,18 +594,6 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_lis_start(pjsip_tpfactory *factory,
 }
 
 
-/* Load the listener's credentials from its pjsip_tls_setting.
- *
- * This is the only place that assigns listener->cert. It wipes the previous
- * credentials first and leaves the field NULL when a load fails, so a caller
- * must come through here rather than invoking pj_ssl_cert_load_from_files2(),
- * pj_ssl_cert_load_from_buffer(), pj_ssl_cert_load_from_store() or
- * pj_ssl_cert_load_direct() for a listener itself.
- *
- * The four sources are cumulative rather than exclusive: each loader adds to
- * the same pj_ssl_cert_t, which is why they are separate "if" blocks and not
- * an if/else chain.
- */
 /* Publish the address after a restart that could not bring the listener up.
  * The listener is down either way, but the factory stays usable for outgoing
  * transports, so the caller's error is what propagates and a failure here is
@@ -624,6 +612,18 @@ static void publish_addr_after_failure(struct tls_listener *listener,
 }
 
 
+/* Load the listener's credentials from its pjsip_tls_setting.
+ *
+ * This is the only place that assigns listener->cert. It wipes the previous
+ * credentials first and leaves the field NULL when a load fails, so a caller
+ * must come through here rather than invoking pj_ssl_cert_load_from_files2(),
+ * pj_ssl_cert_load_from_buffer(), pj_ssl_cert_load_from_store() or
+ * pj_ssl_cert_load_direct() for a listener itself.
+ *
+ * The four sources are cumulative rather than exclusive: each loader adds to
+ * the same pj_ssl_cert_t, which is why they are separate "if" blocks and not
+ * an if/else chain.
+ */
 static pj_status_t load_listener_cert(struct tls_listener *listener)
 {
     pj_pool_t *pool = listener->factory.pool;
