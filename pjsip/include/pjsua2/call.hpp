@@ -2295,6 +2295,15 @@ public:
      * but only if prm.isAsync is false and prm.statusCode is PJSIP_SC_OK
      * (200).
      *
+     * Answering manually also allows application to accept media that
+     * the library does not manage (e.g. T.38 image/udptl), by answering
+     * with its own SDP that keeps such media active. Such media is then
+     * reported as disabled (status PJSUA_CALL_MEDIA_NONE, type
+     * PJMEDIA_TYPE_UNKNOWN) and is handled entirely by the application,
+     * which should also keep it active in the offers the library generates
+     * later on the call (e.g. hold), as the library deactivates it there,
+     * see onCallSdpCreated().
+     *
      * @param prm       Callback parameter.
      */
     virtual void onCallRxReinvite(OnCallRxReinviteParam &prm)
