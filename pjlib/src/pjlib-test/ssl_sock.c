@@ -640,14 +640,21 @@ static pj_status_t load_cert_direct(pj_pool_t *pool,
     /* Create credential */
     status = pj_ssl_cert_load_direct(pool, &cd, p_cert);
 
-    /* The credential holds its own reference on success, so drop the one
-     * taken by PEM_read_bio_*() here. On failure it holds none and this is
-     * still the release that frees them.
+    /* Drop the reference taken by PEM_read_bio_*(), but only where
+     * pj_ssl_cert_load_direct() took one of its own -- it up-refs under the
+     * same guard, and ssl_free_cert() is likewise a no-op below 3.0. Freeing
+     * unconditionally would release the last reference on OpenSSL 1.x and
+     * LibreSSL and leave the credential pointing at freed objects.
+     *
+     * Below 3.0 the header contract holds instead: the application keeps the
+     * objects alive for as long as the credential is used.
      */
+#if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
     if (cd.privkey)
         EVP_PKEY_free(cd.privkey);
     if (cd.cert)
         X509_free(cd.cert);
+#endif
 
     return status;
 }

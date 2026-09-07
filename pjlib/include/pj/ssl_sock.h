@@ -466,6 +466,11 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_store(
  * is never consumed by any of them, so it remains the application's to
  * release.
  *
+ * Loading direct credentials twice into the same instance releases the
+ * reference held from the first load before taking one on the new objects,
+ * so a caller following the cumulative-loader pattern must not assume the
+ * earlier pair stays referenced by the credential.
+ *
  * @param pool          The pool.
  * @param cert_direct   The backend specific objects.
  * @param p_cert        Pointer to credential instance.
