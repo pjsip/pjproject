@@ -324,3 +324,5 @@ EXPORTS
 	platform_strerror                        @ 323 NONAME
 	snprintf                                 @ 324 NONAME
 	vsnprintf                                @ 325 NONAME
+	pj_pool_aligned_alloc                    @ 326 NONAME
+	pj_pool_aligned_zalloc                   @ 327 NONAME

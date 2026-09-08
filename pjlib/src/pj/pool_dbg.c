@@ -232,6 +232,21 @@ PJ_DEF(void*) pj_pool_zalloc_imp( const char *file, int line,
     return pj_pool_calloc_imp(file, line, pool, 1, (unsigned)sz); 
 }
 
+/* Allocate aligned memory from the pool and zero the memory */
+PJ_DEF(void*) pj_pool_aligned_zalloc_imp( const char *file, int line,
+                                          pj_pool_t *pool,
+                                          pj_size_t alignment, pj_size_t sz)
+{
+    void *mem;
+
+    mem = pj_pool_alloc_imp(file, line, pool, alignment, sz);
+    if (!mem)
+        return NULL;
+
+    pj_bzero(mem, sz);
+    return mem;
+}
+
 
 
 #endif  /* PJ_HAS_POOL_ALT_API */

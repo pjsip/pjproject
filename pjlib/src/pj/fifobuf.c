@@ -30,9 +30,9 @@
  * It doubles as the allocator's alignment: the payload starts immediately
  * after the header and every chunk occupies a multiple of SZ, so a payload
  * is exactly as aligned as fifobuf->first (which pj_fifobuf_init() aligns).
- * It must be a power of two, at least sizeof(unsigned) so the header fits,
- * and large enough for any object the caller stores in the buffer, hence
- * pointer sized, matching PJ_POOL_ALIGNMENT.
+ * It must be a power of two and at least sizeof(unsigned) so the header
+ * fits. Pointer sized matches PJ_POOL_ALIGNMENT and covers the objects
+ * fifobuf is used for; it is not an alignment the caller can raise.
  */
 #define SZ  (sizeof(void*) < sizeof(unsigned) ? sizeof(unsigned) \
                                               : sizeof(void*))
@@ -111,14 +111,17 @@ PJ_DEF(void*) pj_fifobuf_alloc (pj_fifobuf_t *fifobuf, unsigned size)
 {
     unsigned available;
     char *start;
-    unsigned total;
+    pj_size_t total;
 
     PJ_CHECK_STACK();
 
     /* Chunks occupy a multiple of SZ so that the chunk after this one, and
-     * hence its payload, stays aligned.
+     * hence its payload, stays aligned. Keep the total in pj_size_t: an
+     * unsigned would wrap for a size close to its maximum, and the wrapped
+     * (small) total would then pass the checks below and hand out a chunk
+     * that was never reserved.
      */
-    total = (unsigned)ALIGN_UP((pj_size_t)size + SZ);
+    total = ALIGN_UP((pj_size_t)size + SZ);
 
     if (fifobuf->full) {
         PJ_LOG(6, (THIS_FILE, 
@@ -147,7 +150,7 @@ PJ_DEF(void*) pj_fifobuf_alloc (pj_fifobuf_t *fifobuf, unsigned size)
                 fifobuf->uend = fifobuf->first;
             if (fifobuf->uend == fifobuf->ubegin)
                 fifobuf->full = 1;
-            put_size(ptr, total);
+            put_size(ptr, (unsigned)total);
             ptr += SZ;
 
             PJ_LOG(6, (THIS_FILE, 
@@ -174,7 +177,7 @@ PJ_DEF(void*) pj_fifobuf_alloc (pj_fifobuf_t *fifobuf, unsigned size)
         fifobuf->uend = start + total;
         if (fifobuf->uend == fifobuf->ubegin)
             fifobuf->full = 1;
-        put_size(ptr, total);
+        put_size(ptr, (unsigned)total);
         ptr += SZ;
 
         PJ_LOG(6, (THIS_FILE, 
