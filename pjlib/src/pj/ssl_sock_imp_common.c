@@ -2239,7 +2239,7 @@ pj_ssl_sock_start_accept2(pj_ssl_sock_t *ssock,
      * of leaving it to the first accepted connection, so that a bad
      * credential fails the listener startup itself.
      */
-    status = ssl_init_server_ctx(ssock);
+    status = ssl_init_server_ctx(ssock, newsock_param);
     if (status != PJ_SUCCESS)
         goto on_error;
 #endif
