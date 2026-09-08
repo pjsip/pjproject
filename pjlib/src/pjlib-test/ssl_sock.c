@@ -953,6 +953,15 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
                (unsigned long)state_cli.recv));
 
 on_return:
+    /* Release the reference pj_ssl_cert_load_direct() took. Each socket
+     * deep-copied and up-ref'd its own in pj_ssl_sock_set_certificate(), so
+     * this drops only the credential's.
+     */
+#if TEST_LOAD_DIRECT && (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+    if (cert)
+        pj_ssl_cert_wipe_keys(cert);
+#endif
+
 #if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_DARWIN) || \
     (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_APPLE)
     if (status != PJ_SUCCESS) {
@@ -1706,6 +1715,15 @@ static int perf_test(unsigned clients, unsigned ms_handshake_timeout)
                (unsigned long)tot_sent, (unsigned long)tot_recv));
 
 on_return:
+    /* Release the reference pj_ssl_cert_load_direct() took. Each socket
+     * deep-copied and up-ref'd its own in pj_ssl_sock_set_certificate(), so
+     * this drops only the credential's.
+     */
+#if TEST_LOAD_DIRECT && (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+    if (cert)
+        pj_ssl_cert_wipe_keys(cert);
+#endif
+
     if (ssock_serv) 
         pj_ssl_sock_close(ssock_serv);
 
