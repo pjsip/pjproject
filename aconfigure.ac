@@ -68,6 +68,14 @@ if test "$CC_OPTIMIZE" = ""; then CC_OPTIMIZE="-O2"; fi
 AC_SUBST(CC_OPTIMIZE)
 if test "$CC_CFLAGS" = ""; then CC_CFLAGS="-Wall"; fi
 AC_SUBST(CC_CFLAGS)
+dnl Flags that make the compiler emit a .d dependency file as a side effect of
+dnl compiling. This is what keeps incremental builds correct when a header
+dnl changes; without it only the .c files are tracked. -MP additionally emits
+dnl a phony target per header so that deleting one does not break the build.
+if test "$CC_DEPFLAGS" = ""; then
+    if test "$GCC" = "yes"; then CC_DEPFLAGS="-MMD -MP"; fi
+fi
+AC_SUBST(CC_DEPFLAGS)
 
 AC_SUBST(ac_pjdir)
 AC_SUBST(ac_build_mak_vars)

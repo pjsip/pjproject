@@ -87,6 +87,12 @@ print:
 	$(MAKE) -f $(RULES_MAK) APP=PJLIB app=pjlib print_lib
 	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjlib-test print_bin
 	
+# Relink the executables when a library they link against is rebuilt.
+# rules.mak adds $(<APP>_EXTRA_DEP) to the executable's prerequisites.
+# These used to be appended to the .depend file by the 'depend' target,
+# which meant they only took effect if 'make dep' had been run.
+export TEST_EXTRA_DEP := $(LIBDIR)/$(PJLIB_LIB)
+
 depend: ../include/pj/config_site.h
 	$(MAKE) -f $(RULES_MAK) APP=PJLIB app=pjlib depend
 	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjlib-test depend

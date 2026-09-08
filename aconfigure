@@ -744,6 +744,7 @@ ac_shlib_suffix
 ac_cflags
 ac_build_mak_vars
 ac_pjdir
+CC_DEPFLAGS
 CC_CFLAGS
 CC_OPTIMIZE
 CC_DEF
@@ -4947,6 +4948,9 @@ if test "$CC_DEF" = ""; then CC_DEF="-D"; fi
 if test "$CC_OPTIMIZE" = ""; then CC_OPTIMIZE="-O2"; fi
 
 if test "$CC_CFLAGS" = ""; then CC_CFLAGS="-Wall"; fi
+if test "$CC_DEPFLAGS" = ""; then
+    if test "$GCC" = "yes"; then CC_DEPFLAGS="-MMD -MP"; fi
+fi
 
 
 

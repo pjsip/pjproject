@@ -18,5 +18,6 @@ export CC_LIB := -l
 
 export CC_SOURCES :=
 export CC_CFLAGS := @CC_CFLAGS@
+export CC_DEPFLAGS := @CC_DEPFLAGS@
 export CC_LDFLAGS :=
 

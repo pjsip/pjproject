@@ -282,6 +282,16 @@ realclean:
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSDP app=pjsdp $@
 
+# Relink the executables when a library they link against is rebuilt.
+# rules.mak adds $(<APP>_EXTRA_DEP) to the executable's prerequisites.
+# These used to be appended to the .depend file by the 'depend' target,
+# which meant they only took effect if 'make dep' had been run.
+export PJMEDIA_TEST_EXTRA_DEP := $(LIBDIR)/$(PJMEDIA_LIB) \
+                                 $(LIBDIR)/$(PJMEDIA_CODEC_LIB) \
+                                 $(LIBDIR)/$(PJMEDIA_VIDEODEV_LIB) \
+                                 $(LIBDIR)/$(PJMEDIA_AUDIODEV_LIB) \
+                                 $(PJNATH_LIB) $(PJLIB_UTIL_LIB) $(PJLIB_LIB)
+
 depend:
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_VIDEODEV app=pjmedia-videodev $@
