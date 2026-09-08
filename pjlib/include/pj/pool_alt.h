@@ -147,7 +147,7 @@ PJ_DECL(void*) pj_pool_zalloc_imp(const char *file, int line,
 #define PJ_POOL_ALLOC_T(pool,type) \
             ((type*)pj_pool_alloc(pool, sizeof(type)))
 #ifndef PJ_POOL_ALIGNMENT
-#   define PJ_POOL_ALIGNMENT    4
+#   define PJ_POOL_ALIGNMENT    (sizeof(void*))
 #endif
 
 /**

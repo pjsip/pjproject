@@ -92,5 +92,8 @@ typedef unsigned __int64 pj_uint64_t;
 #define PJ_ALIGN_DATA_SUFFIX(alignment) __pragma(warning(pop))
 #define PJ_ALIGN_DATA(declaration, alignment) PJ_ALIGN_DATA_PREFIX(alignment) declaration PJ_ALIGN_DATA_SUFFIX(alignment)
 
+/* Alignment requirement of a type, in bytes. */
+#define PJ_ALIGNOF(type)                __alignof(type)
+
 #endif  /* __PJ_COMPAT_CC_MSVC_H__ */
 

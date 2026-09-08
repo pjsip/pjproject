@@ -93,6 +93,10 @@ PJ_DECL(unsigned) pj_fifobuf_available_size(pj_fifobuf_t *fb);
 /**
  * Allocate a chunk of memory from the fifobuf.
  *
+ * The returned buffer is aligned to at least sizeof(void*), so an object
+ * with a fundamental alignment requirement may be stored in it directly.
+ * The allocation therefore consumes slightly more than \a size bytes.
+ *
  * @param fb        The fifobuf
  * @param size      Size to allocate
  * 

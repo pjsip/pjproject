@@ -25,7 +25,21 @@
 
 #define THIS_FILE   "fifobuf"
 
-#define SZ  sizeof(unsigned)
+/* Size of the per-chunk header, which holds the chunk's total size.
+ *
+ * It doubles as the allocator's alignment: the payload starts immediately
+ * after the header and every chunk occupies a multiple of SZ, so a payload
+ * is exactly as aligned as fifobuf->first (which pj_fifobuf_init() aligns).
+ * It must be a power of two, at least sizeof(unsigned) so the header fits,
+ * and large enough for any object the caller stores in the buffer, hence
+ * pointer sized, matching PJ_POOL_ALIGNMENT.
+ */
+#define SZ  (sizeof(void*) < sizeof(unsigned) ? sizeof(unsigned) \
+                                              : sizeof(void*))
+
+/* Round up/down to a multiple of SZ */
+#define ALIGN_UP(x)     (((x) + SZ - 1) & ~(SZ - 1))
+#define ALIGN_DN(x)     ((x) & ~(SZ - 1))
 
 /* put and get size at arbitrary, possibly unaligned location */
 PJ_INLINE(void) put_size(void *ptr, unsigned size)
@@ -48,16 +62,22 @@ PJ_DEF(void) pj_fifobuf_init (pj_fifobuf_t *fifobuf, void *buffer, unsigned size
                "fifobuf_init fifobuf=%p buffer=%p, size=%d", 
                fifobuf, buffer, size));
 
-    fifobuf->first = (char*)buffer;
-    fifobuf->last = fifobuf->first + size;
+    /* Align the start, so that every chunk payload is aligned too. The
+     * padding is taken out of the usable space.
+     */
+    fifobuf->first = (char*)ALIGN_UP((pj_size_t)buffer);
+    fifobuf->last = (char*)buffer + size;
+    if (fifobuf->last < fifobuf->first)
+        fifobuf->last = fifobuf->first;
     fifobuf->ubegin = fifobuf->uend = fifobuf->first;
     fifobuf->full = (fifobuf->last==fifobuf->first);
 }
 
 PJ_DEF(unsigned) pj_fifobuf_capacity (pj_fifobuf_t *fifobuf)
 {
-    unsigned cap = (unsigned)(fifobuf->last - fifobuf->first);
-    return (cap > 0) ? cap-SZ : 0;
+    unsigned cap = (unsigned)ALIGN_DN((pj_size_t)(fifobuf->last -
+                                                  fifobuf->first));
+    return (cap > SZ) ? cap-SZ : 0;
 }
 
 PJ_DEF(unsigned) pj_fifobuf_available_size (pj_fifobuf_t *fifobuf)
@@ -78,10 +98,12 @@ PJ_DEF(unsigned) pj_fifobuf_available_size (pj_fifobuf_t *fifobuf)
         else
             s = s1<s2 ? s2 : s1;
 
-        return (s>=SZ) ? s-SZ : 0;
+        s = (unsigned)ALIGN_DN((pj_size_t)s);
+        return (s>SZ) ? s-SZ : 0;
     } else {
-        unsigned s = (unsigned)(fifobuf->ubegin - fifobuf->uend);
-        return (s>=SZ) ? s-SZ : 0;
+        unsigned s = (unsigned)ALIGN_DN((pj_size_t)(fifobuf->ubegin -
+                                                    fifobuf->uend));
+        return (s>SZ) ? s-SZ : 0;
     }
 }
 
@@ -89,8 +111,14 @@ PJ_DEF(void*) pj_fifobuf_alloc (pj_fifobuf_t *fifobuf, unsigned size)
 {
     unsigned available;
     char *start;
+    unsigned total;
 
     PJ_CHECK_STACK();
+
+    /* Chunks occupy a multiple of SZ so that the chunk after this one, and
+     * hence its payload, stays aligned.
+     */
+    total = (unsigned)ALIGN_UP((pj_size_t)size + SZ);
 
     if (fifobuf->full) {
         PJ_LOG(6, (THIS_FILE, 
@@ -112,14 +140,14 @@ PJ_DEF(void*) pj_fifobuf_alloc (pj_fifobuf_t *fifobuf, unsigned size)
          * where the size of free0, used, and/or free1 may be zero.
          */
         available = (unsigned)(fifobuf->last - fifobuf->uend);
-        if (available >= size+SZ) {
+        if (available >= total) {
             char *ptr = fifobuf->uend;
-            fifobuf->uend += (size+SZ);
+            fifobuf->uend += total;
             if (fifobuf->uend == fifobuf->last)
                 fifobuf->uend = fifobuf->first;
             if (fifobuf->uend == fifobuf->ubegin)
                 fifobuf->full = 1;
-            put_size(ptr, size+SZ);
+            put_size(ptr, total);
             ptr += SZ;
 
             PJ_LOG(6, (THIS_FILE, 
@@ -141,12 +169,12 @@ PJ_DEF(void*) pj_fifobuf_alloc (pj_fifobuf_t *fifobuf, unsigned size)
      */
     start = (fifobuf->uend <= fifobuf->ubegin) ? fifobuf->uend : fifobuf->first;
     available = (unsigned)(fifobuf->ubegin - start);
-    if (available >= size+SZ) {
+    if (available >= total) {
         char *ptr = start;
-        fifobuf->uend = start + size + SZ;
+        fifobuf->uend = start + total;
         if (fifobuf->uend == fifobuf->ubegin)
             fifobuf->full = 1;
-        put_size(ptr, size+SZ);
+        put_size(ptr, total);
         ptr += SZ;
 
         PJ_LOG(6, (THIS_FILE, 

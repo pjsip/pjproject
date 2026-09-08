@@ -46,6 +46,24 @@
 #  error "Unknown compiler."
 #endif
 
+/* PJ_ALIGNOF is the alignment requirement of a type, in bytes. The last
+ * resort works on any conforming C compiler: in "struct { char c; type t; }"
+ * the offset of t is exactly the alignment of type, and since sizeof(type)
+ * is a multiple of that alignment the struct has no trailing padding. That
+ * form defines a type inside sizeof, which is not valid C++, so the standard
+ * operators are preferred wherever they are available.
+ */
+#ifndef PJ_ALIGNOF
+#  if defined(__cplusplus) && __cplusplus >= 201103L
+#    define PJ_ALIGNOF(type)    alignof(type)
+#  elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#    define PJ_ALIGNOF(type)    _Alignof(type)
+#  else
+#    define PJ_ALIGNOF(type)    (sizeof(struct { char pj_c_; type pj_t_; }) - \
+                                 sizeof(type))
+#  endif
+#endif
+
 /* PJ_ALIGN_DATA is compiler specific directive to align data address */
 #ifndef PJ_ALIGN_DATA
 #  error "PJ_ALIGN_DATA is not defined!"

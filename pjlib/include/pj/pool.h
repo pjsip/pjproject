@@ -345,9 +345,15 @@ struct pj_pool_t
 
 /** 
  * Pool memory alignment (must be power of 2). 
+ *
+ * The default is pointer sized. A smaller value would under-align any
+ * pool allocated object embedding a type with a stricter requirement,
+ * e.g. an OS synchronisation primitive or a 64 bit field accessed
+ * atomically, which on some targets is a fault and on others costs the
+ * atomicity of the access.
  */
 #ifndef PJ_POOL_ALIGNMENT
-#   define PJ_POOL_ALIGNMENT    4
+#   define PJ_POOL_ALIGNMENT    (sizeof(void*))
 #endif
 
 /**
@@ -514,6 +520,9 @@ PJ_IDECL(void*) pj_pool_alloc( pj_pool_t *pool, pj_size_t size);
  * @param pool      the pool.
  * @param alignment the requested alignment of the allocation.
  *                  Value of 0 means use the default alignment of this pool.
+ *                  The pool's default alignment is a floor: a smaller value
+ *                  is raised to it, so an allocation is never less aligned
+ *                  than pj_pool_alloc() would have made it.
  * @param size      the requested size.
  *
  * @return pointer to the allocated memory.
@@ -555,6 +564,23 @@ PJ_INLINE(void*) pj_pool_zalloc(pj_pool_t *pool, pj_size_t size)
 
 
 /**
+ * Allocate storage with the specified alignment from the pool, and
+ * initialize it to zero.
+ *
+ * @param pool      The pool.
+ * @param alignment The requested alignment of the allocation.
+ *                  Value of 0 means use the default alignment of this pool.
+ * @param size      The size to be allocated.
+ *
+ * @return          Pointer to the allocated memory.
+ *
+ * @see PJ_POOL_ZALLOC_T
+ */
+PJ_IDECL(void*) pj_pool_aligned_zalloc(pj_pool_t *pool, pj_size_t alignment,
+                                       pj_size_t size);
+
+
+/**
  * This macro allocates memory from the pool and returns the instance of
  * the specified type. It provides a stricker type safety than pj_pool_alloc()
  * since the return value of this macro will be type-casted to the specified
@@ -566,7 +592,7 @@ PJ_INLINE(void*) pj_pool_zalloc(pj_pool_t *pool, pj_size_t size)
  * @return          Memory buffer of the specified type.
  */
 #define PJ_POOL_ALLOC_T(pool,type) \
-            ((type*)pj_pool_alloc(pool, sizeof(type)))
+            ((type*)pj_pool_aligned_alloc(pool, PJ_ALIGNOF(type), sizeof(type)))
 
 /**
  * This macro allocates memory from the pool, zeroes the buffer, and 
@@ -580,7 +606,8 @@ PJ_INLINE(void*) pj_pool_zalloc(pj_pool_t *pool, pj_size_t size)
  * @return          Memory buffer of the specified type.
  */
 #define PJ_POOL_ZALLOC_T(pool,type) \
-            ((type*)pj_pool_zalloc(pool, sizeof(type)))
+            ((type*)pj_pool_aligned_zalloc(pool, PJ_ALIGNOF(type), \
+                                           sizeof(type)))
 
 /*
  * Internal functions
