@@ -161,6 +161,7 @@ realclean:
 # which meant they only took effect if 'make dep' had been run.
 export PJNATH_TEST_EXTRA_DEP := $(LIBDIR)/$(PJNATH_LIB) $(PJLIB_UTIL_LIB) $(PJLIB_LIB)
 export PJTURN_CLIENT_EXTRA_DEP := $(LIBDIR)/$(PJNATH_LIB) $(PJLIB_UTIL_LIB) $(PJLIB_LIB)
+export PJTURN_SRV_EXTRA_DEP := $(LIBDIR)/$(PJNATH_LIB) $(PJLIB_UTIL_LIB) $(PJLIB_LIB)
 
 depend:
 	$(MAKE) -f $(RULES_MAK) APP=PJNATH app=pjnath $@

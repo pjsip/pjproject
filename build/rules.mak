@@ -255,6 +255,20 @@ endif
 dep: depend
 
 ifneq ($(CC_DEPFLAGS),)
+# A tree built before dependency generation was enabled has objects but no .d
+# files. A missing included makefile is not an error and carries no rules, so
+# make would consider those objects up to date and header edits would stay
+# invisible until each source happened to compile again for another reason.
+# Make the objects depend on a sentinel instead: creating it is newer than any
+# pre-existing object, which forces one rebuild that produces the .d files.
+# After that it never changes, and on a clean tree it costs nothing.
+DEP_SENTINEL := $(OBJDIR)/.depflags
+
+$(OBJS): $(DEP_SENTINEL)
+
+$(DEP_SENTINEL): | $(OBJDIRS)
+	@echo "$(CC_DEPFLAGS)" > $@
+
 -include $(OBJS:$(OBJEXT)=.d)
 else
 -include $(DEP_FILE)

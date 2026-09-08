@@ -286,7 +286,10 @@ realclean:
 # rules.mak adds $(<APP>_EXTRA_DEP) to the executable's prerequisites.
 # These used to be appended to the .depend file by the 'depend' target,
 # which meant they only took effect if 'make dep' had been run.
-export PJMEDIA_TEST_EXTRA_DEP := $(LIBDIR)/$(PJMEDIA_LIB) $(LIBDIR)/$(PJMEDIA_CODEC_LIB) \
+export PJMEDIA_TEST_EXTRA_DEP := $(LIBDIR)/$(PJMEDIA_LIB) \
+                                 $(LIBDIR)/$(PJMEDIA_CODEC_LIB) \
+                                 $(LIBDIR)/$(PJMEDIA_VIDEODEV_LIB) \
+                                 $(LIBDIR)/$(PJMEDIA_AUDIODEV_LIB) \
                                  $(PJNATH_LIB) $(PJLIB_UTIL_LIB) $(PJLIB_LIB)
 
 depend:

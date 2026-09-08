@@ -31,6 +31,11 @@ export PJSUA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 export PJSUA_CFLAGS += $(PJ_CFLAGS) $(CFLAGS)
 export PJSUA_CXXFLAGS += $(PJ_CXXFLAGS) $(CFLAGS)
 export PJSUA_LDFLAGS += $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS)
+# Relink when a library pjsua links against is rebuilt. rules.mak adds
+# $(<APP>_EXTRA_DEP) to the executable's prerequisites. This edge used to be
+# appended to the .depend file by the 'depend' target below, which meant it
+# only took effect if 'make dep' had been run.
+export PJSUA_EXTRA_DEP := $(APP_LIB_FILES)
 ifeq ($(EXCLUDE_APP),0)
 export PJSUA_EXE:=pjsua-$(TARGET_NAME)$(HOST_EXE)
 endif
@@ -44,6 +49,7 @@ export PJSYSTEST_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 export PJSYSTEST_CFLAGS += $(PJ_CFLAGS) $(CFLAGS)
 export PJSYSTEST_CXXFLAGS += $(PJ_CXXFLAGS) $(CFLAGS)
 export PJSYSTEST_LDFLAGS += $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS)
+export PJSYSTEST_EXTRA_DEP := $(APP_LIB_FILES)
 ifeq ($(EXCLUDE_APP),0)
 export PJSYSTEST_EXE:=pjsystest-$(TARGET_NAME)$(HOST_EXE)
 endif
