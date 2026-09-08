@@ -16,6 +16,7 @@ export CC_LIB := -l
 
 export CC_SOURCES :=
 export CC_CFLAGS := -Wall 
+export CC_DEPFLAGS := -MMD -MP
 #export CC_CFLAGS += -Wdeclaration-after-statement
 #export CC_CXXFLAGS := -Wdeclaration-after-statement
 export CC_LDFLAGS :=

@@ -155,6 +155,13 @@ realclean:
 	$(MAKE) -f $(RULES_MAK) APP=PJTURN_CLIENT app=pjturn-client $@
 	$(MAKE) -f $(RULES_MAK) APP=PJTURN_SRV app=pjturn-srv $@
 
+# Relink the executables when a library they link against is rebuilt.
+# rules.mak adds $(<APP>_EXTRA_DEP) to the executable's prerequisites.
+# These used to be appended to the .depend file by the 'depend' target,
+# which meant they only took effect if 'make dep' had been run.
+export PJNATH_TEST_EXTRA_DEP := $(LIBDIR)/$(PJNATH_LIB) $(PJLIB_UTIL_LIB) $(PJLIB_LIB)
+export PJTURN_CLIENT_EXTRA_DEP := $(LIBDIR)/$(PJNATH_LIB) $(PJLIB_UTIL_LIB) $(PJLIB_LIB)
+
 depend:
 	$(MAKE) -f $(RULES_MAK) APP=PJNATH app=pjnath $@
 	$(MAKE) -f $(RULES_MAK) APP=PJNATH_TEST app=pjnath-test $@

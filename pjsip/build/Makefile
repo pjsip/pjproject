@@ -355,6 +355,20 @@ clean:
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA_STRESS app=pjsua-stress $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA2_TEST app=pjsua2-test $@
 
+# Relink the executables when a library they link against is rebuilt.
+# rules.mak adds $(<APP>_EXTRA_DEP) to the executable's prerequisites.
+# These used to be appended to the .depend file by the 'depend' target,
+# which meant they only took effect if 'make dep' had been run.
+export TEST_EXTRA_DEP := $(PJMEDIA_LIB) $(LIBDIR)/$(PJSUA_LIB_LIB) $(LIBDIR)/$(PJSIP_SIMPLE_LIB) \
+        $(LIBDIR)/$(PJSIP_UA_LIB) $(LIBDIR)/$(PJSIP_LIB) $(PJNATH_LIB) \
+        $(PJLIB_UTIL_LIB) $(PJLIB_LIB)
+export PJSUA_STRESS_EXTRA_DEP := $(PJMEDIA_LIB) $(LIBDIR)/$(PJSUA_LIB_LIB) $(LIBDIR)/$(PJSIP_SIMPLE_LIB) \
+        $(LIBDIR)/$(PJSIP_UA_LIB) $(LIBDIR)/$(PJSIP_LIB) $(PJNATH_LIB) \
+        $(PJLIB_UTIL_LIB) $(PJLIB_LIB)
+export PJSUA2_TEST_EXTRA_DEP := $(LIBDIR)/$(PJSUA2_LIB_LIB) $(PJMEDIA_LIB) $(LIBDIR)/$(PJSUA_LIB_LIB) $(LIBDIR)/$(PJSIP_SIMPLE_LIB) \
+        $(LIBDIR)/$(PJSIP_UA_LIB) $(LIBDIR)/$(PJSIP_LIB) $(PJNATH_LIB) \
+        $(PJLIB_UTIL_LIB) $(PJLIB_LIB)
+
 depend:
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP app=pjsip $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_UA app=pjsip-ua $@

@@ -155,32 +155,32 @@ $(OBJDIR)/$(app).ko: $(OBJDIR)/$(app).o | $(OBJDIRS)
 	cp $(OBJDIR)/$(app).ko ../lib
 
 $(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.m | $(@D)
-	$(CC) $($(APP)_CFLAGS) \
+	$(CC) $($(APP)_CFLAGS) $(CC_DEPFLAGS) \
 		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
 		$(subst /,$(HOST_PSEP),$<) 
 
 $(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.c | $(@D)
-	$(CC) $($(APP)_CFLAGS) \
+	$(CC) $($(APP)_CFLAGS) $(CC_DEPFLAGS) \
 		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
 		$(subst /,$(HOST_PSEP),$<) 
 
 $(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.S | $(@D)
-	$(CC) $($(APP)_CFLAGS) \
+	$(CC) $($(APP)_CFLAGS) $(CC_DEPFLAGS) \
 		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
 		$(subst /,$(HOST_PSEP),$<) 
 
 $(OBJDIR)/dshowclasses.o: $(SRCDIR)/dshowclasses.cpp | $(@D)
-	$(CXX) $($(APP)_CXXFLAGS) -I$(SRCDIR)/../../../third_party/BaseClasses -fpermissive \
+	$(CXX) $($(APP)_CXXFLAGS) $(CC_DEPFLAGS) -I$(SRCDIR)/../../../third_party/BaseClasses -fpermissive \
 		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
 		$(subst /,$(HOST_PSEP),$<)
 
 $(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.cpp | $(@D)
-	$(CXX) $($(APP)_CXXFLAGS) \
+	$(CXX) $($(APP)_CXXFLAGS) $(CC_DEPFLAGS) \
 		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
 		$(subst /,$(HOST_PSEP),$<)
 
 $(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.cc | $(@D)
-	$(CXX) $($(APP)_CXXFLAGS) \
+	$(CXX) $($(APP)_CXXFLAGS) $(CC_DEPFLAGS) \
 		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
 		$(subst /,$(HOST_PSEP),$<)
 
@@ -223,6 +223,14 @@ ifeq ($(OS_NAME),linux-kernel)
 	rm -f ../lib/$(app).ko
 endif
 
+# When the compiler emits a .d file per object (CC_DEPFLAGS), dependencies are
+# always up to date and this hand-rolled scan is both unnecessary and unsafe:
+# a partial run leaves a truncated $(DEP_FILE) that make later reports as
+# "missing separator".
+ifneq ($(CC_DEPFLAGS),)
+depend:
+	@echo "Dependencies are generated during compilation; nothing to do."
+else
 depend:
 	$(subst @@,$(DEP_FILE),$(HOST_RM))
 	for F in $(FULL_SRCS); do \
@@ -242,8 +250,13 @@ depend:
 	     fi; \
 	   fi; \
 	done;
+endif
 
 dep: depend
 
+ifneq ($(CC_DEPFLAGS),)
+-include $(OBJS:$(OBJEXT)=.d)
+else
 -include $(DEP_FILE)
+endif
 
