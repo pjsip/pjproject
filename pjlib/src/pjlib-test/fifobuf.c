@@ -31,14 +31,27 @@ int dummy_fifobuf_test;
 #define THIS_FILE   "fifobuf.c"
 
 enum {
-    SZ = sizeof(unsigned),
+    /* Must match SZ in fifobuf.c: the per-chunk header, which is also the
+     * alignment that pj_fifobuf_alloc() guarantees for the payload.
+     */
+    SZ = sizeof(void*) < sizeof(unsigned) ? sizeof(unsigned) : sizeof(void*),
 };
 
 static int fifobuf_size_test()
 {
-    enum { SIZE = 32 };
+    /* The two allocations below must exactly fill the buffer to within one
+     * chunk header, which is what makes the available size after freeing the
+     * first chunk come out at 16. Derive that from the chunk overhead so it
+     * holds for both 4 and 8 byte SZ (32 and 64 bit); the 64 bit chunks are
+     * larger, so a fixed size cannot satisfy both.
+     */
+    enum {
+        CHUNK0 = 16 + SZ,                        /* chunk for the 16b alloc */
+        CHUNK1 = (4 + SZ + SZ - 1) & ~(SZ - 1),  /* chunk for the 4b alloc  */
+        SIZE   = CHUNK0 + CHUNK1 + SZ
+    };
     char before[8];
-    char buffer[SIZE];
+    union { char buf[SIZE]; void *align_; } buffer;
     char after[8];
     char zero[8];
     void *p0, *p1;
@@ -48,7 +61,7 @@ static int fifobuf_size_test()
     pj_bzero(after, sizeof(after));
     pj_bzero(zero, sizeof(zero));
 
-    pj_fifobuf_init (&fifo, buffer, sizeof(buffer));
+    pj_fifobuf_init (&fifo, buffer.buf, sizeof(buffer.buf));
 
     PJ_TEST_EQ(pj_fifobuf_capacity(&fifo), SIZE-SZ, NULL, return -11);
     PJ_TEST_EQ(pj_fifobuf_available_size(&fifo), SIZE-SZ, NULL, return -12);
@@ -75,11 +88,11 @@ static int fifobuf_rolling_test()
         SIZE=(MIN_SIZE+MAX_SIZE)/2*N,
     };
     pj_list chunks;
-    char buffer[SIZE];
+    union { char buf[SIZE]; void *align_; } buffer;
     pj_fifobuf_t fifo;
     unsigned rep;
 
-    pj_fifobuf_init(&fifo, buffer, sizeof(buffer));
+    pj_fifobuf_init(&fifo, buffer.buf, sizeof(buffer.buf));
     pj_list_init(&chunks);
 
     PJ_TEST_EQ(pj_fifobuf_capacity(&fifo), SIZE-SZ, NULL, return -300);
@@ -158,9 +171,8 @@ static int fifobuf_misc_test()
     for (i=0; i<30; ++i) {
         entries[i] = pj_fifobuf_alloc(&fifo, i+1);
         PJ_TEST_NOT_NULL(entries[i], NULL, return -50);
-        //fifobuf is no longer aligned.
-        //PJ_TEST_EQ(((pj_size_t)entries[i]) % sizeof(unsigned), 0, -60, 
-        //           "alignment error");
+        PJ_TEST_EQ(((pj_size_t)entries[i]) % SZ, 0, "alignment error",
+                   return -60);
     }
     for (i=0; i<30; ++i) {
         PJ_TEST_SUCCESS( pj_fifobuf_free(&fifo, entries[i]), NULL, return -70);

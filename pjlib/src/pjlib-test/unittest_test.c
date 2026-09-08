@@ -266,9 +266,14 @@ static int func_to_test(void *arg)
 
 enum { 
     /* approx len of each log msg in func_to_test() 
-     * Note that logging adds decor e.g. time, plus overhead in fifobuf.
+     * Note that logging adds decor e.g. time, plus overhead in fifobuf:
+     * a chunk header, and the chunk rounded up to a multiple of the
+     * header size. Keep this in step with SZ in fifobuf.c.
      */
-    MSG_LEN = 45 + 4 + sizeof(pj_test_log_item),
+    FIFOBUF_SZ = sizeof(void*) < sizeof(unsigned) ? sizeof(unsigned)
+                                                  : sizeof(void*),
+    MSG_LEN = (45 + sizeof(pj_test_log_item) + FIFOBUF_SZ + FIFOBUF_SZ - 1) &
+              ~(FIFOBUF_SZ - 1),
 };
 
 /**
@@ -280,12 +285,12 @@ static int usage_test(pj_pool_t *pool, pj_bool_t basic, pj_bool_t parallel,
                       unsigned log_size)
 {
     enum {
-        TEST_CASE_LOG_SIZE = 256,
+        TEST_CASE_LOG_SIZE = 4*MSG_LEN,
     };
     char test_title[80];
     pj_test_suite suite;
     unsigned flags;
-    char buffer0[TEST_CASE_LOG_SIZE], buffer1[TEST_CASE_LOG_SIZE];
+    union { char buf[TEST_CASE_LOG_SIZE]; void *align_; } buffer0, buffer1;
     pj_test_case test_case0, test_case1;
     pj_test_runner *runner;
     pj_test_runner basic_runner;
@@ -313,7 +318,7 @@ static int usage_test(pj_pool_t *pool, pj_bool_t basic, pj_bool_t parallel,
     
     pj_test_case_init(&test_case0, "successful test", flags, &func_to_test,
                       (void*)(long)(0+TEST_LOG_ALL),
-                      buffer0, log_size, NULL);
+                      buffer0.buf, log_size, NULL);
     pj_test_suite_add_case(&suite, &test_case0);
 
     /* Add test case 1. This test case simulates error. It writes
@@ -321,7 +326,7 @@ static int usage_test(pj_pool_t *pool, pj_bool_t basic, pj_bool_t parallel,
      */
     pj_test_case_init(&test_case1, "failure test", flags, &func_to_test, 
                       (void*)(long)(1+TEST_LOG_ALL+TEST_RETURN_ERROR),
-                      buffer1, log_size, NULL);
+                      buffer1.buf, log_size, NULL);
     pj_test_suite_add_case(&suite, &test_case1);
 
     /* Create runner */
@@ -517,7 +522,12 @@ static int log_msg_sizes[] = {
     2*MSG_LEN, /* log buffer enough for 2 messages */
     3*MSG_LEN, /* log buffer enough for 3 message */
     0,         /* no log buffer */
-    64,        /* log will be truncated */
+
+    /* Log will be truncated: less than one whole message, but still enough
+     * that the retained prefix reaches past "Some error in", which is what
+     * the truncated case asserts.
+     */
+    MSG_LEN - FIFOBUF_SZ,
 };
 
 int unittest_basic_test(void)

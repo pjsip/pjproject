@@ -91,6 +91,9 @@ PJ_DECL(int) pj_NO_MEMORY_EXCEPTION(void);
 #define pj_pool_zalloc(pool,sz)             \
         pj_pool_zalloc_imp(__FILE__, __LINE__, pool, sz)
 
+#define pj_pool_aligned_zalloc(pool,alignment,sz) \
+        pj_pool_aligned_zalloc_imp(__FILE__, __LINE__, pool, alignment, sz)
+
 
 
 /*
@@ -141,13 +144,18 @@ PJ_DECL(void*) pj_pool_calloc_imp(const char *file, int line,
 PJ_DECL(void*) pj_pool_zalloc_imp(const char *file, int line, 
                                   pj_pool_t *pool, pj_size_t sz);
 
+/* Allocate aligned memory from the pool and zero the memory */
+PJ_DECL(void*) pj_pool_aligned_zalloc_imp(const char *file, int line,
+                                          pj_pool_t *pool,
+                                          pj_size_t alignment, pj_size_t sz);
+
 
 #define PJ_POOL_ZALLOC_T(pool,type) \
             ((type*)pj_pool_zalloc(pool, sizeof(type)))
 #define PJ_POOL_ALLOC_T(pool,type) \
             ((type*)pj_pool_alloc(pool, sizeof(type)))
 #ifndef PJ_POOL_ALIGNMENT
-#   define PJ_POOL_ALIGNMENT    4
+#   define PJ_POOL_ALIGNMENT    (sizeof(void*))
 #endif
 
 /**

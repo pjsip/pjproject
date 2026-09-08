@@ -148,19 +148,22 @@ AC_MSG_RESULT([Setting PJ_M_NAME to $target_cpu])
 AC_DEFINE_UNQUOTED(PJ_M_NAME,["$target_cpu"])
 
 dnl
-dnl Memory alignment detection
+dnl Memory alignment detection.
+dnl
+dnl Test the pointer size rather than matching the target triple: a list of
+dnl triples silently gives 4 to any 64 bit target it does not mention (e.g.
+dnl amd64-*-freebsd, ppc64, riscv64, s390x), which under-aligns every pool
+dnl allocated object that embeds an OS primitive or a 64 bit field accessed
+dnl atomically. Compile-only, so it stays correct when cross compiling.
 dnl
 AC_MSG_CHECKING([memory alignment])
-case $target in
-    sparc64-* | ia64-* | x86_64-* | arm64-* | aarch64-* | mips64* )
-        AC_DEFINE(PJ_POOL_ALIGNMENT, 8)
-        AC_MSG_RESULT([8 bytes])
-    ;;
-    * )
-        AC_DEFINE(PJ_POOL_ALIGNMENT, 4)
-        AC_MSG_RESULT([4 bytes (default)])
-    ;;
-esac
+AC_COMPILE_IFELSE(
+    [AC_LANG_PROGRAM([[]],
+                     [[int t[sizeof(void *) == 8 ? 1 : -1]; (void)t;]])],
+    [AC_DEFINE(PJ_POOL_ALIGNMENT, 8)
+     AC_MSG_RESULT([8 bytes])],
+    [AC_DEFINE(PJ_POOL_ALIGNMENT, 4)
+     AC_MSG_RESULT([4 bytes])])
 
 
 dnl
