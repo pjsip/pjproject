@@ -39,10 +39,17 @@ enum {
 
 static int fifobuf_size_test()
 {
-    /* SIZE is chosen so that, with the 16 and 4 byte allocations below, the
-     * available size after freeing the first chunk is exactly 16.
+    /* The two allocations below must exactly fill the buffer to within one
+     * chunk header, which is what makes the available size after freeing the
+     * first chunk come out at 16. Derive that from the chunk overhead so it
+     * holds for both 4 and 8 byte SZ (32 and 64 bit); the 64 bit chunks are
+     * larger, so a fixed size cannot satisfy both.
      */
-    enum { SIZE = 6 * sizeof(void*) };
+    enum {
+        CHUNK0 = 16 + SZ,                        /* chunk for the 16b alloc */
+        CHUNK1 = (4 + SZ + SZ - 1) & ~(SZ - 1),  /* chunk for the 4b alloc  */
+        SIZE   = CHUNK0 + CHUNK1 + SZ
+    };
     char before[8];
     union { char buf[SIZE]; void *align_; } buffer;
     char after[8];
