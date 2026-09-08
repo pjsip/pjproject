@@ -221,6 +221,24 @@ static int restart_failure_test(void)
 
     pjsip_transport_dec_ref(tcp);
     pjsip_transport_destroy(tcp);
+    tcp = NULL;
+
+    /* A second restart, with the port still occupied, must fail too.
+     *
+     * This is the regression itself. Keyed off "the listener has no socket"
+     * rather than "no listener was ever wanted", the shortcut at the top of
+     * pjsip_tcp_transport_restart() is taken from here on: every later
+     * restart returns PJ_SUCCESS having only republished the address, the
+     * listener stays down, and nothing ever retries it. The first restart
+     * above is what leaves that state behind.
+     */
+    status = pjsip_tcp_transport_restart(tpfactory, &restart_addr, NULL);
+    if (status == PJ_SUCCESS) {
+        PJ_LOG(3,(THIS_FILE, "   Error: second restart to an occupied port "
+                             "reported success without restarting"));
+        ret = -116;
+        goto on_return;
+    }
 
     /* The listener can be started again once the port is free. */
     pj_sock_close(blocker);

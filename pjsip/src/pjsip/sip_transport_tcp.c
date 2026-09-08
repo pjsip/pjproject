@@ -56,6 +56,15 @@ struct tcp_listener
     pjsip_endpoint          *endpt;
     pjsip_tpmgr             *tpmgr;
     pj_activesock_t         *asock;
+
+    /* PJ_TRUE once a listener has been asked for, i.e. once
+     * pjsip_tcp_transport_lis_start() has been entered. It stays set whether
+     * or not that start succeeded, and whether or not the socket was later
+     * lost, so a restart can tell "no listener was ever wanted here" from
+     * "one was wanted and is not up".
+     */
+    pj_bool_t                lis_wanted;
+
     pj_sockaddr              bound_addr;
     pj_qos_type              qos_type;
     pj_qos_params            qos_params;
@@ -369,6 +378,24 @@ static void update_transport_info(struct tcp_listener *listener)
         PJ_LOG(4, (listener->factory.obj_name, "SIP TCP is ready "
                "(client only)"));
     }
+}
+
+
+/* Publish the address after a restart that could not bring the listener up.
+ * The listener is down either way, but the factory stays usable for outgoing
+ * transports, so the caller's error is what propagates and a failure here is
+ * only logged.
+ */
+static void publish_addr_after_failure(struct tcp_listener *listener,
+                                       const pjsip_host_port *a_name)
+{
+    pj_status_t status = update_factory_addr(listener, a_name);
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(3,(listener->factory.obj_name, status,
+                     "Failed to update published address"));
+    }
+
+    update_transport_info(listener);
 }
 
 /*
@@ -1767,6 +1794,12 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_lis_start(pjsip_tpfactory *factory,
     pj_sockaddr *listener_addr = &factory->local_addr;
     pj_status_t status = PJ_SUCCESS;
 
+    /* A listener has been asked for. Record it before anything can fail, so
+     * that a first start which does not succeed is still distinguishable from
+     * a factory that never wanted a listener at all.
+     */
+    listener->lis_wanted = PJ_TRUE;
+
     /* Nothing to be done, if listener already started. */
     if (listener->asock)
         return PJ_SUCCESS;
@@ -1875,8 +1908,16 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_restart(pjsip_tpfactory *factory,
     pj_status_t status = PJ_SUCCESS;
     struct tcp_listener *listener = (struct tcp_listener *)factory;
 
-    /* Just update the published address if currently no listener */
-    if (!listener->asock) {
+    /* A listener nobody ever asked for has nothing to bring back, so a
+     * restart can only mean updating the published address. That is the
+     * PJSIP_TCP_TRANSPORT_DONT_CREATE_LISTENER case, where the factory is
+     * started without ever calling lis_start().
+     *
+     * Once a listener has been asked for, no shortcut: having no socket then
+     * means either the first start failed or a later restart failed to bring
+     * it back, and the restart below is the only way to recover either.
+     */
+    if (!listener->lis_wanted) {
         PJ_LOG(3,(factory->obj_name,
                       "TCP restart requested while no listener created, "
                       "update the published address only"));
@@ -1893,9 +1934,12 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_restart(pjsip_tpfactory *factory,
 
     /* Close the listener socket only; keep the factory registered so it
      * stays usable for outgoing transports if the restart below fails.
+     * It is already gone if an earlier start or restart failed.
      */
-    pj_activesock_close(listener->asock);
-    listener->asock = NULL;
+    if (listener->asock) {
+        pj_activesock_close(listener->asock);
+        listener->asock = NULL;
+    }
 
     status = pjsip_tcp_transport_lis_start(factory, local, a_name);
     if (status != PJ_SUCCESS) {
@@ -1903,8 +1947,7 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_restart(pjsip_tpfactory *factory,
                    "Unable to start listener after closing it", status);
 
         /* Update the published address anyway (client only) */
-        update_factory_addr(listener, a_name);
-        update_transport_info(listener);
+        publish_addr_after_failure(listener, a_name);
     }
 
     return status;
