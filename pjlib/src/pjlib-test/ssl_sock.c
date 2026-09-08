@@ -596,6 +596,7 @@ static pj_status_t load_cert_direct(pj_pool_t *pool,
 {
     BIO *in;
     pj_ssl_cert_direct cd;
+    pj_status_t status;
 
     PJ_UNUSED_ARG(pool);
 
@@ -624,20 +625,52 @@ static pj_status_t load_cert_direct(pj_pool_t *pool,
         X509* x = NULL;
 
         in = BIO_new_file(CERT_FILE, "r");
-        if (!in)
-            return PJ_ENOTFOUND;
+        if (!in) {
+            status = PJ_ENOTFOUND;
+            goto on_error;
+        }
 
         x = PEM_read_bio_X509(in, NULL, 0, NULL);
         BIO_free(in);
-        if (!x)
-            return PJ_EINVAL;
+        if (!x) {
+            status = PJ_EINVAL;
+            goto on_error;
+        }
 
         cd.type |= PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT;
         cd.cert = x;
     }
 
     /* Create credential */
-    return pj_ssl_cert_load_direct(pool, &cd, p_cert);
+    status = pj_ssl_cert_load_direct(pool, &cd, p_cert);
+
+    /* Drop the reference taken by PEM_read_bio_*(), but only where
+     * pj_ssl_cert_load_direct() took one of its own -- it up-refs under the
+     * same guard, and ssl_free_cert() is likewise a no-op below 3.0. Freeing
+     * unconditionally would release the last reference on OpenSSL 1.x and
+     * LibreSSL and leave the credential pointing at freed objects.
+     *
+     * Below 3.0 the header contract holds instead: the application keeps the
+     * objects alive for as long as the credential is used.
+     */
+#if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
+    if (cd.privkey)
+        EVP_PKEY_free(cd.privkey);
+    if (cd.cert)
+        X509_free(cd.cert);
+#endif
+
+    return status;
+
+on_error:
+    /* No credential was created, so nothing else can be holding these and
+     * the release is correct on every OpenSSL version -- unlike the tail
+     * above, which is surplus only where the credential took its own.
+     */
+    if (cd.privkey)
+        EVP_PKEY_free(cd.privkey);
+
+    return status;
 }
 #else
 #   define load_cert_direct(pool,p_cert)
@@ -920,6 +953,15 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
                (unsigned long)state_cli.recv));
 
 on_return:
+    /* Release the reference pj_ssl_cert_load_direct() took. Each socket
+     * deep-copied and up-ref'd its own in pj_ssl_sock_set_certificate(), so
+     * this drops only the credential's.
+     */
+#if TEST_LOAD_DIRECT && (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+    if (cert)
+        pj_ssl_cert_wipe_keys(cert);
+#endif
+
 #if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_DARWIN) || \
     (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_APPLE)
     if (status != PJ_SUCCESS) {
@@ -1673,6 +1715,15 @@ static int perf_test(unsigned clients, unsigned ms_handshake_timeout)
                (unsigned long)tot_sent, (unsigned long)tot_recv));
 
 on_return:
+    /* Release the reference pj_ssl_cert_load_direct() took. Each socket
+     * deep-copied and up-ref'd its own in pj_ssl_sock_set_certificate(), so
+     * this drops only the credential's.
+     */
+#if TEST_LOAD_DIRECT && (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+    if (cert)
+        pj_ssl_cert_wipe_keys(cert);
+#endif
+
     if (ssock_serv) 
         pj_ssl_sock_close(ssock_serv);
 

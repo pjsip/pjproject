@@ -1483,6 +1483,16 @@ static void turn_on_state(pj_turn_session *sess,
                                         &turn_sock->ssl_sock);
 
             if (status != PJ_SUCCESS) {
+                /* Release what pj_ssl_cert_load_direct() referenced. The
+                 * success path below does this after set_certificate(), but
+                 * turn_sock_on_destroy() only releases the pool, so without
+                 * it this exit strands the application's objects.
+                 */
+                if (turn_sock->cert) {
+                    pj_ssl_cert_wipe_keys(turn_sock->cert);
+                    turn_sock->cert = NULL;
+                }
+
                 turn_sock_destroy(turn_sock, status);
                 pj_grp_lock_release(turn_sock->grp_lock);
                 return;
