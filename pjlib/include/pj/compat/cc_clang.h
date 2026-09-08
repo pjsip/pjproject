@@ -77,4 +77,7 @@
 #define PJ_ALIGN_DATA_SUFFIX(alignment) __attribute__((aligned (alignment)))
 #define PJ_ALIGN_DATA(declaration, alignment) PJ_ALIGN_DATA_PREFIX(alignment) declaration PJ_ALIGN_DATA_SUFFIX(alignment)
 
+/* Alignment requirement of a type, in bytes. */
+#define PJ_ALIGNOF(type)                __alignof__(type)
+
 #endif /* __PJ_COMPAT_CC_CLANG_H__ */

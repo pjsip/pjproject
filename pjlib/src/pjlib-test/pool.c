@@ -218,6 +218,93 @@ on_return:
     return rc;
 }
 
+/* An over-aligned type: the pool must honour the type's own requirement,
+ * which is stricter than the pool's default alignment.
+ */
+typedef struct PJ_ALIGN_DATA_PREFIX(32) over_aligned_t
+{
+    int value;
+} PJ_ALIGN_DATA_SUFFIX(32) over_aligned_t;
+
+/* Test that PJ_POOL_ALLOC_T/PJ_POOL_ZALLOC_T honour the type's alignment,
+ * that the zeroing variant still zeroes, and that a request for less than
+ * the pool's own alignment is raised to it rather than lowered.
+ */
+static int pool_alloc_t_alignment_test(void)
+{
+    enum { LOOP = 32, POOL_ALIGNMENT_TEST = 4*PJ_POOL_ALIGNMENT };
+    pj_pool_t *pool = NULL, *pool2 = NULL;
+    unsigned i;
+    int rc = 0;
+
+    PJ_LOG(3,("test", "...PJ_POOL_ALLOC_T alignment test"));
+
+    PJ_TEST_GTE(PJ_ALIGNOF(over_aligned_t), 32, NULL, return -500);
+
+    pool = pj_pool_create(mem, NULL, 4096, 4096, NULL);
+    PJ_TEST_NOT_NULL(pool, NULL, return -505);
+
+    pool2 = pj_pool_aligned_create(mem, NULL, 4096, 4096,
+                                   POOL_ALIGNMENT_TEST, NULL);
+    PJ_TEST_NOT_NULL(pool2, NULL, { rc=-506; goto on_return; });
+
+    for (i=0; i<LOOP; ++i) {
+        over_aligned_t *a, *z;
+        char *odd;
+
+        /* Walk the bump pointer through every residue, so that the
+         * alignment cannot be an accident of where the pool happens to be.
+         */
+        odd = (char*)pj_pool_alloc(pool, 1 + (i % (2*PJ_ALIGNOF(over_aligned_t))));
+        PJ_TEST_NOT_NULL(odd, NULL, { rc=-510; goto on_return; });
+
+        /* The type's alignment must be honoured, not the pool default */
+        a = PJ_POOL_ALLOC_T(pool, over_aligned_t);
+        PJ_TEST_NOT_NULL(a, NULL, { rc=-515; goto on_return; });
+        PJ_TEST_EQ(((pj_size_t)a) % PJ_ALIGNOF(over_aligned_t), 0,
+                   "PJ_POOL_ALLOC_T ignored the type alignment",
+                   { rc=-520; goto on_return; });
+
+        /* Another odd filler, so that the zeroing variant is checked from
+         * its own residue rather than inheriting the one the aligned
+         * allocation above happened to leave behind.
+         */
+        odd = (char*)pj_pool_alloc(pool, 1 + ((i+3) % (2*PJ_ALIGNOF(over_aligned_t))));
+        PJ_TEST_NOT_NULL(odd, NULL, { rc=-522; goto on_return; });
+
+        z = PJ_POOL_ZALLOC_T(pool, over_aligned_t);
+        PJ_TEST_NOT_NULL(z, NULL, { rc=-525; goto on_return; });
+        PJ_TEST_EQ(((pj_size_t)z) % PJ_ALIGNOF(over_aligned_t), 0,
+                   "PJ_POOL_ZALLOC_T ignored the type alignment",
+                   { rc=-530; goto on_return; });
+        PJ_TEST_EQ(z->value, 0, "PJ_POOL_ZALLOC_T did not zero",
+                   { rc=-535; goto on_return; });
+
+        /* A type needing less than the pool's alignment must still come
+         * back on the pool floor, i.e. the request is raised, not lowered.
+         */
+        odd = PJ_POOL_ALLOC_T(pool2, char);
+        PJ_TEST_NOT_NULL(odd, NULL, { rc=-540; goto on_return; });
+        PJ_TEST_EQ(((pj_size_t)odd) % POOL_ALIGNMENT_TEST, 0,
+                   "allocation fell below the pool alignment",
+                   { rc=-545; goto on_return; });
+
+        /* Deliberately no pj_pool_reset() here: the allocations must
+         * accumulate so that the bump pointer walks through every residue.
+         * Resetting would restart each iteration from the same offset and
+         * the test would only ever probe one of them.
+         */
+    }
+
+on_return:
+    if (pool)
+        pj_pool_release(pool);
+    if (pool2)
+        pj_pool_release(pool2);
+    return rc;
+}
+
+
 /* Test that the alignment works for pool on buf. */
 static int pool_buf_alignment_test(void)
 {
@@ -403,6 +490,9 @@ int pool_test(void)
 #endif  //PJ_HAS_POOL_ALT_API == 0
 
     rc = pool_alignment_test();
+    if (rc) return rc;
+
+    rc = pool_alloc_t_alignment_test();
     if (rc) return rc;
 
     rc = pool_buf_alignment_test();

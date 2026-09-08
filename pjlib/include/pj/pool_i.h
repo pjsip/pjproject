@@ -80,7 +80,7 @@ PJ_IDEF(void*) pj_pool_aligned_alloc(pj_pool_t *pool, pj_size_t alignment,
 
     PJ_ASSERT_RETURN(!alignment || PJ_IS_POWER_OF_TWO(alignment), NULL);
 
-    if (!alignment)
+    if (alignment < pool->alignment)
         alignment = pool->alignment;
 
 #if 0
@@ -124,6 +124,17 @@ PJ_IDEF(void*) pj_pool_calloc( pj_pool_t *pool, pj_size_t count, pj_size_t size)
     buf = pj_pool_alloc( pool, size*count);
     if (buf)
         pj_bzero(buf, size * count);
+    return buf;
+}
+
+PJ_IDEF(void*) pj_pool_aligned_zalloc(pj_pool_t *pool, pj_size_t alignment,
+                                      pj_size_t size)
+{
+    void *buf;
+
+    buf = pj_pool_aligned_alloc(pool, alignment, size);
+    if (buf)
+        pj_bzero(buf, size);
     return buf;
 }
 
