@@ -115,6 +115,12 @@ realclean:
 	$(MAKE) -f $(RULES_MAK) APP=PJLIB_UTIL app=pjlib-util $@
 	$(MAKE) -f $(RULES_MAK) APP=UTIL_TEST app=pjlib-util-test $@
 
+# Relink the executables when a library they link against is rebuilt.
+# rules.mak adds $(<APP>_EXTRA_DEP) to the executable's prerequisites.
+# These used to be appended to the .depend file by the 'depend' target,
+# which meant they only took effect if 'make dep' had been run.
+export UTIL_TEST_EXTRA_DEP := $(LIBDIR)/$(PJLIB_UTIL_LIB) $(PJLIB_LIB)
+
 depend:
 	$(MAKE) -f $(RULES_MAK) APP=PJLIB_UTIL app=pjlib-util $@
 	$(MAKE) -f $(RULES_MAK) APP=UTIL_TEST app=pjlib-util-test $@

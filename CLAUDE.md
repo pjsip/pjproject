@@ -5,7 +5,7 @@ Open-source multimedia communication library in C (SIP, SDP, RTP, STUN, TURN, IC
 ## Build & Test
 
 - **Build**: `./configure && make -j3` (timeout 120s+, NEVER CANCEL)
-- **Skip `make dep`** — it often produces corrupt `.depend` files. `make` generates deps automatically. If build fails with "missing separator" in `.depend`, run `find . -name "*.depend" -delete` and retry.
+- **`make dep` is not needed** — with GCC/Clang the compiler emits a `.d` file per object (`-MMD -MP`), so header dependencies are always up to date and `make dep` is a no-op. On a tree built before that change, a stale `.depend` can still fail with "missing separator": run `find . -name "*.depend" -delete` and retry.
 - **Targeted build**: `cd pjlib/build && make` (or `pjsip/build`, etc.)
 - **Full clean**: `make clean` (required when switching SSL backends or configure options)
 - Get target arch: `make infotarget` (e.g., `x86_64-pc-linux-gnu`)
