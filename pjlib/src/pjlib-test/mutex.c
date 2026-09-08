@@ -201,6 +201,112 @@ static int semaphore_test(pj_pool_t *pool)
 #endif  /* PJ_HAS_SEMAPHORE */
 
 
+#if defined(PJ_HAS_EVENT_OBJ) && PJ_HAS_EVENT_OBJ != 0
+
+/* Signal the event after a short delay, to release the waiter in
+ * event_test() before its timeout expires.
+ */
+static int event_setter_thread(void *arg)
+{
+    pj_event_t *event = (pj_event_t*)arg;
+
+    pj_thread_sleep(100);
+    pj_event_set(event);
+
+    return 0;
+}
+
+static int event_test(pj_pool_t *pool)
+{
+    pj_event_t *event;
+    pj_thread_t *thread;
+    pj_timestamp t0, t1;
+    unsigned msec;
+    pj_status_t status;
+
+    PJ_LOG(3,("", "...testing event"));
+
+    status = pj_event_create(pool, NULL, PJ_TRUE, PJ_FALSE, &event);
+    if (status != PJ_SUCCESS) {
+        app_perror("...error: pj_event_create()", status);
+        return -171;
+    }
+
+    /* Timed wait on an unsignaled event must time out. */
+    pj_get_timestamp(&t0);
+    status = pj_event_timedwait(event, 500);
+    pj_get_timestamp(&t1);
+    if (status != PJ_ETIMEDOUT) {
+        app_perror("...error: pj_event_timedwait() did not time out", status);
+        pj_event_destroy(event);
+        return -173;
+    }
+    msec = pj_elapsed_msec(&t0, &t1);
+    if (msec < 400) {
+        PJ_LOG(3,("", "...error: pj_event_timedwait() returned too early "
+                      "(%d msec)", msec));
+        pj_event_destroy(event);
+        return -175;
+    }
+
+    /* Timed wait must be released as soon as the event is signaled. */
+    status = pj_thread_create(pool, "evt", &event_setter_thread, event,
+                              0, 0, &thread);
+    if (status != PJ_SUCCESS) {
+        app_perror("...error: pj_thread_create()", status);
+        pj_event_destroy(event);
+        return -177;
+    }
+
+    pj_get_timestamp(&t0);
+    status = pj_event_timedwait(event, 30000);
+    pj_get_timestamp(&t1);
+    pj_thread_join(thread);
+    pj_thread_destroy(thread);
+
+    if (status != PJ_SUCCESS) {
+        app_perror("...error: pj_event_timedwait()", status);
+        pj_event_destroy(event);
+        return -179;
+    }
+    msec = pj_elapsed_msec(&t0, &t1);
+    if (msec > 10000) {
+        PJ_LOG(3,("", "...error: pj_event_timedwait() was not released by "
+                      "pj_event_set() (%d msec)", msec));
+        pj_event_destroy(event);
+        return -181;
+    }
+
+    /* The event is manual reset, so it is still signaled. */
+    status = pj_event_timedwait(event, 0);
+    if (status != PJ_SUCCESS) {
+        app_perror("...error: pj_event_timedwait() with zero timeout",
+                   status);
+        pj_event_destroy(event);
+        return -183;
+    }
+
+    /* A zero timeout on an unsignaled event only polls it. */
+    pj_event_reset(event);
+    status = pj_event_timedwait(event, 0);
+    if (status != PJ_ETIMEDOUT) {
+        app_perror("...error: pj_event_timedwait() with zero timeout did "
+                   "not time out", status);
+        pj_event_destroy(event);
+        return -185;
+    }
+
+    status = pj_event_destroy(event);
+    if (status != PJ_SUCCESS) {
+        app_perror("...error: pj_event_destroy()", status);
+        return -187;
+    }
+
+    return 0;
+}
+#endif  /* PJ_HAS_EVENT_OBJ */
+
+
 int mutex_test(void)
 {
     pj_pool_t *pool;
@@ -218,6 +324,12 @@ int mutex_test(void)
 
 #if PJ_HAS_SEMAPHORE
     rc = semaphore_test(pool);
+    if (rc != 0)
+        return rc;
+#endif
+
+#if defined(PJ_HAS_EVENT_OBJ) && PJ_HAS_EVENT_OBJ != 0
+    rc = event_test(pool);
     if (rc != 0)
         return rc;
 #endif

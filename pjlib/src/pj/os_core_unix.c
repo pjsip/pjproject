@@ -45,6 +45,7 @@
 
 #include <unistd.h>         // getpid()
 #include <errno.h>          // errno
+#include <time.h>           // clock_gettime()
 
 #if PJ_HAS_THREADS
 #  if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L \
@@ -149,6 +150,18 @@ struct pj_sem_t
 #endif /* PJ_HAS_SEMAPHORE */
 
 #if defined(PJ_HAS_EVENT_OBJ) && PJ_HAS_EVENT_OBJ != 0
+/* Whether the condition variable clock can be selected. If it can, the
+ * event uses a monotonic clock, so pj_event_timedwait() is immune to
+ * wall clock adjustments.
+ */
+#if defined(_POSIX_CLOCK_SELECTION) && _POSIX_CLOCK_SELECTION > 0 && \
+    defined(_POSIX_MONOTONIC_CLOCK) && _POSIX_MONOTONIC_CLOCK >= 0 && \
+    defined(CLOCK_MONOTONIC)
+#   define EVENT_HAS_MONOTONIC_COND     1
+#else
+#   define EVENT_HAS_MONOTONIC_COND     0
+#endif
+
 struct pj_event_t
 {
     enum event_state {
@@ -159,6 +172,7 @@ struct pj_event_t
 
     pj_mutex_t          mutex;
     pthread_cond_t      cond;
+    pj_bool_t           mono_cond;
 
     pj_bool_t           auto_reset;
     int                 threads_waiting;
@@ -2182,7 +2196,24 @@ PJ_DEF(pj_status_t) pj_event_create(pj_pool_t *pool, const char *name,
     if (rc != PJ_SUCCESS)
         return rc;
 
-    prc = pthread_cond_init(&event->cond, 0);
+    prc = 0;
+    event->mono_cond = PJ_FALSE;
+#if EVENT_HAS_MONOTONIC_COND
+    {
+        pthread_condattr_t attr;
+
+        if (pthread_condattr_init(&attr) == 0) {
+            if (pthread_condattr_setclock(&attr, CLOCK_MONOTONIC) == 0) {
+                prc = pthread_cond_init(&event->cond, &attr);
+                event->mono_cond = (prc == 0);
+            }
+            pthread_condattr_destroy(&attr);
+        }
+    }
+#endif
+    if (!event->mono_cond)
+        prc = pthread_cond_init(&event->cond, 0);
+
     if (prc != 0) {
         pj_mutex_destroy(&event->mutex);
         return PJ_RETURN_OS_ERROR(prc);
@@ -2239,6 +2270,60 @@ PJ_DEF(pj_status_t) pj_event_wait(pj_event_t *event)
     event_on_one_release(event);
     pthread_mutex_unlock(&event->mutex.mutex);
     return PJ_SUCCESS;
+}
+
+/*
+ * pj_event_timedwait()
+ */
+PJ_DEF(pj_status_t) pj_event_timedwait(pj_event_t *event, unsigned timeout)
+{
+    struct timespec abstime;
+    pj_status_t status = PJ_SUCCESS;
+    int prc = 0;
+
+    PJ_ASSERT_RETURN(event, PJ_EINVAL);
+
+    if (timeout == 0) {
+        /* Report the same status as the Win32 implementation does. */
+        return pj_event_trywait(event)==PJ_SUCCESS? PJ_SUCCESS : PJ_ETIMEDOUT;
+    }
+
+#if EVENT_HAS_MONOTONIC_COND
+    if (event->mono_cond) {
+        clock_gettime(CLOCK_MONOTONIC, &abstime);
+    } else
+#endif
+    {
+        pj_time_val tv;
+
+        pj_gettimeofday(&tv);
+        abstime.tv_sec = tv.sec;
+        abstime.tv_nsec = tv.msec * 1000000;
+    }
+    abstime.tv_sec += timeout / 1000;
+    abstime.tv_nsec += (timeout % 1000) * 1000000;
+    if (abstime.tv_nsec >= 1000000000) {
+        abstime.tv_sec++;
+        abstime.tv_nsec -= 1000000000;
+    }
+
+    pthread_mutex_lock(&event->mutex.mutex);
+    event->threads_waiting++;
+    while (event->state == EV_STATE_OFF && prc == 0) {
+        prc = pthread_cond_timedwait(&event->cond, &event->mutex.mutex,
+                                     &abstime);
+    }
+    event->threads_waiting--;
+    if (event->state != EV_STATE_OFF) {
+        event_on_one_release(event);
+    } else if (prc == ETIMEDOUT) {
+        status = PJ_ETIMEDOUT;
+    } else {
+        status = PJ_RETURN_OS_ERROR(prc);
+    }
+    pthread_mutex_unlock(&event->mutex.mutex);
+
+    return status;
 }
 
 /*

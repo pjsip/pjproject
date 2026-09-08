@@ -1120,6 +1120,19 @@ PJ_DECL(pj_status_t) pj_event_create(pj_pool_t *pool, const char *name,
 PJ_DECL(pj_status_t) pj_event_wait(pj_event_t *event);
 
 /**
+ * Wait for event to be signaled, with timeout.
+ *
+ * @param event     The event object.
+ * @param timeout   Timeout in miliseconds. Value zero makes this function
+ *                  return immediately, i.e. it only polls the event.
+ *
+ * @return PJ_SUCCESS if the event is signaled, PJ_ETIMEDOUT if the timeout
+ *         elapsed before the event is signaled, or the appropriate error
+ *         code.
+ */
+PJ_DECL(pj_status_t) pj_event_timedwait(pj_event_t *event, unsigned timeout);
+
+/**
  * Try wait for event object to be signalled.
  *
  * @param event The event object.

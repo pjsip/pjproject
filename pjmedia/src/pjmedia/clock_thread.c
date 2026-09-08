@@ -123,6 +123,12 @@ struct pjmedia_clock
     pj_bool_t                running;
     pj_bool_t                quitting;
     pj_lock_t               *lock;
+#if defined(PJ_HAS_EVENT_OBJ) && PJ_HAS_EVENT_OBJ != 0
+    /* Signalled by stop/destroy to interrupt the clock thread's wait for
+     * the next tick, so those don't have to block until the tick expires.
+     */
+    pj_event_t              *quit_ev;
+#endif
     /* Serializes pjmedia_clock_stop() and pjmedia_clock_destroy()
      * across concurrent callers. Cannot be the same as `lock` above,
      * because `lock` is held by the clock thread inside the callback
@@ -136,6 +142,60 @@ static int clock_thread(void *arg);
 
 #define MAX_JUMP_MSEC   500
 #define USEC_IN_SEC     (pj_uint64_t)1000000
+
+/* Maximum duration of a single sleep while waiting for the next tick, used
+ * only on platforms without event object, where the wait cannot be
+ * interrupted. It bounds how long stop/destroy has to wait for the thread.
+ */
+#define MAX_SLEEP_MSEC  20
+
+
+/* Signal the clock thread to stop waiting for the next tick. */
+static void clock_signal_quit(pjmedia_clock *clock)
+{
+#if defined(PJ_HAS_EVENT_OBJ) && PJ_HAS_EVENT_OBJ != 0
+    if (clock->quit_ev)
+        pj_event_set(clock->quit_ev);
+#else
+    PJ_UNUSED_ARG(clock);
+#endif
+}
+
+
+/* Destroy the quit event, if any. */
+static void clock_destroy_quit_ev(pjmedia_clock *clock)
+{
+#if defined(PJ_HAS_EVENT_OBJ) && PJ_HAS_EVENT_OBJ != 0
+    if (clock->quit_ev) {
+        pj_event_destroy(clock->quit_ev);
+        clock->quit_ev = NULL;
+    }
+#else
+    PJ_UNUSED_ARG(clock);
+#endif
+}
+
+
+/* Wait for the next tick, returning immediately when the clock is being
+ * stopped or destroyed.
+ */
+static void clock_sleep(pjmedia_clock *clock, unsigned msec)
+{
+#if defined(PJ_HAS_EVENT_OBJ) && PJ_HAS_EVENT_OBJ != 0
+    if (clock->quit_ev) {
+        pj_event_timedwait(clock->quit_ev, msec);
+        return;
+    }
+#endif
+
+    /* No event object on this platform, sleep in slices instead. */
+    while (msec > MAX_SLEEP_MSEC && !clock->quitting) {
+        pj_thread_sleep(MAX_SLEEP_MSEC);
+        msec -= MAX_SLEEP_MSEC;
+    }
+    if (!clock->quitting)
+        pj_thread_sleep(msec);
+}
 
 /*
  * Create media clock.
@@ -194,10 +254,29 @@ PJ_DEF(pj_status_t) pjmedia_clock_create2(pj_pool_t *pool,
     clock->quitting = PJ_FALSE;
     clock->destroy_lock = NULL;
 
+#if defined(PJ_HAS_EVENT_OBJ) && PJ_HAS_EVENT_OBJ != 0
+    clock->quit_ev = NULL;
+    if ((options & PJMEDIA_CLOCK_NO_ASYNC) == 0) {
+        /* Manual reset, so the thread never misses the signal. It is
+         * reset again when the clock is restarted. Note that it must not
+         * be allocated from clock->pool, which stop() resets.
+         */
+        status = pj_event_create(pool, "clock%p", PJ_TRUE, PJ_FALSE,
+                                 &clock->quit_ev);
+        if (status != PJ_SUCCESS) {
+            pj_pool_safe_release(&clock->pool);
+            return status;
+        }
+    }
+#endif
+
     /* I don't think we need a mutex, so we'll use null. */
     status = pj_lock_create_null_mutex(pool, "clock", &clock->lock);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+        clock_destroy_quit_ev(clock);
+        pj_pool_safe_release(&clock->pool);
         return status;
+    }
 
     /* But we *do* need a real mutex to serialize stop/destroy: under
      * stress, multiple threads can land in pjmedia_clock_stop() on the
@@ -222,6 +301,7 @@ PJ_DEF(pj_status_t) pjmedia_clock_create2(pj_pool_t *pool,
     if (status != PJ_SUCCESS) {
         pj_lock_destroy(clock->lock);
         clock->lock = NULL;
+        clock_destroy_quit_ev(clock);
         pj_pool_safe_release(&clock->pool);
         return status;
     }
@@ -252,6 +332,10 @@ PJ_DEF(pj_status_t) pjmedia_clock_start(pjmedia_clock *clock)
     clock->next_tick.u64 = now.u64 + clock->interval.u64;
     clock->running = PJ_TRUE;
     clock->quitting = PJ_FALSE;
+#if defined(PJ_HAS_EVENT_OBJ) && PJ_HAS_EVENT_OBJ != 0
+    if (clock->quit_ev)
+        pj_event_reset(clock->quit_ev);
+#endif
 
     if ((clock->options & PJMEDIA_CLOCK_NO_ASYNC) == 0) {
         if (clock->thread) {
@@ -290,6 +374,7 @@ PJ_DEF(pj_status_t) pjmedia_clock_stop(pjmedia_clock *clock)
 
     clock->running = PJ_FALSE;
     clock->quitting = PJ_TRUE;
+    clock_signal_quit(clock);
 
     if (clock->thread) {
         pj_status_t status = pj_thread_join(clock->thread);
@@ -431,7 +516,7 @@ static int clock_thread(void *arg)
         if (now.u64 < clock->next_tick.u64) {
             unsigned msec;
             msec = pj_elapsed_msec(&now, &clock->next_tick);
-            pj_thread_sleep(msec);
+            clock_sleep(clock, msec);
         }
 
         /* Skip if not running */
@@ -481,6 +566,7 @@ PJ_DEF(pj_status_t) pjmedia_clock_destroy(pjmedia_clock *clock)
 
     clock->running = PJ_FALSE;
     clock->quitting = PJ_TRUE;
+    clock_signal_quit(clock);
 
     if (clock->thread) {
         pj_status_t status = pj_thread_join(clock->thread);
@@ -505,6 +591,8 @@ PJ_DEF(pj_status_t) pjmedia_clock_destroy(pjmedia_clock *clock)
         pj_lock_destroy(clock->lock);
         clock->lock = NULL;
     }
+
+    clock_destroy_quit_ev(clock);
 
     /* Caller must not race stop/destroy past this point. */
     pj_mutex_unlock(clock->destroy_lock);
