@@ -608,11 +608,18 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
              * For example, resolution 352*288 can have a stride of 384.
              */
             pj_size_t stride = CVPixelBufferGetBytesPerRowOfPlane(img, 0);
+            /* The chroma plane has its own stride and its own padding, and
+             * neither is derivable from the luma plane's (Apple QA1829: query
+             * per-plane row bytes). On the iPhone 17 front camera they differ,
+             * and walking UV with the luma stride misaligns every chroma row,
+             * which is the horizontal banding this fix is for.
+             */
+            pj_size_t stride_uv = CVPixelBufferGetBytesPerRowOfPlane(img, 1);
             /* Image height is not always equal to the video resolution.
              * For example, resolution 352*288 can have a height of 264.
              */
             pj_size_t height = CVPixelBufferGetHeight(img);
-            pj_bool_t need_clip;
+            pj_bool_t need_clip, need_clip_uv;
             
             /* Auto detect rotation */
             if ((stream->vid_size.w > stream->vid_size.h && stride < height) ||
@@ -624,6 +631,13 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
             }
             
             need_clip = (stride != stream->vid_size.w);
+            /* Gate the chroma copy on the CHROMA stride: an NV12 chroma row
+             * holds w/2 UV pairs, i.e. w bytes, so unpadded means stride_uv
+             * == w. The luma plane can be unpadded while chroma is not, so
+             * reusing need_clip here would take the strideless path on a
+             * padded chroma plane.
+             */
+            need_clip_uv = (stride_uv != stream->vid_size.w);
             
             p = (pj_uint8_t*)CVPixelBufferGetBaseAddressOfPlane(img, 0);
 
@@ -650,7 +664,7 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
             }
 
             p = (pj_uint8_t*)CVPixelBufferGetBaseAddressOfPlane(img, 1);
-            if (!need_clip) {
+            if (!need_clip_uv) {
                 p_len >>= 1;
                 p_end = p + p_len;
                 
@@ -666,7 +680,7 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
                         *U++ = *p++;
                         *V++ = *p++;
                     }
-                    p += (stride - stream->vid_size.w);
+                    p += (stride_uv - stream->vid_size.w);
                 }
             }
 
