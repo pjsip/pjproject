@@ -347,16 +347,19 @@ static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
  * unusable configuration can be rejected once at listener setup instead of on
  * every accepted connection.
  *
- * Takes the protocol set by value rather than reading it from the socket, so
- * that a caller can validate a parameter set the socket does not own -- the
- * newsock_param of a listener, for instance.
+ * Takes the protocol set through a pointer rather than reading it from the
+ * socket, so that a caller can validate a parameter set the socket does not
+ * own -- the newsock_param of a listener, for instance -- and hands the
+ * expanded set back through it, so PJ_SSL_SOCK_PROTO_DEFAULT is resolved in
+ * exactly one place.
  */
-static pj_status_t get_proto_bounds(pj_ssl_sock_proto proto,
+static pj_status_t get_proto_bounds(pj_ssl_sock_proto *p_proto,
                                     SSLProtocol *p_min,
                                     SSLProtocol *p_max)
 {
     SSLProtocol min_proto = kSSLProtocolUnknown;
     SSLProtocol max_proto = kSSLProtocolUnknown;
+    pj_ssl_sock_proto proto = *p_proto;
 
     if (proto == PJ_SSL_SOCK_PROTO_DEFAULT) {
         /* SSL 2.0 is deprecated. */
@@ -415,6 +418,7 @@ static pj_status_t get_proto_bounds(pj_ssl_sock_proto proto,
         max_proto = kTLSProtocol12;
     }
 
+    *p_proto = proto;
     *p_min = min_proto;
     *p_max = max_proto;
 
@@ -446,16 +450,18 @@ static pj_status_t get_proto_bounds(pj_ssl_sock_proto proto,
  * rejects -- the check fails open, never closed.
  */
 static pj_status_t ssl_init_server_ctx(pj_ssl_sock_t *ssock,
-                                      const pj_ssl_sock_param *newsock_param)
+                                       const pj_ssl_sock_param *newsock_param)
 {
     darwinssl_sock_t *dssock = (darwinssl_sock_t *)ssock;
     SecIdentityRef identity = NULL;
     SSLProtocol min_proto, max_proto;
+    pj_ssl_sock_proto proto;
     pj_status_t status;
 
     pj_assert(ssock->is_server && !ssock->parent);
 
-    status = get_proto_bounds(newsock_param->proto, &min_proto, &max_proto);
+    proto = newsock_param->proto;
+    status = get_proto_bounds(&proto, &min_proto, &max_proto);
     if (status != PJ_SUCCESS)
         return status;
 
@@ -504,16 +510,12 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
             return status;
     }
 
-    /* Set min and max protocol version. The expansion is written back
-     * because pj_ssl_sock_get_info() reports ssock->param.proto.
+    /* Set min and max protocol version. The expanded set is written back to
+     * ssock->param.proto because pj_ssl_sock_get_info() reports that field,
+     * and it comes from get_proto_bounds() so that the meaning of
+     * PJ_SSL_SOCK_PROTO_DEFAULT is not stated twice.
      */
-    if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT) {
-        /* SSL 2.0 is deprecated. */
-        ssock->param.proto = PJ_SSL_SOCK_PROTO_ALL &
-                             ~PJ_SSL_SOCK_PROTO_SSL2;
-    }
-
-    status = get_proto_bounds(ssock->param.proto, &min_proto, &max_proto);
+    status = get_proto_bounds(&ssock->param.proto, &min_proto, &max_proto);
     if (status != PJ_SUCCESS)
         return status;
 
