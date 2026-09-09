@@ -79,6 +79,10 @@ struct pjsip_publishc
     pjsip_endpoint              *endpt;
     pj_bool_t                    _delete_flag;
     int                          pending_tsx;
+    /* Outstanding async auth tokens. Kept separate from pending_tsx,
+     * which also gates request sending in pjsip_publishc_send().
+     */
+    int                          pending_auth_tokens;
     pj_bool_t                    in_callback;
     pj_mutex_t                  *mutex;
 
@@ -222,7 +226,7 @@ PJ_DEF(pj_status_t) pjsip_publishc_destroy(pjsip_publishc *pubc)
 {
     PJ_ASSERT_RETURN(pubc, PJ_EINVAL);
 
-    if (pubc->pending_tsx || pubc->in_callback) {
+    if (pubc->pending_tsx || pubc->in_callback || pubc->pending_auth_tokens) {
         pubc->_delete_flag = 1;
         pubc->cb = NULL;
     } else {
@@ -563,6 +567,11 @@ static void call_callback(pjsip_publishc *pubc, pj_status_t status,
 {
     struct pjsip_publishc_cbparam cbparam;
 
+    /* The callback is cleared when the app destroys the pubc while a
+     * request or an async auth token is still outstanding.
+     */
+    if (!pubc->cb)
+        return;
 
     cbparam.pubc = pubc;
     cbparam.token = pubc->token;
@@ -602,14 +611,34 @@ static void pubc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
  * user_data points to pjsip_publishc*.  No lock is held by the caller
  * (publishc does not use dialog-based locking).
  */
+/* Release the hold an async auth token took on pubc at creation,
+ * completing a destroy that was deferred while the token was outstanding.
+ */
+static void pubc_auth_token_release(pjsip_publishc *pubc)
+{
+    pj_assert(pubc->pending_auth_tokens > 0);
+    --pubc->pending_auth_tokens;
+
+    /* pjsip_publishc_destroy() re-defers if anything is still outstanding. */
+    if (pubc->_delete_flag)
+        pjsip_publishc_destroy(pubc);
+}
+
 static pj_status_t pubc_async_auth_send_impl(
                                 pjsip_auth_clt_sess *auth_sess,
                                 void *user_data,
                                 pjsip_tx_data *tdata)
 {
     pjsip_publishc *pubc = (pjsip_publishc *)user_data;
+    pj_status_t status;
+
     PJ_UNUSED_ARG(auth_sess);
-    return pjsip_publishc_send(pubc, tdata);
+
+    status = pjsip_publishc_send(pubc, tdata);
+
+    pubc_auth_token_release(pubc);
+
+    return status;
 }
 
 /* Async auth abandon callback: notify the app that PUBLISH auth failed.
@@ -623,8 +652,13 @@ static void pubc_async_auth_abandon_impl(pjsip_auth_clt_sess *auth_sess,
 
     PJ_UNUSED_ARG(auth_sess);
 
+    /* The hold the token took at creation keeps pubc alive across the
+     * callback, which may destroy it.
+     */
     call_callback(pubc, PJ_ECANCELLED, PJSIP_SC_UNAUTHORIZED, &reason,
                   NULL, PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
+
+    pubc_auth_token_release(pubc);
 }
 
 static void tsx_callback(void *token, pjsip_event *event)
@@ -670,14 +704,22 @@ static void tsx_callback(void *token, pjsip_event *event)
             auth_token->grp_lock     = tsx->grp_lock;
             pj_grp_lock_add_ref(tsx->grp_lock);
 
+            /* The grp_lock ref only keeps the transaction alive. The app
+             * may defer the challenge and consume the token long after
+             * pubc would otherwise have been destroyed, so hold pubc too.
+             */
+            ++pubc->pending_auth_tokens;
+
             pj_bzero(&chal_param, sizeof(chal_param));
             chal_param.rdata = rdata;
             chal_param.tdata = tsx->last_tx;
             status = pjsip_auth_clt_async_impl_on_challenge(
                                             &pubc->auth_sess,
                                             auth_token, &chal_param);
-            if (status != PJ_SUCCESS)
+            if (status != PJ_SUCCESS) {
                 pj_grp_lock_dec_ref(tsx->grp_lock);
+                --pubc->pending_auth_tokens;
+            }
         }
         if (status != PJ_SUCCESS) {
             status = pjsip_auth_clt_reinit_req(&pubc->auth_sess, rdata,
