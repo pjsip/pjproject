@@ -433,21 +433,12 @@ int dlg_target_refresh_test(void)
     pj_str_t uac_target_before;
     int rc = 0;
 
-    /* Init UA layer.
-     *
-     * pjsip_ua_instance() is a process wide singleton that other tests
-     * initialize too, so the check and the initialization must not be
-     * interleaved with theirs. Without this, two tests running in parallel
-     * can both see id == -1 and both register the same module, which trips
-     * the assertion in pjsip_endpt_register_module().
-     */
-    pj_enter_critical_section();
-    if (pjsip_ua_instance()->id == -1) {
+    /* Init UA layer */
+    {
         pjsip_ua_init_param ua_param;
         pj_bzero(&ua_param, sizeof(ua_param));
-        pjsip_ua_init_module(endpt, &ua_param);
+        PJ_TEST_SUCCESS(init_ua_layer(&ua_param), NULL, return -1);
     }
-    pj_leave_critical_section();
 
     PJ_TEST_SUCCESS(pjsip_endpt_register_module(endpt, &mod_dlg_tr_test),
                     NULL, return -2);
