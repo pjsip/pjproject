@@ -1181,28 +1181,17 @@ AuthChallenge::AuthChallenge()
 AuthChallenge::~AuthChallenge()
 {
     if (deferred_ && !consumed_ && auth_sess_ && token_) {
-        /* Capture sess/token under PJSUA_LOCK, then call async_abandon
-         * outside the lock to avoid lock-order inversion.
+        /* Abandon unconditionally, so the token's group lock reference and
+         * the reference it holds on its owner (regc/pubc) are released.
+         *
+         * This is safe even after the account has been deleted: no
+         * abandon_impl() reads the auth session, the only field
+         * async_abandon() itself touches is sess->parent -- always NULL for
+         * the account's shared session -- and the token's own group lock
+         * reference keeps its memory readable.  No PJSUA_LOCK is needed,
+         * which also removes any lock-order inversion.
          */
-        pjsip_auth_clt_sess *sess = NULL;
-        void *tok = NULL;
-        if (PJSUA_TRY_LOCK() == PJ_SUCCESS) {
-            if (pjsua_acc_is_valid(acc_id_)) {
-                sess = auth_sess_;
-                tok = token_;
-            }
-            PJSUA_UNLOCK();
-        } else {
-            /* Try-lock failed (e.g. GC finalizer during shutdown).
-             * Still abandon the token to release its grp_lock ref.
-             * The signature check inside async_abandon provides safety
-             * if the token was already consumed.
-             */
-            sess = auth_sess_;
-            tok = token_;
-        }
-        if (sess && tok)
-            pjsip_auth_clt_async_abandon(sess, tok);
+        pjsip_auth_clt_async_abandon(auth_sess_, token_);
     }
     if (cloned_rdata_)
         pjsip_rx_data_free_cloned(cloned_rdata_);
@@ -1343,25 +1332,13 @@ pj_status_t AuthChallenge::abandon()
     pjsip_auth_clt_sess *sess;
     void *tok;
     if (deferred_) {
-        PJSUA_LOCK();
-        if (!pjsua_acc_is_valid(acc_id_)) {
-            /* Account deleted — skip abandon.  The token's grp_lock ref
-             * will leak, but calling abandon would dereference user_data
-             * (e.g. regc) which has already been destroyed by
-             * pjsua_acc_del().  A proper fix requires pjsua_acc_del()
-             * to consume outstanding auth tokens before destruction.
-             */
-            PJSUA_UNLOCK();
-            consumed_ = true;
-            return PJ_EINVALIDOP;
-        }
-        sess = auth_sess_;  tok = token_;
-        /* Release PJSUA_LOCK before abandon to prevent lock-order
-         * inversion — abandon_impl may call regc/inv callbacks that
-         * acquire tsx grp_lock, and SIP callbacks acquire tsx grp_lock
-         * then PJSUA_LOCK (opposite order).
+        /* Safe without PJSUA_LOCK and without checking the account: the
+         * token holds a reference on its owner, no abandon_impl() reads
+         * the auth session, and taking PJSUA_LOCK here would risk
+         * lock-order inversion since abandon_impl may run regc/inv
+         * callbacks that acquire the tsx group lock.
          */
-        PJSUA_UNLOCK();
+        sess = auth_sess_;  tok = token_;
     } else {
         if (!param_) return PJ_EINVALIDOP;
         sess = param_->auth_sess;  tok = param_->token;
