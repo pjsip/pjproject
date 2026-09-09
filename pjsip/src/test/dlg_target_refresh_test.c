@@ -434,10 +434,10 @@ int dlg_target_refresh_test(void)
     int rc = 0;
 
     /* Init UA layer */
-    if (pjsip_ua_instance()->id == -1) {
+    {
         pjsip_ua_init_param ua_param;
         pj_bzero(&ua_param, sizeof(ua_param));
-        pjsip_ua_init_module(endpt, &ua_param);
+        PJ_TEST_SUCCESS(init_ua_layer(&ua_param), NULL, return -1);
     }
 
     PJ_TEST_SUCCESS(pjsip_endpt_register_module(endpt, &mod_dlg_tr_test),

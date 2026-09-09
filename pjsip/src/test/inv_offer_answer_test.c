@@ -814,15 +814,15 @@ int inv_offer_answer_test(void)
     int rc = 0;
 
     /* Init UA layer */
-    if (pjsip_ua_instance()->id == -1) {
+    {
         pjsip_ua_init_param ua_param;
         pj_bzero(&ua_param, sizeof(ua_param));
         ua_param.on_dlg_forked = &on_dlg_forked;
-        pjsip_ua_init_module(endpt, &ua_param);
+        PJ_TEST_SUCCESS(init_ua_layer(&ua_param), NULL, return -1);
     }
 
     /* Init inv-usage */
-    if (pjsip_inv_usage_instance()->id == -1) {
+    {
         pjsip_inv_callback inv_cb;
         pj_bzero(&inv_cb, sizeof(inv_cb));
         inv_cb.on_media_update = &on_media_update;
@@ -830,7 +830,7 @@ int inv_offer_answer_test(void)
         inv_cb.on_create_offer = &on_create_offer;
         inv_cb.on_state_changed = &on_state_changed;
         inv_cb.on_new_session = &on_new_session;
-        pjsip_inv_usage_init(endpt, &inv_cb);
+        PJ_TEST_SUCCESS(init_inv_usage(&inv_cb), NULL, return -1);
     }
 
     /* 100rel module */

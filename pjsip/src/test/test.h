@@ -21,9 +21,20 @@
 
 #include <pjsip/sip_types.h>
 #include <pjsip/sip_msg.h>
+#include <pjsip/sip_ua_layer.h>
+#include <pjsip-ua/sip_inv.h>
 #include <pj/string.h>
 
 extern pjsip_endpoint *endpt;
+
+/*
+ * Initialize the UA layer and the invite usage, which are process wide
+ * singletons that more than one test needs. Safe to call from several tests
+ * running in parallel: the first caller performs the initialization and the
+ * others wait for it. Returns PJ_SUCCESS if the module is ready to use.
+ */
+pj_status_t init_ua_layer(const pjsip_ua_init_param *prm);
+pj_status_t init_inv_usage(const pjsip_inv_callback *cb);
 extern pj_caching_pool caching_pool;
 
 /* Check if we are using ASan */
