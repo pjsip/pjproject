@@ -205,20 +205,10 @@ static int test_timer_heap(void)
  */
 #define RANDOMIZED_TEST 1
 
-#ifndef __has_feature
-    #define __has_feature(x) 0
-#endif
-#if defined(__SANITIZE_ADDRESS__) || \
-    (defined(__has_feature) && __has_feature(address_sanitizer))
-    #define ASAN_ENABLED 1
-#else
-    #define ASAN_ENABLED 0
-#endif
-
-/* We should only simulate timer crash when using duplicate and
- * not using ASan.
+/* Simulate an entry being destroyed without being cancelled, which the
+ * timer heap can only detect when using duplicate.
  */
-#define SIMULATE_CRASH  PJ_TIMER_USE_COPY && !ASAN_ENABLED
+#define SIMULATE_ENTRY_DESTROYED    PJ_TIMER_USE_COPY
 
 #if RANDOMIZED_TEST
     #define ST_STRESS_THREAD_COUNT          20
@@ -356,7 +346,7 @@ static int stress_worker(void *arg)
                     PJ_LOG(3,("test", "race schedule-schedule %d: %p",
                                       idx, &tparam->entries[idx]));
                 } else {
-                    if (tparam->err != 0) tparam->err = -210;
+                    tparam->err = -210;
                     PJ_LOG(3,("test", "error: failed to schedule entry %d: %p",
                                       idx, &tparam->entries[idx]));
                 }
@@ -383,7 +373,7 @@ static int stress_worker(void *arg)
                     PJ_LOG(3,("test", "race cancel-schedule %d: %p",
                                       idx, &tparam->entries[idx]));
                 } else {
-                    if (tparam->err != 0) tparam->err = -220;
+                    tparam->err = -220;
                     PJ_LOG(3,("test", "error: cancelling invalid entry %d: %p",
                                       idx, &tparam->entries[idx]));
                 }
@@ -395,7 +385,7 @@ static int stress_worker(void *arg)
                     PJ_LOG(3,("test", "race cancel-poll %d: %p",
                                       idx, &tparam->entries[idx]));
                 } else {
-                    if (tparam->err != 0) tparam->err = -230;
+                    tparam->err = -230;
                     PJ_LOG(3,("test", "error: failed to cancel entry %d: %p",
                                       idx, &tparam->entries[idx]));
                 }
@@ -497,9 +487,8 @@ static int timer_stress_test(void)
     pj_thread_t **poll_threads = NULL;
     pj_thread_t **cancel_threads = NULL;
     struct thread_param tparam = {0};
-#if SIMULATE_CRASH
+#if SIMULATE_ENTRY_DESTROYED
     pj_timer_entry *entry;
-    pj_pool_t *tmp_pool;
     pj_time_val delay = {0};
 #endif
 
@@ -653,21 +642,25 @@ static int timer_stress_test(void)
     }
 #endif
 
-#if SIMULATE_CRASH
-    tmp_pool = pj_pool_create( mem, NULL, 4096, 128, NULL);
-    pj_assert(tmp_pool);
-    entry = (pj_timer_entry*)pj_pool_calloc(tmp_pool, 1, sizeof(*entry));
-    pj_assert(entry);
+#if SIMULATE_ENTRY_DESTROYED
+    entry = PJ_POOL_ZALLOC_T(pool, pj_timer_entry);
+    if (!entry) {
+        err = -95;
+        goto on_return;
+    }
     pj_timer_entry_init(entry, 0, &tparam, &dummy_callback);
     delay.sec = 6;
     status = pj_timer_heap_schedule(timer, entry, &delay);
     pj_assert(status == PJ_SUCCESS);
     pj_thread_sleep(1000);
-    PJ_LOG(3,("test", "...Releasing timer entry %p without cancelling it",
-                      entry));
-    pj_pool_secure_release(&tmp_pool);
-    //pj_pool_release(tmp_pool);
-    //pj_memset(tmp_pool, 128, 4096);
+    PJ_LOG(3,("test", "...Overwriting scheduled timer entry %p without "
+                      "cancelling it", entry));
+    /* Overwrite the entry rather than freeing it. The timer heap detects a
+     * destroyed entry by reading it back, which is only defined as long as
+     * the memory is still mapped, so freeing it here would make the test
+     * depend on what the allocator does with the freed block.
+     */
+    pj_memset(entry, 0x55, sizeof(*entry));
 #endif
 
     /* Wait */
@@ -747,11 +740,11 @@ on_return:
     if (n_sched) {
         pj_bool_t match = PJ_TRUE;
 
-#if SIMULATE_CRASH
+#if SIMULATE_ENTRY_DESTROYED
         n_sched++;
 #endif
         if (n_sched != (n_cancel + n_poll + count)) {
-            if (tparam.err != 0) tparam.err = -250;
+            tparam.err = -250;
             match = PJ_FALSE;
         }
         PJ_LOG(3,("test", "Scheduled = cancelled + polled + remaining?: %s",
