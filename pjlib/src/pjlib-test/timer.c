@@ -245,7 +245,7 @@ struct thread_param
     pj_atomic_t **status;
     pj_atomic_t *n_sched, *n_cancel, *n_poll;
     pj_grp_lock_t **grp_locks;
-    int err;
+    pj_atomic_t *err;
 
     pj_atomic_t *idx;
     struct {
@@ -346,7 +346,7 @@ static int stress_worker(void *arg)
                     PJ_LOG(3,("test", "race schedule-schedule %d: %p",
                                       idx, &tparam->entries[idx]));
                 } else {
-                    tparam->err = -210;
+                    pj_atomic_set(tparam->err, -210);
                     PJ_LOG(3,("test", "error: failed to schedule entry %d: %p",
                                       idx, &tparam->entries[idx]));
                 }
@@ -373,7 +373,7 @@ static int stress_worker(void *arg)
                     PJ_LOG(3,("test", "race cancel-schedule %d: %p",
                                       idx, &tparam->entries[idx]));
                 } else {
-                    tparam->err = -220;
+                    pj_atomic_set(tparam->err, -220);
                     PJ_LOG(3,("test", "error: cancelling invalid entry %d: %p",
                                       idx, &tparam->entries[idx]));
                 }
@@ -385,7 +385,7 @@ static int stress_worker(void *arg)
                     PJ_LOG(3,("test", "race cancel-poll %d: %p",
                                       idx, &tparam->entries[idx]));
                 } else {
-                    tparam->err = -230;
+                    pj_atomic_set(tparam->err, -230);
                     PJ_LOG(3,("test", "error: failed to cancel entry %d: %p",
                                       idx, &tparam->entries[idx]));
                 }
@@ -482,7 +482,7 @@ static int timer_stress_test(void)
     pj_timer_heap_t *timer = NULL;
     pj_lock_t *timer_lock;
     pj_status_t status;
-    int err=0;
+    int err=0, t_err=0;
     pj_thread_t **stress_threads = NULL;
     pj_thread_t **poll_threads = NULL;
     pj_thread_t **cancel_threads = NULL;
@@ -592,6 +592,9 @@ static int timer_stress_test(void)
     status = pj_atomic_create(pool, -1, &tparam.n_poll);
     pj_assert (status == PJ_SUCCESS);
     pj_atomic_set(tparam.n_poll, 0);
+    status = pj_atomic_create(pool, -1, &tparam.err);
+    pj_assert (status == PJ_SUCCESS);
+    pj_atomic_set(tparam.err, 0);
 
     /* Start stress worker threads */
     if (ST_STRESS_THREAD_COUNT) {
@@ -652,15 +655,18 @@ static int timer_stress_test(void)
     delay.sec = 6;
     status = pj_timer_heap_schedule(timer, entry, &delay);
     pj_assert(status == PJ_SUCCESS);
-    pj_thread_sleep(1000);
     PJ_LOG(3,("test", "...Overwriting scheduled timer entry %p without "
                       "cancelling it", entry));
     /* Overwrite the entry rather than freeing it. The timer heap detects a
      * destroyed entry by reading it back, which is only defined as long as
      * the memory is still mapped, so freeing it here would make the test
      * depend on what the allocator does with the freed block.
+     *
+     * Zeroing suffices to be detected, and keeps every field a valid value
+     * to read back: timer IDs start at 1, and the heap holds its own copy
+     * of the callback, so both differ from the entry after the overwrite.
      */
-    pj_memset(entry, 0x55, sizeof(*entry));
+    pj_bzero(entry, sizeof(*entry));
 #endif
 
     /* Wait */
@@ -736,6 +742,10 @@ on_return:
         PJ_LOG(3,("test", "Total number of polled entries: %d", n_poll));
         pj_atomic_destroy(tparam.n_poll);
     }
+    if (tparam.err) {
+        t_err = (int)pj_atomic_get(tparam.err);
+        pj_atomic_destroy(tparam.err);
+    }
     PJ_LOG(3,("test", "Number of remaining active entries: %d", count));
     if (n_sched) {
         pj_bool_t match = PJ_TRUE;
@@ -744,7 +754,7 @@ on_return:
         n_sched++;
 #endif
         if (n_sched != (n_cancel + n_poll + count)) {
-            tparam.err = -250;
+            t_err = -250;
             match = PJ_FALSE;
         }
         PJ_LOG(3,("test", "Scheduled = cancelled + polled + remaining?: %s",
@@ -753,7 +763,7 @@ on_return:
 
     pj_pool_safe_release(&pool);
 
-    return (err? err: tparam.err);
+    return (err? err: t_err);
 }
 
 static int get_random_delay()
