@@ -732,6 +732,7 @@ static void ui_make_new_call()
         } else if (result.uri_result) {
             tmp = pj_str(result.uri_result);
         } else {
+            tmp.ptr = NULL;
             tmp.slen = 0;
         }
 
