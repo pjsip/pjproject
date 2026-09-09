@@ -183,7 +183,9 @@ static void clock_sleep(pjmedia_clock *clock, unsigned msec)
 {
 #if defined(PJ_HAS_EVENT_OBJ) && PJ_HAS_EVENT_OBJ != 0
     if (clock->quit_ev) {
-        pj_event_timedwait(clock->quit_ev, msec);
+        /* Timed out or signalled to quit, the caller handles both. */
+        pj_status_t status = pj_event_timedwait(clock->quit_ev, msec);
+        PJ_UNUSED_ARG(status);
         return;
     }
 #endif
