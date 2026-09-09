@@ -109,3 +109,5 @@ configure.out
 **/Platforms/Windows/Native/*
 **/Platforms/Windows/pjsua2/*
 workload-install.ps1
+
+**/problems-report.html
