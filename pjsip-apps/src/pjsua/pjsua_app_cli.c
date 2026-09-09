@@ -2583,6 +2583,9 @@ pj_status_t cmd_call_handler(pj_cli_cmd_val *cval)
     if (app_config.enable_loam) {
         call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
     }
+    if (app_config.sdp_passthrough) {
+        call_opt.flag |= PJSUA_CALL_SDP_PASSTHROUGH;
+    }
 
     switch(cmd_id) {
     case CMD_CALL_NEW:

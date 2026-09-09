@@ -638,6 +638,17 @@ struct pjsip_inv_session
     pj_str_t             siprec_metadata;           /**< SIPREC metadata update
                                                          pending notification,
                                                          internal.           */
+    pj_bool_t            sdp_passthrough;           /**< If PJ_TRUE, SDP
+                                                         negotiation calls
+                                                         pjmedia_sdp_neg_negotiate_passthrough()
+                                                         instead of
+                                                         pjmedia_sdp_neg_negotiate(),
+                                                         keeping the local and
+                                                         remote SDP unmodified.
+                                                         Set by the application
+                                                         (e.g. pjsua) before
+                                                         negotiation. Default
+                                                         is PJ_FALSE.        */
 };
 
 
