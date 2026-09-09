@@ -245,6 +245,75 @@ static void close_report(void)
 }
 
 
+/*
+ * pjsip_ua_instance() and pjsip_inv_usage_instance() are process wide
+ * singletons that more than one test initializes, so an unguarded
+ * "if (id == -1) init()" lets two tests running in parallel both register
+ * the same module, which trips the assertion in
+ * pjsip_endpt_register_module().
+ *
+ * Claim the initialization under the critical section but perform it
+ * outside: pjsip_endpt_register_module() takes a mutex, may sleep for
+ * 100ms when the endpoint is already running, and runs the module's
+ * load()/start() callbacks, none of which may happen while the critical
+ * section is held (see pj_enter_critical_section()). This follows
+ * register_modules() in tsx_uas_test.c.
+ */
+static int ua_init_claimed;
+static int inv_usage_init_claimed;
+
+/* Wait for the thread that claimed the initialization to finish it. */
+static pj_status_t wait_module_ready(pjsip_module *mod)
+{
+    unsigned i;
+
+    for (i=0; i<20 && mod->id < 0; ++i)
+        pj_thread_sleep(50);
+
+    if (mod->id < 0)
+        return PJSIP_ENOTINITIALIZED;
+
+    return PJ_SUCCESS;
+}
+
+pj_status_t init_ua_layer(const pjsip_ua_init_param *prm)
+{
+    int claimed;
+
+    pj_enter_critical_section();
+    if (pjsip_ua_instance()->id != -1) {
+        /* Already initialized, by another test or by pjsua */
+        pj_leave_critical_section();
+        return PJ_SUCCESS;
+    }
+    claimed = ua_init_claimed++;
+    pj_leave_critical_section();
+
+    if (claimed == 0)
+        return pjsip_ua_init_module(endpt, prm);
+
+    return wait_module_ready(pjsip_ua_instance());
+}
+
+pj_status_t init_inv_usage(const pjsip_inv_callback *cb)
+{
+    int claimed;
+
+    pj_enter_critical_section();
+    if (pjsip_inv_usage_instance()->id != -1) {
+        pj_leave_critical_section();
+        return PJ_SUCCESS;
+    }
+    claimed = inv_usage_init_claimed++;
+    pj_leave_critical_section();
+
+    if (claimed == 0)
+        return pjsip_inv_usage_init(endpt, cb);
+
+    return wait_module_ready(pjsip_inv_usage_instance());
+}
+
+
 int test_main(int argc, char *argv[])
 {
     pj_status_t rc;
