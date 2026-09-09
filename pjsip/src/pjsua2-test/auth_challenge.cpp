@@ -454,25 +454,27 @@ void AuthChallengeTests::deferredAbandon()
         }
     }
     TEST_ASSERT(g_state.deferred != nullptr);
+    TEST_ASSERT(g_state.deferred->isValid() == true);
+    TEST_ASSERT(g_state.challengeReceived == true);
 
-    /* To abandon without crashing: delete the account first (which
-     * invalidates it and destroys the regc/auth token), then destroy
-     * the deferred AuthChallenge. The destructor's TRY_LOCK + is_valid
-     * guard will see the account is gone and skip the C-level abandon.
-     *
-     * We must NOT call pjsip_auth_clt_async_abandon directly because
-     * it can crash when called from outside the auth callback chain.
+    /* Abandon the challenge from the event loop. */
+    pj_status_t status = g_state.deferred->abandon();
+    TEST_ASSERT(status == PJ_SUCCESS);
+    g_state.deferred.reset();
+
+    poll_events(5000);
+
+    /* The challenge was given up, so no authenticated REGISTER may have
+     * been sent, and the registration must have failed.
      */
+    TEST_ASSERT(g_mock_auth_count == 0);
+    TEST_ASSERT(g_state.regDone == true);
+
     g_mock_enabled = PJ_FALSE;
     g_state.deferEnabled = false;
 
-    TEST_ASSERT(g_state.challengeReceived == true);
-
     acc.reset();
     pjsua_handle_events(500);
-
-    /* Now safe to destroy deferred state — account is already gone */
-    g_state.deferred.reset();
 
     std::cout << "  deferredAbandon: PASSED" << std::endl;
 }
