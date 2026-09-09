@@ -79,6 +79,10 @@ struct pjsip_publishc
     pjsip_endpoint              *endpt;
     pj_bool_t                    _delete_flag;
     int                          pending_tsx;
+    /* Outstanding async auth tokens. Kept separate from pending_tsx,
+     * which also gates request sending in pjsip_publishc_send().
+     */
+    int                          pending_auth_tokens;
     pj_bool_t                    in_callback;
     pj_mutex_t                  *mutex;
 
@@ -222,7 +226,7 @@ PJ_DEF(pj_status_t) pjsip_publishc_destroy(pjsip_publishc *pubc)
 {
     PJ_ASSERT_RETURN(pubc, PJ_EINVAL);
 
-    if (pubc->pending_tsx || pubc->in_callback) {
+    if (pubc->pending_tsx || pubc->in_callback || pubc->pending_auth_tokens) {
         pubc->_delete_flag = 1;
         pubc->cb = NULL;
     } else {
@@ -612,10 +616,11 @@ static void pubc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
  */
 static void pubc_auth_token_release(pjsip_publishc *pubc)
 {
-    pj_assert(pubc->pending_tsx > 0);
-    --pubc->pending_tsx;
+    pj_assert(pubc->pending_auth_tokens > 0);
+    --pubc->pending_auth_tokens;
 
-    if (pubc->_delete_flag && pubc->pending_tsx == 0)
+    /* pjsip_publishc_destroy() re-defers if anything is still outstanding. */
+    if (pubc->_delete_flag)
         pjsip_publishc_destroy(pubc);
 }
 
@@ -703,7 +708,7 @@ static void tsx_callback(void *token, pjsip_event *event)
              * may defer the challenge and consume the token long after
              * pubc would otherwise have been destroyed, so hold pubc too.
              */
-            ++pubc->pending_tsx;
+            ++pubc->pending_auth_tokens;
 
             pj_bzero(&chal_param, sizeof(chal_param));
             chal_param.rdata = rdata;
@@ -713,7 +718,7 @@ static void tsx_callback(void *token, pjsip_event *event)
                                             auth_token, &chal_param);
             if (status != PJ_SUCCESS) {
                 pj_grp_lock_dec_ref(tsx->grp_lock);
-                --pubc->pending_tsx;
+                --pubc->pending_auth_tokens;
             }
         }
         if (status != PJ_SUCCESS) {
