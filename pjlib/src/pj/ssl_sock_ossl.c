@@ -632,7 +632,10 @@ static pj_bool_t sess_cache_store(const pj_str_t *name, SSL_SESSION *sess)
             ossl_sess_cache_cnt--;
         }
 
-        /* Shift existing entries down and insert at front. */
+        /* Shift existing entries down and insert at front. The branches
+         * above guarantee there is room for one more entry.
+         */
+        pj_assert(ossl_sess_cache_cnt < PJ_SSL_SOCK_OSSL_SESS_CACHE_SIZE);
         for (n = ossl_sess_cache_cnt; n > 0; --n)
             ossl_sess_cache[n] = ossl_sess_cache[n - 1];
 

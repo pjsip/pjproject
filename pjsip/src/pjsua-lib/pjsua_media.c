@@ -1290,18 +1290,45 @@ static pj_status_t create_ice_media_transport(
     /* Configure TURN settings */
     if (acc_cfg->turn_cfg.enable_turn) {
         unsigned i, idx = 0;
-        
-        if (use_ipv6 && !use_nat64 && PJ_ICE_MAX_TURN >= 3) {
+        pj_bool_t turn_ipv6 = (use_ipv6 || use_nat64);
+        pj_str_t turn_server;
+        pj_uint16_t turn_port = 0;
+        pj_in_addr turn_addr;
+
+        /* Configure TURN server */
+
+        /* Parse the server entry into host:port */
+        status = pj_sockaddr_parse2(pj_AF_UNSPEC(), 0,
+                                    &acc_cfg->turn_cfg.turn_server,
+                                    &turn_server, &turn_port, NULL);
+        if (status != PJ_SUCCESS || turn_server.slen == 0) {
+            PJ_LOG(1,(THIS_FILE, "Invalid TURN server setting"));
+            return PJ_EINVAL;
+        }
+
+        if (turn_port == 0)
+            turn_port = 3479;
+
+        /* No IPv6 TURN transport when the server is an IPv4 address literal,
+         * as resolving it as IPv6 will always fail.
+         */
+        if (turn_ipv6 && !use_nat64 &&
+            pj_inet_pton(pj_AF_INET(), &turn_server, &turn_addr)==PJ_SUCCESS)
+        {
+            turn_ipv6 = PJ_FALSE;
+        }
+
+        if (turn_ipv6 && !use_nat64 && PJ_ICE_MAX_TURN >= 3) {
             ice_cfg.turn_tp_cnt = 3;
             idx = 1;
         } else {
             ice_cfg.turn_tp_cnt = 1;
         }
-        
+
         for (i = 0; i < ice_cfg.turn_tp_cnt; i++)
             pj_ice_strans_turn_cfg_default(&ice_cfg.turn_tp[i]);
 
-        if (use_ipv6 || use_nat64) {
+        if (turn_ipv6) {
             if (!use_nat64)
                 ice_cfg.turn_tp[idx++].af = pj_AF_INET6();
 
@@ -1310,28 +1337,12 @@ static pj_status_t create_ice_media_transport(
             ice_cfg.turn_tp[idx].alloc_param.af = pj_AF_INET();
         }
 
-        /* Configure TURN server */
-
-        /* Parse the server entry into host:port */
-        status = pj_sockaddr_parse2(pj_AF_UNSPEC(), 0,
-                                    &acc_cfg->turn_cfg.turn_server,
-                                    &ice_cfg.turn_tp[0].server,
-                                    &ice_cfg.turn_tp[0].port,
-                                    NULL);
-        if (status != PJ_SUCCESS || ice_cfg.turn_tp[0].server.slen == 0) {
-            PJ_LOG(1,(THIS_FILE, "Invalid TURN server setting"));
-            return PJ_EINVAL;
-        }
-
-        if (ice_cfg.turn_tp[0].port == 0)
-            ice_cfg.turn_tp[0].port = 3479;
-
         for (i = 0; i < ice_cfg.turn_tp_cnt; i++) {
             pj_str_t IN6_ADDR_ANY = {"0", 1};
 
             /* Configure TURN connection settings and credential */
-            ice_cfg.turn_tp[i].server    = ice_cfg.turn_tp[0].server;
-            ice_cfg.turn_tp[i].port      = ice_cfg.turn_tp[0].port;
+            ice_cfg.turn_tp[i].server    = turn_server;
+            ice_cfg.turn_tp[i].port      = turn_port;
             ice_cfg.turn_tp[i].conn_type = acc_cfg->turn_cfg.turn_conn_type;
             pj_memcpy(&ice_cfg.turn_tp[i].auth_cred, 
                       &acc_cfg->turn_cfg.turn_auth_cred,

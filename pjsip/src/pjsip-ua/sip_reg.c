@@ -1175,6 +1175,9 @@ static pj_status_t async_auth_send_impl(pjsip_auth_clt_sess *auth_sess,
                       is_unreg);
     }
 
+    /* Release the reference the token took at creation. */
+    pjsip_regc_dec_ref(regc);
+
     return status;
 }
 
@@ -1189,9 +1192,15 @@ static void async_auth_abandon_impl(pjsip_auth_clt_sess *auth_sess,
 
     PJ_UNUSED_ARG(auth_sess);
 
-    /* Called without regc->lock held (same convention as send_impl). */
+    /* Called without regc->lock held (same convention as send_impl). The
+     * reference the token took at creation keeps the regc alive across the
+     * callback, which may destroy it.
+     */
     call_callback(regc, PJ_ECANCELLED, PJSIP_SC_UNAUTHORIZED, &reason,
                   NULL, NOEXP, 0, NULL, is_unreg);
+
+    /* Release the reference the token took at creation. */
+    pjsip_regc_dec_ref(regc);
 }
 
 
@@ -1345,6 +1354,13 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
             auth_token->grp_lock     = tsx->grp_lock;
             pj_grp_lock_add_ref(tsx->grp_lock);
 
+            /* The token only keeps the transaction alive, but the app may
+             * defer the challenge and consume the token long after the regc
+             * would otherwise have been destroyed. Hold a regc reference for
+             * the token's lifetime, released once it is consumed.
+             */
+            pjsip_regc_add_ref(regc);
+
             pj_bzero(&chal_param, sizeof(chal_param));
             chal_param.rdata = rdata;
             chal_param.tdata = tsx->last_tx;
@@ -1353,8 +1369,10 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
                                                     &regc->auth_sess,
                                                     auth_token, &chal_param);
             pj_lock_acquire(regc->lock);
-            if (status != PJ_SUCCESS)
+            if (status != PJ_SUCCESS) {
                 pj_grp_lock_dec_ref(tsx->grp_lock);
+                pjsip_regc_dec_ref(regc);
+            }
         }
         if (status != PJ_SUCCESS) {
             /* Application does not handle the authentication, so let's

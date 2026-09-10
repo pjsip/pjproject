@@ -205,20 +205,10 @@ static int test_timer_heap(void)
  */
 #define RANDOMIZED_TEST 1
 
-#ifndef __has_feature
-    #define __has_feature(x) 0
-#endif
-#if defined(__SANITIZE_ADDRESS__) || \
-    (defined(__has_feature) && __has_feature(address_sanitizer))
-    #define ASAN_ENABLED 1
-#else
-    #define ASAN_ENABLED 0
-#endif
-
-/* We should only simulate timer crash when using duplicate and
- * not using ASan.
+/* Simulate an entry being destroyed without being cancelled, which the
+ * timer heap can only detect when using duplicate.
  */
-#define SIMULATE_CRASH  PJ_TIMER_USE_COPY && !ASAN_ENABLED
+#define SIMULATE_ENTRY_DESTROYED    PJ_TIMER_USE_COPY
 
 #if RANDOMIZED_TEST
     #define ST_STRESS_THREAD_COUNT          20
@@ -255,7 +245,7 @@ struct thread_param
     pj_atomic_t **status;
     pj_atomic_t *n_sched, *n_cancel, *n_poll;
     pj_grp_lock_t **grp_locks;
-    int err;
+    pj_atomic_t *err;
 
     pj_atomic_t *idx;
     struct {
@@ -349,14 +339,16 @@ static int stress_worker(void *arg)
             if (prev_status != 0) continue;
             status = st_schedule_entry(tparam->timer, &tparam->entries[idx]);
             if (prev_status == 0 && status != PJ_SUCCESS) {
-                /* To make sure the flag has been set. */
-                pj_thread_sleep(20);
-                if (pj_atomic_get(tparam->status[idx]) == 1) {
-                    /* Race condition with another scheduling. */
+                if (status == PJ_EINVALIDOP) {
+                    /* Race condition with another scheduling. The heap
+                     * reports an already outstanding entry distinctly, so
+                     * there is no need to wait for the status flag of the
+                     * thread that scheduled it to catch up.
+                     */
                     PJ_LOG(3,("test", "race schedule-schedule %d: %p",
                                       idx, &tparam->entries[idx]));
                 } else {
-                    if (tparam->err != 0) tparam->err = -210;
+                    pj_atomic_set(tparam->err, -210);
                     PJ_LOG(3,("test", "error: failed to schedule entry %d: %p",
                                       idx, &tparam->entries[idx]));
                 }
@@ -383,7 +375,10 @@ static int stress_worker(void *arg)
                     PJ_LOG(3,("test", "race cancel-schedule %d: %p",
                                       idx, &tparam->entries[idx]));
                 } else {
-                    if (tparam->err != 0) tparam->err = -220;
+                    /* Logged without failing: the flag may simply not have
+                     * been updated yet, which is indistinguishable here
+                     * from the entry really being in a bad state.
+                     */
                     PJ_LOG(3,("test", "error: cancelling invalid entry %d: %p",
                                       idx, &tparam->entries[idx]));
                 }
@@ -395,7 +390,7 @@ static int stress_worker(void *arg)
                     PJ_LOG(3,("test", "race cancel-poll %d: %p",
                                       idx, &tparam->entries[idx]));
                 } else {
-                    if (tparam->err != 0) tparam->err = -230;
+                    /* Logged without failing, as above. */
                     PJ_LOG(3,("test", "error: failed to cancel entry %d: %p",
                                       idx, &tparam->entries[idx]));
                 }
@@ -492,14 +487,13 @@ static int timer_stress_test(void)
     pj_timer_heap_t *timer = NULL;
     pj_lock_t *timer_lock;
     pj_status_t status;
-    int err=0;
+    int err=0, t_err=0;
     pj_thread_t **stress_threads = NULL;
     pj_thread_t **poll_threads = NULL;
     pj_thread_t **cancel_threads = NULL;
     struct thread_param tparam = {0};
-#if SIMULATE_CRASH
+#if SIMULATE_ENTRY_DESTROYED
     pj_timer_entry *entry;
-    pj_pool_t *tmp_pool;
     pj_time_val delay = {0};
 #endif
 
@@ -603,6 +597,9 @@ static int timer_stress_test(void)
     status = pj_atomic_create(pool, -1, &tparam.n_poll);
     pj_assert (status == PJ_SUCCESS);
     pj_atomic_set(tparam.n_poll, 0);
+    status = pj_atomic_create(pool, -1, &tparam.err);
+    pj_assert (status == PJ_SUCCESS);
+    pj_atomic_set(tparam.err, 0);
 
     /* Start stress worker threads */
     if (ST_STRESS_THREAD_COUNT) {
@@ -653,21 +650,28 @@ static int timer_stress_test(void)
     }
 #endif
 
-#if SIMULATE_CRASH
-    tmp_pool = pj_pool_create( mem, NULL, 4096, 128, NULL);
-    pj_assert(tmp_pool);
-    entry = (pj_timer_entry*)pj_pool_calloc(tmp_pool, 1, sizeof(*entry));
-    pj_assert(entry);
+#if SIMULATE_ENTRY_DESTROYED
+    entry = PJ_POOL_ZALLOC_T(pool, pj_timer_entry);
+    if (!entry) {
+        err = -95;
+        goto on_return;
+    }
     pj_timer_entry_init(entry, 0, &tparam, &dummy_callback);
     delay.sec = 6;
     status = pj_timer_heap_schedule(timer, entry, &delay);
     pj_assert(status == PJ_SUCCESS);
-    pj_thread_sleep(1000);
-    PJ_LOG(3,("test", "...Releasing timer entry %p without cancelling it",
-                      entry));
-    pj_pool_secure_release(&tmp_pool);
-    //pj_pool_release(tmp_pool);
-    //pj_memset(tmp_pool, 128, 4096);
+    PJ_LOG(3,("test", "...Overwriting scheduled timer entry %p without "
+                      "cancelling it", entry));
+    /* Overwrite the entry rather than freeing it. The timer heap detects a
+     * destroyed entry by reading it back, which is only defined as long as
+     * the memory is still mapped, so freeing it here would make the test
+     * depend on what the allocator does with the freed block.
+     *
+     * Zeroing suffices to be detected, and keeps every field a valid value
+     * to read back: timer IDs start at 1, and the heap holds its own copy
+     * of the callback, so both differ from the entry after the overwrite.
+     */
+    pj_bzero(entry, sizeof(*entry));
 #endif
 
     /* Wait */
@@ -743,15 +747,19 @@ on_return:
         PJ_LOG(3,("test", "Total number of polled entries: %d", n_poll));
         pj_atomic_destroy(tparam.n_poll);
     }
+    if (tparam.err) {
+        t_err = (int)pj_atomic_get(tparam.err);
+        pj_atomic_destroy(tparam.err);
+    }
     PJ_LOG(3,("test", "Number of remaining active entries: %d", count));
     if (n_sched) {
         pj_bool_t match = PJ_TRUE;
 
-#if SIMULATE_CRASH
+#if SIMULATE_ENTRY_DESTROYED
         n_sched++;
 #endif
         if (n_sched != (n_cancel + n_poll + count)) {
-            if (tparam.err != 0) tparam.err = -250;
+            t_err = -250;
             match = PJ_FALSE;
         }
         PJ_LOG(3,("test", "Scheduled = cancelled + polled + remaining?: %s",
@@ -760,7 +768,7 @@ on_return:
 
     pj_pool_safe_release(&pool);
 
-    return (err? err: tparam.err);
+    return (err? err: t_err);
 }
 
 static int get_random_delay()
