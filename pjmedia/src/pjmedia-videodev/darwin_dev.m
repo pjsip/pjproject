@@ -608,11 +608,18 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
              * For example, resolution 352*288 can have a stride of 384.
              */
             pj_size_t stride = CVPixelBufferGetBytesPerRowOfPlane(img, 0);
+            /* The chroma plane has its own stride and its own padding, and
+             * neither is derivable from the luma plane's (Apple QA1829: query
+             * per-plane row bytes). On the iPhone 17 front camera they differ,
+             * and walking UV with the luma stride misaligns every chroma row,
+             * which is the horizontal banding this fix is for.
+             */
+            pj_size_t stride_uv = CVPixelBufferGetBytesPerRowOfPlane(img, 1);
             /* Image height is not always equal to the video resolution.
              * For example, resolution 352*288 can have a height of 264.
              */
             pj_size_t height = CVPixelBufferGetHeight(img);
-            pj_bool_t need_clip;
+            pj_bool_t need_clip, need_clip_uv;
             
             /* Auto detect rotation */
             if ((stream->vid_size.w > stream->vid_size.h && stride < height) ||
@@ -624,6 +631,13 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
             }
             
             need_clip = (stride != stream->vid_size.w);
+            /* Gate the chroma copy on the CHROMA stride: an NV12 chroma row
+             * holds w/2 UV pairs, i.e. w bytes, so unpadded means stride_uv
+             * == w. The luma plane can be unpadded while chroma is not, so
+             * reusing need_clip here would take the strideless path on a
+             * padded chroma plane.
+             */
+            need_clip_uv = (stride_uv != stream->vid_size.w);
             
             p = (pj_uint8_t*)CVPixelBufferGetBaseAddressOfPlane(img, 0);
 
@@ -650,7 +664,7 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
             }
 
             p = (pj_uint8_t*)CVPixelBufferGetBaseAddressOfPlane(img, 1);
-            if (!need_clip) {
+            if (!need_clip_uv) {
                 p_len >>= 1;
                 p_end = p + p_len;
                 
@@ -666,7 +680,7 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
                         *U++ = *p++;
                         *V++ = *p++;
                     }
-                    p += (stride - stream->vid_size.w);
+                    p += (stride_uv - stream->vid_size.w);
                 }
             }
 
@@ -678,8 +692,49 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
             }
         }
     } else {
-        pj_memcpy(stream->capture_buf, CVPixelBufferGetBaseAddress(img),
-                  stream->frame_size);
+        /* Packed formats (e.g. BGRA): the buffer's bytes-per-row can exceed
+         * width * bpp for alignment (Apple QA1829), so a single flat copy of
+         * frame_size reads across row boundaries and repeats the image
+         * horizontally. Copy row by row using the real strides.
+         *
+         * The destination pitch comes from the delivered buffer's own width
+         * rather than from stream->bytes_per_row. The converter reads
+         * capture_buf at orig_size -- the landscape swap of the negotiated
+         * size -- while bytes_per_row follows the negotiated orientation, so
+         * for a portrait-negotiated stream the two disagree. Deriving it here
+         * keeps an unpadded buffer byte-identical to the previous flat copy.
+         */
+        pj_size_t bpp8 = stream->size.w?
+                         (stream->bytes_per_row / stream->size.w): 0;
+        pj_size_t src_stride = CVPixelBufferGetBytesPerRow(img);
+        pj_size_t dst_stride = CVPixelBufferGetWidth(img) * bpp8;
+        pj_size_t row_bytes = (dst_stride < src_stride)? dst_stride:
+                                                         src_stride;
+        pj_size_t src_rows = CVPixelBufferGetHeight(img);
+        /* Rows the destination can hold: this is exactly what the previous
+         * single memcpy of frame_size wrote, so the copy stays within
+         * capture_buf and is byte-identical whenever the strides match.
+         */
+        pj_size_t dst_rows = dst_stride ? (stream->frame_size / dst_stride) : 0;
+        pj_size_t rows = (src_rows < dst_rows) ? src_rows : dst_rows;
+        pj_uint8_t *src = (pj_uint8_t*)CVPixelBufferGetBaseAddress(img);
+        pj_uint8_t *dst = (pj_uint8_t*)stream->capture_buf;
+        pj_size_t i;
+
+        for (i = 0; i < rows; ++i) {
+            pj_memcpy(dst, src, row_bytes);
+            dst += dst_stride;
+            src += src_stride;
+        }
+
+        /* Zero what the source could not fill, as the planar branch above
+         * does for a short buffer. capture_buf is allocated once and reused
+         * for every frame, so an unwritten region does not merely expose
+         * uninitialised memory once -- it keeps displaying the previous
+         * frame's content for as long as the shortfall lasts.
+         */
+        if (rows < dst_rows)
+            pj_bzero(dst, (dst_rows - rows) * dst_stride);
     }
     
     status = pjmedia_vid_dev_conv_resize_and_rotate(&stream->conv, 
