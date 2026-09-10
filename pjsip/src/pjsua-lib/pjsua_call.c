@@ -570,6 +570,12 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
     /* Create and associate our data in the session. */
     call->inv = inv;
 
+    /* Mirror the passthrough flag, set earlier via apply_call_setting()
+     * before call->inv existed, onto the now-created invite session.
+     */
+    call->inv->sdp_passthrough =
+                (call->opt.flag & PJSUA_CALL_SDP_PASSTHROUGH) != 0;
+
     dlg->mod_data[pjsua_var.mod.id] = call;
     inv->mod_data[pjsua_var.mod.id] = call;
 
@@ -773,6 +779,15 @@ static pj_status_t apply_call_setting(pjsua_call *call,
 #if !PJMEDIA_HAS_VIDEO
     pj_assert(call->opt.vid_cnt == 0);
 #endif
+
+    /* Mirror the passthrough flag onto the invite session so that
+     * pjsip-ua's inv_negotiate_sdp() (the primary SDP negotiation call
+     * site) can honor it without needing access to pjsua_call.
+     */
+    if (call->inv) {
+        call->inv->sdp_passthrough =
+                    (call->opt.flag & PJSUA_CALL_SDP_PASSTHROUGH) != 0;
+    }
 
     if (call->opt.flag & PJSUA_CALL_REINIT_MEDIA) {
         PJ_LOG(4, (THIS_FILE, "PJSUA_CALL_REINIT_MEDIA"));
@@ -2243,6 +2258,14 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     /* Create and attach pjsua_var data to the dialog */
     call->inv = inv;
+
+    /* Mirror the passthrough flag onto the freshly created invite
+     * session (call->opt is the default at this point; pjsua_call_answer()
+     * et al re-apply it via apply_call_setting() once the application
+     * supplies its own setting).
+     */
+    call->inv->sdp_passthrough =
+                (call->opt.flag & PJSUA_CALL_SDP_PASSTHROUGH) != 0;
 
 #if PJSUA_HAS_SIPREC
     /*
@@ -4549,8 +4572,14 @@ static pj_bool_t check_lock_codec(pjsua_call *call)
             continue;
         }
 
-        /* Remote may answer with less media lines. */
-        if (i >= remote_sdp->media_count)
+        /* Remote may answer with less media lines. Also guard against
+         * local_sdp having fewer media lines than remote_sdp: this
+         * normally can't happen (process_answer()/create_answer() keep
+         * both sides' media count in sync), but with
+         * PJSUA_CALL_SDP_PASSTHROUGH the active local/remote SDPs are
+         * whatever was fed into the negotiator, unpadded.
+         */
+        if (i >= remote_sdp->media_count || i >= local_sdp->media_count)
             continue;
 
         rem_m = remote_sdp->media[i];

@@ -389,6 +389,9 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
         opt.aud_cnt = app_config.aud_cnt;
         opt.vid_cnt = app_config.vid.vid_cnt;
         opt.txt_cnt = app_config.txt_cnt;
+        if (app_config.sdp_passthrough) {
+            opt.flag |= PJSUA_CALL_SDP_PASSTHROUGH;
+        }
 
         pjsua_call_answer2(call_id, &opt, app_config.auto_answer, NULL,
                            NULL);
@@ -2255,6 +2258,9 @@ static pj_status_t app_init(void)
     call_opt.txt_cnt = app_config.txt_cnt;
     if (app_config.enable_loam) {
         call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
+    }
+    if (app_config.sdp_passthrough) {
+        call_opt.flag |= PJSUA_CALL_SDP_PASSTHROUGH;
     }
 
 #if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0

@@ -2563,7 +2563,9 @@ static pj_status_t inv_negotiate_sdp( pjsip_inv_session *inv )
                      PJMEDIA_SDP_NEG_STATE_WAIT_NEGO, 
                      PJMEDIA_SDPNEG_EINSTATE);
 
-    status = pjmedia_sdp_neg_negotiate(inv->pool_prov, inv->neg, 0);
+    status = inv->sdp_passthrough?
+              pjmedia_sdp_neg_negotiate_passthrough(inv->pool_prov, inv->neg) :
+              pjmedia_sdp_neg_negotiate(inv->pool_prov, inv->neg, 0);
 
     PJ_PERROR(4,(inv->obj_name, status, "SDP negotiation done"));
 

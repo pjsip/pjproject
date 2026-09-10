@@ -2331,6 +2331,52 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
 }
 
 
+/* Negotiate without inspecting/modifying offer/answer content, for
+ * signalling-plane relay (e.g. B2BUA) use cases. */
+PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate_passthrough(pj_pool_t *pool,
+                                                          pjmedia_sdp_neg *neg)
+{
+    PJ_ASSERT_RETURN(pool && neg, PJ_EINVAL);
+
+    /* Must be in STATE_WAIT_NEGO state. */
+    PJ_ASSERT_RETURN(neg->state == PJMEDIA_SDP_NEG_STATE_WAIT_NEGO,
+                     PJMEDIA_SDPNEG_EINSTATE);
+
+    /* Must have remote and local SDP to negotiate. */
+    PJ_ASSERT_RETURN(neg->neg_remote_sdp && neg->neg_local_sdp, PJ_EBUG);
+
+    /* Promote the fed-in local/remote SDP to active. Note:
+     * assign_pt_and_update_map() is intentionally not called here.
+     */
+    neg->active_local_sdp = neg->neg_local_sdp;
+    neg->active_remote_sdp = neg->neg_remote_sdp;
+
+    /* Keep the pool used for allocating the active SDPs */
+    neg->pool_active = pool;
+
+    if (!neg->has_remote_answer) {
+        /* We are answering: this answer will be sent, so update the
+         * last sent SDP (mirrors pjmedia_sdp_neg_negotiate()), without
+         * touching its origin.version.
+         */
+        neg->last_sent = neg->neg_local_sdp;
+    }
+
+    /* State is DONE */
+    neg->state = PJMEDIA_SDP_NEG_STATE_DONE;
+
+    /* Save state */
+    neg->answer_was_remote = neg->has_remote_answer;
+
+    /* Clear temporary SDP */
+    neg->initial_sdp_tmp = NULL;
+    neg->neg_local_sdp = neg->neg_remote_sdp = NULL;
+    neg->has_remote_answer = PJ_FALSE;
+
+    return PJ_SUCCESS;
+}
+
+
 static pj_status_t custom_fmt_match(pj_pool_t *pool,
                                     const pj_str_t *fmt_name,
                                     pjmedia_sdp_media *offer,

@@ -4913,7 +4913,9 @@ on_check_med_status:
         if (status != PJ_SUCCESS)
             goto on_error;
 
-        status = pjmedia_sdp_neg_negotiate(tmp_pool, neg, 0);
+        status = call->inv->sdp_passthrough?
+                  pjmedia_sdp_neg_negotiate_passthrough(tmp_pool, neg) :
+                  pjmedia_sdp_neg_negotiate(tmp_pool, neg, 0);
         if (status != PJ_SUCCESS)
             goto on_error;
     }
