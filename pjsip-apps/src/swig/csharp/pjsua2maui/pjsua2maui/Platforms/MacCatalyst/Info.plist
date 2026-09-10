@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- The Mac App Store requires you specify if the app uses encryption. -->
+    <!-- Please consult https://developer.apple.com/documentation/bundleresources/information_property_list/itsappusesnonexemptencryption -->
+    <!-- <key>ITSAppUsesNonExemptEncryption</key> -->
+    <!-- Please indicate <true/> or <false/> here. -->
+	<!-- App Sandbox must be enabled to distribute a MacCatalyst app through the Mac App Store. -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<!-- When App Sandbox is enabled, this value is required to open outgoing network connections. -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+    <!-- Specify the category for your app here. -->
+    <!-- Please consult https://developer.apple.com/documentation/bundleresources/information_property_list/lsapplicationcategorytype -->
+    <!-- <key>LSApplicationCategoryType</key> -->
+    <!-- <string>public.app-category.YOUR-CATEGORY-HERE</string> -->
+	<key>UIDeviceFamily</key>
+	<array>
+		<integer>2</integer>
+	</array>
+	<key>MinimumOSVersion</key>
+	<string>12.2</string>
+	<key>CFBundleDisplayName</key>
+	<string>pjsua2maui</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.teluu.pjsua2maui</string>
+	<key>CFBundleVersion</key>
+	<string>1.0</string>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>CFBundleName</key>
+	<string>pjsua2maui</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Camera permission required</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Mic permission required</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app needs access to the microphone to make voip calls.</string>
+	<key>NSCameraUsageDescription </string>
+	<string>This app needs access to the camera to make voip video calls.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>voip</string>
+		<string>audio</string>
+	</array>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>microphone</string>
+		<string>video-camera</string>
+		<string>opengles-1</string>
+		<string>wifi</string>
+	</array>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arm64</string>
+		<string>x64</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>XSAppIconAssets</key>
+	<string>Assets.xcassets/appicon.appiconset</string>
+</dict>
+</plist>
