@@ -842,6 +842,25 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 
 /**
+ * Maximum age, in milliseconds, of an incomplete RFC 5626 CRLF keep-alive
+ * "ping" prefix retained from a previous read on a TCP transport, before it
+ * is discarded instead of being reassembled with the bytes that follow.
+ *
+ * A ping that is genuinely fragmented is completed by the next segment, so
+ * this only needs to be larger than the delay between two fragments of the
+ * same ping. Reassembling across a longer gap would join unrelated bytes,
+ * e.g. two "pong" replies to our own pings, into a ping the peer never sent.
+ *
+ * Only relevant when \a PJSIP_TCP_KEEP_ALIVE_RESPONSE is enabled.
+ *
+ * Default: 5000 (5 seconds)
+ */
+#ifndef PJSIP_TCP_KEEP_ALIVE_FRAGMENT_TIMEOUT
+#   define PJSIP_TCP_KEEP_ALIVE_FRAGMENT_TIMEOUT 5000
+#endif
+
+
+/**
  * The initial timeout interval for incoming TCP transports
  * (i.e. server side) in the event that no valid SIP message is received
  * following a successful connection. The value is in seconds.
@@ -900,6 +919,25 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  */
 #ifndef PJSIP_TLS_KEEP_ALIVE_RESPONSE
 #   define PJSIP_TLS_KEEP_ALIVE_RESPONSE    1
+#endif
+
+
+/**
+ * Maximum age, in milliseconds, of an incomplete RFC 5626 CRLF keep-alive
+ * "ping" prefix retained from a previous read on a TLS transport, before it
+ * is discarded instead of being reassembled with the bytes that follow.
+ *
+ * A ping that is genuinely fragmented is completed by the next segment, so
+ * this only needs to be larger than the delay between two fragments of the
+ * same ping. Reassembling across a longer gap would join unrelated bytes,
+ * e.g. two "pong" replies to our own pings, into a ping the peer never sent.
+ *
+ * Only relevant when \a PJSIP_TLS_KEEP_ALIVE_RESPONSE is enabled.
+ *
+ * Default: 5000 (5 seconds)
+ */
+#ifndef PJSIP_TLS_KEEP_ALIVE_FRAGMENT_TIMEOUT
+#   define PJSIP_TLS_KEEP_ALIVE_FRAGMENT_TIMEOUT 5000
 #endif
 
 

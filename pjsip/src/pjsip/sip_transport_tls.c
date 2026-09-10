@@ -120,6 +120,19 @@ struct tls_transport
      */
     pjsip_tx_data_op_key     pong_op_key;
 
+    /* Set when a CRLF keep-alive "ping" of ours has been sent and nothing
+     * has been read since. The reply is a bare CRLF, which is also the first
+     * half of a ping, so this is what tells our own "pong" apart from a
+     * genuinely fragmented ping from the peer.
+     */
+    pj_bool_t                ka_ping_pending;
+
+    /* Length and arrival time of the incomplete ping prefix retained as the
+     * read remainder, so that it is not reassembled across an arbitrary gap.
+     */
+    pj_size_t                ka_partial_len;
+    pj_time_val              ka_partial_ts;
+
     /* TLS transport can only have  one rdata!
      * Otherwise chunks of incoming PDU may be received on different
      * buffer.
@@ -2017,11 +2030,22 @@ static pj_status_t tls_shutdown(pjsip_transport *transport)
  * Callback from ioqueue that an incoming data is received from the socket.
  */
 #if PJSIP_TLS_KEEP_ALIVE_RESPONSE
-/* RFC 5626 Section 4.4.1 CRLF keep-alive patterns: the accepted "ping" and
- * the "pong" reply. Defined together in one place, with lengths derived via
- * sizeof, so both can be adjusted - or made configurable, e.g. a single CRLF
- * or a longer packet - without touching the scan/response logic. The pong
- * has static lifetime so it stays valid until the (async) send completes.
+/* RFC 5626 Section 4.4.1 CRLF keep-alive patterns: the "ping" we accept and
+ * the "pong" we reply with. These are fixed by the RFC and must NOT be
+ * changed: they are the bytes a compliant peer sends and expects back, so
+ * altering either one breaks the mechanism against every such peer. The
+ * comparison in tls_keep_alive_timer() also relies on the ping being the RFC
+ * pattern to decide whether a pong can be expected in return.
+ *
+ * Both patterns are named here, rather than written inline, so that the
+ * scan/response logic carries no literal bytes and no literal lengths (those
+ * are derived via sizeof). The pong must not be turned into an automatic
+ * variable: the reply is sent asynchronously, so its buffer has to outlive
+ * the send call.
+ *
+ * The payload we *send* as our own keep-alive is a separate and genuinely
+ * configurable thing, PJSIP_TLS_KEEP_ALIVE_DATA; a peer will simply not answer
+ * a payload that is not the RFC ping.
  */
 static const char tls_crlf_ka_ping[] = { '\r', '\n', '\r', '\n' };
 static const char tls_crlf_ka_pong[] = { '\r', '\n' };
@@ -2097,8 +2121,61 @@ static pj_bool_t on_data_read(pj_ssl_sock_t *ssock,
          */
         {
             pj_size_t partial_len;
-            pj_size_t ka_len = tls_get_crlf_ka_len((char*)data, size,
-                                                   &partial_len);
+            pj_size_t ka_len;
+            pj_bool_t ping_pending = tls->ka_ping_pending;
+
+            /* Whatever we read now ends the window in which a bare CRLF can
+             * be attributed to a ping of ours.
+             */
+            tls->ka_ping_pending = PJ_FALSE;
+
+            /* Discard a retained incomplete ping that has gone stale. A real
+             * fragment is completed by the next segment, not seconds later,
+             * and reassembling across such a gap would join unrelated bytes
+             * into a ping that the peer never sent.
+             */
+            if (tls->ka_partial_len) {
+                pj_size_t stale_len = tls->ka_partial_len;
+                pj_time_val elapsed = tls->last_activity;
+
+                /* last_activity is the arrival time of this read, so the
+                 * gap measured here is arrival to arrival, excluding our
+                 * own processing time.
+                 */
+                PJ_TIME_VAL_SUB(elapsed, tls->ka_partial_ts);
+                tls->ka_partial_len = 0;
+
+                if (stale_len <= size &&
+                    PJ_TIME_VAL_MSEC(elapsed) >
+                        PJSIP_TLS_KEEP_ALIVE_FRAGMENT_TIMEOUT)
+                {
+                    pj_memmove(data, (char*)data + stale_len,
+                               size - stale_len);
+                    size -= stale_len;
+
+                    if (size == 0) {
+                        *remainder = 0;
+                        pj_pool_reset(rdata->tp_info.pool);
+                        return PJ_TRUE;
+                    }
+                }
+            }
+
+            ka_len = tls_get_crlf_ka_len((char*)data, size, &partial_len);
+
+            /* A read consisting of nothing but a bare CRLF, while a ping of
+             * ours is outstanding, is the peer's pong to that ping, not the
+             * first half of a ping. Consume it: retaining it would let it
+             * reassemble with the next pong into a phantom ping, which we
+             * would then answer with a CRLF the peer never asked for.
+             */
+            if (ka_len == 0 && ping_pending && partial_len == size &&
+                partial_len == sizeof(tls_crlf_ka_pong))
+            {
+                *remainder = 0;
+                pj_pool_reset(rdata->tp_info.pool);
+                return PJ_TRUE;
+            }
 
             if (ka_len) {
                 pj_ssize_t pong_len = sizeof(tls_crlf_ka_pong);
@@ -2134,6 +2211,8 @@ static pj_bool_t on_data_read(pj_ssl_sock_t *ssock,
                 if (ka_len)
                     pj_memmove(data, (char*)data + ka_len, partial_len);
                 *remainder = partial_len;
+                tls->ka_partial_len = partial_len;
+                tls->ka_partial_ts = tls->last_activity;
                 pj_pool_reset(rdata->tp_info.pool);
                 return PJ_TRUE;
             }
@@ -2473,6 +2552,19 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
     size = tls->ka_pkt.slen;
     status = pj_ssl_sock_send(tls->ssock, &tls->ka_op_key.key,
                               tls->ka_pkt.ptr, &size, 0);
+
+#if PJSIP_TLS_KEEP_ALIVE_RESPONSE
+    /* If what we send is the RFC 5626 ping, the peer answers it with a bare
+     * CRLF, which is also the first half of a ping. Remember that we are
+     * expecting one, so that on_data_read() can tell the two apart.
+     */
+    if (tls->ka_pkt.slen == (pj_ssize_t)sizeof(tls_crlf_ka_ping) &&
+        pj_memcmp(tls->ka_pkt.ptr, tls_crlf_ka_ping,
+                  sizeof(tls_crlf_ka_ping)) == 0)
+    {
+        tls->ka_ping_pending = PJ_TRUE;
+    }
+#endif
 
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
         tls_perror(tls->base.obj_name, 

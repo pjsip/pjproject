@@ -462,9 +462,16 @@ int transport_tcp_keep_alive_test(void)
      * ignored by the keep-alive responder.
      */
     const char not_ping[] = { 'X', '\r', '\n', '\r', '\n' };
+    /* What a peer sends back in reply to a ping of ours. Note that it is
+     * also the first two bytes of a ping.
+     */
+    const char pong[] = { '\r', '\n' };
     char buf[8];
     pj_ssize_t len;
     pj_status_t status;
+    pj_sock_t sock2 = PJ_INVALID_SOCKET;
+    long orig_ka_interval = pjsip_cfg()->tcp.keep_alive_interval;
+    int i, j;
     int ret = 0;
 
     PJ_LOG(3,(THIS_FILE, "  testing TCP CRLF keep-alive response"));
@@ -607,16 +614,116 @@ int transport_tcp_keep_alive_test(void)
         goto on_return;
     }
 
+    /* Phase 8: a retained fragment must not be reassembled after it has
+     * gone stale. Two bare CRLFs separated by more than
+     * PJSIP_TCP_KEEP_ALIVE_FRAGMENT_TIMEOUT are not one fragmented ping, so
+     * they must not draw a pong.
+     */
+    status = ka_send_raw(sock, ping, 2);                /* "\r\n" */
+    if (status != PJ_SUCCESS) {
+        app_perror("   Error: unable to send ping fragment", status);
+        ret = -270;
+        goto on_return;
+    }
+    flush_events(PJSIP_TCP_KEEP_ALIVE_FRAGMENT_TIMEOUT + 1000);
+    status = ka_send_raw(sock, ping, 2);               /* another "\r\n" */
+    if (status != PJ_SUCCESS) {
+        app_perror("   Error: unable to send ping fragment", status);
+        ret = -271;
+        goto on_return;
+    }
+    len = ka_recv_timeout(sock, buf, sizeof(buf), NO_PONG_WAIT_MSEC);
+    if (len != 0) {
+        PJ_LOG(3,(THIS_FILE, "   Error: got %d byte(s) for two bare CRLFs "
+                             "sent %d ms apart (expected none)", (int)len,
+                             PJSIP_TCP_KEEP_ALIVE_FRAGMENT_TIMEOUT + 1000));
+        ret = -272;
+        goto on_return;
+    }
+
+    /* Phase 9: the reply to a ping of ours is a bare CRLF, i.e. the same
+     * bytes as the first half of a ping. Two such replies must not be
+     * reassembled into a ping that the peer never sent, because we would
+     * answer that phantom ping with an unsolicited CRLF - which a server
+     * waiting for a complete message eventually gives up on and closes.
+     *
+     * Needs a connection whose transport actually pings, so use a short
+     * keep-alive interval and a fresh connection: the phases above rely on
+     * no ping of ours being outstanding, and the interval cannot be changed
+     * on a live connection (the timer reschedules with whatever it reads).
+     */
+    PJ_LOG(3,(THIS_FILE, "  testing TCP CRLF keep-alive ping/pong exchange"));
+
+    pjsip_cfg()->tcp.keep_alive_interval = 1;
+
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, &sock2);
+    if (status != PJ_SUCCESS) {
+        app_perror("   Error: unable to create socket", status);
+        ret = -280;
+        goto on_return;
+    }
+    status = pj_sock_connect(sock2, &rem_addr, sizeof(rem_addr));
+    if (status != PJ_SUCCESS) {
+        app_perror("   Error: unable to connect to TCP listener", status);
+        ret = -281;
+        goto on_return;
+    }
+    flush_events(100);
+
+    for (i = 0; i < 3; ++i) {
+        /* Wait for the transport's ping, pumping the endpoint so that its
+         * keep-alive timer can fire.
+         */
+        len = 0;
+        for (j = 0; j < 40 && len == 0; ++j) {
+            flush_events(100);
+            len = ka_recv_timeout(sock2, buf, sizeof(buf), 0);
+        }
+        if (len != (pj_ssize_t)sizeof(ping) ||
+            pj_memcmp(buf, ping, sizeof(ping)) != 0)
+        {
+            PJ_LOG(3,(THIS_FILE, "   Error: expected a %d byte(s) keep-alive "
+                                 "ping on exchange %d, got %d byte(s)",
+                                 (int)sizeof(ping), i+1, (int)len));
+            ret = -282;
+            goto on_return;
+        }
+
+        /* Answer it the way a server does. */
+        status = ka_send_raw(sock2, pong, sizeof(pong));
+        if (status != PJ_SUCCESS) {
+            app_perror("   Error: unable to send keep-alive pong", status);
+            ret = -283;
+            goto on_return;
+        }
+
+        /* Our pong must not be answered: a pong is not a ping. */
+        len = ka_recv_timeout(sock2, buf, sizeof(buf), 0);
+        if (len != 0) {
+            PJ_LOG(3,(THIS_FILE, "   Error: got %d byte(s) in response to a "
+                                 "keep-alive pong on exchange %d "
+                                 "(expected none)", (int)len, i+1));
+            ret = -284;
+            goto on_return;
+        }
+    }
+
     PJ_LOG(3,(THIS_FILE, "   TCP keep-alive response test OK"));
 
 on_return:
     if (sock != PJ_INVALID_SOCKET)
         pj_sock_close(sock);
+    if (sock2 != PJ_INVALID_SOCKET)
+        pj_sock_close(sock2);
     if (tpfactory) {
         pjsip_tpmgr_unregister_tpfactory(pjsip_endpt_get_tpmgr(endpt),
                                          tpfactory);
     }
     flush_events(500);
+    /* Restore only after the transports are gone, so that no keep-alive
+     * timer is left scheduled against the restored interval.
+     */
+    pjsip_cfg()->tcp.keep_alive_interval = orig_ka_interval;
     return ret;
 #else
     PJ_LOG(3,(THIS_FILE, "  skipping TCP CRLF keep-alive response test "
