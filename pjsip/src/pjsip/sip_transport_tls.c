@@ -2029,13 +2029,20 @@ static const char tls_crlf_ka_pong[] = { '\r', '\n' };
 /* Count the leading bytes of a received buffer that form CRLF keep-alive
  * "ping"(s), i.e. one or more consecutive ping patterns at the start of the
  * buffer. Returns 0 if the buffer does not begin with a ping.
+ *
+ * A trailing incomplete ping is not retained for reassembly with the next
+ * read. A bare CRLF is both the first half of a ping and the "pong" a peer
+ * sends in reply to a ping of ours, and the two cannot be told apart by
+ * content; retaining it lets two pongs coalesce into a ping nobody sent,
+ * which we would answer with a CRLF the peer never asked for. Incomplete
+ * pings are therefore left to the parser, which drops them as leading
+ * newlines (RFC 3261 Section 7.5), and go unanswered.
  */
-static pj_size_t tls_get_crlf_ka_len(const char *data, pj_size_t size,
-                                     pj_size_t *partial_len)
+static pj_size_t tls_get_crlf_ka_len(const char *data, pj_size_t size)
 {
     const char *ka = tls_crlf_ka_ping;
     const pj_size_t ka_sz = sizeof(tls_crlf_ka_ping);
-    pj_size_t matched = 0, tail;
+    pj_size_t matched = 0;
 
     while (size - matched >= ka_sz &&
            pj_memcmp(data + matched, ka, ka_sz) == 0)
@@ -2043,15 +2050,6 @@ static pj_size_t tls_get_crlf_ka_len(const char *data, pj_size_t size,
         matched += ka_sz;
     }
 
-    /* A ping may be fragmented across reads, leaving a 1..(ka_sz-1) byte
-     * prefix of the pattern at the end. Report it so the caller can retain
-     * and reassemble it with the next read, rather than handing it to the
-     * parser (whose leading-newline skip would drop it, leaving the ping
-     * unanswered).
-     */
-    tail = size - matched;
-    *partial_len = (tail >= 1 && tail < ka_sz &&
-                    pj_memcmp(data + matched, ka, tail) == 0) ? tail : 0;
     return matched;
 }
 #endif
@@ -2096,9 +2094,7 @@ static pj_bool_t on_data_read(pj_ssl_sock_t *ssock,
          * SIP parser (which would otherwise drop them as a malformed message).
          */
         {
-            pj_size_t partial_len;
-            pj_size_t ka_len = tls_get_crlf_ka_len((char*)data, size,
-                                                   &partial_len);
+            pj_size_t ka_len = tls_get_crlf_ka_len((char*)data, size);
 
             if (ka_len) {
                 pj_ssize_t pong_len = sizeof(tls_crlf_ka_pong);
@@ -2123,22 +2119,7 @@ static pj_bool_t on_data_read(pj_ssl_sock_t *ssock,
                                "Error sending CRLF keep-alive response",
                                send_st, &tls->remote_name);
                 }
-            }
 
-            /* A ping fragmented across reads leaves a trailing incomplete
-             * ping: keep those bytes so they reassemble with the next read
-             * (otherwise the parser's leading-newline skip would drop them
-             * and the ping would go unanswered).
-             */
-            if (partial_len) {
-                if (ka_len)
-                    pj_memmove(data, (char*)data + ka_len, partial_len);
-                *remainder = partial_len;
-                pj_pool_reset(rdata->tp_info.pool);
-                return PJ_TRUE;
-            }
-
-            if (ka_len) {
                 if (ka_len == size) {
                     /* Nothing but keep-alive(s) in this buffer. */
                     *remainder = 0;

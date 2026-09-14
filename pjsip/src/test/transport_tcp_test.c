@@ -445,9 +445,11 @@ static pj_ssize_t ka_recv_timeout(pj_sock_t sock, void *buf,
  *     packet rather than a keep-alive ping - is NOT answered.
  *  3. After the non-ping data, a genuine ping is still answered, i.e. the
  *     stream was not left in a bad state.
- *  4. A ping fragmented across TCP reads ("\r\n"+"\r\n", and "\r"+"\n\r\n")
- *     is reassembled and answered exactly once, with no pong for the
- *     incomplete leading fragment.
+ *  4. An incomplete ping is never answered and never retained: a bare CRLF
+ *     is also the "pong" a peer sends in reply to a ping of ours, so a run of
+ *     them must not coalesce into a ping that nobody sent.
+ *  5. A genuine ping after such a run is still answered, i.e. no residue was
+ *     left behind.
  */
 int transport_tcp_keep_alive_test(void)
 {
@@ -462,9 +464,14 @@ int transport_tcp_keep_alive_test(void)
      * ignored by the keep-alive responder.
      */
     const char not_ping[] = { 'X', '\r', '\n', '\r', '\n' };
+    /* What a peer sends back in reply to a ping of ours. Note that it is
+     * also the first two bytes of a ping.
+     */
+    const char pong[] = { '\r', '\n' };
     char buf[8];
     pj_ssize_t len;
     pj_status_t status;
+    int i;
     int ret = 0;
 
     PJ_LOG(3,(THIS_FILE, "  testing TCP CRLF keep-alive response"));
@@ -548,62 +555,75 @@ int transport_tcp_keep_alive_test(void)
         goto on_return;
     }
 
-    /* Phase 4-5: a ping fragmented across two reads ("\r\n" then "\r\n")
-     * must be reassembled and answered once. The first fragment on its own
-     * must not draw a pong, and must not be dropped either.
+    /* Phase 4: a bare CRLF is the first half of a ping, but it is also the
+     * complete "pong" that a peer sends in reply to a ping of ours. The two
+     * are indistinguishable by content, so an incomplete ping is dropped
+     * rather than retained for reassembly: a retained one would join with the
+     * next pong into a ping the peer never sent, and we would answer that
+     * phantom ping with an unsolicited CRLF - which a server waiting for a
+     * complete message eventually gives up on, closing the connection.
+     *
+     * Send a run of bare CRLFs, as a peer answering a series of our pings
+     * does, and require silence throughout.
      */
-    status = ka_send_raw(sock, ping, 2);                /* "\r\n" */
-    if (status != PJ_SUCCESS) {
-        app_perror("   Error: unable to send ping fragment", status);
-        ret = -250;
-        goto on_return;
-    }
-    len = ka_recv_timeout(sock, buf, sizeof(buf), NO_PONG_WAIT_MSEC);
-    if (len != 0) {
-        PJ_LOG(3,(THIS_FILE, "   Error: got %d byte(s) for a partial ping "
-                             "fragment (expected none)", (int)len));
-        ret = -251;
-        goto on_return;
-    }
-    status = ka_send_raw(sock, ping + 2, 2);            /* completing "\r\n" */
-    if (status != PJ_SUCCESS) {
-        app_perror("   Error: unable to send ping fragment", status);
-        ret = -252;
-        goto on_return;
-    }
-    len = ka_recv_timeout(sock, buf, sizeof(buf), PONG_WAIT_MSEC);
-    if (len != 2 || buf[0] != '\r' || buf[1] != '\n') {
-        PJ_LOG(3,(THIS_FILE, "   Error: expected a CRLF pong for a reassembled "
-                             "fragmented ping, got %d byte(s)", (int)len));
-        ret = -253;
-        goto on_return;
+    for (i = 0; i < 4; ++i) {
+        status = ka_send_raw(sock, pong, sizeof(pong));
+        if (status != PJ_SUCCESS) {
+            app_perror("   Error: unable to send bare CRLF", status);
+            ret = -250;
+            goto on_return;
+        }
+        len = ka_recv_timeout(sock, buf, sizeof(buf), NO_PONG_WAIT_MSEC);
+        if (len != 0) {
+            PJ_LOG(3,(THIS_FILE, "   Error: got %d byte(s) for bare CRLF #%d "
+                                 "(expected none)", (int)len, i+1));
+            ret = -251;
+            goto on_return;
+        }
     }
 
-    /* Phase 6-7: fragmentation on an odd boundary ("\r" then "\n\r\n"). */
+    /* Fragmentation on an odd boundary is dropped the same way. */
     status = ka_send_raw(sock, ping, 1);                /* "\r" */
     if (status != PJ_SUCCESS) {
         app_perror("   Error: unable to send ping fragment", status);
         ret = -260;
         goto on_return;
     }
-    len = ka_recv_timeout(sock, buf, sizeof(buf), NO_PONG_WAIT_MSEC);
-    if (len != 0) {
-        PJ_LOG(3,(THIS_FILE, "   Error: got %d byte(s) for a 1-byte ping "
-                             "fragment (expected none)", (int)len));
-        ret = -261;
-        goto on_return;
-    }
     status = ka_send_raw(sock, ping + 1, 3);            /* "\n\r\n" */
     if (status != PJ_SUCCESS) {
         app_perror("   Error: unable to send ping fragment", status);
+        ret = -261;
+        goto on_return;
+    }
+    len = ka_recv_timeout(sock, buf, sizeof(buf), NO_PONG_WAIT_MSEC);
+    if (len != 0) {
+        PJ_LOG(3,(THIS_FILE, "   Error: got %d byte(s) for a ping fragmented "
+                             "on an odd boundary (expected none)", (int)len));
         ret = -262;
+        goto on_return;
+    }
+
+    /* Phase 5: none of the above left a residue - a genuine ping is still
+     * answered, exactly once.
+     */
+    status = ka_send_raw(sock, ping, sizeof(ping));
+    if (status != PJ_SUCCESS) {
+        app_perror("   Error: unable to send keep-alive ping", status);
+        ret = -270;
         goto on_return;
     }
     len = ka_recv_timeout(sock, buf, sizeof(buf), PONG_WAIT_MSEC);
     if (len != 2 || buf[0] != '\r' || buf[1] != '\n') {
-        PJ_LOG(3,(THIS_FILE, "   Error: expected a CRLF pong for an odd-boundary "
-                             "fragmented ping, got %d byte(s)", (int)len));
-        ret = -263;
+        PJ_LOG(3,(THIS_FILE, "   Error: expected a CRLF pong after incomplete "
+                             "pings, got %d byte(s)", (int)len));
+        ret = -271;
+        goto on_return;
+    }
+    len = ka_recv_timeout(sock, buf, sizeof(buf), NO_PONG_WAIT_MSEC);
+    if (len != 0) {
+        PJ_LOG(3,(THIS_FILE, "   Error: got %d extra byte(s) after the pong "
+                             "(expected none)", (int)len));
+        ret = -272;
         goto on_return;
     }
 
