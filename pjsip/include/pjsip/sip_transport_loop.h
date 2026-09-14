@@ -44,6 +44,10 @@ PJ_BEGIN_DECL
 /**
  * Create and start datagram loop transport.
  *
+ * The transport is returned unreferenced, so it will be destroyed by the
+ * idle timer once the last user releases it. Callers that keep the pointer
+ * must call #pjsip_transport_add_ref() to hold it.
+ *
  * @param endpt         The endpoint instance.
  * @param transport     Pointer to receive the transport instance.
  *
