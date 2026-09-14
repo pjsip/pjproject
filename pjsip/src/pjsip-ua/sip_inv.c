@@ -2671,7 +2671,10 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
      *
      * See also tickets #657, #1644, #1764, and #2123 for more info.
      */
-    if (tsx_inv_data->sdp_done) {
+        if (tsx_inv_data->sdp_done &&
+                !(tsx->role == PJSIP_ROLE_UAC &&
+                    !tsx_inv_data->has_sdp &&
+                    rdata->msg_info.msg->line.status.code/100 == 2)) {
         pj_str_t res_tag;
         int st_code;
 
@@ -3116,6 +3119,56 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(   pjsip_inv_session *inv,
     /* For non-2xx final response, strip message body */
     if (st_code >= 300) {
         last_res->msg->body = NULL;
+    }
+
+    /* An asynchronous confirmed UAS re-INVITE without an SDP offer is
+     * answered with a new local offer in the 2xx response. */
+    if (st_code/100 == 2 && inv->state == PJSIP_INV_STATE_CONFIRMED &&
+        inv->invite_tsx && inv->neg &&
+        pjmedia_sdp_neg_get_state(inv->neg) == PJMEDIA_SDP_NEG_STATE_DONE)
+    {
+        struct tsx_inv_data *tsx_inv_data;
+        pjmedia_sdp_session *offer = (pjmedia_sdp_session*)local_sdp;
+        const pjmedia_sdp_session *local_offer = NULL;
+
+        tsx_inv_data = (struct tsx_inv_data*)
+                       inv->invite_tsx->mod_data[mod_inv.mod.id];
+        if (!tsx_inv_data) {
+            tsx_inv_data = PJ_POOL_ZALLOC_T(inv->invite_tsx->pool,
+                                            struct tsx_inv_data);
+            tsx_inv_data->inv = inv;
+            tsx_inv_data->has_sdp = PJ_FALSE;
+            inv->invite_tsx->mod_data[mod_inv.mod.id] = tsx_inv_data;
+        }
+        if (tsx_inv_data && !tsx_inv_data->has_sdp) {
+            if (!offer && mod_inv.cb.on_create_offer)
+                (*mod_inv.cb.on_create_offer)(inv, &offer);
+
+            if (offer) {
+                status = pjmedia_sdp_neg_modify_local_offer2(
+                            inv->pool_prov, inv->neg,
+                            inv->sdp_neg_flags, offer);
+            } else {
+                status = pjmedia_sdp_neg_send_local_offer(
+                            inv->pool_prov, inv->neg, &local_offer);
+            }
+
+            if (status == PJ_SUCCESS && !local_offer)
+                status = pjmedia_sdp_neg_get_neg_local(inv->neg, &local_offer);
+            if (status == PJ_SUCCESS && local_offer)
+                last_res->msg->body = create_sdp_body(last_res->pool, local_offer);
+            else if (status == PJ_SUCCESS)
+                status = PJMEDIA_SDPNEG_EINSTATE;
+
+            if (status != PJ_SUCCESS) {
+                pjsip_tx_data_dec_ref(last_res);
+                pjsip_tx_data_dec_ref(last_res);
+                goto on_return;
+            }
+
+            /* local_sdp has already been installed as the offer above. */
+            local_sdp = NULL;
+        }
     }
 
     /* Process SDP in answer */
