@@ -443,7 +443,7 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_USE_CLI, OPT_CLI_TELNET_PORT, OPT_DISABLE_CLI_CONSOLE,
            OPT_SERVER_AFFINITY
 #if !PJSUA_MEDIA_HAS_PJMEDIA
-           , OPT_CUSTOM_SDP
+           , OPT_CUSTOM_SDP, OPT_DUMMY_CODECS
 #endif
     };
     struct pj_getopt_option long_options[] = {
@@ -608,6 +608,7 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "server-affinity", 2, 0, OPT_SERVER_AFFINITY},
 #if !PJSUA_MEDIA_HAS_PJMEDIA
         { "custom-sdp",     1, 0, OPT_CUSTOM_SDP},
+        { "dummy-codecs", 0, 0, OPT_DUMMY_CODECS},
 #endif
         { NULL, 0, 0, 0}
     };
@@ -1728,6 +1729,9 @@ static pj_status_t parse_args(int argc, char *argv[],
             cfg->custom_sdp.slen = (pj_ssize_t)(dst - cfg->custom_sdp.ptr);
             break;
         }
+        case OPT_DUMMY_CODECS:
+            cfg->dummy_codecs = PJ_TRUE;
+            break;
 #endif /* !PJSUA_MEDIA_HAS_PJMEDIA */
 
         default:

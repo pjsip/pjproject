@@ -834,6 +834,18 @@ struct OnCallSdpCreatedParam
 };
 
 /**
+ * This structure contains parameters for Call::onCallSendAck() callback.
+ */
+struct OnCallSendAckParam
+{
+    /**
+     * The 2xx response for INVITE that triggered the need to send an ACK
+     * request.
+     */
+    SipRxData rdata;
+};
+
+/**
  * This structure contains parameters for Call::onStreamPreCreate()
  * callback.
  */
@@ -1743,6 +1755,24 @@ public:
     void hangup(const CallOpParam &prm) PJSUA2_THROW(Error);
     
     /**
+     * Create and send an ACK request for the 2xx response, optionally with
+     * an SDP answer \a sdp attached to it. Application would normally call
+     * this from within onCallSendAck(), to manually take over the ACK
+     * transmission, e.g. to attach an SDP answer to the ACK for a late
+     * SDP offer received in the 2xx response.
+     *
+     * @param cseq      CSeq of the 2xx response that triggered the need to
+     *                  send an ACK request; normally this is the CSeq of
+     *                  the \a rdata received in the onCallSendAck()
+     *                  callback.
+     * @param sdp       Optional SDP answer to be attached to the ACK
+     *                  request. If its wholeSdp is empty, no SDP body
+     *                  will be attached.
+     */
+    void sendAck(int cseq, const SdpSession &sdp = SdpSession())
+                PJSUA2_THROW(Error);
+
+    /**
      * Put the specified call on hold. This will send re-INVITE with the
      * appropriate SDP to inform remote that the call is being put on hold.
      * The final status of the request itself will be reported on the
@@ -2102,6 +2132,20 @@ public:
      */
     virtual void onCallSdpCreated(OnCallSdpCreatedParam &prm)
     { PJ_UNUSED_ARG(prm); }
+
+    /**
+     * Notify application when the framework needs to send an ACK request
+     * after it receives an incoming 2xx response for INVITE (e.g. when the
+     * 2xx response carries a late SDP offer). The default implementation
+     * simply sends the ACK without any SDP answer, using sendAck().
+     * Application can override this callback to attach an SDP answer to
+     * the ACK (e.g. for a late offer scenario), or to delay sending the
+     * ACK, by calling sendAck() itself.
+     *
+     * @param prm       Callback parameter.
+     */
+    virtual void onCallSendAck(OnCallSendAckParam &prm)
+    { sendAck(static_cast<pjsip_rx_data*>(prm.rdata.pjRxData)->msg_info.cseq->cseq); }
 
     /**
      * Notify application when an audio media session is about to be created
