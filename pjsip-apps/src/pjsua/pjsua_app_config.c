@@ -466,7 +466,8 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_USE_CLI, OPT_CLI_TELNET_PORT, OPT_DISABLE_CLI_CONSOLE,
            OPT_SERVER_AFFINITY, OPT_SERVER_FAILOVER, OPT_RESOLVER_FALLBACK
 #if !PJSUA_MEDIA_HAS_PJMEDIA
-           , OPT_CUSTOM_SDP, OPT_SDP_PASSTHROUGH, OPT_ACC_MEDIA_APP_MANAGED
+           , OPT_CUSTOM_SDP, OPT_SDP_PASSTHROUGH, OPT_ACC_MEDIA_APP_MANAGED,
+           OPT_DUMMY_CODECS
 #endif
     };
     struct pj_getopt_option long_options[] = {
@@ -639,6 +640,7 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "acc-media-app-managed", 0, 0, OPT_ACC_MEDIA_APP_MANAGED},
         { "custom-sdp",     1, 0, OPT_CUSTOM_SDP},
         { "sdp-passthrough", 0, 0, OPT_SDP_PASSTHROUGH},
+        { "dummy-codecs", 0, 0, OPT_DUMMY_CODECS},
 #endif
         { NULL, 0, 0, 0}
     };
@@ -1811,6 +1813,9 @@ static pj_status_t parse_args(int argc, char *argv[],
             cfg->custom_sdp.slen = (pj_ssize_t)(dst - cfg->custom_sdp.ptr);
             break;
         }
+        case OPT_DUMMY_CODECS:
+            cfg->dummy_codecs = PJ_TRUE;
+            break;
 #endif /* !PJSUA_MEDIA_HAS_PJMEDIA */
 
         default:

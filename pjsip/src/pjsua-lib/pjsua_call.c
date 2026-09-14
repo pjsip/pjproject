@@ -124,6 +124,14 @@ static pj_bool_t pjsua_call_on_uac_tsx_terminate_session(
                                             pjsip_transaction *tsx,
                                             pjsip_event *e);
 
+/*
+ * This callback is called by the invite session framework when it needs to
+ * send an ACK request for the 2xx response of INVITE, and the application
+ * has asked to handle the ACK transmission manually.
+ */
+static void pjsua_call_on_send_ack(pjsip_inv_session *inv,
+                                   pjsip_rx_data *rdata);
+
 #if PJSUA_HAS_SIPREC
 /*
  * SIPREC metadata verification handler.
@@ -273,6 +281,9 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     inv_cb.on_tsx_state_changed = &pjsua_call_on_tsx_state_changed;
     inv_cb.on_redirected = &pjsua_call_on_redirected;
     inv_cb.on_rx_reinvite = &pjsua_call_on_rx_reinvite;
+    if (pjsua_var.ua_cfg.cb.on_call_send_ack) {
+        inv_cb.on_send_ack = &pjsua_call_on_send_ack;
+    }
     if (pjsua_var.ua_cfg.cb.on_call_tsx_terminate_session) {
         inv_cb.on_uac_tsx_terminate_session =
                                     &pjsua_call_on_uac_tsx_terminate_session;
@@ -3400,7 +3411,9 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
      * Or if initial answer is not sent yet, we will answer the call after
      * initial answer is sent (see #1923).
      */
-    if (call->med_ch_cb || !call->inv->last_answer) {
+    if (call->med_ch_cb ||
+        (call->inv->state < PJSIP_INV_STATE_CONFIRMED &&
+         !call->inv->last_answer)) {
         struct call_answer *answer;
 
         PJ_LOG(4,(THIS_FILE, "Pending answering call %d upon completion "
@@ -3553,6 +3566,56 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
         pjsip_dlg_dec_lock(dlg);
     }
 
+    return status;
+}
+
+
+/*
+ * Create and send an ACK request for the 2xx response, optionally with an
+ * SDP answer \a sdp attached to it.
+ */
+PJ_DEF(pj_status_t) pjsua_call_send_ack(pjsua_call_id call_id,
+                                        int cseq,
+                                        const pjmedia_sdp_session *sdp)
+{
+    pjsua_call *call;
+    pjsip_dialog *dlg = NULL;
+    pjsip_tx_data *tdata;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
+                     PJ_EINVAL);
+
+    PJ_LOG(4,(THIS_FILE, "Sending ACK for call %d", call_id));
+    pj_log_push_indent();
+
+    status = acquire_call("pjsua_call_send_ack()", call_id, &call, &dlg);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    if (sdp) {
+        status = pjsip_inv_set_sdp_answer(call->inv, sdp);
+        if (status != PJ_SUCCESS) {
+            pjsua_perror(THIS_FILE, "Unable to set SDP answer for ACK",
+                        status);
+            goto on_return;
+        }
+    }
+
+    status = pjsip_inv_create_ack(call->inv, cseq, &tdata);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE, "Unable to create ACK", status);
+        goto on_return;
+    }
+
+    status = pjsip_inv_send_msg(call->inv, tdata);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE, "Unable to send ACK", status);
+    }
+
+on_return:
+    if (dlg) pjsip_dlg_dec_lock(dlg);
+    pj_log_pop_indent();
     return status;
 }
 
@@ -8070,6 +8133,31 @@ static pj_bool_t pjsua_call_on_uac_tsx_terminate_session(
 
     return (*pjsua_var.ua_cfg.cb.on_call_tsx_terminate_session)(call->index,
                                                                 tsx, e);
+}
+
+/*
+ * This callback is called by the invite session framework when it needs to
+ * send an ACK request for the 2xx response of INVITE, and the application
+ * has asked to handle the ACK transmission manually (by implementing
+ * on_call_send_ack()).
+ */
+static void pjsua_call_on_send_ack(pjsip_inv_session *inv,
+                                   pjsip_rx_data *rdata)
+{
+    pjsua_call *call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+
+    if (!call)
+        return;
+
+    pj_log_push_indent();
+
+    if (pjsua_var.ua_cfg.cb.on_call_send_ack) {
+        (*pjsua_var.ua_cfg.cb.on_call_send_ack)(call->index, rdata);
+    } else {
+        pjsua_call_send_ack(call->index, rdata->msg_info.cseq->cseq, NULL);
+    }
+
+    pj_log_pop_indent();
 }
 
 #if defined(PJSUA_MEDIA_HAS_PJMEDIA) && PJSUA_MEDIA_HAS_PJMEDIA != 0
