@@ -292,6 +292,12 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
         if (status != PJ_SUCCESS)
             return 0;
 
+        /* Hold a reference for the lifetime of the process, otherwise the
+         * transport is destroyed by the idle timer once the last transaction
+         * using it is gone, leaving loop_transport dangling.
+         */
+        pjsip_transport_add_ref(loop_transport);
+
         tsx_user.name = pj_str("tsx-user");
         tsx_user.id = -1;
         tsx_user.priority = PJSIP_MOD_PRIORITY_APPLICATION;

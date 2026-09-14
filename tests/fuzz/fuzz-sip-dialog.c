@@ -223,6 +223,12 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
     if (status != PJ_SUCCESS)
         return 1;
 
+    /* Hold a reference for the lifetime of the process, otherwise the
+     * transport is destroyed by the idle timer once the last transaction
+     * using it is gone, leaving loop_transport dangling.
+     */
+    pjsip_transport_add_ref(loop_transport);
+
     /* Register dialog test module */
     pj_bzero(&dialog_test_mod, sizeof(dialog_test_mod));
     dialog_test_mod.name = pj_str("dialog-test-mod");
