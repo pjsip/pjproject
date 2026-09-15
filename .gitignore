@@ -98,3 +98,6 @@ getversion.mak
 configure.out
 */Platforms/iOS/pjsua2/*
 */Platforms/iOS/lib/*
+
+# Apple XCFramework distribution build output
+/out/

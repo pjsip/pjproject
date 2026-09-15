@@ -1,0 +1,3 @@
+#ifndef __PJSIP_LINKER_SETTINGS_H__
+#define __PJSIP_LINKER_SETTINGS_H__
+#endif

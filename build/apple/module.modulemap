@@ -1,0 +1,4 @@
+module PJSIP {
+    header "PJSIPUmbrella.h"
+    export *
+}
