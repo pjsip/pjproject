@@ -146,6 +146,7 @@ tier1_slice() {
             -Wno-macro-redefined \
             -DPJSIP_MAX_MODULE=9999 -DPJSIP_MAX_URL_SIZE=9999 \
             -DPJMEDIA_MAX_SDP_FMT=9999 -DPJ_MAX_OBJ_NAME=9999 \
+            -DPJMEDIA_HAS_RTCP_XR=9999 \
             "$SELF_DIR/tier1/abi_override.c" 2>"$w/abi.log"; then
         pass "$label  consumer -D cannot move the ABI"
     else

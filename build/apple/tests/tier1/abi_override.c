@@ -24,4 +24,11 @@
 #  error "a consumer -D changed PJ_MAX_OBJ_NAME"
 #endif
 
+/* Not an array dimension: this one adds members to pjmedia_rtcp_session, so
+ * it is reachable only by pinning the macros pjproject declares overridable. */
+#include <pjmedia/rtcp.h>
+#if PJMEDIA_HAS_RTCP_XR == 9999
+#  error "a consumer -D changed PJMEDIA_HAS_RTCP_XR: pjmedia_rtcp_session differs"
+#endif
+
 int main(void) { return 0; }

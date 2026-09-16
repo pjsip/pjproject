@@ -62,6 +62,7 @@ OPUS_PREFIX=${OPUS_PREFIX:-}
 NO_OPUS=${NO_OPUS:-}
 CODESIGN_ID=${CODESIGN_ID:-}
 SITE_EXISTED=
+PARTIAL_BUILD=
 JOBS=${JOBS:-$(sysctl -n hw.ncpu)}
 RELEASE_BASE=${RELEASE_BASE:-https://github.com/pjsip/pjproject/releases/download}
 
@@ -94,6 +95,18 @@ CONFIGURE_OPTS=(
 KEEP_SYMBOLS='^_pj|^_PJ|^__Z[A-Za-z]*2pj|^__Z[A-Za-z]*St[0-9]|^__ZSt'
 
 die() { echo "error: $*" >&2; exit 1; }
+
+# Below 14.0 clang records 14.0 in simulator objects regardless, so a lower
+# value would only make the generated manifests advertise compatibility the
+# artifact does not have.
+case $IOS_DEPLOYMENT_TARGET in
+[0-9]*)
+    if [ "${IOS_DEPLOYMENT_TARGET%%.*}" -lt 14 ]; then
+        die "IOS_DEPLOYMENT_TARGET=$IOS_DEPLOYMENT_TARGET is below the 14.0 floor that the current Xcode SDK enforces for the simulator"
+    fi
+    ;;
+*)  die "IOS_DEPLOYMENT_TARGET must be a version number" ;;
+esac
 
 slice_archs() {
     case $1 in
@@ -313,39 +326,77 @@ cflags_macros() {
 # link error. These keep their header defaults, so freezing them changes
 # nothing except that a conflicting consumer -D is now overridden rather than
 # silently obeyed.
+# Macros that decide public structure layout. Two sources, unioned:
+# anything pjproject itself declares overridable with the #ifndef/#define
+# idiom (which is precisely the set a consumer might try to set, and includes
+# switches like PJMEDIA_HAS_RTCP_XR that add conditional struct members), and
+# anything used as an array dimension in a public header. Both keep their
+# built values, so pinning them changes nothing except that a conflicting
+# consumer -D is overridden rather than silently obeyed.
 abi_macros() {
     local hdr=$1 sdk=$2 target=$3
     local probe=$STAGE/abi-probe.c dm=$STAGE/abi-macros.txt
 
     echo '#include <pjsua.h>' > "$probe"
-    xcrun -sdk "$sdk" clang -E -dM -target "$target" -I"$hdr" "$probe" \
-        > "$dm" 2>/dev/null || return 0
+    # Fatal on purpose: an empty set here would leave the layout macros
+    # unfrozen while cflags_macros still produced output, so the non-empty
+    # check downstream would pass and ship unpinned headers.
+    xcrun -sdk "$sdk" clang -E -dM -target "$target" -I"$hdr" "$probe" > "$dm" \
+        || die "cannot preprocess the staged headers for $target"
 
-    find "$hdr" \( -name '*.h' -o -name '*.hpp' \) -print0 \
-        | xargs -0 grep -hoE '\[[A-Z][A-Z0-9_]{3,}\]' 2>/dev/null \
-        | tr -d '[]' | sort -u \
-        | python3 -c '
-import re, sys
-defs = {}
-for line in open(sys.argv[1]):
+    python3 - "$dm" "$hdr" <<'PYEOF'
+import os, re, sys
+
+macros, dm, hdr = {}, sys.argv[1], sys.argv[2]
+function_like = set()
+for line in open(dm):
+    m = re.match(r"#define ([A-Z][A-Z0-9_]*)\(", line)
+    if m:
+        function_like.add(m.group(1))
+        continue
     m = re.match(r"#define ([A-Z][A-Z0-9_]*) (.*)", line.rstrip("\n"))
     if m:
-        defs[m.group(1)] = m.group(2)
-wanted = [n.strip() for n in sys.stdin if n.strip() in defs]
-# A frozen value may name another macro; freeze those too, or the consumer can
-# still change the result by overriding the one we left alone.
-seen, queue = set(), list(wanted)
+        macros[m.group(1)] = m.group(2)
+
+wanted = set()
+for root, _, files in os.walk(hdr):
+    for name in files:
+        if not name.endswith((".h", ".hpp")):
+            continue
+        text = open(os.path.join(root, name), errors="ignore").read()
+        # declared overridable by the project itself
+        for n in re.findall(r"^#\s*ifndef\s+(PJ[A-Z0-9_]*)\s*$", text, re.M):
+            if re.search(r"^#\s*define\s+%s\b" % re.escape(n), text, re.M):
+                wanted.add(n)
+        # sizes a public structure
+        wanted.update(re.findall(r"\[([A-Z][A-Z0-9_]{3,})\]", text))
+
+# A pinned value may name another macro; pin those too, or the result can
+# still be changed by overriding the one left alone.
+seen, queue = set(), [n for n in wanted if n in macros]
 while queue:
     name = queue.pop()
     if name in seen:
         continue
     seen.add(name)
-    for ref in re.findall(r"[A-Z][A-Z0-9_]{3,}", defs[name]):
-        if ref in defs and ref not in seen:
+    for ref in re.findall(r"[A-Z][A-Z0-9_]{3,}", macros[name]):
+        if ref in macros and ref not in seen:
             queue.append(ref)
-for name in sorted(seen):
-    print("%s\t%s" % (name, defs[name]))
-' "$dm"
+
+# A body that invokes a function-like macro cannot be pinned: pre-defining the
+# name skips the #ifndef block that also defines its helper, leaving the body
+# calling something undefined. Such macros build strings or read runtime
+# config and never decide a layout. sizeof() is not a macro call.
+def pinnable(body):
+    return not re.search(r"\b(?!sizeof\b)[A-Za-z_]\w*\s*\(", body)
+
+out = [n for n in sorted(seen)
+       if n not in function_like and macros[n].strip() and pinnable(macros[n])]
+if not out:
+    sys.exit("no layout macros found in the staged headers")
+for name in out:
+    print("%s\t%s" % (name, macros[name]))
+PYEOF
 }
 
 # Writes the collected macros into the shipped config_site.h at its marker.
@@ -354,8 +405,7 @@ freeze_macros() {
 
     [ -s "$macros" ] || die "no macros collected to freeze into $site"
     grep -q "appends the frozen build macros" "$site" \
-        || die "no freeze marker in $site: the shipped config_site.h would not
-                carry the build's configuration"
+        || die "no freeze marker in $site: the shipped config_site.h would not carry the build's configuration"
 
     awk -F'\t' '
         NR == FNR { name[FNR] = $1; value[FNR] = $2; n = FNR; next }
@@ -565,7 +615,13 @@ package() {
     CHECKSUM=$(shasum -a 256 "$DIST/$NAME.xcframework.zip" | cut -d' ' -f1)
 
     rm -rf "$DIST/spm"
-    if [ -n "$NO_OPUS" ]; then
+    if [ -n "$PARTIAL_BUILD" ]; then
+        # The manifests declare both platforms and one checksum for the whole
+        # artifact; a subset build would advertise slices that are not there.
+        rm -f "$DIST/Package.swift" "$DIST/$NAME.podspec"
+        echo "note: SLICES was a subset, so no manifests were generated;" \
+             "this artifact is for iteration, not release"
+    elif [ -n "$NO_OPUS" ]; then
         # The manifests describe a distribution that includes Opus, and the
         # verifier requires it. Emitting them for a NO_OPUS build would
         # publish metadata that does not match the artifact.
@@ -583,12 +639,16 @@ package() {
     echo "sha256:   $CHECKSUM"
     echo "release:  $RELEASE_URL"
     echo ""
-    echo "upload to the release:"
-    echo "  $DIST/$NAME.xcframework.zip"
-    echo "  $DIST/$NAME.podspec"
-    echo ""
-    echo "commit to the repo root BEFORE tagging $VERSION:"
-    echo "  cp $DIST/Package.swift $PJDIR/Package.swift"
+    if [ -f "$DIST/Package.swift" ]; then
+        echo "upload to the release:"
+        echo "  $DIST/$NAME.xcframework.zip"
+        echo "  $DIST/$NAME.podspec"
+        echo ""
+        echo "commit to the repo root BEFORE tagging $VERSION:"
+        echo "  cp $DIST/Package.swift $PJDIR/Package.swift"
+    else
+        echo "artifact only; not a release build"
+    fi
     if [ -z "$CODESIGN_ID" ]; then
         echo ""
         echo "note: not code signed (set CODESIGN_ID to sign)"
@@ -600,6 +660,13 @@ main() {
 
     command -v xcodebuild >/dev/null || die "xcodebuild not found"
     mkdir -p "$OUTDIR" "$STAGE" "$DIST"
+
+    for slice in ios-device ios-simulator macos; do
+        case " $SLICES " in
+        *" $slice "*) ;;
+        *) PARTIAL_BUILD=1 ;;
+        esac
+    done
 
     VERSION=${VERSION:-$(pj_version)}
     RELEASE_URL=${RELEASE_URL:-$RELEASE_BASE/$VERSION/$NAME.xcframework.zip}

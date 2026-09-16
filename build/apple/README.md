@@ -108,14 +108,17 @@ frozen into them:
   `PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES`, and `PJMEDIA_HAS_WEBRTC_AEC`,
   `PJMEDIA_HAS_LIBYUV` and `PJMEDIA_RESAMPLE_IMP` are all header-visible.
 - Every macro that decides the layout of a public structure is pinned to the
-  value the binary was built with. The set is found by scanning the shipped
-  headers for macros used as array dimensions — `PJSIP_MAX_MODULE`,
-  `PJSIP_MAX_URL_SIZE`, `PJMEDIA_MAX_SDP_FMT` and around sixty more — plus any
-  macro those values refer to. These keep their header defaults, so pinning
-  them changes nothing except that a consumer's conflicting `-D` is now
-  overridden rather than silently obeyed. Without it, an application could
-  define one on its own command line and compile against structures of a
-  different size than the library contains.
+  value the binary was built with. Two sources are unioned: everything
+  pjproject itself declares overridable with the `#ifndef`/`#define` idiom —
+  which is exactly the set a consumer might try to set, and includes switches
+  like `PJMEDIA_HAS_RTCP_XR` that add *conditional members* to a public struct
+  — and everything used as an array dimension, plus the transitive closure over
+  macros those values refer to. That comes to roughly six hundred macros per
+  slice. They keep their built values, so pinning them changes nothing except
+  that a consumer's conflicting `-D` is now overridden rather than silently
+  obeyed. Without it an application could define one on its own command line
+  and compile against structures of a different shape than the library
+  contains.
 
 These values differ per platform — iOS gets the OpenGL ES renderer, macOS does
 not — so they are frozen per slice, not once.
@@ -185,8 +188,13 @@ privacy manifest, and are zipped and checksummed.
 | `JOBS` | CPU count | parallel compile jobs |
 
 A partial `SLICES` run still produces a valid XCFramework with fewer slices,
-which is useful while iterating (`SLICES=macos` is about ten minutes) and never
-appropriate for a release.
+which is useful while iterating (`SLICES=macos` is about ten minutes). It does
+not generate manifests, since those declare both platforms and one checksum for
+the whole artifact and would advertise slices that are not present.
+
+`IOS_DEPLOYMENT_TARGET` below 14.0 is rejected outright: clang records 14.0 in
+simulator objects regardless, so a lower value would only make the manifests
+claim compatibility the binary does not have.
 
 Output:
 
