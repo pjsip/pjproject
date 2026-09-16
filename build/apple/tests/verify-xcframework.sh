@@ -53,6 +53,10 @@ done
 XCFRAMEWORK=${XCFRAMEWORK:-$PJDIR/out/dist/PJSIP.xcframework}
 TIERS=${TIERS:-"1 2 3"}
 
+# Must match KEEP_SYMBOLS in build-xcframework.sh: the C API, the pj namespace,
+# and std:: template instantiations. Anything else exported is a leak.
+KEEP_SYMBOLS='^_pj|^_PJ|^__Z[A-Za-z]*2pj|^__Z[A-Za-z]*St[0-9]|^__ZSt'
+
 die() { echo "error: $*" >&2; exit 1; }
 pass() { printf '  \033[32mok\033[0m   %s\n' "$*"; }
 fail() { printf '  \033[31mFAIL\033[0m %s\n' "$*"; FAILURES=$((FAILURES + 1)); }
@@ -138,6 +142,17 @@ tier1_slice() {
         sed 's/^/       /' "$w/module.log" | grep -m4 error || true
     fi
 
+    if xcrun -sdk "$sdk" clang -fsyntax-only -target "$target" -I"$hdr" \
+            -Wno-macro-redefined \
+            -DPJSIP_MAX_MODULE=9999 -DPJSIP_MAX_URL_SIZE=9999 \
+            -DPJMEDIA_MAX_SDP_FMT=9999 -DPJ_MAX_OBJ_NAME=9999 \
+            "$SELF_DIR/tier1/abi_override.c" 2>"$w/abi.log"; then
+        pass "$label  consumer -D cannot move the ABI"
+    else
+        fail "$label  consumer -D overrides the frozen layout macros"
+        sed 's/^/       /' "$w/abi.log" | grep -m3 error || true
+    fi
+
     xcrun -sdk "$sdk" clang -target "$target" -c \
         "$SELF_DIR/tier1/symbol_clash.c" -o "$w/clash.o" 2>/dev/null
 
@@ -157,7 +172,7 @@ tier1_slice() {
         | grep -v "non-external" \
         | grep -E '\) (external|weak external) ' \
         | awk '{print $NF}' \
-        | grep -vc '^_pj\|^_PJ\|^__Z' || true)
+        | grep -vcE "$KEEP_SYMBOLS" || true)
     if [ "$leaked" = "0" ]; then
         pass "$label  exports nothing outside the pj API"
     else

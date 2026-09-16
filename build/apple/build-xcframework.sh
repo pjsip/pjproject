@@ -61,6 +61,7 @@ MACOS_DEPLOYMENT_TARGET=${MACOS_DEPLOYMENT_TARGET:-11.0}
 OPUS_PREFIX=${OPUS_PREFIX:-}
 NO_OPUS=${NO_OPUS:-}
 CODESIGN_ID=${CODESIGN_ID:-}
+SITE_EXISTED=
 JOBS=${JOBS:-$(sysctl -n hw.ncpu)}
 RELEASE_BASE=${RELEASE_BASE:-https://github.com/pjsip/pjproject/releases/download}
 
@@ -76,6 +77,7 @@ CONFIGURE_OPTS=(
     --disable-darwin-ssl
     --disable-opencore-amr
     --disable-bcg729
+    --disable-g7221-codec
     --disable-silk
     --disable-lyra
     --disable-sdl
@@ -84,6 +86,12 @@ CONFIGURE_OPTS=(
     --disable-vpx
     --disable-libsamplerate
 )
+
+# Symbols that stay exported: the C API, the pj namespace including its
+# vtables and typeinfo, and std:: template instantiations, which are weak and
+# meant to be shared. Everything else is demoted, so a C++ library bundled
+# later cannot leak its symbols merely by being mangled.
+KEEP_SYMBOLS='^_pj|^_PJ|^__Z[A-Za-z]*2pj|^__Z[A-Za-z]*St[0-9]|^__ZSt'
 
 die() { echo "error: $*" >&2; exit 1; }
 
@@ -120,6 +128,16 @@ slice_min_version() {
     esac
 }
 
+slice_target() {
+    local slice=$1 arch=$2 min
+    min=$(slice_min_version "$slice")
+    case $slice in
+    ios-device)     echo "$arch-apple-ios$min" ;;
+    ios-simulator)  echo "$arch-apple-ios$min-simulator" ;;
+    macos)          echo "$arch-apple-macos$min" ;;
+    esac
+}
+
 arch_macro() {
     case $1 in
     arm64)  echo "__arm64__" ;;
@@ -128,9 +146,14 @@ arch_macro() {
     esac
 }
 
+# The checkout may or may not have had its own config_site.h. Either restore
+# it, or remove ours so that an ordinary source build afterwards is not
+# silently configured for the distribution.
 restore_site() {
-    if [ -f "$BACKUP" ]; then
-        mv -f "$BACKUP" "$SITE"
+    if [ -n "$SITE_EXISTED" ]; then
+        [ -f "$BACKUP" ] && mv -f "$BACKUP" "$SITE"
+    else
+        rm -f "$SITE"
     fi
 }
 
@@ -224,7 +247,7 @@ prelink_archive() {
         | grep -v undefined \
         | grep -E '\) (external|weak external) ' \
         | awk '{print $NF}' \
-        | grep -v '^_pj\|^_PJ\|^__Z' \
+        | grep -vE "$KEEP_SYMBOLS" \
         | sort -u > "$dest/hidden-symbols.txt"
     echo "    hiding $(wc -l < "$dest/hidden-symbols.txt" | tr -d ' ') non-API symbols"
 
@@ -272,7 +295,7 @@ freeze_autoconf() {
 # PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES, PJMEDIA_HAS_WEBRTC_AEC and
 # PJMEDIA_RESAMPLE_IMP among others), so a consumer that does not see the same
 # values compiles against a different view of the library than was built.
-build_macros() {
+cflags_macros() {
     local mk=$STAGE/cflags.mak
     {
         echo "include $PJDIR/build.mak"
@@ -280,37 +303,81 @@ build_macros() {
         echo "print:"
         printf '\t@echo $(CFLAGS)\n'
     } > "$mk"
-    make -s -f "$mk" print 2>/dev/null | tr ' ' '\n' | grep '^-DPJ' | sort -u
+    make -s -f "$mk" print 2>/dev/null | tr ' ' '\n' | grep '^-DPJ' | sort -u \
+        | sed 's/^-D//' | awk -F= '{ if (NF>1) { v=$2; for(i=3;i<=NF;i++) v=v"="$i; print $1"\t"v } else print $1"\t1" }'
 }
 
-# The values differ per platform, which is why they are frozen per slice.
-freeze_build_macros() {
-    local site=$1 flags=$2 f name val body
+# Macros that decide public structure layout. Anything used as an array
+# dimension in a public header is ABI visible: a consumer that overrides one
+# gets structures of a different size than the binary was built with, and no
+# link error. These keep their header defaults, so freezing them changes
+# nothing except that a conflicting consumer -D is now overridden rather than
+# silently obeyed.
+abi_macros() {
+    local hdr=$1 sdk=$2 target=$3
+    local probe=$STAGE/abi-probe.c dm=$STAGE/abi-macros.txt
 
-    [ -n "$flags" ] || die "no -DPJ* build macros found to freeze"
+    echo '#include <pjsua.h>' > "$probe"
+    xcrun -sdk "$sdk" clang -E -dM -target "$target" -I"$hdr" "$probe" \
+        > "$dm" 2>/dev/null || return 0
+
+    find "$hdr" \( -name '*.h' -o -name '*.hpp' \) -print0 \
+        | xargs -0 grep -hoE '\[[A-Z][A-Z0-9_]{3,}\]' 2>/dev/null \
+        | tr -d '[]' | sort -u \
+        | python3 -c '
+import re, sys
+defs = {}
+for line in open(sys.argv[1]):
+    m = re.match(r"#define ([A-Z][A-Z0-9_]*) (.*)", line.rstrip("\n"))
+    if m:
+        defs[m.group(1)] = m.group(2)
+wanted = [n.strip() for n in sys.stdin if n.strip() in defs]
+# A frozen value may name another macro; freeze those too, or the consumer can
+# still change the result by overriding the one we left alone.
+seen, queue = set(), list(wanted)
+while queue:
+    name = queue.pop()
+    if name in seen:
+        continue
+    seen.add(name)
+    for ref in re.findall(r"[A-Z][A-Z0-9_]{3,}", defs[name]):
+        if ref in defs and ref not in seen:
+            queue.append(ref)
+for name in sorted(seen):
+    print("%s\t%s" % (name, defs[name]))
+' "$dm"
+}
+
+# Writes the collected macros into the shipped config_site.h at its marker.
+freeze_macros() {
+    local site=$1 macros=$2
+
+    [ -s "$macros" ] || die "no macros collected to freeze into $site"
     grep -q "appends the frozen build macros" "$site" \
         || die "no freeze marker in $site: the shipped config_site.h would not
-                carry the build's video device settings"
-    body=""
-    for f in $flags; do
-        f=${f#-D}
-        name=${f%%=*}
-        val=${f#*=}
-        body="$body#undef  $name\n#define $name $val\n"
-    done
-    awk -v body="$body" '''
+                carry the build's configuration"
+
+    awk -F'\t' '
+        NR == FNR { name[FNR] = $1; value[FNR] = $2; n = FNR; next }
         /^\/\* build-xcframework\.sh appends the frozen build macros/ {
-            printf "/* Frozen by build-xcframework.sh from the build'\''s own CFLAGS. */\n"
-            printf body
+            print "/* Frozen by build-xcframework.sh from this build: the macros"
+            print " * it was compiled with, and every macro that decides the"
+            print " * layout of a public structure. Overriding any of these in a"
+            print " * consuming project does not change the binary, so they are"
+            print " * pinned here rather than left to the consumer. */"
+            for (i = 1; i <= n; i++) {
+                printf "#undef  %s\n", name[i]
+                printf "#define %s %s\n", name[i], value[i]
+            }
             next
         }
         { print }
-    ''' "$site" > "$site.tmp"
+    ' "$macros" "$site" > "$site.tmp"
     mv -f "$site.tmp" "$site"
 }
 
 stage_headers() {
-    local hdr=$1 d
+    local hdr=$1 sdk=$2 target=$3 d
     rm -rf "$hdr"
     mkdir -p "$hdr"
     for d in pjlib pjlib-util pjnath pjmedia pjsip; do
@@ -319,7 +386,10 @@ stage_headers() {
     cp "$SELF_DIR/PJSIPUmbrella.h" "$hdr/PJSIPUmbrella.h"
     cp "$SELF_DIR/module.modulemap" "$hdr/module.modulemap"
     freeze_autoconf "$hdr/pj/config.h"
-    freeze_build_macros "$hdr/pj/config_site.h" "$(build_macros)"
+
+    { cflags_macros; abi_macros "$hdr" "$sdk" "$target"; } \
+        | sort -u -t"$(printf '\t')" -k1,1 > "$STAGE/frozen-macros.txt"
+    freeze_macros "$hdr/pj/config_site.h" "$STAGE/frozen-macros.txt"
 }
 
 build_arch() {
@@ -382,7 +452,7 @@ build_arch() {
         libs="$libs $opus_prefix/lib/libopus.a"
     fi
     prelink_archive "$dest" "$slice" "$arch" $libs
-    stage_headers "$dest/Headers"
+    stage_headers "$dest/Headers" "$(slice_sdk "$slice")" "$(slice_target "$slice" "$arch")"
 }
 
 # Headers autoconf generates per architecture. m_auto.h differs in PJ_M_NAME
@@ -461,8 +531,8 @@ render() {
         -e "s|@PODSPEC_URL@|$PODSPEC_URL|g" \
         -e "s|@CHECKSUM@|$CHECKSUM|g" \
         -e "s|@VERSION@|$VERSION|g" \
-        -e "s|@IOS_MIN@|.v${IOS_DEPLOYMENT_TARGET%%.*}|g" \
-        -e "s|@MACOS_MIN@|.v${MACOS_DEPLOYMENT_TARGET%%.*}|g" \
+        -e "s|@IOS_MIN@|\"$IOS_DEPLOYMENT_TARGET\"|g" \
+        -e "s|@MACOS_MIN@|\"$MACOS_DEPLOYMENT_TARGET\"|g" \
         -e "s|@IOS_MIN_RAW@|$IOS_DEPLOYMENT_TARGET|g" \
         -e "s|@MACOS_MIN_RAW@|$MACOS_DEPLOYMENT_TARGET|g" \
         "$1" > "$2"
@@ -495,8 +565,17 @@ package() {
     CHECKSUM=$(shasum -a 256 "$DIST/$NAME.xcframework.zip" | cut -d' ' -f1)
 
     rm -rf "$DIST/spm"
-    render "$SELF_DIR/Package.swift.in" "$DIST/Package.swift"
-    render "$SELF_DIR/PJSIP.podspec.in" "$DIST/$NAME.podspec"
+    if [ -n "$NO_OPUS" ]; then
+        # The manifests describe a distribution that includes Opus, and the
+        # verifier requires it. Emitting them for a NO_OPUS build would
+        # publish metadata that does not match the artifact.
+        rm -f "$DIST/Package.swift" "$DIST/$NAME.podspec"
+        echo "note: NO_OPUS is set, so no manifests were generated;" \
+             "this artifact is for iteration, not release"
+    else
+        render "$SELF_DIR/Package.swift.in" "$DIST/Package.swift"
+        render "$SELF_DIR/PJSIP.podspec.in" "$DIST/$NAME.podspec"
+    fi
 
     echo ""
     echo "version:  $VERSION"
@@ -526,10 +605,14 @@ main() {
     RELEASE_URL=${RELEASE_URL:-$RELEASE_BASE/$VERSION/$NAME.xcframework.zip}
     PODSPEC_URL=${PODSPEC_URL:-$RELEASE_BASE/$VERSION/$NAME.podspec}
 
-    trap restore_site EXIT
-    if [ -f "$SITE" ] && [ ! -f "$BACKUP" ]; then
+    # A backup left behind by an earlier interrupted run is stale: it would be
+    # restored over whatever the checkout has now.
+    rm -f "$BACKUP"
+    if [ -f "$SITE" ]; then
+        SITE_EXISTED=1
         cp "$SITE" "$BACKUP"
     fi
+    trap restore_site EXIT
     cp "$SELF_DIR/config_site.h" "$SITE"
 
     for slice in $SLICES; do

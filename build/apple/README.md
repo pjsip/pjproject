@@ -57,8 +57,11 @@ Excluded, for licensing rather than technical reasons:
 | G.722.1, SILK, Lyra | disabled at configure time |
 
 Disabling these in `config_site.h` alone is not enough — that only switches off
-PJMEDIA's wrapper while `third_party/` still builds and links the library. The
-configure flags are what keep the object code out of the archive.
+PJMEDIA's wrapper while `third_party/` still builds and links the library, so
+the object code ends up in the archive regardless. The configure flags are what
+keep it out. G.722.1 in particular has its wrapper off by default, which makes
+the omission easy to miss: `--disable-g7221-codec` is what actually keeps
+`libg7221codec` out.
 
 ### Video
 
@@ -104,6 +107,15 @@ frozen into them:
   `PJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL` drives
   `PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES`, and `PJMEDIA_HAS_WEBRTC_AEC`,
   `PJMEDIA_HAS_LIBYUV` and `PJMEDIA_RESAMPLE_IMP` are all header-visible.
+- Every macro that decides the layout of a public structure is pinned to the
+  value the binary was built with. The set is found by scanning the shipped
+  headers for macros used as array dimensions — `PJSIP_MAX_MODULE`,
+  `PJSIP_MAX_URL_SIZE`, `PJMEDIA_MAX_SDP_FMT` and around sixty more — plus any
+  macro those values refer to. These keep their header defaults, so pinning
+  them changes nothing except that a consumer's conflicting `-D` is now
+  overridden rather than silently obeyed. Without it, an application could
+  define one on its own command line and compile against structures of a
+  different size than the library contains.
 
 These values differ per platform — iOS gets the OpenGL ES renderer, macOS does
 not — so they are frozen per slice, not once.
@@ -123,12 +135,18 @@ and so on. libsrtp, libyuv and the WebRTC AEC are exactly what every WebRTC
 based SDK bundles, so an application linking this framework alongside one would
 fail on duplicate symbols.
 
-The deny list is computed, not written down, so a library added later cannot
-leak symbols by being forgotten. `-keep_private_externs` is deliberately not
-used: it would preserve the hidden symbols as private externs, which still
-collide. Debug info is stripped as well, because DWARF refers to object files by
-build-time paths that do not exist for any consumer and the linker warns once
-per missing file.
+Exported symbols are narrowed to the C API, the `pj` namespace (including its
+vtables and typeinfo, which consumers subclassing `pj::Account` need), and
+`std::` template instantiations, which are weak and meant to be shared.
+Everything else is demoted — including pjsua2's own global-namespace helper
+classes, and any C++ library bundled later, which would otherwise leak wholesale
+simply by being mangled. The deny list is computed, not written down, so a
+library added later cannot leak symbols by being forgotten.
+
+`-keep_private_externs` is deliberately not used: it would preserve the hidden
+symbols as private externs, which still collide. Debug info is stripped as well,
+because DWARF refers to object files by build-time paths that do not exist for
+any consumer and the linker warns once per missing file.
 
 ## Building
 
@@ -162,7 +180,7 @@ privacy manifest, and are zipped and checksummed.
 | `VERSION` | from `version.mak` | podspec version and the URLs in both manifests |
 | `RELEASE_BASE` | pjproject releases | base URL the manifests point at |
 | `OPUS_PREFIX` | unset | use a prebuilt Opus instead of building one |
-| `NO_OPUS` | unset | build without Opus |
+| `NO_OPUS` | unset | build without Opus; for iteration only, and no manifests are generated since they would not describe the artifact |
 | `OUTDIR` | `out/` | where staging and output go |
 | `JOBS` | CPU count | parallel compile jobs |
 
@@ -203,9 +221,9 @@ forgets to declare fails here rather than in someone else's project.
 1. **Headers, symbols and linking.** Per slice, compiled with no `-D` flags at
    all — which is itself the test that the build's macros were frozen into the
    headers. Asserts the configuration, compiles the Clang module and the public
-   headers, links the archive beside an object defining the same third-party
-   symbols a WebRTC SDK would, and confirms nothing outside the pj API is
-   exported.
+   headers, checks that a consumer `-D` cannot move the ABI, links the archive
+   beside an object defining the same third-party symbols a WebRTC SDK would,
+   and confirms nothing outside the pj API is exported.
 2. **A SwiftPM consumer that runs**, using the linker settings copied verbatim
    from the shipped manifest.
 3. **A real iOS app on a booted simulator.** The only tier that runs the

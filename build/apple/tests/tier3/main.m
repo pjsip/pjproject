@@ -131,12 +131,17 @@ static void run_checks(void)
 
     registered = try_register();
 
+    /* Tear down before claiming success: simctl does not surface an exit
+     * code, so the driver greps for the marker. Printing it first would let a
+     * teardown crash pass as a clean run. */
+    status = pjsua_destroy();
+    if (status != PJ_SUCCESS)
+        fail("pjsua_destroy", status);
+
     printf("VERIFY-OK ios pjsip=%s audio_devs=%u video_devs=%u register=%s\n",
            pj_get_version(), aud_devs, vid_devs,
            registered == 0 ? "ok" : "skipped");
     fflush(stdout);
-
-    pjsua_destroy();
     exit(0);
 }
 
