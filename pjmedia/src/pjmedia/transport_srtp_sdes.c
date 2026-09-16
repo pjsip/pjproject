@@ -147,6 +147,27 @@ static pj_status_t generate_crypto_attr_value(pj_pool_t *pool,
                           "(native err=%d)", err));
                 return PJMEDIA_ERRNO_FROM_LIBSRTP(1);
             }
+#elif defined(PJ_HAS_SSL_SOCK) && (PJ_HAS_SSL_SOCK != 0) && \
+      (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_MBEDTLS)
+            mbedtls_entropy_context entropy;
+            mbedtls_ctr_drbg_context ctr_drbg;
+            int err;
+
+            mbedtls_entropy_init(&entropy);
+            mbedtls_ctr_drbg_init(&ctr_drbg);
+            err = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func,
+                                        &entropy, NULL, 0);
+            if (err == 0) {
+                err = mbedtls_ctr_drbg_random(&ctr_drbg, (unsigned char*)key,
+                                        crypto_suites[cs_idx].cipher_key_len);
+            }
+            mbedtls_ctr_drbg_free(&ctr_drbg);
+            mbedtls_entropy_free(&entropy);
+            if (err != 0) {
+                PJ_LOG(4,(THIS_FILE, "Failed generating random key "
+                          "(native err=-0x%04X)", -err));
+                return PJMEDIA_ERRNO_FROM_LIBSRTP(1);
+            }
 #else
             PJ_LOG(3,(THIS_FILE, "Warning: simple random generator is used "
                                  "for generating SRTP key"));
