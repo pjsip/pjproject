@@ -107,9 +107,33 @@ endif()
 # after a CMake build too. CMake's own library names differ from the GNU ones
 # for a few targets, hence the mapping rather than a plain copy.
 if(IOS)
+  # On by default so the Xcode sample projects work straight after a build,
+  # which is the whole point of them. It writes into the source tree, so it
+  # turns itself off when that tree is not writable rather than failing an
+  # otherwise valid out-of-source build.
   option(PJ_IOS_SAMPLE_LIBS
     "Link the built libraries into the iOS sample app projects" ON
   )
+
+  if(PJ_IOS_SAMPLE_LIBS)
+    execute_process(
+      COMMAND "${CMAKE_COMMAND}" -E touch
+              "${PROJECT_SOURCE_DIR}/pjsip-apps/src/.pj_write_probe"
+      RESULT_VARIABLE _pj_src_writable
+      ERROR_QUIET
+    )
+    if(_pj_src_writable EQUAL 0)
+      file(REMOVE "${PROJECT_SOURCE_DIR}/pjsip-apps/src/.pj_write_probe")
+    else()
+      set(PJ_IOS_SAMPLE_LIBS OFF)
+      message(STATUS
+        "[!] the source tree is not writable, so the iOS sample projects will "
+        "not be given the built libraries. The libraries themselves are "
+        "unaffected."
+      )
+    endif()
+    unset(_pj_src_writable)
+  endif()
 endif()
 
 if(IOS AND PJ_IOS_SAMPLE_LIBS)
