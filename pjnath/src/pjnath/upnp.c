@@ -134,7 +134,7 @@ static const char * check_error_response(IXML_Document *doc)
         const char *error_desc = doc_get_elmt_value(doc, "errorDescription");
 
         PJ_LOG(3, (THIS_FILE, "Response error code: %s (%s)",
-                              error_code, error_desc));
+                              error_code, error_desc? error_desc: ""));
     }
 
     return error_code;
@@ -148,6 +148,9 @@ static const char *action_get_external_ip(struct igd *igd)
     IXML_Document *response = NULL;
     const char *public_ip = NULL;
     int upnp_err;
+    int af;
+    pj_in_addr dummy4;
+    pj_in6_addr dummy6;
     pj_status_t status;
 
     /* Create action XML. */
@@ -176,10 +179,31 @@ static const char *action_get_external_ip(struct igd *igd)
         goto on_error;
     }
     pj_strdup2_with_null(upnp_mgr.pool, &igd->public_ip, public_ip);
-    status = pj_sockaddr_parse(pj_AF_UNSPEC(), 0, &igd->public_ip,
-                               &igd->public_ip_addr);
+
+    /* Return the pool copy from here on. The value above points into the
+     * response doc, which on_error frees.
+     */
+    public_ip = NULL;
+
+    /* The IGD must report a numeric address. Do not resolve it: the text
+     * is attacker controlled and resolving it would issue a name lookup.
+     */
+    if (pj_inet_pton(pj_AF_INET(), &igd->public_ip, &dummy4) == PJ_SUCCESS) {
+        af = pj_AF_INET();
+    } else if (pj_inet_pton(pj_AF_INET6(), &igd->public_ip,
+                            &dummy6) == PJ_SUCCESS)
+    {
+        af = pj_AF_INET6();
+    } else {
+        PJ_LOG(3, (THIS_FILE, "IGD %s reported a non-numeric external IP",
+                              igd->dev_id.ptr));
+        goto on_error;
+    }
+
+    status = pj_sockaddr_init(af, &igd->public_ip_addr, &igd->public_ip, 0);
     if (status != PJ_SUCCESS)
         goto on_error;
+
     public_ip = igd->public_ip.ptr;
 
 on_error:
@@ -214,7 +238,8 @@ static void download_igd_xml(unsigned dev_idx)
 
     /* Check device type. */
     dev_type = doc_get_elmt_value(doc, "deviceType");
-    if (!dev_type) return;
+    if (!dev_type)
+        goto on_error;
     if (pj_ansi_strncmp(dev_type, UPNP_IGD_DEVICE,
                         pj_ansi_strlen(UPNP_IGD_DEVICE)) != 0)
     {
@@ -240,20 +265,20 @@ static void download_igd_xml(unsigned dev_idx)
         IXML_Node *service_type_node = ixmlNodeList_item(service_list, i);
         IXML_Node *service_node = ixmlNode_getParentNode(service_type_node);
         IXML_Element* service_element = (IXML_Element*) service_node;
+        const char *service_name;
         const char *service_type;
         pj_bool_t call_cb = PJ_FALSE;
 
         /* Check if parent node is "service". */
-        if (!service_node ||
-            (pj_ansi_strcmp(ixmlNode_getNodeName(service_node), "service")))
-        {
+        service_name = service_node? ixmlNode_getNodeName(service_node): NULL;
+        if (!service_name || pj_ansi_strcmp(service_name, "service"))
             continue;
-        }
-        
+
         /* We only want serviceType of WANIPConnection or WANPPPConnection. */
         service_type = get_node_value(service_type_node);
-        if (pj_ansi_strcmp(service_type, UPNP_WANIP_SERVICE) &&
-            pj_ansi_strcmp(service_type, UPNP_WANPPP_SERVICE))
+        if (!service_type ||
+            (pj_ansi_strcmp(service_type, UPNP_WANIP_SERVICE) &&
+             pj_ansi_strcmp(service_type, UPNP_WANPPP_SERVICE)))
         {
             continue;
         }
@@ -325,7 +350,7 @@ on_error:
 /* Add a newly discovered IGD. */
 static void add_device(const char *dev_id, const char *url)
 {
-    unsigned i;
+    unsigned i, dev_idx;
 
     pj_mutex_lock(upnp_mgr.mutex);
 
@@ -345,16 +370,17 @@ static void add_device(const char *dev_id, const char *url)
         }
     }
 
+    dev_idx = upnp_mgr.igd_cnt++;
     pj_strdup2_with_null(upnp_mgr.pool,
-                         &upnp_mgr.igd_devs[upnp_mgr.igd_cnt].dev_id, dev_id);
+                         &upnp_mgr.igd_devs[dev_idx].dev_id, dev_id);
     pj_strdup2_with_null(upnp_mgr.pool,
-                         &upnp_mgr.igd_devs[upnp_mgr.igd_cnt++].url, url);
+                         &upnp_mgr.igd_devs[dev_idx].url, url);
     pj_mutex_unlock(upnp_mgr.mutex);
 
     PJ_LOG(4, (THIS_FILE, "Discovered a new IGD %s, url: %s", dev_id, url));
 
     /* Download the IGD's XML doc. */
-    download_igd_xml(upnp_mgr.igd_cnt-1);
+    download_igd_xml(dev_idx);
 }
 
 /* Update online status of an IGD. */
