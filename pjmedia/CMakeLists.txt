@@ -185,6 +185,13 @@ cmake_dependent_option(PJMEDIA_WITH_VPX_CODEC
 )
 import_if_or_set(PJMEDIA_WITH_VPX_CODEC OFF VPX)
 
+# VideoToolbox H.264 codec
+cmake_dependent_option(PJMEDIA_WITH_VID_TOOLBOX_CODEC
+  "Enable VideoToolbox H.264 codec" ON
+  "PJMEDIA_WITH_VIDEO;APPLE" OFF
+)
+import_if_or_set(PJMEDIA_WITH_VID_TOOLBOX_CODEC OFF VideoToolbox)
+
 # OpenH264 codecs
 cmake_dependent_option(PJMEDIA_WITH_OPEN_H264_CODEC
   "Enable OpenH264 codecs support" ON
@@ -278,11 +285,19 @@ cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_SDL
 )
 import_if_or_set(PJMEDIA_WITH_VIDEODEV_SDL OFF SDL2)
 
+# Darwin (AVFoundation) capture backend
+cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_DARWIN
+  "Enable AVFoundation video capture backend" ON
+  "PJMEDIA_WITH_VIDEODEV;APPLE" OFF
+)
+import_if_or_set(PJMEDIA_WITH_VIDEODEV_DARWIN OFF AVFoundation)
+
 # Metal backend
 cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_METAL
   "Enable Metal video device backend" OFF
   "PJMEDIA_WITH_VIDEODEV;APPLE" OFF
 )
+import_if_or_set(PJMEDIA_WITH_VIDEODEV_METAL OFF Metal)
 
 # QT backend
 cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_QT
@@ -598,6 +613,7 @@ add_library(pjmedia-codec
   src/pjmedia-codec/opencore_amr.c
   src/pjmedia-codec/speex_codec.c
   src/pjmedia-codec/openh264.cpp
+  $<$<BOOL:${PJMEDIA_WITH_VID_TOOLBOX_CODEC}>:src/pjmedia-codec/vid_toolbox.m>
   src/pjmedia-codec/opus.c
   src/pjmedia-codec/silk.c
   src/pjmedia-codec/vpx_packetizer.c
@@ -684,6 +700,7 @@ block(SCOPE_FOR VARIABLES)
   # video codecs
   set(PJMEDIA_HAS_VPX_CODEC ${PJMEDIA_WITH_VPX_CODEC})
   set(PJMEDIA_HAS_OPENH264_CODEC ${PJMEDIA_WITH_OPEN_H264_CODEC})
+  set(PJMEDIA_HAS_VID_TOOLBOX_CODEC ${PJMEDIA_WITH_VID_TOOLBOX_CODEC})
 
   # write configured header
   configure_file(
@@ -729,6 +746,7 @@ target_link_libraries(pjmedia-codec
     # video codecs
     $<$<BOOL:${PJMEDIA_WITH_VPX_CODEC}>:VPX::VPX>
     $<$<BOOL:${PJMEDIA_WITH_OPEN_H264_CODEC}>:OpenH264::OpenH264>
+    $<$<BOOL:${PJMEDIA_WITH_VID_TOOLBOX_CODEC}>:VideoToolbox::VideoToolbox>
     $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVFORMAT}>:FFMPEG::avformat>
     $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVCODEC}>:FFMPEG::avcodec>
     $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVUTIL}>:FFMPEG::avutil>
@@ -826,6 +844,7 @@ add_library(pjmedia-videodev
   src/pjmedia-videodev/videodev.c
 
   $<$<BOOL:${IOS}>:src/pjmedia-videodev/ios_opengl_dev.m>
+  $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_DARWIN}>:src/pjmedia-videodev/darwin_dev.m>
   $<$<BOOL:${APPLE}>:src/pjmedia-videodev/sdl_dev_m.m>
   $<$<BOOL:${APPLE}>:src/pjmedia-videodev/metal_dev.m>
   $<$<BOOL:${APPLE}>:src/pjmedia-videodev/qt_dev.m>
@@ -861,6 +880,7 @@ target_compile_definitions(pjmedia-videodev
     PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES=$<BOOL:${PJMEDIA_WITH_VIDEODEV_OPENGL}>
     PJMEDIA_VIDEO_DEV_HAS_FFMPEG=$<BOOL:${PJMEDIA_WITH_VIDEODEV_FFMPEG}>
     PJMEDIA_VIDEO_DEV_HAS_SDL=$<BOOL:${PJMEDIA_WITH_VIDEODEV_SDL}>
+    PJMEDIA_VIDEO_DEV_HAS_DARWIN=$<BOOL:${PJMEDIA_WITH_VIDEODEV_DARWIN}>
     PJMEDIA_VIDEO_DEV_HAS_METAL=$<BOOL:${PJMEDIA_WITH_VIDEODEV_METAL}>
     PJMEDIA_VIDEO_DEV_HAS_QT=$<BOOL:${PJMEDIA_WITH_VIDEODEV_QT}>
     PJMEDIA_VIDEO_DEV_HAS_V4L2=$<BOOL:${PJMEDIA_WITH_VIDEODEV_V4L2}>
@@ -892,6 +912,8 @@ target_link_libraries(pjmedia-videodev
     $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_FFMPEG}>:FFMPEG::avdevice>
     $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_SDL}>:SDL2::SDL2>
     $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_V4L2}>:V4L2::V4L2>
+    $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_DARWIN}>:AVFoundation::AVFoundation>
+    $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_METAL}>:Metal::Metal>
     # TODO: add remaining APIs' dependencies
 
     # transitive deps

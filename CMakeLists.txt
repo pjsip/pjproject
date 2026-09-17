@@ -92,7 +92,13 @@ add_subdirectory(pjlib-util)
 add_subdirectory(pjnath)
 add_subdirectory(pjmedia)
 add_subdirectory(pjsip)
-add_subdirectory(pjsip-apps)
+# The sample applications are command line executables. iOS has no place to
+# run one, and CMake would make each a bundle needing a destination and a
+# signing identity, so the iOS build stops at the libraries -- which is what
+# an iOS consumer links into an app of their own anyway.
+if(NOT IOS)
+  add_subdirectory(pjsip-apps)
+endif()
 
 # ##############################################################################
 # Installation
@@ -112,8 +118,11 @@ set(install_targets
   pjsip-ua
   pjsua-lib
   pjsua2
-  pjsua
 )
+
+if(NOT IOS)
+  list(APPEND install_targets pjsua)
+endif()
 
 # set `VERSION` and `SO_VERSION`
 foreach(target IN LISTS install_targets)
@@ -244,6 +253,9 @@ _pj_collect_find_module(PJLIB_WITH_LIBUUID               UUID)
 _pj_collect_find_module(PJNATH_WITH_UPNP                 UPNP)
 _pj_collect_find_module(PJMEDIA_WITH_AUDIODEV_COREAUDIO   CoreAudio)
 _pj_collect_find_module(PJMEDIA_WITH_VIDEODEV_V4L2        V4L2)
+_pj_collect_find_module(PJMEDIA_WITH_VIDEODEV_DARWIN      AVFoundation)
+_pj_collect_find_module(PJMEDIA_WITH_VIDEODEV_METAL       Metal)
+_pj_collect_find_module(PJMEDIA_WITH_VID_TOOLBOX_CODEC    VideoToolbox)
 if(PJMEDIA_WITH_RESAMPLE STREQUAL "libsamplerate")
   _pj_collect_find_module(TRUE SampleRate)
 endif()
