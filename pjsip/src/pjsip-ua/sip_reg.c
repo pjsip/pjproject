@@ -992,12 +992,20 @@ static pj_uint32_t calculate_response_expiration(const pjsip_regc *regc,
     const pjsip_msg *msg = rdata->msg_info.msg;
     const pjsip_hdr *hdr;
 
-    /* Enumerate all Contact headers in the response */
+    /* Enumerate all Contact headers in the response. A "Contact: *" header
+     * carries no URI, and a wildcard Contact is not valid in a REGISTER
+     * response, so skip it rather than dereference it as an URI below.
+     */
     *contact_cnt = 0;
     for (hdr=msg->hdr.next; hdr!=&msg->hdr; hdr=hdr->next) {
         if (hdr->type == PJSIP_H_CONTACT && 
             *contact_cnt < max_contact) 
         {
+            const pjsip_contact_hdr *chdr = (const pjsip_contact_hdr*)hdr;
+
+            if (chdr->star || chdr->uri == NULL)
+                continue;
+
             contacts[*contact_cnt] = (pjsip_contact_hdr*)hdr;
             ++(*contact_cnt);
         }
