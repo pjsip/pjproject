@@ -211,8 +211,9 @@ static pj_test_stat essential_tests(int argc, char *argv[])
     }
 
     /* Now that the essential components have been tested, test the
-     * multithreaded unit-testing framework.
+     * multithreaded unit-testing framework. Needs threads, by definition.
      */
+#if PJ_HAS_THREADS
     if (argc==1) {
         PJ_LOG(3,(THIS_FILE, "Testing the unit-test test scheduling"));
         if (unittest_parallel_test()) {
@@ -226,6 +227,7 @@ static pj_test_stat essential_tests(int argc, char *argv[])
             return stat;
         }
     }
+#endif
 
     return stat;
 }

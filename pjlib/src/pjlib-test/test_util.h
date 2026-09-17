@@ -201,8 +201,10 @@ PJ_INLINE(pj_status_t) ut_run_tests(ut_app_t *ut_app, const char *title,
 
     pj_test_runner_param_default(&runner_prm);
     runner_prm.stop_on_error = ut_app->prm_stop_on_error;
+#if PJ_HAS_THREADS
     if (ut_app->prm_nthreads >= 0)
         runner_prm.nthreads = ut_app->prm_nthreads;
+#endif
     runner_prm.verbosity = ut_app->verbosity;
     status = pj_test_create_text_runner(ut_app->pool, &runner_prm, &runner);
     PJ_TEST_SUCCESS(status, "error creating text runner", return status);

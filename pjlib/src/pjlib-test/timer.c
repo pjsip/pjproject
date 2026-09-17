@@ -977,9 +977,14 @@ int timer_test()
     if (rc != 0)
         return rc;
 
+#if PJ_HAS_THREADS
     rc = timer_stress_test();
     if (rc != 0)
         return rc;
+#else
+    /* The stress test drives the timer heap from several threads. */
+    PJ_UNUSED_ARG(timer_stress_test);
+#endif
 
 #if WITH_BENCHMARK
     rc = timer_bench_test();

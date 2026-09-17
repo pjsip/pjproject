@@ -263,6 +263,41 @@ jobs:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
 
+  no-threads:
+    needs: [detect-changes]
+    if: github.event_name == 'push' || needs.detect-changes.outputs.pjlib_deps == 'true'
+    runs-on: ubuntu-latest
+    name: No threads / pjlib
+    steps:
+    - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n#define PJ_HAS_THREADS 0\n" > pjlib/include/pj/config_site.h
+    - name: configure
+      run: ./configure
+    - name: make
+      run: $MAKE_FAST
+    - name: check pjlib does not reference pthread
+      run: |
+        obj=$(ls pjlib/build/output/pjlib-*/os_core_unix.o)
+        echo "checking $obj"
+        if nm -u "$obj" | grep -E ' U (pthread_|sched_get)'; then
+          echo "::error::os_core_unix.o references pthread with PJ_HAS_THREADS=0"
+          exit 1
+        fi
+        echo "ok: no pthread symbols referenced"
+    - name: pjlib-test
+      run: make pjlib-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
+
   # build-ubuntu-openssl
   # TLS: with OpenSSL (same as build-ubuntu-default)
 

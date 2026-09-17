@@ -368,9 +368,14 @@ PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio)
     return PJ_SUCCESS;
 
 #else
+    /* Report the error rather than assert. PJ_HAS_THREADS is not enforced on
+     * Windows -- pj_thread_create() is not disabled by it -- so threads can
+     * exist here and reach this branch at run time, e.g. pjmedia_clock's
+     * thread raising its own priority. An assertion would abort a build that
+     * otherwise works.
+     */
     PJ_UNUSED_ARG(thread);
     PJ_UNUSED_ARG(prio);
-    pj_assert("pj_thread_set_prio() called in non-threading mode!");
     return PJ_EINVALIDOP;
 #endif
 }
@@ -408,7 +413,7 @@ PJ_DEF(void*) pj_thread_get_os_handle(pj_thread_t *thread)
                       PJ_LOG(1, (THIS_FILE, "Can not use pseudo handle of the thread %s on other threads", thread->obj_name)));
     return thread->hthread;
 #else
-    pj_assert("pj_thread_is_registered() called in non-threading mode!");
+    /* Reachable at run time, see pj_thread_set_prio() above. */
     return NULL;
 #endif
 }
