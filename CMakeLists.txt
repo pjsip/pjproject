@@ -328,6 +328,14 @@ install(
   COMPONENT   PjDevelopment
 )
 
+# APPLE is empty rather than 0 off Apple, and PjConfig.cmake.in substitutes it
+# into an if() condition, where an empty operand beside AND is a hard error.
+if(APPLE)
+  set(PJ_APPLE 1)
+else()
+  set(PJ_APPLE 0)
+endif()
+
 # write package config
 configure_package_config_file(
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/${PJ_CMAKE_CONFIG_FILE}.in"
