@@ -1,5 +1,17 @@
+# CoreAudio audio device backend (macOS and iOS)
+#
+# Defines the imported target `CoreAudio::CoreAudio` when every framework is found.
+# The framework list follows the one the autotools build links (aconfigure.ac).
+
+set(_coreaudio_frameworks CoreAudio AudioToolbox Foundation)
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+  list(APPEND _coreaudio_frameworks CoreServices AudioUnit AppKit)
+else()
+  list(APPEND _coreaudio_frameworks CoreFoundation CFNetwork AVFoundation UIKit)
+endif()
+
 set(_coreaudio_libs)
-foreach(_coreaudio_lib IN ITEMS CoreAudio AudioToolbox Foundation AppKit)
+foreach(_coreaudio_lib IN LISTS _coreaudio_frameworks)
   string(TOUPPER "CoreAudio_LIBRARY_${_coreaudio_lib}" _coreaudio_lib_var)
   list(APPEND _coreaudio_required_vars ${_coreaudio_lib_var})
 
@@ -11,6 +23,7 @@ foreach(_coreaudio_lib IN ITEMS CoreAudio AudioToolbox Foundation AppKit)
 endforeach()
 unset(_coreaudio_lib)
 unset(_coreaudio_lib_var)
+unset(_coreaudio_frameworks)
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(CoreAudio

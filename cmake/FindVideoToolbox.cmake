@@ -1,9 +1,17 @@
 # VideoToolbox H.264 codec backend (macOS and iOS)
 #
 # Defines the imported target `VideoToolbox::VideoToolbox` when every framework is found.
+# The framework list follows the one the autotools build links (aconfigure.ac).
+
+set(_videotoolbox_frameworks VideoToolbox CoreMedia CoreVideo Foundation)
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+  list(APPEND _videotoolbox_frameworks AppKit)
+else()
+  list(APPEND _videotoolbox_frameworks UIKit)
+endif()
 
 set(_videotoolbox_libs)
-foreach(_videotoolbox_lib IN ITEMS VideoToolbox CoreMedia CoreVideo)
+foreach(_videotoolbox_lib IN LISTS _videotoolbox_frameworks)
   string(TOUPPER "VideoToolbox_LIBRARY_${_videotoolbox_lib}" _videotoolbox_lib_var)
   list(APPEND _videotoolbox_required_vars ${_videotoolbox_lib_var})
 
@@ -15,6 +23,7 @@ foreach(_videotoolbox_lib IN ITEMS VideoToolbox CoreMedia CoreVideo)
 endforeach()
 unset(_videotoolbox_lib)
 unset(_videotoolbox_lib_var)
+unset(_videotoolbox_frameworks)
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(VideoToolbox

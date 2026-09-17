@@ -1,9 +1,17 @@
 # Metal video render backend (macOS and iOS)
 #
 # Defines the imported target `Metal::Metal` when every framework is found.
+# The framework list follows the one the autotools build links (aconfigure.ac).
+
+set(_metal_frameworks Metal MetalKit Foundation)
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+  list(APPEND _metal_frameworks AppKit)
+else()
+  list(APPEND _metal_frameworks UIKit)
+endif()
 
 set(_metal_libs)
-foreach(_metal_lib IN ITEMS Metal MetalKit)
+foreach(_metal_lib IN LISTS _metal_frameworks)
   string(TOUPPER "Metal_LIBRARY_${_metal_lib}" _metal_lib_var)
   list(APPEND _metal_required_vars ${_metal_lib_var})
 
@@ -15,6 +23,7 @@ foreach(_metal_lib IN ITEMS Metal MetalKit)
 endforeach()
 unset(_metal_lib)
 unset(_metal_lib_var)
+unset(_metal_frameworks)
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Metal
