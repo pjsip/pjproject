@@ -72,8 +72,12 @@
 #endif
 
 /* Macros the build passes on the command line, frozen per slice. */
-#if PJMEDIA_HAS_WEBRTC_AEC != 1
-#  error "the WebRTC AEC was built in but the headers do not say so"
+/* The WebRTC AEC is not available on Apple in the CMake build, and CoreAudio
+ * provides echo cancellation of its own, so the distribution does without it.
+ * Asserted rather than ignored: if it ever appears, the headers and the
+ * binary must still agree about it. */
+#if PJMEDIA_HAS_WEBRTC_AEC != 0
+#  error "the WebRTC AEC is unexpectedly enabled; the shipped headers must match the build"
 #endif
 #if PJMEDIA_HAS_LIBYUV != 1
 #  error "libyuv was built in but the headers do not say so"

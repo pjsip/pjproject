@@ -12,13 +12,13 @@
 # alongside a WebRTC based SDK does not hit duplicate definitions of libsrtp,
 # libyuv, the WebRTC AEC or Opus.
 #
-# Requires Xcode and cmake (cmake is used for Opus only). The first run
-# downloads the Opus release tarball into $OUTDIR/src and checks it against a
-# pinned checksum; later runs reuse it.
+# Requires Xcode and cmake. The first run downloads the Opus release tarball
+# into $OUTDIR/src and checks it against a pinned checksum; later runs reuse
+# it.
 #
-# The tree is distcleaned and rebuilt once per architecture, so a full run
-# takes roughly an hour. An existing pjlib/include/pj/config_site.h is backed
-# up and restored on exit.
+# Builds out of tree, one configure per slice with both architectures in a
+# single pass, so nothing in the working tree is disturbed except
+# pjlib/include/pj/config_site.h, which is backed up and restored on exit.
 #
 # Usage:
 #   build/apple/build-xcframework.sh
@@ -74,18 +74,45 @@ XCODE_DEV=$(xcode-select -p)
 SITE=$PJDIR/pjlib/include/pj/config_site.h
 BACKUP=$OUTDIR/config_site.h.orig
 
-CONFIGURE_OPTS=(
-    --disable-darwin-ssl
-    --disable-opencore-amr
-    --disable-bcg729
-    --disable-g7221-codec
-    --disable-silk
-    --disable-lyra
-    --disable-sdl
-    --disable-ffmpeg
-    --disable-openh264
-    --disable-vpx
-    --disable-libsamplerate
+# The distribution's configuration. Everything CMake has an option for is set
+# here rather than in config_site.h, so the build is described in one place.
+CMAKE_OPTS=(
+    -DPJ_SKIP_EXPERIMENTAL_NOTICE=ON
+    -DBUILD_TESTING=OFF
+    # the sample-app staging writes into the source tree; a distribution build
+    # must not be influenced by, or leave behind, anything there
+    -DPJ_IOS_SAMPLE_LIBS=OFF
+
+    # TLS from Apple's Network framework, which also rules out DTLS-SRTP
+    -DPJLIB_WITH_SSL=apple
+    -DPJLIB_WITH_IOQUEUE=select
+
+    # audio
+    -DPJMEDIA_WITH_AUDIODEV_COREAUDIO=ON
+    -DPJMEDIA_WITH_SPEEX_AEC=OFF
+    -DPJMEDIA_WITH_ILBC_CODEC=ON
+    -DPJMEDIA_WITH_L16_CODEC=OFF
+
+    # video: capture from AVFoundation, render with Metal and OpenGL ES,
+    # H.264 through VideoToolbox
+    -DPJMEDIA_WITH_VIDEO=ON
+    -DPJMEDIA_WITH_VIDEODEV_DARWIN=ON
+    -DPJMEDIA_WITH_VIDEODEV_METAL=ON
+    -DPJMEDIA_WITH_VIDEODEV_OPENGL=ON
+    -DPJMEDIA_WITH_VID_TOOLBOX_CODEC=ON
+
+    # codecs excluded for licensing reasons, and backends with external
+    # dependencies that would not be self-contained
+    -DPJMEDIA_WITH_OPENCORE_AMRNB_CODEC=OFF
+    -DPJMEDIA_WITH_OPENCORE_AMRWB_CODEC=OFF
+    -DPJMEDIA_WITH_BCG729_CODEC=OFF
+    -DPJMEDIA_WITH_G7221_CODEC=OFF
+    -DPJMEDIA_WITH_SILK_CODEC=OFF
+    -DPJMEDIA_WITH_LYRA_CODEC=OFF
+    -DPJMEDIA_WITH_OPEN_H264_CODEC=OFF
+    -DPJMEDIA_WITH_VPX_CODEC=OFF
+    -DPJMEDIA_WITH_FFMPEG=OFF
+    -DPJMEDIA_WITH_VIDEODEV_SDL=OFF
 )
 
 # Symbols that stay exported: the C API, the pj namespace including its
@@ -111,8 +138,8 @@ esac
 slice_archs() {
     case $1 in
     ios-device)     echo "arm64" ;;
-    ios-simulator)  echo "arm64 x86_64" ;;
-    macos)          echo "arm64 x86_64" ;;
+    ios-simulator)  echo "arm64;x86_64" ;;
+    macos)          echo "arm64;x86_64" ;;
     *)              die "unknown slice '$1'" ;;
     esac
 }
@@ -141,21 +168,17 @@ slice_min_version() {
     esac
 }
 
+# The triple for compile-time probes against a slice; the first architecture
+# stands for the slice, which is safe because every macro they could disagree
+# on is cosmetic on Apple's 64-bit little-endian pairs.
 slice_target() {
-    local slice=$1 arch=$2 min
+    local slice=$1 min arch
     min=$(slice_min_version "$slice")
+    arch=$(slice_archs "$slice" | cut -d';' -f1)
     case $slice in
     ios-device)     echo "$arch-apple-ios$min" ;;
     ios-simulator)  echo "$arch-apple-ios$min-simulator" ;;
     macos)          echo "$arch-apple-macos$min" ;;
-    esac
-}
-
-arch_macro() {
-    case $1 in
-    arm64)  echo "__arm64__" ;;
-    x86_64) echo "__x86_64__" ;;
-    *)      die "no predefined macro known for arch '$1'" ;;
     esac
 }
 
@@ -170,13 +193,27 @@ restore_site() {
     fi
 }
 
-clean_tree() {
-    if [ -f "$PJDIR/build.mak" ]; then
-        make -C "$PJDIR" distclean >/dev/null 2>&1 || true
-    fi
-    rm -f "$PJDIR/build.mak" "$PJDIR/config.status"
-    mkdir -p "$PJDIR"/pjlib/lib "$PJDIR"/pjlib-util/lib "$PJDIR"/pjnath/lib \
-             "$PJDIR"/pjmedia/lib "$PJDIR"/pjsip/lib "$PJDIR"/third_party/lib
+# CMake puts the source include directory ahead of the binary one, so a
+# generated header left in the tree -- by an autotools build, or by the iOS
+# sample staging -- silently overrides the one this build generates. A
+# distribution must not inherit whatever configured the tree last.
+STALE_HEADERS="
+    pjlib/include/pj/compat/os_auto.h
+    pjlib/include/pj/compat/m_auto.h
+    pjmedia/include/pjmedia/config_auto.h
+    pjmedia/include/pjmedia-codec/config_auto.h
+    pjsip/include/pjsip/sip_autoconf.h
+"
+
+require_clean_tree() {
+    local h found=
+    for h in $STALE_HEADERS; do
+        [ -f "$PJDIR/$h" ] && found="$found $h"
+    done
+    [ -z "$found" ] && return 0
+    die "generated headers are present in the source tree and would shadow
+                this build:$found
+                remove them (a 'make distclean' does), then run again"
 }
 
 fetch_opus() {
@@ -195,18 +232,20 @@ fetch_opus() {
 
 # Opus is not bundled in third_party, so it is built here against exactly the
 # same deployment target and architecture as the slice it goes into.
+# Opus is not bundled in third_party, so it is built here against exactly the
+# same architectures and deployment target as the slice it goes into.
 build_opus() {
-    local slice=$1 arch=$2 prefix=$3
+    local slice=$1 prefix=$2
     local src=$SRCDIR/opus-$OPUS_VERSION
-    local bld=$STAGE/$slice/$arch/opus-build
+    local bld=$STAGE/$slice/opus-build
     local args=()
 
-    command -v cmake >/dev/null || die "cmake is required to build Opus"
+    command -v cmake >/dev/null || die "cmake is required"
     fetch_opus
 
     args=(-DCMAKE_BUILD_TYPE=Release
           -DCMAKE_INSTALL_PREFIX="$prefix"
-          -DCMAKE_OSX_ARCHITECTURES="$arch"
+          -DCMAKE_OSX_ARCHITECTURES="$(slice_archs "$slice")"
           -DCMAKE_OSX_DEPLOYMENT_TARGET="$(slice_min_version "$slice")"
           -DCMAKE_OSX_SYSROOT="$(slice_sdk "$slice")"
           -DOPUS_BUILD_SHARED_LIBRARY=OFF
@@ -225,14 +264,21 @@ build_opus() {
     [ -f "$prefix/lib/libopus.a" ] || die "Opus build produced no static library"
 }
 
-# The set of static libraries the build produced, straight from build.mak so
-# that enabled and disabled third party libraries are always accounted for.
-merged_libs() {
-    local mk=$STAGE/libs.mak
+# Every static library the slice built, plus Opus. CMake writes them beside
+# their targets, so the build tree itself is the list.
+slice_libs() {
+    local bld=$1 prefix=$2
+    find "$bld" -name '*.a' -not -path '*/CMakeFiles/*' | sort
+    [ -n "$prefix" ] && echo "$prefix/lib/libopus.a"
+}
+
+# The release version, straight from the tree rather than a second copy.
+pj_version() {
+    local mk=$STAGE/version.mak.tmp
     {
-        echo "include $PJDIR/build.mak"
+        echo "include $PJDIR/version.mak"
         echo "print:"
-        printf '\t@echo $(APP_LIBXX_FILES)\n'
+        printf '\t@echo $(PJ_VERSION)\n'
     } > "$mk"
     make -s -f "$mk" print
 }
@@ -244,38 +290,50 @@ merged_libs() {
 # being forgotten here. -keep_private_externs is deliberately not used: it
 # would preserve the hidden symbols as private externs, which still collide.
 prelink_archive() {
-    local dest=$1 slice=$2 arch=$3
-    shift 3
+    local dest=$1 slice=$2
+    shift 2
     local libs=("$@")
-    local ldflags sdkv
+    local sdkv plat min arch thin=()
 
     sdkv=$(xcrun --sdk "$(slice_sdk "$slice")" --show-sdk-version)
-    ldflags=(-r -arch "$arch"
-             -platform_version "$(slice_ld_platform "$slice")" \
-                 "$(slice_min_version "$slice")" "$sdkv"
-             -all_load)
+    plat=$(slice_ld_platform "$slice")
+    min=$(slice_min_version "$slice")
 
-    ld "${ldflags[@]}" -o "$dest/pass1.o" "${libs[@]}"
-    nm -m "$dest/pass1.o" \
-        | grep -v undefined \
-        | grep -E '\) (external|weak external) ' \
-        | awk '{print $NF}' \
-        | grep -vE "$KEEP_SYMBOLS" \
-        | sort -u > "$dest/hidden-symbols.txt"
-    echo "    hiding $(wc -l < "$dest/hidden-symbols.txt" | tr -d ' ') non-API symbols"
+    # ld -r takes one architecture at a time, so a fat slice is prelinked once
+    # per architecture and the results recombined. The build itself still runs
+    # only once, which is where the time goes.
+    for arch in $(echo "$(slice_archs "$slice")" | tr ';' ' '); do
+        local ldflags=(-r -arch "$arch" -platform_version "$plat" "$min" "$sdkv" -all_load)
 
-    ld "${ldflags[@]}" -unexported_symbols_list "$dest/hidden-symbols.txt" \
-       -o "$dest/prelink.o" "${libs[@]}"
-    libtool -static -no_warning_for_no_symbols \
-            -o "$dest/libpjproject.a" "$dest/prelink.o"
+        ld "${ldflags[@]}" -o "$dest/pass1-$arch.o" "${libs[@]}"
+        nm -m "$dest/pass1-$arch.o" \
+            | grep -v undefined \
+            | grep -E '\) (external|weak external) ' \
+            | awk '{print $NF}' \
+            | grep -vE "$KEEP_SYMBOLS" \
+            | sort -u > "$dest/hidden-symbols-$arch.txt"
+        echo "    $arch: hiding $(wc -l < "$dest/hidden-symbols-$arch.txt" | tr -d ' ') non-API symbols"
 
-    # Drop DWARF: it refers to object files by their build-time paths, which
-    # do not exist for anyone consuming the framework, and the linker warns
-    # once per missing file. The symbol table is kept, so backtraces still
-    # name functions.
-    strip -S "$dest/libpjproject.a"
+        ld "${ldflags[@]}" -unexported_symbols_list "$dest/hidden-symbols-$arch.txt" \
+           -o "$dest/prelink-$arch.o" "${libs[@]}"
+        libtool -static -no_warning_for_no_symbols \
+                -o "$dest/libpjproject-$arch.a" "$dest/prelink-$arch.o"
 
-    rm -f "$dest/pass1.o" "$dest/prelink.o"
+        # DWARF refers to object files by their build-time paths, which do not
+        # exist for anyone consuming the framework, and the linker warns once
+        # per missing file. The symbol table is kept, so backtraces still name
+        # functions.
+        strip -S "$dest/libpjproject-$arch.a"
+        thin+=("$dest/libpjproject-$arch.a")
+        rm -f "$dest/pass1-$arch.o" "$dest/prelink-$arch.o"
+    done
+
+    if [ ${#thin[@]} -eq 1 ]; then
+        mv "${thin[0]}" "$dest/libpjproject.a"
+    else
+        lipo -create "${thin[@]}" -output "$dest/libpjproject.a"
+        rm -f "${thin[@]}"
+    fi
 }
 
 # The normal build passes -DPJ_AUTOCONF on the command line; a consumer of
@@ -308,16 +366,14 @@ freeze_autoconf() {
 # PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES, PJMEDIA_HAS_WEBRTC_AEC and
 # PJMEDIA_RESAMPLE_IMP among others), so a consumer that does not see the same
 # values compiles against a different view of the library than was built.
+# Every -DPJ* macro the build puts on the compile line. pjmedia's public
+# headers branch on a number of them, so a consumer that does not see the same
+# values compiles against a different view of the library than was built.
 cflags_macros() {
-    local mk=$STAGE/cflags.mak
-    {
-        echo "include $PJDIR/build.mak"
-        echo "include $PJDIR/pjmedia/build/os-auto.mak"
-        echo "print:"
-        printf '\t@echo $(CFLAGS)\n'
-    } > "$mk"
-    make -s -f "$mk" print 2>/dev/null | tr ' ' '\n' | grep '^-DPJ' | sort -u \
-        | sed 's/^-D//' | awk -F= '{ if (NF>1) { v=$2; for(i=3;i<=NF;i++) v=v"="$i; print $1"\t"v } else print $1"\t1" }'
+    local bld=$1
+    find "$bld" -name flags.make -exec cat {} + 2>/dev/null \
+        | tr ' ' '\n' | grep '^-DPJ' | sort -u | sed 's/^-D//' \
+        | awk -F= '{ if (NF>1) { v=$2; for(i=3;i<=NF;i++) v=v"="$i; print $1"\t"v } else print $1"\t1" }'
 }
 
 # Macros that decide public structure layout. Anything used as an array
@@ -334,14 +390,23 @@ cflags_macros() {
 # built values, so pinning them changes nothing except that a conflicting
 # consumer -D is overridden rather than silently obeyed.
 abi_macros() {
-    local hdr=$1 sdk=$2 target=$3
+    local hdr=$1 sdk=$2 target=$3 cflags=$4
     local probe=$STAGE/abi-probe.c dm=$STAGE/abi-macros.txt
+    local dflags=()
+
+    # With the build's own -D flags, otherwise every macro whose value derives
+    # from one of them resolves to something the build never used.
+    while IFS=$'\t' read -r name value; do
+        [ -n "$name" ] && dflags+=("-D$name=$value")
+    done < "$cflags"
+    printf '%s\n' "${dflags[@]}" > "$STAGE/abi-dflags.txt"
 
     echo '#include <pjsua.h>' > "$probe"
     # Fatal on purpose: an empty set here would leave the layout macros
     # unfrozen while cflags_macros still produced output, so the non-empty
     # check downstream would pass and ship unpinned headers.
-    xcrun -sdk "$sdk" clang -E -dM -target "$target" -I"$hdr" "$probe" > "$dm" \
+    xcrun -sdk "$sdk" clang -E -dM -target "$target" -I"$hdr" \
+        "${dflags[@]}" "$probe" > "$dm" \
         || die "cannot preprocess the staged headers for $target"
 
     python3 - "$dm" "$hdr" <<'PYEOF'
@@ -358,18 +423,58 @@ for line in open(dm):
     if m:
         macros[m.group(1)] = m.group(2)
 
-wanted = set()
+# A macro is only safe to pin when every guard block that offers it a default
+# offers nothing else, and no header branches on whether it is defined at all.
+# Those properties have to hold across all the headers, because the same macro
+# is often given a default in one header and, in the generated config_auto.h,
+# inside a block that defines its siblings too -- pin it and the siblings
+# vanish with the block.
+candidates, unsafe = set(), set()
 for root, _, files in os.walk(hdr):
-    for name in files:
-        if not name.endswith((".h", ".hpp")):
+    for fname in files:
+        if not fname.endswith((".h", ".hpp")):
             continue
-        text = open(os.path.join(root, name), errors="ignore").read()
-        # declared overridable by the project itself
-        for n in re.findall(r"^#\s*ifndef\s+(PJ[A-Z0-9_]*)\s*$", text, re.M):
-            if re.search(r"^#\s*define\s+%s\b" % re.escape(n), text, re.M):
-                wanted.add(n)
+        text = open(os.path.join(root, fname), errors="ignore").read()
+        lines = text.splitlines()
+
+        for i, line in enumerate(lines):
+            m = re.match(r"^#\s*ifndef\s+(PJ[A-Z0-9_]*)\s*$", line)
+            if not m:
+                continue
+            name = m.group(1)
+
+            depth, defined_here, j = 1, [], i + 1
+            while j < len(lines) and depth:
+                l = lines[j]
+                if re.match(r"^#\s*if", l):
+                    depth += 1
+                elif re.match(r"^#\s*endif", l):
+                    depth -= 1
+                d = re.match(r"^#\s*(?:define|cmakedefine01)\s+([A-Za-z_][A-Za-z0-9_]*)", l)
+                if d and depth:
+                    defined_here.append(d.group(1))
+                j += 1
+
+            if defined_here.count(name) == 1 and len(defined_here) == 1:
+                candidates.add(name)
+            else:
+                unsafe.add(name)
+                unsafe.update(defined_here)
+
+        # A bare defined(X) branch changes the moment X is defined at all,
+        # whatever its value. "defined(X) && X != 0" is a value test wearing a
+        # guard, and is safe to pin, so only flag lines that ask the former
+        # without also reading the value.
+        for l in lines:
+            for name in re.findall(r"defined\s*\(\s*(PJ[A-Z0-9_]*)\s*\)", l):
+                rest = re.sub(r"defined\s*\(\s*%s\s*\)" % re.escape(name), "", l)
+                if not re.search(r"\b%s\b" % re.escape(name), rest):
+                    unsafe.add(name)
+
         # sizes a public structure
-        wanted.update(re.findall(r"\[([A-Z][A-Z0-9_]{3,})\]", text))
+        candidates.update(re.findall(r"\[([A-Z][A-Z0-9_]{3,})\]", text))
+
+wanted = candidates - unsafe
 
 # A pinned value may name another macro; pin those too, or the result can
 # still be changed by overriding the one left alone.
@@ -426,154 +531,133 @@ freeze_macros() {
     mv -f "$site.tmp" "$site"
 }
 
+# No Opus headers are shipped: no public pjmedia header includes them, and
+# an opus/ directory here would shadow the consumer's own Opus headers
+# through the framework's header search path.
 stage_headers() {
-    local hdr=$1 sdk=$2 target=$3 d
+    local hdr=$1 bld=$2 sdk=$3 target=$4 d h
     rm -rf "$hdr"
     mkdir -p "$hdr"
     for d in pjlib pjlib-util pjnath pjmedia pjsip; do
         rsync -a "$PJDIR/$d/include/" "$hdr/"
     done
+
+    # the generated headers live in the build tree, so overlay them
+    for h in $STALE_HEADERS; do
+        [ -f "$bld/$h" ] || die "the build generated no $h"
+        mkdir -p "$hdr/$(dirname "${h#*/include/}")"
+        cp "$bld/$h" "$hdr/${h#*/include/}"
+    done
+
     cp "$SELF_DIR/PJSIPUmbrella.h" "$hdr/PJSIPUmbrella.h"
     cp "$SELF_DIR/module.modulemap" "$hdr/module.modulemap"
     freeze_autoconf "$hdr/pj/config.h"
 
-    { cflags_macros; abi_macros "$hdr" "$sdk" "$target"; } \
-        | sort -u -t"$(printf '\t')" -k1,1 > "$STAGE/frozen-macros.txt"
-    freeze_macros "$hdr/pj/config_site.h" "$STAGE/frozen-macros.txt"
+    cflags_macros "$bld" > "$STAGE/cflags-macros.txt"
+    # cflags first and first-wins on the name, so the value the build actually
+    # used beats the header default for any macro that appears in both.
+    { cat "$STAGE/cflags-macros.txt"
+      abi_macros "$hdr" "$sdk" "$target" "$STAGE/cflags-macros.txt"; } \
+        | awk -F'\t' '!seen[$1]++' > "$STAGE/frozen-macros.txt"
+
+    # Pinning a value must never change one. Most configuration macros are
+    # "#ifndef X / #define X <default>", but some invert that and others are
+    # derived from macros we also pin, so freezing them would reconfigure the
+    # library rather than record it. Rather than try to recognise every such
+    # idiom, freeze, compare the fully preprocessed macro set against the
+    # build's, drop whatever moved, and repeat until it is provably a no-op.
+    local pristine=$STAGE/config_site.pristine.h
+    local after=$STAGE/abi-macros-after.txt
+    local dflags=() changed pass
+    cp "$hdr/pj/config_site.h" "$pristine"
+    while read -r f; do [ -n "$f" ] && dflags+=("$f"); done < "$STAGE/abi-dflags.txt"
+
+    for pass in 1 2 3 4 5; do
+        cp "$pristine" "$hdr/pj/config_site.h"
+        freeze_macros "$hdr/pj/config_site.h" "$STAGE/frozen-macros.txt"
+
+        xcrun -sdk "$sdk" clang -E -dM -target "$target" -I"$hdr" \
+            "${dflags[@]}" "$STAGE/abi-probe.c" > "$after" 2>/dev/null \
+            || die "cannot re-check the staged headers for $target"
+
+        changed=$(diff <(grep '^#define PJ' "$STAGE/abi-macros.txt" | sort) \
+                       <(grep '^#define PJ' "$after" | sort) \
+                  | grep '^[<>]' | awk '{print $3}' | sort -u || true)
+        [ -z "$changed" ] && break
+
+        echo "    pass $pass: not pinning $(echo $changed | wc -w | tr -d ' ')" \
+             "macro(s) whose value the pinning would change"
+        grep -vF -x -f <(echo "$changed") -w "$STAGE/frozen-macros.txt" \
+            > "$STAGE/frozen-macros.next" 2>/dev/null || true
+        awk -F'\t' 'NR==FNR{drop[$1];next} !($1 in drop)' \
+            <(echo "$changed" | tr ' ' '\n') "$STAGE/frozen-macros.txt" \
+            > "$STAGE/frozen-macros.next"
+        mv "$STAGE/frozen-macros.next" "$STAGE/frozen-macros.txt"
+    done
+
+    [ -z "$changed" ] || die "could not reach a configuration-preserving freeze;
+                these still move: $(echo $changed)"
 }
 
-build_arch() {
-    local slice=$1 arch=$2
-    local dest=$STAGE/$slice/$arch
+# One configure and build per slice, with every architecture of that slice in
+# the same pass, so there is no lipo step and no per-architecture header
+# reconciliation to do afterwards.
+build_slice() {
+    local slice=$1
+    local dest=$STAGE/$slice
+    local bld=$dest/build
     local opus_prefix=$dest/opus
-    local opts=("${CONFIGURE_OPTS[@]}")
+    local opts=("${CMAKE_OPTS[@]}")
     local libs
 
-    echo "==> building $slice / $arch"
-    clean_tree
+    echo "==> building $slice ($(slice_archs "$slice"))"
     rm -rf "$dest"
     mkdir -p "$dest"
 
     if [ -n "$NO_OPUS" ]; then
-        opts+=(--disable-opus)
+        opts+=(-DPJMEDIA_WITH_OPUS_CODEC=OFF)
         opus_prefix=
-    elif [ -n "$OPUS_PREFIX" ]; then
-        opus_prefix=$OPUS_PREFIX
-        opts+=(--with-opus="$opus_prefix")
     else
-        build_opus "$slice" "$arch" "$opus_prefix"
-        opts+=(--with-opus="$opus_prefix")
+        [ -n "$OPUS_PREFIX" ] && opus_prefix=$OPUS_PREFIX || build_opus "$slice" "$opus_prefix"
+        # CMAKE_FIND_ROOT_PATH as well as the prefix: an iOS build searches
+        # only inside the sysroot by default, so a prefix outside it is
+        # ignored and Opus would be silently dropped.
+        opts+=(-DPJMEDIA_WITH_OPUS_CODEC=ON
+               -DCMAKE_PREFIX_PATH="$opus_prefix"
+               -DCMAKE_FIND_ROOT_PATH="$opus_prefix")
     fi
 
-    (
-        cd "$PJDIR"
-        unset CFLAGS LDFLAGS CC CXX CPP AR AR_FLAGS RANLIB
-        case $slice in
-        ios-device)
-            export DEVPATH=$XCODE_DEV/Platforms/iPhoneOS.platform/Developer
-            export ARCH="-arch $arch"
-            export MIN_IOS="-miphoneos-version-min=$IOS_DEPLOYMENT_TARGET"
-            ./configure-iphone "${opts[@]}"
-            ;;
-        ios-simulator)
-            export DEVPATH=$XCODE_DEV/Platforms/iPhoneSimulator.platform/Developer
-            export ARCH="-arch $arch"
-            export MIN_IOS="-mios-simulator-version-min=$IOS_DEPLOYMENT_TARGET"
-            ./configure-iphone "${opts[@]}"
-            ;;
-        macos)
-            export CFLAGS="-O2 -Wno-unused-label -arch $arch -mmacosx-version-min=$MACOS_DEPLOYMENT_TARGET"
-            export LDFLAGS="-O2 -arch $arch -mmacosx-version-min=$MACOS_DEPLOYMENT_TARGET"
-            ./aconfigure --host="$arch-apple-darwin" "${opts[@]}"
-            ;;
-        esac
-    )
+    opts+=(-DCMAKE_OSX_ARCHITECTURES="$(slice_archs "$slice")"
+           -DCMAKE_OSX_SYSROOT="$(slice_sdk "$slice")"
+           -DCMAKE_OSX_DEPLOYMENT_TARGET="$(slice_min_version "$slice")"
+           -DCMAKE_BUILD_TYPE=Release)
+    case $slice in
+    ios-device|ios-simulator) opts+=(-DCMAKE_SYSTEM_NAME=iOS) ;;
+    esac
 
+    cmake -S "$PJDIR" -B "$bld" "${opts[@]}" > "$dest/configure.log" 2>&1 \
+        || { sed 's/^/    /' "$dest/configure.log" | tail -15; die "configure failed for $slice"; }
+
+    # The options above are what the artifact claims to be; a silently
+    # downgraded one would ship a framework that does not match its manifest.
+    local opt
+    for opt in PJLIB_WITH_SSL:apple PJMEDIA_WITH_VIDEO:ON \
+               PJMEDIA_WITH_VID_TOOLBOX_CODEC:ON PJMEDIA_WITH_VIDEODEV_DARWIN:ON \
+               PJMEDIA_WITH_AUDIODEV_COREAUDIO:ON; do
+        grep -q "^${opt%%:*}:[A-Z]*=${opt##*:}$" "$bld/CMakeCache.txt" \
+            || die "$slice: ${opt%%:*} did not stay ${opt##*:}; see $dest/configure.log"
+    done
     if [ -z "$NO_OPUS" ]; then
-        grep -q "PJMEDIA_HAS_OPUS_CODEC 1" \
-            "$PJDIR/pjmedia/include/pjmedia-codec/config_auto.h" \
-            || die "configure did not pick up Opus for $slice/$arch"
+        grep -q "^PJMEDIA_WITH_OPUS_CODEC:BOOL=ON$" "$bld/CMakeCache.txt" \
+            || die "$slice: configure did not pick up Opus"
     fi
 
-    make -C "$PJDIR" lib -j"$JOBS"
+    cmake --build "$bld" -j "$JOBS" > "$dest/build.log" 2>&1 \
+        || { grep -i "error" "$dest/build.log" | head -10 | sed 's/^/    /'; die "build failed for $slice"; }
 
-    libs=$(merged_libs)
-    if [ -n "$opus_prefix" ]; then
-        libs="$libs $opus_prefix/lib/libopus.a"
-    fi
-    prelink_archive "$dest" "$slice" "$arch" $libs
-    stage_headers "$dest/Headers" "$(slice_sdk "$slice")" "$(slice_target "$slice" "$arch")"
-}
-
-# Headers autoconf generates per architecture. m_auto.h differs in PJ_M_NAME
-# (and PJ_HAS_PENTIUM), os_auto.h in PJ_OS_NAME; neither affects ABI, and both
-# are resolved at compile time in a fat slice.
-PER_ARCH_HEADERS="pj/compat/m_auto.h pj/compat/os_auto.h"
-
-# Merge the per-architecture builds of one slice into a single fat archive
-# plus one header tree. Only the headers listed above may differ between
-# architectures, and those are turned into dispatching headers; anything else
-# differing is a bug in this script's assumptions and must not be papered over.
-fuse_slice() {
-    local slice=$1
-    local dest=$STAGE/$slice
-    local archs first a h guard inputs=() excludes=()
-    read -r -a archs <<< "$(slice_archs "$slice")"
-    first=${archs[0]}
-
-    if [ ${#archs[@]} -eq 1 ]; then
-        rm -rf "$dest/Headers"
-        mv "$dest/$first/libpjproject.a" "$dest/libpjproject.a"
-        mv "$dest/$first/Headers" "$dest/Headers"
-        return
-    fi
-
-    for a in "${archs[@]}"; do
-        inputs+=("$dest/$a/libpjproject.a")
-    done
-    lipo -create "${inputs[@]}" -output "$dest/libpjproject.a"
-
-    for h in $PER_ARCH_HEADERS; do
-        excludes+=(-x "$(basename "$h")")
-    done
-    for a in "${archs[@]:1}"; do
-        diff -r "${excludes[@]}" "$dest/$first/Headers" "$dest/$a/Headers" \
-            || die "generated headers differ between $first and $a in $slice"
-    done
-
-    # Built before the first architecture's tree is moved into place, since
-    # that move is what makes $dest/$first/Headers disappear.
-    local tmpd=$dest/.dispatch
-    rm -rf "$tmpd"
-    mkdir -p "$tmpd"
-    for h in $PER_ARCH_HEADERS; do
-        {
-            echo "/* Generated by build-xcframework.sh for a multi-architecture slice. */"
-            for a in "${archs[@]}"; do
-                guard=$(arch_macro "$a")
-                echo "#if defined($guard)"
-                cat "$dest/$a/Headers/$h"
-                echo "#endif"
-            done
-        } > "$tmpd/$(basename "$h")"
-    done
-
-    rm -rf "$dest/Headers"
-    mv "$dest/$first/Headers" "$dest/Headers"
-    for h in $PER_ARCH_HEADERS; do
-        mv -f "$tmpd/$(basename "$h")" "$dest/Headers/$h"
-    done
-    rmdir "$tmpd"
-}
-
-pj_version() {
-    local mk=$STAGE/version.mak.tmp
-    {
-        echo "include $PJDIR/version.mak"
-        echo "print:"
-        printf '\t@echo $(PJ_VERSION)\n'
-    } > "$mk"
-    make -s -f "$mk" print
+    libs=$(slice_libs "$bld" "$opus_prefix")
+    prelink_archive "$dest" "$slice" $libs
+    stage_headers "$dest/Headers" "$bld" "$(slice_sdk "$slice")" "$(slice_target "$slice")"
 }
 
 render() {
@@ -615,19 +699,12 @@ package() {
     CHECKSUM=$(shasum -a 256 "$DIST/$NAME.xcframework.zip" | cut -d' ' -f1)
 
     rm -rf "$DIST/spm"
-    if [ -n "$PARTIAL_BUILD" ]; then
-        # The manifests declare both platforms and one checksum for the whole
-        # artifact; a subset build would advertise slices that are not there.
+    if [ -n "$PARTIAL_BUILD" ] || [ -n "$NO_OPUS" ]; then
+        # The manifests describe the full distribution and carry one checksum
+        # for it; emitting them here would publish metadata that does not
+        # match the artifact.
         rm -f "$DIST/Package.swift" "$DIST/$NAME.podspec"
-        echo "note: SLICES was a subset, so no manifests were generated;" \
-             "this artifact is for iteration, not release"
-    elif [ -n "$NO_OPUS" ]; then
-        # The manifests describe a distribution that includes Opus, and the
-        # verifier requires it. Emitting them for a NO_OPUS build would
-        # publish metadata that does not match the artifact.
-        rm -f "$DIST/Package.swift" "$DIST/$NAME.podspec"
-        echo "note: NO_OPUS is set, so no manifests were generated;" \
-             "this artifact is for iteration, not release"
+        echo "note: this is an iteration build, so no manifests were generated"
     else
         render "$SELF_DIR/Package.swift.in" "$DIST/Package.swift"
         render "$SELF_DIR/PJSIP.podspec.in" "$DIST/$NAME.podspec"
@@ -637,17 +714,15 @@ package() {
     echo "version:  $VERSION"
     echo "artifact: $DIST/$NAME.xcframework.zip"
     echo "sha256:   $CHECKSUM"
-    echo "release:  $RELEASE_URL"
-    echo ""
     if [ -f "$DIST/Package.swift" ]; then
+        echo "release:  $RELEASE_URL"
+        echo ""
         echo "upload to the release:"
         echo "  $DIST/$NAME.xcframework.zip"
         echo "  $DIST/$NAME.podspec"
         echo ""
         echo "commit to the repo root BEFORE tagging $VERSION:"
         echo "  cp $DIST/Package.swift $PJDIR/Package.swift"
-    else
-        echo "artifact only; not a release build"
     fi
     if [ -z "$CODESIGN_ID" ]; then
         echo ""
@@ -682,11 +757,10 @@ main() {
     trap restore_site EXIT
     cp "$SELF_DIR/config_site.h" "$SITE"
 
+    require_clean_tree
+
     for slice in $SLICES; do
-        for arch in $(slice_archs "$slice"); do
-            build_arch "$slice" "$arch"
-        done
-        fuse_slice "$slice"
+        build_slice "$slice"
         args+=(-library "$STAGE/$slice/libpjproject.a"
                -headers "$STAGE/$slice/Headers")
     done

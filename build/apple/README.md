@@ -6,7 +6,11 @@ distribute it.
 
 This directory produces a **distribution**, not a build of the library for local
 use. If you are building PJSIP to develop against it, use `configure-iphone` and
-`make` as usual; nothing here is needed.
+`make`, or CMake directly; nothing here is needed.
+
+The distribution is built with CMake. The configuration lives in
+build-xcframework.sh as CMake options, with `config_site.h` carrying only the
+few settings CMake has no option for.
 
 ```
 build-xcframework.sh          builds and packages everything
@@ -47,6 +51,12 @@ default; `config.h` has a compile-time `#error` if the two disagree.
 
 Present: Opus (built from a pinned source release), G.711, G.722, GSM, Speex,
 and iLBC via CoreAudio's implementation.
+
+Echo cancellation comes from CoreAudio, which has its own. Neither the Speex
+nor the WebRTC canceller is built: Speex is switched off deliberately, and the
+WebRTC one is unavailable because the CMake build has no WebRTC on Apple.
+`webrtc_aec3` does not compile on macOS, where `PlatformThreadId` is undefined,
+and the NEON flags break the x86_64 half of a simulator build.
 
 Excluded, for licensing rather than technical reasons:
 
@@ -153,26 +163,34 @@ any consumer and the linker warns once per missing file.
 
 ## Building
 
-Requires Xcode and `cmake` (cmake is used only for Opus), plus network access on
-the first run to fetch the pinned Opus tarball into `$OUTDIR/src`, which later
-runs reuse.
+Requires Xcode and `cmake`, plus network access on the first run to fetch the
+pinned Opus tarball into `$OUTDIR/src`, which later runs reuse.
 
 ```sh
 ./build/apple/build-xcframework.sh
 ```
 
-The script is **destructive to the working tree by design**: it runs
-`make distclean` and reconfigures once per architecture, five times for a default
-build, so a full run takes roughly an hour. An existing
-`pjlib/include/pj/config_site.h` is backed up and restored on exit, but
-configured state and built objects are not.
+The build is out of tree. Nothing in the working tree is touched except
+`pjlib/include/pj/config_site.h`, which is backed up and restored on exit.
 
-Per architecture it distcleans, builds Opus, configures and runs `make lib`,
-merges every static library into one relocatable object while demoting non-API
-symbols, strips debug info, and stages that architecture's headers with the
-build's macros frozen in. Per slice the architectures are lipo'd together and
-their header trees reconciled. Finally the slices become an XCFramework, gain the
-privacy manifest, and are zipped and checksummed.
+It refuses to start if the five generated headers (`os_auto.h`, `m_auto.h`, the
+two `config_auto.h`, `sip_autoconf.h`) are present in the source tree, because
+CMake puts the source include directory ahead of the binary one and they would
+shadow the ones this build generates. An autotools build leaves them there by
+design; `make distclean` removes them.
+
+Each slice is configured and built once, with both of its architectures in the
+same pass. The configuration is passed as CMake options — the script is the
+single place it is written down — leaving `config_site.h` to carry only what
+CMake has no option for. Per slice: build Opus, configure and build, prelink
+each architecture while demoting non-API symbols, strip, recombine with `lipo`,
+then stage that slice's headers with the build's own macros frozen in. Finally
+the slices become an XCFramework, gain the privacy manifest, and are zipped and
+checksummed.
+
+`CMAKE_BUILD_TYPE` is `Release`, so the distribution is built `-O3 -DNDEBUG`.
+Assertions therefore compile out; `PJ_ASSERT_RETURN` still returns its error
+code, so the checks that matter for control flow remain.
 
 | Variable | Default | Effect |
 |---|---|---|
@@ -183,14 +201,14 @@ privacy manifest, and are zipped and checksummed.
 | `VERSION` | from `version.mak` | podspec version and the URLs in both manifests |
 | `RELEASE_BASE` | pjproject releases | base URL the manifests point at |
 | `OPUS_PREFIX` | unset | use a prebuilt Opus instead of building one |
-| `NO_OPUS` | unset | build without Opus; for iteration only, and no manifests are generated since they would not describe the artifact |
+| `NO_OPUS` | unset | build without Opus; iteration only, no manifests |
 | `OUTDIR` | `out/` | where staging and output go |
 | `JOBS` | CPU count | parallel compile jobs |
 
 A partial `SLICES` run still produces a valid XCFramework with fewer slices,
-which is useful while iterating (`SLICES=macos` is about ten minutes). It does
-not generate manifests, since those declare both platforms and one checksum for
-the whole artifact and would advertise slices that are not present.
+which is useful while iterating (`SLICES=macos` is a few minutes). It does not
+generate manifests, since those declare both platforms and one checksum for the
+whole artifact.
 
 `IOS_DEPLOYMENT_TARGET` below 14.0 is rejected outright: clang records 14.0 in
 simulator objects regardless, so a lower value would only make the manifests
@@ -204,14 +222,15 @@ Output:
 | `out/dist/PJSIP.xcframework.zip` | the release artifact; its sha256 is printed at the end |
 | `out/dist/Package.swift` | copy to the repository root before tagging |
 | `out/dist/PJSIP.podspec` | upload to the release |
-| `out/stage/` | per-slice intermediates, including each architecture's `hidden-symbols.txt` |
+| `out/stage/<slice>/` | the CMake build tree, staged headers and `hidden-symbols-<arch>.txt` |
 | `out/src/` | cached Opus tarball and source |
 
-The build aborts rather than producing a questionable artifact if configure did
-not pick up Opus, if a slice's architectures disagree on any generated header
-beyond the two known per-architecture ones, if the build macros cannot be frozen
-into the shipped headers, or if the Opus tarball does not match its pinned
-checksum.
+The build aborts rather than producing a questionable artifact if the source
+tree holds generated headers, if any option it sets did not survive configure
+(a silently downgraded one would ship a framework that does not match its
+manifest), if configure did not pick up Opus, if the build macros cannot be
+frozen into the shipped headers, or if the Opus tarball does not match its
+pinned checksum.
 
 ## Verifying
 
@@ -329,6 +348,8 @@ and is reachable only from Objective-C++ or C++ sources.
 - **No DTLS-SRTP**, so no WebRTC interoperability.
 - **H.264 is the only video codec.**
 - **No AMR or G.729**, for the licensing reasons above.
+- **No WebRTC echo canceller**, unlike an autotools build. CoreAudio's own
+  canceller is used instead.
 - **pjsua2 is not usable from Swift.**
 - **Compile-time configuration is fixed**; an app needing different values must
   build from source.
