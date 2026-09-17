@@ -2521,26 +2521,44 @@ static pj_bool_t parse_ossl_asn1_time(pj_time_val *tv, pj_bool_t *gmt,
 }
 
 
-/* Get Common Name field string from a general name string */
-static void get_cn_from_gen_name(const pj_str_t *gen_name, pj_str_t *cn)
+/* Get Common Name field string from a X509 name.
+ *
+ * The CN must be read via the X.509 API instead of being scraped from the
+ * one-line display form produced by X509_NAME_oneline(), as any RDN value
+ * may itself contain the "/CN=" sequence and would then be mistaken for
+ * the Common Name.
+ */
+static void get_cn_from_x509_name(pj_pool_t *pool, X509_NAME *name,
+                                  pj_str_t *cn)
 {
-    pj_str_t CN_sign = {"/CN=", 4};
-    char *p, *q;
+    int idx, len;
+    X509_NAME_ENTRY *entry;
+    ASN1_STRING *data;
+    unsigned char *utf8 = NULL;
 
     pj_bzero(cn, sizeof(pj_str_t));
 
-    if (!gen_name->slen)
+    if (!name)
         return;
 
-    p = pj_strstr(gen_name, &CN_sign);
-    if (!p)
+    idx = X509_NAME_get_index_by_NID(name, NID_commonName, -1);
+    if (idx < 0)
         return;
 
-    p += 4; /* shift pointer to value part */
-    pj_strset(cn, p, gen_name->slen - (p - gen_name->ptr));
-    q = pj_strchr(cn, '/');
-    if (q)
-        cn->slen = q - p;
+    entry = X509_NAME_get_entry(name, idx);
+    data = entry? X509_NAME_ENTRY_get_data(entry) : NULL;
+    if (!data)
+        return;
+
+    len = ASN1_STRING_to_UTF8(&utf8, data);
+    if (len < 0)
+        return;
+
+    /* Reject embedded NUL, it indicates a spoofing attempt */
+    if (len > 0 && (int)pj_ansi_strlen((char*)utf8) == len)
+        pj_strdup2(pool, cn, (char*)utf8);
+
+    OPENSSL_free(utf8);
 }
 
 
@@ -2585,7 +2603,7 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci, X509 *x,
 
     /* Issuer */
     pj_strdup2(pool, &ci->issuer.info, buf);
-    get_cn_from_gen_name(&ci->issuer.info, &ci->issuer.cn);
+    get_cn_from_x509_name(pool, X509_get_issuer_name(x), &ci->issuer.cn);
 
     /* Serial number */
     pj_memcpy(ci->serial_no, serial_no, sizeof(ci->serial_no));
@@ -2594,7 +2612,7 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci, X509 *x,
     pj_strdup2(pool, &ci->subject.info, 
                X509_NAME_oneline(X509_get_subject_name(x),
                                  buf, sizeof(buf)));
-    get_cn_from_gen_name(&ci->subject.info, &ci->subject.cn);
+    get_cn_from_x509_name(pool, X509_get_subject_name(x), &ci->subject.cn);
 
     /* Validity */
     parse_ossl_asn1_time(&ci->validity.start, &ci->validity.gmt,

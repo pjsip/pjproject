@@ -47,6 +47,12 @@
 #define TEST_ROC 0
 
 #if defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK != 0 && \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_MBEDTLS)
+#  include <mbedtls/ctr_drbg.h>
+#  include <mbedtls/entropy.h>
+#endif
+
+#if defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK != 0 && \
     (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
 #  include <openssl/rand.h>
 #  include <openssl/opensslv.h>

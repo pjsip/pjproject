@@ -1021,6 +1021,50 @@ int regc_test(void)
             /* error    code    have_reg    expiration  contact_cnt auth?*/
             { PJ_FALSE, 200,    PJ_TRUE,    600,        0,          PJ_FALSE}
         },
+
+        /* a broken registrar returns a wildcard Contact, which is only
+         * valid in a request. It carries no URI, so it must be ignored
+         * rather than dereferenced. The expiration is taken from the
+         * Expires header.
+         */
+        {
+            ON_OFF,                         /* check_contact    */
+            ON_OFF,                         /* add_xuid_param   */
+            "wildcard Contact in response", /* title            */
+            NULL,                           /* alt_registrar    */
+            1,                              /* contact cnt      */
+            { "<sip:user@127.0.0.1:5060>" },/* contacts[]       */
+            600,                            /* expires          */
+
+            /* registrar config: */
+            /* respond  code    auth      contact   exp_prm expires more_contacts */
+            { PJ_TRUE,  200,    PJ_FALSE, NONE,     0,      65,     {"*", 0}},
+
+            /* client expected results: */
+            /* error    code    have_reg    expiration  contact_cnt auth?*/
+            { PJ_FALSE, 200,    PJ_TRUE,    65,         0,          PJ_FALSE}
+        },
+
+        /* as above, but the wildcard Contact accompanies our own binding.
+         * Our binding must still be found and the wildcard ignored.
+         */
+        {
+            ON_OFF,                         /* check_contact    */
+            ON_OFF,                         /* add_xuid_param   */
+            " as above with our binding",   /* title            */
+            NULL,                           /* alt_registrar    */
+            1,                              /* contact cnt      */
+            { "<sip:user@127.0.0.1:5060>" },/* contacts[]       */
+            600,                            /* expires          */
+
+            /* registrar config: */
+            /* respond  code    auth      contact   exp_prm expires more_contacts */
+            { PJ_TRUE,  200,    PJ_FALSE, EXACT,    75,     65,     {"*", 0}},
+
+            /* client expected results: */
+            /* error    code    have_reg    expiration  contact_cnt auth?*/
+            { PJ_FALSE, 200,    PJ_TRUE,    75,         1,          PJ_FALSE}
+        },
     };
 
     unsigned i;

@@ -181,23 +181,26 @@ PJ_DEF(void) pjpidf_tuple_construct(pj_pool_t *pool, pjpidf_tuple *t,
 PJ_DEF(const pj_str_t*) pjpidf_tuple_get_id(const pjpidf_tuple *t)
 {
     const pj_xml_attr *attr = pj_xml_find_attr((pj_xml_node*)t, &ID, NULL);
-    pj_assert(attr);
+    if (!attr)
+        return &EMPTY_STRING;
     return &attr->value;
 }
 
 PJ_DEF(void) pjpidf_tuple_set_id(pj_pool_t *pool, pjpidf_tuple *t, const pj_str_t *id)
 {
     pj_xml_attr *attr = pj_xml_find_attr(t, &ID, NULL);
-    pj_assert(attr);
-    pj_strdup(pool, &attr->value, id);
+    if (!attr) {
+        attr = xml_create_attr(pool, &ID, id);
+        pj_xml_add_attr(t, attr);
+    } else {
+        pj_strdup(pool, &attr->value, id);
+    }
 }
 
 
 PJ_DEF(pjpidf_status*) pjpidf_tuple_get_status(pjpidf_tuple *t)
 {
-    pjpidf_status *st = (pjpidf_status*)pj_xml_find_node(t, &STATUS);
-    pj_assert(st);
-    return st;
+    return (pjpidf_status*)pj_xml_find_node(t, &STATUS);
 }
 
 

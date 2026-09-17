@@ -188,23 +188,37 @@ static int ssl_data_pull(void *ctx, unsigned char *buf, size_t len)
     return read_size;
 }
 
-/* Get Common Name field string from a general name string */
-static void cert_get_cn(const pj_str_t *gen_name, pj_str_t *cn)
+/* Get Common Name field string from a certificate DN.
+ *
+ * The CN must be read from the parsed DN instead of being scraped from the
+ * printable form produced by mbedtls_x509_dn_gets(), as any RDN value may
+ * itself contain the "CN=" sequence and would then be mistaken for the
+ * Common Name.
+ */
+static void cert_get_cn(pj_pool_t *pool, const mbedtls_x509_name *name,
+                        pj_str_t *cn)
 {
-    pj_str_t CN_sign = {"CN=", 3};
-    char *p, *q;
+    const mbedtls_x509_name *n, *cn_entry = NULL;
+    pj_str_t val;
 
-    pj_bzero(cn, sizeof(cn));
+    pj_bzero(cn, sizeof(pj_str_t));
 
-    p = pj_strstr(gen_name, &CN_sign);
-    if (!p)
+    for (n = name; n != NULL; n = n->next) {
+        if (n->oid.p && MBEDTLS_OID_CMP(MBEDTLS_OID_AT_CN, &n->oid) == 0) {
+            cn_entry = n;
+            break;
+        }
+    }
+
+    if (!cn_entry || !cn_entry->val.p || cn_entry->val.len == 0)
         return;
 
-    p += 3; /* shift pointer to value part */
-    pj_strset(cn, p, gen_name->slen - (p - gen_name->ptr));
-    q = pj_strchr(cn, ',');
-    if (q)
-        cn->slen = q - p;
+    /* Reject embedded NUL, it indicates a spoofing attempt */
+    if (pj_memchr(cn_entry->val.p, 0, cn_entry->val.len))
+        return;
+
+    pj_strset(&val, (char*)cn_entry->val.p, (pj_ssize_t)cn_entry->val.len);
+    pj_strdup(pool, cn, &val);
 }
 
 static void cert_get_time(pj_time_val *tv,
@@ -340,7 +354,7 @@ static void update_cert_info(const mbedtls_x509_crt *crt,
         return;
     }
     pj_strdup2(pool, &ci->issuer.info, buf);
-    cert_get_cn(&ci->issuer.info, &ci->issuer.cn);
+    cert_get_cn(pool, &crt->issuer, &ci->issuer.cn);
 
     /* Subject */
     ret = mbedtls_x509_dn_gets(buf, bufsize, &crt->subject);
@@ -349,7 +363,7 @@ static void update_cert_info(const mbedtls_x509_crt *crt,
         return;
     }
     pj_strdup2(pool, &ci->subject.info, buf);
-    cert_get_cn(&ci->subject.info, &ci->subject.cn);
+    cert_get_cn(pool, &crt->subject, &ci->subject.cn);
 
     /* Validity period */
     cert_get_time(&ci->validity.start, &crt->valid_from, &ci->validity.gmt);
@@ -421,7 +435,7 @@ static int cert_verify_cb(void *data, mbedtls_x509_crt *crt,
 
     if (((*flags) & MBEDTLS_X509_BADCERT_CN_MISMATCH) != 0) {
         PJ_LOG(3, (THIS_FILE, "CN mismatch!"));
-        ssock->verify_status |= PJ_SSL_CERT_EISSUER_MISMATCH;
+        ssock->verify_status |= PJ_SSL_CERT_EIDENTITY_NOT_MATCH;
     }
 
     if (((*flags) & MBEDTLS_X509_BADCERT_NOT_TRUSTED) != 0) {

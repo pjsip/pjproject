@@ -317,8 +317,12 @@ pjsip_dlg_info_dialog_set_id(pj_pool_t *pool,
                              const pj_str_t *id)
 {
     pj_xml_attr *attr = pj_xml_find_attr(dialog, &ID, NULL);
-    pj_assert(attr);
-    pj_strdup(pool, &attr->value, id);
+    if (!attr) {
+        attr = xml_create_attr(pool, &ID, id);
+        pj_xml_add_attr(dialog, attr);
+    } else {
+        pj_strdup(pool, &attr->value, id);
+    }
 }
 
 PJ_DEF(const pj_str_t*)
@@ -548,8 +552,12 @@ pjsip_dlg_info_dialog_info_set_state(pj_pool_t *pool,
                                      const pj_str_t *state)
 {
     pj_xml_attr *attr = pj_xml_find_attr(dialog_info, &STATE, NULL);
-    pj_assert(attr);
-    pj_strdup(pool, &attr->value, state);
+    if (!attr) {
+        attr = xml_create_attr(pool, &STATE, state);
+        pj_xml_add_attr(dialog_info, attr);
+    } else {
+        pj_strdup(pool, &attr->value, state);
+    }
 }
 
 PJ_DEF(const pj_str_t *)
@@ -569,8 +577,12 @@ pjsip_dlg_info_dialog_info_set_version(pj_pool_t *pool,
                                        const pj_str_t *version)
 {
     pj_xml_attr *attr = pj_xml_find_attr(dialog_info, &VERSION, NULL);
-    pj_assert(attr);
-    pj_strdup(pool, &attr->value, version);
+    if (!attr) {
+        attr = xml_create_attr(pool, &VERSION, version);
+        pj_xml_add_attr(dialog_info, attr);
+    } else {
+        pj_strdup(pool, &attr->value, version);
+    }
 }
 
 PJ_DEF(const pj_str_t *)
@@ -589,8 +601,12 @@ pjsip_dlg_info_dialog_info_set_entity(pj_pool_t *pool,
                                       const pj_str_t *entity)
 {
     pj_xml_attr *attr = pj_xml_find_attr(dialog_info, &ENTITY, NULL);
-    pj_assert(attr);
-    pj_strdup(pool, &attr->value, entity);
+    if (!attr) {
+        attr = xml_create_attr(pool, &ENTITY, entity);
+        pj_xml_add_attr(dialog_info, attr);
+    } else {
+        pj_strdup(pool, &attr->value, entity);
+    }
 }
 
 PJ_DEF(pjsip_dlg_info_dialog *)

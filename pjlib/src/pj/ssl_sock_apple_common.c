@@ -175,7 +175,7 @@ static void get_info_and_cn(CFArrayRef array, CFMutableStringRef info,
                 CFStringAppend(info, str);
                 add_separator = PJ_TRUE;
 
-                if (CFEqual(keys[i], kSecOIDCommonName))
+                if (CFEqual(keys[i], kSecOIDCommonName) && !*cn)
                     *cn = str;
             }
         }
@@ -307,11 +307,17 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
         CFRelease(serial);
     }
 
-    /* Subject */
-    str = SecCertificateCopySubjectSummary(cert);
-    CFStringGetCString(str, buf, bufsize, kCFStringEncodingUTF8);
-    pj_strdup2(pool, &ci->subject.cn, buf);
-    CFRelease(str);
+    /* Subject Common Name.
+     *
+     * Note that SecCertificateCopySubjectSummary() must not be used here: it
+     * returns a display summary, which falls back to another attribute such
+     * as the email address when the subject carries no Common Name.
+     */
+    if (SecCertificateCopyCommonName(cert, &str) == errSecSuccess && str) {
+        CFStringGetCString(str, buf, bufsize, kCFStringEncodingUTF8);
+        pj_strdup2(pool, &ci->subject.cn, buf);
+        CFRelease(str);
+    }
 #if !TARGET_OS_IPHONE
 {
     CFArrayRef subject;
