@@ -143,9 +143,45 @@ if(IOS AND PJ_IOS_SAMPLE_LIBS)
     yuv:libyuv.a
   )
 
+  # The Xcode projects include the pjproject headers straight from the source
+  # tree, where the autotools build also writes the five headers it generates.
+  # CMake generates them under the build directory instead, so pj/config.h
+  # fails on a missing pj/compat/os_auto.h. Copy rather than symlink: a later
+  # ./aconfigure writes to these exact paths and would otherwise write through
+  # the link into the build directory.
+  set(_pj_ios_generated_headers
+    pjlib/include/pj/compat/os_auto.h
+    pjlib/include/pj/compat/m_auto.h
+    pjmedia/include/pjmedia/config_auto.h
+    pjmedia/include/pjmedia-codec/config_auto.h
+    pjsip/include/pjsip/sip_autoconf.h
+  )
+
+  # The Xcode projects link a fixed list of archives, including ones this
+  # configuration may not build -- WebRTC has no Apple support here, and any
+  # codec can be switched off. The matching feature is compiled out of the
+  # headers too, so nothing references those symbols and an empty archive
+  # satisfies the link. Without it the projects fail with "library not found".
+  set(_pj_ios_placeholder_src "${PROJECT_BINARY_DIR}/pj_ios_placeholder.c")
+  file(WRITE "${_pj_ios_placeholder_src}"
+    "/* Stands in for a library this configuration does not build.\n"
+    " * Its feature is compiled out, so nothing refers to its symbols. */\n"
+    "int pj_ios_placeholder(void);\n"
+    "int pj_ios_placeholder(void) { return 0; }\n"
+  )
+  add_library(pj-ios-placeholder STATIC "${_pj_ios_placeholder_src}")
+
   add_custom_target(pj-ios-sample-libs ALL
     COMMENT "Linking libraries into the iOS sample app projects"
   )
+  add_dependencies(pj-ios-sample-libs pj-ios-placeholder)
+
+  foreach(_pj_hdr IN LISTS _pj_ios_generated_headers)
+    add_custom_command(TARGET pj-ios-sample-libs POST_BUILD
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+              "${PROJECT_BINARY_DIR}/${_pj_hdr}" "${PROJECT_SOURCE_DIR}/${_pj_hdr}"
+    )
+  endforeach()
   foreach(_dir IN LISTS _pj_ios_sample_dirs)
     add_custom_command(TARGET pj-ios-sample-libs PRE_BUILD
       COMMAND "${CMAKE_COMMAND}" -E make_directory "${_dir}"
@@ -157,21 +193,27 @@ if(IOS AND PJ_IOS_SAMPLE_LIBS)
     list(GET _parts 0 _pj_tgt)
     list(GET _parts 1 _pj_name)
 
-    # A target is absent when its feature is disabled; the sample projects
-    # only need what was actually built.
     if(TARGET ${_pj_tgt})
       add_dependencies(pj-ios-sample-libs ${_pj_tgt})
-      foreach(_dir IN LISTS _pj_ios_sample_dirs)
-        add_custom_command(TARGET pj-ios-sample-libs POST_BUILD
-          COMMAND "${CMAKE_COMMAND}" -E create_symlink
-                  "$<TARGET_FILE:${_pj_tgt}>" "${_dir}/${_pj_name}"
-        )
-      endforeach()
+      set(_pj_src "$<TARGET_FILE:${_pj_tgt}>")
+    else()
+      set(_pj_src "$<TARGET_FILE:pj-ios-placeholder>")
     endif()
+
+    foreach(_dir IN LISTS _pj_ios_sample_dirs)
+      add_custom_command(TARGET pj-ios-sample-libs POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E create_symlink
+                "${_pj_src}" "${_dir}/${_pj_name}"
+      )
+    endforeach()
   endforeach()
 
   unset(_pj_ios_sample_dirs)
   unset(_pj_ios_sample_libs)
+  unset(_pj_ios_generated_headers)
+  unset(_pj_hdr)
+  unset(_pj_src)
+  unset(_pj_ios_placeholder_src)
   unset(_pj_tgt)
   unset(_pj_name)
   unset(_parts)
