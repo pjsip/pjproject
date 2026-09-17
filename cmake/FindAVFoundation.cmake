@@ -34,12 +34,13 @@ find_package_handle_standard_args(AVFoundation
 if(AVFoundation_FOUND)
   set(AVFoundation_LIBRARIES ${_avfoundation_libs})
 
+  # IMPORTED, so the target never has to belong to an export set when a
+  # library that links it is installed.
   if(NOT TARGET AVFoundation::AVFoundation)
-    add_library(avfoundation INTERFACE)
-    set_target_properties(avfoundation PROPERTIES
+    add_library(AVFoundation::AVFoundation INTERFACE IMPORTED GLOBAL)
+    set_target_properties(AVFoundation::AVFoundation PROPERTIES
       INTERFACE_LINK_LIBRARIES "${AVFoundation_LIBRARIES}"
     )
-    add_library(AVFoundation::AVFoundation ALIAS avfoundation)
   endif()
 endif()
 

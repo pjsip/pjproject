@@ -8,6 +8,11 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
 
 find_dependency(Threads)
 
+# Frameworks pjlib itself needs on Apple
+if(@APPLE@)
+  find_dependency(AppleFoundation)
+endif()
+
 # SSL/TLS backend (mutually exclusive)
 set(_pj_ssl_backend "@PJLIB_WITH_SSL@")
 if(_pj_ssl_backend STREQUAL "openssl")
@@ -102,6 +107,9 @@ if(@PJMEDIA_WITH_OPEN_H264_CODEC@)
 endif()
 if(@PJMEDIA_WITH_VID_TOOLBOX_CODEC@)
   find_dependency(VideoToolbox)
+endif()
+if(@APPLE@ AND @PJMEDIA_WITH_ILBC_CODEC@)
+  find_dependency(AudioToolbox)
 endif()
 
 set(CMAKE_MODULE_PATH "${_pj_saved_module_path}")

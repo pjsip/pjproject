@@ -724,8 +724,7 @@ target_sources(pjmedia-codec
 #
 
 if(APPLE AND PJMEDIA_WITH_ILBC_CODEC)
-  find_library(PJ_FRAMEWORK_AudioToolbox AudioToolbox)
-  mark_as_advanced(PJ_FRAMEWORK_AudioToolbox)
+  find_package(AudioToolbox)
 endif()
 
 target_link_libraries(pjmedia-codec
@@ -757,7 +756,7 @@ target_link_libraries(pjmedia-codec
     # AudioToolbox. It is set in config_site.h, which CMake cannot see, so the
     # framework is linked whenever the codec is built on Apple -- as the
     # autotools build does globally.
-    $<$<BOOL:${PJ_FRAMEWORK_AudioToolbox}>:${PJ_FRAMEWORK_AudioToolbox}>
+    $<$<BOOL:${AudioToolbox_FOUND}>:AudioToolbox::AudioToolbox>
     $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVFORMAT}>:FFMPEG::avformat>
     $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVCODEC}>:FFMPEG::avcodec>
     $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVUTIL}>:FFMPEG::avutil>

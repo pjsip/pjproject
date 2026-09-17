@@ -143,28 +143,28 @@ if(IOS AND PJ_IOS_SAMPLE_LIBS)
     "${PROJECT_SOURCE_DIR}/pjsip-apps/src/pjsua2/ios-swift-pjsua2/Libraries"
   )
 
-  # <cmake target>:<file name the Xcode projects link>
+  # <cmake target>|<file name the Xcode projects link>
   set(_pj_ios_sample_libs
-    pjlib:libpj.a
-    pjlib-util:libpjlib-util.a
-    pjnath:libpjnath.a
-    pjmedia:libpjmedia.a
-    pjmedia-codec:libpjmedia-codec.a
-    pjmedia-audiodev:libpjmedia-audiodev.a
-    pjmedia-videodev:libpjmedia-videodev.a
-    pjsip:libpjsip.a
-    pjsip-simple:libpjsip-simple.a
-    pjsip-ua:libpjsip-ua.a
-    pjsua-lib:libpjsua.a
-    pjsua2:libpjsua2.a
-    g7221:libg7221codec.a
-    gsm:libgsmcodec.a
-    ilbc:libilbccodec.a
-    resample:libresample.a
-    speex:libspeex.a
-    srtp:libsrtp.a
-    webrtc:libwebrtc.a
-    yuv:libyuv.a
+    pjlib|libpj.a
+    pjlib-util|libpjlib-util.a
+    pjnath|libpjnath.a
+    pjmedia|libpjmedia.a
+    pjmedia-codec|libpjmedia-codec.a
+    pjmedia-audiodev|libpjmedia-audiodev.a
+    pjmedia-videodev|libpjmedia-videodev.a
+    pjsip|libpjsip.a
+    pjsip-simple|libpjsip-simple.a
+    pjsip-ua|libpjsip-ua.a
+    pjsua-lib|libpjsua.a
+    pjsua2|libpjsua2.a
+    Pj::Dep::G7221|libg7221codec.a
+    Pj::Dep::GSM|libgsmcodec.a
+    Pj::Dep::iLBC|libilbccodec.a
+    Pj::Dep::Resample|libresample.a
+    Pj::Dep::Speex|libspeex.a
+    Pj::Dep::SRTP|libsrtp.a
+    Pj::Dep::WebRTC|libwebrtc.a
+    Pj::Dep::YUV|libyuv.a
   )
 
   # The Xcode projects include the pjproject headers straight from the source
@@ -213,15 +213,26 @@ if(IOS AND PJ_IOS_SAMPLE_LIBS)
   endforeach()
 
   foreach(_entry IN LISTS _pj_ios_sample_libs)
-    string(REPLACE ":" ";" _parts "${_entry}")
+    string(REPLACE "|" ";" _parts "${_entry}")
     list(GET _parts 0 _pj_tgt)
     list(GET _parts 1 _pj_name)
 
+    # The third-party entries are the provider-agnostic Pj::Dep:: aliases, so
+    # a system provider is staged as readily as a bundled one. Only a library
+    # this configuration genuinely does not have falls back to the
+    # placeholder, and it says so rather than leaving the sample to fail with
+    # unresolved symbols later.
     if(TARGET ${_pj_tgt})
-      add_dependencies(pj-ios-sample-libs ${_pj_tgt})
+      if(NOT _pj_tgt MATCHES "^Pj::")
+        add_dependencies(pj-ios-sample-libs ${_pj_tgt})
+      endif()
       set(_pj_src "$<TARGET_FILE:${_pj_tgt}>")
     else()
       set(_pj_src "$<TARGET_FILE:pj-ios-placeholder>")
+      message(STATUS
+        "[!] ${_pj_name} is not built by this configuration; the iOS sample "
+        "projects get an empty archive in its place"
+      )
     endif()
 
     foreach(_dir IN LISTS _pj_ios_sample_dirs)
@@ -399,6 +410,8 @@ _pj_collect_find_module(PJMEDIA_WITH_VIDEODEV_V4L2        V4L2)
 _pj_collect_find_module(PJMEDIA_WITH_VIDEODEV_DARWIN      AVFoundation)
 _pj_collect_find_module(PJMEDIA_WITH_VIDEODEV_METAL       Metal)
 _pj_collect_find_module(PJMEDIA_WITH_VID_TOOLBOX_CODEC    VideoToolbox)
+_pj_collect_find_module(APPLE                             AppleFoundation)
+_pj_collect_find_module(PJMEDIA_WITH_ILBC_CODEC           AudioToolbox)
 if(PJMEDIA_WITH_RESAMPLE STREQUAL "libsamplerate")
   _pj_collect_find_module(TRUE SampleRate)
 endif()

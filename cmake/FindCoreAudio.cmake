@@ -34,12 +34,13 @@ find_package_handle_standard_args(CoreAudio
 if(CoreAudio_FOUND)
   set(CoreAudio_LIBRARIES ${_coreaudio_libs})
 
+  # IMPORTED, so the target never has to belong to an export set when a
+  # library that links it is installed.
   if(NOT TARGET CoreAudio::CoreAudio)
-    add_library(coreaudio INTERFACE)
-    set_target_properties(coreaudio PROPERTIES
+    add_library(CoreAudio::CoreAudio INTERFACE IMPORTED GLOBAL)
+    set_target_properties(CoreAudio::CoreAudio PROPERTIES
       INTERFACE_LINK_LIBRARIES "${CoreAudio_LIBRARIES}"
     )
-    add_library(CoreAudio::CoreAudio ALIAS coreaudio)
   endif()
 endif()
 

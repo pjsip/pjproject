@@ -34,12 +34,13 @@ find_package_handle_standard_args(Metal
 if(Metal_FOUND)
   set(Metal_LIBRARIES ${_metal_libs})
 
+  # IMPORTED, so the target never has to belong to an export set when a
+  # library that links it is installed.
   if(NOT TARGET Metal::Metal)
-    add_library(metal INTERFACE)
-    set_target_properties(metal PROPERTIES
+    add_library(Metal::Metal INTERFACE IMPORTED GLOBAL)
+    set_target_properties(Metal::Metal PROPERTIES
       INTERFACE_LINK_LIBRARIES "${Metal_LIBRARIES}"
     )
-    add_library(Metal::Metal ALIAS metal)
   endif()
 endif()
 

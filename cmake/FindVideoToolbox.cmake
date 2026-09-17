@@ -34,12 +34,13 @@ find_package_handle_standard_args(VideoToolbox
 if(VideoToolbox_FOUND)
   set(VideoToolbox_LIBRARIES ${_videotoolbox_libs})
 
+  # IMPORTED, so the target never has to belong to an export set when a
+  # library that links it is installed.
   if(NOT TARGET VideoToolbox::VideoToolbox)
-    add_library(videotoolbox INTERFACE)
-    set_target_properties(videotoolbox PROPERTIES
+    add_library(VideoToolbox::VideoToolbox INTERFACE IMPORTED GLOBAL)
+    set_target_properties(VideoToolbox::VideoToolbox PROPERTIES
       INTERFACE_LINK_LIBRARIES "${VideoToolbox_LIBRARIES}"
     )
-    add_library(VideoToolbox::VideoToolbox ALIAS videotoolbox)
   endif()
 endif()
 

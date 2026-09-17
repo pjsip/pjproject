@@ -247,23 +247,14 @@ if(APPLE)
   # Objective-C sources of its own -- os_info_iphone.m uses UIDevice,
   # ssl_sock_apple.m uses NSLock -- and because pjlib is a static library the
   # missing frameworks surface only when an application is finally linked.
-  set(_pj_apple_frameworks CoreFoundation Foundation)
-  if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    list(APPEND _pj_apple_frameworks AppKit)
-  else()
-    list(APPEND _pj_apple_frameworks UIKit)
+  #
+  # Through an imported target rather than the paths find_library() returns:
+  # those carry the SDK version of the machine that built the package, so an
+  # installed Pj would not relocate to another Xcode.
+  find_package(AppleFoundation)
+  if(AppleFoundation_FOUND)
+    target_link_libraries(pjlib PUBLIC AppleFoundation::AppleFoundation)
   endif()
-
-  foreach(_pj_fw IN LISTS _pj_apple_frameworks)
-    find_library(PJ_FRAMEWORK_${_pj_fw} "${_pj_fw}")
-    mark_as_advanced(PJ_FRAMEWORK_${_pj_fw})
-    if(PJ_FRAMEWORK_${_pj_fw})
-      target_link_libraries(pjlib PUBLIC "${PJ_FRAMEWORK_${_pj_fw}}")
-    endif()
-  endforeach()
-
-  unset(_pj_apple_frameworks)
-  unset(_pj_fw)
 
   # pjlib compiles a C++ source of its own (atomic_queue.cpp), so a consumer
   # needs the C++ runtime even when the consumer is pure C. Nothing surfaces
