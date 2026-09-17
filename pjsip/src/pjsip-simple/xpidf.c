@@ -125,6 +125,11 @@ PJ_DEF(pjxpidf_pres*) pjxpidf_parse(pj_pool_t *pool, char *text, pj_size_t len)
     if (!pres)
         return NULL;
 
+    /* The accessors below assert on these lookups, so the validation here
+     * must reject any document that lacks them. Relaxing it would turn
+     * those asserts into remotely triggerable aborts.
+     */
+
     /* Validate <presence> */
     if (pj_stricmp(&pres->name, &STR_PRESENCE) != 0)
         return NULL;

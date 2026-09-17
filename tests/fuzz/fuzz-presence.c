@@ -7,6 +7,7 @@
 #include <pjsip-simple/pidf.h>
 #include <pjsip-simple/xpidf.h>
 #include <pjsip-simple/rpid.h>
+#include <pjsip-simple/presence.h>
 #include <pjsip-simple/dialog_info.h>
 #include <pjsip-simple/iscomposing.h>
 
@@ -61,7 +62,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
 
         pjpidf_tuple *tuple = pjpidf_pres_get_first_tuple(pidf_pres);
         if (tuple) {
-            /* Call only safe accessor functions without assertions */
+            pjpidf_tuple_get_id(tuple);
             pjpidf_tuple_get_contact(tuple);
             pjpidf_tuple_get_timestamp(tuple);
 
@@ -80,6 +81,31 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
             (void)rpid_elem.activity;
             if (rpid_elem.note.slen > 0) {
                 (void)rpid_elem.note.ptr;
+            }
+        }
+    }
+
+    /* Test the PIDF entry point reached from an incoming presence NOTIFY.
+     * The parsers mutate the document in place, so give it its own copy.
+     */
+    char *pidf_doc = pj_pool_alloc(pool, Size + 1);
+    if (pidf_doc) {
+        pjsip_pres_status pres_status;
+
+        memcpy(pidf_doc, Data, Size);
+        pidf_doc[Size] = '\0';
+        pj_bzero(&pres_status, sizeof(pres_status));
+
+        if (pjsip_pres_parse_pidf2(pidf_doc, (unsigned)Size, pool,
+                                   &pres_status) == PJ_SUCCESS)
+        {
+            unsigned i;
+            for (i = 0; i < pres_status.info_cnt; ++i) {
+                if (pres_status.info[i].id.slen > 0)
+                    (void)pres_status.info[i].id.ptr;
+                if (pres_status.info[i].contact.slen > 0)
+                    (void)pres_status.info[i].contact.ptr;
+                (void)pres_status.info[i].basic_open;
             }
         }
     }
