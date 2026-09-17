@@ -102,5 +102,10 @@
 #cmakedefine01 PJMEDIA_HAS_LYRA_CODEC
 #endif
 
+/* VideoToolbox H.264 codec */
+#ifndef PJMEDIA_HAS_VID_TOOLBOX_CODEC
+#cmakedefine01 PJMEDIA_HAS_VID_TOOLBOX_CODEC
+#endif
+
 #endif  /* __PJMEDIA_CODEC_CONFIG_AUTO_H_ */
 

@@ -243,10 +243,24 @@ endif()
 
 # apple
 if(APPLE)
-  find_library(CoreFoundation_LIBRARY CoreFoundation)
-  if (CoreFoundation_LIBRARY)
-    target_link_libraries(pjlib PRIVATE "${CoreFoundation_LIBRARY}")
+  # The autotools build links these globally (aconfigure.ac). pjlib has
+  # Objective-C sources of its own -- os_info_iphone.m uses UIDevice,
+  # ssl_sock_apple.m uses NSLock -- and because pjlib is a static library the
+  # missing frameworks surface only when an application is finally linked.
+  #
+  # Through an imported target rather than the paths find_library() returns:
+  # those carry the SDK version of the machine that built the package, so an
+  # installed Pj would not relocate to another Xcode.
+  find_package(AppleFoundation)
+  if(AppleFoundation_FOUND)
+    target_link_libraries(pjlib PUBLIC AppleFoundation::AppleFoundation)
   endif()
+
+  # pjlib compiles a C++ source of its own (atomic_queue.cpp), so a consumer
+  # needs the C++ runtime even when the consumer is pure C. Nothing surfaces
+  # this while building the archive; it appears as undefined std::terminate()
+  # when an application is linked.
+  target_link_libraries(pjlib PUBLIC c++)
 endif()
 
 # math library
