@@ -591,6 +591,27 @@ static pj_status_t blob_to_str(DWORD enc_type, CERT_NAME_BLOB* blob,
 }
 
 
+/* Get the Common Name of the certificate subject or issuer.
+ *
+ * Note that the whole DN string must not be used here, as the peer identity
+ * check compares the requested host name against this field.
+ */
+static pj_status_t cert_get_cn(const CERT_CONTEXT *cert, pj_bool_t is_issuer,
+                               char *buf, unsigned buf_len)
+{
+    DWORD ret;
+
+    ret = CertGetNameStringA((PCCERT_CONTEXT)cert, CERT_NAME_ATTR_TYPE,
+                             (is_issuer? CERT_NAME_ISSUER_FLAG : 0),
+                             (void*)szOID_COMMON_NAME, buf, buf_len);
+    if (ret <= 1) {
+        PJ_LOG(3,(SENDER, "Failed to get cert common name"));
+        return PJ_ENOTFOUND;
+    }
+    return PJ_SUCCESS;
+}
+
+
 static pj_status_t file_time_to_time_val(const FILETIME* file_time,
                                          pj_time_val* time_val)
 {
@@ -631,7 +652,7 @@ static void cert_parse_info(pj_pool_t* pool, pj_ssl_cert_info* ci,
 
     /* Get issuer & serial no first */
     status = blob_to_str(cert->dwCertEncodingType, &cert_info->Issuer,
-                         CERT_SIMPLE_NAME_STR,
+                         CERT_X500_NAME_STR | CERT_NAME_STR_NO_PLUS_FLAG,
                          buf, sizeof(buf));
 
     serial_size = PJ_MIN(cert_info->SerialNumber.cbData, sizeof(serial_no));
@@ -653,9 +674,7 @@ static void cert_parse_info(pj_pool_t* pool, pj_ssl_cert_info* ci,
 
     /* Issuer */
     pj_strdup2(pool, &ci->issuer.info, buf);
-    status = blob_to_str(cert->dwCertEncodingType, &cert_info->Issuer,
-                         CERT_X500_NAME_STR | CERT_NAME_STR_NO_PLUS_FLAG,
-                         buf, sizeof(buf));
+    status = cert_get_cn(cert, PJ_TRUE, buf, sizeof(buf));
     if (status == PJ_SUCCESS)
         pj_strdup2(pool, &ci->issuer.cn, buf);
 
@@ -664,14 +683,12 @@ static void cert_parse_info(pj_pool_t* pool, pj_ssl_cert_info* ci,
 
     /* Subject */
     status = blob_to_str(cert->dwCertEncodingType, &cert_info->Subject,
-                         CERT_SIMPLE_NAME_STR,
+                         CERT_X500_NAME_STR | CERT_NAME_STR_NO_PLUS_FLAG,
                          buf, sizeof(buf));
     if (status == PJ_SUCCESS)
         pj_strdup2(pool, &ci->subject.info, buf);
 
-    status = blob_to_str(cert->dwCertEncodingType, &cert_info->Subject,
-                         CERT_X500_NAME_STR | CERT_NAME_STR_NO_PLUS_FLAG,
-                         buf, sizeof(buf));
+    status = cert_get_cn(cert, PJ_FALSE, buf, sizeof(buf));
     if (status == PJ_SUCCESS)
         pj_strdup2(pool, &ci->subject.cn, buf);
 

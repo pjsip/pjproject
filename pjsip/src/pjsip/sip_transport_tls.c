@@ -2258,6 +2258,7 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
         pj_str_t *remote_name;
         pj_ssl_cert_info *serv_cert = ssl_info.remote_cert_info;
         pj_bool_t matched = PJ_FALSE;
+        pj_bool_t has_san = PJ_FALSE;
         unsigned i;
 
         /* Remote name may be hostname or IP address */
@@ -2269,12 +2270,13 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
         /* Start matching remote name with SubjectAltName fields of 
          * server certificate.
          */
-        for (i = 0; i < serv_cert->subj_alt_name.cnt && !matched; ++i) {
+        for (i = 0; i < serv_cert->subj_alt_name.cnt; ++i) {
             pj_str_t *cert_name = &serv_cert->subj_alt_name.entry[i].name;
 
             switch (serv_cert->subj_alt_name.entry[i].type) {
             case PJ_SSL_CERT_NAME_DNS:
             case PJ_SSL_CERT_NAME_IP:
+                has_san = PJ_TRUE;
                 matched = !pj_stricmp(remote_name, cert_name);
                 break;
             case PJ_SSL_CERT_NAME_URI:
@@ -2287,18 +2289,26 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
                     p = pj_strchr(cert_name, ':') + 1;
                     pj_strset(&host_part, p, cert_name->slen - 
                                              (p - cert_name->ptr));
+                    has_san = PJ_TRUE;
                     matched = !pj_stricmp(remote_name, &host_part);
                 }
                 break;
             default:
                 break;
             }
+
+            if (matched)
+                break;
         }
         
-        /* When still not matched or no SubjectAltName fields in server
-         * certificate, try with Common Name of Subject field.
+        /* Only when the certificate presents no identity in SubjectAltName,
+         * try with Common Name of Subject field. RFC 5922 (section 7.2) and
+         * RFC 6125 (section 6.4.4) forbid falling back to Common Name when
+         * SubjectAltName identities are present but none of them matches.
          */
-        if (!matched) {
+        if (!matched && !has_san && remote_name->slen &&
+            serv_cert->subject.cn.slen)
+        {
             matched = !pj_stricmp(remote_name, &serv_cert->subject.cn);
         }
 

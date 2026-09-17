@@ -940,23 +940,38 @@ static pj_ssl_cipher ssl_get_cipher(pj_ssl_sock_t *ssock)
 }
 
 
-/* Get Common Name field string from a general name string */
-static void tls_cert_get_cn(const pj_str_t *gen_name, pj_str_t *cn)
+/* Get Common Name field string from a certificate DN.
+ *
+ * The CN must be read via the X.509 API instead of being scraped from the
+ * printable DN form, as any RDN value may itself contain the "CN="
+ * sequence and would then be mistaken for the Common Name.
+ */
+static void tls_cert_get_cn(pj_pool_t *pool, gnutls_x509_crt_t cert,
+                            pj_bool_t is_issuer, pj_str_t *cn)
 {
-    pj_str_t CN_sign = {"CN=", 3};
-    char *p, *q;
+    char buf[512];
+    size_t bufsize = sizeof(buf);
+    int ret;
 
-    pj_bzero(cn, sizeof(cn));
+    pj_bzero(cn, sizeof(pj_str_t));
 
-    p = pj_strstr(gen_name, &CN_sign);
-    if (!p)
+    if (is_issuer) {
+        ret = gnutls_x509_crt_get_issuer_dn_by_oid(
+                        cert, GNUTLS_OID_X520_COMMON_NAME, 0, 0,
+                        buf, &bufsize);
+    } else {
+        ret = gnutls_x509_crt_get_dn_by_oid(
+                        cert, GNUTLS_OID_X520_COMMON_NAME, 0, 0,
+                        buf, &bufsize);
+    }
+    if (ret < 0)
         return;
 
-    p += 3; /* shift pointer to value part */
-    pj_strset(cn, p, gen_name->slen - (p - gen_name->ptr));
-    q = pj_strchr(cn, ',');
-    if (q)
-        cn->slen = q - p;
+    /* GnuTLS returns the value in RFC 4514 escaped form, so a value holding
+     * a NUL comes back as a hex string rather than as a truncatable C string.
+     */
+    buf[sizeof(buf) - 1] = '\0';
+    pj_strdup2(pool, cn, buf);
 }
 
 
@@ -998,7 +1013,7 @@ static void tls_cert_get_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
 
     /* Issuer */
     pj_strdup2(pool, &ci->issuer.info, buf);
-    tls_cert_get_cn(&ci->issuer.info, &ci->issuer.cn);
+    tls_cert_get_cn(pool, cert, PJ_TRUE, &ci->issuer.cn);
 
     /* Serial number */
     pj_memcpy(ci->serial_no, serial_no, sizeof(ci->serial_no));
@@ -1007,7 +1022,7 @@ static void tls_cert_get_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
     bufsize = sizeof(buf);
     gnutls_x509_crt_get_dn(cert, buf, &bufsize);
     pj_strdup2(pool, &ci->subject.info, buf);
-    tls_cert_get_cn(&ci->subject.info, &ci->subject.cn);
+    tls_cert_get_cn(pool, cert, PJ_FALSE, &ci->subject.cn);
 
     /* Validity */
     ci->validity.end.sec = (long)gnutls_x509_crt_get_expiration_time(cert);
