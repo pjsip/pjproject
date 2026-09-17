@@ -275,10 +275,15 @@ run_tier3() {
 
     app=$w/VerifyPJSIP.app
     mkdir -p "$app"
-    cp "$SELF_DIR/tier3/Info.plist" "$app/Info.plist"
 
     local minos
     minos=$(slice_minos "$dir/libpjproject.a" "$HOST_ARCH")
+
+    # The bundle has to claim the artifact's own minimum, not a fixed one: a
+    # simulator older than the plist's MinimumOSVersion refuses the install,
+    # which would read as a library failure rather than a harness mismatch.
+    cp "$SELF_DIR/tier3/Info.plist" "$app/Info.plist"
+    plutil -replace MinimumOSVersion -string "$minos" "$app/Info.plist"
     if ! xcrun -sdk iphonesimulator clang -fobjc-arc \
             -target "$HOST_ARCH-apple-ios$minos-simulator" \
             -I"$dir/Headers" "$SELF_DIR/tier3/main.m" \

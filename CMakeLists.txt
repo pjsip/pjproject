@@ -341,12 +341,18 @@ install(
   COMPONENT   PjDevelopment
 )
 
-# APPLE is empty rather than 0 off Apple, and PjConfig.cmake.in substitutes it
-# into an if() condition, where an empty operand beside AND is a hard error.
+# APPLE and IOS are empty rather than 0 off those platforms, and
+# PjConfig.cmake.in substitutes them into if() conditions, where an empty
+# operand beside AND is a hard error.
 if(APPLE)
   set(PJ_APPLE 1)
 else()
   set(PJ_APPLE 0)
+endif()
+if(IOS)
+  set(PJ_IOS 1)
+else()
+  set(PJ_IOS 0)
 endif()
 
 # write package config
@@ -428,6 +434,9 @@ _pj_collect_find_module(PJLIB_WITH_LIBUUID               UUID)
 _pj_collect_find_module(PJNATH_WITH_UPNP                 UPNP)
 _pj_collect_find_module(PJMEDIA_WITH_AUDIODEV_COREAUDIO   CoreAudio)
 _pj_collect_find_module(PJMEDIA_WITH_VIDEODEV_V4L2        V4L2)
+if(IOS)
+  _pj_collect_find_module(PJMEDIA_WITH_VIDEODEV_OPENGL    OpenGLES)
+endif()
 _pj_collect_find_module(PJMEDIA_WITH_VIDEODEV_DARWIN      AVFoundation)
 _pj_collect_find_module(PJMEDIA_WITH_VIDEODEV_METAL       Metal)
 _pj_collect_find_module(PJMEDIA_WITH_VID_TOOLBOX_CODEC    VideoToolbox)

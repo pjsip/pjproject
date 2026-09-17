@@ -169,8 +169,10 @@ slice_min_version() {
 }
 
 # The triple for compile-time probes against a slice; the first architecture
-# stands for the slice, which is safe because every macro they could disagree
-# on is cosmetic on Apple's 64-bit little-endian pairs.
+# stands for the slice. The one machine value that does differ across Apple's
+# 64-bit little-endian pairs is dispatched on the compiler's own architecture
+# macro rather than frozen (see dispatch_machine_header), so the probe cannot
+# pin the wrong architecture's.
 slice_target() {
     local slice=$1 min arch
     min=$(slice_min_version "$slice")
@@ -269,7 +271,11 @@ build_opus() {
 slice_libs() {
     local bld=$1 prefix=$2
     find "$bld" -name '*.a' -not -path '*/CMakeFiles/*' | sort
-    [ -n "$prefix" ] && echo "$prefix/lib/libopus.a"
+    # an if, not a &&: with NO_OPUS there is no prefix, and the test would be
+    # the function's exit status
+    if [ -n "$prefix" ]; then
+        echo "$prefix/lib/libopus.a"
+    fi
 }
 
 # The release version, straight from the tree rather than a second copy.
@@ -358,9 +364,6 @@ freeze_autoconf() {
     mv -f "$hdr.tmp" "$hdr"
 }
 
-# No Opus headers are shipped: no public pjmedia header includes them, and
-# an opus/ directory here would shadow the consumer's own Opus headers
-# through the framework's header search path.
 # Every -DPJ* macro the build passes on the command line. pjmedia's public
 # headers branch on a number of them (PJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL drives
 # PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES, PJMEDIA_HAS_WEBRTC_AEC and
@@ -531,6 +534,64 @@ freeze_macros() {
     mv -f "$site.tmp" "$site"
 }
 
+# Marker the dispatch below carries, so its loss is detectable downstream.
+MACHINE_DISPATCH_MARK="/* PJSIP: machine name chosen per architecture */"
+
+# The compiler macro and the pjlib machine macro for an Apple architecture.
+arch_machine_macros() {
+    case $1 in
+    arm64|arm64e)   echo "__aarch64__ PJ_M_ARM64" ;;
+    x86_64)         echo "__x86_64__ PJ_M_X86_64" ;;
+    *)              die "no machine macros known for architecture '$1'" ;;
+    esac
+}
+
+# CMake configures once per slice, so pj_detect_arch() sees only the first of
+# CMAKE_OSX_ARCHITECTURES and the m_auto.h it generates names that one
+# architecture for the whole fat slice -- an x86_64 half would otherwise
+# report arm64 to its own sources and to consumers. Everything else in the
+# file is genuinely common to Apple's 64-bit pairs, so instead of configuring
+# once per architecture the machine name becomes a dispatch on the compiler's
+# own architecture macro. Applied to the build tree before compiling, so the
+# library and the headers staged from it cannot disagree.
+dispatch_machine_header() {
+    local hdr=$1 slice=$2 arch macros kw="#if" body=$1.dispatch
+
+    # The two remaining machine values have to be common to the slice.
+    # Endianness already is: on Darwin the header derives it from the
+    # compiler's own __BIG_ENDIAN__ rather than from the configure run.
+    grep -q "^#define PJ_HAS_FLOATING_POINT 1$" "$hdr" \
+        || die "$hdr does not report hardware floating point; the slice's
+                architectures no longer share this header"
+    grep -q "^#ifdef __BIG_ENDIAN__$" "$hdr" \
+        || die "$hdr no longer derives endianness from the compiler; it would
+                carry only the first architecture's"
+
+    : > "$body"
+    for arch in $(echo "$(slice_archs "$slice")" | tr ';' ' '); do
+        macros=$(arch_machine_macros "$arch")
+        printf '%s defined(%s)\n#   define %-14s 1\n#   define %-14s "%s"\n' \
+               "$kw" "${macros%% *}" "${macros##* }" PJ_M_NAME "$arch" >> "$body"
+        kw="#elif"
+    done
+    printf '#else\n#   error "this PJSIP build was not made for this architecture"\n#endif\n' \
+        >> "$body"
+
+    awk -v mark="$MACHINE_DISPATCH_MARK" -v body="$body" '
+        /^#define PJ_M_NAME / {
+            print mark
+            while ((getline line < body) > 0) print line
+            close(body)
+            next
+        }
+        { print }
+    ' "$hdr" > "$hdr.tmp" && mv "$hdr.tmp" "$hdr"
+    rm -f "$body"
+
+    grep -qF "$MACHINE_DISPATCH_MARK" "$hdr" \
+        || die "$hdr has no PJ_M_NAME to make per-architecture"
+}
+
 # No Opus headers are shipped: no public pjmedia header includes them, and
 # an opus/ directory here would shadow the consumer's own Opus headers
 # through the framework's header search path.
@@ -548,6 +609,10 @@ stage_headers() {
         mkdir -p "$hdr/$(dirname "${h#*/include/}")"
         cp "$bld/$h" "$hdr/${h#*/include/}"
     done
+
+    grep -qF "$MACHINE_DISPATCH_MARK" "$hdr/pj/compat/m_auto.h" \
+        || die "the staged m_auto.h names a single architecture; the build
+                regenerated it after dispatch_machine_header ran"
 
     cp "$SELF_DIR/PJSIPUmbrella.h" "$hdr/PJSIPUmbrella.h"
     cp "$SELF_DIR/module.modulemap" "$hdr/module.modulemap"
@@ -608,7 +673,7 @@ build_slice() {
     local bld=$dest/build
     local opus_prefix=$dest/opus
     local opts=("${CMAKE_OPTS[@]}")
-    local libs
+    local libs lib
 
     echo "==> building $slice ($(slice_archs "$slice"))"
     rm -rf "$dest"
@@ -641,9 +706,14 @@ build_slice() {
     # The options above are what the artifact claims to be; a silently
     # downgraded one would ship a framework that does not match its manifest.
     local opt
-    for opt in PJLIB_WITH_SSL:apple PJMEDIA_WITH_VIDEO:ON \
-               PJMEDIA_WITH_VID_TOOLBOX_CODEC:ON PJMEDIA_WITH_VIDEODEV_DARWIN:ON \
-               PJMEDIA_WITH_AUDIODEV_COREAUDIO:ON; do
+    local checks=(PJLIB_WITH_SSL:apple PJMEDIA_WITH_VIDEO:ON
+                  PJMEDIA_WITH_VID_TOOLBOX_CODEC:ON PJMEDIA_WITH_VIDEODEV_DARWIN:ON
+                  PJMEDIA_WITH_VIDEODEV_METAL:ON PJMEDIA_WITH_AUDIODEV_COREAUDIO:ON)
+    # the OpenGL ES renderer is iOS only; macOS renders with Metal alone
+    case $slice in
+    ios-device|ios-simulator) checks+=(PJMEDIA_WITH_VIDEODEV_OPENGL:ON) ;;
+    esac
+    for opt in "${checks[@]}"; do
         grep -q "^${opt%%:*}:[A-Z]*=${opt##*:}$" "$bld/CMakeCache.txt" \
             || die "$slice: ${opt%%:*} did not stay ${opt##*:}; see $dest/configure.log"
     done
@@ -652,11 +722,18 @@ build_slice() {
             || die "$slice: configure did not pick up Opus"
     fi
 
+    dispatch_machine_header "$bld/pjlib/include/pj/compat/m_auto.h" "$slice"
+
     cmake --build "$bld" -j "$JOBS" > "$dest/build.log" 2>&1 \
         || { grep -i "error" "$dest/build.log" | head -10 | sed 's/^/    /'; die "build failed for $slice"; }
 
-    libs=$(slice_libs "$bld" "$opus_prefix")
-    prelink_archive "$dest" "$slice" $libs
+    # one array element per line, so a path containing spaces survives
+    libs=()
+    while IFS= read -r lib; do
+        [ -n "$lib" ] && libs+=("$lib")
+    done < <(slice_libs "$bld" "$opus_prefix")
+    [ ${#libs[@]} -gt 0 ] || die "$slice: the build produced no static library"
+    prelink_archive "$dest" "$slice" "${libs[@]}"
     stage_headers "$dest/Headers" "$bld" "$(slice_sdk "$slice")" "$(slice_target "$slice")"
 }
 
