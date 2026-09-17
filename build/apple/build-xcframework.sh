@@ -70,6 +70,12 @@ OPUS_VERSION=1.6.1
 OPUS_SHA256=6ffcb593207be92584df15b32466ed64bbec99109f007c82205f0194572411a1
 OPUS_URL=https://downloads.xiph.org/releases/opus/opus-$OPUS_VERSION.tar.gz
 
+# Every cmake invocation here, Opus included, and deliberately overriding the
+# environment: cflags_macros() reads the build's own flags.make, which only the
+# Makefile generators write, so a Ninja or Xcode CMAKE_GENERATOR would build
+# and then fail at the freeze -- or, for Opus, fail before the build starts.
+export CMAKE_GENERATOR="Unix Makefiles"
+
 XCODE_DEV=$(xcode-select -p)
 SITE=$PJDIR/pjlib/include/pj/config_site.h
 BACKUP=$OUTDIR/config_site.h.orig
@@ -824,9 +830,16 @@ main() {
     RELEASE_URL=${RELEASE_URL:-$RELEASE_BASE/$VERSION/$NAME.xcframework.zip}
     PODSPEC_URL=${PODSPEC_URL:-$RELEASE_BASE/$VERSION/$NAME.podspec}
 
-    # A backup left behind by an earlier interrupted run is stale: it would be
-    # restored over whatever the checkout has now.
-    rm -f "$BACKUP"
+    # A backup here means an earlier run was killed before its EXIT trap
+    # could put things back: $SITE holds this script's config_site.h and
+    # $BACKUP holds the checkout's own. Deleting it would destroy the only
+    # copy, and nothing here can tell that case apart from a backup that has
+    # since become stale, so the reconciliation is left to a human.
+    if [ -f "$BACKUP" ]; then
+        die "$BACKUP is left over from an interrupted run and holds the
+                checkout's own $SITE. Move it back, or delete it if the
+                current $SITE is the one to keep, then run again"
+    fi
     if [ -f "$SITE" ]; then
         SITE_EXISTED=1
         cp "$SITE" "$BACKUP"

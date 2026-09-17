@@ -100,9 +100,15 @@ slice_minos() {
     fi
     (cd "$tmp" && ar x thin.a 2>/dev/null) || true
     o=$(ls "$tmp"/*.o 2>/dev/null | grep -v thin | head -1)
-    [ -n "$o" ] && minos=$(vtool -show-build "$o" 2>/dev/null | awk '/minos/{print $2; exit}')
+    # Matched on the field, not anywhere in the line: vtool prints the
+    # object's path first, and $tmp has "minos" in its own name.
+    [ -n "$o" ] && minos=$(vtool -show-build "$o" 2>/dev/null \
+                           | awk '$1 == "minos" { print $2; exit }')
     rm -rf "$tmp"
-    echo "${minos:-15.0}"
+    # No default: every caller compiles against this, so inventing a version
+    # would test a target the artifact never claimed -- and silently pass.
+    [ -n "$minos" ] || die "cannot read the minimum OS version of $lib ($arch)"
+    echo "$minos"
 }
 
 slice_dir() {
