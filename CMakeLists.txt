@@ -100,6 +100,83 @@ if(NOT IOS)
   add_subdirectory(pjsip-apps)
 endif()
 
+# The iOS sample applications are Xcode projects rather than CMake targets,
+# and they link the static libraries from beside their own sources under the
+# names the GNU makefiles produce. Mirror what pjsip-apps/build/Makefile does
+# for $(PJSUA_EXE) on iOS, so the sample projects can be opened and built
+# after a CMake build too. CMake's own library names differ from the GNU ones
+# for a few targets, hence the mapping rather than a plain copy.
+if(IOS)
+  option(PJ_IOS_SAMPLE_LIBS
+    "Link the built libraries into the iOS sample app projects" ON
+  )
+endif()
+
+if(IOS AND PJ_IOS_SAMPLE_LIBS)
+  set(_pj_ios_sample_dirs
+    "${PROJECT_SOURCE_DIR}/pjsip-apps/src/pjsua/ios"
+    "${PROJECT_SOURCE_DIR}/pjsip-apps/src/pjsua/ios-swift/Libraries"
+    "${PROJECT_SOURCE_DIR}/pjsip-apps/src/pjsua2/ios-swift-pjsua2/Libraries"
+  )
+
+  # <cmake target>:<file name the Xcode projects link>
+  set(_pj_ios_sample_libs
+    pjlib:libpj.a
+    pjlib-util:libpjlib-util.a
+    pjnath:libpjnath.a
+    pjmedia:libpjmedia.a
+    pjmedia-codec:libpjmedia-codec.a
+    pjmedia-audiodev:libpjmedia-audiodev.a
+    pjmedia-videodev:libpjmedia-videodev.a
+    pjsip:libpjsip.a
+    pjsip-simple:libpjsip-simple.a
+    pjsip-ua:libpjsip-ua.a
+    pjsua-lib:libpjsua.a
+    pjsua2:libpjsua2.a
+    g7221:libg7221codec.a
+    gsm:libgsmcodec.a
+    ilbc:libilbccodec.a
+    resample:libresample.a
+    speex:libspeex.a
+    srtp:libsrtp.a
+    webrtc:libwebrtc.a
+    yuv:libyuv.a
+  )
+
+  add_custom_target(pj-ios-sample-libs ALL
+    COMMENT "Linking libraries into the iOS sample app projects"
+  )
+  foreach(_dir IN LISTS _pj_ios_sample_dirs)
+    add_custom_command(TARGET pj-ios-sample-libs PRE_BUILD
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${_dir}"
+    )
+  endforeach()
+
+  foreach(_entry IN LISTS _pj_ios_sample_libs)
+    string(REPLACE ":" ";" _parts "${_entry}")
+    list(GET _parts 0 _pj_tgt)
+    list(GET _parts 1 _pj_name)
+
+    # A target is absent when its feature is disabled; the sample projects
+    # only need what was actually built.
+    if(TARGET ${_pj_tgt})
+      add_dependencies(pj-ios-sample-libs ${_pj_tgt})
+      foreach(_dir IN LISTS _pj_ios_sample_dirs)
+        add_custom_command(TARGET pj-ios-sample-libs POST_BUILD
+          COMMAND "${CMAKE_COMMAND}" -E create_symlink
+                  "$<TARGET_FILE:${_pj_tgt}>" "${_dir}/${_pj_name}"
+        )
+      endforeach()
+    endif()
+  endforeach()
+
+  unset(_pj_ios_sample_dirs)
+  unset(_pj_ios_sample_libs)
+  unset(_pj_tgt)
+  unset(_pj_name)
+  unset(_parts)
+endif()
+
 # ##############################################################################
 # Installation
 

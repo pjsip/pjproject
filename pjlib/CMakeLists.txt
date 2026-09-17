@@ -243,10 +243,33 @@ endif()
 
 # apple
 if(APPLE)
-  find_library(CoreFoundation_LIBRARY CoreFoundation)
-  if (CoreFoundation_LIBRARY)
-    target_link_libraries(pjlib PRIVATE "${CoreFoundation_LIBRARY}")
+  # The autotools build links these globally (aconfigure.ac). pjlib has
+  # Objective-C sources of its own -- os_info_iphone.m uses UIDevice,
+  # ssl_sock_apple.m uses NSLock -- and because pjlib is a static library the
+  # missing frameworks surface only when an application is finally linked.
+  set(_pj_apple_frameworks CoreFoundation Foundation)
+  if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    list(APPEND _pj_apple_frameworks AppKit)
+  else()
+    list(APPEND _pj_apple_frameworks UIKit)
   endif()
+
+  foreach(_pj_fw IN LISTS _pj_apple_frameworks)
+    find_library(PJ_FRAMEWORK_${_pj_fw} "${_pj_fw}")
+    mark_as_advanced(PJ_FRAMEWORK_${_pj_fw})
+    if(PJ_FRAMEWORK_${_pj_fw})
+      target_link_libraries(pjlib PUBLIC "${PJ_FRAMEWORK_${_pj_fw}}")
+    endif()
+  endforeach()
+
+  unset(_pj_apple_frameworks)
+  unset(_pj_fw)
+
+  # pjlib compiles a C++ source of its own (atomic_queue.cpp), so a consumer
+  # needs the C++ runtime even when the consumer is pure C. Nothing surfaces
+  # this while building the archive; it appears as undefined std::terminate()
+  # when an application is linked.
+  target_link_libraries(pjlib PUBLIC c++)
 endif()
 
 # math library

@@ -723,6 +723,11 @@ target_sources(pjmedia-codec
 # pjmedia-codec - dependencies
 #
 
+if(APPLE AND PJMEDIA_WITH_ILBC_CODEC)
+  find_library(PJ_FRAMEWORK_AudioToolbox AudioToolbox)
+  mark_as_advanced(PJ_FRAMEWORK_AudioToolbox)
+endif()
+
 target_link_libraries(pjmedia-codec
   PUBLIC
     pjlib
@@ -747,6 +752,12 @@ target_link_libraries(pjmedia-codec
     $<$<BOOL:${PJMEDIA_WITH_VPX_CODEC}>:VPX::VPX>
     $<$<BOOL:${PJMEDIA_WITH_OPEN_H264_CODEC}>:OpenH264::OpenH264>
     $<$<BOOL:${PJMEDIA_WITH_VID_TOOLBOX_CODEC}>:VideoToolbox::VideoToolbox>
+
+    # PJMEDIA_ILBC_CODEC_USE_COREAUDIO makes ilbc.c use AudioConverter from
+    # AudioToolbox. It is set in config_site.h, which CMake cannot see, so the
+    # framework is linked whenever the codec is built on Apple -- as the
+    # autotools build does globally.
+    $<$<BOOL:${PJ_FRAMEWORK_AudioToolbox}>:${PJ_FRAMEWORK_AudioToolbox}>
     $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVFORMAT}>:FFMPEG::avformat>
     $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVCODEC}>:FFMPEG::avcodec>
     $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVUTIL}>:FFMPEG::avutil>
