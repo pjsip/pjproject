@@ -232,6 +232,36 @@ int log_test(void)
     return 0;
 }
 
+#if !PJ_HAS_THREADS
+/* Thread identity when PJ_HAS_THREADS is 0. The thread tests do not run in
+ * that configuration, so check the contract documented in os.h here: there is
+ * exactly one thread, it is always "registered", and it keeps the same handle.
+ * Operations that need a second thread are not called; they assert by design.
+ */
+static int no_threads_test(void)
+{
+    pj_thread_t *t1, *t2;
+    const char *name;
+
+    PJ_TEST_NOT_NULL((t1=pj_thread_this()), "must not be NULL", return -10);
+    PJ_TEST_NOT_NULL((t2=pj_thread_this()), "must not be NULL", return -11);
+    PJ_TEST_EQ(t1, t2, "handle must be stable", return -12);
+
+    PJ_TEST_TRUE(pj_thread_is_registered(), "must be registered", return -20);
+
+    PJ_TEST_NOT_NULL((name=pj_thread_get_name(t1)), NULL, return -30);
+    PJ_TEST_TRUE(name[0] != '\0', "name must not be empty", return -31);
+
+    /* Unsupported operations report failure rather than a valid value. */
+    PJ_TEST_EQ(pj_thread_get_os_handle(t1), NULL, NULL, return -40);
+    PJ_TEST_EQ(pj_thread_get_prio(t1), -1, NULL, return -41);
+    PJ_TEST_EQ(pj_thread_get_prio_min(t1), -1, NULL, return -42);
+    PJ_TEST_EQ(pj_thread_get_prio_max(t1), -1, NULL, return -43);
+
+    return 0;
+}
+#endif
+
 int os_test(void)
 {
     const pj_sys_info *si;
@@ -247,6 +277,12 @@ int os_test(void)
     PJ_LOG(3,("", "   info:     %s", si->info.ptr));
 
     rc = endianness_test32();
+    if (rc != 0)
+        return rc;
+
+#if !PJ_HAS_THREADS
+    rc = no_threads_test();
+#endif
 
     return rc;
 }
