@@ -337,6 +337,7 @@ typedef struct test_port {
     pjmedia_port  base;
     unsigned      get_cnt;
     unsigned      put_cnt;
+    pj_int32_t    put_peak;     /* max |sample| ever received via put_frame */
 } test_port;
 
 static pj_status_t tp_get_frame(pjmedia_port *this_port, pjmedia_frame *frame)
@@ -353,8 +354,19 @@ static pj_status_t tp_get_frame(pjmedia_port *this_port, pjmedia_frame *frame)
 static pj_status_t tp_put_frame(pjmedia_port *this_port, pjmedia_frame *frame)
 {
     test_port *tp = (test_port*)this_port;
-    PJ_UNUSED_ARG(frame);
     tp->put_cnt++;
+
+    /* Track the signal level, so a test can tell a delivered frame that
+     * carries audio from one that carries silence. */
+    if (frame->type == PJMEDIA_FRAME_TYPE_AUDIO && frame->buf) {
+        pj_int16_t *p = (pj_int16_t*)frame->buf;
+        unsigned i, n = (unsigned)(frame->size / sizeof(pj_int16_t));
+        for (i = 0; i < n; ++i) {
+            pj_int32_t v = p[i] < 0 ? -(pj_int32_t)p[i] : (pj_int32_t)p[i];
+            if (v > tp->put_peak)
+                tp->put_peak = v;
+        }
+    }
     return PJ_SUCCESS;
 }
 
@@ -481,9 +493,101 @@ on_return:
     return rc;
 }
 
+/*
+ * Verify that the master/sound port (slot 0) is mixed into its listeners.
+ *
+ * Slot 0 is a passive port created with no attached pjmedia_port: its captured
+ * audio is fed into a delay buffer by put_frame() and read back from that
+ * buffer by the mixing loop. A read-path guard that skips any slot whose
+ * ->port is NULL therefore silences the whole capture direction - the sink
+ * keeps receiving correctly paced frames, but they carry only silence.
+ *
+ * Returns 0 on success, negative on failure.
+ */
+static int master_capture_test(void)
+{
+    pj_pool_t *pool = NULL;
+    pjmedia_conf *conf = NULL;
+    pjmedia_port *master;
+    test_port *sink;
+    unsigned slot_sink = 0, i;
+    int rc = 0;
+    pj_status_t status;
+
+    PJ_LOG(3, (THIS_FILE, "  conf mixes the master/sound port capture"));
+
+    pool = pj_pool_create(mem, "conf_cap", 4000, 4000, NULL);
+    if (!pool) return -300;
+
+    status = pjmedia_conf_create(pool, 8, CLOCK_RATE, CHANNELS, SPF, BPS,
+                                 PJMEDIA_CONF_NO_DEVICE, &conf);
+    if (status != PJ_SUCCESS) { rc = -301; goto on_return; }
+    master = pjmedia_conf_get_master_port(conf);
+
+    sink = create_test_port(pool, CLOCK_RATE, SPF, PJ_TRUE);
+    if (!sink) { rc = -302; goto on_return; }
+
+    status = pjmedia_conf_add_port(conf, pool, &sink->base, NULL, &slot_sink);
+    if (status != PJ_SUCCESS) { rc = -303; goto on_return; }
+
+    /* Slot 0 (master/sound port) transmits to the sink. */
+    status = pjmedia_conf_connect_port(conf, 0, slot_sink, 0);
+    if (status != PJ_SUCCESS) { rc = -304; goto on_return; }
+
+    /* Feed captured audio into slot 0 and run the clock. Several iterations,
+     * since the delay buffer needs to learn before it returns frames. */
+    for (i = 0; i < 32; ++i) {
+        pj_int16_t buf[SPF];
+        pjmedia_frame f;
+        unsigned j;
+
+        for (j = 0; j < SPF; ++j)
+            buf[j] = (pj_int16_t)(2000 + j);
+
+        pj_bzero(&f, sizeof(f));
+        f.type = PJMEDIA_FRAME_TYPE_AUDIO;
+        f.buf = buf;
+        f.size = sizeof(buf);
+        f.timestamp.u64 = g_pump_ts;
+
+        status = pjmedia_port_put_frame(master, &f);
+        if (status != PJ_SUCCESS) { rc = -305; goto on_return; }
+
+        status = pump(master, 1);
+        if (status != PJ_SUCCESS) { rc = -306; goto on_return; }
+    }
+
+    if (sink->put_cnt == 0) {
+        PJ_LOG(1,(THIS_FILE, "   sink received no frame from slot 0"));
+        rc = -307; goto on_return;
+    }
+    if (sink->put_peak == 0) {
+        PJ_LOG(1,(THIS_FILE, "   slot 0 capture is silent at the listener "
+                             "(delivered %d frames, all zero)",
+                             sink->put_cnt));
+        rc = -308; goto on_return;
+    }
+
+on_return:
+    if (conf)
+        pjmedia_conf_destroy(conf);
+    if (pool)
+        pj_pool_release(pool);
+    return rc;
+}
+
+
 int conf_test(void)
 {
     int rc;
+
+    /* Runs on every backend: it does not depend on detach/replace support,
+     * which the probes below may skip out of. */
+    rc = master_capture_test();
+    if (rc != 0) {
+        PJ_LOG(1,(THIS_FILE, "  conf master capture test failed (rc=%d)", rc));
+        return rc;
+    }
 
     rc = detach_replace_test();
     if (rc == 1) {

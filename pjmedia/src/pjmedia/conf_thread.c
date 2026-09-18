@@ -4040,8 +4040,10 @@ static void perform_get_frame(pjmedia_conf *conf)
         }
 
         /* Skip if the slot currently has no attached port (detached and
-         * awaiting a replace); read_port() below would dereference it. */
-        if (conf_port->port == NULL) {
+         * awaiting a replace); read_port() below would dereference it.
+         * A slot with a delay buffer (the master/sound port) is read from
+         * that buffer instead of from the port, so it must not be skipped. */
+        if (conf_port->port == NULL && conf_port->delay_buf == NULL) {
             conf_port->rx_level = 0;
             continue;
         }
