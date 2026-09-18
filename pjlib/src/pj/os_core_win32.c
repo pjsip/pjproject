@@ -411,8 +411,14 @@ PJ_DEF(void*) pj_thread_get_os_handle(pj_thread_t *thread)
     /* Not guarded by PJ_HAS_THREADS: the setting does not disable thread
      * creation on Windows, so the handle is valid either way and returning
      * NULL would discard it.
+     *
+     * pj_thread_register() stores the pseudo handle from GetCurrentThread(),
+     * which is the same value for every thread, so it is only meaningful to
+     * the caller itself. Handing it to another thread would refer to that
+     * thread instead, hence the check below.
      */
-    PJ_ASSERT_ON_FAIL(thread->hthread != GetCurrentThread(), 
+    PJ_ASSERT_ON_FAIL(thread == pj_thread_this() ||
+                      thread->hthread != GetCurrentThread(), 
                       PJ_LOG(1, (THIS_FILE, "Can not use pseudo handle of the thread %s on other threads", thread->obj_name)));
     return thread->hthread;
 }
