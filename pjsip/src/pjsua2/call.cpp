@@ -800,6 +800,41 @@ void Call::hangup(const CallOpParam &prm) PJSUA2_THROW(Error)
                                          param.p_msg_data) );
 }
 
+void Call::sendAck(int cseq, const SdpSession &sdp)
+                   PJSUA2_THROW(Error)
+{
+    pj_pool_t *tmp_pool = NULL;
+    pjmedia_sdp_session *pj_sdp = NULL;
+    pj_status_t status = PJ_SUCCESS;
+
+    if (!sdp.wholeSdp.empty()) {
+        tmp_pool = pjsua_pool_create("tmp-sendack", 2048, 512);
+        if (!tmp_pool) {
+            PJSUA2_RAISE_ERROR2(PJ_ENOMEM, "Call::sendAck()");
+        }
+
+        pj_str_t dup_pj_sdp;
+        pj_str_t pj_sdp_str = {(char*)sdp.wholeSdp.c_str(),
+                               (pj_ssize_t)sdp.wholeSdp.size()};
+
+        pj_strdup(tmp_pool, &dup_pj_sdp, &pj_sdp_str);
+        status = pjmedia_sdp_parse(tmp_pool, dup_pj_sdp.ptr,
+                                   dup_pj_sdp.slen, &pj_sdp);
+        if (status != PJ_SUCCESS) {
+            pj_pool_release(tmp_pool);
+            PJSUA2_RAISE_ERROR2(status, "Call::sendAck()");
+        }
+    }
+
+    status = pjsua_call_send_ack(id, cseq, pj_sdp);
+
+    if (tmp_pool) {
+        pj_pool_release(tmp_pool);
+    }
+
+    PJSUA2_CHECK_RAISE_ERROR2(status, "Call::sendAck()");
+}
+
 void Call::setHold(const CallOpParam &prm) PJSUA2_THROW(Error)
 {
     call_param param(prm.txOption, prm.opt, prm.reason);

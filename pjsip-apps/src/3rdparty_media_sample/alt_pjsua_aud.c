@@ -17,6 +17,7 @@
  */
 #include <pjsua-lib/pjsua.h>
 #include <pjsua-lib/pjsua_internal.h>
+#include "../pjsua/pjsua_app.h"
 
 #if defined(PJSUA_MEDIA_HAS_PJMEDIA) && PJSUA_MEDIA_HAS_PJMEDIA != 0
 #  error The PJSUA_MEDIA_HAS_PJMEDIA should be declared as zero
@@ -173,14 +174,28 @@ static pjmedia_codec_factory_op alt_codec_factory_op =
 /* Initialize third party media library. */
 pj_status_t pjsua_aud_subsys_init()
 {
-    /* Codec registration is intentionally omitted: pjsua now handles an
-     * empty codec registry gracefully, so 3rd-party media stacks do not
-     * need to register dummy codecs.  The alt_codec_factory above is kept
-     * as reference documentation for implementors who do want to register.
-     */
-    (void)alt_codec_factory;
-    (void)alt_codec_factory_op;
+    if (app_config.dummy_codecs) {
+        /* Enable dummy codecs if requested in the app config */
+        pjmedia_codec_mgr *codec_mgr;
+        pj_status_t status;
 
+        /* Register our "dummy" codecs */
+        alt_codec_factory.base.op = &alt_codec_factory_op;
+        codec_mgr = pjmedia_endpt_get_codec_mgr(pjsua_var.med_endpt);
+        status = pjmedia_codec_mgr_register_factory(codec_mgr,
+                                                    &alt_codec_factory.base);
+        if (status != PJ_SUCCESS)
+            return status;
+    }
+    else {
+        /* Codec registration is intentionally omitted: pjsua now handles an
+        * empty codec registry gracefully, so 3rd-party media stacks do not
+        * need to register dummy codecs.  The alt_codec_factory above is kept
+        * as reference documentation for implementors who do want to register.
+        */
+        (void)alt_codec_factory;
+        (void)alt_codec_factory_op;
+    }
     /* TODO: initialize your evil library here */
     return PJ_SUCCESS;
 }
