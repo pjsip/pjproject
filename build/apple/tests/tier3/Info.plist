@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleExecutable</key>
+	<string>VerifyPJSIP</string>
+	<key>CFBundleIdentifier</key>
+	<string>org.pjsip.VerifyPJSIP</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>VerifyPJSIP</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<!-- Replaced by verify-xcframework.sh with the slice's own minimum. -->
+	<key>MinimumOSVersion</key>
+	<string>15.0</string>
+	<key>UIDeviceFamily</key>
+	<array>
+		<integer>1</integer>
+		<integer>2</integer>
+	</array>
+	<key>UILaunchScreen</key>
+	<dict/>
+	<!-- The framework opens the microphone and, for video calls, the camera.
+	     Consuming apps need both of these; declaring them here keeps the
+	     requirement under test. -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Verifying that PJSIP can open the microphone.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Verifying that PJSIP can open the camera.</string>
+</dict>
+</plist>

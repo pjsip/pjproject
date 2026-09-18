@@ -173,6 +173,17 @@ if(IOS AND PJ_IOS_SAMPLE_LIBS)
   # fails on a missing pj/compat/os_auto.h. Copy rather than symlink: a later
   # ./aconfigure writes to these exact paths and would otherwise write through
   # the link into the build directory.
+  #
+  # Note that CMake puts the source include directory ahead of the binary one,
+  # so a generated header sitting in the source tree -- left by this step, or
+  # by an autotools build -- shadows the one the current build generated. Turn
+  # this off for a build that must not be influenced by whatever configured
+  # the tree last.
+  cmake_dependent_option(PJ_IOS_SAMPLE_HEADERS
+    "Copy the generated headers into the source tree for the iOS samples" ON
+    "PJ_IOS_SAMPLE_LIBS" OFF
+  )
+
   set(_pj_ios_generated_headers
     pjlib/include/pj/compat/os_auto.h
     pjlib/include/pj/compat/m_auto.h
@@ -200,12 +211,14 @@ if(IOS AND PJ_IOS_SAMPLE_LIBS)
   )
   add_dependencies(pj-ios-sample-libs pj-ios-placeholder)
 
-  foreach(_pj_hdr IN LISTS _pj_ios_generated_headers)
-    add_custom_command(TARGET pj-ios-sample-libs POST_BUILD
-      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-              "${PROJECT_BINARY_DIR}/${_pj_hdr}" "${PROJECT_SOURCE_DIR}/${_pj_hdr}"
-    )
-  endforeach()
+  if(PJ_IOS_SAMPLE_HEADERS)
+    foreach(_pj_hdr IN LISTS _pj_ios_generated_headers)
+      add_custom_command(TARGET pj-ios-sample-libs POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+                "${PROJECT_BINARY_DIR}/${_pj_hdr}" "${PROJECT_SOURCE_DIR}/${_pj_hdr}"
+      )
+    endforeach()
+  endif()
   foreach(_dir IN LISTS _pj_ios_sample_dirs)
     add_custom_command(TARGET pj-ios-sample-libs PRE_BUILD
       COMMAND "${CMAKE_COMMAND}" -E make_directory "${_dir}"
@@ -328,12 +341,18 @@ install(
   COMPONENT   PjDevelopment
 )
 
-# APPLE is empty rather than 0 off Apple, and PjConfig.cmake.in substitutes it
-# into an if() condition, where an empty operand beside AND is a hard error.
+# APPLE and IOS are empty rather than 0 off those platforms, and
+# PjConfig.cmake.in substitutes them into if() conditions, where an empty
+# operand beside AND is a hard error.
 if(APPLE)
   set(PJ_APPLE 1)
 else()
   set(PJ_APPLE 0)
+endif()
+if(IOS)
+  set(PJ_IOS 1)
+else()
+  set(PJ_IOS 0)
 endif()
 
 # write package config
@@ -415,6 +434,9 @@ _pj_collect_find_module(PJLIB_WITH_LIBUUID               UUID)
 _pj_collect_find_module(PJNATH_WITH_UPNP                 UPNP)
 _pj_collect_find_module(PJMEDIA_WITH_AUDIODEV_COREAUDIO   CoreAudio)
 _pj_collect_find_module(PJMEDIA_WITH_VIDEODEV_V4L2        V4L2)
+if(IOS)
+  _pj_collect_find_module(PJMEDIA_WITH_VIDEODEV_OPENGL    OpenGLES)
+endif()
 _pj_collect_find_module(PJMEDIA_WITH_VIDEODEV_DARWIN      AVFoundation)
 _pj_collect_find_module(PJMEDIA_WITH_VIDEODEV_METAL       Metal)
 _pj_collect_find_module(PJMEDIA_WITH_VID_TOOLBOX_CODEC    VideoToolbox)

@@ -270,7 +270,15 @@ cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_OPENGL
   "Enable OpenGL video device backend" ON
   "PJMEDIA_WITH_VIDEODEV;ANDROID OR IOS" OFF
 )
-import_if_or_set(PJMEDIA_WITH_VIDEODEV_OPENGL OFF OpenGL COMPONENTS GLES2)
+# On iOS the ES implementation is OpenGLES.framework, not the GL and GLES2
+# libraries FindOpenGL looks for, so that probe always fails there and the
+# renderer would be silently dropped. PjConfig.cmake.in picks the same one of
+# the two packages, so an installed tree re-resolves what was linked here.
+if(IOS)
+  import_if_or_set(PJMEDIA_WITH_VIDEODEV_OPENGL OFF OpenGLES)
+else()
+  import_if_or_set(PJMEDIA_WITH_VIDEODEV_OPENGL OFF OpenGL COMPONENTS GLES2)
+endif()
 
 # FFMPEG backend
 cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_FFMPEG
@@ -918,7 +926,8 @@ target_link_libraries(pjmedia-videodev
     pjlib-util pjmedia
 
     # video backends
-    $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_OPENGL}>:OpenGL::GL;OpenGL::GLES2>
+    $<$<AND:$<BOOL:${PJMEDIA_WITH_VIDEODEV_OPENGL}>,$<NOT:$<BOOL:${IOS}>>>:OpenGL::GL;OpenGL::GLES2>
+    $<$<AND:$<BOOL:${PJMEDIA_WITH_VIDEODEV_OPENGL}>,$<BOOL:${IOS}>>:OpenGLES::OpenGLES>
     $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_FFMPEG}>:FFMPEG::avdevice>
     $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_SDL}>:SDL2::SDL2>
     $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_V4L2}>:V4L2::V4L2>
