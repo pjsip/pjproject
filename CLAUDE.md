@@ -135,32 +135,11 @@ Supported on POSIX, exercised by the `no-threads` CI job. Enable with:
 - autoconf: `./configure --disable-threads --disable-libwebrtc`
 - CMake: `-DPJLIB_WITH_THREADS=OFF -DPJMEDIA_WITH_WEBRTC_AEC=OFF -DPJMEDIA_WITH_WEBRTC_AEC3=OFF`
 
-Both set `PJ_HAS_THREADS=0` and keep `-lpthread` off the link line. WebRTC must be
-disabled separately because it calls `pthread_once()`.
-
-Rules when editing `os_core_unix.c` or any backend:
-- **Guard calls, not types.** No pthread or `sched_*` *function* may be called when
-  `PJ_HAS_THREADS` is 0, so the objects link without pthread. pthread *types* in struct
-  members are fine — they emit no relocation.
-- **Creating or registering a thread asserts; asking about the current thread does
-  not.** `pj_thread_create()`, `join`, `register` and `init` assert and return
-  `PJ_EINVALIDOP`. Functions that report on the current thread do not assert:
-  `pj_thread_this()` returns the main-thread descriptor and
-  `pj_thread_is_registered()` returns `PJ_TRUE`, while the priority getters/setter
-  and `pj_thread_get_os_handle()` return a failure value (`-1`, `PJ_EINVALIDOP`,
-  `NULL`) because the operation itself is unsupported. Callers therefore need no
-  `#if` at each call site.
-- **Sync primitives degrade to accepted no-ops.** `create` hands out a fixed `DUMMY_*`
-  handle; the operations assert that handle and return `PJ_SUCCESS`. Applies to
-  `pj_mutex_t`, `pj_sem_t`, `pj_rwmutex_t`, `pj_event_t` and `pj_barrier_t`.
-  `pj_event_wait()` returns immediately since blocking could only hang;
-  `pj_barrier_wait()` returns `PJ_TRUE`.
-- **Windows does not honour the setting** — `pj_thread_create()` still creates threads
-  in `os_core_win32.c`. Do not assume the rules above hold there.
-- CI asserts that the unit test executables and `pjsua` reference no pthread symbol:
-  `nm -D -u <binary> | grep -E ' U (pthread_|sched_get)'` must find nothing.
-- pjlib-test: tests that need threads are excluded via the `INCLUDE_*` macros in
-  `pjlib/src/pjlib-test/test.h`, and `-w N` is ignored.
+No pthread function may be called when the macro is 0; CI fails if any library or
+app still references one. The rules are documented where they apply: the API
+contract in the `PJ_THREAD` section of `pjlib/include/pj/os.h`, and the guarding
+rule at the `#include <pthread.h>` site in `pjlib/src/pj/os_core_unix.c`. Windows
+does not honour the macro — threads still exist there.
 
 ### Group Lock (`pj_grp_lock_t`)
 - Mutual exclusion + reference counting + lock ordering in one primitive.
