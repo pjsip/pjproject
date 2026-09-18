@@ -6322,7 +6322,21 @@ typedef enum pjsua_call_flag
     /**
      * Disable inter-media synchronization.
      */
-    PJSUA_CALL_NO_MEDIA_SYNC = 256
+    PJSUA_CALL_NO_MEDIA_SYNC = 256,
+
+    /**
+     * Keep and forward the original local and remote SDP as-is during
+     * negotiation, bypassing pjmedia's answer/offer content rewriting
+     * (codec/payload type reassignment, format filtering, etc). The SDP
+     * negotiator state machine still transitions normally. Intended for
+     * signalling-plane B2BUA/relay use cases where the SDP is forwarded
+     * verbatim between two call legs.
+     *
+     * Valid for #pjsua_call_make_call(), #pjsua_call_answer() /
+     * answer2(), #pjsua_call_reinvite()/reinvite2(), and
+     * #pjsua_call_update()/update2().
+     */
+    PJSUA_CALL_SDP_PASSTHROUGH = 512
 
 } pjsua_call_flag;
 

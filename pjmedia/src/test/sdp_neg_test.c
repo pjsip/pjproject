@@ -1896,6 +1896,161 @@ static int sdp_neg_static_pt_repr_test(pj_pool_t *pool)
     return 0;
 }
 
+/* Real-world SDP offer/answer pair used to verify that
+ * pjmedia_sdp_neg_negotiate_passthrough() promotes the fed-in SDP verbatim,
+ * without the fmtp reconciliation / payload-type bookkeeping that a normal
+ * pjmedia_sdp_neg_negotiate() would apply. The offer carries 6 payload
+ * types (AMR-WB/AMR/telephone-event), while the answer narrows this down
+ * to 2 with different fmtp parameters than the offer's — exactly the kind
+ * of content a normal negotiation would rewrite.
+ */
+static char pt_offer_str[] =
+    "v=0\r\n"
+    "o=- 893867431174198 4062473431 IN IP4 10.162.173.125\r\n"
+    "s=SS VOIP\r\n"
+    "c=IN IP4 10.186.99.36\r\n"
+    "t=0 0\r\n"
+    "m=audio 56832 RTP/AVP 116 107 118 96 111 110\r\n"
+    "b=AS:41\r\n"
+    "b=RS:512\r\n"
+    "b=RR:1537\r\n"
+    "a=rtpmap:116 AMR-WB/16000/1\r\n"
+    "a=fmtp:116 mode-change-capability=2;max-red=220\r\n"
+    "a=rtpmap:107 AMR-WB/16000/1\r\n"
+    "a=fmtp:107 octet-align=1;mode-change-capability=2;max-red=220\r\n"
+    "a=rtpmap:118 AMR/8000/1\r\n"
+    "a=fmtp:118 mode-change-capability=2;max-red=220\r\n"
+    "a=rtpmap:96 AMR/8000/1\r\n"
+    "a=fmtp:96 octet-align=1;mode-change-capability=2;max-red=220\r\n"
+    "a=rtpmap:111 telephone-event/16000\r\n"
+    "a=fmtp:111 0-15\r\n"
+    "a=rtpmap:110 telephone-event/8000\r\n"
+    "a=fmtp:110 0-15\r\n"
+    "a=curr:qos local none\r\n"
+    "a=curr:qos remote none\r\n"
+    "a=des:qos mandatory local sendrecv\r\n"
+    "a=des:qos optional remote sendrecv\r\n"
+    "a=sendrecv\r\n"
+    "a=ptime:20\r\n"
+    "a=maxptime:240\r\n";
+
+static char pt_answer_str[] =
+    "v=0\r\n"
+    "o=- 893867432491909 4062736973 IN IP4 10.162.173.125\r\n"
+    "s=-\r\n"
+    "t=0 0\r\n"
+    "a=msid-semantic: WMS\r\n"
+    "m=audio 56384 RTP/AVP 116 111\r\n"
+    "c=IN IP4 10.186.99.38\r\n"
+    "b=AS:41\r\n"
+    "a=rtpmap:116 AMR-WB/16000\r\n"
+    "a=fmtp:116 max-red=0; mode-change-capability=2; mode-change-neighbor=1;"
+        " mode-change-period=2\r\n"
+    "a=rtpmap:111 telephone-event/16000\r\n"
+    "a=fmtp:111 0-15\r\n"
+    "a=ptime:20\r\n"
+    "a=maxptime:40\r\n"
+    "a=msid:- 415221c9-141a-4cfa-905a-024af91d0e7c\r\n"
+    "a=ssrc:18411299 cname:NNI4WBv5F7m8JUWO\r\n"
+    "a=sendrecv\r\n";
+
+/* Verify pjmedia_sdp_neg_negotiate_passthrough() for both negotiation
+ * directions: we answer a remote offer, and remote answers our offer.
+ * In both cases, the active local/remote SDP after negotiation must be
+ * content-identical to what was fed into the negotiator, unlike
+ * pjmedia_sdp_neg_negotiate() which would reconcile/filter the answer's
+ * fmtp against the offer's and reassign payload types.
+ */
+static int sdp_neg_passthrough_test(pj_pool_t *pool)
+{
+    pjmedia_sdp_session *offer, *answer;
+    pjmedia_sdp_neg *neg;
+    const pjmedia_sdp_session *active_local, *active_remote;
+    pj_status_t status;
+    char b1[sizeof(pt_offer_str)], b2[sizeof(pt_answer_str)];
+
+    /* Case 1: we answer a remote offer (has_remote_answer == PJ_FALSE). */
+    pj_memcpy(b1, pt_offer_str, sizeof(pt_offer_str));
+    pj_memcpy(b2, pt_answer_str, sizeof(pt_answer_str));
+    if (pjmedia_sdp_parse(pool, b1, pj_ansi_strlen(b1), &offer) != PJ_SUCCESS)
+        return -3000;
+    if (pjmedia_sdp_parse(pool, b2, pj_ansi_strlen(b2), &answer) != PJ_SUCCESS)
+        return -3010;
+
+    if (pjmedia_sdp_neg_create_w_remote_offer(pool, NULL, offer, &neg) !=
+        PJ_SUCCESS)
+    {
+        return -3020;
+    }
+    if (pjmedia_sdp_neg_set_local_answer(pool, neg, answer) != PJ_SUCCESS)
+        return -3030;
+
+    status = pjmedia_sdp_neg_negotiate_passthrough(pool, neg);
+    if (status != PJ_SUCCESS) {
+        app_perror(status, "   sdp_neg_passthrough_test: negotiate failed");
+        return -3040;
+    }
+
+    if (pjmedia_sdp_neg_get_state(neg) != PJMEDIA_SDP_NEG_STATE_DONE)
+        return -3050;
+
+    if (pjmedia_sdp_neg_get_active_local(neg, &active_local) != PJ_SUCCESS)
+        return -3060;
+    if (pjmedia_sdp_neg_get_active_remote(neg, &active_remote) != PJ_SUCCESS)
+        return -3070;
+
+    if (compare_sdp_string("passthrough answer", "fed-in answer", answer,
+                           "active local", active_local, PJ_SUCCESS) != 0)
+    {
+        return -3080;
+    }
+    if (compare_sdp_string("passthrough offer", "fed-in offer", offer,
+                           "active remote", active_remote, PJ_SUCCESS) != 0)
+    {
+        return -3090;
+    }
+
+    /* Case 2: remote answers our offer (has_remote_answer == PJ_TRUE). */
+    pj_memcpy(b1, pt_offer_str, sizeof(pt_offer_str));
+    pj_memcpy(b2, pt_answer_str, sizeof(pt_answer_str));
+    if (pjmedia_sdp_parse(pool, b1, pj_ansi_strlen(b1), &offer) != PJ_SUCCESS)
+        return -3100;
+    if (pjmedia_sdp_parse(pool, b2, pj_ansi_strlen(b2), &answer) != PJ_SUCCESS)
+        return -3110;
+
+    if (pjmedia_sdp_neg_create_w_local_offer(pool, offer, &neg) != PJ_SUCCESS)
+        return -3120;
+    if (pjmedia_sdp_neg_set_remote_answer(pool, neg, answer) != PJ_SUCCESS)
+        return -3130;
+
+    status = pjmedia_sdp_neg_negotiate_passthrough(pool, neg);
+    if (status != PJ_SUCCESS) {
+        app_perror(status, "   sdp_neg_passthrough_test: negotiate failed");
+        return -3140;
+    }
+
+    if (pjmedia_sdp_neg_get_state(neg) != PJMEDIA_SDP_NEG_STATE_DONE)
+        return -3150;
+
+    if (pjmedia_sdp_neg_get_active_local(neg, &active_local) != PJ_SUCCESS)
+        return -3160;
+    if (pjmedia_sdp_neg_get_active_remote(neg, &active_remote) != PJ_SUCCESS)
+        return -3170;
+
+    if (compare_sdp_string("passthrough offer", "fed-in offer", offer,
+                           "active local", active_local, PJ_SUCCESS) != 0)
+    {
+        return -3180;
+    }
+    if (compare_sdp_string("passthrough answer", "fed-in answer", answer,
+                           "active remote", active_remote, PJ_SUCCESS) != 0)
+    {
+        return -3190;
+    }
+
+    return 0;
+}
+
 /* Regression: offer without c= on a port=0 media (passes lenient validation,
  * fails strict) must leave the negotiator in DONE state, not stuck in WAIT_NEGO. */
 static int sdp_neg_strict_validate_test(pj_pool_t *pool)
@@ -2241,6 +2396,21 @@ int sdp_neg_test()
 
         PJ_LOG(3,(THIS_FILE, "  sdp_neg_static_pt_repr_test"));
         status = sdp_neg_static_pt_repr_test(pool);
+        pj_pool_release(pool);
+
+        if (status != 0)
+            return status;
+    }
+
+    {
+        pj_pool_t *pool;
+
+        pool = pj_pool_create(mem, "sdp_neg_passthrough", 4000, 4000, NULL);
+        if (!pool)
+            return PJ_ENOMEM;
+
+        PJ_LOG(3,(THIS_FILE, "  sdp_neg_passthrough_test"));
+        status = sdp_neg_passthrough_test(pool);
         pj_pool_release(pool);
 
         if (status != 0)

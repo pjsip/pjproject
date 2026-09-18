@@ -720,6 +720,58 @@ PJ_DECL(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
 
 
 /**
+ * Negotiate local and remote SDP without inspecting or modifying their
+ * content. Before calling this function, the SDP negotiator must be in
+ * PJMEDIA_SDP_NEG_STATE_WAIT_NEGO state. After calling this function, the
+ * negotiator state will move to PJMEDIA_SDP_NEG_STATE_DONE.
+ *
+ * Unlike #pjmedia_sdp_neg_negotiate(), this function does not run any
+ * offer/answer content negotiation (no codec/format reconciliation, no
+ * payload type reassignment, no SDP version bump): the local and remote
+ * SDP that were fed into the negotiator (via
+ * #pjmedia_sdp_neg_set_local_answer(), #pjmedia_sdp_neg_set_remote_answer(),
+ * #pjmedia_sdp_neg_modify_local_offer2(), or
+ * #pjmedia_sdp_neg_set_remote_offer()) simply become the active local and
+ * remote SDP verbatim. This is intended for applications that relay SDP
+ * on the signalling plane only (e.g. a signalling-plane B2BUA) and want
+ * the negotiator's state machine to progress normally without pjmedia
+ * altering the SDP content that has already been assembled/forwarded.
+ *
+ * Because this function skips pjmedia's internal payload-type bookkeeping
+ * (the per-negotiator dynamic payload type to codec mapping normally
+ * maintained by the negotiator to keep payload types stable across
+ * multiple offer/answer rounds), mixing calls to this function with
+ * #pjmedia_sdp_neg_negotiate() on the same negotiator instance may cause
+ * the payload types chosen by a subsequent #pjmedia_sdp_neg_negotiate()
+ * call to differ from what was actually used on the wire during a
+ * preceding passthrough round. Applications that use this function should
+ * do so for the entire lifetime of the negotiator instance.
+ *
+ * This function also skips the media-count padding that
+ * #pjmedia_sdp_neg_negotiate() normally performs (e.g. inserting a
+ * matching-but-disabled media line when the answer has fewer "m=" lines
+ * than the offer), so the resulting active local and remote SDP may end
+ * up with a different number of media lines from each other. Applications
+ * that inspect the negotiated SDP media array by index (e.g. pjsua, which
+ * assumes as many media lines as the call's configured media count) must
+ * account for this, e.g. by supplying local/remote SDP pairs with a
+ * matching media count, or by bounds-checking both SDPs' media_count
+ * before indexing.
+ *
+ * @param pool          Pool to allocate memory. The pool's lifetime needs
+ *                      to be valid for the duration of the negotiator.
+ * @param neg           The SDP negotiator instance.
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error
+ *                      code (e.g. if the negotiator is not in
+ *                      PJMEDIA_SDP_NEG_STATE_WAIT_NEGO state, or if the
+ *                      local/remote SDP to negotiate is not available).
+ */
+PJ_DECL(pj_status_t) pjmedia_sdp_neg_negotiate_passthrough(pj_pool_t *pool,
+                                                pjmedia_sdp_neg *neg);
+
+
+/**
  * Enumeration of customized SDP format matching option flags. See
  * #pjmedia_sdp_neg_register_fmt_match_cb() for more info.
  */

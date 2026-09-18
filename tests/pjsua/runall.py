@@ -48,6 +48,8 @@ excluded_tests = [
     "alt-pjsua-uas-custom-sdp",
     "alt-pjsua-uas-amr-sdp",
     "alt-pjsua-uas-static-pt-no-rtpmap",
+    "alt-pjsua-uac-sdp-passthrough",
+    "alt-pjsua-uas-sdp-passthrough",
 ]
 
 # Exclude scripts-sipp/uac-reinvite-bad-via-branch on MacOS due to unreliable result
