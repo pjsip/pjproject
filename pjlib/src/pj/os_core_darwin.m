@@ -18,7 +18,13 @@
 #include <pj/os.h>
 #include "TargetConditionals.h"
 
-#if TARGET_OS_IPHONE
+/* The desktop implementation below runs main_func() on a secondary thread so
+ * that the main thread can be given to CFRunLoop, which AppKit and some Core
+ * Foundation paths require. That needs threads, so without them fall back to
+ * calling main_func() directly, as on iPhone. Anything that depends on the
+ * main run loop will not work then, but those subsystems need threads anyway.
+ */
+#if TARGET_OS_IPHONE || (!defined(PJ_HAS_THREADS) || PJ_HAS_THREADS==0)
 
 PJ_DEF(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
                        unsigned flags)

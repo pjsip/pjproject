@@ -141,9 +141,11 @@ PJ_DECL(const pj_sys_info*) pj_get_sys_info(void);
  * into existence -- pj_thread_create(), pj_thread_join(),
  * pj_thread_register() -- assert and fail with PJ_EINVALIDOP, because with
  * locking compiled out a second thread would corrupt PJLIB's state. Functions
- * that merely query or configure the one thread that does exist return a
- * failure value without asserting, so that portable code may call them
- * unconditionally.
+ * that merely query or configure the one thread that does exist do not assert.
+ * They report on that thread where they can -- pj_thread_this() returns its
+ * descriptor and pj_thread_is_registered() returns PJ_TRUE -- and return a
+ * failure value only where the operation itself is unsupported, so that
+ * portable code may call them unconditionally.
  *
  * Not every backend honours the setting. The Windows one ignores it for
  * thread creation and registration, so threads still exist there and these
@@ -388,9 +390,11 @@ PJ_DECL(int) pj_thread_get_prio_max(pj_thread_t *thread);
  * @return              Native thread handle. For example, when the
  *                      backend thread uses pthread, this function will
  *                      return pointer to pthread_t, and on Windows,
- *                      this function will return HANDLE. Returns NULL
- *                      when PJ_HAS_THREADS is disabled, as there is no
- *                      native thread to refer to.
+ *                      this function will return HANDLE. On a backend that
+ *                      implements PJ_HAS_THREADS being disabled it returns
+ *                      NULL, as there is no native thread to refer to; where
+ *                      the setting is not honoured, such as on Windows, the
+ *                      native handle is returned as usual.
  */
 PJ_DECL(void*) pj_thread_get_os_handle(pj_thread_t *thread);
 

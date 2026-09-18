@@ -142,12 +142,14 @@ Rules when editing `os_core_unix.c` or any backend:
 - **Guard calls, not types.** No pthread or `sched_*` *function* may be called when
   `PJ_HAS_THREADS` is 0, so the objects link without pthread. pthread *types* in struct
   members are fine — they emit no relocation.
-- **Write `#if PJ_HAS_THREADS`**, never `#if !PJ_HAS_THREADS`.
 - **Creating or registering a thread asserts; asking about the current thread does
   not.** `pj_thread_create()`, `join`, `register` and `init` assert and return
-  `PJ_EINVALIDOP`. `pj_thread_this()`, `pj_thread_is_registered()`, the priority
-  getters/setter and `pj_thread_get_os_handle()` return a failure value without
-  asserting, so callers need no `#if` at each call site.
+  `PJ_EINVALIDOP`. Functions that report on the current thread do not assert:
+  `pj_thread_this()` returns the main-thread descriptor and
+  `pj_thread_is_registered()` returns `PJ_TRUE`, while the priority getters/setter
+  and `pj_thread_get_os_handle()` return a failure value (`-1`, `PJ_EINVALIDOP`,
+  `NULL`) because the operation itself is unsupported. Callers therefore need no
+  `#if` at each call site.
 - **Sync primitives degrade to accepted no-ops.** `create` hands out a fixed `DUMMY_*`
   handle; the operations assert that handle and return `PJ_SUCCESS`. Applies to
   `pj_mutex_t`, `pj_sem_t`, `pj_rwmutex_t`, `pj_event_t` and `pj_barrier_t`.

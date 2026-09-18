@@ -265,7 +265,9 @@ jobs:
 
   no-threads:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.pjlib_deps == 'true'
+    # any_src, not pjlib_deps: the no-pthread guarantee covers the upper layers
+    # too, e.g. pjmedia's alsa_dev.c.
+    if: github.event_name == 'push' || needs.detect-changes.outputs.any_src == 'true'
     runs-on: ubuntu-latest
     name: No threads / pjlib
     steps:
