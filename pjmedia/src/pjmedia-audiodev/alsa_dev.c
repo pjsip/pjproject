@@ -530,11 +530,14 @@ static int pb_thread_func (void *arg)
     void* user_data            = stream->user_data;
     char* buf                  = stream->pb_buf;
     pj_timestamp tstamp;
+#if PJ_HAS_THREADS
     struct sched_param param;
     pthread_t* thid;    
+#endif
     int result;
     pj_status_t status = PJ_SUCCESS;
 
+#if PJ_HAS_THREADS
     thid = (pthread_t*) pj_thread_get_os_handle (pj_thread_this());
     param.sched_priority = sched_get_priority_max (SCHED_RR);
     PJ_LOG (5,(THIS_FILE, "pb_thread_func(%u): Set thread priority "
@@ -549,6 +552,7 @@ static int pb_thread_func (void *arg)
             PJ_LOG (5,(THIS_FILE, "Unable to increase playback thread "
                                   "priority, error: %d", result));
     }    
+#endif
 
     pj_bzero (buf, size);
     tstamp.u64 = 0;
@@ -625,10 +629,13 @@ static int ca_thread_func (void *arg)
     char* buf                  = stream->ca_buf;
     pj_timestamp tstamp;
     int result;
+#if PJ_HAS_THREADS
     struct sched_param param;
     pthread_t* thid;
+#endif
     pj_status_t status = PJ_SUCCESS;
 
+#if PJ_HAS_THREADS
     thid = (pthread_t*) pj_thread_get_os_handle (pj_thread_this());
     param.sched_priority = sched_get_priority_max (SCHED_RR);
     PJ_LOG (5,(THIS_FILE, "ca_thread_func(%u): Set thread priority "
@@ -643,6 +650,7 @@ static int ca_thread_func (void *arg)
             PJ_LOG (5,(THIS_FILE, "Unable to increase capture thread "
                                   "priority, error: %d", result));
     }
+#endif
 
     pj_bzero (buf, size);
     tstamp.u64 = 0;

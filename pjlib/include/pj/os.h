@@ -135,14 +135,20 @@ PJ_DECL(const pj_sys_info*) pj_get_sys_info(void);
  *
  * \section pj_thread_nothreads_sec When PJ_HAS_THREADS is disabled
  *
- * PJLIB then assumes it is accessed by one thread only, the thread that
- * called main(), and cannot tell threads apart. Functions that would bring
- * another thread into existence -- pj_thread_create(), pj_thread_join(),
+ * On backends that implement this setting, currently the POSIX one, PJLIB then
+ * assumes it is accessed by one thread only, the thread that called main(),
+ * and cannot tell threads apart. Functions that would bring another thread
+ * into existence -- pj_thread_create(), pj_thread_join(),
  * pj_thread_register() -- assert and fail with PJ_EINVALIDOP, because with
  * locking compiled out a second thread would corrupt PJLIB's state. Functions
  * that merely query or configure the one thread that does exist return a
  * failure value without asserting, so that portable code may call them
  * unconditionally.
+ *
+ * Not every backend honours the setting. The Windows one ignores it for
+ * thread creation and registration, so threads still exist there and these
+ * functions keep their normal behaviour. Check the backend before relying on
+ * the description above.
  *
  * \section pj_thread_examples_sec Examples
  *
@@ -319,11 +325,11 @@ PJ_DECL(pj_status_t) pj_thread_attach ( const char *thread_name,
 /**
  * Check if this thread has been registered to PJLIB.
  *
- * When PJ_HAS_THREADS is disabled, PJLIB assumes that it is accessed by one
- * thread only, the main thread, and cannot tell threads apart. This function
- * then always returns PJ_TRUE. That is so it can be called unconditionally
- * from the main thread, instead of every caller having to guard the call with
- * a PJ_HAS_THREADS check.
+ * On a backend that implements PJ_HAS_THREADS being disabled, PJLIB assumes
+ * that it is accessed by one thread only, the main thread, and cannot tell
+ * threads apart. This function then always returns PJ_TRUE, so that it can be
+ * called unconditionally from the main thread instead of every caller having
+ * to guard the call with a PJ_HAS_THREADS check.
  *
  * @return              Non-zero if it is registered.
  */
@@ -409,11 +415,13 @@ PJ_DECL(pj_status_t) pj_thread_resume(pj_thread_t *thread);
 /**
  * Get the current thread.
  *
- * When PJ_HAS_THREADS is disabled, PJLIB assumes that it is accessed by one
- * thread only, the main thread, and cannot tell threads apart. This function
- * then always returns the handle of the main thread. That is so it can be
- * called unconditionally from the main thread, instead of every caller having
- * to guard the call with a PJ_HAS_THREADS check.
+ * On a backend that implements PJ_HAS_THREADS being disabled, PJLIB assumes
+ * that it is accessed by one thread only, the main thread, and cannot tell
+ * threads apart. This function then always returns the handle of that thread,
+ * so that it can be called unconditionally from the main thread instead of
+ * every caller having to guard the call with a PJ_HAS_THREADS check. Where
+ * the setting is not honoured, such as on Windows, it keeps returning the
+ * thread it is actually called from.
  *
  * @return Thread handle of current thread.
  */

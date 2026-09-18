@@ -408,14 +408,13 @@ PJ_DEF(void*) pj_thread_get_os_handle(pj_thread_t *thread)
 {
     PJ_ASSERT_RETURN(thread, NULL);
 
-#if PJ_HAS_THREADS
+    /* Not guarded by PJ_HAS_THREADS: the setting does not disable thread
+     * creation on Windows, so the handle is valid either way and returning
+     * NULL would discard it.
+     */
     PJ_ASSERT_ON_FAIL(thread->hthread != GetCurrentThread(), 
                       PJ_LOG(1, (THIS_FILE, "Can not use pseudo handle of the thread %s on other threads", thread->obj_name)));
     return thread->hthread;
-#else
-    /* Reachable at run time, see pj_thread_set_prio() above. */
-    return NULL;
-#endif
 }
 
 /*

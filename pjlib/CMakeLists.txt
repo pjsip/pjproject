@@ -7,6 +7,11 @@ include(CMakeDependentOption)
 # Floating point support
 option(PJLIB_WITH_FLOATING_POINT "Enable floating point support" ON)
 
+# Threading support. Turning this off sets PJ_HAS_THREADS to 0 and keeps the
+# threading library off the link line. Components that need threads, such as
+# pjsua-lib and the WebRTC AEC, will not work; disable them separately.
+option(PJLIB_WITH_THREADS "Enable threading support" ON)
+
 # I/O queue backend
 pj_option(PJLIB_WITH_IOQUEUE "I/O Queue implementation backend"
   DEFAULT select
@@ -260,9 +265,13 @@ if(NOT (WIN32 OR CYGWIN OR MINGW))
 endif()
 
 # threading library
-find_package(Threads)
-if(Threads_FOUND)
-  target_link_libraries(pjlib PRIVATE Threads::Threads)
+if(PJLIB_WITH_THREADS)
+  find_package(Threads)
+  if(Threads_FOUND)
+    target_link_libraries(pjlib PRIVATE Threads::Threads)
+  endif()
+else()
+  target_compile_definitions(pjlib PUBLIC PJ_HAS_THREADS=0)
 endif()
 
 # uuid

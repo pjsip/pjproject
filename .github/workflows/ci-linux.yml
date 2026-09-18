@@ -275,20 +275,36 @@ jobs:
         git clone --depth 1 https://github.com/pjsip/cirunner.git
         cirunner/installlinux.sh
     - name: config site
-      run: echo -e "#define PJ_TODO(x)\n#define PJ_HAS_THREADS 0\n" > pjlib/include/pj/config_site.h
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
     - name: configure
-      run: ./configure
+      # libwebrtc uses pthread_once() and is not built without threads.
+      run: ./configure --disable-threads --disable-libwebrtc
     - name: make
       run: $MAKE_FAST
-    - name: check pjlib does not reference pthread
+    - name: check nothing references pthread
       run: |
-        obj=$(ls pjlib/build/output/pjlib-*/os_core_unix.o)
-        echo "checking $obj"
-        if nm -u "$obj" | grep -E ' U (pthread_|sched_get)'; then
-          echo "::error::os_core_unix.o references pthread with PJ_HAS_THREADS=0"
-          exit 1
-        fi
-        echo "ok: no pthread symbols referenced"
+        t=$(make infotarget)
+        rc=0
+        for bin in pjlib/bin/pjlib-test-$t \
+                   pjlib-util/bin/pjlib-util-test-$t \
+                   pjnath/bin/pjnath-test-$t \
+                   pjmedia/bin/pjmedia-test-$t \
+                   pjsip/bin/pjsip-test-$t \
+                   pjsip-apps/bin/pjsua-$t; do
+          if [ ! -f "$bin" ]; then
+            echo "::error::$bin was not built"
+            rc=1
+            continue
+          fi
+          if nm -D -u "$bin" | grep -E ' U (pthread_|sched_get)'; then
+            echo "::error::$bin references pthread with PJ_HAS_THREADS=0;"\
+                 "run 'nm -u -A <lib>.a' on its libraries to find the object"
+            rc=1
+          else
+            echo "ok: $bin"
+          fi
+        done
+        exit $rc
     - name: pjlib-test
       run: make pjlib-test
     - name: upload artifacts on failure
