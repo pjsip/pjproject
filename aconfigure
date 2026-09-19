@@ -822,6 +822,7 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
+enable_threads
 enable_libuuid
 enable_floating_point
 enable_kqueue
@@ -1525,6 +1526,7 @@ Optional Features:
   --disable-option-checking  ignore unrecognized --enable/--with options
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
+  --disable-threads       Disable threading support
   --disable-libuuid       Exclude libuuid(default: autodetect)
   --disable-floating-point
                           Disable floating point where possible
@@ -4948,6 +4950,7 @@ if test "$CC_DEF" = ""; then CC_DEF="-D"; fi
 if test "$CC_OPTIMIZE" = ""; then CC_OPTIMIZE="-O2"; fi
 
 if test "$CC_CFLAGS" = ""; then CC_CFLAGS="-Wall"; fi
+
 if test "$CC_DEPFLAGS" = ""; then
     if test "$GCC" = "yes"; then CC_DEPFLAGS="-MMD -MP"; fi
 fi
@@ -4991,6 +4994,27 @@ else
     ac_cross_compile=${host_orig}-
 fi
 
+# Check whether --enable-threads was given.
+if test ${enable_threads+y}
+then :
+  enableval=$enable_threads;
+        if test "$enable_threads" = "no"; then
+            ac_no_threads=1
+            CFLAGS="$CFLAGS -DPJ_HAS_THREADS=0"
+            ac_cflags="$ac_cflags -DPJ_HAS_THREADS=0"
+            { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Checking if threading is disabled...yes" >&5
+printf "%s\n" "Checking if threading is disabled...yes" >&6; }
+        fi
+
+else case e in #(
+  e) { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Checking if threading is disabled...no" >&5
+printf "%s\n" "Checking if threading is disabled...no" >&6; }
+ ;;
+esac
+fi
+
+
+if test "$ac_no_threads" != "1"; then
 
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for pthread_create in -lpthread" >&5
 printf %s "checking for pthread_create in -lpthread... " >&6; }
@@ -5043,6 +5067,7 @@ then :
 
 fi
 
+fi
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for puts in -lwsock32" >&5
 printf %s "checking for puts in -lwsock32... " >&6; }
 if test ${ac_cv_lib_wsock32_puts+y}
@@ -5655,15 +5680,12 @@ int t[sizeof(void *) == 8 ? 1 : -1]; (void)t;
 _ACEOF
 if ac_fn_c_try_compile "$LINENO"
 then :
-
-printf "%s\n" "#define PJ_POOL_ALIGNMENT 8" >>confdefs.h
+  printf "%s\n" "#define PJ_POOL_ALIGNMENT 8" >>confdefs.h
 
      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: 8 bytes" >&5
 printf "%s\n" "8 bytes" >&6; }
-
 else case e in #(
-  e)
-printf "%s\n" "#define PJ_POOL_ALIGNMENT 4" >>confdefs.h
+  e) printf "%s\n" "#define PJ_POOL_ALIGNMENT 4" >>confdefs.h
 
      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: 4 bytes" >&5
 printf "%s\n" "4 bytes" >&6; } ;;

@@ -428,9 +428,9 @@ static pj_bool_t ioqueue_dispatch_write_event( pj_ioqueue_t *ioqueue,
                     return PJ_TRUE;
                 }
 
-                /* Save the thread invoking the write callback.
-                 * Note that when threading is disabled or concurrency is allowed,
-                 * this will always be NULL.
+                /* Save the thread invoking the write callback. Note that
+                 * when concurrency is allowed this is not reached, so the
+                 * field stays NULL.
                  */
                 h->write_callback_thread = pj_thread_this();
 
@@ -860,9 +860,9 @@ static pj_bool_t ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue,
                 return PJ_TRUE;
             }
 
-            /* Save the thread invoking the read callback.
-             * Note that when threading is disabled or concurrency is allowed,
-             * this will always be NULL.
+            /* Save the thread invoking the read callback. Note that when
+             * concurrency is allowed this is not reached, so the field stays
+             * NULL.
              */
             h->read_callback_thread = pj_thread_this();
 

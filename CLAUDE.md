@@ -43,7 +43,11 @@ Quick smoke test: `cd tests/pjsua && python3 run.py mod_run.py scripts-run/100_s
 - `--with-gnutls=/usr/` — GnuTLS instead of OpenSSL (requires `make clean` first)
 - `--disable-ssl` — disable SSL/TLS
 - `--enable-shared` — shared libraries
+- `--disable-threads` — build without threads, see No-Threads Build below
 - Feature toggles: `#define` in `pjlib/include/pj/config_site.h`
+- **Editing `aconfigure.ac`** — regenerate the committed `aconfigure` with
+  `autoconf -o aconfigure aconfigure.ac`. Requires **autoconf 2.72**; different versions
+  rewrite thousands of unrelated lines.
 
 ### Config Site
 
@@ -124,6 +128,18 @@ https://github.com/pjsip/pjproject_docs
 - Use `pj_mutex_t` / `pj_lock_t` — NOT pthread directly.
 - Callbacks may fire from worker threads — be thread-safe.
 - **Avoid invoking user callbacks while holding a mutex** — release lock first to prevent deadlock.
+
+### No-Threads Build (`PJ_HAS_THREADS=0`)
+
+Supported on POSIX, exercised by the `no-threads` CI job. Enable with:
+- autoconf: `./configure --disable-threads --disable-libwebrtc`
+- CMake: `-DPJLIB_WITH_THREADS=OFF -DPJMEDIA_WITH_WEBRTC_AEC=OFF -DPJMEDIA_WITH_WEBRTC_AEC3=OFF`
+
+No pthread function may be called when the macro is 0; CI fails if any library or
+app still references one. The rules are documented where they apply: the API
+contract in the `PJ_THREAD` section of `pjlib/include/pj/os.h`, and the guarding
+rule at the `#include <pthread.h>` site in `pjlib/src/pj/os_core_unix.c`. Windows
+does not honour the macro — threads still exist there.
 
 ### Group Lock (`pj_grp_lock_t`)
 - Mutual exclusion + reference counting + lock ordering in one primitive.

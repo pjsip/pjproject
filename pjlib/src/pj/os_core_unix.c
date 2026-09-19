@@ -60,6 +60,11 @@
 #  endif
 #endif
 
+/* Rule for this file: when PJ_HAS_THREADS is 0 no pthread function may be
+ * called, so that the object links against a libc without pthread. Guard the
+ * code, not the types -- a pthread type in a struct costs nothing here, as
+ * none of those objects is ever created in that configuration.
+ */
 #include <pthread.h>
 #if defined(PJ_HAS_PTHREAD_NP_H) && PJ_HAS_PTHREAD_NP_H != 0
 #  include <pthread_np.h>
@@ -207,12 +212,16 @@ static int initialized;
 #   define MAX_THREADS 32
     static int tls_flag[MAX_THREADS];
     static void *tls[MAX_THREADS];
+
+    static pj_thread_t main_thread;
 #endif
 
 static unsigned atexit_count;
 static void (*atexit_func[32])(void);
 
+#if PJ_HAS_THREADS
 static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type);
+#endif
 /*
  * pj_init(void).
  * Init PJLIB!
@@ -241,6 +250,26 @@ PJ_DEF(pj_status_t) pj_init(void)
     /* Critical section. */
     if ((rc=init_mutex(&critical_section, "critsec", PJ_MUTEX_RECURSE)) != 0)
         return rc;
+
+#else
+    /* Describe the one and only thread. No TLS and no registration: with a
+     * single thread, pj_thread_this() can simply return it.
+     */
+    pj_ansi_strxcpy(main_thread.obj_name, "main",
+                    sizeof(main_thread.obj_name));
+    main_thread.signature1 = SIGNATURE1;
+    main_thread.signature2 = SIGNATURE2;
+
+#  if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
+    /* Collect the stack high-water mark, but never assert on overflow: the
+     * real extent of main()'s stack is not known here, so claim it is
+     * unbounded, exactly as pj_thread_register() does. What remains useful
+     * is pj_thread_get_stack_max_usage().
+     */
+    main_thread.stk_start = dummy_guid;
+    main_thread.stk_size = 0xFFFFFFFFUL;
+    main_thread.stk_max_usage = 0;
+#  endif
 
 #endif
 
@@ -332,6 +361,12 @@ PJ_DEF(void) pj_shutdown()
 
     /* Ticket #1132: Assertion when (re)starting PJLIB on different thread */
     pj_bzero(main_thread_desc, sizeof(pj_thread_desc));
+#else
+    /* Back to the pre-pj_init() state, so a restart starts from the same
+     * zeroed descriptor as a fresh boot. Still safe for pj_thread_this()
+     * to hand out: the name is empty rather than stale.
+     */
+    pj_bzero(&main_thread, sizeof(main_thread));
 #endif
 
     /* Clear static variables */
@@ -356,7 +391,6 @@ PJ_DEF(pj_bool_t) pj_thread_is_registered(void)
 #if PJ_HAS_THREADS
     return pj_thread_local_get(thread_tls_id) != 0;
 #else
-    pj_assert("pj_thread_is_registered() called in non-threading mode!");
     return PJ_TRUE;
 #endif
 }
@@ -478,11 +512,11 @@ PJ_DEF(int) pj_thread_get_prio(pj_thread_t *thread)
     return param.sched_priority;
 #else
     PJ_UNUSED_ARG(thread);
-    return 1;
+    return -1;
 #endif
 }
 
-#if !defined(PJ_ANDROID) || PJ_ANDROID == 0
+#if PJ_HAS_THREADS && (!defined(PJ_ANDROID) || PJ_ANDROID == 0)
 static pj_status_t set_prio(pj_thread_t *thread, int prio, 
                             pj_bool_t max_policy)
 {
@@ -504,7 +538,7 @@ static pj_status_t set_prio(pj_thread_t *thread, int prio,
 
     return PJ_SUCCESS;    
 }
-#endif /* !PJ_ANDROID */
+#endif /* PJ_HAS_THREADS && !PJ_ANDROID */
 
 /*
  * Set the thread priority.
@@ -531,10 +565,12 @@ PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio)
 #  endif /* PJ_ANDROID */
 
 #else
+    /* Unsupported without threads, and reported through the return value
+     * rather than an assertion.
+     */
     PJ_UNUSED_ARG(thread);
     PJ_UNUSED_ARG(prio);
-    pj_assert("pj_thread_set_prio() called in non-threading mode!");
-    return 1;
+    return PJ_EINVALIDOP;
 #endif
 }
 
@@ -544,6 +580,7 @@ PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio)
  */
 PJ_DEF(int) pj_thread_get_prio_min(pj_thread_t *thread)
 {
+#if PJ_HAS_THREADS
     struct sched_param param;
     int policy;
     int rc;
@@ -558,12 +595,17 @@ PJ_DEF(int) pj_thread_get_prio_min(pj_thread_t *thread)
     /* Thread prio min/max are declared in OpenBSD private hdr */
     return 0;
 #else
-    pj_assert("pj_thread_get_prio_min() not supported!");
     return 0;
+#endif
+
+#else
+    PJ_UNUSED_ARG(thread);
+    return -1;
 #endif
 }
 
 
+#if PJ_HAS_THREADS
 static int get_prio_max(pj_thread_t *thread)
 {
     int ori_policy, policy;
@@ -589,6 +631,7 @@ static int get_prio_max(pj_thread_t *thread)
     rc = pthread_setschedparam(thread->thread, ori_policy, &ori_param);
     return prio;
 }
+#endif /* PJ_HAS_THREADS */
 
 
 /*
@@ -596,14 +639,20 @@ static int get_prio_max(pj_thread_t *thread)
  */
 PJ_DEF(int) pj_thread_get_prio_max(pj_thread_t *thread)
 {
+#if PJ_HAS_THREADS
+
 #if defined(_POSIX_PRIORITY_SCHEDULING)
     return get_prio_max(thread);
 #elif defined __OpenBSD__
     /* Thread prio min/max are declared in OpenBSD private hdr */
     return 31;
 #else
-    pj_assert("pj_thread_get_prio_max() not supported!");
     return 0;
+#endif
+
+#else
+    PJ_UNUSED_ARG(thread);
+    return -1;
 #endif
 }
 
@@ -618,7 +667,7 @@ PJ_DEF(void*) pj_thread_get_os_handle(pj_thread_t *thread)
 #if PJ_HAS_THREADS
     return &thread->thread;
 #else
-    pj_assert("pj_thread_is_registered() called in non-threading mode!");
+    /* See pj_thread_set_prio() on why this does not assert. */
     return NULL;
 #endif
 }
@@ -701,9 +750,16 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
     *ptr_thread = thread;
     return PJ_SUCCESS;
 #else
-    pj_thread_t *thread = (pj_thread_t*)desc;
-    *ptr_thread = thread;
-    return PJ_SUCCESS;
+    /* Registration announces a thread pjlib did not create. There is no
+     * such thread here, and no locking either -- pj_mutex_lock() and
+     * friends compile to nothing -- so accepting one would hand out
+     * unprotected access rather than report the error.
+     */
+    PJ_UNUSED_ARG(cstr_thread_name);
+    PJ_UNUSED_ARG(desc);
+    PJ_UNUSED_ARG(ptr_thread);
+    pj_assert(!"pj_thread_register() called while threading is disabled!");
+    return PJ_EINVALIDOP;
 #endif
 }
 
@@ -722,7 +778,7 @@ pj_status_t pj_thread_init(void)
     }
     return pj_thread_register("thr%p", main_thread_desc, &dummy);
 #else
-    PJ_LOG(2,(THIS_FILE, "Thread init error. Threading is not enabled!"));
+    pj_assert(!"pj_thread_init() called while threading is disabled!");
     return PJ_EINVALIDOP;
 #endif
 }
@@ -975,16 +1031,10 @@ PJ_DEF(pj_status_t) pj_thread_create2( const char *thread_name,
  */
 PJ_DEF(const char*) pj_thread_get_name(pj_thread_t *p)
 {
-#if PJ_HAS_THREADS
-    pj_thread_t *rec = (pj_thread_t*)p;
-
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(p, "");
 
-    return rec->obj_name;
-#else
-    return "";
-#endif
+    return p->obj_name;
 }
 
 /*
@@ -992,6 +1042,7 @@ PJ_DEF(const char*) pj_thread_get_name(pj_thread_t *p)
  */
 PJ_DEF(pj_status_t) pj_thread_resume(pj_thread_t *p)
 {
+#if PJ_HAS_THREADS
     pj_status_t rc;
 
     PJ_CHECK_STACK();
@@ -1000,6 +1051,11 @@ PJ_DEF(pj_status_t) pj_thread_resume(pj_thread_t *p)
     rc = pj_mutex_unlock(p->suspended_mutex);
 
     return rc;
+#else
+    PJ_UNUSED_ARG(p);
+    pj_assert(!"No multithreading support!");
+    return PJ_EINVALIDOP;
+#endif
 }
 
 /*
@@ -1024,8 +1080,8 @@ PJ_DEF(pj_thread_t*) pj_thread_this(void)
 
     return rec;
 #else
-    pj_assert(!"Threading is not enabled!");
-    return NULL;
+    /* Threading is disabled: there is only ever the main thread. */
+    return &main_thread;
 #endif
 }
 
@@ -1104,6 +1160,7 @@ PJ_DEF(pj_status_t) pj_thread_attach(const char *cstr_thread_name,
  */
 PJ_DEF(pj_status_t) pj_thread_destroy(pj_thread_t *p)
 {
+#if PJ_HAS_THREADS
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(p, PJ_EINVAL);
 
@@ -1114,6 +1171,11 @@ PJ_DEF(pj_status_t) pj_thread_destroy(pj_thread_t *p)
     }
 
     return PJ_SUCCESS;
+#else
+    PJ_UNUSED_ARG(p);
+    pj_assert(!"No multithreading support!");
+    return PJ_EINVALIDOP;
+#endif
 }
 
 /*
@@ -1519,9 +1581,9 @@ PJ_DECL(int) pthread_mutexattr_settype(pthread_mutexattr_t*,int);
 PJ_END_DECL
 #endif
 
+#if PJ_HAS_THREADS
 static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type)
 {
-#if PJ_HAS_THREADS
     pthread_mutexattr_t attr;
     int rc;
 
@@ -1605,10 +1667,8 @@ static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type)
 
     PJ_LOG(6, (mutex->obj_name, "Mutex created"));
     return PJ_SUCCESS;
-#else /* PJ_HAS_THREADS */
-    return PJ_SUCCESS;
-#endif
 }
+#endif /* PJ_HAS_THREADS */
 
 /*
  * pj_mutex_create()
@@ -1858,6 +1918,9 @@ struct pj_rwmutex_t
     pthread_rwlock_t rwlock;
 };
 
+/* PJ_HAS_THREADS==0 only. */
+#define DUMMY_RWMUTEX  ((pj_rwmutex_t*)1)
+
 PJ_DEF(pj_status_t) pj_rwmutex_create(pj_pool_t *pool, const char *name,
                                       pj_rwmutex_t **p_mutex)
 {
@@ -1866,6 +1929,7 @@ PJ_DEF(pj_status_t) pj_rwmutex_create(pj_pool_t *pool, const char *name,
 
     PJ_UNUSED_ARG(name);
 
+#if PJ_HAS_THREADS
     rwm = PJ_POOL_ALLOC_T(pool, pj_rwmutex_t);
     PJ_ASSERT_RETURN(rwm, PJ_ENOMEM);
 
@@ -1875,6 +1939,13 @@ PJ_DEF(pj_status_t) pj_rwmutex_create(pj_pool_t *pool, const char *name,
 
     *p_mutex = rwm;
     return PJ_SUCCESS;
+#else
+    PJ_UNUSED_ARG(pool);
+    PJ_UNUSED_ARG(rwm);
+    PJ_UNUSED_ARG(status);
+    *p_mutex = DUMMY_RWMUTEX;
+    return PJ_SUCCESS;
+#endif
 }
 
 /*
@@ -1883,6 +1954,7 @@ PJ_DEF(pj_status_t) pj_rwmutex_create(pj_pool_t *pool, const char *name,
  */
 PJ_DEF(pj_status_t) pj_rwmutex_lock_read(pj_rwmutex_t *mutex)
 {
+#if PJ_HAS_THREADS
     pj_status_t status;
 
     status = pthread_rwlock_rdlock(&mutex->rwlock);
@@ -1890,6 +1962,10 @@ PJ_DEF(pj_status_t) pj_rwmutex_lock_read(pj_rwmutex_t *mutex)
         return PJ_RETURN_OS_ERROR(status);
 
     return PJ_SUCCESS;
+#else
+    pj_assert(mutex == DUMMY_RWMUTEX);
+    return PJ_SUCCESS;
+#endif
 }
 
 /*
@@ -1898,6 +1974,7 @@ PJ_DEF(pj_status_t) pj_rwmutex_lock_read(pj_rwmutex_t *mutex)
  */
 PJ_DEF(pj_status_t) pj_rwmutex_lock_write(pj_rwmutex_t *mutex)
 {
+#if PJ_HAS_THREADS
     pj_status_t status;
 
     status = pthread_rwlock_wrlock(&mutex->rwlock);
@@ -1905,6 +1982,10 @@ PJ_DEF(pj_status_t) pj_rwmutex_lock_write(pj_rwmutex_t *mutex)
         return PJ_RETURN_OS_ERROR(status);
 
     return PJ_SUCCESS;
+#else
+    pj_assert(mutex == DUMMY_RWMUTEX);
+    return PJ_SUCCESS;
+#endif
 }
 
 /*
@@ -1922,6 +2003,7 @@ PJ_DEF(pj_status_t) pj_rwmutex_unlock_read(pj_rwmutex_t *mutex)
  */
 PJ_DEF(pj_status_t) pj_rwmutex_unlock_write(pj_rwmutex_t *mutex)
 {
+#if PJ_HAS_THREADS
     pj_status_t status;
 
     status = pthread_rwlock_unlock(&mutex->rwlock);
@@ -1929,6 +2011,10 @@ PJ_DEF(pj_status_t) pj_rwmutex_unlock_write(pj_rwmutex_t *mutex)
         return PJ_RETURN_OS_ERROR(status);
 
     return PJ_SUCCESS;
+#else
+    pj_assert(mutex == DUMMY_RWMUTEX);
+    return PJ_SUCCESS;
+#endif
 }
 
 /*
@@ -1937,6 +2023,7 @@ PJ_DEF(pj_status_t) pj_rwmutex_unlock_write(pj_rwmutex_t *mutex)
  */
 PJ_DEF(pj_status_t) pj_rwmutex_destroy(pj_rwmutex_t *mutex)
 {
+#if PJ_HAS_THREADS
     pj_status_t status;
 
     status = pthread_rwlock_destroy(&mutex->rwlock);
@@ -1944,6 +2031,10 @@ PJ_DEF(pj_status_t) pj_rwmutex_destroy(pj_rwmutex_t *mutex)
         return PJ_RETURN_OS_ERROR(status);
 
     return PJ_SUCCESS;
+#else
+    pj_assert(mutex == DUMMY_RWMUTEX);
+    return PJ_SUCCESS;
+#endif
 }
 
 #endif  /* PJ_EMULATE_RWMUTEX */
@@ -2178,13 +2269,18 @@ PJ_DEF(pj_status_t) pj_sem_destroy(pj_sem_t *sem)
 ///////////////////////////////////////////////////////////////////////////////
 #if defined(PJ_HAS_EVENT_OBJ) && PJ_HAS_EVENT_OBJ != 0
 
+/* PJ_HAS_THREADS==0 only. */
+#define DUMMY_EVENT  ((pj_event_t*)1)
+
 /*
  * pj_event_create()
  */
+
 PJ_DEF(pj_status_t) pj_event_create(pj_pool_t *pool, const char *name,
                                     pj_bool_t manual_reset, pj_bool_t initial,
                                     pj_event_t **ptr_event)
 {
+#if PJ_HAS_THREADS
     pj_event_t *event;
     pj_status_t rc;
     int prc;
@@ -2232,8 +2328,17 @@ PJ_DEF(pj_status_t) pj_event_create(pj_pool_t *pool, const char *name,
 
     *ptr_event = event;
     return PJ_SUCCESS;
+#else
+    PJ_UNUSED_ARG(pool);
+    PJ_UNUSED_ARG(name);
+    PJ_UNUSED_ARG(manual_reset);
+    PJ_UNUSED_ARG(initial);
+    *ptr_event = DUMMY_EVENT;
+    return PJ_SUCCESS;
+#endif
 }
 
+#if PJ_HAS_THREADS
 static void event_on_one_release(pj_event_t *event)
 {
     if (event->state == EV_STATE_SET) {
@@ -2256,12 +2361,14 @@ static void event_on_one_release(pj_event_t *event)
         }
     }
 }
+#endif  /* PJ_HAS_THREADS */
 
 /*
  * pj_event_wait()
  */
 PJ_DEF(pj_status_t) pj_event_wait(pj_event_t *event)
 {
+#if PJ_HAS_THREADS
     pthread_mutex_lock(&event->mutex.mutex);
     event->threads_waiting++;
     while (event->state == EV_STATE_OFF)
@@ -2270,6 +2377,10 @@ PJ_DEF(pj_status_t) pj_event_wait(pj_event_t *event)
     event_on_one_release(event);
     pthread_mutex_unlock(&event->mutex.mutex);
     return PJ_SUCCESS;
+#else
+    pj_assert(event == DUMMY_EVENT);
+    return PJ_SUCCESS;
+#endif
 }
 
 /*
@@ -2277,6 +2388,7 @@ PJ_DEF(pj_status_t) pj_event_wait(pj_event_t *event)
  */
 PJ_DEF(pj_status_t) pj_event_timedwait(pj_event_t *event, unsigned timeout)
 {
+#if PJ_HAS_THREADS
     struct timespec abstime;
     pj_status_t status = PJ_SUCCESS;
     int prc = 0;
@@ -2324,6 +2436,11 @@ PJ_DEF(pj_status_t) pj_event_timedwait(pj_event_t *event, unsigned timeout)
     pthread_mutex_unlock(&event->mutex.mutex);
 
     return status;
+#else
+    PJ_UNUSED_ARG(timeout);
+    pj_assert(event == DUMMY_EVENT);
+    return PJ_SUCCESS;
+#endif
 }
 
 /*
@@ -2331,6 +2448,7 @@ PJ_DEF(pj_status_t) pj_event_timedwait(pj_event_t *event, unsigned timeout)
  */
 PJ_DEF(pj_status_t) pj_event_trywait(pj_event_t *event)
 {
+#if PJ_HAS_THREADS
     pj_status_t status;
 
     pthread_mutex_lock(&event->mutex.mutex);
@@ -2341,6 +2459,10 @@ PJ_DEF(pj_status_t) pj_event_trywait(pj_event_t *event)
     pthread_mutex_unlock(&event->mutex.mutex);
 
     return status;
+#else
+    pj_assert(event == DUMMY_EVENT);
+    return PJ_SUCCESS;
+#endif
 }
 
 /*
@@ -2348,6 +2470,7 @@ PJ_DEF(pj_status_t) pj_event_trywait(pj_event_t *event)
  */
 PJ_DEF(pj_status_t) pj_event_set(pj_event_t *event)
 {
+#if PJ_HAS_THREADS
     pthread_mutex_lock(&event->mutex.mutex);
     event->threads_to_release = 1;
     event->state = EV_STATE_SET;
@@ -2357,6 +2480,10 @@ PJ_DEF(pj_status_t) pj_event_set(pj_event_t *event)
         pthread_cond_broadcast(&event->cond);
     pthread_mutex_unlock(&event->mutex.mutex);
     return PJ_SUCCESS;
+#else
+    pj_assert(event == DUMMY_EVENT);
+    return PJ_SUCCESS;
+#endif
 }
 
 /*
@@ -2364,6 +2491,7 @@ PJ_DEF(pj_status_t) pj_event_set(pj_event_t *event)
  */
 PJ_DEF(pj_status_t) pj_event_pulse(pj_event_t *event)
 {
+#if PJ_HAS_THREADS
     pthread_mutex_lock(&event->mutex.mutex);
     if (event->threads_waiting) {
         event->threads_to_release = event->auto_reset ? 1 :
@@ -2376,6 +2504,10 @@ PJ_DEF(pj_status_t) pj_event_pulse(pj_event_t *event)
     }
     pthread_mutex_unlock(&event->mutex.mutex);
     return PJ_SUCCESS;
+#else
+    pj_assert(event == DUMMY_EVENT);
+    return PJ_SUCCESS;
+#endif
 }
 
 /*
@@ -2383,11 +2515,16 @@ PJ_DEF(pj_status_t) pj_event_pulse(pj_event_t *event)
  */
 PJ_DEF(pj_status_t) pj_event_reset(pj_event_t *event)
 {
+#if PJ_HAS_THREADS
     pthread_mutex_lock(&event->mutex.mutex);
     event->state = EV_STATE_OFF;
     event->threads_to_release = 0;
     pthread_mutex_unlock(&event->mutex.mutex);
     return PJ_SUCCESS;
+#else
+    pj_assert(event == DUMMY_EVENT);
+    return PJ_SUCCESS;
+#endif
 }
 
 /*
@@ -2395,15 +2532,22 @@ PJ_DEF(pj_status_t) pj_event_reset(pj_event_t *event)
  */
 PJ_DEF(pj_status_t) pj_event_destroy(pj_event_t *event)
 {
+#if PJ_HAS_THREADS
     pj_mutex_destroy(&event->mutex);
     pthread_cond_destroy(&event->cond);
     return PJ_SUCCESS;
+#else
+    pj_assert(event == DUMMY_EVENT);
+    return PJ_SUCCESS;
+#endif
 }
+
 
 #endif  /* PJ_HAS_EVENT_OBJ */
 
 ///////////////////////////////////////////////////////////////////////////////
-#if defined(_POSIX_BARRIERS) && _POSIX_BARRIERS >= 200112L
+
+#if defined(_POSIX_BARRIERS) && _POSIX_BARRIERS >= 200112L && PJ_HAS_THREADS
     /* pthread_barrier is supported. */
 
 /**
@@ -2451,13 +2595,13 @@ PJ_DEF(pj_status_t) pj_barrier_destroy(pj_barrier_t *barrier)
     return PJ_STATUS_FROM_OS(status);
 }
 
-#else   // _POSIX_BARRIERS
-    /* pthread_barrier is not supported. */
+#elif PJ_HAS_THREADS   /* #if _POSIX_BARRIERS */
+    /* pthread_barrier is not supported; emulate it. */
 
 /**
  * Barrier object.
  */
-PJ_DEF(pj_status_t) pj_barrier_create(pj_pool_t *pool, unsigned trip_count, pj_barrier_t **p_barrier)
+PJ_DEF(pj_status_t) pj_barrier_create(pj_pool_t *pool, unsigned trip_count, pj_barrier_t **p_barrier) 
 {
     pj_barrier_t *barrier;
     pj_status_t status;
@@ -2524,7 +2668,44 @@ PJ_DEF(pj_status_t) pj_barrier_destroy(pj_barrier_t *barrier)
     return pj_mutex_destroy(&barrier->mutex);
 }
 
-#endif  // _POSIX_BARRIERS
+#else   /* #if _POSIX_BARRIERS */
+    /* No threads, so there is nobody to synchronise with. */
+
+/* Handle handed out when there is nobody to synchronise with. */
+#define DUMMY_BARRIER  ((pj_barrier_t*)1)
+
+/**
+ * Barrier object.
+ */
+PJ_DEF(pj_status_t) pj_barrier_create(pj_pool_t *pool, unsigned trip_count, pj_barrier_t **p_barrier) 
+{
+    PJ_UNUSED_ARG(pool);
+    PJ_UNUSED_ARG(trip_count);
+    *p_barrier = DUMMY_BARRIER;
+    return PJ_SUCCESS;
+}
+
+/**
+ * Wait on the barrier.
+ */
+PJ_DEF(pj_int32_t) pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags) 
+{
+    PJ_UNUSED_ARG(flags);
+    pj_assert(barrier == DUMMY_BARRIER);
+    return PJ_TRUE;
+}
+
+/**
+ * Destroy the barrier.
+ */
+PJ_DEF(pj_status_t) pj_barrier_destroy(pj_barrier_t *barrier) 
+{
+    pj_assert(barrier == DUMMY_BARRIER);
+    return PJ_SUCCESS;
+}
+
+#endif  /* _POSIX_BARRIERS */
+
 
 
 ///////////////////////////////////////////////////////////////////////////////

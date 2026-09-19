@@ -115,7 +115,25 @@ else
     ac_cross_compile=${host_orig}-
 fi
 
-AC_CHECK_LIB(pthread,pthread_create)
+dnl # Threading support. Disabling it sets PJ_HAS_THREADS to 0 and keeps
+dnl # -lpthread off the link line. Components that need threads, such as
+dnl # pjsua-lib and the WebRTC AEC, will not work; disable them separately.
+AC_ARG_ENABLE(threads,
+    AS_HELP_STRING([--disable-threads],[Disable threading support]),
+    [
+        if test "$enable_threads" = "no"; then
+            [ac_no_threads=1]
+            [CFLAGS="$CFLAGS -DPJ_HAS_THREADS=0"]
+            [ac_cflags="$ac_cflags -DPJ_HAS_THREADS=0"]
+            AC_MSG_RESULT([Checking if threading is disabled...yes])
+        fi
+    ],
+    AC_MSG_RESULT([Checking if threading is disabled...no])
+)
+
+if test "$ac_no_threads" != "1"; then
+    AC_CHECK_LIB(pthread,pthread_create)
+fi
 AC_CHECK_LIB(wsock32,puts)
 AC_CHECK_LIB(ws2_32,puts)
 AC_CHECK_LIB(ole32,puts)

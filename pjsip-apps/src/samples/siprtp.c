@@ -1112,7 +1112,10 @@ static void boost_priority(void)
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 }
 
-#elif defined(PJ_LINUX) && PJ_LINUX != 0
+/* Needs threads: without them there is no media thread to boost, and the
+ * pthread/sched calls below would be linked in for nothing.
+ */
+#elif defined(PJ_LINUX) && PJ_LINUX != 0 && PJ_HAS_THREADS
 #include <pthread.h>
 static void boost_priority(void)
 {

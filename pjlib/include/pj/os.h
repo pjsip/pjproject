@@ -133,6 +133,25 @@ PJ_DECL(const pj_sys_info*) pj_get_sys_info(void);
  * @{
  * This module provides multithreading API.
  *
+ * \section pj_thread_nothreads_sec When PJ_HAS_THREADS is disabled
+ *
+ * On backends that implement this setting, currently the POSIX one, PJLIB then
+ * assumes it is accessed by one thread only, the thread that called main(),
+ * and cannot tell threads apart. Functions that would bring another thread
+ * into existence -- pj_thread_create(), pj_thread_join(),
+ * pj_thread_register() -- assert and fail with PJ_EINVALIDOP, because with
+ * locking compiled out a second thread would corrupt PJLIB's state. Functions
+ * that merely query or configure the one thread that does exist do not assert.
+ * They report on that thread where they can -- pj_thread_this() returns its
+ * descriptor and pj_thread_is_registered() returns PJ_TRUE -- and return a
+ * failure value only where the operation itself is unsupported, so that
+ * portable code may call them unconditionally.
+ *
+ * Not every backend honours the setting. The Windows one ignores it for
+ * thread creation and registration, so threads still exist there and these
+ * functions keep their normal behaviour. Check the backend before relying on
+ * the description above.
+ *
  * \section pj_thread_examples_sec Examples
  *
  * For examples, please see:
@@ -308,6 +327,12 @@ PJ_DECL(pj_status_t) pj_thread_attach ( const char *thread_name,
 /**
  * Check if this thread has been registered to PJLIB.
  *
+ * On a backend that implements PJ_HAS_THREADS being disabled, PJLIB assumes
+ * that it is accessed by one thread only, the main thread, and cannot tell
+ * threads apart. This function then always returns PJ_TRUE, so that it can be
+ * called unconditionally from the main thread instead of every caller having
+ * to guard the call with a PJ_HAS_THREADS check.
+ *
  * @return              Non-zero if it is registered.
  */
 PJ_DECL(pj_bool_t) pj_thread_is_registered(void);
@@ -351,7 +376,7 @@ PJ_DECL(int) pj_thread_get_prio_min(pj_thread_t *thread);
  * Get the highest priority value available for this thread.
  *
  * @param thread        Thread handle.
- * @return              Minimum thread priority value, or -1 on error.
+ * @return              Maximum thread priority value, or -1 on error.
  */
 PJ_DECL(int) pj_thread_get_prio_max(pj_thread_t *thread);
 
@@ -365,7 +390,11 @@ PJ_DECL(int) pj_thread_get_prio_max(pj_thread_t *thread);
  * @return              Native thread handle. For example, when the
  *                      backend thread uses pthread, this function will
  *                      return pointer to pthread_t, and on Windows,
- *                      this function will return HANDLE.
+ *                      this function will return HANDLE. On a backend that
+ *                      implements PJ_HAS_THREADS being disabled it returns
+ *                      NULL, as there is no native thread to refer to; where
+ *                      the setting is not honoured, such as on Windows, the
+ *                      native handle is returned as usual.
  */
 PJ_DECL(void*) pj_thread_get_os_handle(pj_thread_t *thread);
 
@@ -389,6 +418,14 @@ PJ_DECL(pj_status_t) pj_thread_resume(pj_thread_t *thread);
 
 /**
  * Get the current thread.
+ *
+ * On a backend that implements PJ_HAS_THREADS being disabled, PJLIB assumes
+ * that it is accessed by one thread only, the main thread, and cannot tell
+ * threads apart. This function then always returns the handle of that thread,
+ * so that it can be called unconditionally from the main thread instead of
+ * every caller having to guard the call with a PJ_HAS_THREADS check. Where
+ * the setting is not honoured, such as on Windows, it keeps returning the
+ * thread it is actually called from.
  *
  * @return Thread handle of current thread.
  */
