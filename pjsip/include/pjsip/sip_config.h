@@ -1169,9 +1169,13 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #define PJSIP_MAX_TSX_KEY_LEN           (PJSIP_MAX_URL_SIZE*2)
 
 /* User agent's pool setting. */
-#define PJSIP_POOL_LEN_USER_AGENT       1024
+#ifndef PJSIP_POOL_LEN_USER_AGENT
+#   define PJSIP_POOL_LEN_USER_AGENT       1024
+#endif
 /* User agent's pool setting. */
-#define PJSIP_POOL_INC_USER_AGENT       1024
+#ifndef PJSIP_POOL_INC_USER_AGENT
+#   define PJSIP_POOL_INC_USER_AGENT       1024
+#endif
 
 /** Message/URL related constants. */
 #define PJSIP_MAX_CALL_ID_LEN           pj_GUID_STRING_LENGTH()
@@ -1183,9 +1187,13 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #define PJSIP_MAX_HNAME_LEN             64
 
 /** Dialog's pool setting. */
-#define PJSIP_POOL_LEN_DIALOG           4000
+#ifndef PJSIP_POOL_LEN_DIALOG
+#   define PJSIP_POOL_LEN_DIALOG           4000
+#endif
 /** Dialog's pool setting. */
-#define PJSIP_POOL_INC_DIALOG           4000
+#ifndef PJSIP_POOL_INC_DIALOG
+#   define PJSIP_POOL_INC_DIALOG           4000
+#endif
 
 /** Maximum header types. */
 #define PJSIP_MAX_HEADER_TYPES          72

@@ -1761,6 +1761,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\samples\embedded_ua.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\samples\encdec.c"
 				>
 			</File>

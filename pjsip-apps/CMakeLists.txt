@@ -38,3 +38,20 @@ target_link_libraries(aidemo
     pjmedia-audiodev
     pjmedia-videodev
 )
+
+# embedded_ua uses SDES-SRTP and SIP over TLS unconditionally; it raises
+# #error at compile time when either is unavailable.
+if(PJMEDIA_WITH_SRTP AND NOT PJLIB_WITH_SSL STREQUAL "")
+  add_executable(embedded_ua src/samples/embedded_ua.c)
+  target_link_libraries(embedded_ua
+    PRIVATE
+      pjlib
+      pjlib-util
+      pjnath
+      pjmedia
+      pjmedia-codec
+      pjmedia-audiodev
+      pjsip
+      pjsip-ua
+  )
+endif()

@@ -501,6 +501,7 @@
     <ClCompile Include="..\src\samples\clidemo.c" />
     <ClCompile Include="..\src\samples\confbench.c" />
     <ClCompile Include="..\src\samples\confsample.c" />
+    <ClCompile Include="..\src\samples\embedded_ua.c" />
     <ClCompile Include="..\src\samples\encdec.c" />
     <ClCompile Include="..\src\samples\footprint.c" />
     <ClCompile Include="..\src\samples\httpdemo.c" />
