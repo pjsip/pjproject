@@ -843,6 +843,16 @@ struct OnCallSendAckParam
      * request.
      */
     SipRxData rdata;
+
+    /**
+     * Output: application sets this to true to suppress the automatic
+     * session termination and keep the call alive. Default is false, i.e.
+     * the library will terminate the call as per default behavior.
+     */
+    bool suppressSendAck;
+
+    OnCallSendAckParam() : suppressSendAck(false)
+    {}
 };
 
 /**
@@ -2145,7 +2155,7 @@ public:
      * @param prm       Callback parameter.
      */
     virtual void onCallSendAck(OnCallSendAckParam &prm)
-    { sendAck(static_cast<pjsip_rx_data*>(prm.rdata.pjRxData)->msg_info.cseq->cseq); }
+    { PJ_UNUSED_ARG(prm); }
 
     /**
      * Notify application when an audio media session is about to be created
