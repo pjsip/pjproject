@@ -349,6 +349,13 @@ typedef struct transport_srtp
 
     pj_uint32_t          tx_ssrc;
 
+    /* Last ROC set via srtp_set_stream_roc() for the receiving direction.
+     * libsrtp keeps it in a pending state until a packet is successfully
+     * unprotected, while srtp_get_stream_roc() only reports the value
+     * already folded into the replay database.
+     */
+    pj_uint32_t          rx_roc_pending;
+
 } transport_srtp;
 
 
@@ -1078,12 +1085,15 @@ static pj_status_t create_srtp_ctx(transport_srtp *srtp,
         status = PJMEDIA_ERRNO_FROM_LIBSRTP(err);
         goto on_return;
     }
+    srtp->rx_roc_pending = 0;
     if (setting->rx_roc.roc != 0 &&
         setting->rx_roc.ssrc != 0)
     {
         err = srtp_set_stream_roc(ctx->srtp_rx_ctx,
                                   setting->rx_roc.ssrc,
                                   setting->rx_roc.roc);
+        if (err == srtp_err_status_ok)
+            srtp->rx_roc_pending = setting->rx_roc.roc;
         PJ_LOG(4, (THIS_FILE, "Initializing SRTP RX ROC from SSRC %u with "
                    "ROC %d %s\n",
                    setting->rx_roc.ssrc, setting->rx_roc.roc,
@@ -1795,11 +1805,17 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
 
         srtp_get_stream_roc(srtp->srtp_ctx.srtp_rx_ctx,
                             srtp->setting.rx_roc.ssrc, &roc);
-        new_roc = (roc == srtp->setting.rx_roc.roc?
+        /* Toggle against the pending ROC. srtp_get_stream_roc() reports the
+         * replay database value, which keeps its initial value for as long
+         * as no packet authenticates -- exactly the situation this retry
+         * exists for.
+         */
+        new_roc = (srtp->rx_roc_pending == srtp->setting.rx_roc.roc?
                    srtp->setting.prev_rx_roc.roc: srtp->setting.rx_roc.roc);
         status = srtp_set_stream_roc(srtp->srtp_ctx.srtp_rx_ctx,
                                      srtp->setting.rx_roc.ssrc, new_roc);
         if (status == srtp_err_status_ok) {
+            srtp->rx_roc_pending = new_roc;
             PJ_LOG(4, (srtp->pool->obj_name,
                        "Retrying to unprotect SRTP from ROC %d to new ROC %d",
                        roc, new_roc));
@@ -1810,8 +1826,10 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
 
     if (err != srtp_err_status_ok) {
         PJ_LOG(5,(srtp->pool->obj_name,
-                  "Failed to unprotect SRTP, pkt size=%ld, SSRC=%u, err=%s",
-                  size, rx_ssrc, get_libsrtp_errstr(err)));
+                  "Failed to unprotect SRTP, pkt size=%ld, SSRC=%u, "
+                  "seq=%u, err=%s",
+                  size, rx_ssrc, ntohs(((pjmedia_rtp_hdr*)pkt)->seq),
+                  get_libsrtp_errstr(err)));
     } else {
         cb = srtp->rtp_cb;
         cb2 = srtp->rtp_cb2;
@@ -1822,6 +1840,11 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
 
         /* Save SSRC after successful SRTP unprotect */
         srtp->rx_ssrc = rx_ssrc;
+
+        /* libsrtp folds the pending ROC into the replay database after
+         * a successful unprotect, so drop our copy as well.
+         */
+        srtp->rx_roc_pending = 0;
     }
 
     pj_lock_release(srtp->mutex);
