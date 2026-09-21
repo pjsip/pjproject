@@ -2671,10 +2671,7 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
      *
      * See also tickets #657, #1644, #1764, and #2123 for more info.
      */
-        if (tsx_inv_data->sdp_done &&
-                !(tsx->role == PJSIP_ROLE_UAC &&
-                    !tsx_inv_data->has_sdp &&
-                    rdata->msg_info.msg->line.status.code/100 == 2)) {
+    if (tsx_inv_data->sdp_done) {
         pj_str_t res_tag;
         int st_code;
 
@@ -3152,13 +3149,6 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(   pjsip_inv_session *inv,
                 status = pjmedia_sdp_neg_send_local_offer(
                             inv->pool_prov, inv->neg, &local_offer);
             }
-
-            if (status == PJ_SUCCESS && !local_offer)
-                status = pjmedia_sdp_neg_get_neg_local(inv->neg, &local_offer);
-            if (status == PJ_SUCCESS && local_offer)
-                last_res->msg->body = create_sdp_body(last_res->pool, local_offer);
-            else if (status == PJ_SUCCESS)
-                status = PJMEDIA_SDPNEG_EINSTATE;
 
             if (status != PJ_SUCCESS) {
                 pjsip_tx_data_dec_ref(last_res);

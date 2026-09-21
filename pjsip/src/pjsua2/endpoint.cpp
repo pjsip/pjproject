@@ -1561,18 +1561,19 @@ void Endpoint::on_call_sdp_created(pjsua_call_id call_id,
     }
 }
 
-void Endpoint::on_call_send_ack(pjsua_call_id call_id,
-                                pjsip_rx_data *rdata)
+pj_bool_t Endpoint::on_call_send_ack(pjsua_call_id call_id,
+                                     pjsip_rx_data *rdata)
 {
     Call *call = Call::lookup(call_id);
     if (!call) {
-        return;
+        return PJ_FALSE;
     }
 
     OnCallSendAckParam prm;
     prm.rdata.fromPj(*rdata);
 
     call->onCallSendAck(prm);
+    return prm.suppressSendAck ? PJ_TRUE : PJ_FALSE;
 }
 
 void Endpoint::on_stream_precreate(pjsua_call_id call_id,
