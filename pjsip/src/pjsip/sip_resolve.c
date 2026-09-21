@@ -304,10 +304,16 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
      * explicitly set.
      */
 #if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6==1
-    if ((ip_addr_ver == 6) || (type & PJSIP_TRANSPORT_IPV6))
+    /* An explicit IP address determines its own address family; the
+     * transport type IPv6 flag is only a hint for hostname targets that
+     * have not been resolved yet.
+     */
+    if (ip_addr_ver == 6)
         af = pj_AF_INET6();
     else if (ip_addr_ver == 4)
         af = pj_AF_INET();
+    else if (type & PJSIP_TRANSPORT_IPV6)
+        af = pj_AF_INET6();
 #else
     /* IPv6 is disabled, will resolving IPv6 address be useful? */
     af = pj_AF_INET();
