@@ -39,7 +39,7 @@ silently drops the backend.
 |---|---|---|
 | `PJMEDIA_WITH_AUDIODEV_OBOE` | Oboe audio | an Oboe SDK, see below |
 | `PJMEDIA_WITH_AUDIODEV_JNI` | Java audio device | -- |
-| `PJMEDIA_WITH_VIDEODEV_ANDROID` | Camera capture | the Java classes below |
+| `PJMEDIA_WITH_VIDEODEV_ANDROID` | Camera capture | the helper classes below |
 | `PJMEDIA_WITH_VIDEODEV_OPENGL` | OpenGL ES renderer | NDK `GLESv2`, `EGL` |
 | `PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC` | MediaCodec audio and video codecs | NDK `mediandk` |
 
@@ -58,11 +58,16 @@ The AAR's Prefab layout is the same one `./aconfigure --with-oboe=<prefix>`
 expects, so a prefix that works for one works for the other. Without it the
 backend switches itself off and the build falls back to the JNI audio device.
 
-### Camera capture
+### Java helper classes
 
-`android_dev.c` drives the camera from Java. The classes it calls live in
-`pjmedia/src/pjmedia-videodev/android/` and are **not** part of the CMake
-build -- compile them into the APK alongside the native library, as
+The camera backend and Oboe both call up into Java. Those classes live in
+`pjmedia/src/pjmedia-videodev/android/` and
+`pjmedia/src/pjmedia-audiodev/android/`, and only the ones belonging to an
+enabled backend are needed.
+
+Building the bindings takes care of them -- see below -- so there is nothing
+to do in the usual case. Building the libraries on their own does not: then
+they are yours to compile into the APK alongside the native library, the way
 `pjsip-apps/src/swig/java/android` does.
 
 ## The pjsua2 bindings and the AAR
@@ -72,8 +77,8 @@ build -- compile them into the APK alongside the native library, as
 
 - `libpjsua2.so`, which is what `System.loadLibrary("pjsua2")` opens
 - the `org.pjsip.pjsua2` Java sources, under `PJSUA2_JAVA_OUTPUT_DIR`,
-  together with the `org.pjsip` camera and audio-device helper classes for
-  whichever backends are enabled
+  and beside them the `org.pjsip` helper classes for whichever backends are
+  enabled -- so the camera and Oboe classes above need no separate handling
 
 It is off by default: SWIG is a build dependency nothing else here needs.
 
