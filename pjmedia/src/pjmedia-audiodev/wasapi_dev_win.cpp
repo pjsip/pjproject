@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-audiodev/audiodev_imp.h>
+#include <pjmedia/event.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/os.h>
@@ -827,17 +828,32 @@ static void thread_release(struct wasapi_stream *s)
 }
 
 /* Device gone (e.g: USB unplugged): stop serving it until the application
- * recreates the stream. */
-static void halt_stream(struct wasapi_stream *s, const char *what, HRESULT hr)
+ * recreates the stream. The application is notified with an event, as it
+ * cannot tell from the callbacks alone that they will never come back. */
+static void halt_stream(struct wasapi_stream *s, pjmedia_dir dir,
+                        const char *what, HRESULT hr)
 {
-    if (!s->halted) {
-        if (hr == AUDCLNT_E_DEVICE_INVALIDATED) {
-            PJ_LOG(2, (THIS_FILE, "WASAPI: %s: device removed", what));
-        } else {
-            log_hr(what, hr);
-        }
-    }
+    pjmedia_event e;
+    pj_timestamp *ts;
+
+    if (s->halted)
+        return;
+
     s->halted = PJ_TRUE;
+
+    if (hr == AUDCLNT_E_DEVICE_INVALIDATED) {
+        PJ_LOG(2, (THIS_FILE, "WASAPI: %s: device removed", what));
+    } else {
+        log_hr(what, hr);
+    }
+
+    ts = (dir == PJMEDIA_DIR_PLAYBACK)? &s->pb_ts : &s->cap_ts;
+    pjmedia_event_init(&e, PJMEDIA_EVENT_AUD_DEV_ERROR, ts, &s->base);
+    e.data.aud_dev_err.dir = dir;
+    e.data.aud_dev_err.status = PJMEDIA_EAUD_SYSERR;
+    e.data.aud_dev_err.id = (dir == PJMEDIA_DIR_PLAYBACK)? s->param.play_id :
+                                                           s->param.rec_id;
+    pjmedia_event_publish(NULL, &s->base, &e, PJMEDIA_EVENT_PUBLISH_DEFAULT);
 }
 
 static void process_capture(struct wasapi_stream *s)
@@ -852,7 +868,8 @@ static void process_capture(struct wasapi_stream *s)
 
         hr = s->cap_capture->GetNextPacketSize(&packet);
         if (FAILED(hr)) {
-            halt_stream(s, "capture GetNextPacketSize", hr);
+            halt_stream(s, PJMEDIA_DIR_CAPTURE,
+                        "capture GetNextPacketSize", hr);
             return;
         }
         if (packet == 0)
@@ -862,7 +879,7 @@ static void process_capture(struct wasapi_stream *s)
         if (hr == AUDCLNT_S_BUFFER_EMPTY)
             return;
         if (FAILED(hr)) {
-            halt_stream(s, "capture GetBuffer", hr);
+            halt_stream(s, PJMEDIA_DIR_CAPTURE, "capture GetBuffer", hr);
             return;
         }
 
@@ -922,7 +939,7 @@ static void process_playback(struct wasapi_stream *s)
 
     hr = s->pb_client->GetCurrentPadding(&padding);
     if (FAILED(hr)) {
-        halt_stream(s, "playback GetCurrentPadding", hr);
+        halt_stream(s, PJMEDIA_DIR_PLAYBACK, "playback GetCurrentPadding", hr);
         return;
     }
     if (padding == 0 && s->pb_ts.u64 != 0)
@@ -937,7 +954,7 @@ static void process_playback(struct wasapi_stream *s)
         if (hr == AUDCLNT_E_BUFFER_TOO_LARGE)
             return;
         if (FAILED(hr)) {
-            halt_stream(s, "playback GetBuffer", hr);
+            halt_stream(s, PJMEDIA_DIR_PLAYBACK, "playback GetBuffer", hr);
             return;
         }
 
@@ -1213,6 +1230,14 @@ static pj_status_t wasapi_factory_create_stream(pjmedia_aud_dev_factory *f,
     {
         return PJ_EINVAL;
     }
+    /* Each active direction is served from the audio thread, so it needs its
+     * callback.
+     */
+    if (((param->dir & PJMEDIA_DIR_CAPTURE) && !rec_cb) ||
+        ((param->dir & PJMEDIA_DIR_PLAYBACK) && !play_cb))
+    {
+        return PJ_EINVAL;
+    }
     if ((param->dir & PJMEDIA_DIR_CAPTURE) &&
         ((unsigned)param->rec_id >= wf->dev_count ||
          (!wf->devs[param->rec_id].cap_id &&
@@ -1293,6 +1318,13 @@ static pj_status_t wasapi_factory_create_stream(pjmedia_aud_dev_factory *f,
         return status;
     }
 
+    /* Apply the remaining settings */
+    if (param->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING) {
+        wasapi_stream_set_cap(&s->base,
+                              PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
+                              &param->output_vol);
+    }
+
     *p_strm = &s->base;
     return PJ_SUCCESS;
 }
@@ -1304,6 +1336,14 @@ static pj_status_t wasapi_stream_get_param(pjmedia_aud_stream *strm,
 
     PJ_ASSERT_RETURN(s && pi, PJ_EINVAL);
     pj_memcpy(pi, &s->param, sizeof(*pi));
+
+    /* Update the volume setting */
+    if (wasapi_stream_get_cap(strm, PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
+                              &pi->output_vol) == PJ_SUCCESS)
+    {
+        pi->flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
+    }
+
     return PJ_SUCCESS;
 }
 
@@ -1378,6 +1418,17 @@ static pj_status_t wasapi_stream_destroy(pjmedia_aud_stream *strm)
     struct wasapi_stream *s = (struct wasapi_stream*)strm;
 
     PJ_ASSERT_RETURN(s, PJ_EINVAL);
+
+    /* From the audio thread itself, i.e: from a callback, send_cmd() would
+     * run the QUIT inline and pj_thread_join() would return immediately, so
+     * the stream would be freed while this thread is still running in it.
+     * The application has to destroy the stream from another thread.
+     */
+    if (s->thread && GetCurrentThreadId() == s->thread_id) {
+        PJ_LOG(2, (THIS_FILE, "WASAPI: the stream cannot be destroyed from "
+                   "its own audio thread"));
+        return PJ_EINVALIDOP;
+    }
 
     if (s->thread) {
         send_cmd(s, WASAPI_CMD_QUIT);
