@@ -46,6 +46,7 @@
 #include <unistd.h>         // getpid()
 #include <errno.h>          // errno
 #include <time.h>           // clock_gettime()
+#include <sched.h>          // sched_yield()
 
 #if PJ_HAS_THREADS
 #  if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L \
@@ -1200,6 +1201,14 @@ PJ_DEF(pj_status_t) pj_thread_sleep(unsigned msec)
     PJ_CHECK_STACK();
 
     pj_set_os_error(0);
+
+    /* A zero duration means "give up the CPU now": without this, the loop
+     * below would do nothing at all, since usleep() is never reached.
+     */
+    if (msec == 0) {
+        sched_yield();
+        return PJ_SUCCESS;
+    }
 
     /* Sleep in sub-second chunks to avoid overflow of msec*1000 for large
      * values, and to keep each usleep() argument below 1000000, which POSIX
