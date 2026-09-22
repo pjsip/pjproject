@@ -194,6 +194,7 @@ struct wasapi_stream
     enum wasapi_cmd         cmd;
     float                   cmd_volume;
     pj_status_t             cmd_status;
+    pj_bool_t               cmd_dead;       /* Thread stopped answering     */
 
     pj_bool_t               running;
     pj_bool_t               halted;         /* Device gone/callback error   */
@@ -702,13 +703,19 @@ static pj_status_t init_client(struct wasapi_stream *s, IMMDevice *dev,
     s->period = def_period;
     period_ms = hns_to_ms(def_period);
 
+    /* The latency members are optional, they are only meaningful when the
+     * matching capability flag is set, so fall back to the defaults as WMME
+     * does.
+     */
     if (playback) {
-        target_ms = prm->output_latency_ms;
+        target_ms = (prm->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY)?
+                    prm->output_latency_ms : PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
         if (target_ms < s->ptime_ms + period_ms)
             target_ms = s->ptime_ms + period_ms;
         buffer_ms = target_ms + s->ptime_ms;
     } else {
-        buffer_ms = prm->input_latency_ms;
+        buffer_ms = (prm->flags & PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY)?
+                    prm->input_latency_ms : PJMEDIA_SND_DEFAULT_REC_LATENCY;
         if (buffer_ms < WASAPI_CAP_MIN_FRAMES * s->ptime_ms)
             buffer_ms = WASAPI_CAP_MIN_FRAMES * s->ptime_ms;
     }
@@ -751,6 +758,7 @@ static pj_status_t init_client(struct wasapi_stream *s, IMMDevice *dev,
             s->pb_target_frames = s->frame_frames;
         s->param.output_latency_ms = s->pb_target_frames * 1000 /
                                      prm->clock_rate;
+        s->param.flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY;
     } else {
         hr = client->SetEventHandle(s->cap_event);
         if (SUCCEEDED(hr))
@@ -764,6 +772,7 @@ static pj_status_t init_client(struct wasapi_stream *s, IMMDevice *dev,
         s->cap_client = client;
         /* Effective: until one frame is full, plus the period */
         s->param.input_latency_ms = s->ptime_ms + period_ms;
+        s->param.flags |= PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY;
     }
 
     PJ_LOG(4, (THIS_FILE, "WASAPI %s: %u Hz, %u ch, %u ms frames, "
@@ -933,6 +942,12 @@ static void process_capture(struct wasapi_stream *s)
                     s->halted = PJ_TRUE;
                     return;
                 }
+
+                /* The callback may have stopped the stream */
+                if (!s->running || s->halted) {
+                    s->cap_capture->ReleaseBuffer(frames);
+                    return;
+                }
             }
         }
 
@@ -987,6 +1002,10 @@ static void process_playback(struct wasapi_stream *s)
             s->halted = PJ_TRUE;
             return;
         }
+
+        /* The callback may have stopped the stream */
+        if (!s->running || s->halted)
+            return;
     }
 }
 
@@ -1035,16 +1054,27 @@ static pj_status_t do_start(struct wasapi_stream *s)
 
 static pj_status_t do_stop(struct wasapi_stream *s)
 {
+    HRESULT hr;
+
     if (!s->running)
         return PJ_SUCCESS;
 
+    /* Reset() returns AUDCLNT_E_BUFFER_OPERATION_PENDING when a buffer from
+     * GetBuffer() is still outstanding, which is the case when the stream is
+     * stopped from inside a callback. That is expected, the buffer is left
+     * with whatever it still holds, so only report the other failures.
+     */
     if (s->pb_client) {
         s->pb_client->Stop();
-        s->pb_client->Reset();
+        hr = s->pb_client->Reset();
+        if (FAILED(hr) && hr != AUDCLNT_E_BUFFER_OPERATION_PENDING)
+            log_hr("playback Reset", hr);
     }
     if (s->cap_client) {
         s->cap_client->Stop();
-        s->cap_client->Reset();
+        hr = s->cap_client->Reset();
+        if (FAILED(hr) && hr != AUDCLNT_E_BUFFER_OPERATION_PENDING)
+            log_hr("capture Reset", hr);
     }
     s->running = PJ_FALSE;
 
@@ -1187,6 +1217,17 @@ static pj_status_t send_cmd(struct wasapi_stream *s, enum wasapi_cmd cmd,
     }
 
     EnterCriticalSection(&s->cmd_lock);
+
+    /* Once the audio thread has missed a command it may still be about to
+     * pick it up, so queueing another one would race with it: the thread
+     * could clear the newer command and signal its waiter as if it had run.
+     * Refuse everything from here on instead.
+     */
+    if (s->cmd_dead) {
+        LeaveCriticalSection(&s->cmd_lock);
+        return PJ_ETIMEDOUT;
+    }
+
     if (volume)
         s->cmd_volume = *volume;
     s->cmd = cmd;
@@ -1201,6 +1242,7 @@ static pj_status_t send_cmd(struct wasapi_stream *s, enum wasapi_cmd cmd,
     } else {
         PJ_LOG(2, (THIS_FILE, "WASAPI: audio thread did not answer command "
                    "%d", cmd));
+        s->cmd_dead = PJ_TRUE;
         status = PJ_ETIMEDOUT;
     }
     LeaveCriticalSection(&s->cmd_lock);
@@ -1249,6 +1291,7 @@ static pj_status_t wasapi_factory_create_stream(pjmedia_aud_dev_factory *f,
         return PJMEDIA_EAUD_BADFORMAT;
     }
     if (param->channel_count < 1 || param->clock_rate == 0 ||
+        param->samples_per_frame == 0 ||
         param->samples_per_frame % param->channel_count != 0)
     {
         return PJ_EINVAL;
@@ -1458,7 +1501,15 @@ static pj_status_t wasapi_stream_destroy(pjmedia_aud_stream *strm)
     }
 
     if (s->thread) {
-        send_cmd(s, WASAPI_CMD_QUIT, NULL);
+        if (send_cmd(s, WASAPI_CMD_QUIT, NULL) != PJ_SUCCESS) {
+            /* The audio thread is not answering. Joining it would block for
+             * good and freeing the stream would pull the pool from under it,
+             * so leave both alone.
+             */
+            PJ_LOG(1, (THIS_FILE, "WASAPI: audio thread is not responding, "
+                       "the stream is left allocated"));
+            return PJ_ETIMEDOUT;
+        }
         pj_thread_join(s->thread);
         pj_thread_destroy(s->thread);
         s->thread = NULL;
