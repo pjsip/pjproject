@@ -37,6 +37,8 @@ static void close_snd_dev(pj_bool_t close_null_snd);
  * ownership/state.
  */
 static void close_snd_port(pjmedia_snd_port *old_snd);
+/* Sound device auto-close timer callback */
+static void close_snd_timer_cb(pj_timer_heap_t *th, pj_timer_entry *entry);
 /* Create audio device param */
 static pj_status_t create_aud_param(pjmedia_aud_param *param,
                                     pjmedia_aud_dev_index capture_dev,
@@ -379,6 +381,16 @@ pj_status_t pjsua_aud_subsys_init()
                                pjsua_var.ua_cfg.cb.on_conf_op_completed);
     }
 
+    /* Initialize the sound device auto-close timer here rather than in
+     * pjsua_aud_subsys_start(), so that its callback is already set if
+     * the application is destroyed after a failure somewhere between
+     * pjsua_init() and pjsua_start(): the teardown path calls
+     * pjsua_check_snd_dev_idle(), which would otherwise schedule a timer
+     * entry with a NULL callback.
+     */
+    pj_timer_entry_init(&pjsua_var.snd_idle_timer, PJ_FALSE, NULL,
+                        &close_snd_timer_cb);
+
     return status;
 
 on_error:
@@ -460,13 +472,8 @@ static void close_snd_timer_cb( pj_timer_heap_t *th,
 
 pj_status_t pjsua_aud_subsys_start(void)
 {
-    pj_status_t status = PJ_SUCCESS;
-
-    pj_timer_entry_init(&pjsua_var.snd_idle_timer, PJ_FALSE, NULL,
-                        &close_snd_timer_cb);
-
     pjsua_check_snd_dev_idle();
-    return status;
+    return PJ_SUCCESS;
 }
 
 pj_status_t pjsua_aud_subsys_destroy()
