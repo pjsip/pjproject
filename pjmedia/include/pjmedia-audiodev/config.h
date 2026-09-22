@@ -199,6 +199,15 @@ PJ_BEGIN_DECL
   * implemented by wasapi_dev_win.cpp, which offers a lower latency than
   * WMME. The WASAPI devices are listed after the WMME ones, so enabling it
   * does not change the existing device order.
+  *
+  * Note that the first WASAPI device, named "Soundmapper - ", resolves the
+  * default endpoints once, when the stream is created, and then stays on
+  * them. This differs from the WMME device of the same name, which is the
+  * WAVE_MAPPER, a virtual device that the OS keeps routing to whatever the
+  * default device currently is. So when an endpoint in use disappears, e.g:
+  * a USB headset is unplugged, WASAPI stops the stream and publishes
+  * PJMEDIA_EVENT_AUD_DEV_ERROR instead of switching over silently, and the
+  * application decides which device to recreate the stream on.
   */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_WASAPI
 #  if (defined(PJ_WIN32_UWP) && PJ_WIN32_UWP!=0) || \

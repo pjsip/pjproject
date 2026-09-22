@@ -47,6 +47,12 @@
  * PJMEDIA_WMME_DEV_USE_MMDEVICE_API. The channel count comes from the mix
  * format.
  *
+ * Index 0 resolves the default endpoints when the stream is created and then
+ * stays on them: unlike the WMME WAVE_MAPPER, an IAudioClient is bound to a
+ * concrete endpoint by Initialize(). Losing that endpoint therefore stops the
+ * stream with PJMEDIA_EVENT_AUD_DEV_ERROR rather than following the new
+ * default, leaving the choice of the replacement device to the application.
+ *
  * The stream asks for 16 bit PCM at the requested rate and channel count;
  * AUTOCONVERTPCM lets the audio engine convert to its mix format (both rate
  * and channels). That way 8/16/48 kHz and mono/multichannel work without a
