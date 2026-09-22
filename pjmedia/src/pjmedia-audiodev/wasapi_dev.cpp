@@ -20,7 +20,13 @@
 #include <pj/log.h>
 #include <pj/os.h>
 
-#if PJMEDIA_AUDIO_DEV_HAS_WASAPI
+/* This is the UWP/Windows Phone 8 implementation. Windows desktop is served
+ * by wasapi_dev_win.cpp, so that only one of the two ever defines
+ * pjmedia_wasapi_factory().
+ */
+#if PJMEDIA_AUDIO_DEV_HAS_WASAPI && \
+    ((defined(PJ_WIN32_UWP) && PJ_WIN32_UWP != 0) || \
+     (defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8 != 0))
 
 #include <Avrt.h>
 #include <windows.h>

@@ -190,6 +190,15 @@ PJ_BEGIN_DECL
  /**
   * This setting controls whether Windows Audio Session API (WASAPI)
   * support should be included.
+  *
+  * On UWP and Windows Phone 8 this is the only audio backend, so it is
+  * enabled by default and implemented by wasapi_dev.cpp.
+  *
+  * On Windows desktop it is disabled by default, since WMME is the default
+  * backend there, and can be enabled in config_site.h. It is then
+  * implemented by wasapi_dev_win.cpp, which offers a lower latency than
+  * WMME. The WASAPI devices are listed after the WMME ones, so enabling it
+  * does not change the existing device order.
   */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_WASAPI
 #  if (defined(PJ_WIN32_UWP) && PJ_WIN32_UWP!=0) || \
@@ -198,6 +207,20 @@ PJ_BEGIN_DECL
 #  else
 #    define PJMEDIA_AUDIO_DEV_HAS_WASAPI        0
 #  endif
+#endif
+
+
+ /**
+  * This setting controls whether the Windows desktop WASAPI backend should
+  * open its streams in raw mode, which bypasses the audio processing objects
+  * (APO) of the endpoint, e.g: the effects added by the audio driver. Note
+  * that it requires Windows 8.1 or later, and that the backend falls back to
+  * the normal shared mode when the endpoint does not support it.
+  *
+  * Default: 0 (disabled)
+  */
+#ifndef PJMEDIA_WASAPI_DEV_USE_RAW_MODE
+#  define PJMEDIA_WASAPI_DEV_USE_RAW_MODE       0
 #endif
 
 

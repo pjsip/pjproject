@@ -782,6 +782,7 @@ add_library(pjmedia-audiodev
   src/pjmedia-audiodev/null_dev.c
   src/pjmedia-audiodev/oboe_dev.cpp
   src/pjmedia-audiodev/wasapi_dev.cpp
+  src/pjmedia-audiodev/wasapi_dev_win.cpp
   src/pjmedia-audiodev/wmme_dev.c
 
   $<$<BOOL:${APPLE}>:src/pjmedia-audiodev/coreaudio_dev.m>

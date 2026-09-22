@@ -777,6 +777,7 @@
       <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM'">MultiThreadedDebugDLL</RuntimeLibrary>
       <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM'">MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
+    <ClCompile Condition="'$(API_Family)'=='WinDesktop'" Include="..\src\pjmedia-audiodev\wasapi_dev_win.cpp" />
     <ClCompile Include="..\src\pjmedia-audiodev\wmme_dev.c" />
   </ItemGroup>
   <ItemGroup>
