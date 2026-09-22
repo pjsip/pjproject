@@ -8222,6 +8222,21 @@ struct pjsua_media_config
     unsigned            conf_threads;
 
     /**
+     * The priority of the conference bridge worker threads, see
+     * pjmedia_conf_param::worker_thread_prio for more info. The valid value
+     * range is platform dependent, see #pj_thread_get_prio_min() and
+     * #pj_thread_get_prio_max(), while zero means the worker threads will
+     * use the priority assigned by the OS.
+     *
+     * This value is ignored by all conference backends except for the
+     * multithreaded conference bridge backend
+     * (PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND).
+     *
+     * Default value: 0
+     */
+    int                 conf_thread_prio;
+
+    /**
      * Specify whether the media manager should manage its own
      * ioqueue for the RTP/RTCP sockets. If yes, ioqueue will be created
      * and at least one worker thread will be created too. If no,

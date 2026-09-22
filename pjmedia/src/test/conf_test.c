@@ -22,6 +22,7 @@
 #include <pjmedia/errno.h>
 #include <pj/pool.h>
 #include <pj/log.h>
+#include <pj/os.h>
 
 #define THIS_FILE   "conf_test.c"
 
@@ -576,6 +577,71 @@ on_return:
     return rc;
 }
 
+/*
+ * Verify that a parallel bridge whose worker threads are given a priority
+ * still mixes correctly. Whether the priority is actually applied is platform
+ * and privilege dependent (e.g. on Linux raising it needs CAP_SYS_NICE), so
+ * this only asserts that the bridge keeps delivering frames, which is what a
+ * broken priority setting would take down. On the non-parallel backends the
+ * setting is simply ignored.
+ */
+static int worker_prio_test(void)
+{
+    pj_pool_t *pool = NULL;
+    pjmedia_conf *conf = NULL;
+    pjmedia_conf_param param;
+    pjmedia_port *master;
+    test_port *src, *sink;
+    unsigned slot_src = 0, slot_sink = 0;
+    int rc = 0;
+    pj_status_t status;
+
+    PJ_LOG(3, (THIS_FILE, "  conf worker threads with a priority set"));
+
+    pool = pj_pool_create(mem, "conf_prio", 4000, 4000, NULL);
+    if (!pool) return -400;
+
+    pjmedia_conf_param_default(&param);
+    param.max_slots = 8;
+    param.sampling_rate = CLOCK_RATE;
+    param.channel_count = CHANNELS;
+    param.samples_per_frame = SPF;
+    param.bits_per_sample = BPS;
+    param.options = PJMEDIA_CONF_NO_DEVICE;
+    param.worker_threads = 2;
+    param.worker_thread_prio = pj_thread_get_prio_max(pj_thread_this());
+
+    status = pjmedia_conf_create2(pool, &param, &conf);
+    if (status != PJ_SUCCESS) { rc = -401; goto on_return; }
+    master = pjmedia_conf_get_master_port(conf);
+
+    src  = create_test_port(pool, CLOCK_RATE, SPF, PJ_TRUE);
+    sink = create_test_port(pool, CLOCK_RATE, SPF, PJ_TRUE);
+    if (!src || !sink) { rc = -402; goto on_return; }
+
+    status = pjmedia_conf_add_port(conf, pool, &src->base, NULL, &slot_src);
+    if (status != PJ_SUCCESS) { rc = -403; goto on_return; }
+    status = pjmedia_conf_add_port(conf, pool, &sink->base, NULL, &slot_sink);
+    if (status != PJ_SUCCESS) { rc = -404; goto on_return; }
+    status = pjmedia_conf_connect_port(conf, slot_src, slot_sink, 0);
+    if (status != PJ_SUCCESS) { rc = -405; goto on_return; }
+
+    status = pump(master, 20);
+    if (status != PJ_SUCCESS) { rc = -406; goto on_return; }
+
+    if (sink->put_cnt == 0) {
+        PJ_LOG(1,(THIS_FILE, "   no frame delivered by the worker threads"));
+        rc = -407;
+    }
+
+on_return:
+    if (conf)
+        pjmedia_conf_destroy(conf);
+    if (pool)
+        pj_pool_release(pool);
+    return rc;
+}
+
 
 int conf_test(void)
 {
@@ -604,6 +670,12 @@ int conf_test(void)
         return 0;   /* unsupported backend - skip */
     if (rc != 0) {
         PJ_LOG(1,(THIS_FILE, "  conf replace flow test failed (rc=%d)", rc));
+        return rc;
+    }
+
+    rc = worker_prio_test();
+    if (rc != 0) {
+        PJ_LOG(1,(THIS_FILE, "  conf worker prio test failed (rc=%d)", rc));
         return rc;
     }
     return 0;

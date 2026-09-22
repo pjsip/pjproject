@@ -416,6 +416,8 @@ struct pjmedia_conf
     pj_atomic_value_t    threads;         /**< The number of threads to use.
                                            * 1 means the operations will be
                                            * done only by get_frame() thread*/
+    int                  thread_prio;     /**< Worker thread priority, zero
+                                           * means OS default              */
     pj_thread_t        **pool_threads;    /**< Thread pool's threads        */
     pj_barrier_t        *active_thread;   /**< entry barrier                */
     pj_barrier_t        *barrier;         /**< exit barrier                 */
@@ -1100,6 +1102,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_create2(pj_pool_t *pool_,
     conf->bits_per_sample = param->bits_per_sample;
     conf->threads = param->worker_threads + 1;
     conf->is_parallel = (param->worker_threads>0);
+    conf->thread_prio = param->worker_thread_prio;
 
     /* loading and storing a properly aligned pointer should be atomic 
      * at the processor level and not require mutex protection 
@@ -3956,8 +3959,23 @@ static pj_status_t thread_pool_start(pjmedia_conf *conf)
 static int conf_thread(void *arg)
 {
     pjmedia_conf *conf = (pjmedia_conf *)arg;
+    pj_thread_t *this_thread = pj_thread_this();
     pj_int32_t rc;
     pj_assert(conf->is_parallel);
+
+    /* The get_frame() thread waits for the worker threads to finish mixing,
+     * so leaving the workers at a lower priority will delay the audio frame.
+     */
+    if (conf->thread_prio) {
+        pj_status_t status = pj_thread_set_prio(this_thread,
+                                                conf->thread_prio);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(3, (THIS_FILE, status,
+                          "%s: unable to set thread priority to %d",
+                          pj_thread_get_name(this_thread),
+                          conf->thread_prio));
+        }
+    }
 
     /* don't go to the barrier while thread pool is creating
      * if we can not create all threads,
