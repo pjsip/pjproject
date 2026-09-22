@@ -54,6 +54,18 @@ set_target_properties(pjsua2jni PROPERTIES
 # pjsua2 carries the rest of the stack transitively.
 target_link_libraries(pjsua2jni PRIVATE pjsua2)
 
+# Export the JNI entry points and nothing else; see pjsua2jni.map. Only the
+# GNU-style linkers use a version script, which on Android is all of them.
+if(ANDROID)
+  set(_pjsua2jni_map "${CMAKE_CURRENT_SOURCE_DIR}/pjsua2jni.map")
+  target_link_options(pjsua2jni PRIVATE
+    "LINKER:--version-script=${_pjsua2jni_map}"
+  )
+  # A version script is not a source file, so relink when it changes.
+  set_property(TARGET pjsua2jni APPEND PROPERTY LINK_DEPENDS "${_pjsua2jni_map}")
+  unset(_pjsua2jni_map)
+endif()
+
 # SWIG parses the headers itself, so it needs its own -I list. Two things are
 # needed for that:
 #
