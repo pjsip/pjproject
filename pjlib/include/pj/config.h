@@ -691,6 +691,22 @@
 
 
 /**
+ * Specify whether the POSIX sched_yield() is available, which is used by
+ * pj_thread_sleep(0) to relinquish the CPU. It is mandatory in POSIX.1-2008
+ * and present on every mainstream POSIX platform, but an embedded RTOS
+ * (e.g. Zephyr or FreeRTOS) may only provide a partial POSIX layer. Set
+ * this to 0 on such a target and usleep(0) will be used instead; note that
+ * usleep(0) is considerably more expensive, as it sleeps for a full timer
+ * slack period rather than merely yielding.
+ *
+ * Default: 1
+ */
+#ifndef PJ_HAS_SCHED_YIELD
+#  define PJ_HAS_SCHED_YIELD        1
+#endif
+
+
+/**
  * Support TCP in the library.
  * Disabling TCP will reduce the footprint slightly (about 6KB).
  *
