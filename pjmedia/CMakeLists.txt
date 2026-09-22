@@ -243,9 +243,12 @@ cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_WMME
   "PJMEDIA_WITH_AUDIODEV;WIN32 OR CYGWIN OR MINGW" OFF
 )
 
-# Windows Audio Session API (WASAPI) backend
+# Windows Audio Session API (WASAPI) backend.
+# Off by default: on Windows desktop, which is what this build targets, WMME
+# is the default backend and WASAPI is opt-in, see PJMEDIA_AUDIO_DEV_HAS_WASAPI
+# in pjmedia-audiodev/config.h.
 cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_WASAPI
-  "Enable WASAPI audio device backend" ON
+  "Enable WASAPI audio device backend" OFF
   "PJMEDIA_WITH_AUDIODEV;WIN32 OR CYGWIN OR MINGW" OFF
 )
 import_if_or_set(PJMEDIA_WITH_AUDIODEV_WASAPI OFF WASAPI)
