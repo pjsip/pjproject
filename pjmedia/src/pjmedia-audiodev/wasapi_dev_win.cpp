@@ -1051,43 +1051,48 @@ static pj_status_t do_stop(struct wasapi_stream *s)
     return PJ_SUCCESS;
 }
 
-/* Execute a command in the audio thread. PJ_TRUE = quit the thread. */
-static pj_bool_t exec_cmd(struct wasapi_stream *s)
+/* Execute a command in the audio thread. The command and its volume
+ * argument/result are passed explicitly rather than read from the stream, so
+ * that a command issued from a callback, i.e: already running in the audio
+ * thread, does not overwrite one that an application thread has queued and is
+ * still waiting for. PJ_TRUE = quit the thread.
+ */
+static pj_bool_t exec_cmd(struct wasapi_stream *s, enum wasapi_cmd cmd,
+                          float *volume, pj_status_t *p_status)
 {
     pj_bool_t quit = PJ_FALSE;
 
-    switch (s->cmd) {
+    switch (cmd) {
     case WASAPI_CMD_START:
-        s->cmd_status = do_start(s);
+        *p_status = do_start(s);
         break;
     case WASAPI_CMD_STOP:
-        s->cmd_status = do_stop(s);
+        *p_status = do_stop(s);
         break;
     case WASAPI_CMD_QUIT:
-        s->cmd_status = do_stop(s);
+        *p_status = do_stop(s);
         quit = PJ_TRUE;
         break;
     case WASAPI_CMD_GET_VOLUME:
-        s->cmd_status = PJMEDIA_EAUD_INVCAP;
-        if (s->pb_volume &&
-            SUCCEEDED(s->pb_volume->GetMasterVolume(&s->cmd_volume)))
+        *p_status = PJMEDIA_EAUD_INVCAP;
+        if (s->pb_volume && volume &&
+            SUCCEEDED(s->pb_volume->GetMasterVolume(volume)))
         {
-            s->cmd_status = PJ_SUCCESS;
+            *p_status = PJ_SUCCESS;
         }
         break;
     case WASAPI_CMD_SET_VOLUME:
-        s->cmd_status = PJMEDIA_EAUD_INVCAP;
-        if (s->pb_volume &&
-            SUCCEEDED(s->pb_volume->SetMasterVolume(s->cmd_volume, NULL)))
+        *p_status = PJMEDIA_EAUD_INVCAP;
+        if (s->pb_volume && volume &&
+            SUCCEEDED(s->pb_volume->SetMasterVolume(*volume, NULL)))
         {
-            s->cmd_status = PJ_SUCCESS;
+            *p_status = PJ_SUCCESS;
         }
         break;
     default:
-        s->cmd_status = PJ_EINVALIDOP;
+        *p_status = PJ_EINVALIDOP;
         break;
     }
-    s->cmd = WASAPI_CMD_NONE;
     return quit;
 }
 
@@ -1122,7 +1127,8 @@ static int PJ_THREAD_FUNC wasapi_thread(void *arg)
                                           s->running ? 500 : INFINITE);
 
         if (rc == WAIT_OBJECT_0) {
-            quit = exec_cmd(s);
+            quit = exec_cmd(s, s->cmd, &s->cmd_volume, &s->cmd_status);
+            s->cmd = WASAPI_CMD_NONE;
             if (!quit)
                 SetEvent(s->done_event);
             continue;
@@ -1158,22 +1164,29 @@ static int PJ_THREAD_FUNC wasapi_thread(void *arg)
     return 0;
 }
 
-/* Send a command to the audio thread and wait for it */
-static pj_status_t send_cmd(struct wasapi_stream *s, enum wasapi_cmd cmd)
+/* Send a command to the audio thread and wait for it. volume is the argument
+ * of SET_VOLUME and the result of GET_VOLUME, and NULL for the others.
+ */
+static pj_status_t send_cmd(struct wasapi_stream *s, enum wasapi_cmd cmd,
+                            float *volume)
 {
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
 
     if (!s->thread)
         return PJ_EINVALIDOP;
 
-    /* From the audio thread itself (a callback), execute it directly */
+    /* From the audio thread itself (a callback), execute it directly. It must
+     * not touch the shared command slots here, an application thread may have
+     * queued a command and still be waiting for it.
+     */
     if (GetCurrentThreadId() == s->thread_id) {
-        s->cmd = cmd;
-        exec_cmd(s);
-        return s->cmd_status;
+        exec_cmd(s, cmd, volume, &status);
+        return status;
     }
 
     EnterCriticalSection(&s->cmd_lock);
+    if (volume)
+        s->cmd_volume = *volume;
     s->cmd = cmd;
     ResetEvent(s->done_event);
     SetEvent(s->cmd_event);
@@ -1181,6 +1194,8 @@ static pj_status_t send_cmd(struct wasapi_stream *s, enum wasapi_cmd cmd)
         WAIT_OBJECT_0)
     {
         status = s->cmd_status;
+        if (volume)
+            *volume = s->cmd_volume;
     } else {
         PJ_LOG(2, (THIS_FILE, "WASAPI: audio thread did not answer command "
                    "%d", cmd));
@@ -1377,9 +1392,11 @@ static pj_status_t wasapi_stream_get_cap(pjmedia_aud_stream *strm,
     if (cap == PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING &&
         (s->param.dir & PJMEDIA_DIR_PLAYBACK))
     {
-        status = send_cmd(s, WASAPI_CMD_GET_VOLUME);
+        float vol = 0;
+
+        status = send_cmd(s, WASAPI_CMD_GET_VOLUME, &vol);
         if (status == PJ_SUCCESS)
-            *(unsigned*)pval = (unsigned)(s->cmd_volume * 100.0f + 0.5f);
+            *(unsigned*)pval = (unsigned)(vol * 100.0f + 0.5f);
         return status;
     }
     return PJMEDIA_EAUD_INVCAP;
@@ -1397,10 +1414,12 @@ static pj_status_t wasapi_stream_set_cap(pjmedia_aud_stream *strm,
         (s->param.dir & PJMEDIA_DIR_PLAYBACK))
     {
         unsigned vol = *(const unsigned*)pval;
+        float fvol;
+
         if (vol > 100)
             vol = 100;
-        s->cmd_volume = vol / 100.0f;
-        return send_cmd(s, WASAPI_CMD_SET_VOLUME);
+        fvol = vol / 100.0f;
+        return send_cmd(s, WASAPI_CMD_SET_VOLUME, &fvol);
     }
     return PJMEDIA_EAUD_INVCAP;
 }
@@ -1409,14 +1428,14 @@ static pj_status_t wasapi_stream_start(pjmedia_aud_stream *strm)
 {
     struct wasapi_stream *s = (struct wasapi_stream*)strm;
     PJ_ASSERT_RETURN(s, PJ_EINVAL);
-    return send_cmd(s, WASAPI_CMD_START);
+    return send_cmd(s, WASAPI_CMD_START, NULL);
 }
 
 static pj_status_t wasapi_stream_stop(pjmedia_aud_stream *strm)
 {
     struct wasapi_stream *s = (struct wasapi_stream*)strm;
     PJ_ASSERT_RETURN(s, PJ_EINVAL);
-    return send_cmd(s, WASAPI_CMD_STOP);
+    return send_cmd(s, WASAPI_CMD_STOP, NULL);
 }
 
 static pj_status_t wasapi_stream_destroy(pjmedia_aud_stream *strm)
@@ -1437,7 +1456,7 @@ static pj_status_t wasapi_stream_destroy(pjmedia_aud_stream *strm)
     }
 
     if (s->thread) {
-        send_cmd(s, WASAPI_CMD_QUIT);
+        send_cmd(s, WASAPI_CMD_QUIT, NULL);
         pj_thread_join(s->thread);
         pj_thread_destroy(s->thread);
         s->thread = NULL;
