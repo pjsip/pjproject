@@ -514,7 +514,17 @@ block(SCOPE_FOR VARIABLES)
   check_symbol_exists(localtime_r time.h PJ_HAS_LOCALTIME_R)
   # The header alone is not enough: bionic ships <ifaddrs.h> at every API
   # level but declares getifaddrs() only from API 24.
-  check_symbol_exists(getifaddrs ifaddrs.h PJ_HAS_IFADDRS_H)
+  #
+  # Probed under its own cache key, not straight into PJ_HAS_IFADDRS_H. That
+  # name once held the result of a check_include_file() probe, and these
+  # checks skip their test whenever the result variable is already cached, so
+  # reusing it would leave every build tree configured before this change
+  # stuck on the old answer.
+  check_symbol_exists(getifaddrs ifaddrs.h PJ_HAS_GETIFADDRS)
+  # Quoted: a failed check leaves PJ_HAS_GETIFADDRS empty, and an unquoted
+  # empty expansion would turn this into an unset(), which would let that
+  # stale cache entry show through again.
+  set(PJ_HAS_IFADDRS_H "${PJ_HAS_GETIFADDRS}")
   check_symbol_exists(inet_aton arpa/inet.h PJ_SOCK_HAS_INET_ATON)
   check_symbol_exists(inet_pton arpa/inet.h PJ_SOCK_HAS_INET_PTON)
   check_symbol_exists(inet_ntop arpa/inet.h PJ_SOCK_HAS_INET_NTOP)

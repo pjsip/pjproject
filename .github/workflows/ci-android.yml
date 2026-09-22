@@ -84,7 +84,7 @@ jobs:
       run: |
         set -eu
         readelf=$(find "${ANDROID_NDK_LATEST_HOME}" -name 'llvm-readelf' | head -1)
-        needed=$("$readelf" -d build/pjsip-apps/pjsua-* | sed -n 's/.*Shared library: \[\(.*\)\]/\1/p')
+        needed=$("$readelf" -d build/pjsip-apps/pjsua | sed -n 's/.*Shared library: \[\(.*\)\]/\1/p')
         echo "$needed"
         fail=0
         for lib in liboboe.so libmediandk.so libGLESv2.so libEGL.so libandroid.so liblog.so; do
