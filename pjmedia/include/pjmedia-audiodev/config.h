@@ -200,12 +200,15 @@ PJ_BEGIN_DECL
   * WMME. The WASAPI devices are listed after the WMME ones, so enabling it
   * does not change the existing device order.
   *
-  * Note that the first WASAPI device, named "Soundmapper - ", resolves the
-  * default endpoints once, when the stream is created, and then stays on
-  * them. This differs from the WMME device of the same name, which is the
-  * WAVE_MAPPER, a virtual device that the OS keeps routing to whatever the
-  * default device currently is. So when an endpoint in use disappears, e.g:
-  * a USB headset is unplugged, WASAPI stops the stream and publishes
+  * The first WASAPI device is named "Wave mapper", as the WMME one is, so an
+  * application selecting it by name only has to pass "WASAPI" instead of
+  * "WMME" as the driver name of #pjmedia_aud_dev_lookup().
+  *
+  * Note however that it only resolves the default endpoints once, when the
+  * stream is created, and then stays on them. The WMME device of that name is
+  * the WAVE_MAPPER, a virtual device that the OS keeps routing to whatever
+  * the default device currently is. So when an endpoint in use disappears,
+  * e.g: a USB headset is unplugged, WASAPI stops the stream and publishes
   * PJMEDIA_EVENT_AUD_DEV_ERROR instead of switching over silently, and the
   * application decides which device to recreate the stream on.
   */

@@ -39,8 +39,8 @@
  *
  * The device list is modelled on WMME, so that applications can keep finding
  * their sound cards by matching parts of the device name:
- *   index 0     "Soundmapper - " = default capture + default playback
- *                                  (eConsole, like WAVE_MAPPER)
+ *   index 0     "Wave mapper" = default capture + default playback
+ *                               (eConsole, like the WMME WAVE_MAPPER)
  *   then        all active capture endpoints  (input_count only)
  *   then        all active render endpoints   (output_count only)
  * The name is the friendly name of the endpoint, in ANSI as WMME does with
@@ -93,8 +93,10 @@
                                  AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM | \
                                  AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY)
 
-/* Name of the default device, as WMME uses for WAVE_MAPPER */
-#define WASAPI_DEFAULT_NAME     "Soundmapper - "
+/* Name of the default device, the same name WMME gives to WAVE_MAPPER, so
+ * that an application moving over only has to change the driver name in
+ * pjmedia_aud_dev_lookup(). */
+#define WASAPI_DEFAULT_NAME     "Wave mapper"
 
 /* How long start/stop/destroy wait for the audio thread */
 #define WASAPI_CMD_TIMEOUT_MS   5000
