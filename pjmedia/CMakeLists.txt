@@ -174,9 +174,12 @@ import_if_or_set(PJMEDIA_WITH_BCG729_CODEC OFF BCG729)
 option(PJMEDIA_WITH_LYRA_CODEC "Enable Lyra codec" ON)
 import_if_or_set(PJMEDIA_WITH_LYRA_CODEC OFF Lyra)
 
-# Android MediaCodec codecs - Not supported yet
-option(PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC "Enable Android MediaCodec codec")
-mark_as_advanced(PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC)
+# Android MediaCodec codecs
+cmake_dependent_option(PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC
+  "Enable Android MediaCodec codecs" ON
+  "ANDROID" OFF
+)
+import_if_or_set(PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC OFF MediaNDK)
 
 # Google VP8/VP9 codecs
 cmake_dependent_option(PJMEDIA_WITH_VPX_CODEC
@@ -217,11 +220,13 @@ cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_JNI
   "PJMEDIA_WITH_AUDIODEV;ANDROID" OFF
 )
 
-# Android OBOE backend
+# Android OBOE backend. Oboe is not bundled; see cmake/FindOboe.cmake for
+# where to point the build at an SDK.
 cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_OBOE
   "Enable OBOE audio device backend" ON
   "PJMEDIA_WITH_AUDIODEV;ANDROID" OFF
 )
+import_if_or_set(PJMEDIA_WITH_AUDIODEV_OBOE OFF Oboe)
 
 # macOS/iOS CoreAudio backend
 cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_COREAUDIO
@@ -270,15 +275,35 @@ cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_OPENGL
   "Enable OpenGL video device backend" ON
   "PJMEDIA_WITH_VIDEODEV;ANDROID OR IOS" OFF
 )
-# On iOS the ES implementation is OpenGLES.framework, not the GL and GLES2
-# libraries FindOpenGL looks for, so that probe always fails there and the
-# renderer would be silently dropped. PjConfig.cmake.in picks the same one of
-# the two packages, so an installed tree re-resolves what was linked here.
-if(IOS)
+# The two platforms that have this backend are also the two FindOpenGL cannot
+# serve: on iOS the ES implementation is OpenGLES.framework rather than the GL
+# and GLES2 libraries it looks for, and on Android it finds no GL library to
+# pair with GLES2. Either way the probe fails and the renderer would be
+# silently dropped.
+#
+# PJ_OPENGL_PACKAGE records which one was used. The top-level directory reads
+# it to install the matching Find module, and PjConfig.cmake.in to re-resolve
+# the same package in an installed tree, so it has to be in the cache to be
+# visible outside this directory.
+if(IOS OR ANDROID)
+  set(PJ_OPENGL_PACKAGE OpenGLES CACHE INTERNAL "OpenGL package to find")
   import_if_or_set(PJMEDIA_WITH_VIDEODEV_OPENGL OFF OpenGLES)
 else()
+  set(PJ_OPENGL_PACKAGE OpenGL CACHE INTERNAL "OpenGL package to find")
   import_if_or_set(PJMEDIA_WITH_VIDEODEV_OPENGL OFF OpenGL COMPONENTS GLES2)
 endif()
+
+if(PJ_OPENGL_PACKAGE STREQUAL OpenGLES)
+  set(PJ_OPENGL_LINK_TARGETS OpenGLES::OpenGLES)
+else()
+  set(PJ_OPENGL_LINK_TARGETS OpenGL::GL OpenGL::GLES2)
+endif()
+
+# Android camera capture backend
+cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_ANDROID
+  "Enable Android camera video device backend" ON
+  "PJMEDIA_WITH_VIDEODEV;ANDROID" OFF
+)
 
 # FFMPEG backend
 cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_FFMPEG
@@ -557,6 +582,16 @@ target_sources(pjmedia
       "${CMAKE_CURRENT_BINARY_DIR}/include/pjmedia/config_auto.h"
 )
 
+# A file set's BASE_DIRS land after whatever include directories the target
+# already had, so the source tree would be searched first and an autotools
+# build's leftover pjmedia/config_auto.h would shadow the one just generated.
+# ./configure-android is the established Android workflow, so that leftover is
+# the normal state of a working tree. BEFORE puts the build directory first.
+target_include_directories(pjmedia BEFORE
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+)
+
 #
 # pjmedia - dependencies
 #
@@ -605,6 +640,8 @@ endif()
 add_library(pjmedia-codec
   src/pjmedia-codec/amr_sdp_match.c
   src/pjmedia-codec/audio_codecs.c
+  $<$<BOOL:${PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC}>:src/pjmedia-codec/and_aud_mediacodec.cpp>
+  $<$<BOOL:${PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC}>:src/pjmedia-codec/and_vid_mediacodec.cpp>
   src/pjmedia-codec/bcg729.c
   src/pjmedia-codec/ffmpeg_vid_codecs.c
   src/pjmedia-codec/g722.c
@@ -709,6 +746,7 @@ block(SCOPE_FOR VARIABLES)
   set(PJMEDIA_HAS_VPX_CODEC ${PJMEDIA_WITH_VPX_CODEC})
   set(PJMEDIA_HAS_OPENH264_CODEC ${PJMEDIA_WITH_OPEN_H264_CODEC})
   set(PJMEDIA_HAS_VID_TOOLBOX_CODEC ${PJMEDIA_WITH_VID_TOOLBOX_CODEC})
+  set(PJMEDIA_HAS_ANDROID_MEDIACODEC ${PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC})
 
   # write configured header
   configure_file(
@@ -725,6 +763,17 @@ target_sources(pjmedia-codec
       "${CMAKE_CURRENT_BINARY_DIR}/include"
     FILES
       "${CMAKE_CURRENT_BINARY_DIR}/include/pjmedia-codec/config_auto.h"
+)
+
+# A file set's BASE_DIRS land after whatever include directories the target
+# already had, so the source tree would be searched first and an autotools
+# build's leftover pjmedia-codec/config_auto.h would shadow the one just
+# generated.
+# ./configure-android is the established Android workflow, so that leftover is
+# the normal state of a working tree. BEFORE puts the build directory first.
+target_include_directories(pjmedia-codec BEFORE
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
 )
 
 #
@@ -759,6 +808,7 @@ target_link_libraries(pjmedia-codec
     $<$<BOOL:${PJMEDIA_WITH_VPX_CODEC}>:VPX::VPX>
     $<$<BOOL:${PJMEDIA_WITH_OPEN_H264_CODEC}>:OpenH264::OpenH264>
     $<$<BOOL:${PJMEDIA_WITH_VID_TOOLBOX_CODEC}>:VideoToolbox::VideoToolbox>
+    $<$<BOOL:${PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC}>:MediaNDK::MediaNDK>
 
     # PJMEDIA_ILBC_CODEC_USE_COREAUDIO makes ilbc.c use AudioConverter from
     # AudioToolbox. It is set in config_site.h, which CMake cannot see, so the
@@ -812,7 +862,7 @@ target_compile_definitions(pjmedia-audiodev
   PUBLIC
     PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO=$<BOOL:${PJMEDIA_WITH_AUDIODEV_NULL}>
     PJMEDIA_AUDIO_DEV_HAS_ANDROID_JNI=$<BOOL:${PJMEDIA_WITH_AUDIODEV_JNI}>
-    PJMEDIA_AUDIO_DEV_HAS_OBOE=$<BOOL:${PJMEDIA_AUDIO_DEV_HAS_OBOE}>
+    PJMEDIA_AUDIO_DEV_HAS_OBOE=$<BOOL:${PJMEDIA_WITH_AUDIODEV_OBOE}>
     PJMEDIA_AUDIO_DEV_HAS_COREAUDIO=$<BOOL:${PJMEDIA_WITH_AUDIODEV_COREAUDIO}>
     PJMEDIA_AUDIO_DEV_HAS_ALSA=$<BOOL:${PJMEDIA_WITH_AUDIODEV_ALSA}>
     PJMEDIA_AUDIO_DEV_HAS_WMME=$<BOOL:${PJMEDIA_WITH_AUDIODEV_WMME}>
@@ -841,6 +891,7 @@ target_link_libraries(pjmedia-audiodev
     # audio backends
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_ALSA}>:ALSA::ALSA>
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_COREAUDIO}>:CoreAudio::CoreAudio>
+    $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_OBOE}>:Oboe::Oboe>
     # TODO: add remaining APIs' dependencies
 )
 
@@ -849,6 +900,7 @@ target_link_libraries(pjmedia-audiodev
 
 add_library(pjmedia-videodev
   src/pjmedia-videodev/avi_dev.c
+  src/pjmedia-videodev/android_dev.c
   src/pjmedia-videodev/android_opengl.c
   src/pjmedia-videodev/colorbar_dev.c
   src/pjmedia-videodev/dshow_dev.c
@@ -903,6 +955,7 @@ target_compile_definitions(pjmedia-videodev
     PJMEDIA_VIDEO_DEV_HAS_QT=$<BOOL:${PJMEDIA_WITH_VIDEODEV_QT}>
     PJMEDIA_VIDEO_DEV_HAS_V4L2=$<BOOL:${PJMEDIA_WITH_VIDEODEV_V4L2}>
     PJMEDIA_VIDEO_DEV_HAS_DSHOW=$<BOOL:${PJMEDIA_WITH_VIDEODEV_DSHOW}>
+    PJMEDIA_VIDEO_DEV_HAS_ANDROID=$<BOOL:${PJMEDIA_WITH_VIDEODEV_ANDROID}>
 )
 
 # os-specific opengl
@@ -926,8 +979,7 @@ target_link_libraries(pjmedia-videodev
     pjlib-util pjmedia
 
     # video backends
-    $<$<AND:$<BOOL:${PJMEDIA_WITH_VIDEODEV_OPENGL}>,$<NOT:$<BOOL:${IOS}>>>:OpenGL::GL;OpenGL::GLES2>
-    $<$<AND:$<BOOL:${PJMEDIA_WITH_VIDEODEV_OPENGL}>,$<BOOL:${IOS}>>:OpenGLES::OpenGLES>
+    $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_OPENGL}>:${PJ_OPENGL_LINK_TARGETS}>
     $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_FFMPEG}>:FFMPEG::avdevice>
     $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_SDL}>:SDL2::SDL2>
     $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_V4L2}>:V4L2::V4L2>

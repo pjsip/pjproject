@@ -471,7 +471,6 @@ block(SCOPE_FOR VARIABLES)
   endif()
 
   check_include_file(fcntl.h PJ_HAS_FCNTL_H)
-  check_include_file(ifaddrs.h PJ_HAS_IFADDRS_H)
   check_include_file(limits.h PJ_HAS_LIMITS_H)
   check_include_file(linux/socket.h PJ_HAS_LINUX_SOCKET_H)
   check_include_file(malloc.h PJ_HAS_MALLOC_H)
@@ -513,6 +512,8 @@ block(SCOPE_FOR VARIABLES)
 
   include(CheckSymbolExists)
   check_symbol_exists(localtime_r time.h PJ_HAS_LOCALTIME_R)
+  # The header alone is not enough: bionic ships <ifaddrs.h> at every API
+  # level but declares getifaddrs() only from API 24.
   check_symbol_exists(getifaddrs ifaddrs.h PJ_HAS_IFADDRS_H)
   check_symbol_exists(inet_aton arpa/inet.h PJ_SOCK_HAS_INET_ATON)
   check_symbol_exists(inet_pton arpa/inet.h PJ_SOCK_HAS_INET_PTON)
@@ -740,6 +741,11 @@ target_sources(pjlib
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
       FILES
         "${CMAKE_CURRENT_SOURCE_DIR}/include/pj/config_site.h"
+        # config_site.h is where a build states its overrides, and the
+        # documented way to write one is to include config_site_sample.h and
+        # pick a profile from it. Installing the former without the latter
+        # leaves such a config_site.h dangling in the installed tree.
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/pj/config_site_sample.h"
         "${CMAKE_CURRENT_BINARY_DIR}/include/pj/compat/m_auto.h"
         "${CMAKE_CURRENT_BINARY_DIR}/include/pj/compat/os_auto.h"
 )
