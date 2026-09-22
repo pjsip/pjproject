@@ -33,6 +33,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: install dependencies
+      run: sudo apt-get update && sudo apt-get install -y swig
+
     # Oboe is not bundled, so the audio backend is only exercised when the
     # build is pointed at an SDK. The AAR lays its native side out as a
     # Prefab module, which is what cmake/FindOboe.cmake looks for.
@@ -51,6 +54,7 @@ jobs:
           -DANDROID_PLATFORM=android-${ANDROID_API} \
           -DCMAKE_BUILD_TYPE=Release \
           -DPJ_SKIP_EXPERIMENTAL_NOTICE=ON \
+          -DPJ_BUILD_SWIG_JAVA=ON \
           -DOboe_ROOT="${{ runner.temp }}/oboe"
 
     - name: build
@@ -94,6 +98,27 @@ jobs:
           esac
         done
         exit $fail
+
+    # The AAR is the Android deliverable, and it is only as good as the two
+    # halves SWIG produces: the JNI library an app loads by name, and the
+    # Java classes that call into it.
+    - name: check swig bindings
+      run: |
+        set -eu
+        readelf=$(find "${ANDROID_NDK_LATEST_HOME}" -name 'llvm-readelf' | head -1)
+        so=build/pjsip-apps/src/swig/libpjsua2.so
+        test -f "$so" || { echo "::error::$so was not built"; exit 1; }
+        # System.loadLibrary("pjsua2") in pjsua2.i depends on this name.
+        "$readelf" -d "$so" | grep -q 'SONAME.*\[libpjsua2\.so\]' \
+          || { echo "::error::$so has the wrong SONAME"; exit 1; }
+        generated=build/pjsip-apps/src/swig/java/org/pjsip/pjsua2
+        count=$(find "$generated" -name '*.java' | wc -l)
+        echo "generated $count Java sources"
+        test "$count" -gt 100 \
+          || { echo "::error::too few generated Java sources"; exit 1; }
+        # Copied in beside them when the camera backend is on.
+        test -f build/pjsip-apps/src/swig/java/org/pjsip/PjCameraInfo.java \
+          || { echo "::error::camera helper classes are missing"; exit 1; }
 
     - name: install
       run: cmake --install build --prefix ${{ runner.temp }}/pj-install

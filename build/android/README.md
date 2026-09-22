@@ -15,9 +15,9 @@ Repeat per ABI. `arm64-v8a`, `armeabi-v7a`, `x86_64` and `x86` are all built by
 CI; each needs its own build directory.
 
 This is an alternative to `./configure-android && make`, not a replacement for
-it. The autotools build is still what
-`pjsip-apps/src/swig/java/Makefile` uses to produce `libpjsua2.so` and the
-SWIG-generated Java classes, and CMake has no SWIG step.
+it. Both can build the libraries and the pjsua2 bindings; the autotools build
+additionally covers the desktop Java, Python and C# bindings, which CMake does
+not.
 
 ## Minimum API level
 
@@ -65,6 +65,42 @@ backend switches itself off and the build falls back to the JNI audio device.
 build -- compile them into the APK alongside the native library, as
 `pjsip-apps/src/swig/java/android` does.
 
+## The pjsua2 bindings and the AAR
+
+`-DPJ_BUILD_SWIG_JAVA=ON` adds a `pjsua2jni` target that runs SWIG over
+`pjsip-apps/src/swig/pjsua2.i` and produces the two halves of the binding:
+
+- `libpjsua2.so`, which is what `System.loadLibrary("pjsua2")` opens
+- the `org.pjsip.pjsua2` Java sources, under `PJSUA2_JAVA_OUTPUT_DIR`,
+  together with the `org.pjsip` camera and audio-device helper classes for
+  whichever backends are enabled
+
+It is off by default: SWIG is a build dependency nothing else here needs.
+
+To build the AAR, let Gradle drive CMake rather than running it yourself:
+
+```sh
+cd pjsip-apps/src/swig/java/android
+./gradlew -PpjBuildWithCMake=true :pjsua2:assembleRelease
+```
+
+That configures CMake once per ABI, so one command produces all four. Gradle
+packages `libc++_shared.so` itself, which the Makefile workflow has to copy by
+hand.
+
+`-PpjBuildWithCMake=true` is required; without it the module behaves as it
+always has and takes `libpjsua2.so` and the Java classes prebuilt out of
+`pjsua2/src/main`, where `make -C pjsip-apps/src/swig/java` puts them. The two
+cannot both be active -- each would supply its own copy of `libc++_shared.so`
+and of every generated class -- so pick one and run `./gradlew clean` when
+switching.
+
+Prerequisites beyond the NDK and SDK: **SWIG 4.0+**, and **Ninja**, which the
+Android Gradle plugin requires for CMake projects. The SDK-managed CMake ships
+one, but this project needs CMake 3.28 or newer, above what the SDK provides,
+so a CMake from elsewhere on `PATH` is used and Ninja has to be installed
+separately.
+
 ## Finding dependencies outside the NDK
 
 The NDK toolchain file sets `CMAKE_FIND_ROOT_PATH_MODE_*` to `ONLY`, which
@@ -86,8 +122,9 @@ because an unpacked AAR is never inside a sysroot.
 - **No TLS unless you supply OpenSSL.** Android has no system OpenSSL; build
   one for the NDK and point the search roots at it as above. Otherwise the
   build silently comes out with `PJLIB_WITH_SSL` empty.
-- **No SWIG, no AAR.** Producing `libpjsua2.so` and the `org.pjsip.pjsua2`
-  classes is still the autotools build's job.
+- **No desktop Java, Python or C# bindings.** Those are still built by
+  `pjsip-apps/src/swig/*/Makefile`; they need a JDK probe, javac steps and
+  sample runners that no CMake consumer is asking for.
 - **No video codecs beyond MediaCodec.** OpenH264 and VPX are not bundled and
   have no Android packages to find. Build them for the NDK and add their
   prefixes to `CMAKE_FIND_ROOT_PATH`.
