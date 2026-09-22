@@ -1,16 +1,28 @@
-# OpenGL ES video render backend (iOS)
+# OpenGL ES video render backend (iOS and Android)
 #
-# Defines the imported target `OpenGLES::OpenGLES` when every framework is
-# found. FindOpenGL looks for the GL and GLES2 libraries, which do not exist
-# on iOS, where the ES implementation is a framework instead.
+# Defines the imported target `OpenGLES::OpenGLES` when every library is
+# found. FindOpenGL looks for the GL and GLES2 libraries, which neither
+# platform provides in the shape it expects: on iOS the ES implementation is
+# a framework, and on Android it lives in the NDK sysroot, where FindOpenGL
+# fails to locate a GL library to go with it.
 #
-# The renderer draws into a CAEAGLLayer inside a UIView, so QuartzCore and
-# UIKit are part of the backend rather than incidental.
+# The window the renderer draws into is part of the backend rather than
+# incidental, so each platform's windowing library is included here:
+#
+#   iOS      a CAEAGLLayer inside a UIView  -> QuartzCore, UIKit
+#   Android  an ANativeWindow               -> libandroid
 
-set(_opengles_frameworks OpenGLES QuartzCore UIKit)
+if(IOS)
+  set(_opengles_libs_wanted OpenGLES QuartzCore UIKit)
+elseif(ANDROID)
+  set(_opengles_libs_wanted GLESv2 EGL android)
+else()
+  set(_opengles_libs_wanted)
+endif()
 
 set(_opengles_libs)
-foreach(_opengles_lib IN LISTS _opengles_frameworks)
+set(_opengles_required_vars)
+foreach(_opengles_lib IN LISTS _opengles_libs_wanted)
   string(TOUPPER "OpenGLES_LIBRARY_${_opengles_lib}" _opengles_lib_var)
   list(APPEND _opengles_required_vars ${_opengles_lib_var})
 
@@ -22,7 +34,7 @@ foreach(_opengles_lib IN LISTS _opengles_frameworks)
 endforeach()
 unset(_opengles_lib)
 unset(_opengles_lib_var)
-unset(_opengles_frameworks)
+unset(_opengles_libs_wanted)
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(OpenGLES

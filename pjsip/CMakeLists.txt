@@ -109,6 +109,16 @@ target_sources(pjsip
       "${CMAKE_CURRENT_BINARY_DIR}/include/pjsip/sip_autoconf.h"
 )
 
+# A file set's BASE_DIRS land after whatever include directories the target
+# already had, so the source tree would be searched first and an autotools
+# build's leftover pjsip/sip_autoconf.h would shadow the one just generated.
+# ./configure-android is the established Android workflow, so that leftover is
+# the normal state of a working tree. BEFORE puts the build directory first.
+target_include_directories(pjsip BEFORE
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+)
+
 # ##############################################################################
 # pjsip-simple
 

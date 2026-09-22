@@ -38,6 +38,7 @@ if (NOT PJ_SKIP_EXPERIMENTAL_NOTICE)
     " * Tested platforms:                                *\n"
     " * - Linux x86_64                                   *\n"
     " * - macOS                                          *\n"
+    " * - Android (arm64-v8a, armeabi-v7a, x86_64, x86)  *\n"
     " ****************************************************\n"
     "Set `PJ_SKIP_EXPERIMENTAL_NOTICE=ON` to disable this warning"
   )
@@ -341,18 +342,13 @@ install(
   COMPONENT   PjDevelopment
 )
 
-# APPLE and IOS are empty rather than 0 off those platforms, and
-# PjConfig.cmake.in substitutes them into if() conditions, where an empty
-# operand beside AND is a hard error.
+# APPLE is empty rather than 0 off Apple platforms, and PjConfig.cmake.in
+# substitutes it into an if() condition, where an empty operand beside AND is
+# a hard error.
 if(APPLE)
   set(PJ_APPLE 1)
 else()
   set(PJ_APPLE 0)
-endif()
-if(IOS)
-  set(PJ_IOS 1)
-else()
-  set(PJ_IOS 0)
 endif()
 
 # write package config
@@ -433,8 +429,12 @@ endforeach()
 _pj_collect_find_module(PJLIB_WITH_LIBUUID               UUID)
 _pj_collect_find_module(PJNATH_WITH_UPNP                 UPNP)
 _pj_collect_find_module(PJMEDIA_WITH_AUDIODEV_COREAUDIO   CoreAudio)
+_pj_collect_find_module(PJMEDIA_WITH_AUDIODEV_OBOE        Oboe)
 _pj_collect_find_module(PJMEDIA_WITH_VIDEODEV_V4L2        V4L2)
-if(IOS)
+# PJ_OPENGL_PACKAGE is the name PjConfig.cmake.in calls find_dependency with,
+# so keying off it keeps the two from drifting apart. Only the OpenGLES module
+# is ours; FindOpenGL is a built-in and needs no installing.
+if(PJ_OPENGL_PACKAGE STREQUAL "OpenGLES")
   _pj_collect_find_module(PJMEDIA_WITH_VIDEODEV_OPENGL    OpenGLES)
 endif()
 _pj_collect_find_module(PJMEDIA_WITH_VIDEODEV_DARWIN      AVFoundation)
@@ -456,6 +456,7 @@ _pj_collect_find_module(PJMEDIA_WITH_BCG729_CODEC         BCG729)
 _pj_collect_find_module(PJMEDIA_WITH_LYRA_CODEC           Lyra)
 _pj_collect_find_module(PJMEDIA_WITH_VPX_CODEC            VPX)
 _pj_collect_find_module(PJMEDIA_WITH_OPEN_H264_CODEC      OpenH264)
+_pj_collect_find_module(PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC MediaNDK)
 
 if(_pj_find_modules)
   list(REMOVE_DUPLICATES _pj_find_modules)

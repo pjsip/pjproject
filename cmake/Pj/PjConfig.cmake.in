@@ -47,16 +47,15 @@ endif()
 if(@PJMEDIA_WITH_AUDIODEV_ALSA@)
   find_dependency(ALSA)
 endif()
+if(@PJMEDIA_WITH_AUDIODEV_OBOE@)
+  find_dependency(Oboe)
+endif()
 
 # Video device backends
 if(@PJMEDIA_WITH_VIDEODEV_OPENGL@)
-  # iOS has no GL or GLES2 library for FindOpenGL to find; the ES
-  # implementation is a framework, which FindOpenGLES locates instead.
-  if(@PJ_IOS@)
-    find_dependency(OpenGLES)
-  else()
-    find_dependency(OpenGL)
-  endif()
+  # Neither iOS nor Android can be served by FindOpenGL, so both were built
+  # against FindOpenGLES instead. Re-resolve whichever one was used.
+  find_dependency(@PJ_OPENGL_PACKAGE@)
 endif()
 if(@PJMEDIA_WITH_VIDEODEV_SDL@)
   find_dependency(SDL2)
@@ -116,6 +115,9 @@ if(@PJMEDIA_WITH_OPEN_H264_CODEC@)
 endif()
 if(@PJMEDIA_WITH_VID_TOOLBOX_CODEC@)
   find_dependency(VideoToolbox)
+endif()
+if(@PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC@)
+  find_dependency(MediaNDK)
 endif()
 if(@PJ_APPLE@ AND @PJMEDIA_WITH_ILBC_CODEC@)
   find_dependency(AudioToolbox)

@@ -1,0 +1,139 @@
+name: CI Android
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Cancel superseded runs on the same ref (e.g. a force-push to a PR) so they
+# stop holding CI runner slots.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The minimum this project supports, and what pjsua2/build.gradle declares
+  # as minSdkVersion. Keep them in step: bionic gates several libc functions
+  # on the API level, so a higher floor here would hide breakage.
+  ANDROID_API: 23
+  OBOE_VERSION: 1.9.0
+
+jobs:
+  cmake-build:
+    runs-on: ubuntu-latest
+    name: CMake / ${{ matrix.abi }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Every ABI the NDK still supports. arm64-v8a and x86_64 are the pair
+        # Google Play requires; the 32-bit two are cheap to keep building and
+        # catch the format-string and pointer-width mistakes the others miss.
+        abi: [arm64-v8a, armeabi-v7a, x86_64, x86]
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: install dependencies
+      run: sudo apt-get update && sudo apt-get install -y swig
+
+    # Oboe is not bundled, so the audio backend is only exercised when the
+    # build is pointed at an SDK. The AAR lays its native side out as a
+    # Prefab module, which is what cmake/FindOboe.cmake looks for.
+    - name: get oboe
+      run: |
+        curl -sSLf -o oboe.aar \
+          "https://dl.google.com/dl/android/maven2/com/google/oboe/oboe/${OBOE_VERSION}/oboe-${OBOE_VERSION}.aar"
+        mkdir -p "${{ runner.temp }}/oboe"
+        unzip -q oboe.aar -d "${{ runner.temp }}/oboe"
+
+    - name: configure
+      run: |
+        cmake -B build \
+          -DCMAKE_TOOLCHAIN_FILE="${ANDROID_NDK_LATEST_HOME}/build/cmake/android.toolchain.cmake" \
+          -DANDROID_ABI=${{ matrix.abi }} \
+          -DANDROID_PLATFORM=android-${ANDROID_API} \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DPJ_SKIP_EXPERIMENTAL_NOTICE=ON \
+          -DPJ_BUILD_SWIG_JAVA=ON \
+          -DOboe_ROOT="${{ runner.temp }}/oboe"
+
+    - name: build
+      run: cmake --build build -j $(nproc)
+
+    # A missing Find module or a mistyped option variable does not fail the
+    # build, it just silently drops a backend -- which is how the Oboe and
+    # OpenGL ES backends came to be compiled out on Android in the first
+    # place. Assert on the configured values rather than trusting the build.
+    - name: check backends are enabled
+      run: |
+        set -eu
+        fail=0
+        for opt in PJMEDIA_WITH_AUDIODEV_OBOE \
+                   PJMEDIA_WITH_AUDIODEV_JNI \
+                   PJMEDIA_WITH_VIDEODEV_OPENGL \
+                   PJMEDIA_WITH_VIDEODEV_ANDROID \
+                   PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC; do
+          value=$(cmake -L -N build | sed -n "s/^${opt}:[^=]*=//p")
+          echo "${opt}=${value:-<unset>}"
+          case "${value}" in
+            ON|1|TRUE|YES) ;;
+            *) echo "::error::${opt} is not enabled"; fail=1 ;;
+          esac
+        done
+        exit $fail
+
+    # Each backend pulls in a platform library, so the link is a second,
+    # independent check that the code was really compiled in.
+    - name: check linked libraries
+      run: |
+        set -eu
+        readelf=$(find "${ANDROID_NDK_LATEST_HOME}" -name 'llvm-readelf' | head -1)
+        needed=$("$readelf" -d build/pjsip-apps/pjsua | sed -n 's/.*Shared library: \[\(.*\)\]/\1/p')
+        echo "$needed"
+        fail=0
+        for lib in liboboe.so libmediandk.so libGLESv2.so libEGL.so libandroid.so liblog.so; do
+          case "$needed" in
+            *"$lib"*) ;;
+            *) echo "::error::pjsua is not linked against $lib"; fail=1 ;;
+          esac
+        done
+        exit $fail
+
+    # The AAR is the Android deliverable, and it is only as good as the two
+    # halves SWIG produces: the JNI library an app loads by name, and the
+    # Java classes that call into it.
+    - name: check swig bindings
+      run: |
+        set -eu
+        readelf=$(find "${ANDROID_NDK_LATEST_HOME}" -name 'llvm-readelf' | head -1)
+        so=build/pjsip-apps/src/swig/libpjsua2.so
+        test -f "$so" || { echo "::error::$so was not built"; exit 1; }
+        # System.loadLibrary("pjsua2") in pjsua2.i depends on this name.
+        "$readelf" -d "$so" | grep -q 'SONAME.*\[libpjsua2\.so\]' \
+          || { echo "::error::$so has the wrong SONAME"; exit 1; }
+        generated=build/pjsip-apps/src/swig/java/org/pjsip/pjsua2
+        count=$(find "$generated" -name '*.java' | wc -l)
+        echo "generated $count Java sources"
+        test "$count" -gt 100 \
+          || { echo "::error::too few generated Java sources"; exit 1; }
+        # Copied in beside them when the camera backend is on.
+        test -f build/pjsip-apps/src/swig/java/org/pjsip/PjCameraInfo.java \
+          || { echo "::error::camera helper classes are missing"; exit 1; }
+
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+
+    # The installed tree has to re-resolve the same packages it was built
+    # against; PjConfig.cmake picking the wrong OpenGL package, say, only
+    # shows up here.
+    - name: test find_package
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_TOOLCHAIN_FILE="${ANDROID_NDK_LATEST_HOME}/build/cmake/android.toolchain.cmake" \
+          -DANDROID_ABI=${{ matrix.abi }} \
+          -DANDROID_PLATFORM=android-${ANDROID_API} \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_FIND_ROOT_PATH="${{ runner.temp }}/pj-install" \
+          -DCMAKE_PREFIX_PATH="${{ runner.temp }}/pj-install" \
+          -DOboe_ROOT="${{ runner.temp }}/oboe"
+        cmake --build build-consumer --verbose

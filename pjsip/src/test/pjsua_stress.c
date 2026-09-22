@@ -37,7 +37,15 @@
  */
 
 /* For REG_RIP in <ucontext.h> on glibc; must precede any libc include. */
-#if defined(__linux__) && !defined(_GNU_SOURCE)
+/* Android defines __linux__ too, but bionic is not glibc: it declares
+ * backtrace() only from API 33 and its ucontext_t has a different shape.
+ * This harness runs on the Linux and macOS CI targets, so keep it off there.
+ */
+#if defined(__linux__) && !defined(__ANDROID__)
+#  define PJSUA_STRESS_GLIBC 1
+#endif
+
+#if defined(PJSUA_STRESS_GLIBC) && !defined(_GNU_SOURCE)
 #  define _GNU_SOURCE 1
 #endif
 
@@ -46,7 +54,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(__linux__) || defined(__APPLE__)
+#if defined(PJSUA_STRESS_GLIBC) || defined(__APPLE__)
 #  include <execinfo.h>
 #  include <signal.h>
 #  include <unistd.h>
@@ -57,7 +65,7 @@
  * where <ucontext.h> needs no extra feature macro beyond _GNU_SOURCE above.
  * macOS's copy requires _XOPEN_SOURCE and its plain backtrace already
  * captures the crash site, so it is left on the fallback path. */
-#if defined(__linux__)
+#if defined(PJSUA_STRESS_GLIBC)
 #  include <ucontext.h>
 #  define PJSUA_STRESS_HAS_FAULT_PC 1
 #endif

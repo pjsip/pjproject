@@ -2,25 +2,95 @@ plugins {
     id 'com.android.library'
 }
 
+// Build the native side and the SWIG bindings with CMake instead of taking
+// them prebuilt out of src/main. Opt-in, because the established workflow is
+// ./configure-android && make && make -C pjsip-apps/src/swig/java, which
+// leaves libpjsua2.so in src/main/jniLibs and the generated classes in
+// src/main/java. The two cannot both be active: AGP would find two copies of
+// libc++_shared.so and of every org.pjsip.pjsua2 class.
+//
+//   ./gradlew -PpjBuildWithCMake=true :pjsua2:assembleRelease
+//
+def buildWithCMake = project.hasProperty('pjBuildWithCMake') &&
+                     project.property('pjBuildWithCMake').toBoolean()
+
+// Six levels up from this module.
+def pjprojectRoot = file("../../../../../..")
+
+// One directory for the SWIG-generated Java, shared by every ABI. CMake is
+// configured once per ABI and each run writes the same classes, so pointing
+// this at a per-ABI build directory would put four copies of every class on
+// the source path.
+def generatedJavaDir = layout.buildDirectory.dir("generated/pjsua2/java").get().asFile
+
 android {
     compileSdk 33
+
+    if (buildWithCMake) {
+        // The NDK is usually installed outside the SDK for this project --
+        // configure-android and build/android/README.md both key off
+        // ANDROID_NDK_ROOT -- so follow it when set, and otherwise leave AGP
+        // to find an SDK-managed one.
+        def ndkRoot = System.getenv("ANDROID_NDK_ROOT")
+        if (ndkRoot != null && !ndkRoot.isEmpty()) {
+            ndkPath = ndkRoot
+            // AGP checks ndkPath against ndkVersion, which otherwise defaults
+            // to whatever this AGP release pins, and fails when the two
+            // disagree. Take the version from the NDK the path names.
+            def ndkProps = new Properties()
+            file("${ndkRoot}/source.properties").withInputStream { ndkProps.load(it) }
+            ndkVersion = ndkProps.getProperty("Pkg.Revision")
+        }
+    }
 
     defaultConfig {
         minSdkVersion 23
         targetSdkVersion 33
 
+        if (buildWithCMake) {
+            externalNativeBuild {
+                cmake {
+                    // c++_shared because an app may load more than one native
+                    // library that uses the STL (openh264, where it is built
+                    // in). It also lets AGP package libc++_shared.so itself,
+                    // which the SWIG Makefile has to copy by hand.
+                    arguments "-DANDROID_STL=c++_shared",
+                              "-DPJ_BUILD_SWIG_JAVA=ON",
+                              "-DPJ_SKIP_EXPERIMENTAL_NOTICE=ON",
+                              "-DBUILD_TESTING=OFF",
+                              "-DPJSUA2_JAVA_OUTPUT_DIR=${generatedJavaDir}"
 
-        ndk {
-            moduleName "libpjsua2"
-        }
-
-        externalNativeBuild {
-            cmake {
-                arguments "-DANDROID_STL=c++_shared"
+                    // Just the binding. Without this the whole project is
+                    // built, pjsua and the samples included, once per ABI.
+                    targets "pjsua2jni"
+                }
             }
         }
+
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
+    }
+
+    if (buildWithCMake) {
+        externalNativeBuild {
+            cmake {
+                path file("${pjprojectRoot}/CMakeLists.txt")
+                // The project's cmake_minimum_required is 3.28, above the
+                // 3.22.1 AGP defaults to and ships in the SDK. The "+" lets
+                // AGP accept any newer CMake it finds on PATH.
+                version "3.28.0+"
+            }
+        }
+
+        sourceSets {
+            main {
+                // CMake supplies the native libraries and the bindings now.
+                // Leaving the defaults in place would pick up whatever an
+                // earlier Makefile build left behind and collide with it.
+                jniLibs.srcDirs = []
+                java.srcDirs = [generatedJavaDir]
+            }
+        }
     }
 
     buildTypes {
@@ -36,3 +106,17 @@ android {
     namespace 'org.pjsip.pjsua2'
 }
 
+// SWIG writes the Java sources during the native build, but AGP does not know
+// that the Java compilation depends on it -- a generated source directory is
+// not automatically wired to the task that fills it. Without this a clean
+// build fails on missing org.pjsip.pjsua2 classes.
+if (buildWithCMake) {
+    afterEvaluate {
+        android.libraryVariants.configureEach { variant ->
+            def nativeBuild = tasks.findByName("externalNativeBuild${variant.name.capitalize()}")
+            if (nativeBuild != null) {
+                variant.javaCompileProvider.configure { it.dependsOn(nativeBuild) }
+            }
+        }
+    }
+}
