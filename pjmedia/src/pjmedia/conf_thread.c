@@ -3963,20 +3963,6 @@ static int conf_thread(void *arg)
     pj_int32_t rc;
     pj_assert(conf->is_parallel);
 
-    /* The get_frame() thread waits for the worker threads to finish mixing,
-     * so leaving the workers at a lower priority will delay the audio frame.
-     */
-    if (conf->thread_prio) {
-        pj_status_t status = pj_thread_set_prio(this_thread,
-                                                conf->thread_prio);
-        if (status != PJ_SUCCESS) {
-            PJ_PERROR(3, (THIS_FILE, status,
-                          "%s: unable to set thread priority to %d",
-                          pj_thread_get_name(this_thread),
-                          conf->thread_prio));
-        }
-    }
-
     /* don't go to the barrier while thread pool is creating
      * if we can not create all threads,
      * we should not go to the barrier because we can not leave it
@@ -3987,6 +3973,23 @@ static int conf_thread(void *arg)
     }
 
     if (conf->running) {
+
+        /* The get_frame() thread waits for the worker threads to finish
+         * mixing, so leaving the workers at a lower priority will delay the
+         * audio frame. Raise it only here: the startup loop above is a busy
+         * wait, and at a real time priority the workers could otherwise
+         * starve the thread that is still creating the pool.
+         */
+        if (conf->thread_prio) {
+            pj_status_t status = pj_thread_set_prio(this_thread,
+                                                    conf->thread_prio);
+            if (status != PJ_SUCCESS) {
+                PJ_PERROR(3, (THIS_FILE, status,
+                              "%s: unable to set thread priority to %d",
+                              pj_thread_get_name(this_thread),
+                              conf->thread_prio));
+            }
+        }
 
         while (1) {
             TRACE_EX((THIS_FILE, "%s: timestamp=%llu, thread at barrier",

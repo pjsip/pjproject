@@ -593,7 +593,7 @@ static int worker_prio_test(void)
     pjmedia_port *master;
     test_port *src, *sink;
     unsigned slot_src = 0, slot_sink = 0;
-    int rc = 0;
+    int rc = 0, prio;
     pj_status_t status;
 
     PJ_LOG(3, (THIS_FILE, "  conf worker threads with a priority set"));
@@ -609,7 +609,15 @@ static int worker_prio_test(void)
     param.bits_per_sample = BPS;
     param.options = PJMEDIA_CONF_NO_DEVICE;
     param.worker_threads = 2;
-    param.worker_thread_prio = pj_thread_get_prio_max(pj_thread_this());
+
+    /* On an unprivileged POSIX host pj_thread_get_prio_max() reports the
+     * SCHED_OTHER maximum, i.e. zero, which the bridge reads as "leave the
+     * OS default" and the new path would not run at all. Fall back to a
+     * nonzero value so it is still exercised: setting it is expected to fail
+     * there, which must be logged and otherwise harmless.
+     */
+    prio = pj_thread_get_prio_max(pj_thread_this());
+    param.worker_thread_prio = (prio > 0)? prio : 1;
 
     status = pjmedia_conf_create2(pool, &param, &conf);
     if (status != PJ_SUCCESS) { rc = -401; goto on_return; }

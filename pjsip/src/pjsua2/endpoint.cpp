@@ -589,7 +589,7 @@ void MediaConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
     NODE_READ_INT     ( this_node, sndAutoCloseTime);
     NODE_READ_BOOL    ( this_node, vidPreviewEnableNative);
     NODE_READ_BOOL    ( this_node, sndUseSwClock);
-    NODE_READ_INT     ( this_node, confThreadPrio);
+    NODE_READ_INT_OPT ( this_node, confThreadPrio);
 }
 
 void MediaConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
