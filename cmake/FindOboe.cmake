@@ -11,7 +11,14 @@
 #   <root>/prefab/modules/oboe/include
 #   <root>/prefab/modules/oboe/libs/android.<abi>/liboboe.{a,so}
 #
-# A plain include/ + lib/ prefix works too, for an Oboe built from source.
+# An Oboe built and installed from source works too. Its own install rules
+# write include/ and lib/<abi>/, and a plain include/ + lib/ prefix is
+# accepted as well.
+#
+# Note that the AAR is a Prefab module and carries liboboe.so nowhere else, so
+# depending on it from Maven alone does not put the library into an
+# application: a consumer either builds against it through Prefab, or links a
+# static Oboe built from source.
 #
 # Oboe drives OpenSL ES on older devices and logs through <android/log.h>, so
 # both NDK libraries are part of the backend rather than incidental.
@@ -40,6 +47,7 @@ find_library(Oboe_LIBRARY
     oboe
   PATH_SUFFIXES
     "${_oboe_module_dir}/libs/android.${CMAKE_ANDROID_ARCH_ABI}"
+    "lib/${CMAKE_ANDROID_ARCH_ABI}"
     lib
   NO_CMAKE_FIND_ROOT_PATH
 )

@@ -133,3 +133,121 @@ because an unpacked AAR is never inside a sysroot.
 - **No video codecs beyond MediaCodec.** OpenH264 and VPX are not bundled and
   have no Android packages to find. Build them for the NDK and add their
   prefixes to `CMAKE_FIND_ROOT_PATH`.
+
+## Binary distribution (AAR)
+
+`build-aar.sh` produces a **distribution**, not a build of the library for
+local use. If you are building PJSIP to develop against it, use the CMake or
+autotools instructions above; nothing in this section is needed.
+
+```sh
+ANDROID_NDK_ROOT=... ANDROID_HOME=... ./build/android/build-aar.sh
+```
+
+```
+build-aar.sh        builds and packages everything
+config_site.h       the configuration the distribution is built with
+AndroidManifest.xml the manifest inside the AAR
+proguard.txt        consumer keep rules, shipped inside the AAR
+pom.xml.in          template for the published POM
+```
+
+Output lands in `out-android/dist`: the AAR, sources and javadoc jars, a POM
+and `SHA256SUMS`. Pinned sources and per-ABI dependency builds are cached
+under `out-android/src` and `out-android/deps`, so a second run only rebuilds
+PJSIP itself.
+
+The build is out of tree. Nothing in the working tree is touched except
+`pjlib/include/pj/config_site.h`, which is backed up and restored on exit. It
+refuses to start if the five generated autotools headers are present, for the
+shadowing reason described above; `make distclean` removes them.
+
+### One library, no runtime dependencies
+
+The AAR carries exactly one native library per ABI and nothing else:
+
+```
+pjsua2-<version>.aar
+├── AndroidManifest.xml
+├── classes.jar          org.pjsip.pjsua2 + the org.pjsip helpers
+├── proguard.txt
+└── jni/<abi>/libpjsua2.so
+```
+
+OpenSSL, Opus and Oboe are each built from a pinned release and linked in
+statically, and the C++ runtime is static too, so `libpjsua2.so` needs nothing
+at run time but Android's own libraries. In particular there is no
+`libc++_shared.so` and no `liboboe.so` to collide with an application's own
+copy. Oboe has to be built from source for this: its published AAR is a Prefab
+module and carries `liboboe.so` nowhere a prebuilt consumer can reach.
+
+**The library exports only the JNI entry points** — `JNI_OnLoad` and the
+`Java_org_pjsip_*` functions, 3,091 symbols in place of the 10,972 it would
+otherwise expose. The rest is hidden by a version script. This matters because
+the bundled third-party code (libsrtp, libyuv, the WebRTC AEC, OpenSSL) is
+exactly what a WebRTC-based SDK in the same app also carries, and Android's
+linker resolves such a clash by picking one definition for everybody rather
+than by failing.
+
+Both properties are checked on the built artifact, not assumed.
+
+### What the build contains
+
+Upstream defaults apply except where named here or passed as a CMake option in
+`build-aar.sh`, which is the single place the configuration is written down.
+
+| | |
+|---|---|
+| Audio codecs | Opus, G.711, G.722, GSM, Speex, iLBC, L16 |
+| Via MediaCodec | the platform's own audio and video codecs |
+| Video | MediaCodec, camera capture, OpenGL ES renderer |
+| Audio devices | Oboe, and the Java device |
+| Echo cancellation | WebRTC AEC3 |
+| Security | SRTP, and TLS over the bundled OpenSSL |
+
+TLS is why OpenSSL is bundled at all: Android has no system OpenSSL and
+PJSIP's TLS transport is native, so Conscrypt cannot serve it. Bundling it
+means **this artifact has to be rebuilt and republished on OpenSSL security
+releases**. The 3.5 LTS branch is pinned to keep that to a minimum.
+
+Because OpenSSL is present, DTLS-SRTP works, and with it WebRTC
+interoperability. The Apple distribution has no equivalent — it uses Apple's
+Network framework and `transport_srtp_dtls.c` is OpenSSL-only.
+
+### What is excluded, and why
+
+Excluded for licensing rather than for any technical reason:
+
+| Codec | Why |
+|---|---|
+| AMR-NB, AMR-WB (opencore) | patent encumbered |
+| G.729 (bcg729) | LGPL; static linking would impose a relink obligation on every consumer |
+| G.722.1 | licence encumbered, and its wrapper is off by default so the omission is easy to miss |
+| SILK | disabled at configure time |
+| Lyra | disabled at configure time |
+
+Turning these off in `config_site.h` alone is not enough: that only switches
+off PJMEDIA's wrapper while `third_party/` still builds and links the library,
+so the object code ends up in the artifact regardless. The configure-time
+switches in `build-aar.sh` are what keep it out, and `verify_config` asserts
+each one before the build starts.
+
+Two things that look like leaks in a symbol dump but are not: Opus contains
+its own SILK layer, and pjsua2 exposes a `CodecLyraConfig` class whether or
+not Lyra is built. Neither is the corresponding codec.
+
+**AMR is a judgement call, not a clean exclusion.** The `opencore` AMR
+implementations are excluded as above, but the MediaCodec wrapper still offers
+AMR-NB and AMR-WB through the *platform's* codecs (`OMX.google.amrnb.*`),
+which is the upstream default. No AMR code is shipped — the device provides
+it — so this is the same position as any Android app that opens a MediaCodec
+for `audio/3gpp`. Set `PJMEDIA_HAS_AND_MEDIA_AMRNB` and
+`PJMEDIA_HAS_AND_MEDIA_AMRWB` to 0 in `config_site.h` to drop them.
+
+### Publishing
+
+The script stops at signed-able artifacts; it does not upload. Before a first
+release someone has to claim the `org.pjsip` namespace on Maven Central, which
+means proving control of pjsip.org with a DNS TXT record, and generate and
+publish a GPG release key. Both are one-time account steps, and until they
+exist there is nothing for an upload script to be tested against.

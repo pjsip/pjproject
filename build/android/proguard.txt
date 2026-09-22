@@ -1,0 +1,24 @@
+# Keep rules shipped inside the AAR and applied to any app that consumes it.
+#
+# Everything under org.pjsip is reached from native code by name. R8 cannot
+# see those references:
+#
+#  - pjsua2JNI holds the native methods, and the wrapper calls back into the
+#    generated classes through SWIG's director mechanism, resolving each one
+#    with FindClass/GetMethodID on its Java name.
+#  - the device backends do the same for the helper classes: android_dev.c
+#    looks up org/pjsip/PjCamera and friends, oboe_dev.cpp looks up
+#    org/pjsip/PjAudioDevInfo.
+#
+# Renaming or removing any of them turns into a ClassNotFoundException or a
+# NoSuchMethodError at call time, in a minified release build only. Keeping
+# the whole package is the safe rule, and the classes are generated rather
+# than hand-written so there is nothing here worth shrinking.
+-keep class org.pjsip.** { *; }
+-keepclassmembers class org.pjsip.** { *; }
+
+# The native methods themselves, spelled out so the rule survives a future
+# narrowing of the one above.
+-keepclasseswithmembernames class * {
+    native <methods>;
+}

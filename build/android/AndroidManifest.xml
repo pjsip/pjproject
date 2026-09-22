@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The manifest of the distributed AAR. A library manifest contributes to the
+  manifest of every app that merges it, so it declares only the package and
+  the API range and asks for nothing: the permissions PJSIP needs depend on
+  what the app uses it for, and a library that demanded INTERNET, RECORD_AUDIO
+  and CAMERA from everyone would be asking for permissions some consumers
+  never exercise.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.pjsip.pjsua2">
+
+    <uses-sdk
+        android:minSdkVersion="23"
+        android:targetSdkVersion="33" />
+
+</manifest>
