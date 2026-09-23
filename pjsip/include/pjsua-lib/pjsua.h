@@ -8170,8 +8170,16 @@ struct pjsua_media_config
     /**
      * Sound device uses \ref PJMEDIA_CLOCK instead of native sound device
      * clock, generally this will be able to reduce jitter and clock drift.
+     * It also moves the media processing (mixing, encoding, transmission)
+     * off the sound device callback, which then only moves frames in and
+     * out of the delay buffers.
      *
      * This option is not applicable for encoded/non-PCM format.
+     *
+     * Note that this applies to the main sound device only. An extra sound
+     * device created by pjsua_ext_snd_dev_create() takes its settings from
+     * the supplied #pjmedia_snd_port_param, so it needs
+     * PJMEDIA_SND_PORT_USE_SW_CLOCK set in its \a options field.
      *
      * Default value: PJSUA_DEFAULT_SND_USE_SW_CLOCK
      */
