@@ -205,11 +205,24 @@ the manifest still says are safe to install on 23.
 
 ### Licences
 
-An application shipping this artifact redistributes PJSIP and eight
-third-party projects in binary form. The AAR carries `META-INF/NOTICE` and the
-full text of every licence beside it; the POM can only name one licence, and
-names PJSIP's. A missing licence file stops the build rather than producing an
-artifact that cannot lawfully be redistributed.
+An application shipping this artifact redistributes PJSIP and a set of
+third-party projects in binary form, several of which require their notice to
+be reproduced. The AAR carries `META-INF/NOTICE` and the full text of every
+licence beside it; the POM can only name one licence, and names PJSIP's. A
+missing licence file stops the build rather than producing an artifact that
+cannot lawfully be redistributed.
+
+The texts are collected by sweeping each bundled component's directory rather
+than from a list of files, because a bundled project can carry sub-components
+under their own terms: `webrtc_aec3` alone compiles Abseil, the Ooura FFT,
+RNNoise and PFFFT. A hand-kept list goes stale the next time one is added --
+which is exactly how the first version of this shipped one licence for the
+whole AEC3 archive. PFFFT states its terms in the head of its source file
+rather than in a licence file, so those are lifted out verbatim.
+
+The NOTICE lists what was actually collected instead of restating each
+component's terms, because a hand-written summary is how it came to claim a
+BSD grant for iLBC that its sources do not contain.
 
 ### What the build contains
 
@@ -218,7 +231,7 @@ Upstream defaults apply except where named here or passed as a CMake option in
 
 | | |
 |---|---|
-| Audio codecs | Opus, G.711, G.722, GSM, Speex, iLBC, L16 |
+| Audio codecs | Opus, G.711, G.722, GSM, Speex, L16 |
 | Via MediaCodec | the platform's own audio and video codecs |
 | Video | MediaCodec, camera capture, OpenGL ES renderer |
 | Audio devices | Oboe, and the Java device |
@@ -244,6 +257,7 @@ Excluded for licensing rather than for any technical reason:
 | AMR-NB, AMR-WB (opencore) | patent encumbered |
 | G.729 (bcg729) | LGPL; static linking would impose a relink obligation on every consumer |
 | libresample | LGPL 2.1, for exactly that reason. The only exclusion here that is not a codec, and the easiest to ship by accident, because it is the upstream default for `PJMEDIA_WITH_RESAMPLE`; the build sets `speex` instead |
+| iLBC | A different reason: the bundled sources state only *"Copyright (C) The Internet Society (2004). All Rights Reserved"* and carry no grant of any kind, so this build cannot ship an authoritative licence for it. The codec itself is not the problem -- re-enable it along with the correct text once somebody can point at one. The Apple distribution is unaffected because it uses CoreAudio's iLBC rather than the bundled implementation |
 | G.722.1 | licence encumbered, and its wrapper is off by default so the omission is easy to miss |
 | SILK | disabled at configure time |
 | Lyra | disabled at configure time |

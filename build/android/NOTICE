@@ -11,28 +11,24 @@ later, and is also available under a commercial licence from Teluu for use in
 applications that cannot meet the GPL's terms. See
 https://www.pjsip.org/licensing.htm
 
-Statically linked into libpjsua2.so
------------------------------------
+Statically linked into libpjsua2.so: OpenSSL, Opus, Oboe, libsrtp, libyuv,
+the WebRTC AEC and AEC3, Speex and SpeexDSP, and GSM 06.10. Several of those
+bundle sub-components under their own separate terms -- the WebRTC AEC3 alone
+carries Abseil, the Ooura FFT, RNNoise and PFFFT.
 
-  OpenSSL              Apache License 2.0            LICENSE.openssl
-  Opus                 BSD 3-Clause                  LICENSE.opus
-  Oboe                 Apache License 2.0            LICENSE.oboe
-  libsrtp              BSD 3-Clause                  LICENSE.libsrtp
-  libyuv               BSD 3-Clause                  LICENSE.libyuv
-                                                     LICENSE.libyuv-third-party
-  WebRTC (AEC)         BSD 3-Clause                  LICENSE.webrtc
-                                                     LICENSE.webrtc-third-party
-  WebRTC AEC3          BSD 3-Clause                  LICENSE.webrtc-aec3
-  Speex / SpeexDSP     BSD 3-Clause                  LICENSE.speex
-  GSM 06.10            Permissive (TU Berlin)        LICENSE.gsm
+Every licence text is reproduced in this artifact and listed at the end of
+this file. Read the text rather than any summary of it: the terms are what
+the files say, and several of them require this reproduction.
 
-Resampling uses Speex's resampler rather than the bundled libresample, which
-is LGPL 2.1: static linking it would place a relink obligation on every
-application shipping this artifact.
+Two components are deliberately absent:
 
-iLBC ships no separate licence file; its terms are stated in the headers of
-the sources under third_party/ilbc in the pjproject repository, and are the
-Global IP Solutions BSD-style grant.
+  libresample   LGPL 2.1. Static linking would place a relink obligation on
+                every application shipping this artifact, so Speex's
+                resampler is used instead.
+
+  iLBC          The bundled sources state only "Copyright (C) The Internet
+                Society (2004). All Rights Reserved" and carry no grant, so
+                no authoritative licence for it could be included here.
 
 Audio and video codecs provided by the Android platform through MediaCodec are
 not part of this artifact and are covered by the terms of the device they run

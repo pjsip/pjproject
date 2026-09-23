@@ -375,6 +375,7 @@ build_abi() {
         -DPJMEDIA_WITH_LYRA_CODEC=OFF \
         -DPJMEDIA_WITH_OPEN_H264_CODEC=OFF \
         -DPJMEDIA_WITH_VPX_CODEC=OFF \
+        -DPJMEDIA_WITH_ILBC_CODEC=OFF \
         >"$STAGE/$abi-cmake.log" 2>&1 \
         || { tail -30 "$STAGE/$abi-cmake.log"; die "configure failed for $abi"; }
 
@@ -423,12 +424,19 @@ verify_config() {
     # The resampler is Speex's for the same reason: the bundled libresample
     # is LGPL 2.1, and static linking it would put the relink obligation on
     # every consumer, which is exactly why bcg729 is excluded below.
+    #
+    # iLBC is here for a different reason: the bundled sources state only
+    # "Copyright (C) The Internet Society (2004). All Rights Reserved" and
+    # carry no grant of any kind, so this build cannot ship an authoritative
+    # licence for it. Re-enable it together with the correct text once
+    # somebody can point at one -- the codec itself is not the problem.
     for opt in PJMEDIA_WITH_OPENCORE_AMRNB_CODEC \
                PJMEDIA_WITH_OPENCORE_AMRWB_CODEC \
                PJMEDIA_WITH_G7221_CODEC \
                PJMEDIA_WITH_SILK_CODEC \
                PJMEDIA_WITH_BCG729_CODEC \
-               PJMEDIA_WITH_LYRA_CODEC; do
+               PJMEDIA_WITH_LYRA_CODEC \
+               PJMEDIA_WITH_ILBC_CODEC; do
         value=$(cmake -L -N "$bld" | sed -n "s/^${opt}:[^=]*=//p")
         case "$value" in
         ON|1|TRUE|YES)
@@ -585,55 +593,104 @@ pj_version() {
 
 # Every licence covering something linked into the shipped library.
 #
-# The artifact is a binary redistribution of PJSIP and of eight third-party
-# projects, each with its own terms and attribution requirement. The POM can
-# only name one licence, and names PJSIP's, so the texts travel inside the
-# AAR instead. Missing any of them is a compliance failure rather than an
-# inconvenience, so an absent file stops the build.
+# An application shipping this artifact redistributes PJSIP and a set of
+# third-party projects in binary form, several of which require their notice
+# to be reproduced. The POM can only name one licence, and names PJSIP's, so
+# the texts travel inside the AAR.
+#
+# Collected by sweeping each component's directory rather than from a list of
+# files, because a bundled project can carry sub-components with their own
+# terms: webrtc_aec3 alone compiles Abseil, the Ooura FFT, RNNoise weights and
+# PFFFT, each licensed separately. A hand-kept list silently goes stale the
+# next time one of those is added.
 stage_licenses() {
     local root=$1
     local dir=$root/META-INF/licenses
-    local src dest missing=
+    local comp name src rel dest found
 
     mkdir -p "$dir"
 
-    # name|path pairs, relative to the source tree unless absolute
-    local entries="
+    # Named files, for components where a whole source tree is unpacked but
+    # only the library is linked. Sweeping those pulls in build tooling and
+    # sample apps -- OpenSSL's tree alone carries a Perl module's licence and
+    # a copyright.pm -- and listing things that are not in the binary is its
+    # own kind of inaccuracy.
+    local files="
 pjsip|$PJDIR/COPYING
-libsrtp|$PJDIR/third_party/srtp/LICENSE
-libyuv|$PJDIR/third_party/yuv/LICENSE
-libyuv-third-party|$PJDIR/third_party/yuv/LICENSE_THIRD_PARTY
-webrtc|$PJDIR/third_party/webrtc/LICENSE
-webrtc-third-party|$PJDIR/third_party/webrtc/LICENSE_THIRD_PARTY
-webrtc-aec3|$PJDIR/third_party/webrtc_aec3/LICENSE
-speex|$PJDIR/third_party/speex/COPYING
-gsm|$PJDIR/third_party/gsm/COPYRIGHT
 openssl|$SRCDIR/openssl-$OPENSSL_VERSION/LICENSE.txt
+opus|$SRCDIR/opus-$OPUS_VERSION/COPYING
 oboe|$SRCDIR/oboe-$OBOE_VERSION/LICENSE
 "
-
-    local line name
-    for line in $entries; do
-        name=${line%%|*}
-        src=${line#*|}
-        if [ -f "$src" ]; then
-            cp "$src" "$dir/LICENSE.$name"
-        else
-            missing="$missing  $name ($src)"$'\n'
-        fi
+    for comp in $files; do
+        name=${comp%%|*}
+        src=${comp#*|}
+        [ -f "$src" ] || die "no licence file for $name at $src"
+        cp "$src" "$dir/LICENSE.$name"
     done
 
-    # Opus names its licence differently across releases.
-    for src in "$SRCDIR/opus-$OPUS_VERSION/COPYING" \
-               "$SRCDIR/opus-$OPUS_VERSION/LICENSE"; do
-        [ -f "$src" ] && { cp "$src" "$dir/LICENSE.opus"; break; }
+    # Swept directories, for the bundled trees: there the tree is what gets
+    # compiled, and sub-components carry their own terms.
+    local roots="
+libsrtp|$PJDIR/third_party/srtp
+libyuv|$PJDIR/third_party/yuv
+webrtc|$PJDIR/third_party/webrtc
+webrtc_aec3|$PJDIR/third_party/webrtc_aec3
+speex|$PJDIR/third_party/speex
+gsm|$PJDIR/third_party/gsm
+"
+
+    for comp in $roots; do
+        name=${comp%%|*}
+        src=${comp#*|}
+        [ -d "$src" ] || die "no licence source for $name at $src"
+
+        found=0
+        while IFS= read -r rel; do
+            [ -n "$rel" ] || continue
+            # Name each by where it sits, so a sub-component's licence is
+            # distinguishable from its parent's.
+            dest=$(printf '%s' "${rel%/*}" | tr '/' '-')
+            case $rel in
+            */*) dest="LICENSE.$name-${dest##*-}" ;;
+            *)   dest="LICENSE.$name" ;;
+            esac
+            # Two files in one directory (LICENSE and LICENSE_THIRD_PARTY)
+            # must not overwrite each other.
+            case ${rel##*/} in
+            *THIRD_PARTY*) dest="$dest-third-party" ;;
+            esac
+            cp "$src/$rel" "$dir/$dest"
+            found=1
+        done <<EOF
+$(cd "$src" && find . \( -iname 'LICENSE*' -o -iname 'COPYING*' -o -iname 'COPYRIGHT*' \) \
+    -type f ! -name '*.c' ! -name '*.h' ! -name '*.cc' ! -name '*.pm' |
+    sed 's|^\./||' | sort)
+EOF
+        [ "$found" -eq 1 ] || die "no licence file found under $src for $name"
     done
-    [ -f "$dir/LICENSE.opus" ] || missing="$missing  opus"$'\n'
 
-    [ -z "$missing" ] || die "licence files are missing, refusing to package:
-$missing"
+    # PFFFT states its terms in the head of its only source file rather than
+    # in a licence file, and requires binary redistributions to reproduce
+    # them. Lift the comment block out verbatim.
+    local pffft=$PJDIR/third_party/webrtc_aec3/src/third_party/pffft/src/pffft.c
+    if [ -f "$pffft" ]; then
+        sed -n '1,/^   PFFFT : a Pretty Fast FFT\./p' "$pffft" |
+            sed '$d' >"$dir/LICENSE.webrtc_aec3-pffft"
+        [ -s "$dir/LICENSE.webrtc_aec3-pffft" ] \
+            || die "could not extract the PFFFT licence from $pffft"
+    fi
 
-    cp "$SELF_DIR/NOTICE" "$root/META-INF/NOTICE"
+    # The NOTICE lists what was actually collected rather than restating each
+    # component's terms. Claiming terms by hand is how this file came to say
+    # iLBC carried a BSD grant that its sources do not contain.
+    {
+        cat "$SELF_DIR/NOTICE"
+        echo
+        echo "Licence texts included in this artifact"
+        echo "---------------------------------------"
+        echo
+        (cd "$dir" && ls | sed 's|^|  META-INF/licenses/|')
+    } >"$root/META-INF/NOTICE"
 }
 
 # An AAR is a zip with a fixed layout, so it is assembled here rather than by
