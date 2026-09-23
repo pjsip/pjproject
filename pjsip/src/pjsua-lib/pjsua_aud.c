@@ -2157,6 +2157,15 @@ static pj_status_t open_snd_dev(pjmedia_snd_port_param *param)
 
     PJ_ASSERT_RETURN(param, PJ_EINVAL);
 
+    /* The software clock setting is endpoint wide, so apply it here, in the
+     * common open path. Applying it at each call site is error prone:
+     * pjsua_conf_connect() reopens the device with a param of its own and
+     * used to drop the setting silently, reverting the sound port to the
+     * native clock for the rest of the session.
+     */
+    if (pjsua_var.media_cfg.snd_use_sw_clock)
+        param->options |= PJMEDIA_SND_PORT_USE_SW_CLOCK;
+
     /* Check if NULL sound device is used */
     if (PJSUA_SND_NULL_DEV==param->base.rec_id ||
         PJSUA_SND_NULL_DEV==param->base.play_id)
@@ -2221,8 +2230,11 @@ static pj_status_t open_snd_dev(pjmedia_snd_port_param *param)
         if (dev_id < 0)
             dev_id = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
 
-        pjmedia_snd_port_param_default(&cp_param);
-        pj_memcpy(&cp_param.base, &param->base, sizeof(cp_param.base));
+        /* Copy the whole param, not just the base: options, ec_options,
+         * user_data and the frame preview callbacks belong to the caller
+         * and were being dropped here.
+         */
+        pj_memcpy(&cp_param, param, sizeof(cp_param));
         cp_param.base.dir = PJMEDIA_DIR_PLAYBACK;
         cp_param.base.play_id = dev_id;
 
@@ -2582,8 +2594,6 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param)
 
         /* Open! */
         param.options = 0;
-        if (pjsua_var.media_cfg.snd_use_sw_clock)
-            param.options |= PJMEDIA_SND_PORT_USE_SW_CLOCK;
         status = open_snd_dev(&param);
         if (status == PJ_SUCCESS)
             break;
