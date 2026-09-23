@@ -28,6 +28,7 @@
 #if defined(PJMEDIA_AUDIO_DEV_HAS_WASAPI) && \
     PJMEDIA_AUDIO_DEV_HAS_WASAPI != 0 && \
     defined(PJ_WIN32) && PJ_WIN32 != 0 && \
+    !(defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE != 0) && \
     !(defined(PJ_WIN32_UWP) && PJ_WIN32_UWP != 0) && \
     !(defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8 != 0)
 
@@ -192,7 +193,8 @@ struct wasapi_stream
     pj_bool_t               cmd_lock_init;
     HANDLE                  cmd_event;      /* A command is pending         */
     HANDLE                  done_event;     /* Command is done              */
-    enum wasapi_cmd         cmd;
+    volatile LONG           cmd;            /* enum wasapi_cmd, claimed
+                                             * with InterlockedExchange   */
     float                   cmd_volume;
     pj_status_t             cmd_status;
     pj_bool_t               cmd_dead;       /* Thread stopped answering     */
@@ -328,11 +330,9 @@ static void get_endpoint_format(IMMDevice *dev, unsigned *channels,
                                 (void**)&client)) &&
         SUCCEEDED(client->GetMixFormat(&wfx)) && wfx)
     {
-        /* Report at least 2 channels, as WMME did even for mono
-          * microphones, so that applications auto-detecting the channel
-          * count keep seeing the same value. The engine converts the
-          * channels anyway (AUTOCONVERTPCM). */
-        if (wfx->nChannels > 2 && wfx->nChannels <= 256)
+        /* Keep whatever the endpoint reports, as WMME does, and fall back
+         * to the default only for a value that cannot be right. */
+        if (wfx->nChannels >= 1 && wfx->nChannels <= 256)
             *channels = wfx->nChannels;
         if (wfx->nSamplesPerSec)
             *rate = wfx->nSamplesPerSec;
@@ -619,7 +619,7 @@ static pj_status_t wasapi_factory_default_param(pjmedia_aud_dev_factory *f,
         return PJMEDIA_EAUD_INVDEV;
     }
 
-    param->clock_rate = 16000;
+    param->clock_rate = di->default_samples_per_sec;
     param->channel_count = 1;
     param->samples_per_frame = param->clock_rate * 20 / 1000;
     param->bits_per_sample = 16;
@@ -854,6 +854,7 @@ static void halt_stream(struct wasapi_stream *s, pjmedia_dir dir,
                         pj_status_t status)
 {
     pjmedia_event e;
+    pjmedia_aud_param pi;
     pj_timestamp *ts;
 
     if (s->halted)
@@ -871,8 +872,11 @@ static void halt_stream(struct wasapi_stream *s, pjmedia_dir dir,
     pjmedia_event_init(&e, PJMEDIA_EVENT_AUD_DEV_ERROR, ts, &s->base);
     e.data.aud_dev_err.dir = dir;
     e.data.aud_dev_err.status = status;
-    e.data.aud_dev_err.id = (dir == PJMEDIA_DIR_PLAYBACK)? s->param.play_id :
-                                                           s->param.rec_id;
+    e.data.aud_dev_err.id = PJMEDIA_AUD_INVALID_DEV;
+    if (pjmedia_aud_stream_get_param(&s->base, &pi) == PJ_SUCCESS) {
+        e.data.aud_dev_err.id = (dir == PJMEDIA_DIR_PLAYBACK)? pi.play_id :
+                                                               pi.rec_id;
+    }
     pjmedia_event_publish(NULL, &s->base, &e, PJMEDIA_EVENT_PUBLISH_DEFAULT);
 }
 
@@ -1184,15 +1188,19 @@ static int PJ_THREAD_FUNC wasapi_thread(void *arg)
                                           s->running ? 500 : INFINITE);
 
         if (rc == WAIT_OBJECT_0) {
-            /* Nobody is waiting for a command once the channel is closed,
-             * and running it now could undo what a callback did since.
+            /* Claim the command. Once it is taken out of the slot, a caller
+             * that gives up cannot take it back, and a caller that already
+             * gave up will have emptied the slot, so a command runs at most
+             * once and never after the channel was closed.
              */
-            if (!s->cmd_dead) {
-                quit = exec_cmd(s, s->cmd, &s->cmd_volume, &s->cmd_status);
+            LONG c = InterlockedExchange(&s->cmd, WASAPI_CMD_NONE);
+
+            if (c != WASAPI_CMD_NONE) {
+                quit = exec_cmd(s, (enum wasapi_cmd)c, &s->cmd_volume,
+                                &s->cmd_status);
                 if (!quit)
                     SetEvent(s->done_event);
             }
-            s->cmd = WASAPI_CMD_NONE;
             continue;
         }
 
@@ -1264,7 +1272,7 @@ static pj_status_t send_cmd(struct wasapi_stream *s, enum wasapi_cmd cmd,
 
     if (volume)
         s->cmd_volume = *volume;
-    s->cmd = cmd;
+    InterlockedExchange(&s->cmd, cmd);
     ResetEvent(s->done_event);
     SetEvent(s->cmd_event);
     if (WaitForSingleObject(s->done_event, WASAPI_CMD_TIMEOUT_MS) ==
@@ -1274,6 +1282,10 @@ static pj_status_t send_cmd(struct wasapi_stream *s, enum wasapi_cmd cmd,
         if (volume)
             *volume = s->cmd_volume;
     } else {
+        /* Take the command back, unless the thread has already claimed it:
+         * it must not run once we have given up on it.
+         */
+        InterlockedCompareExchange(&s->cmd, WASAPI_CMD_NONE, cmd);
         PJ_LOG(2, (THIS_FILE, "WASAPI: audio thread did not answer command "
                    "%d", cmd));
         s->cmd_dead = PJ_TRUE;

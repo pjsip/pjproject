@@ -7,6 +7,7 @@
  * them finds devices at run time.
  */
 #if defined(PJ_WIN32) && PJ_WIN32!=0 && \
+    !(defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0) && \
     !(defined(PJ_WIN32_UWP) && PJ_WIN32_UWP!=0) && \
     !(defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8!=0)
 #   define PJMEDIA_AUDIO_DEV_HAS_WMME           1
