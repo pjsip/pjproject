@@ -106,6 +106,12 @@
 /* Minimum capture buffer size in frames (overflow protection only) */
 #define WASAPI_CAP_MIN_FRAMES   4
 
+/* Sanity cap on the channel count, the same one WMME applies to the value a
+ * device reports. It also keeps channel_count away from the WORD it is cast
+ * to in WAVEFORMATEX, where a value like 65537 would narrow to 1 while the
+ * buffer arithmetic kept using the original. */
+#define WASAPI_MAX_CHANNELS     256
+
 #define WASAPI_MAX_DEVS         PJMEDIA_AUD_DEV_MAX_DEVS
 
 #define SAFE_RELEASE(p)         do { if (p) { (p)->Release(); (p) = NULL; } \
@@ -310,7 +316,17 @@ static void get_endpoint_name(IMMDevice *dev, char *buf, int size)
         SUCCEEDED(props->GetValue(wasapi_pkey_friendly_name, &v)) &&
         v.vt == VT_LPWSTR && v.pwszVal)
     {
-        pj_unicode_to_ansi(v.pwszVal, wcslen(v.pwszVal), buf, size);
+        pj_size_t len;
+
+        /* The conversion yields nothing at all when the result does not fit,
+         * and the endpoint would be left with a generic name that no
+         * application can look up, so shorten the name until it converts.
+         */
+        for (len = wcslen(v.pwszVal); len > 0; len /= 2) {
+            pj_unicode_to_ansi(v.pwszVal, len, buf, size);
+            if (buf[0] != '\0')
+                break;
+        }
     }
     PropVariantClear(&v);
     SAFE_RELEASE(props);
@@ -332,7 +348,7 @@ static void get_endpoint_format(IMMDevice *dev, unsigned *channels,
     {
         /* Keep whatever the endpoint reports, as WMME does, and fall back
          * to the default only for a value that cannot be right. */
-        if (wfx->nChannels >= 1 && wfx->nChannels <= 256)
+        if (wfx->nChannels >= 1 && wfx->nChannels <= WASAPI_MAX_CHANNELS)
             *channels = wfx->nChannels;
         if (wfx->nSamplesPerSec)
             *rate = wfx->nSamplesPerSec;
@@ -973,7 +989,12 @@ static void process_capture(struct wasapi_stream *s)
             }
         }
 
-        s->cap_capture->ReleaseBuffer(frames);
+        hr = s->cap_capture->ReleaseBuffer(frames);
+        if (FAILED(hr)) {
+            halt_stream_hr(s, PJMEDIA_DIR_CAPTURE, "capture ReleaseBuffer",
+                           hr);
+            return;
+        }
     }
 }
 
@@ -1012,10 +1033,15 @@ static void process_playback(struct wasapi_stream *s)
 
         status = (*s->play_cb)(s->user_data, &frame);
 
-        s->pb_render->ReleaseBuffer(s->frame_frames,
+        hr = s->pb_render->ReleaseBuffer(s->frame_frames,
                                     (status != PJ_SUCCESS ||
                                      frame.type != PJMEDIA_FRAME_TYPE_AUDIO) ?
                                     AUDCLNT_BUFFERFLAGS_SILENT : 0);
+        if (FAILED(hr)) {
+            halt_stream_hr(s, PJMEDIA_DIR_PLAYBACK, "playback ReleaseBuffer",
+                           hr);
+            return;
+        }
         s->pb_ts.u64 += s->frame_frames;
         padding += s->frame_frames;
 
@@ -1217,7 +1243,8 @@ static int PJ_THREAD_FUNC wasapi_thread(void *arg)
         /* Whichever event it was, serve both directions */
         if (s->cap_capture)
             process_capture(s);
-        if (s->pb_render && !s->halted)
+        /* A capture callback may have stopped the stream just now */
+        if (s->pb_render && s->running && !s->halted)
             process_playback(s);
     }
 
@@ -1336,9 +1363,13 @@ static pj_status_t wasapi_factory_create_stream(pjmedia_aud_dev_factory *f,
     {
         return PJMEDIA_EAUD_BADFORMAT;
     }
-    if (param->channel_count < 1 || param->clock_rate == 0 ||
+    if (param->channel_count < 1 ||
+        param->channel_count > WASAPI_MAX_CHANNELS ||
+        param->clock_rate == 0 ||
         param->samples_per_frame == 0 ||
-        param->samples_per_frame % param->channel_count != 0)
+        param->samples_per_frame % param->channel_count != 0 ||
+        param->samples_per_frame / param->channel_count > param->clock_rate ||
+        param->samples_per_frame > 0xFFFFFFFFu / 2)
     {
         return PJ_EINVAL;
     }
@@ -1379,7 +1410,8 @@ static pj_status_t wasapi_factory_create_stream(pjmedia_aud_dev_factory *f,
     s->frame_samples = param->samples_per_frame;
     s->frame_frames = param->samples_per_frame / param->channel_count;
     s->frame_bytes = param->samples_per_frame * 2;
-    s->ptime_ms = s->frame_frames * 1000 / param->clock_rate;
+    s->ptime_ms = (unsigned)((pj_uint64_t)s->frame_frames * 1000 /
+                             param->clock_rate);
     if (s->ptime_ms == 0)
         s->ptime_ms = 1;
 
@@ -1405,7 +1437,8 @@ static pj_status_t wasapi_factory_create_stream(pjmedia_aud_dev_factory *f,
     s->done_event = CreateEvent(NULL, FALSE, FALSE, NULL);
 
     if (!s->cmd_event || !s->done_event ||
-        ((param->dir & PJMEDIA_DIR_CAPTURE) && !s->cap_event) ||
+        ((param->dir & PJMEDIA_DIR_CAPTURE) &&
+         (!s->cap_event || !s->cap_buf)) ||
         ((param->dir & PJMEDIA_DIR_PLAYBACK) && !s->pb_event))
     {
         stream_free(s);
