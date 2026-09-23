@@ -2222,8 +2222,11 @@ static pj_status_t open_snd_dev(pjmedia_snd_port_param *param)
         if (dev_id < 0)
             dev_id = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
 
-        pjmedia_snd_port_param_default(&cp_param);
-        pj_memcpy(&cp_param.base, &param->base, sizeof(cp_param.base));
+        /* Copy the whole param, not just the base: options, ec_options,
+         * user_data and the frame preview callbacks belong to the caller
+         * and were being dropped here.
+         */
+        pj_memcpy(&cp_param, param, sizeof(cp_param));
         cp_param.base.dir = PJMEDIA_DIR_PLAYBACK;
         cp_param.base.play_id = dev_id;
 
