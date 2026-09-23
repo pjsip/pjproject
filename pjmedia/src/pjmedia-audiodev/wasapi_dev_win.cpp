@@ -860,6 +860,12 @@ static void halt_stream(struct wasapi_stream *s, pjmedia_dir dir,
 
     s->halted = PJ_TRUE;
 
+    /* The stream is documented to stop, so stop it for real: leaving it
+     * running would keep the thread waking on its timeout and would make
+     * do_start() report success without restarting anything.
+     */
+    do_stop(s);
+
     ts = (dir == PJMEDIA_DIR_PLAYBACK)? &s->pb_ts : &s->cap_ts;
     pjmedia_event_init(&e, PJMEDIA_EVENT_AUD_DEV_ERROR, ts, &s->base);
     e.data.aud_dev_err.dir = dir;
@@ -950,7 +956,6 @@ static void process_capture(struct wasapi_stream *s)
                     s->cap_capture->ReleaseBuffer(frames);
                     PJ_PERROR(4, (THIS_FILE, status, "WASAPI: capture "
                                   "callback failed, stopping"));
-                    do_stop(s);
                     halt_stream(s, PJMEDIA_DIR_CAPTURE, status);
                     return;
                 }
@@ -1012,7 +1017,6 @@ static void process_playback(struct wasapi_stream *s)
         if (status != PJ_SUCCESS) {
             PJ_PERROR(4, (THIS_FILE, status, "WASAPI: playback callback "
                           "failed, stopping"));
-            do_stop(s);
             halt_stream(s, PJMEDIA_DIR_PLAYBACK, status);
             return;
         }
@@ -1081,14 +1085,20 @@ static pj_status_t do_stop(struct wasapi_stream *s)
     if (s->pb_client) {
         s->pb_client->Stop();
         hr = s->pb_client->Reset();
-        if (FAILED(hr) && hr != AUDCLNT_E_BUFFER_OPERATION_PENDING)
+        if (FAILED(hr) && hr != AUDCLNT_E_BUFFER_OPERATION_PENDING &&
+            hr != AUDCLNT_E_DEVICE_INVALIDATED)
+        {
             log_hr("playback Reset", hr);
+        }
     }
     if (s->cap_client) {
         s->cap_client->Stop();
         hr = s->cap_client->Reset();
-        if (FAILED(hr) && hr != AUDCLNT_E_BUFFER_OPERATION_PENDING)
+        if (FAILED(hr) && hr != AUDCLNT_E_BUFFER_OPERATION_PENDING &&
+            hr != AUDCLNT_E_DEVICE_INVALIDATED)
+        {
             log_hr("capture Reset", hr);
+        }
     }
     s->running = PJ_FALSE;
 
@@ -1173,10 +1183,15 @@ static int PJ_THREAD_FUNC wasapi_thread(void *arg)
                                           s->running ? 500 : INFINITE);
 
         if (rc == WAIT_OBJECT_0) {
-            quit = exec_cmd(s, s->cmd, &s->cmd_volume, &s->cmd_status);
+            /* Nobody is waiting for a command once the channel is closed,
+             * and running it now could undo what a callback did since.
+             */
+            if (!s->cmd_dead) {
+                quit = exec_cmd(s, s->cmd, &s->cmd_volume, &s->cmd_status);
+                if (!quit)
+                    SetEvent(s->done_event);
+            }
             s->cmd = WASAPI_CMD_NONE;
-            if (!quit)
-                SetEvent(s->done_event);
             continue;
         }
 
@@ -1221,6 +1236,15 @@ static pj_status_t send_cmd(struct wasapi_stream *s, enum wasapi_cmd cmd,
     if (!s->thread)
         return PJ_EINVALIDOP;
 
+    /* Once the audio thread has missed a command it may still be about to
+     * pick it up, so anything issued afterwards would race with it. Refuse
+     * everything from here on, including from a callback: an inline command
+     * would otherwise still run and then be undone by the command the
+     * timeout left behind.
+     */
+    if (s->cmd_dead)
+        return PJ_ETIMEDOUT;
+
     /* From the audio thread itself (a callback), execute it directly. It must
      * not touch the shared command slots here, an application thread may have
      * queued a command and still be waiting for it.
@@ -1232,11 +1256,6 @@ static pj_status_t send_cmd(struct wasapi_stream *s, enum wasapi_cmd cmd,
 
     EnterCriticalSection(&s->cmd_lock);
 
-    /* Once the audio thread has missed a command it may still be about to
-     * pick it up, so queueing another one would race with it: the thread
-     * could clear the newer command and signal its waiter as if it had run.
-     * Refuse everything from here on instead.
-     */
     if (s->cmd_dead) {
         LeaveCriticalSection(&s->cmd_lock);
         return PJ_ETIMEDOUT;
