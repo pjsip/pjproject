@@ -112,6 +112,10 @@
  * buffer arithmetic kept using the original. */
 #define WASAPI_MAX_CHANNELS     256
 
+/* Sanity cap on a requested latency. Anything near it is already absurd for
+ * audio, and it keeps the buffer duration arithmetic in range. */
+#define WASAPI_MAX_LATENCY_MS   10000
+
 #define WASAPI_MAX_DEVS         PJMEDIA_AUD_DEV_MAX_DEVS
 
 #define SAFE_RELEASE(p)         do { if (p) { (p)->Release(); (p) = NULL; } \
@@ -727,12 +731,16 @@ static pj_status_t init_client(struct wasapi_stream *s, IMMDevice *dev,
     if (playback) {
         target_ms = (prm->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY)?
                     prm->output_latency_ms : PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
+        if (target_ms > WASAPI_MAX_LATENCY_MS)
+            target_ms = WASAPI_MAX_LATENCY_MS;
         if (target_ms < s->ptime_ms + period_ms)
             target_ms = s->ptime_ms + period_ms;
         buffer_ms = target_ms + s->ptime_ms;
     } else {
         buffer_ms = (prm->flags & PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY)?
                     prm->input_latency_ms : PJMEDIA_SND_DEFAULT_REC_LATENCY;
+        if (buffer_ms > WASAPI_MAX_LATENCY_MS)
+            buffer_ms = WASAPI_MAX_LATENCY_MS;
         if (buffer_ms < WASAPI_CAP_MIN_FRAMES * s->ptime_ms)
             buffer_ms = WASAPI_CAP_MIN_FRAMES * s->ptime_ms;
     }
@@ -768,13 +776,15 @@ static pj_status_t init_client(struct wasapi_stream *s, IMMDevice *dev,
 
         s->pb_client = client;
         s->pb_buf_frames = buf_frames;
-        s->pb_target_frames = target_ms * prm->clock_rate / 1000;
+        s->pb_target_frames = (UINT32)((pj_uint64_t)target_ms *
+                                       prm->clock_rate / 1000);
         if (s->pb_target_frames > buf_frames)
             s->pb_target_frames = buf_frames;
         if (s->pb_target_frames < s->frame_frames)
             s->pb_target_frames = s->frame_frames;
-        s->param.output_latency_ms = s->pb_target_frames * 1000 /
-                                     prm->clock_rate;
+        s->param.output_latency_ms =
+                    (unsigned)((pj_uint64_t)s->pb_target_frames * 1000 /
+                               prm->clock_rate);
         s->param.flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY;
     } else {
         hr = client->SetEventHandle(s->cap_event);
@@ -1210,7 +1220,12 @@ static int PJ_THREAD_FUNC wasapi_thread(void *arg)
         events[nevents++] = s->pb_event;
 
     while (!quit) {
-        DWORD rc = WaitForMultipleObjects(nevents, events, FALSE,
+        /* Once halted the device events are of no further use, and a broken
+         * handle among them is one of the things that can halt the stream,
+         * so wait on the command event alone from then on. events[0] is it.
+         */
+        DWORD n = s->halted? 1 : nevents;
+        DWORD rc = WaitForMultipleObjects(n, events, FALSE,
                                           s->running ? 500 : INFINITE);
 
         if (rc == WAIT_OBJECT_0) {
@@ -1237,6 +1252,19 @@ static int PJ_THREAD_FUNC wasapi_thread(void *arg)
             /* The engine has stopped delivering events */
             if (++stalls == 1 || stalls % 100 == 0)
                 PJ_LOG(3, (THIS_FILE, "WASAPI: no device events for 500 ms"));
+            continue;
+        }
+
+        if (rc >= WAIT_OBJECT_0 + n) {
+            /* WAIT_FAILED or an abandoned handle. Falling through would
+             * treat it as an event and spin, and this thread runs at the
+             * audio priority.
+             */
+            PJ_LOG(2, (THIS_FILE, "WASAPI: wait failed (err=%lu), stopping",
+                       (unsigned long)GetLastError()));
+            halt_stream(s, (s->param.dir & PJMEDIA_DIR_PLAYBACK)?
+                           PJMEDIA_DIR_PLAYBACK : PJMEDIA_DIR_CAPTURE,
+                        PJMEDIA_EAUD_SYSERR);
             continue;
         }
 
@@ -1276,9 +1304,10 @@ static pj_status_t send_cmd(struct wasapi_stream *s, enum wasapi_cmd cmd,
      * pick it up, so anything issued afterwards would race with it. Refuse
      * everything from here on, including from a callback: an inline command
      * would otherwise still run and then be undone by the command the
-     * timeout left behind.
+     * timeout left behind. QUIT is the exception, the thread may well have
+     * recovered since, and leaving it running is worse than asking again.
      */
-    if (s->cmd_dead)
+    if (s->cmd_dead && cmd != WASAPI_CMD_QUIT)
         return PJ_ETIMEDOUT;
 
     /* From the audio thread itself (a callback), execute it directly. It must
@@ -1292,7 +1321,7 @@ static pj_status_t send_cmd(struct wasapi_stream *s, enum wasapi_cmd cmd,
 
     EnterCriticalSection(&s->cmd_lock);
 
-    if (s->cmd_dead) {
+    if (s->cmd_dead && cmd != WASAPI_CMD_QUIT) {
         LeaveCriticalSection(&s->cmd_lock);
         return PJ_ETIMEDOUT;
     }
@@ -1369,7 +1398,10 @@ static pj_status_t wasapi_factory_create_stream(pjmedia_aud_dev_factory *f,
         param->samples_per_frame == 0 ||
         param->samples_per_frame % param->channel_count != 0 ||
         param->samples_per_frame / param->channel_count > param->clock_rate ||
-        param->samples_per_frame > 0xFFFFFFFFu / 2)
+        param->samples_per_frame > 0xFFFFFFFFu / 2 ||
+        /* wfx.nAvgBytesPerSec below is a DWORD */
+        (pj_uint64_t)param->clock_rate * param->channel_count * 2 >
+            0xFFFFFFFFu)
     {
         return PJ_EINVAL;
     }
@@ -1583,10 +1615,16 @@ static pj_status_t wasapi_stream_destroy(pjmedia_aud_stream *strm)
         if (send_cmd(s, WASAPI_CMD_QUIT, NULL) != PJ_SUCCESS) {
             /* The audio thread is not answering. Joining it would block for
              * good and freeing the stream would pull the pool from under it,
-             * so leave both alone.
+             * so leave both alone. Stop it serving the device first: the
+             * caller carries on regardless, e.g: pjmedia_snd_port releases
+             * the buffers the callbacks write into without looking at this
+             * return value, so a callback afterwards would touch freed
+             * memory.
              */
+            s->halted = PJ_TRUE;
             PJ_LOG(1, (THIS_FILE, "WASAPI: audio thread is not responding, "
-                       "the stream is left allocated"));
+                       "the stream is left allocated and stopped serving "
+                       "the device"));
             return PJ_ETIMEDOUT;
         }
         pj_thread_join(s->thread);

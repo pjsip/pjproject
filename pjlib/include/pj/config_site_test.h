@@ -6,7 +6,7 @@
  * even be compiled by the tests. aud_dev_test then initializes whichever of
  * them finds devices at run time.
  */
-#if defined(PJ_WIN32) && PJ_WIN32!=0 && \
+#if defined(PJ_WIN32) && PJ_WIN32!=0 && defined(_MSC_VER) && \
     !(defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0) && \
     !(defined(PJ_WIN32_UWP) && PJ_WIN32_UWP!=0) && \
     !(defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8!=0)
