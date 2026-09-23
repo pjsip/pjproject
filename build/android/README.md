@@ -246,8 +246,27 @@ for `audio/3gpp`. Set `PJMEDIA_HAS_AND_MEDIA_AMRNB` and
 
 ### Publishing
 
-The script stops at signed-able artifacts; it does not upload. Before a first
-release someone has to claim the `org.pjsip` namespace on Maven Central, which
-means proving control of pjsip.org with a DNS TXT record, and generate and
-publish a GPG release key. Both are one-time account steps, and until they
-exist there is nothing for an upload script to be tested against.
+The script stops at artifacts that are ready to sign; it does not upload, and
+two one-time account steps have to happen before an upload script would have
+anything to be tested against.
+
+**Claim the namespace.** On [central.sonatype.com](https://central.sonatype.com)
+-- not the retired oss.sonatype.org -- open *View Namespaces*, *Add Namespace*,
+and enter `org.pjsip`. Copy the verification key it assigns, publish it as a
+DNS TXT record on the apex of `pjsip.org` (the namespace is checked against
+that exact domain), then press *Verify Namespace*. Verification usually
+completes in minutes and creates an organization with the verifying account as
+its administrator -- so verify from an account the project controls, not a
+personal one, or the ability to publish ends up tied to one individual.
+
+**Create a release signing key.** Every deployed file needs a detached GPG
+signature beside it, from a key published to a public keyserver. It wants the
+same treatment as the account: an organization key with a documented
+successor.
+
+What the script already produces, per Central's requirements: the AAR, a
+sources jar, a javadoc jar, a POM carrying the name, description, URL, licence,
+developer and SCM fields it insists on, and `.md5`/`.sha1` beside every file
+with `.sha256`/`.sha512` as extras. What is missing is a `.asc` per file, which
+needs the key above, and a `<developer><email>`, left blank rather than
+guessed.

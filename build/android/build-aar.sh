@@ -65,14 +65,26 @@ SITE_EXISTED=
 die() { echo "error: $*" >&2; exit 1; }
 need() { command -v "$1" >/dev/null || die "$1 is required"; }
 
-# macOS ships shasum, most Linux distributions sha256sum; CI runs on Linux.
-sha256_of() {
-    if command -v sha256sum >/dev/null; then
-        sha256sum "$1" | cut -d' ' -f1
-    else
-        shasum -a 256 "$1" | cut -d' ' -f1
-    fi
+# macOS ships shasum, most Linux distributions the coreutils *sum tools;
+# CI runs on Linux.
+hash_of() {
+    local alg=$1 file=$2
+    case $alg in
+    md5)
+        if command -v md5sum >/dev/null; then md5sum "$file" | cut -d' ' -f1
+        else md5 -q "$file"; fi
+        ;;
+    *)
+        if command -v "${alg}sum" >/dev/null; then
+            "${alg}sum" "$file" | cut -d' ' -f1
+        else
+            shasum -a "${alg#sha}" "$file" | cut -d' ' -f1
+        fi
+        ;;
+    esac
 }
+
+sha256_of() { hash_of sha256 "$1"; }
 
 # ##############################################################################
 # Preconditions
@@ -509,11 +521,21 @@ write_pom() {
         "$SELF_DIR/pom.xml.in" >"$DIST/$ARTIFACT_ID-$version.pom"
 }
 
+# Maven Central requires an .md5 and a .sha1 beside every deployed file, each
+# holding just the hex digest; .sha256 and .sha512 are accepted as extras.
+# Signature files are exempt, and the checksums themselves are not signed.
 checksums() {
-    local f
+    local f alg
     (
         cd "$DIST"
-        rm -f SHA256SUMS
+        rm -f ./*.md5 ./*.sha1 ./*.sha256 ./*.sha512 SHA256SUMS
+        for f in *.aar *.jar *.pom; do
+            for alg in md5 sha1 sha256 sha512; do
+                hash_of "$alg" "$f" >"$f.$alg"
+            done
+        done
+        # A single digest list as well, for release notes and for anyone
+        # checking a download by hand.
         for f in *.aar *.jar *.pom; do
             echo "$(sha256_of "$f")  $f" >>SHA256SUMS
         done
