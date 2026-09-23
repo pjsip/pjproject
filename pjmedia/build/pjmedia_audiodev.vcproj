@@ -6705,6 +6705,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia-audiodev\wasapi_dev_win.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia-audiodev\wmme_dev.c"
 				>
 				<FileConfiguration
