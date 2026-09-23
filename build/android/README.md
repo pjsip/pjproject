@@ -144,6 +144,10 @@ autotools instructions above; nothing in this section is needed.
 ANDROID_NDK_ROOT=... ANDROID_HOME=... ./build/android/build-aar.sh
 ```
 
+Tools: `cmake`, `swig`, `curl`, and a JDK, which supplies both `javac` and the
+`jar` that assembles the AAR. Deliberately not `zip`, which is missing from a
+fair number of minimal images while the JDK is required anyway.
+
 ```
 build-aar.sh        builds and packages everything
 config_site.h       the configuration the distribution is built with

@@ -496,7 +496,11 @@ verify_artifact() {
     }
 
     local extra
-    extra=$(echo "$exported" | grep -v '^Java_org_pjsip_' | grep -vx 'JNI_OnLoad' || true)
+    # JNI_On* rather than JNI_OnLoad, to match what pjsua2jni.map exports:
+    # the map is a pattern so that JNI_OnUnload is allowed in a configuration
+    # that defines one, and a stricter check here would fail a library the map
+    # deliberately permits.
+    extra=$(echo "$exported" | grep -v '^Java_org_pjsip_' | grep -vE '^JNI_On' || true)
     [ -z "$extra" ] || {
         echo "error: $abi: unexpected exported symbols:" >&2
         echo "$extra" | sed 's/^/  /' >&2
@@ -508,9 +512,10 @@ verify_artifact() {
     # accepts whatever NDK it is pointed at, so check the property rather than
     # the toolchain version: every loadable segment must be aligned to at
     # least 0x4000.
-    local align
+    local align loads=0
     for align in $("$ndk_bin/llvm-readelf" -l "$so" |
                    awk '$1 == "LOAD" { print $NF }'); do
+        loads=$((loads + 1))
         [ "$((align))" -ge 16384 ] || {
             echo "error: $abi: a LOAD segment is aligned to $align, need 0x4000" >&2
             echo "  the NDK in use may predate r28; 16 KB alignment is required" >&2
@@ -518,6 +523,12 @@ verify_artifact() {
             break
         }
     done
+    # A loop over nothing succeeds. Without this the check reports alignment
+    # it never looked at, which is the opposite of its purpose.
+    [ "$loads" -gt 0 ] || {
+        echo "error: $abi: no LOAD segments found, cannot verify alignment" >&2
+        fail=1
+    }
 
     # Every dependency has to be part of Android itself. Anything else --
     # liboboe.so, libc++_shared.so -- is a library the AAR does not ship and
@@ -712,6 +723,11 @@ EOF
 # Gradle. That keeps the distribution independent of the Android Gradle plugin
 # version, which pins its own NDK and CMake and would otherwise decide what
 # this artifact is built with.
+#
+# Assembled with jar rather than zip: a JDK is required anyway, for javac, and
+# zip is missing from a fair number of minimal images. --no-manifest because
+# jar would otherwise add a META-INF/MANIFEST.MF that does not belong in an
+# AAR.
 package_aar() {
     local version=$1
     local root=$STAGE/aar
@@ -725,6 +741,10 @@ package_aar() {
         "$SELF_DIR/AndroidManifest.xml.in" >"$root/AndroidManifest.xml"
     cp "$STAGE/classes.jar" "$root/classes.jar"
     cp "$SELF_DIR/proguard.txt" "$root/proguard.txt"
+    # Mandatory in the AAR format, and some AGP versions reject an AAR that
+    # has none. This library declares no resources, so it is empty -- which is
+    # what AGP itself emits here too.
+    : >"$root/R.txt"
     stage_licenses "$root"
     for abi in $ABIS; do
         mkdir -p "$root/jni/$abi"
@@ -736,7 +756,8 @@ package_aar() {
     # Only the output goes -- the dependency caches live elsewhere.
     rm -rf "$DIST"
     mkdir -p "$DIST"
-    (cd "$root" && zip -qr "$DIST/$ARTIFACT_ID-$version.aar" .)
+    jar --create --no-manifest \
+        --file "$DIST/$ARTIFACT_ID-$version.aar" -C "$root" .
     cp "$STAGE/$ARTIFACT_ID-sources.jar" "$DIST/$ARTIFACT_ID-$version-sources.jar"
     cp "$STAGE/$ARTIFACT_ID-javadoc.jar" "$DIST/$ARTIFACT_ID-$version-javadoc.jar"
 }
@@ -783,8 +804,6 @@ main() {
     need javac
     need jar
     need curl
-    need unzip
-    need zip
     [ -n "${ANDROID_NDK_ROOT:-}" ] || die "ANDROID_NDK_ROOT must be set"
     [ -d "$ANDROID_NDK_ROOT" ] || die "ANDROID_NDK_ROOT does not exist"
 
