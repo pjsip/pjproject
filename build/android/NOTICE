@@ -12,7 +12,7 @@ applications that cannot meet the GPL's terms. See
 https://www.pjsip.org/licensing.htm
 
 Statically linked into libpjsua2.so: OpenSSL, Opus, Oboe, libsrtp, libyuv,
-the WebRTC AEC and AEC3, Speex and SpeexDSP, and GSM 06.10. Several of those
+the WebRTC AEC and AEC3, Speex and SpeexDSP, GSM 06.10, and iLBC. Several of those
 bundle sub-components under their own separate terms -- the WebRTC AEC3 alone
 carries Abseil, the Ooura FFT, RNNoise and PFFFT.
 
@@ -20,15 +20,18 @@ Every licence text is reproduced in this artifact and listed at the end of
 this file. Read the text rather than any summary of it: the terms are what
 the files say, and several of them require this reproduction.
 
-Two components are deliberately absent:
+iLBC is a special case worth stating plainly. The sources bundled with PJSIP
+are the RFC 3951 reference implementation and carry only "Copyright (C) The
+Internet Society (2004). All Rights Reserved" -- no grant of any kind. That
+implementation was relicensed under the 3-clause BSD licence in 2011, after
+Google acquired Global IP Solutions, and has since been distributed on those
+terms as part of the WebRTC project. LICENSE.ilbc is that text.
+
+One component is deliberately absent:
 
   libresample   LGPL 2.1. Static linking would place a relink obligation on
                 every application shipping this artifact, so Speex's
                 resampler is used instead.
-
-  iLBC          The bundled sources state only "Copyright (C) The Internet
-                Society (2004). All Rights Reserved" and carry no grant, so
-                no authoritative licence for it could be included here.
 
 Audio and video codecs provided by the Android platform through MediaCodec are
 not part of this artifact and are covered by the terms of the device they run

@@ -173,11 +173,25 @@ android_jar() {
     [ -n "$sdk" ] || die "ANDROID_HOME or ANDROID_SDK_ROOT must be set"
     # Newest platform available; android.jar is backward compatible and only
     # the helper classes compile against it.
-    local jar
-    jar=$(ls -d "$sdk"/platforms/android-*/android.jar 2>/dev/null |
-          sort -t- -k2 -n | tail -1)
-    [ -n "$jar" ] || die "no android.jar under $sdk/platforms"
-    echo "$jar"
+    # Sort on the API level pulled out of the directory name, not on a field
+    # of the whole path: `sort -t- -k2 -n` over the full path keys on
+    # whatever follows the first hyphen anywhere in it, so an SDK at a
+    # hyphenated location -- /opt/android-sdk is the common one -- gives every
+    # entry the numeric key 0 and the lexical tiebreak then picks android-9
+    # over android-35.
+    local jar api best=-1 best_jar=
+    for jar in "$sdk"/platforms/android-*/android.jar; do
+        [ -f "$jar" ] || continue
+        api=${jar%/android.jar}
+        api=${api##*/android-}
+        # Preview platforms are named for a letter rather than a number.
+        case $api in
+        ''|*[!0-9]*) continue ;;
+        esac
+        [ "$api" -gt "$best" ] && { best=$api; best_jar=$jar; }
+    done
+    [ -n "$best_jar" ] || die "no android.jar under $sdk/platforms"
+    echo "$best_jar"
 }
 
 # ##############################################################################
@@ -375,7 +389,6 @@ build_abi() {
         -DPJMEDIA_WITH_LYRA_CODEC=OFF \
         -DPJMEDIA_WITH_OPEN_H264_CODEC=OFF \
         -DPJMEDIA_WITH_VPX_CODEC=OFF \
-        -DPJMEDIA_WITH_ILBC_CODEC=OFF \
         >"$STAGE/$abi-cmake.log" 2>&1 \
         || { tail -30 "$STAGE/$abi-cmake.log"; die "configure failed for $abi"; }
 
@@ -409,7 +422,8 @@ verify_config() {
                PJMEDIA_WITH_AUDIODEV_OBOE:ON \
                PJMEDIA_WITH_VIDEODEV_ANDROID:ON \
                PJMEDIA_WITH_VIDEODEV_OPENGL:ON \
-               PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC:ON; do
+               PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC:ON \
+               PJMEDIA_WITH_ILBC_CODEC:ON; do
         value=$(cmake -L -N "$bld" | sed -n "s/^${opt%%:*}:[^=]*=//p")
         [ "$value" = "${opt##*:}" ] || {
             echo "error: $abi: ${opt%%:*} is '${value:-unset}', expected ${opt##*:}" >&2
@@ -424,19 +438,12 @@ verify_config() {
     # The resampler is Speex's for the same reason: the bundled libresample
     # is LGPL 2.1, and static linking it would put the relink obligation on
     # every consumer, which is exactly why bcg729 is excluded below.
-    #
-    # iLBC is here for a different reason: the bundled sources state only
-    # "Copyright (C) The Internet Society (2004). All Rights Reserved" and
-    # carry no grant of any kind, so this build cannot ship an authoritative
-    # licence for it. Re-enable it together with the correct text once
-    # somebody can point at one -- the codec itself is not the problem.
     for opt in PJMEDIA_WITH_OPENCORE_AMRNB_CODEC \
                PJMEDIA_WITH_OPENCORE_AMRWB_CODEC \
                PJMEDIA_WITH_G7221_CODEC \
                PJMEDIA_WITH_SILK_CODEC \
                PJMEDIA_WITH_BCG729_CODEC \
-               PJMEDIA_WITH_LYRA_CODEC \
-               PJMEDIA_WITH_ILBC_CODEC; do
+               PJMEDIA_WITH_LYRA_CODEC; do
         value=$(cmake -L -N "$bld" | sed -n "s/^${opt}:[^=]*=//p")
         case "$value" in
         ON|1|TRUE|YES)
@@ -615,11 +622,19 @@ stage_licenses() {
     # sample apps -- OpenSSL's tree alone carries a Perl module's licence and
     # a copyright.pm -- and listing things that are not in the binary is its
     # own kind of inaccuracy.
+    # iLBC is the one entry whose licence does not live beside its sources.
+    # third_party/ilbc is the RFC 3951 reference code and states only
+    # "Copyright (C) The Internet Society (2004). All Rights Reserved". That
+    # implementation was relicensed 3-clause BSD in 2011, after Google
+    # acquired Global IP Solutions, and is distributed on those terms as part
+    # of WebRTC -- whose licence this tree already carries, and which is what
+    # ships for it. NOTICE records the provenance.
     local files="
 pjsip|$PJDIR/COPYING
 openssl|$SRCDIR/openssl-$OPENSSL_VERSION/LICENSE.txt
 opus|$SRCDIR/opus-$OPUS_VERSION/COPYING
 oboe|$SRCDIR/oboe-$OBOE_VERSION/LICENSE
+ilbc|$PJDIR/third_party/webrtc/LICENSE
 "
     for comp in $files; do
         name=${comp%%|*}

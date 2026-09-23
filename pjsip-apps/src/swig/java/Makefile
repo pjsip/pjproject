@@ -157,6 +157,12 @@ else
   ifeq ($(OS),android)
     MY_JNI_CFLAGS+= -D__ANDROID__
     MY_JNI_LDFLAGS+= -Wl,-soname,libpjsua2.so
+    # Export only the JNI entry points. The same map the CMake build applies;
+    # without it here the established autotools path keeps exporting every
+    # symbol of the statically linked libsrtp, libyuv, WebRTC AEC and OpenSSL,
+    # and whether an application is protected depends on which build produced
+    # its libpjsua2.so. See ../pjsua2jni.map.
+    MY_JNI_LDFLAGS+= -Wl,--version-script=$(PJDIR)/pjsip-apps/src/swig/pjsua2jni.map
     MY_JNI_LDXXLIBS+= -landroid
     SWIG_FLAGS+= -D__ANDROID__
   endif

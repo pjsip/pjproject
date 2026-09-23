@@ -222,7 +222,14 @@ rather than in a licence file, so those are lifted out verbatim.
 
 The NOTICE lists what was actually collected instead of restating each
 component's terms, because a hand-written summary is how it came to claim a
-BSD grant for iLBC that its sources do not contain.
+BSD grant for iLBC without citing one.
+
+iLBC is the one component whose licence does not sit beside its sources.
+`third_party/ilbc` is the RFC 3951 reference implementation and states only
+*"Copyright (C) The Internet Society (2004). All Rights Reserved"*. That code
+was relicensed 3-clause BSD in 2011 after Google acquired Global IP Solutions
+and has been distributed on those terms as part of WebRTC ever since, so the
+WebRTC licence this tree already carries is what ships for it.
 
 ### What the build contains
 
@@ -231,7 +238,7 @@ Upstream defaults apply except where named here or passed as a CMake option in
 
 | | |
 |---|---|
-| Audio codecs | Opus, G.711, G.722, GSM, Speex, L16 |
+| Audio codecs | Opus, G.711, G.722, GSM, Speex, iLBC, L16 |
 | Via MediaCodec | the platform's own audio and video codecs |
 | Video | MediaCodec, camera capture, OpenGL ES renderer |
 | Audio devices | Oboe, and the Java device |
@@ -257,7 +264,6 @@ Excluded for licensing rather than for any technical reason:
 | AMR-NB, AMR-WB (opencore) | patent encumbered |
 | G.729 (bcg729) | LGPL; static linking would impose a relink obligation on every consumer |
 | libresample | LGPL 2.1, for exactly that reason. The only exclusion here that is not a codec, and the easiest to ship by accident, because it is the upstream default for `PJMEDIA_WITH_RESAMPLE`; the build sets `speex` instead |
-| iLBC | A different reason: the bundled sources state only *"Copyright (C) The Internet Society (2004). All Rights Reserved"* and carry no grant of any kind, so this build cannot ship an authoritative licence for it. The codec itself is not the problem -- re-enable it along with the correct text once somebody can point at one. The Apple distribution is unaffected because it uses CoreAudio's iLBC rather than the bundled implementation |
 | G.722.1 | licence encumbered, and its wrapper is off by default so the omission is easy to miss |
 | SILK | disabled at configure time |
 | Lyra | disabled at configure time |
