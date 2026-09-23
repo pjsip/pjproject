@@ -7169,6 +7169,10 @@
 				RelativePath="..\include\pjmedia-audiodev\errno.h"
 				>
 			</File>
+			<File
+				RelativePath="..\include\pjmedia-audiodev\wasapi.h"
+				>
+			</File>
 		</Filter>
 	</Files>
 	<Globals>

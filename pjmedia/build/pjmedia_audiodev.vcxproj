@@ -786,6 +786,7 @@
     <ClInclude Include="..\include\pjmedia-audiodev\audiotest.h" />
     <ClInclude Include="..\include\pjmedia-audiodev\config.h" />
     <ClInclude Include="..\include\pjmedia-audiodev\errno.h" />
+    <ClInclude Include="..\include\pjmedia-audiodev\wasapi.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

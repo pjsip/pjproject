@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-audiodev/audiodev_imp.h>
+#include <pjmedia-audiodev/wasapi.h>
 #include <pjmedia/event.h>
 #include <pj/assert.h>
 #include <pj/log.h>
@@ -650,6 +651,96 @@ static pj_status_t wasapi_factory_default_param(pjmedia_aud_dev_factory *f,
 
     return PJ_SUCCESS;
 }
+
+/* The endpoint id behind a device index, for an application that wants to
+ * open the same endpoint itself. See pjmedia-audiodev/wasapi.h.
+ */
+PJ_DEF(pj_status_t) pjmedia_wasapi_get_endpoint(pjmedia_aud_dev_index id,
+                                                pj_bool_t capture,
+                                                pj_uint16_t *buf,
+                                                unsigned len,
+                                                pj_bool_t *is_default)
+{
+    pjmedia_aud_subsys *sub = pjmedia_get_aud_subsys();
+    struct wasapi_factory *wf;
+    const struct wasapi_dev *d;
+    unsigned i, fid, index;
+    const WCHAR *ep;
+    pj_size_t ep_len;
+
+    PJ_ASSERT_RETURN(buf && len && is_default, PJ_EINVAL);
+    buf[0] = 0;
+    *is_default = PJ_FALSE;
+
+    if (!sub || id == PJMEDIA_AUD_INVALID_DEV)
+        return PJMEDIA_EAUD_INVDEV;
+
+    /* An application usually holds PJMEDIA_AUD_DEFAULT_CAPTURE_DEV or
+     * PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV rather than a concrete index, pjsua
+     * starts out with exactly those, so resolve them the way the audio
+     * subsystem does before looking anything up.
+     */
+    if (id < 0) {
+        for (i = 0; i < sub->drv_cnt; ++i) {
+            const pjmedia_aud_driver *drv = &sub->drv[i];
+            int local = -1;
+
+            if (drv->dev_idx >= 0)
+                local = drv->dev_idx;
+            else if (id == PJMEDIA_AUD_DEFAULT_CAPTURE_DEV &&
+                     drv->rec_dev_idx >= 0)
+                local = drv->rec_dev_idx;
+            else if (id == PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV &&
+                     drv->play_dev_idx >= 0)
+                local = drv->play_dev_idx;
+
+            if (local >= 0) {
+                id = (pjmedia_aud_dev_index)(drv->start_idx + local);
+                break;
+            }
+        }
+        if (id < 0)
+            return PJMEDIA_EAUD_NODEFDEV;
+    }
+
+    if ((unsigned)id >= sub->dev_cnt)
+        return PJMEDIA_EAUD_INVDEV;
+
+    /* pjmedia_aud_subsys::dev_list packs the driver in the high half and the
+     * index within it in the low half.
+     */
+    fid = sub->dev_list[id] >> 16;
+    index = sub->dev_list[id] & 0xFFFF;
+    if (fid >= sub->drv_cnt || !sub->drv[fid].f ||
+        sub->drv[fid].f->op != &factory_op)
+    {
+        return PJMEDIA_EAUD_INVDEV;     /* not a WASAPI device */
+    }
+
+    wf = (struct wasapi_factory*)sub->drv[fid].f;
+    if (index >= wf->dev_count)
+        return PJMEDIA_EAUD_INVDEV;
+    d = &wf->devs[index];
+
+    if (d->is_default) {
+        if (capture ? !d->info.input_count : !d->info.output_count)
+            return PJMEDIA_EAUD_INVDEV;
+        *is_default = PJ_TRUE;
+        return PJ_SUCCESS;
+    }
+
+    ep = capture ? d->cap_id : d->pb_id;
+    if (!ep)
+        return PJMEDIA_EAUD_INVDEV;
+
+    ep_len = wcslen(ep);
+    if (ep_len >= len)
+        return PJ_ETOOSMALL;
+    pj_memcpy(buf, ep, (ep_len + 1) * sizeof(WCHAR));
+
+    return PJ_SUCCESS;
+}
+
 
 /* ---------------------------------------------------------------------------
  * Audio thread

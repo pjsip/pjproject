@@ -805,6 +805,7 @@ target_sources(pjmedia-audiodev
       include/pjmedia-audiodev/audiotest.h
       include/pjmedia-audiodev/config.h
       include/pjmedia-audiodev/errno.h
+      include/pjmedia-audiodev/wasapi.h
 )
 
 #
