@@ -346,6 +346,7 @@ pj_status_t pjsua_aud_subsys_init()
     param.bits_per_sample = pjsua_var.mconf_cfg.bits_per_sample;
     param.options = opt;
     param.worker_threads = pjsua_var.media_cfg.conf_threads-1;
+    param.worker_thread_prio = pjsua_var.media_cfg.conf_thread_prio;
 
     /* Init conference bridge. */
     status = pjmedia_conf_create2(pjsua_var.pool, &param, &pjsua_var.mconf);
