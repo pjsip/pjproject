@@ -35,15 +35,11 @@
     </license>
   </licenses>
 
-  <!--
-    Central wants a contactable developer. An <email> is conventional here and
-    is deliberately left out rather than guessed; add the address the project
-    wants published before the first release.
-  -->
   <developers>
     <developer>
       <id>pjsip</id>
       <name>PJSIP Team</name>
+      <email>contact@teluu.com</email>
       <organization>Teluu Inc.</organization>
       <organizationUrl>https://www.teluu.com</organizationUrl>
     </developer>

@@ -267,6 +267,5 @@ successor.
 What the script already produces, per Central's requirements: the AAR, a
 sources jar, a javadoc jar, a POM carrying the name, description, URL, licence,
 developer and SCM fields it insists on, and `.md5`/`.sha1` beside every file
-with `.sha256`/`.sha512` as extras. What is missing is a `.asc` per file, which
-needs the key above, and a `<developer><email>`, left blank rather than
-guessed.
+with `.sha256`/`.sha512` as extras. The one thing still missing is a `.asc`
+signature per file, which needs the release key above.
