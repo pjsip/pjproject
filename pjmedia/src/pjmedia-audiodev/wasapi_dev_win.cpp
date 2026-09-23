@@ -844,11 +844,13 @@ static void thread_release(struct wasapi_stream *s)
     SAFE_RELEASE(s->cap_client);
 }
 
-/* Device gone (e.g: USB unplugged): stop serving it until the application
- * recreates the stream. The application is notified with an event, as it
- * cannot tell from the callbacks alone that they will never come back. */
+static pj_status_t do_stop(struct wasapi_stream *s);
+
+/* Stop serving the device until the application recreates the stream, and say
+ * why: it cannot tell from the callbacks alone that they will never come
+ * back. */
 static void halt_stream(struct wasapi_stream *s, pjmedia_dir dir,
-                        const char *what, HRESULT hr)
+                        pj_status_t status)
 {
     pjmedia_event e;
     pj_timestamp *ts;
@@ -858,19 +860,28 @@ static void halt_stream(struct wasapi_stream *s, pjmedia_dir dir,
 
     s->halted = PJ_TRUE;
 
+    ts = (dir == PJMEDIA_DIR_PLAYBACK)? &s->pb_ts : &s->cap_ts;
+    pjmedia_event_init(&e, PJMEDIA_EVENT_AUD_DEV_ERROR, ts, &s->base);
+    e.data.aud_dev_err.dir = dir;
+    e.data.aud_dev_err.status = status;
+    e.data.aud_dev_err.id = (dir == PJMEDIA_DIR_PLAYBACK)? s->param.play_id :
+                                                           s->param.rec_id;
+    pjmedia_event_publish(NULL, &s->base, &e, PJMEDIA_EVENT_PUBLISH_DEFAULT);
+}
+
+/* The device failed, e.g: a USB headset was unplugged. */
+static void halt_stream_hr(struct wasapi_stream *s, pjmedia_dir dir,
+                           const char *what, HRESULT hr)
+{
+    if (s->halted)
+        return;
+
     if (hr == AUDCLNT_E_DEVICE_INVALIDATED) {
         PJ_LOG(2, (THIS_FILE, "WASAPI: %s: device removed", what));
     } else {
         log_hr(what, hr);
     }
-
-    ts = (dir == PJMEDIA_DIR_PLAYBACK)? &s->pb_ts : &s->cap_ts;
-    pjmedia_event_init(&e, PJMEDIA_EVENT_AUD_DEV_ERROR, ts, &s->base);
-    e.data.aud_dev_err.dir = dir;
-    e.data.aud_dev_err.status = PJMEDIA_EAUD_SYSERR;
-    e.data.aud_dev_err.id = (dir == PJMEDIA_DIR_PLAYBACK)? s->param.play_id :
-                                                           s->param.rec_id;
-    pjmedia_event_publish(NULL, &s->base, &e, PJMEDIA_EVENT_PUBLISH_DEFAULT);
+    halt_stream(s, dir, PJMEDIA_EAUD_SYSERR);
 }
 
 static void process_capture(struct wasapi_stream *s)
@@ -885,8 +896,8 @@ static void process_capture(struct wasapi_stream *s)
 
         hr = s->cap_capture->GetNextPacketSize(&packet);
         if (FAILED(hr)) {
-            halt_stream(s, PJMEDIA_DIR_CAPTURE,
-                        "capture GetNextPacketSize", hr);
+            halt_stream_hr(s, PJMEDIA_DIR_CAPTURE,
+                           "capture GetNextPacketSize", hr);
             return;
         }
         if (packet == 0)
@@ -896,7 +907,7 @@ static void process_capture(struct wasapi_stream *s)
         if (hr == AUDCLNT_S_BUFFER_EMPTY)
             return;
         if (FAILED(hr)) {
-            halt_stream(s, PJMEDIA_DIR_CAPTURE, "capture GetBuffer", hr);
+            halt_stream_hr(s, PJMEDIA_DIR_CAPTURE, "capture GetBuffer", hr);
             return;
         }
 
@@ -937,9 +948,10 @@ static void process_capture(struct wasapi_stream *s)
 
                 if (status != PJ_SUCCESS) {
                     s->cap_capture->ReleaseBuffer(frames);
-                    PJ_LOG(4, (THIS_FILE, "WASAPI: capture callback "
-                               "returned %d, stopping", status));
-                    s->halted = PJ_TRUE;
+                    PJ_PERROR(4, (THIS_FILE, status, "WASAPI: capture "
+                                  "callback failed, stopping"));
+                    do_stop(s);
+                    halt_stream(s, PJMEDIA_DIR_CAPTURE, status);
                     return;
                 }
 
@@ -962,7 +974,8 @@ static void process_playback(struct wasapi_stream *s)
 
     hr = s->pb_client->GetCurrentPadding(&padding);
     if (FAILED(hr)) {
-        halt_stream(s, PJMEDIA_DIR_PLAYBACK, "playback GetCurrentPadding", hr);
+        halt_stream_hr(s, PJMEDIA_DIR_PLAYBACK, "playback GetCurrentPadding",
+                       hr);
         return;
     }
     if (padding == 0 && s->pb_ts.u64 != 0)
@@ -977,7 +990,7 @@ static void process_playback(struct wasapi_stream *s)
         if (hr == AUDCLNT_E_BUFFER_TOO_LARGE)
             return;
         if (FAILED(hr)) {
-            halt_stream(s, PJMEDIA_DIR_PLAYBACK, "playback GetBuffer", hr);
+            halt_stream_hr(s, PJMEDIA_DIR_PLAYBACK, "playback GetBuffer", hr);
             return;
         }
 
@@ -997,9 +1010,10 @@ static void process_playback(struct wasapi_stream *s)
         padding += s->frame_frames;
 
         if (status != PJ_SUCCESS) {
-            PJ_LOG(4, (THIS_FILE, "WASAPI: playback callback returned %d, "
-                       "stopping", status));
-            s->halted = PJ_TRUE;
+            PJ_PERROR(4, (THIS_FILE, status, "WASAPI: playback callback "
+                          "failed, stopping"));
+            do_stop(s);
+            halt_stream(s, PJMEDIA_DIR_PLAYBACK, status);
             return;
         }
 
