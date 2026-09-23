@@ -954,6 +954,8 @@ static void ioqueue_on_accept_complete(pj_ioqueue_key_t *key,
 }
 
 
+#endif  /* PJ_HAS_TCP */
+
 PJ_DEF(pj_status_t) pj_activesock_start_connect( pj_activesock_t *asock,
                                                  pj_pool_t *pool,
                                                  const pj_sockaddr_t *remaddr,
@@ -967,6 +969,7 @@ PJ_DEF(pj_status_t) pj_activesock_start_connect( pj_activesock_t *asock,
     return pj_ioqueue_connect(asock->key, remaddr, addr_len);
 }
 
+#if PJ_HAS_TCP
 static void ioqueue_on_connect_complete(pj_ioqueue_key_t *key, 
                                         pj_status_t status)
 {

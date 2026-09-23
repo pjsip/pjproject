@@ -174,7 +174,6 @@ public:
                                  &addr, sizeof(addr));
     }
 
-#if PJ_HAS_TCP
     //
     // Start async connect()
     //
@@ -183,6 +182,7 @@ public:
         return pj_ioqueue_connect(key_, &addr, sizeof(addr));
     }
 
+#if PJ_HAS_TCP
     //
     // Start async accept().
     //
@@ -287,8 +287,13 @@ public:
     {
         cb_.on_read_complete    = &read_complete_cb;
         cb_.on_write_complete   = &write_complete_cb;
+#if PJ_HAS_TCP
         cb_.on_accept_complete  = &accept_complete_cb;
         cb_.on_connect_complete = &connect_complete_cb;
+#else
+        cb_.on_accept_complete  = NULL;
+        cb_.on_connect_complete = NULL;
+#endif
     }
 
     //
@@ -300,8 +305,13 @@ public:
     {
         cb_.on_read_complete    = &read_complete_cb;
         cb_.on_write_complete   = &write_complete_cb;
+#if PJ_HAS_TCP
         cb_.on_accept_complete  = &accept_complete_cb;
         cb_.on_connect_complete = &connect_complete_cb;
+#else
+        cb_.on_accept_complete  = NULL;
+        cb_.on_connect_complete = NULL;
+#endif
 
         create(pool, max_fd, max_timer_entries);
     }
@@ -482,6 +492,7 @@ private:
         handler->on_write_complete((Pj_Async_Op*)op_key, bytes_sent);
     }
 
+#if PJ_HAS_TCP
     //
     // Static accept completion callback.
     //
@@ -507,6 +518,7 @@ private:
 
         handler->on_connect_complete(status);
     }
+#endif  /* PJ_HAS_TCP */
 
 };
 

@@ -193,7 +193,12 @@ PJ_INLINE(int) key_has_pending_accept(pj_ioqueue_key_t *key)
 
 PJ_INLINE(int) key_has_pending_connect(pj_ioqueue_key_t *key)
 {
+#if PJ_HAS_TCP
     return key->connecting;
+#else
+    PJ_UNUSED_ARG(key);
+    return 0;
+#endif
 }
 
 
@@ -907,6 +912,7 @@ static pj_bool_t ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue,
 }
 
 
+#if PJ_HAS_TCP
 static pj_bool_t ioqueue_dispatch_exception_event( pj_ioqueue_t *ioqueue,
                                                    pj_ioqueue_key_t *h )
 {
@@ -974,6 +980,7 @@ static pj_bool_t ioqueue_dispatch_exception_event( pj_ioqueue_t *ioqueue,
 
     return PJ_TRUE;
 }
+#endif  /* PJ_HAS_TCP */
 
 /*
  * pj_ioqueue_recv()
@@ -1507,6 +1514,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
     return PJ_EPENDING;
 }
 
+#endif  /* PJ_HAS_TCP */
+
 /*
  * Initiate overlapped connect() operation (well, it's non-blocking actually,
  * since there's no overlapped version of connect()).
@@ -1524,9 +1533,11 @@ PJ_DEF(pj_status_t) pj_ioqueue_connect( pj_ioqueue_key_t *key,
     if (IS_CLOSING(key))
         return PJ_ECANCELLED;
 
+#if PJ_HAS_TCP
     /* Check if socket has not been marked for connecting */
     if (key->connecting != 0)
         return PJ_EPENDING;
+#endif
     
     status = pj_sock_connect(key->fd, addr, addrlen);
     if (status == PJ_SUCCESS) {
@@ -1534,6 +1545,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_connect( pj_ioqueue_key_t *key,
         return PJ_SUCCESS;
     } else {
         if (status == PJ_STATUS_FROM_OS(PJ_BLOCKING_CONNECT_ERROR_VAL)) {
+#if PJ_HAS_TCP
             /* Pending! */
             pj_ioqueue_lock_key(key);
             /* Check again. Handle may have been closed after the previous 
@@ -1548,13 +1560,22 @@ PJ_DEF(pj_status_t) pj_ioqueue_connect( pj_ioqueue_key_t *key,
                                 WRITEABLE_EVENT|EXCEPTION_EVENT);
             pj_ioqueue_unlock_key(key);
             return PJ_EPENDING;
+#else
+            /* Only a connection oriented socket can report that connect()
+             * is still in progress, and the asynchronous completion is
+             * compiled out here, so no callback will ever come. Say so
+             * loudly rather than returning a "would block" status, which
+             * the caller would read as "connecting asynchronously".
+             */
+            pj_assert(!"asynchronous connect() requires PJ_HAS_TCP");
+            return PJ_ENOTSUP;
+#endif
         } else {
             /* Error! */
             return status;
         }
     }
 }
-#endif  /* PJ_HAS_TCP */
 
 
 PJ_DEF(void) pj_ioqueue_op_key_init( pj_ioqueue_op_key_t *op_key,
@@ -1644,12 +1665,14 @@ PJ_DEF(pj_status_t) pj_ioqueue_post_completion( pj_ioqueue_key_t *key,
         op_rec = op_rec->next;
     }
 
+#if PJ_HAS_TCP
     /* Clear connecting operation. */
     if (key->connecting) {
         key->connecting = 0;
         ioqueue_remove_from_set2(key->ioqueue, key,
                                  WRITEABLE_EVENT|EXCEPTION_EVENT);
     }
+#endif
 
     pj_ioqueue_unlock_key(key);
     
@@ -1724,7 +1747,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_clear_key( pj_ioqueue_key_t *key )
     } while (0);
 #endif
 
+#if PJ_HAS_TCP
     key->connecting = 0;
+#endif
 
     /* Remove key from sets */
     ioqueue_remove_from_set2(key->ioqueue, key,

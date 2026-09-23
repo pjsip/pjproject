@@ -956,7 +956,10 @@ on_error:
  */
 PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 {
-    pj_fd_set_t rfdset, wfdset, xfdset;
+    pj_fd_set_t rfdset, wfdset;
+#if PJ_HAS_TCP
+    pj_fd_set_t xfdset;
+#endif
     int nfds;
     int i, count, event_cnt, processed_cnt;
     pj_ioqueue_key_t *h;
@@ -1003,8 +1006,6 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     pj_memcpy(&wfdset, &ioqueue->wfdset, sizeof(pj_fd_set_t));
 #if PJ_HAS_TCP
     pj_memcpy(&xfdset, &ioqueue->xfdset, sizeof(pj_fd_set_t));
-#else
-    PJ_FD_ZERO(&xfdset);
 #endif
 
 #if VALIDATE_FD_SET
@@ -1021,8 +1022,11 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     __try {
 #endif
 
-    count = pj_sock_select(nfds+1, &rfdset, &wfdset, &xfdset, 
-                           timeout);
+#if PJ_HAS_TCP
+    count = pj_sock_select(nfds+1, &rfdset, &wfdset, &xfdset, timeout);
+#else
+    count = pj_sock_select(nfds+1, &rfdset, &wfdset, NULL, timeout);
+#endif
 
 #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
     /* Ignore Invalid Handle Exception raised by select().*/
@@ -1122,10 +1126,20 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
                 if (ioqueue_dispatch_write_event(ioqueue, event[i].key))
                     ++processed_cnt;
                 break;
+#if PJ_HAS_TCP
             case EXCEPTION_EVENT:
                 if (ioqueue_dispatch_exception_event(ioqueue, event[i].key))
                     ++processed_cnt;
                 break;
+#else
+            case EXCEPTION_EVENT:
+                /* Not reachable: only a key with a pending connect()
+                 * queues this, and without TCP pj_ioqueue_connect() never
+                 * leaves a key in that state.
+                 */
+                pj_assert(!"Invalid event!");
+                break;
+#endif
             case NO_EVENT:
                 pj_assert(!"Invalid event!");
                 break;

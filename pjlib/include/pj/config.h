@@ -788,6 +788,20 @@
 #endif
 
 
+/* With PJ_HAS_TCP disabled the ioqueue only supports a connect() that
+ * completes immediately, which is all a datagram socket ever needs. The UWP
+ * backend however performs even a datagram connect() asynchronously, via
+ * DatagramSocket::ConnectAsync(), so it does need the asynchronous connect
+ * completion and therefore requires TCP to be enabled. Reject the
+ * combination here, where both macros are final regardless of whether they
+ * came from autoconf, CMake or config_site.h.
+ */
+#if defined(PJ_HAS_TCP) && PJ_HAS_TCP==0 && \
+    PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_UWP
+#   error PJ_IOQUEUE_IMP_UWP requires PJ_HAS_TCP
+#endif
+
+
 /**
  * Constants for declaring the maximum handles that can be supported by
  * a single IOQ framework. This constant might not be relevant to the 
@@ -1292,6 +1306,17 @@
 #   else
 #       define PJ_SSL_SOCK_IMP              PJ_SSL_SOCK_IMP_OPENSSL
 #   endif
+#endif
+
+
+/* Secure socket is connection oriented, i.e. it is implemented on top of
+ * TCP, so it cannot be built when TCP support is disabled. Reject the
+ * combination here, where both macros are final regardless of whether they
+ * came from autoconf, CMake or config_site.h.
+ */
+#if defined(PJ_HAS_TCP) && PJ_HAS_TCP==0 && \
+    defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK!=0
+#   error PJ_HAS_SSL_SOCK requires PJ_HAS_TCP
 #endif
 
 

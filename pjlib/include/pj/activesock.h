@@ -563,10 +563,16 @@ PJ_DECL(pj_status_t) pj_activesock_sendto(pj_activesock_t *asock,
 PJ_DECL(pj_status_t) pj_activesock_start_accept(pj_activesock_t *asock,
                                                 pj_pool_t *pool);
 
+#endif  /* PJ_HAS_TCP */
+
 /**
  * Starts asynchronous socket connect() operation for this socket. Once
  * the connection is done (either successfully or not), the 
  * \a on_connect_complete() callback will be called.
+ *
+ * Note that connect() is also applicable to datagram (e.g. UDP) socket, in
+ * which case it merely sets the default destination address of the socket,
+ * hence this function is available regardless of the setting of PJ_HAS_TCP.
  *
  * @param asock     The active socket.
  * @param pool      The pool to allocate some internal data for the
@@ -584,9 +590,6 @@ PJ_DECL(pj_status_t) pj_activesock_start_connect(pj_activesock_t *asock,
                                                  pj_pool_t *pool,
                                                  const pj_sockaddr_t *remaddr,
                                                  int addr_len);
-
-
-#endif  /* PJ_HAS_TCP */
 
 /**
  * @}

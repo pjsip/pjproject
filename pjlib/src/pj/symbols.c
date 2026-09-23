@@ -102,8 +102,8 @@ PJ_EXPORT_SYMBOL(pj_ioqueue_send)
 PJ_EXPORT_SYMBOL(pj_ioqueue_sendto)
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP != 0
 PJ_EXPORT_SYMBOL(pj_ioqueue_accept)
-PJ_EXPORT_SYMBOL(pj_ioqueue_connect)
 #endif
+PJ_EXPORT_SYMBOL(pj_ioqueue_connect)
 
 /*
  * list.h

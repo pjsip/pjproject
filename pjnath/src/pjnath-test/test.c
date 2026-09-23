@@ -253,9 +253,12 @@ static int test_inner(int argc, char *argv[])
 
 #if INCLUDE_TURN_SOCK_TEST
     UT_ADD_TEST1(&test_app.ut_app, turn_sock_test, (void*)(intptr_t)0, 0);
+#if PJ_HAS_TCP
+    /* TURN over TCP and TLS need a TCP test server */
     UT_ADD_TEST1(&test_app.ut_app, turn_sock_test, (void*)(intptr_t)1, 0);
     UT_ADD_TEST1(&test_app.ut_app, turn_sock_test, (void*)(intptr_t)2, 0);
-#endif
+#endif  /* PJ_HAS_TCP */
+#endif  /* INCLUDE_TURN_SOCK_TEST */
 
 #if INCLUDE_CONCUR_TEST
     UT_ADD_TEST(&test_app.ut_app, ice_conc_test, 0);

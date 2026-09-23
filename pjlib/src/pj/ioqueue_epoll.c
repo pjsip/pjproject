@@ -934,7 +934,7 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
              * connecting, report it as such.  If not, just report it as a
              * read event and the higher layers will handle it.
              */
-            if (h->connecting) {
+            if (key_has_pending_connect(h)) {
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
                 increment_counter(h);
 #endif
@@ -1012,10 +1012,20 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
                                                           queue[i].key);
 
                 break;
+#if PJ_HAS_TCP
             case EXCEPTION_EVENT:
                 event_done = ioqueue_dispatch_exception_event(ioqueue,
                                                               queue[i].key);
                 break;
+#else
+            case EXCEPTION_EVENT:
+                /* Not reachable: only a key with a pending connect()
+                 * queues this, and without TCP pj_ioqueue_connect() never
+                 * leaves a key in that state.
+                 */
+                pj_assert(!"Invalid event!");
+                break;
+#endif
             case NO_EVENT:
                 pj_assert(!"Invalid event!");
                 break;

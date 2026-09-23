@@ -43,6 +43,9 @@
 
 #endif
 
+/* The telnet front end is a TCP server, hence it needs TCP support. */
+#if PJ_HAS_TCP
+
 #define CLI_TELNET_BUF_SIZE 256
 
 #define CUT_MSG "<..data truncated..>\r\n"
@@ -2038,3 +2041,43 @@ PJ_DEF(pj_status_t) pj_cli_telnet_get_info(pj_cli_front_end *fe,
 
     return PJ_SUCCESS;
 }
+
+#else   /* PJ_HAS_TCP */
+
+/*
+ * Stubs for when TCP support is disabled.
+ */
+
+#define THIS_FILE   "cli_telnet.c"
+
+PJ_DEF(void) pj_cli_telnet_cfg_default(pj_cli_telnet_cfg *param)
+{
+    pj_assert(param);
+
+    pj_bzero(param, sizeof(*param));
+}
+
+PJ_DEF(pj_status_t) pj_cli_telnet_create(pj_cli_t *cli,
+                                         pj_cli_telnet_cfg *param,
+                                         pj_cli_front_end **p_fe)
+{
+    PJ_UNUSED_ARG(cli);
+    PJ_UNUSED_ARG(param);
+    PJ_UNUSED_ARG(p_fe);
+
+    PJ_LOG(1,(THIS_FILE, "Telnet CLI front end is not available because "
+                         "the library is built with PJ_HAS_TCP=0"));
+
+    return PJ_ENOTSUP;
+}
+
+PJ_DEF(pj_status_t) pj_cli_telnet_get_info(pj_cli_front_end *fe,
+                                           pj_cli_telnet_info *info)
+{
+    PJ_UNUSED_ARG(fe);
+    PJ_UNUSED_ARG(info);
+
+    return PJ_ENOTSUP;
+}
+
+#endif  /* PJ_HAS_TCP */

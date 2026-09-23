@@ -675,7 +675,10 @@ static int many_handles_test(const pj_ioqueue_cfg *cfg)
     return 0;
 }
 
-#if PJ_HAS_THREADS
+/* parallel_recv_test() needs a stream socket pair, so it is only
+ * available when TCP is enabled.
+ */
+#if PJ_HAS_THREADS && PJ_HAS_TCP
 typedef struct parallel_recv_data
 {
     unsigned   buffer;
@@ -916,7 +919,7 @@ on_return:
     return retcode;
 }
 
-#endif /* PJ_HAS_THREADS */
+#endif /* PJ_HAS_THREADS && PJ_HAS_TCP */
 
 /*
  * Multi-operation test.
@@ -1278,7 +1281,7 @@ int udp_ioqueue_test()
         if (rc) return rc;
     }
 
-#if PJ_HAS_THREADS
+#if PJ_HAS_THREADS && PJ_HAS_TCP
     for (i=0; i<(int)PJ_ARRAY_SIZE(epoll_flags); ++i) {
         pj_ioqueue_cfg cfg;
 

@@ -738,6 +738,7 @@ on_error:
     return retval;
 }
 
+#if PJ_HAS_TCP
 static int tcp_test(void)
 {
     pj_sock_t cs, ss;
@@ -768,6 +769,7 @@ static int tcp_test(void)
 
     return retval;
 }
+#endif  /* PJ_HAS_TCP */
 
 static int ioctl_test(void)
 {
@@ -1002,9 +1004,11 @@ int sock_test()
     if (rc != 0)
         return rc;
 
+#if PJ_HAS_TCP
     rc = tcp_test();
     if (rc != 0)
         return rc;
+#endif
 
     rc = socketpair_test();
     if (rc != 0)

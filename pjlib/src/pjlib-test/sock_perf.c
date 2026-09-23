@@ -170,10 +170,12 @@ int sock_perf_test(void)
     PJ_LOG(3,("", "....bandwidth UDP = %d KB/s", bandwidth));
 #endif
 
+#if PJ_HAS_TCP
     /* Benchmarking TCP */
     rc = sock_producer_consumer(pj_SOCK_STREAM(), 512, LOOP, &bandwidth);
     if (rc != 0) return rc;
     PJ_LOG(3,("", "....bandwidth TCP = %d KB/s", bandwidth));
+#endif
 
     return rc;
 }
