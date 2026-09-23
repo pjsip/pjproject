@@ -1,6 +1,18 @@
 /* To suppress warning: label ‘TODO*’ defined but not used [-Wunused-label] */
 #define PJ_TODO(x)
 
+/* Exercise both Windows audio backends. WMME is enabled by default, WASAPI is
+ * not on the desktop, so without this the desktop WASAPI backend would not
+ * even be compiled by the tests. aud_dev_test then initializes whichever of
+ * them finds devices at run time.
+ */
+#if defined(PJ_WIN32) && PJ_WIN32!=0 && \
+    !(defined(PJ_WIN32_UWP) && PJ_WIN32_UWP!=0) && \
+    !(defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8!=0)
+#   define PJMEDIA_AUDIO_DEV_HAS_WMME           1
+#   define PJMEDIA_AUDIO_DEV_HAS_WASAPI         1
+#endif
+
 /* Temp workaround for MacOS rwmutex deadlock */
 #if defined(PJ_DARWINOS) && PJ_DARWINOS
     #undef PJ_EMULATE_RWMUTEX

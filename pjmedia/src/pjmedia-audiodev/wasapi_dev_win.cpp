@@ -27,6 +27,7 @@
  * two files is built, depending on the platform. */
 #if defined(PJMEDIA_AUDIO_DEV_HAS_WASAPI) && \
     PJMEDIA_AUDIO_DEV_HAS_WASAPI != 0 && \
+    defined(PJ_WIN32) && PJ_WIN32 != 0 && \
     !(defined(PJ_WIN32_UWP) && PJ_WIN32_UWP != 0) && \
     !(defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8 != 0)
 
