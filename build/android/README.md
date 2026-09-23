@@ -155,7 +155,11 @@ pom.xml.in          template for the published POM
 Output lands in `out-android/dist`: the AAR, sources and javadoc jars, a POM
 and `SHA256SUMS`. Pinned sources and per-ABI dependency builds are cached
 under `out-android/src` and `out-android/deps`, so a second run only rebuilds
-PJSIP itself.
+PJSIP itself. The cache is keyed on the source release, the API level and the
+NDK revision, so changing any of them rebuilds rather than quietly linking the
+previous build's libraries. `out-android/dist` is cleared on each run, so a
+version change cannot leave the previous release's files to be checksummed and
+published alongside the new one.
 
 The build is out of tree. Nothing in the working tree is touched except
 `pjlib/include/pj/config_site.h`, which is backed up and restored on exit. It
@@ -168,9 +172,11 @@ The AAR carries exactly one native library per ABI and nothing else:
 
 ```
 pjsua2-<version>.aar
-├── AndroidManifest.xml
+├── AndroidManifest.xml  minSdkVersion generated from ANDROID_API
 ├── classes.jar          org.pjsip.pjsua2 + the org.pjsip helpers
 ├── proguard.txt
+├── META-INF/NOTICE      what is bundled, and under what terms
+├── META-INF/licenses/   the full text of each
 └── jni/<abi>/libpjsua2.so
 ```
 
@@ -189,7 +195,21 @@ exactly what a WebRTC-based SDK in the same app also carries, and Android's
 linker resolves such a clash by picking one definition for everybody rather
 than by failing.
 
-Both properties are checked on the built artifact, not assumed.
+Both properties are checked on the built artifact, not assumed, along with
+16&nbsp;KB page alignment -- which the NDK only began defaulting to in r28,
+while this build accepts whatever NDK it is pointed at.
+
+The manifest's `minSdkVersion` is generated from `ANDROID_API` rather than
+written down, so a build at a higher API cannot ship native code using symbols
+the manifest still says are safe to install on 23.
+
+### Licences
+
+An application shipping this artifact redistributes PJSIP and eight
+third-party projects in binary form. The AAR carries `META-INF/NOTICE` and the
+full text of every licence beside it; the POM can only name one licence, and
+names PJSIP's. A missing licence file stops the build rather than producing an
+artifact that cannot lawfully be redistributed.
 
 ### What the build contains
 
@@ -203,6 +223,7 @@ Upstream defaults apply except where named here or passed as a CMake option in
 | Video | MediaCodec, camera capture, OpenGL ES renderer |
 | Audio devices | Oboe, and the Java device |
 | Echo cancellation | WebRTC AEC3 |
+| Resampling | Speex's resampler -- see below |
 | Security | SRTP, and TLS over the bundled OpenSSL |
 
 TLS is why OpenSSL is bundled at all: Android has no system OpenSSL and
@@ -218,10 +239,11 @@ Network framework and `transport_srtp_dtls.c` is OpenSSL-only.
 
 Excluded for licensing rather than for any technical reason:
 
-| Codec | Why |
+| Component | Why |
 |---|---|
 | AMR-NB, AMR-WB (opencore) | patent encumbered |
 | G.729 (bcg729) | LGPL; static linking would impose a relink obligation on every consumer |
+| libresample | LGPL 2.1, for exactly that reason. The only exclusion here that is not a codec, and the easiest to ship by accident, because it is the upstream default for `PJMEDIA_WITH_RESAMPLE`; the build sets `speex` instead |
 | G.722.1 | licence encumbered, and its wrapper is off by default so the omission is easy to miss |
 | SILK | disabled at configure time |
 | Lyra | disabled at configure time |

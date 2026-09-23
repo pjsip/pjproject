@@ -1,0 +1,39 @@
+PJSUA2 for Android
+Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
+
+This artifact is a binary distribution of PJSIP together with several
+third-party projects that are statically linked into libpjsua2.so. Each
+carries its own terms; the full texts are in META-INF/licenses/ beside this
+file.
+
+PJSIP itself is distributed under the GNU General Public License version 2 or
+later, and is also available under a commercial licence from Teluu for use in
+applications that cannot meet the GPL's terms. See
+https://www.pjsip.org/licensing.htm
+
+Statically linked into libpjsua2.so
+-----------------------------------
+
+  OpenSSL              Apache License 2.0            LICENSE.openssl
+  Opus                 BSD 3-Clause                  LICENSE.opus
+  Oboe                 Apache License 2.0            LICENSE.oboe
+  libsrtp              BSD 3-Clause                  LICENSE.libsrtp
+  libyuv               BSD 3-Clause                  LICENSE.libyuv
+                                                     LICENSE.libyuv-third-party
+  WebRTC (AEC)         BSD 3-Clause                  LICENSE.webrtc
+                                                     LICENSE.webrtc-third-party
+  WebRTC AEC3          BSD 3-Clause                  LICENSE.webrtc-aec3
+  Speex / SpeexDSP     BSD 3-Clause                  LICENSE.speex
+  GSM 06.10            Permissive (TU Berlin)        LICENSE.gsm
+
+Resampling uses Speex's resampler rather than the bundled libresample, which
+is LGPL 2.1: static linking it would place a relink obligation on every
+application shipping this artifact.
+
+iLBC ships no separate licence file; its terms are stated in the headers of
+the sources under third_party/ilbc in the pjproject repository, and are the
+Global IP Solutions BSD-style grant.
+
+Audio and video codecs provided by the Android platform through MediaCodec are
+not part of this artifact and are covered by the terms of the device they run
+on.

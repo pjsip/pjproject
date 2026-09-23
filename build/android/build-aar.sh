@@ -65,6 +65,34 @@ SITE_EXISTED=
 die() { echo "error: $*" >&2; exit 1; }
 need() { command -v "$1" >/dev/null || die "$1 is required"; }
 
+# The NDK's own version, so a dependency built with a different one is not
+# silently reused.
+ndk_revision() {
+    sed -n 's/^Pkg.Revision *= *//p' "$ANDROID_NDK_ROOT/source.properties" |
+        tr -d '[:space:]'
+}
+
+# A dependency prefix is reusable only if it was built from the same source
+# release, for the same API level, with the same NDK. Keyed on the archive
+# existing alone -- as this was -- a bumped pin or a changed ANDROID_API would
+# silently link yesterday's library into today's artifact.
+dep_fresh() {
+    local abi=$1 name=$2 want=$3
+    local stamp=$DEPS/$abi/.stamp-$name
+    [ -f "$stamp" ] || return 1
+    [ "$(cat "$stamp")" = "$want" ]
+}
+
+dep_stamp() {
+    local abi=$1 name=$2 want=$3
+    mkdir -p "$DEPS/$abi"
+    printf '%s\n' "$want" >"$DEPS/$abi/.stamp-$name"
+}
+
+dep_key() {
+    echo "$1 api=$ANDROID_API ndk=$(ndk_revision)"
+}
+
 # macOS ships shasum, most Linux distributions the coreutils *sum tools;
 # CI runs on Linux.
 hash_of() {
@@ -172,6 +200,23 @@ fetch() {
     mv -f "$out.part" "$out"
 }
 
+# Unpack a pinned tarball into a source tree known to be pristine.
+#
+# All three dependencies are configured out of tree, so the source stays
+# clean and can be reused -- but only if nothing has ever configured it in
+# place. OpenSSL in particular fails with "no such library is built" when it
+# finds another configuration's residue beside its sources, so reuse is gated
+# on a marker this function writes rather than on the directory existing.
+extract_pristine() {
+    local tarball=$1 src=$2
+
+    [ -f "$src/.pjsip-pristine" ] && return 0
+    rm -rf "$src"
+    tar xzf "$tarball" -C "$(dirname "$src")"
+    [ -d "$src" ] || die "$(basename "$tarball") did not unpack to $(basename "$src")"
+    touch "$src/.pjsip-pristine"
+}
+
 openssl_target() {
     case $1 in
     arm64-v8a)   echo android-arm64 ;;
@@ -186,12 +231,14 @@ build_openssl() {
     local abi=$1 prefix=$DEPS/$abi
     local src=$SRCDIR/openssl-$OPENSSL_VERSION
     local bld=$STAGE/$abi/openssl
+    local key
+    key=$(dep_key "openssl-$OPENSSL_VERSION")
 
-    [ -f "$prefix/lib/libssl.a" ] && return 0
+    [ -f "$prefix/lib/libssl.a" ] && dep_fresh "$abi" openssl "$key" && return 0
 
     fetch "$OPENSSL_URL" "$OPENSSL_SHA256" \
           "$SRCDIR/openssl-$OPENSSL_VERSION.tar.gz"
-    [ -d "$src" ] || tar xzf "$SRCDIR/openssl-$OPENSSL_VERSION.tar.gz" -C "$SRCDIR"
+    extract_pristine "$SRCDIR/openssl-$OPENSSL_VERSION.tar.gz" "$src"
 
     echo "==> building OpenSSL $OPENSSL_VERSION for $abi"
     rm -rf "$bld"
@@ -213,17 +260,20 @@ build_openssl() {
         || { tail -20 "$STAGE/$abi-openssl.log"; die "OpenSSL build failed for $abi"; }
 
     [ -f "$prefix/lib/libssl.a" ] || die "OpenSSL produced no static library for $abi"
+    dep_stamp "$abi" openssl "$key"
 }
 
 build_opus() {
     local abi=$1 prefix=$DEPS/$abi
     local src=$SRCDIR/opus-$OPUS_VERSION
     local bld=$STAGE/$abi/opus
+    local key
+    key=$(dep_key "opus-$OPUS_VERSION")
 
-    [ -f "$prefix/lib/libopus.a" ] && return 0
+    [ -f "$prefix/lib/libopus.a" ] && dep_fresh "$abi" opus "$key" && return 0
 
     fetch "$OPUS_URL" "$OPUS_SHA256" "$SRCDIR/opus-$OPUS_VERSION.tar.gz"
-    [ -d "$src" ] || tar xzf "$SRCDIR/opus-$OPUS_VERSION.tar.gz" -C "$SRCDIR"
+    extract_pristine "$SRCDIR/opus-$OPUS_VERSION.tar.gz" "$src"
 
     echo "==> building Opus $OPUS_VERSION for $abi"
     rm -rf "$bld"
@@ -243,17 +293,20 @@ build_opus() {
         || { tail -20 "$STAGE/$abi-opus.log"; die "Opus build failed for $abi"; }
 
     [ -f "$prefix/lib/libopus.a" ] || die "Opus produced no static library for $abi"
+    dep_stamp "$abi" opus "$key"
 }
 
 build_oboe() {
     local abi=$1 prefix=$DEPS/$abi
     local src=$SRCDIR/oboe-$OBOE_VERSION
     local bld=$STAGE/$abi/oboe
+    local key
+    key=$(dep_key "oboe-$OBOE_VERSION")
 
-    [ -f "$prefix/lib/$abi/liboboe.a" ] && return 0
+    [ -f "$prefix/lib/$abi/liboboe.a" ] && dep_fresh "$abi" oboe "$key" && return 0
 
     fetch "$OBOE_URL" "$OBOE_SHA256" "$SRCDIR/oboe-$OBOE_VERSION.tar.gz"
-    [ -d "$src" ] || tar xzf "$SRCDIR/oboe-$OBOE_VERSION.tar.gz" -C "$SRCDIR"
+    extract_pristine "$SRCDIR/oboe-$OBOE_VERSION.tar.gz" "$src"
 
     echo "==> building Oboe $OBOE_VERSION for $abi"
     rm -rf "$bld"
@@ -272,6 +325,7 @@ build_oboe() {
 
     [ -f "$prefix/lib/$abi/liboboe.a" ] \
         || die "Oboe produced no static library for $abi"
+    dep_stamp "$abi" oboe "$key"
 }
 
 # ##############################################################################
@@ -306,6 +360,7 @@ build_abi() {
         \
         -DPJMEDIA_WITH_VIDEO=ON \
         -DPJMEDIA_WITH_SRTP=ON \
+        -DPJMEDIA_WITH_RESAMPLE=speex \
         -DPJMEDIA_WITH_OPUS_CODEC=ON \
         -DPJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC=ON \
         -DPJMEDIA_WITH_AUDIODEV_OBOE=ON \
@@ -347,6 +402,7 @@ verify_config() {
 
     for opt in PJLIB_WITH_SSL:openssl \
                PJMEDIA_WITH_OPUS_CODEC:ON \
+               PJMEDIA_WITH_RESAMPLE:speex \
                PJMEDIA_WITH_SRTP:ON \
                PJMEDIA_WITH_VIDEO:ON \
                PJMEDIA_WITH_AUDIODEV_OBOE:ON \
@@ -363,6 +419,10 @@ verify_config() {
     # Excluded for licensing. Disabling the wrapper is not enough on its own
     # -- third_party still builds and links the library -- so these are the
     # configure-time switches that keep the object code out entirely.
+    #
+    # The resampler is Speex's for the same reason: the bundled libresample
+    # is LGPL 2.1, and static linking it would put the relink obligation on
+    # every consumer, which is exactly why bcg729 is excluded below.
     for opt in PJMEDIA_WITH_OPENCORE_AMRNB_CODEC \
                PJMEDIA_WITH_OPENCORE_AMRWB_CODEC \
                PJMEDIA_WITH_G7221_CODEC \
@@ -396,14 +456,53 @@ verify_artifact() {
     local ndk_bin=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/$(host_tag)/bin
     local fail=0 n lib
 
-    # Only the JNI entry points and JNI_OnLoad. Anything else means the
-    # version script stopped being applied, and the library would start
-    # exporting the bundled third-party code again.
-    n=$("$ndk_bin/llvm-nm" -D --defined-only "$so" | grep -vc '^.* Java_org_pjsip')
-    [ "$n" -eq 1 ] || {
-        echo "error: $abi: $n non-JNI exported symbols, expected 1 (JNI_OnLoad)" >&2
+    # The exported set has to be exactly JNI_OnLoad plus the entry points, and
+    # all three parts of that are worth asserting separately. Counting "things
+    # that are not Java_org_pjsip" and demanding one would also accept a
+    # library exporting JNI_OnLoad and nothing else, or one exporting some
+    # unrelated symbol alongside the entry points.
+    local exported
+    exported=$("$ndk_bin/llvm-nm" -D --defined-only "$so" | awk '{print $NF}')
+
+    # A case, not `grep -q`: grep exits on the first match, echo then takes
+    # SIGPIPE, and pipefail turns a successful match into a failed pipeline.
+    case $'\n'"$exported"$'\n' in
+    *$'\n'JNI_OnLoad$'\n'*) ;;
+    *)
+        echo "error: $abi: JNI_OnLoad is not exported" >&2
+        fail=1
+        ;;
+    esac
+
+    n=$(echo "$exported" | grep -c '^Java_org_pjsip_' || true)
+    [ "$n" -ge 1000 ] || {
+        echo "error: $abi: only $n JNI entry points exported, expected the full binding" >&2
         fail=1
     }
+
+    local extra
+    extra=$(echo "$exported" | grep -v '^Java_org_pjsip_' | grep -vx 'JNI_OnLoad' || true)
+    [ -z "$extra" ] || {
+        echo "error: $abi: unexpected exported symbols:" >&2
+        echo "$extra" | sed 's/^/  /' >&2
+        fail=1
+    }
+
+    # Android 15 requires a 16 KB page size, and Google Play requires it of
+    # new uploads. The NDK only began defaulting to it in r28, and this build
+    # accepts whatever NDK it is pointed at, so check the property rather than
+    # the toolchain version: every loadable segment must be aligned to at
+    # least 0x4000.
+    local align
+    for align in $("$ndk_bin/llvm-readelf" -l "$so" |
+                   awk '$1 == "LOAD" { print $NF }'); do
+        [ "$((align))" -ge 16384 ] || {
+            echo "error: $abi: a LOAD segment is aligned to $align, need 0x4000" >&2
+            echo "  the NDK in use may predate r28; 16 KB alignment is required" >&2
+            fail=1
+            break
+        }
+    done
 
     # Every dependency has to be part of Android itself. Anything else --
     # liboboe.so, libc++_shared.so -- is a library the AAR does not ship and
@@ -484,6 +583,59 @@ pj_version() {
     make -s -f "$mk" print
 }
 
+# Every licence covering something linked into the shipped library.
+#
+# The artifact is a binary redistribution of PJSIP and of eight third-party
+# projects, each with its own terms and attribution requirement. The POM can
+# only name one licence, and names PJSIP's, so the texts travel inside the
+# AAR instead. Missing any of them is a compliance failure rather than an
+# inconvenience, so an absent file stops the build.
+stage_licenses() {
+    local root=$1
+    local dir=$root/META-INF/licenses
+    local src dest missing=
+
+    mkdir -p "$dir"
+
+    # name|path pairs, relative to the source tree unless absolute
+    local entries="
+pjsip|$PJDIR/COPYING
+libsrtp|$PJDIR/third_party/srtp/LICENSE
+libyuv|$PJDIR/third_party/yuv/LICENSE
+libyuv-third-party|$PJDIR/third_party/yuv/LICENSE_THIRD_PARTY
+webrtc|$PJDIR/third_party/webrtc/LICENSE
+webrtc-third-party|$PJDIR/third_party/webrtc/LICENSE_THIRD_PARTY
+webrtc-aec3|$PJDIR/third_party/webrtc_aec3/LICENSE
+speex|$PJDIR/third_party/speex/COPYING
+gsm|$PJDIR/third_party/gsm/COPYRIGHT
+openssl|$SRCDIR/openssl-$OPENSSL_VERSION/LICENSE.txt
+oboe|$SRCDIR/oboe-$OBOE_VERSION/LICENSE
+"
+
+    local line name
+    for line in $entries; do
+        name=${line%%|*}
+        src=${line#*|}
+        if [ -f "$src" ]; then
+            cp "$src" "$dir/LICENSE.$name"
+        else
+            missing="$missing  $name ($src)"$'\n'
+        fi
+    done
+
+    # Opus names its licence differently across releases.
+    for src in "$SRCDIR/opus-$OPUS_VERSION/COPYING" \
+               "$SRCDIR/opus-$OPUS_VERSION/LICENSE"; do
+        [ -f "$src" ] && { cp "$src" "$dir/LICENSE.opus"; break; }
+    done
+    [ -f "$dir/LICENSE.opus" ] || missing="$missing  opus"$'\n'
+
+    [ -z "$missing" ] || die "licence files are missing, refusing to package:
+$missing"
+
+    cp "$SELF_DIR/NOTICE" "$root/META-INF/NOTICE"
+}
+
 # An AAR is a zip with a fixed layout, so it is assembled here rather than by
 # Gradle. That keeps the distribution independent of the Android Gradle plugin
 # version, which pins its own NDK and CMake and would otherwise decide what
@@ -496,14 +648,21 @@ package_aar() {
     echo "==> packaging AAR"
     rm -rf "$root"
     mkdir -p "$root/jni"
-    cp "$SELF_DIR/AndroidManifest.xml" "$root/AndroidManifest.xml"
+    # The manifest's minimum has to be the one the libraries were built for.
+    sed -e "s|@MIN_SDK@|$ANDROID_API|g" \
+        "$SELF_DIR/AndroidManifest.xml.in" >"$root/AndroidManifest.xml"
     cp "$STAGE/classes.jar" "$root/classes.jar"
     cp "$SELF_DIR/proguard.txt" "$root/proguard.txt"
+    stage_licenses "$root"
     for abi in $ABIS; do
         mkdir -p "$root/jni/$abi"
         cp "$STAGE/jni/$abi/libpjsua2.so" "$root/jni/$abi/"
     done
 
+    # Cleared, not merely created: leftovers from a previous version would be
+    # picked up by the checksum pass below and published alongside this one.
+    # Only the output goes -- the dependency caches live elsewhere.
+    rm -rf "$DIST"
     mkdir -p "$DIST"
     (cd "$root" && zip -qr "$DIST/$ARTIFACT_ID-$version.aar" .)
     cp "$STAGE/$ARTIFACT_ID-sources.jar" "$DIST/$ARTIFACT_ID-$version-sources.jar"
