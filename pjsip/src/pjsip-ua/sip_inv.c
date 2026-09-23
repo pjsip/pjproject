@@ -3125,7 +3125,9 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(   pjsip_inv_session *inv,
         pjmedia_sdp_neg_get_state(inv->neg) == PJMEDIA_SDP_NEG_STATE_DONE)
     {
         struct tsx_inv_data *tsx_inv_data;
-        pjmedia_sdp_session *offer = (pjmedia_sdp_session*)local_sdp;
+        const pjmedia_sdp_session *offer = local_sdp;
+        pjmedia_sdp_session *new_offer = NULL;
+        pj_bool_t cb_called = PJ_FALSE;
         const pjmedia_sdp_session *local_offer = NULL;
 
         tsx_inv_data = (struct tsx_inv_data*)
@@ -3138,16 +3140,25 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(   pjsip_inv_session *inv,
             inv->invite_tsx->mod_data[mod_inv.mod.id] = tsx_inv_data;
         }
         if (tsx_inv_data && !tsx_inv_data->has_sdp) {
-            if (!offer && mod_inv.cb.on_create_offer)
-                (*mod_inv.cb.on_create_offer)(inv, &offer);
+            if (!offer && mod_inv.cb.on_create_offer) {
+                cb_called = PJ_TRUE;
+                (*mod_inv.cb.on_create_offer)(inv, &new_offer);
+                if (new_offer)
+                    offer = new_offer;
+            }
 
             if (offer) {
                 status = pjmedia_sdp_neg_modify_local_offer2(
                             inv->pool_prov, inv->neg,
                             inv->sdp_neg_flags, offer);
-            } else {
+            } else if (!cb_called) {
                 status = pjmedia_sdp_neg_send_local_offer(
                             inv->pool_prov, inv->neg, &local_offer);
+            } else {
+                /* App callback was invoked but did not provide a usable
+                 * offer; do not silently re-offer the stale active SDP.
+                 */
+                status = PJ_EINVALIDOP;
             }
 
             if (status != PJ_SUCCESS) {
