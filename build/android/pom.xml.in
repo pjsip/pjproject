@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Template for the published POM. build-aar.sh substitutes the @...@ fields.
+
+  Maven Central requires name, description, url, licences, developers and scm
+  on every artifact, and rejects a release that is missing any of them.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>@GROUP_ID@</groupId>
+  <artifactId>@ARTIFACT_ID@</artifactId>
+  <version>@VERSION@</version>
+  <packaging>aar</packaging>
+
+  <name>PJSUA2 for Android</name>
+  <description>
+    PJSIP's high-level PJSUA2 API for Android, as JNI bindings over the
+    native SIP, media and NAT traversal stack.
+  </description>
+  <url>https://www.pjsip.org</url>
+
+  <licenses>
+    <license>
+      <name>GNU General Public License, version 2 or later</name>
+      <url>https://www.gnu.org/licenses/old-licenses/gpl-2.0.html</url>
+      <distribution>repo</distribution>
+      <comments>
+        A commercial licence is available from Teluu for use in applications
+        that cannot meet the GPL's terms; see https://www.pjsip.org/licensing.htm
+      </comments>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>pjsip</id>
+      <name>PJSIP Team</name>
+      <email>contact@teluu.com</email>
+      <organization>Teluu Inc.</organization>
+      <organizationUrl>https://www.teluu.com</organizationUrl>
+    </developer>
+  </developers>
+
+  <scm>
+    <url>https://github.com/pjsip/pjproject</url>
+    <connection>scm:git:https://github.com/pjsip/pjproject.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/pjsip/pjproject.git</developerConnection>
+  </scm>
+
+  <!--
+    No dependencies. OpenSSL, Opus, Oboe and the C++ runtime are all linked
+    statically into the one native library, so nothing has to be resolved at
+    run time and there is no second copy of any of them to collide with an
+    application's own.
+  -->
+</project>
