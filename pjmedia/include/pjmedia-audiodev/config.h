@@ -197,8 +197,10 @@ PJ_BEGIN_DECL
   * On Windows desktop it is disabled by default, since WMME is the default
   * backend there, and can be enabled in config_site.h. It is then
   * implemented by wasapi_dev_win.cpp, which offers a lower latency than
-  * WMME. The WASAPI devices are listed after the WMME ones, so enabling it
-  * does not change the existing device order.
+  * WMME. That desktop backend is **experimental**: it is new and has seen
+  * little field use, so enable it deliberately and test it for your case.
+  * The WASAPI devices are listed after the WMME ones, so enabling it does
+  * not change the existing device order.
   *
   * The first WASAPI device is named "Wave mapper", as the WMME one is, so an
   * application selecting it by name only has to pass "WASAPI" instead of

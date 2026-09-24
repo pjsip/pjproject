@@ -244,11 +244,18 @@ cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_WMME
 )
 
 # Windows Audio Session API (WASAPI) backend.
-# Off by default: on Windows desktop, which is what this build targets, WMME
-# is the default backend and WASAPI is opt-in, see PJMEDIA_AUDIO_DEV_HAS_WASAPI
-# in pjmedia-audiodev/config.h.
+# On UWP and Windows Phone 8 it is the only backend, so it stays on there.
+# On Windows desktop WMME is the default and WASAPI is opt-in, see
+# PJMEDIA_AUDIO_DEV_HAS_WASAPI in pjmedia-audiodev/config.h. Note CMake's
+# WIN32 is true for a WindowsStore build as well, so this cannot be a flat
+# OFF or such a build would end up with no audio backend at all.
+if(WINDOWS_STORE OR WINDOWS_PHONE)
+  set(PJMEDIA_AUDIODEV_WASAPI_DEFAULT ON)
+else()
+  set(PJMEDIA_AUDIODEV_WASAPI_DEFAULT OFF)
+endif()
 cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_WASAPI
-  "Enable WASAPI audio device backend" OFF
+  "Enable WASAPI audio device backend" ${PJMEDIA_AUDIODEV_WASAPI_DEFAULT}
   "PJMEDIA_WITH_AUDIODEV;WIN32 OR CYGWIN OR MINGW" OFF
 )
 import_if_or_set(PJMEDIA_WITH_AUDIODEV_WASAPI OFF WASAPI)

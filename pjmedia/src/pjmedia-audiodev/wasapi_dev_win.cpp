@@ -36,6 +36,9 @@
 /* ===========================================================================
  * Windows Desktop (Win32/Win64)
  *
+ * EXPERIMENTAL. This backend is new and has seen little field use, so it is
+ * disabled by default and WMME remains the Windows desktop default.
+ *
  * WASAPI in shared mode, event driven. It is an alternative to WMME with a
  * lower latency: since Vista, WMME itself is only a layer on top of WASAPI
  * and it adds buffering of its own.
@@ -340,17 +343,22 @@ static void get_endpoint_name(IMMDevice *dev, char *buf, int size)
         SUCCEEDED(props->GetValue(wasapi_pkey_friendly_name, &v)) &&
         v.vt == VT_LPWSTR && v.pwszVal)
     {
-        pj_size_t len;
+        int len = (int)wcslen(v.pwszVal);
 
         /* The conversion yields nothing at all when the result does not fit,
-         * and the endpoint would be left with a generic name that no
-         * application can look up, so shorten the name until it converts.
+         * so trim the source to what does. Trim by one character at a time:
+         * dropping more than necessary can make two endpoints that share a
+         * prefix indistinguishable, and the name is what applications look
+         * devices up by.
          */
-        for (len = wcslen(v.pwszVal); len > 0; len /= 2) {
-            pj_unicode_to_ansi(v.pwszVal, len, buf, size);
-            if (buf[0] != '\0')
-                break;
+        while (len > 0 &&
+               WideCharToMultiByte(CP_ACP, 0, v.pwszVal, len, NULL, 0,
+                                   NULL, NULL) > size - 1)
+        {
+            --len;
         }
+        if (len > 0)
+            pj_unicode_to_ansi(v.pwszVal, len, buf, size);
     }
     PropVariantClear(&v);
     SAFE_RELEASE(props);
@@ -1391,13 +1399,32 @@ static int PJ_THREAD_FUNC wasapi_thread(void *arg)
             continue;
 
         if (rc == WAIT_TIMEOUT) {
-            /* The engine has stopped delivering events */
+            pjmedia_dir pdir = PJMEDIA_DIR_CAPTURE;
+            HRESULT phr = S_OK;
+            UINT32 pad;
+
+            /* The engine has stopped delivering events. That can be all a
+             * lost endpoint shows, and no callback is running to notice it,
+             * so ask the clients instead of waiting for one to fail.
+             */
+            if (s->cap_client)
+                phr = s->cap_client->GetCurrentPadding(&pad);
+            if (SUCCEEDED(phr) && s->pb_client) {
+                pdir = PJMEDIA_DIR_PLAYBACK;
+                phr = s->pb_client->GetCurrentPadding(&pad);
+            }
+            if (FAILED(phr)) {
+                halt_stream_hr(s, pdir, "device event timeout", phr);
+                continue;
+            }
+
             if (++stalls == 1 || stalls % 100 == 0)
                 PJ_LOG(3, (THIS_FILE, "WASAPI: no device events for 500 ms"));
             continue;
         }
 
         /* Whichever event it was, serve both directions */
+        stalls = 0;
         if (s->cap_capture)
             process_capture(s);
         /* A capture callback may have stopped the stream just now */
@@ -1670,14 +1697,13 @@ static pj_status_t wasapi_stream_get_param(pjmedia_aud_stream *strm,
     struct wasapi_stream *s = (struct wasapi_stream*)strm;
 
     PJ_ASSERT_RETURN(s && pi, PJ_EINVAL);
-    pj_memcpy(pi, &s->param, sizeof(*pi));
 
-    /* Update the volume setting */
-    if (wasapi_stream_get_cap(strm, PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
-                              &pi->output_vol) == PJ_SUCCESS)
-    {
-        pi->flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
-    }
+    /* Report the volume last seen rather than asking the audio thread: this
+     * is called on paths that hold locks, e.g: under PJSUA_LOCK, and a
+     * command would block there for the whole timeout if that thread is busy
+     * in a callback.
+     */
+    pj_memcpy(pi, &s->param, sizeof(*pi));
 
     return PJ_SUCCESS;
 }
@@ -1709,8 +1735,11 @@ static pj_status_t wasapi_stream_get_cap(pjmedia_aud_stream *strm,
         float vol = 0;
 
         status = send_cmd(s, WASAPI_CMD_GET_VOLUME, &vol);
-        if (status == PJ_SUCCESS)
+        if (status == PJ_SUCCESS) {
             *(unsigned*)pval = (unsigned)(vol * 100.0f + 0.5f);
+            s->param.output_vol = *(unsigned*)pval;
+            s->param.flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
+        }
         return status;
     }
     return PJMEDIA_EAUD_INVCAP;
@@ -1728,12 +1757,18 @@ static pj_status_t wasapi_stream_set_cap(pjmedia_aud_stream *strm,
         (s->param.dir & PJMEDIA_DIR_PLAYBACK))
     {
         unsigned vol = *(const unsigned*)pval;
+        pj_status_t status;
         float fvol;
 
         if (vol > 100)
             vol = 100;
         fvol = vol / 100.0f;
-        return send_cmd(s, WASAPI_CMD_SET_VOLUME, &fvol);
+        status = send_cmd(s, WASAPI_CMD_SET_VOLUME, &fvol);
+        if (status == PJ_SUCCESS) {
+            s->param.output_vol = vol;
+            s->param.flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
+        }
+        return status;
     }
     return PJMEDIA_EAUD_INVCAP;
 }
@@ -1778,8 +1813,13 @@ static pj_status_t wasapi_stream_destroy(pjmedia_aud_stream *strm)
          * declaring it stuck. Without a handle there is nothing to look at,
          * and joining would be unbounded.
          */
+        /* An unanswered QUIT stays in the slot, so a thread that was merely
+         * slow still claims it and leaves. Give it a grace period rather
+         * than declare it stuck the moment the command timed out.
+         */
         if (!h || WaitForSingleObject(h, qs == PJ_SUCCESS?
-                                         WASAPI_EXIT_TIMEOUT_MS : 0) !=
+                                         WASAPI_EXIT_TIMEOUT_MS :
+                                         WASAPI_CMD_TIMEOUT_MS) !=
                   WAIT_OBJECT_0)
         {
             /* The audio thread is not finishing. Joining it would block for

@@ -44,6 +44,17 @@
 PJ_BEGIN_DECL
 
 
+/* Declared only where wasapi_dev_win.cpp provides it, so that using it on a
+ * target served by wasapi_dev.cpp is a compile error rather than a link one.
+ * Keep in step with the guard at the top of that file.
+ */
+#if defined(PJMEDIA_AUDIO_DEV_HAS_WASAPI) && \
+    PJMEDIA_AUDIO_DEV_HAS_WASAPI != 0 && \
+    defined(PJ_WIN32) && PJ_WIN32 != 0 && \
+    !(defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE != 0) && \
+    !(defined(PJ_WIN32_UWP) && PJ_WIN32_UWP != 0) && \
+    !(defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8 != 0)
+
 /**
  * Get the WASAPI endpoint ID of a device of this backend, so that an
  * application can open the same endpoint itself, e.g: with an IAudioClient
@@ -90,6 +101,8 @@ PJ_DECL(pj_status_t) pjmedia_wasapi_get_endpoint(pjmedia_aud_dev_index id,
                                                  pj_uint16_t *buf,
                                                  unsigned len,
                                                  pj_bool_t *is_default);
+
+#endif  /* Windows desktop WASAPI */
 
 
 PJ_END_DECL
