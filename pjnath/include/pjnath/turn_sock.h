@@ -248,6 +248,11 @@ typedef struct pj_turn_sock_tls_cfg
      * left-most label only. When disabled, verification failure is only
      * logged.
      *
+     * Note that some TLS backends, e.g: mbedTLS when a CA is configured,
+     * verify the certificate during the TLS handshake and abort it on
+     * failure regardless of this setting, in which case the connection
+     * fails with the backend error.
+     *
      * Default: PJ_FALSE
      */
     pj_bool_t   verify_server;

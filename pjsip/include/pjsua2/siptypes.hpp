@@ -366,7 +366,9 @@ struct TlsConfig : public PersistentObject
      * For TURN TLS, if \a verifyServer is enabled, the connection to the
      * TURN server is closed whenever there is any TLS verification error,
      * including when the certificate does not identify the TURN server
-     * name, otherwise the error is only logged.
+     * name, otherwise the error is only logged. Some TLS backends, e.g:
+     * mbedTLS when a CA is configured, may abort the TLS handshake on
+     * verification failure regardless of this setting.
      *
      * Note that verification requires the trusted CA certificates, e.g:
      * via \a CaListFile, as some platforms, e.g: Android, provide no
