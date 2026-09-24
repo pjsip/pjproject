@@ -312,6 +312,8 @@ void TlsConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
     NODE_READ_NUM_T   ( this_node, pj_ssl_cert_lookup_type, certLookupType);
     NODE_READ_STRING  ( this_node, certLookupKeyword);
     NODE_READ_STRING_OPT( this_node, CaListPath);
+    NODE_READ_UNSIGNED_OPT( this_node, proto);
+    NODE_READ_BOOL_OPT( this_node, enableRenegotiation);
 }
 
 void TlsConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
@@ -339,6 +341,8 @@ void TlsConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
     NODE_WRITE_NUM_T   ( this_node, pj_ssl_cert_lookup_type, certLookupType);
     NODE_WRITE_STRING  ( this_node, certLookupKeyword);
     NODE_WRITE_STRING  ( this_node, CaListPath);
+    NODE_WRITE_UNSIGNED( this_node, proto);
+    NODE_WRITE_BOOL    ( this_node, enableRenegotiation);
 }
 
 pj_turn_sock_tls_cfg TlsConfig::toTurnPj() const
