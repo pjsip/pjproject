@@ -96,6 +96,7 @@ struct pj_turn_sock
 #if PJ_HAS_SSL_SOCK
     pj_ssl_sock_t       *ssl_sock;
     pj_ssl_cert_t       *cert;
+    pj_bool_t            has_ca;
     pj_str_t             server_name;
 #endif
 
@@ -862,6 +863,12 @@ static pj_status_t verify_server_cert(pj_turn_sock *turn_sock)
         info.verify_status |= PJ_SSL_CERT_EIDENTITY_NOT_MATCH;
     }
 
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_MBEDTLS)
+    /* This backend has no system trust store, so require a CA */
+    if (!turn_sock->has_ca)
+        info.verify_status |= PJ_SSL_CERT_EUNTRUSTED;
+#endif
+
     if (info.verify_status == PJ_SSL_CERT_ESUCCESS ||
         (!mandatory && pj_log_get_level() < 4))
     {
@@ -1452,6 +1459,14 @@ static void turn_on_state(pj_turn_session *sess,
              * to the next server address, as the settings are wiped.
              */
             pj_bool_t load_cred = (turn_sock->cert == NULL);
+
+            if (load_cred) {
+                pj_turn_sock_tls_cfg *tls_cfg = &turn_sock->setting.tls_cfg;
+
+                turn_sock->has_ca = (tls_cfg->ca_list_file.slen ||
+                                     tls_cfg->ca_list_path.slen ||
+                                     tls_cfg->ca_buf.slen);
+            }
 
             ssock_param = &turn_sock->setting.tls_cfg.ssock_param;
             pj_ssl_sock_param_default(&param);

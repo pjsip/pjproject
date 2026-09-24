@@ -540,8 +540,10 @@ typedef enum pj_ssl_cert_name_match_flag
     PJ_SSL_CERT_NAME_MATCH_WILDCARD = 1,
 
     /**
-     * Also match the host part of "sip:" and "sips:" URI entries of the
-     * SubjectAltName extension, as specified in RFC 5922 section 7.1.
+     * Also match "sip:" and "sips:" URI entries of the SubjectAltName
+     * extension, as specified in RFC 5922 section 7.1. The entry must be
+     * exactly the scheme followed by the name, e.g: "sip:example.com",
+     * so an entry with a user part, port, or parameters never matches.
      */
     PJ_SSL_CERT_NAME_MATCH_SIP_URI  = 2,
 

@@ -891,7 +891,14 @@ public:
       sipOutboundUse(PJ_TRUE),
       udpKaIntervalSec(15),
       udpKaData("\r\n")
-    {}
+    {
+#if PJ_HAS_SSL_SOCK
+        pj_turn_sock_tls_cfg tls_cfg;
+
+        pj_turn_sock_tls_cfg_default(&tls_cfg);
+        turnTlsConfig.fromTurnPj(tls_cfg);
+#endif
+    }
 
     /**
      * Read this object from a container node.
