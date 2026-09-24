@@ -104,6 +104,20 @@
 /* How long start/stop/destroy wait for the audio thread */
 #define WASAPI_CMD_TIMEOUT_MS   5000
 
+/* A command and the ticket identifying it travel in one interlocked slot, so
+ * that the audio thread claims both at once and can answer the exact command
+ * it ran. Zero means the slot is empty; tickets therefore start at 1.
+ */
+#define WASAPI_CMD_PACK(seq, cmd)   (((LONG)(seq) << 8) | ((LONG)(cmd) & 0xFF))
+#define WASAPI_CMD_OF(v)            ((enum wasapi_cmd)((v) & 0xFF))
+#define WASAPI_SEQ_OF(v)            ((LONG)((v) >> 8))
+#define WASAPI_SEQ_MAX              0x7FFFFF
+
+/* How long destroy waits for the thread to release the device after it has
+ * answered QUIT. That is driver teardown, not a command, so it gets its own
+ * budget, like opening the device does. */
+#define WASAPI_EXIT_TIMEOUT_MS  10000
+
 /* Minimum capture buffer size in frames (overflow protection only) */
 #define WASAPI_CAP_MIN_FRAMES   4
 
@@ -203,17 +217,20 @@ struct wasapi_stream
     CRITICAL_SECTION        cmd_lock;
     pj_bool_t               cmd_lock_init;
     HANDLE                  cmd_event;      /* A command is pending         */
-    HANDLE                  done_event;     /* Command is done              */
-    volatile LONG           cmd;            /* enum wasapi_cmd, claimed
-                                             * with InterlockedExchange   */
-    float                   cmd_volume;
+    HANDLE                  done_event;     /* A command was answered       */
+    HANDLE                  init_event;     /* Device open result is ready  */
+    volatile LONG           cmd;            /* Ticket and command, packed   */
+    volatile LONG           done_seq;       /* Ticket the thread answered   */
+    LONG                    cmd_seq_next;   /* Next ticket, under cmd_lock  */
+    float                   cmd_arg[4];     /* Argument, kept per ticket    */
+    float                   cmd_volume;     /* Result of the answered cmd   */
     pj_status_t             cmd_status;
-    volatile LONG           cmd_dead;       /* Thread stopped answering,
-                                             * read outside cmd_lock so it
-                                             * is accessed interlocked     */
+    pj_status_t             init_status;
 
     pj_bool_t               running;
-    pj_bool_t               halted;         /* Device gone/callback error   */
+    volatile LONG           halted;         /* Device gone/callback error,
+                                             * also set from outside the
+                                             * audio thread               */
     REFERENCE_TIME          period;         /* Engine period (100 ns)       */
 
     /* Playback */
@@ -1301,10 +1318,10 @@ static int PJ_THREAD_FUNC wasapi_thread(void *arg)
     co = CoInitializeEx(NULL, COINIT_MULTITHREADED);
     mmcss = mmcss_enter(&avrt);
 
-    s->cmd_status = FAILED(co) ? PJMEDIA_EAUD_SYSERR : thread_init(s);
-    if (s->cmd_status != PJ_SUCCESS)
+    s->init_status = FAILED(co) ? PJMEDIA_EAUD_SYSERR : thread_init(s);
+    if (s->init_status != PJ_SUCCESS)
         quit = PJ_TRUE;
-    SetEvent(s->done_event);
+    SetEvent(s->init_event);
 
     events[nevents++] = s->cmd_event;
     if (s->cap_event)
@@ -1325,15 +1342,18 @@ static int PJ_THREAD_FUNC wasapi_thread(void *arg)
             /* Claim the command. Once it is taken out of the slot, a caller
              * that gives up cannot take it back, and a caller that already
              * gave up will have emptied the slot, so a command runs at most
-             * once and never after the channel was closed.
+             * once. The ticket travels with it, so the answer below names
+             * the command that actually ran.
              */
-            LONG c = InterlockedExchange(&s->cmd, WASAPI_CMD_NONE);
+            LONG v = InterlockedExchange(&s->cmd, 0);
 
-            if (c != WASAPI_CMD_NONE) {
-                quit = exec_cmd(s, (enum wasapi_cmd)c, &s->cmd_volume,
-                                &s->cmd_status);
-                if (!quit)
-                    SetEvent(s->done_event);
+            if (v != 0) {
+                float arg = s->cmd_arg[WASAPI_SEQ_OF(v) & 3];
+
+                quit = exec_cmd(s, WASAPI_CMD_OF(v), &arg, &s->cmd_status);
+                s->cmd_volume = arg;
+                InterlockedExchange(&s->done_seq, WASAPI_SEQ_OF(v));
+                SetEvent(s->done_event);
             }
             continue;
         }
@@ -1347,11 +1367,23 @@ static int PJ_THREAD_FUNC wasapi_thread(void *arg)
              * shortcut below, which loops straight back into the wait, and
              * there is nothing left to wait on, so leave the loop.
              */
+            LONG v;
+
             PJ_LOG(2, (THIS_FILE, "WASAPI: wait failed (err=%lu), stopping",
                        (unsigned long)GetLastError()));
             halt_stream(s, (s->param.dir & PJMEDIA_DIR_PLAYBACK)?
                            PJMEDIA_DIR_PLAYBACK : PJMEDIA_DIR_CAPTURE,
                         PJMEDIA_EAUD_SYSERR);
+
+            /* Answer whatever was published, otherwise its caller waits the
+             * whole timeout for a thread that is already leaving.
+             */
+            v = InterlockedExchange(&s->cmd, 0);
+            if (v != 0) {
+                s->cmd_status = PJMEDIA_EAUD_SYSERR;
+                InterlockedExchange(&s->done_seq, WASAPI_SEQ_OF(v));
+                SetEvent(s->done_event);
+            }
             break;
         }
 
@@ -1378,17 +1410,10 @@ static int PJ_THREAD_FUNC wasapi_thread(void *arg)
     if (SUCCEEDED(co))
         CoUninitialize();
 
-    /* QUIT waits for this, so signal only after releasing. After a failed
-     * init this is a second signal that nobody collects any more
-     * (create_stream then only waits for the thread to end). */
-    SetEvent(s->done_event);
+    /* Thread ids are reused, so stop claiming this one */
+    s->thread_id = 0;
 
     return 0;
-}
-
-static pj_bool_t cmd_is_dead(struct wasapi_stream *s)
-{
-    return InterlockedCompareExchange(&s->cmd_dead, 0, 0) != 0;
 }
 
 /* Send a command to the audio thread and wait for it. volume is the argument
@@ -1398,19 +1423,11 @@ static pj_status_t send_cmd(struct wasapi_stream *s, enum wasapi_cmd cmd,
                             float *volume)
 {
     pj_status_t status = PJ_SUCCESS;
+    LONG seq, packed;
+    DWORD deadline;
 
     if (!s->thread)
         return PJ_EINVALIDOP;
-
-    /* Once the audio thread has missed a command it may still be about to
-     * pick it up, so anything issued afterwards would race with it. Refuse
-     * everything from here on, including from a callback: an inline command
-     * would otherwise still run and then be undone by the command the
-     * timeout left behind. QUIT is the exception, the thread may well have
-     * recovered since, and leaving it running is worse than asking again.
-     */
-    if (cmd_is_dead(s) && cmd != WASAPI_CMD_QUIT)
-        return PJ_ETIMEDOUT;
 
     /* From the audio thread itself (a callback), execute it directly. It must
      * not touch the shared command slots here, an application thread may have
@@ -1423,35 +1440,62 @@ static pj_status_t send_cmd(struct wasapi_stream *s, enum wasapi_cmd cmd,
 
     EnterCriticalSection(&s->cmd_lock);
 
-    if (cmd_is_dead(s) && cmd != WASAPI_CMD_QUIT) {
-        LeaveCriticalSection(&s->cmd_lock);
-        return PJ_ETIMEDOUT;
+    seq = s->cmd_seq_next + 1;
+    if (seq > WASAPI_SEQ_MAX)
+        seq = 1;
+    s->cmd_seq_next = seq;
+    packed = WASAPI_CMD_PACK(seq, cmd);
+
+    /* The argument goes in the slot of this ticket: a command that timed out
+     * may still be running, and must not read the next one's argument.
+     */
+    s->cmd_arg[seq & 3] = volume? *volume : 0;
+
+    /* Arm the completion before publishing, the thread may answer at once */
+    ResetEvent(s->done_event);
+    InterlockedExchange(&s->cmd, packed);
+    SetEvent(s->cmd_event);
+
+    /* Wait for this command to be answered. A completion left over from a
+     * command that timed out earlier carries its own ticket and is skipped,
+     * so it can no longer be mistaken for this one.
+     */
+    deadline = GetTickCount() + WASAPI_CMD_TIMEOUT_MS;
+    for (;;) {
+        DWORD remaining = deadline - GetTickCount();
+
+        if ((LONG)remaining <= 0 ||
+            WaitForSingleObject(s->done_event, remaining) != WAIT_OBJECT_0)
+        {
+            /* It may have been answered just as the deadline passed */
+            if (InterlockedCompareExchange(&s->done_seq, 0, 0) == seq) {
+                status = s->cmd_status;
+                if (volume)
+                    *volume = s->cmd_volume;
+                break;
+            }
+            /* Take the command back, unless it has already been claimed: it
+             * must not run once we have given up on it. If it was claimed,
+             * it will answer with its own ticket and be ignored. QUIT is the
+             * exception, it stays so that a thread that recovers still stops
+             * the device and exits instead of running on forever.
+             */
+            if (cmd != WASAPI_CMD_QUIT)
+                InterlockedCompareExchange(&s->cmd, 0, packed);
+            PJ_LOG(2, (THIS_FILE, "WASAPI: audio thread did not answer "
+                       "command %d", cmd));
+            status = PJ_ETIMEDOUT;
+            break;
+        }
+
+        if (InterlockedCompareExchange(&s->done_seq, 0, 0) == seq) {
+            status = s->cmd_status;
+            if (volume)
+                *volume = s->cmd_volume;
+            break;
+        }
     }
 
-    if (volume)
-        s->cmd_volume = *volume;
-    /* Arm the completion before publishing the command: the thread may claim
-     * and answer it immediately, and resetting afterwards would wipe that.
-     */
-    ResetEvent(s->done_event);
-    InterlockedExchange(&s->cmd, cmd);
-    SetEvent(s->cmd_event);
-    if (WaitForSingleObject(s->done_event, WASAPI_CMD_TIMEOUT_MS) ==
-        WAIT_OBJECT_0)
-    {
-        status = s->cmd_status;
-        if (volume)
-            *volume = s->cmd_volume;
-    } else {
-        /* Take the command back, unless the thread has already claimed it:
-         * it must not run once we have given up on it.
-         */
-        InterlockedCompareExchange(&s->cmd, WASAPI_CMD_NONE, cmd);
-        PJ_LOG(2, (THIS_FILE, "WASAPI: audio thread did not answer command "
-                   "%d", cmd));
-        InterlockedExchange(&s->cmd_dead, PJ_TRUE);
-        status = PJ_ETIMEDOUT;
-    }
     LeaveCriticalSection(&s->cmd_lock);
 
     return status;
@@ -1468,6 +1512,8 @@ static void stream_free(struct wasapi_stream *s)
         CloseHandle(s->cmd_event);
     if (s->done_event)
         CloseHandle(s->done_event);
+    if (s->init_event)
+        CloseHandle(s->init_event);
     if (s->pb_event)
         CloseHandle(s->pb_event);
     if (s->cap_event)
@@ -1572,8 +1618,9 @@ static pj_status_t wasapi_factory_create_stream(pjmedia_aud_dev_factory *f,
     s->cmd_lock_init = PJ_TRUE;
     s->cmd_event = CreateEvent(NULL, FALSE, FALSE, NULL);
     s->done_event = CreateEvent(NULL, FALSE, FALSE, NULL);
+    s->init_event = CreateEvent(NULL, FALSE, FALSE, NULL);
 
-    if (!s->cmd_event || !s->done_event ||
+    if (!s->cmd_event || !s->done_event || !s->init_event ||
         ((param->dir & PJMEDIA_DIR_CAPTURE) &&
          (!s->cap_event || !s->cap_buf)) ||
         ((param->dir & PJMEDIA_DIR_PLAYBACK) && !s->pb_event))
@@ -1589,10 +1636,16 @@ static pj_status_t wasapi_factory_create_stream(pjmedia_aud_dev_factory *f,
         stream_free(s);
         return status;
     }
-    WaitForSingleObject(s->done_event, INFINITE);
+    /* Opening a device can hang in the driver, and callers hold locks over
+     * this, e.g: pjsua holds PJSUA_LOCK. Giving up here is worse than
+     * waiting though: the thread owns this stream and its pool belongs to
+     * the application pool factory, which destroys the pools it was never
+     * given back, so an abandoned thread would be left reading freed memory.
+     */
+    WaitForSingleObject(s->init_event, INFINITE);
 
-    if (s->cmd_status != PJ_SUCCESS) {
-        status = s->cmd_status;
+    if (s->init_status != PJ_SUCCESS) {
+        status = s->init_status;
         pj_thread_join(s->thread);
         pj_thread_destroy(s->thread);
         s->thread = NULL;
@@ -1717,16 +1770,27 @@ static pj_status_t wasapi_stream_destroy(pjmedia_aud_stream *strm)
     }
 
     if (s->thread) {
-        if (send_cmd(s, WASAPI_CMD_QUIT, NULL) != PJ_SUCCESS) {
-            /* The audio thread is not answering. Joining it would block for
+        HANDLE h = (HANDLE)pj_thread_get_os_handle(s->thread);
+        pj_status_t qs = send_cmd(s, WASAPI_CMD_QUIT, NULL);
+
+        /* Even when QUIT was not answered the thread may have left on its
+         * own, e.g: after a broken wait, so always look at it before
+         * declaring it stuck. Without a handle there is nothing to look at,
+         * and joining would be unbounded.
+         */
+        if (!h || WaitForSingleObject(h, qs == PJ_SUCCESS?
+                                         WASAPI_EXIT_TIMEOUT_MS : 0) !=
+                  WAIT_OBJECT_0)
+        {
+            /* The audio thread is not finishing. Joining it would block for
              * good and freeing the stream would pull the pool from under it,
              * so leave both alone. Stop it serving the device first: the
              * caller carries on regardless, e.g: pjmedia_snd_port releases
              * the buffers the callbacks write into without looking at this
-             * return value, so a callback afterwards would touch freed
-             * memory.
+             * return value. Note this only stops further callbacks, one
+             * already running cannot be taken back.
              */
-            s->halted = PJ_TRUE;
+            InterlockedExchange(&s->halted, PJ_TRUE);
             PJ_LOG(1, (THIS_FILE, "WASAPI: audio thread is not responding, "
                        "the stream is left allocated and stopped serving "
                        "the device"));
