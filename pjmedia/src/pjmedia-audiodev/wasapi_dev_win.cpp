@@ -208,7 +208,9 @@ struct wasapi_stream
                                              * with InterlockedExchange   */
     float                   cmd_volume;
     pj_status_t             cmd_status;
-    pj_bool_t               cmd_dead;       /* Thread stopped answering     */
+    volatile LONG           cmd_dead;       /* Thread stopped answering,
+                                             * read outside cmd_lock so it
+                                             * is accessed interlocked     */
 
     pj_bool_t               running;
     pj_bool_t               halted;         /* Device gone/callback error   */
@@ -1336,6 +1338,23 @@ static int PJ_THREAD_FUNC wasapi_thread(void *arg)
             continue;
         }
 
+        if (rc == WAIT_FAILED || (rc >= WAIT_OBJECT_0 + n &&
+                                  rc != WAIT_TIMEOUT))
+        {
+            /* The wait itself is broken, e.g: a handle went bad. It returns
+             * at once however long the timeout, so looping would spin at the
+             * audio priority. This has to be handled before the halted
+             * shortcut below, which loops straight back into the wait, and
+             * there is nothing left to wait on, so leave the loop.
+             */
+            PJ_LOG(2, (THIS_FILE, "WASAPI: wait failed (err=%lu), stopping",
+                       (unsigned long)GetLastError()));
+            halt_stream(s, (s->param.dir & PJMEDIA_DIR_PLAYBACK)?
+                           PJMEDIA_DIR_PLAYBACK : PJMEDIA_DIR_CAPTURE,
+                        PJMEDIA_EAUD_SYSERR);
+            break;
+        }
+
         if (!s->running || s->halted)
             continue;
 
@@ -1343,19 +1362,6 @@ static int PJ_THREAD_FUNC wasapi_thread(void *arg)
             /* The engine has stopped delivering events */
             if (++stalls == 1 || stalls % 100 == 0)
                 PJ_LOG(3, (THIS_FILE, "WASAPI: no device events for 500 ms"));
-            continue;
-        }
-
-        if (rc >= WAIT_OBJECT_0 + n) {
-            /* WAIT_FAILED or an abandoned handle. Falling through would
-             * treat it as an event and spin, and this thread runs at the
-             * audio priority.
-             */
-            PJ_LOG(2, (THIS_FILE, "WASAPI: wait failed (err=%lu), stopping",
-                       (unsigned long)GetLastError()));
-            halt_stream(s, (s->param.dir & PJMEDIA_DIR_PLAYBACK)?
-                           PJMEDIA_DIR_PLAYBACK : PJMEDIA_DIR_CAPTURE,
-                        PJMEDIA_EAUD_SYSERR);
             continue;
         }
 
@@ -1380,6 +1386,11 @@ static int PJ_THREAD_FUNC wasapi_thread(void *arg)
     return 0;
 }
 
+static pj_bool_t cmd_is_dead(struct wasapi_stream *s)
+{
+    return InterlockedCompareExchange(&s->cmd_dead, 0, 0) != 0;
+}
+
 /* Send a command to the audio thread and wait for it. volume is the argument
  * of SET_VOLUME and the result of GET_VOLUME, and NULL for the others.
  */
@@ -1398,7 +1409,7 @@ static pj_status_t send_cmd(struct wasapi_stream *s, enum wasapi_cmd cmd,
      * timeout left behind. QUIT is the exception, the thread may well have
      * recovered since, and leaving it running is worse than asking again.
      */
-    if (s->cmd_dead && cmd != WASAPI_CMD_QUIT)
+    if (cmd_is_dead(s) && cmd != WASAPI_CMD_QUIT)
         return PJ_ETIMEDOUT;
 
     /* From the audio thread itself (a callback), execute it directly. It must
@@ -1412,15 +1423,18 @@ static pj_status_t send_cmd(struct wasapi_stream *s, enum wasapi_cmd cmd,
 
     EnterCriticalSection(&s->cmd_lock);
 
-    if (s->cmd_dead && cmd != WASAPI_CMD_QUIT) {
+    if (cmd_is_dead(s) && cmd != WASAPI_CMD_QUIT) {
         LeaveCriticalSection(&s->cmd_lock);
         return PJ_ETIMEDOUT;
     }
 
     if (volume)
         s->cmd_volume = *volume;
-    InterlockedExchange(&s->cmd, cmd);
+    /* Arm the completion before publishing the command: the thread may claim
+     * and answer it immediately, and resetting afterwards would wipe that.
+     */
     ResetEvent(s->done_event);
+    InterlockedExchange(&s->cmd, cmd);
     SetEvent(s->cmd_event);
     if (WaitForSingleObject(s->done_event, WASAPI_CMD_TIMEOUT_MS) ==
         WAIT_OBJECT_0)
@@ -1435,7 +1449,7 @@ static pj_status_t send_cmd(struct wasapi_stream *s, enum wasapi_cmd cmd,
         InterlockedCompareExchange(&s->cmd, WASAPI_CMD_NONE, cmd);
         PJ_LOG(2, (THIS_FILE, "WASAPI: audio thread did not answer command "
                    "%d", cmd));
-        s->cmd_dead = PJ_TRUE;
+        InterlockedExchange(&s->cmd_dead, PJ_TRUE);
         status = PJ_ETIMEDOUT;
     }
     LeaveCriticalSection(&s->cmd_lock);
