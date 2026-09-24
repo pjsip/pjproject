@@ -299,7 +299,10 @@ typedef struct pj_ssl_cert_info {
             pj_str_t    name;       /**< The name               */
         } *entry;                   /**< Subject alt name entry */
     } subj_alt_name;                /**< Subject alternative
-                                         name extension         */
+                                         name extension. Note that
+                                         the Apple backend on iOS
+                                         does not provide this, as
+                                         iOS has no API for it. */
 
     pj_str_t raw;                   /**< Raw certificate in PEM format, only
                                          available for remote certificate. */

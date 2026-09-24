@@ -1066,10 +1066,15 @@ static void tls_cert_get_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
 
             switch (ret) {
             case GNUTLS_SAN_IPADDRESS:
-                type = PJ_SSL_CERT_NAME_IP;
-                pj_inet_ntop2(len == sizeof(pj_in6_addr) ? pj_AF_INET6()
-                                                         : pj_AF_INET(),
-                              out, buf, sizeof(buf));
+                /* Ignore malformed IP address */
+                if (len == sizeof(pj_in_addr) || len == sizeof(pj_in6_addr)) {
+                    type = PJ_SSL_CERT_NAME_IP;
+                    pj_inet_ntop2(len == sizeof(pj_in6_addr) ? pj_AF_INET6()
+                                                             : pj_AF_INET(),
+                                  out, buf, sizeof(buf));
+                } else {
+                    type = PJ_SSL_CERT_NAME_UNKNOWN;
+                }
                 break;
             case GNUTLS_SAN_URI:
                 type = PJ_SSL_CERT_NAME_URI;

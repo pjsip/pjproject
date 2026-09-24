@@ -742,9 +742,16 @@ static void cert_parse_info(pj_pool_t* pool, pj_ssl_cert_info* ci,
                 break;
             case CERT_ALT_NAME_IP_ADDRESS:
                 type = PJ_SSL_CERT_NAME_IP;
-                pj_inet_ntop2(ane->IPAddress.cbData == sizeof(pj_in6_addr)?
-                                    pj_AF_INET6() : pj_AF_INET(),
-                              ane->IPAddress.pbData, buf, sizeof(buf));
+                /* Ignore malformed IP address */
+                if (ane->IPAddress.cbData == sizeof(pj_in_addr) ||
+                    ane->IPAddress.cbData == sizeof(pj_in6_addr))
+                {
+                    len = pj_inet_ntop(ane->IPAddress.cbData ==
+                                           sizeof(pj_in6_addr)?
+                                           pj_AF_INET6() : pj_AF_INET(),
+                                       ane->IPAddress.pbData, buf,
+                                       sizeof(buf)) == PJ_SUCCESS;
+                }
                 break;
             case CERT_ALT_NAME_URL:
                 type = PJ_SSL_CERT_NAME_URI;
