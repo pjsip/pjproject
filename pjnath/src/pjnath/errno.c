@@ -71,6 +71,8 @@ static const struct
 
     /* TURN related errors */
     PJ_BUILD_ERR( PJNATH_ETURNINTP,         "Invalid/unsupported transport"),
+    PJ_BUILD_ERR( PJNATH_ETURNTLSCERTVERIF, "TURN server TLS certificate "
+                                            "verification failed"),
 
 };
 #endif  /* PJ_HAS_ERROR_STRING */

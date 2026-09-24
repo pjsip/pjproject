@@ -220,6 +220,12 @@ public:
 
 /**
  * TLS transport settings, to be specified in TransportConfig.
+ *
+ * This is also used for the TURN TLS settings in
+ * AccountNatConfig::turnTlsConfig, where the following fields are ignored:
+ * \a method, \a verifyClient, \a requireClientCert, \a qosType,
+ * \a qosParams, and \a qosIgnoreError. For TURN TLS, the QoS settings are
+ * taken from the media transport config.
  */
 struct TlsConfig : public PersistentObject
 {
@@ -227,6 +233,11 @@ struct TlsConfig : public PersistentObject
      * Certificate of Authority (CA) list file.
      */
     string              CaListFile;
+
+    /**
+     * Certificate of Authority (CA) list directory path.
+     */
+    string              CaListPath;
 
     /**
      * Public endpoint certificate file, which will be used as client-
@@ -246,23 +257,23 @@ struct TlsConfig : public PersistentObject
     string              password;
 
     /**
-     * Certificate of Authority (CA) buffer. If CaListFile, certFile or
-     * privKeyFile are set, this setting will be ignored.
+     * Certificate of Authority (CA) buffer. If CaListFile, CaListPath,
+     * certFile or privKeyFile are set, this setting will be ignored.
      */
     string              CaBuf;
 
     /**
      * Public endpoint certificate buffer, which will be used as client-
      * side  certificate for outgoing TLS connection, and server-side
-     * certificate for incoming TLS connection. If CaListFile, certFile or
-     * privKeyFile are set, this setting will be ignored.
+     * certificate for incoming TLS connection. If CaListFile, CaListPath,
+     * certFile or privKeyFile are set, this setting will be ignored.
      */
     string              certBuf;
 
     /**
      * Optional private key buffer of the endpoint certificate to be used. 
-     * If CaListFile, certFile or privKeyFile are set, this setting will 
-     * be ignored.
+     * If CaListFile, CaListPath, certFile or privKeyFile are set, this
+     * setting will be ignored.
      */
     string              privKeyBuf;
 
@@ -351,6 +362,15 @@ struct TlsConfig : public PersistentObject
      *
      * In any cases, application can inspect pjsip_tls_state_info in the
      * callback to see the verification detail.
+     *
+     * For TURN TLS, if \a verifyServer is enabled, the connection to the
+     * TURN server is closed whenever there is any TLS verification error,
+     * including when the certificate does not identify the TURN server
+     * name, otherwise the error is only logged.
+     *
+     * Note that verification requires the trusted CA certificates, e.g:
+     * via \a CaListFile, as some platforms, e.g: Android, provide no
+     * default CA store to the TLS backend.
      *
      * Default value is false.
      */
@@ -450,6 +470,16 @@ public:
 
     /** Convert from pjsip */
     void fromPj(const pjsip_tls_setting &prm);
+
+    /**
+     * Convert to TURN TLS setting. The result refers to the content of
+     * this object, so it is only valid as long as this object remains
+     * valid and unmodified.
+     */
+    pj_turn_sock_tls_cfg toTurnPj() const;
+
+    /** Convert from TURN TLS setting */
+    void fromTurnPj(const pj_turn_sock_tls_cfg &prm);
 
     /**
      * Read this object from a container node.

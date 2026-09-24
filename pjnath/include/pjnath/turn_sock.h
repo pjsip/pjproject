@@ -240,6 +240,19 @@ typedef struct pj_turn_sock_tls_cfg
     pj_str_t    password;
 
     /**
+     * Specifies whether the TURN server certificate must be verified. When
+     * enabled, the connection is closed with PJNATH_ETURNTLSCERTVERIF if
+     * the certificate is not trusted (see #ca_list_file) or it does not
+     * identify the TURN server name given to pj_turn_sock_alloc(). The
+     * identity check follows RFC 6125, wildcards are accepted as the whole
+     * left-most label only. When disabled, verification failure is only
+     * logged.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t   verify_server;
+
+    /**
      * The ssl socket parameter.
      * These fields are used by TURN TLS:
      * - proto

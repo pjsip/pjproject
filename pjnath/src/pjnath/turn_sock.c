@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjnath/turn_sock.h>
+#include <pjnath/errno.h>
 #include <pj/activesock.h>
 #include <pj/ssl_sock.h>
 #include <pj/assert.h>
@@ -178,6 +179,7 @@ static pj_bool_t on_data_sent_asock(pj_activesock_t *asock,
  * SSL sock callback
  */
 #if PJ_HAS_SSL_SOCK
+static pj_status_t verify_server_cert(pj_turn_sock *turn_sock);
 static pj_bool_t on_connect_complete_ssl_sock(pj_ssl_sock_t *ssl_sock,
                                               pj_status_t status);
 static pj_bool_t on_data_read_ssl_sock(pj_ssl_sock_t *ssl_sock,
@@ -240,6 +242,8 @@ PJ_DEF(void) pj_turn_sock_tls_cfg_dup(pj_pool_t *pool,
     pj_strdup(pool, &dst->ca_buf, &src->ca_buf);
     pj_strdup(pool, &dst->cert_buf, &src->cert_buf);
     pj_strdup(pool, &dst->privkey_buf, &src->privkey_buf);
+    pj_strdup_with_null(pool, &dst->cert_lookup.keyword,
+                        &src->cert_lookup.keyword);
     pj_ssl_sock_param_copy(pool, &dst->ssock_param, &src->ssock_param);
 }
 
@@ -385,6 +389,13 @@ PJ_DEF(pj_status_t) pj_turn_sock_create(pj_stun_config *cfg,
 static void turn_sock_on_destroy(void *comp)
 {
     pj_turn_sock *turn_sock = (pj_turn_sock*) comp;
+
+#if PJ_HAS_SSL_SOCK
+    if (turn_sock->cert) {
+        pj_ssl_cert_wipe_keys(turn_sock->cert);
+        turn_sock->cert = NULL;
+    }
+#endif
 
     if (turn_sock->pool) {
         PJ_LOG(4,(turn_sock->obj_name, "TURN socket destroyed"));
@@ -752,6 +763,11 @@ static pj_bool_t on_connect_complete(pj_turn_sock *turn_sock,
         return PJ_FALSE;
     }
 
+#if PJ_HAS_SSL_SOCK
+    if (status == PJ_SUCCESS && turn_sock->conn_type == PJ_TURN_TP_TLS)
+        status = verify_server_cert(turn_sock);
+#endif
+
     if (status != PJ_SUCCESS) {
         if (turn_sock->conn_type == PJ_TURN_TP_UDP)
             sess_fail(turn_sock, "UDP connect() error", status);
@@ -816,6 +832,69 @@ static pj_bool_t on_connect_complete_asock(pj_activesock_t *asock,
 }
 
 #if PJ_HAS_SSL_SOCK
+/* Verify the TURN server certificate, including its identity, as the SSL
+ * socket does not do it. Returns non-success only if verification is
+ * mandatory and it failed.
+ */
+static pj_status_t verify_server_cert(pj_turn_sock *turn_sock)
+{
+    pj_ssl_sock_info info;
+    const char *errs[16];
+    unsigned i, cnt = PJ_ARRAY_SIZE(errs);
+    char buf[512];
+    int len;
+    pj_bool_t mandatory = turn_sock->setting.tls_cfg.verify_server;
+    pj_status_t status;
+
+    status = pj_ssl_sock_get_info(turn_sock->ssl_sock, &info);
+    if (status != PJ_SUCCESS)
+        return mandatory? status : PJ_SUCCESS;
+
+    /* This check supersedes any identity check done by the backend */
+    if (info.remote_cert_info && info.remote_cert_info->version &&
+        pj_ssl_cert_verify_name(info.remote_cert_info,
+                                &turn_sock->server_name,
+                                PJ_SSL_CERT_NAME_MATCH_WILDCARD)
+                                                        == PJ_SUCCESS)
+    {
+        info.verify_status &= ~PJ_SSL_CERT_EIDENTITY_NOT_MATCH;
+    } else {
+        info.verify_status |= PJ_SSL_CERT_EIDENTITY_NOT_MATCH;
+    }
+
+    if (info.verify_status == PJ_SSL_CERT_ESUCCESS ||
+        (!mandatory && pj_log_get_level() < 4))
+    {
+        return PJ_SUCCESS;
+    }
+
+    pj_ssl_cert_get_verify_status_strings(info.verify_status, errs, &cnt);
+    buf[0] = '\0';
+    for (i = 0, len = 0; i < cnt && len < (int)sizeof(buf); ++i) {
+        int n = pj_ansi_snprintf(buf + len, sizeof(buf) - len, "%s%s",
+                                 (i? "; " : ""), errs[i]);
+        if (n < 0)
+            break;
+        len += n;
+    }
+    buf[sizeof(buf) - 1] = '\0';
+
+    if (mandatory) {
+        PJ_LOG(2, (turn_sock->obj_name, "TURN server %.*s certificate "
+                   "verification failed: %s",
+                   (int)turn_sock->server_name.slen,
+                   turn_sock->server_name.ptr, buf));
+    } else {
+        PJ_LOG(4, (turn_sock->obj_name, "TURN server %.*s certificate "
+                   "verification failed, ignored as verify_server is "
+                   "disabled: %s",
+                   (int)turn_sock->server_name.slen,
+                   turn_sock->server_name.ptr, buf));
+    }
+
+    return mandatory? PJNATH_ETURNTLSCERTVERIF : PJ_SUCCESS;
+}
+
 static pj_bool_t on_connect_complete_ssl_sock(pj_ssl_sock_t *ssl_sock,
                                               pj_status_t status)
 {
@@ -1369,6 +1448,10 @@ static void turn_on_state(pj_turn_session *sess,
         else {
             //TURN TLS
             pj_ssl_sock_param param, *ssock_param;
+            /* Credentials are loaded once and kept for reconnection, e.g:
+             * to the next server address, as the settings are wiped.
+             */
+            pj_bool_t load_cred = (turn_sock->cert == NULL);
 
             ssock_param = &turn_sock->setting.tls_cfg.ssock_param;
             pj_ssl_sock_param_default(&param);
@@ -1395,10 +1478,11 @@ static void turn_on_state(pj_turn_session *sess,
                       sizeof(param.qos_params));
 
             /* Set SSL/TLS credentials from files */
-            if (turn_sock->setting.tls_cfg.cert_file.slen ||
-                turn_sock->setting.tls_cfg.ca_list_file.slen ||
-                turn_sock->setting.tls_cfg.ca_list_path.slen ||
-                turn_sock->setting.tls_cfg.privkey_file.slen)
+            if (load_cred &&
+                (turn_sock->setting.tls_cfg.cert_file.slen ||
+                 turn_sock->setting.tls_cfg.ca_list_file.slen ||
+                 turn_sock->setting.tls_cfg.ca_list_path.slen ||
+                 turn_sock->setting.tls_cfg.privkey_file.slen))
             {
                 status = pj_ssl_cert_load_from_files2(
                     turn_sock->pool,
@@ -1419,9 +1503,10 @@ static void turn_on_state(pj_turn_session *sess,
             }
             
             /* Set SSL/TLS credentials from buffer */
-            if (turn_sock->setting.tls_cfg.ca_buf.slen ||
-                turn_sock->setting.tls_cfg.cert_buf.slen ||
-                turn_sock->setting.tls_cfg.privkey_buf.slen)
+            if (load_cred &&
+                (turn_sock->setting.tls_cfg.ca_buf.slen ||
+                 turn_sock->setting.tls_cfg.cert_buf.slen ||
+                 turn_sock->setting.tls_cfg.privkey_buf.slen))
             {
                 status = pj_ssl_cert_load_from_buffer(
                     turn_sock->pool,
@@ -1441,7 +1526,8 @@ static void turn_on_state(pj_turn_session *sess,
             }
             
             /* Set SSL/TLS credentials from OS store */
-            if (turn_sock->setting.tls_cfg.cert_lookup.type !=
+            if (load_cred &&
+                turn_sock->setting.tls_cfg.cert_lookup.type !=
                                                  PJ_SSL_CERT_LOOKUP_NONE &&
                 turn_sock->setting.tls_cfg.cert_lookup.keyword.slen)
             {
@@ -1459,7 +1545,8 @@ static void turn_on_state(pj_turn_session *sess,
             }
 
             /* Set direct SSL/TLS credentials */
-            if (turn_sock->setting.tls_cfg.cert_direct.type !=
+            if (load_cred &&
+                turn_sock->setting.tls_cfg.cert_direct.type !=
                 PJ_SSL_CERT_DIRECT_NONE)
             {
                 status = pj_ssl_cert_load_direct(
@@ -1483,16 +1570,6 @@ static void turn_on_state(pj_turn_session *sess,
                                         &turn_sock->ssl_sock);
 
             if (status != PJ_SUCCESS) {
-                /* Release what pj_ssl_cert_load_direct() referenced. The
-                 * success path below does this after set_certificate(), but
-                 * turn_sock_on_destroy() only releases the pool, so without
-                 * it this exit strands the application's objects.
-                 */
-                if (turn_sock->cert) {
-                    pj_ssl_cert_wipe_keys(turn_sock->cert);
-                    turn_sock->cert = NULL;
-                }
-
                 turn_sock_destroy(turn_sock, status);
                 pj_grp_lock_release(turn_sock->grp_lock);
                 return;
@@ -1502,9 +1579,6 @@ static void turn_on_state(pj_turn_session *sess,
                 status = pj_ssl_sock_set_certificate(turn_sock->ssl_sock,
                                                      turn_sock->pool,
                                                      turn_sock->cert);
-
-                pj_ssl_cert_wipe_keys(turn_sock->cert);
-                turn_sock->cert = NULL;
             }
 
         }

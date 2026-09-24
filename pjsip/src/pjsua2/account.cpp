@@ -502,6 +502,9 @@ void AccountNatConfig::readObject(const ContainerNode &node)
     NODE_READ_STRING  ( this_node, udpKaData);
     NODE_READ_INT     ( this_node, contactUseSrcPort);
     NODE_READ_STRINGV ( this_node, iceManualHost);
+    /* Append new fields at the end, optional for older config files */
+    if (this_node.hasUnread() && this_node.unreadName() == "TlsConfig")
+        NODE_READ_OBJ ( this_node, turnTlsConfig);
 }
 
 void AccountNatConfig::writeObject(ContainerNode &node) const
@@ -540,6 +543,7 @@ void AccountNatConfig::writeObject(ContainerNode &node) const
     NODE_WRITE_STRING  ( this_node, udpKaData);
     NODE_WRITE_INT     ( this_node, contactUseSrcPort);
     NODE_WRITE_STRINGV  (this_node, iceManualHost);
+    NODE_WRITE_OBJ     ( this_node, turnTlsConfig);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -813,6 +817,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
                             str2Pj(natConfig.turnPassword);
     ret.turn_cfg.turn_auth_cred.data.static_cred.realm = pj_str((char*)"");
     ret.turn_cfg.turn_auth_cred.data.static_cred.nonce = pj_str((char*)"");
+    ret.turn_cfg.turn_tls_setting = natConfig.turnTlsConfig.toTurnPj();
 
     ret.allow_contact_rewrite   = natConfig.contactRewriteUse;
     ret.contact_rewrite_method  = natConfig.contactRewriteMethod;
@@ -1014,6 +1019,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
                 prm.turn_cfg.turn_auth_cred.data.static_cred.data_type;
         natConfig.turnPassword  =
                 pj2Str(prm.turn_cfg.turn_auth_cred.data.static_cred.data);
+        natConfig.turnTlsConfig.fromTurnPj(prm.turn_cfg.turn_tls_setting);
     } else {
         if (!mcfg) {
             pjsua_media_config_default(&default_mcfg);
@@ -1028,6 +1034,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
                 mcfg->turn_auth_cred.data.static_cred.data_type;
         natConfig.turnPassword  =
                 pj2Str(mcfg->turn_auth_cred.data.static_cred.data);
+        natConfig.turnTlsConfig.fromTurnPj(mcfg->turn_tls_setting);
     }
     natConfig.contactRewriteUse = prm.allow_contact_rewrite;
     natConfig.contactRewriteMethod = prm.contact_rewrite_method;

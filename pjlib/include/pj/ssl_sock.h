@@ -523,6 +523,62 @@ PJ_DECL(pj_status_t) pj_ssl_cert_get_verify_status_strings(
                                                  const char *error_strings[],
                                                  unsigned *count);
 
+
+/**
+ * Flags to customize the matching rules of pj_ssl_cert_verify_name().
+ */
+typedef enum pj_ssl_cert_name_match_flag
+{
+    /**
+     * Allow a wildcard in a DNS name of the certificate, as specified in
+     * RFC 6125 section 6.4.3. The wildcard is only accepted as the whole
+     * left-most label (e.g: "*.example.com"), it matches exactly one label,
+     * and it must be followed by at least two labels. Partial-label
+     * wildcards such as "f*.example.com" are never accepted. A wildcard is
+     * never matched against an IP address.
+     */
+    PJ_SSL_CERT_NAME_MATCH_WILDCARD = 1,
+
+    /**
+     * Also match the host part of "sip:" and "sips:" URI entries of the
+     * SubjectAltName extension, as specified in RFC 5922 section 7.1.
+     */
+    PJ_SSL_CERT_NAME_MATCH_SIP_URI  = 2,
+
+    /**
+     * Never match against the subject Common Name. Without this flag, the
+     * Common Name is only used when the certificate presents no identity in
+     * the SubjectAltName extension (RFC 6125 section 6.4.4).
+     */
+    PJ_SSL_CERT_NAME_MATCH_NO_CN    = 4
+
+} pj_ssl_cert_name_match_flag;
+
+
+/**
+ * Verify that a certificate identifies the specified name, e.g: to check
+ * the identity of a server against the name used to connect to it. The SSL
+ * socket does not perform this check, application may use this function
+ * and set PJ_SSL_CERT_EIDENTITY_NOT_MATCH to the verification status when
+ * it fails.
+ *
+ * By default, the name is matched case-insensitively against the DNS and IP
+ * address entries of the SubjectAltName extension, and against the subject
+ * Common Name only when the certificate presents no SubjectAltName identity.
+ * An IP address name only matches IP address entries or the Common Name.
+ *
+ * @param ci            The certificate info, e.g: the remote certificate
+ *                      info from pj_ssl_sock_get_info().
+ * @param name          The expected name, a hostname or an IP address.
+ * @param flags         Bitmask of #pj_ssl_cert_name_match_flag.
+ *
+ * @return              PJ_SUCCESS if the certificate identifies the name,
+ *                      PJ_ENOTFOUND if it does not.
+ */
+PJ_DECL(pj_status_t) pj_ssl_cert_verify_name(const pj_ssl_cert_info *ci,
+                                             const pj_str_t *name,
+                                             unsigned flags);
+
 /** 
  * Wipe out the keys in the SSL certificate. 
  *

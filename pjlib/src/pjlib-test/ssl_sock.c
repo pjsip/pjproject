@@ -2384,9 +2384,126 @@ on_return:
 #endif  /* PJ_SSL_SOCK_IMP_OPENSSL */
 
 
+static int cert_verify_name_test(void)
+{
+    enum { WC = PJ_SSL_CERT_NAME_MATCH_WILDCARD,
+           URI = PJ_SSL_CERT_NAME_MATCH_SIP_URI,
+           NOCN = PJ_SSL_CERT_NAME_MATCH_NO_CN };
+    static const struct test_t {
+        const char *cn;
+        const char *san;     /* "D:" DNS, "I:" IP, "U:" URI, ',' separated */
+        const char *name;
+        unsigned flags;
+        pj_status_t result;
+    } tests[] = {
+        /* DNS SAN, exact & case-insensitive */
+        { "x", "D:turn.example.com", "turn.example.com", 0, PJ_SUCCESS },
+        { "x", "D:TURN.Example.com", "turn.example.COM", 0, PJ_SUCCESS },
+        { "x", "D:a.example.com,D:turn.example.com", "turn.example.com", 0,
+          PJ_SUCCESS },
+        { "x", "D:turn.example.com", "turn.example.co", 0, PJ_ENOTFOUND },
+        { "x", "D:turn.example.com", "xturn.example.com", 0, PJ_ENOTFOUND },
+
+        /* Wildcard */
+        { "x", "D:*.example.com", "turn.example.com", 0, PJ_ENOTFOUND },
+        { "x", "D:*.example.com", "turn.example.com", WC, PJ_SUCCESS },
+        { "x", "D:*.example.com", "a.turn.example.com", WC, PJ_ENOTFOUND },
+        { "x", "D:*.example.com", "example.com", WC, PJ_ENOTFOUND },
+        { "x", "D:*.example.com", ".example.com", WC, PJ_ENOTFOUND },
+        { "x", "D:*.com", "example.com", WC, PJ_ENOTFOUND },
+        { "x", "D:f*.example.com", "foo.example.com", WC, PJ_ENOTFOUND },
+        { "x", "D:*", "example", WC, PJ_ENOTFOUND },
+        { "x", "D:*.0.0.1", "127.0.0.1", WC, PJ_ENOTFOUND },
+
+        /* IP SAN */
+        { "x", "I:192.0.2.1", "192.0.2.1", 0, PJ_SUCCESS },
+        { "x", "I:192.0.2.1", "192.0.2.10", 0, PJ_ENOTFOUND },
+        { "x", "I:2001:db8::1", "2001:DB8:0::1", 0, PJ_SUCCESS },
+        { "x", "D:192.0.2.1", "192.0.2.1", 0, PJ_ENOTFOUND },
+        { "x", "I:192.0.2.1", "example.com", 0, PJ_ENOTFOUND },
+
+        /* SIP URI SAN */
+        { "x", "U:sip:example.com", "example.com", 0, PJ_ENOTFOUND },
+        { "x", "U:sip:example.com", "example.com", URI, PJ_SUCCESS },
+        { "x", "U:sips:example.com", "example.com", URI, PJ_SUCCESS },
+        { "x", "U:http://example.com", "example.com", URI, PJ_ENOTFOUND },
+
+        /* CN fallback, only when there is no SAN identity */
+        { "turn.example.com", "", "turn.example.com", 0, PJ_SUCCESS },
+        { "turn.example.com", "", "turn.example.com", NOCN, PJ_ENOTFOUND },
+        { "turn.example.com", "D:other.example.com", "turn.example.com", 0,
+          PJ_ENOTFOUND },
+        { "turn.example.com", "I:192.0.2.1", "turn.example.com", 0,
+          PJ_ENOTFOUND },
+        { "turn.example.com", "U:http://x", "turn.example.com", 0,
+          PJ_SUCCESS },
+        { "example.com", "U:sip:x.example.com", "example.com", URI,
+          PJ_ENOTFOUND },
+        { "*.example.com", "", "turn.example.com", 0, PJ_ENOTFOUND },
+        { "*.example.com", "", "turn.example.com", WC, PJ_SUCCESS },
+        { "192.0.2.1", "", "192.0.2.1", 0, PJ_SUCCESS },
+        { "", "", "", 0, PJ_ENOTFOUND },
+        { "", "", "example.com", 0, PJ_ENOTFOUND },
+    };
+    pj_pool_t *pool;
+    unsigned i;
+    int rc = 0;
+
+    pool = pj_pool_create(mem, "certname", 1000, 1000, NULL);
+    if (!pool)
+        return -1300;
+
+    for (i = 0; i < PJ_ARRAY_SIZE(tests); ++i) {
+        const struct test_t *t = &tests[i];
+        pj_ssl_cert_info ci;
+        const char *p = t->san;
+        pj_str_t name;
+        pj_status_t status;
+
+        pj_bzero(&ci, sizeof(ci));
+        ci.version = 3;
+        pj_cstr(&ci.subject.cn, t->cn);
+        ci.subj_alt_name.entry = pj_pool_calloc(pool, 4,
+                                         sizeof(*ci.subj_alt_name.entry));
+
+        while (*p) {
+            const char *end = pj_ansi_strchr(p, ',');
+            unsigned n = ci.subj_alt_name.cnt++;
+
+            if (!end)
+                end = p + pj_ansi_strlen(p);
+            ci.subj_alt_name.entry[n].type =
+                            (p[0]=='D'? PJ_SSL_CERT_NAME_DNS :
+                             (p[0]=='I'? PJ_SSL_CERT_NAME_IP :
+                              PJ_SSL_CERT_NAME_URI));
+            pj_strset(&ci.subj_alt_name.entry[n].name, (char*)p + 2,
+                      end - p - 2);
+            p = (*end)? end + 1 : end;
+        }
+
+        status = pj_ssl_cert_verify_name(&ci, pj_cstr(&name, t->name),
+                                         t->flags);
+        if (status != t->result) {
+            PJ_LOG(1,("", "   cert name test #%u failed: cn='%s' san='%s' "
+                      "name='%s' flags=%u: expected %d, got %d",
+                      i, t->cn, t->san, t->name, t->flags, t->result,
+                      status));
+            rc = -1310;
+        }
+    }
+
+    pj_pool_release(pool);
+    return rc;
+}
+
 int ssl_sock_test(void)
 {
     int ret;
+
+    PJ_LOG(3,("", "..certificate name verification test"));
+    ret = cert_verify_name_test();
+    if (ret != 0)
+        return ret;
 
     PJ_LOG(3,("", "..get cipher list test"));
     ret = get_cipher_list();
