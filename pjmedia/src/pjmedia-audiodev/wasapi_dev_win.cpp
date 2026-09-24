@@ -1480,7 +1480,22 @@ static pj_status_t send_cmd(struct wasapi_stream *s, enum wasapi_cmd cmd,
 
     /* Arm the completion before publishing, the thread may answer at once */
     ResetEvent(s->done_event);
-    InterlockedExchange(&s->cmd, packed);
+    /* Do not displace a QUIT that an earlier destroy left behind: it is what
+     * lets a thread that recovers stop the device and exit.
+     */
+    for (;;) {
+        LONG cur = InterlockedCompareExchange(&s->cmd, packed, 0);
+
+        if (cur == 0)
+            break;
+        if (WASAPI_CMD_OF(cur) == WASAPI_CMD_QUIT && cmd != WASAPI_CMD_QUIT) {
+            LeaveCriticalSection(&s->cmd_lock);
+            return PJ_EINVALIDOP;
+        }
+        /* Some other stale command, take the slot */
+        if (InterlockedCompareExchange(&s->cmd, packed, cur) == cur)
+            break;
+    }
     SetEvent(s->cmd_event);
 
     /* Wait for this command to be answered. A completion left over from a
