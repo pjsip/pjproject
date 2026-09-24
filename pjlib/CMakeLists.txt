@@ -792,6 +792,7 @@ if(BUILD_TESTING)
     src/pjlib-test/sock.c
     src/pjlib-test/sock_perf.c
     src/pjlib-test/ssl_sock.c
+    src/pjlib-test/ssl_sock_apple_test.c
     src/pjlib-test/ssl_sock_stress.c
     src/pjlib-test/string.c
     src/pjlib-test/test.c
@@ -806,6 +807,14 @@ if(BUILD_TESTING)
   )
 
   target_link_libraries(pjlib-test PRIVATE pjlib pjlib-ssl)
+  if(APPLE)
+    # ssl_sock_apple_test.c calls Security.framework directly,
+    # independent of which SSL backend was configured.
+    find_library(Security_LIBRARY Security REQUIRED)
+    find_library(CoreFoundation_LIBRARY CoreFoundation REQUIRED)
+    target_link_libraries(pjlib-test PRIVATE
+      "${Security_LIBRARY}" "${CoreFoundation_LIBRARY}")
+  endif()
 
   add_test(NAME pjlib-test COMMAND pjlib-test)
 endif()
