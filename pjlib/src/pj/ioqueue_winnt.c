@@ -946,7 +946,9 @@ static pj_status_t cancel_all_pending_op(pj_ioqueue_key_t *key)
     } while (0);
 #endif
 
+#if PJ_HAS_TCP
     key->connecting = 0;
+#endif
     pj_ioqueue_unlock_key(key);
 
     if (rc == 0) {
@@ -1108,7 +1110,9 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
             case PJ_IOQUEUE_OP_RECV_FROM:
             case PJ_IOQUEUE_OP_SEND:
             case PJ_IOQUEUE_OP_SEND_TO:
+#if PJ_HAS_TCP
             case PJ_IOQUEUE_OP_ACCEPT:
+#endif
                 op = (struct pending_op*)
                      ((char*)pOv - offsetof(struct pending_op, pending_key));
                 op_key = op->app_op_key;

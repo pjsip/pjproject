@@ -449,6 +449,18 @@ static int simple_sock_test(void)
 
     for (i=0; i<(int)PJ_ARRAY_SIZE(types); ++i) {
         rc = pj_sock_socket(pj_AF_INET(), types[i], 0, &sock);
+#if !PJ_HAS_TCP
+        /* Without TCP, stream socket creation must be refused */
+        if (types[i] == pj_SOCK_STREAM()) {
+            if (rc == PJ_SUCCESS)
+                pj_sock_close(sock);
+            if (rc != PJ_ENOTSUP) {
+                app_perror("...error: stream socket not refused", rc);
+                return -10;
+            }
+            continue;
+        }
+#endif
         if (rc != PJ_SUCCESS) {
             app_perror("...error: unable to create socket", rc);
             break;
