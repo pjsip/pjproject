@@ -183,11 +183,15 @@ static pj_status_t create_identity_from_cert(darwinssl_sock_t *dssock,
 
     *p_identity = NULL;
 
-    if (cert->privkey_file.slen || cert->privkey_buf.slen ||
-        cert->privkey_pass.slen)
+    if (cert->privkey_file.slen || cert->privkey_buf.slen)
     {
+#if TARGET_OS_IPHONE
+        PJ_LOG(3, (THIS_FILE, "Ignoring supplied private key. The key must "
+                              "be inside the PKCS#12 certificate bundle."));
+#else
         PJ_LOG(3, (THIS_FILE, "Ignoring supplied private key. Private key "
                               "must be placed in the keychain instead."));
+#endif
     }
 
 
@@ -928,7 +932,8 @@ static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
         count = SecTrustGetCertificateCount(trust);
         if (count > 0) {
             cert = SecTrustGetCertificateAtIndex(trust, 0);
-            get_cert_info(ssock->pool, &ssock->remote_cert_info, cert);
+            get_cert_info(ssock->info_pool, &ssock->remote_cert_info,
+                          cert, PJ_TRUE);
         }
         CFRelease(trust);
     } else if (err != noErr) {

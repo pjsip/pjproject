@@ -428,11 +428,15 @@ static pj_status_t create_identity_from_cert(applessl_sock_t *assock,
     /* Init */
     *p_identity = NULL;
 
-    if (cert->privkey_file.slen || cert->privkey_buf.slen ||
-        cert->privkey_pass.slen)
+    if (cert->privkey_file.slen || cert->privkey_buf.slen)
     {
-        PJ_LOG(5, (THIS_FILE, "Ignoring supplied private key. Private key "
+#if TARGET_OS_IPHONE
+        PJ_LOG(3, (THIS_FILE, "Ignoring supplied private key. The key must "
+                              "be inside the PKCS#12 certificate bundle."));
+#else
+        PJ_LOG(3, (THIS_FILE, "Ignoring supplied private key. Private key "
                               "must be placed in the keychain instead."));
+#endif
     }
 
     if (cert->cert_file.slen) {
@@ -1763,7 +1767,8 @@ static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
                 elmt = (CFTypeRef) CFArrayGetValueAtIndex(cert_arr, 0);
                 if (CFGetTypeID(elmt) == SecCertificateGetTypeID()) {
                     cert = (SecCertificateRef)elmt;
-                    get_cert_info(ssock->pool, &ssock->local_cert_info, cert);
+                    get_cert_info(ssock->pool, &ssock->local_cert_info,
+                                  cert, PJ_FALSE);
                 }
             }               
             CFRelease(cert_arr);
@@ -1775,7 +1780,8 @@ static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
         count = SecTrustGetCertificateCount(trust);
         if (count > 0) {
             cert = SecTrustGetCertificateAtIndex(trust, 0);
-            get_cert_info(ssock->pool, &ssock->remote_cert_info, cert);
+            get_cert_info(ssock->info_pool, &ssock->remote_cert_info,
+                          cert, PJ_TRUE);
         }
     }
 }
