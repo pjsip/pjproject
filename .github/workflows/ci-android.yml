@@ -5,6 +5,7 @@ on:
       - 'master'
   pull_request:
     types: [opened, synchronize, reopened]
+  workflow_dispatch:
 
 # Cancel superseded runs on the same ref (e.g. a force-push to a PR) so they
 # stop holding CI runner slots.
