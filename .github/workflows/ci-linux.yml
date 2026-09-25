@@ -4,7 +4,8 @@ on:
     branches:
       - 'master'
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
 
 # Cancel superseded runs on the same ref (e.g. a force-push to a PR) so they
 # stop holding CI runner slots.
@@ -19,7 +20,10 @@ env:
   CI_RUNNER: python ${{ github.workspace }}/cirunner/cirunner.py -t 3600 -o ${{ github.workspace }}/artifacts --
   MAKE_FAST: make -j 3
 jobs:
+  # Draft PRs run the build only jobs. Skipping this job skips every test job
+  # that needs it.
   detect-changes:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     outputs:
       # Aggregate dependency groups — each combines the raw path filters
@@ -35,6 +39,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: dorny/paths-filter@v3
+      if: github.event_name == 'pull_request'
       id: filter
       with:
         filters: |
@@ -105,7 +110,7 @@ jobs:
   default-full-bundle-1:
     # full bundle: enable all codecs + AEC + DTLS
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.any_src == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.any_src == 'true'
     runs-on: ubuntu-latest
     name: Default / pjsua
     steps:
@@ -169,7 +174,7 @@ jobs:
 
   default-full-bundle-2:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.pjnath_deps == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.pjnath_deps == 'true'
     runs-on: ubuntu-latest
     name: Default / pjlib,util,pjnath
     steps:
@@ -203,7 +208,7 @@ jobs:
 
   default-full-bundle-3:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.pjmedia_pjsip_deps == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.pjmedia_pjsip_deps == 'true'
     runs-on: ubuntu-latest
     name: Default / pjmedia,pjsip
     steps:
@@ -233,7 +238,7 @@ jobs:
 
   no-tls:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.pjsip_deps == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.pjsip_deps == 'true'
     runs-on: ubuntu-latest
     name: No SSL / pjlib,pjsip
     steps:
@@ -267,7 +272,7 @@ jobs:
     needs: [detect-changes]
     # any_src, not pjlib_deps: the no-pthread guarantee covers the upper layers
     # too, e.g. pjmedia's alsa_dev.c.
-    if: github.event_name == 'push' || needs.detect-changes.outputs.any_src == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.any_src == 'true'
     runs-on: ubuntu-latest
     name: No threads / pjlib
     steps:
@@ -321,7 +326,7 @@ jobs:
 
   gnu-tls:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.pjnath_pjsip_deps == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.pjnath_pjsip_deps == 'true'
     runs-on: ubuntu-latest
     name: GnuTLS / pjlib,pjnath,pjsip
     steps:
@@ -359,7 +364,7 @@ jobs:
 
   vid-openh264-1:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.any_src == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.any_src == 'true'
     runs-on: ubuntu-latest
     name: OpenH264+VPX / pjsua
     steps:
@@ -434,7 +439,7 @@ jobs:
 
   vid-openh264-2:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.pjnath_deps == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.pjnath_deps == 'true'
     runs-on: ubuntu-latest
     name: OpenH264+VPX / pjlib,util,pjnath
     steps:
@@ -479,7 +484,7 @@ jobs:
 
   vid-openh264-3:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.pjmedia_pjsip_deps == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.pjmedia_pjsip_deps == 'true'
     runs-on: ubuntu-latest
     name: OpenH264+VPX / pjmedia,pjsip
     steps:
@@ -528,7 +533,7 @@ jobs:
 
   vid-ffmpeg:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.pjmedia_deps == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.pjmedia_deps == 'true'
     runs-on: ubuntu-latest
     name: FFMPEG+x264 / pjmedia
     steps:
@@ -585,7 +590,7 @@ jobs:
 
   ioq-epoll-cb-with-lock-conf-thread:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.any_src == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.any_src == 'true'
     runs-on: ubuntu-latest
     name: ioq-epoll-cb-with-lock-conf-thread / pjlib,pjsua
     steps:
@@ -631,7 +636,7 @@ jobs:
 
   ioq-no-fast-track:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.pjlib_deps == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.pjlib_deps == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -686,7 +691,7 @@ jobs:
     # Build pjsua-lib with PJSUA_MEDIA_HAS_PJMEDIA=0 (third-party media mode)
     # and test the alt_pjsua sample application.
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.any_src == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.any_src == 'true'
     runs-on: ubuntu-latest
     name: alt_pjsua / 3rdparty media
     steps:
@@ -764,7 +769,7 @@ jobs:
   # .github/workflows/stress-test.yml.
   stress-asan:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.any_src == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.any_src == 'true'
     runs-on: ubuntu-latest
     name: stress / asan
     timeout-minutes: 45
@@ -859,7 +864,7 @@ jobs:
 
   stress-tsan:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.any_src == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.any_src == 'true'
     runs-on: ubuntu-latest
     name: stress / tsan
     timeout-minutes: 45
