@@ -37,7 +37,8 @@
  *  - SIP over UDP or TLS, selected by EMBUA_SIP_TRANSPORT; TLS when the
  *    stack has it (which also requires PJ_HAS_TCP). The TLS transport has
  *    no certificate: it works as a client towards the registrar, and
- *    incoming requests then arrive over that same connection.
+ *    incoming requests then arrive over that same connection. The server's
+ *    certificate is not verified.
  *  - Mandatory SDES-SRTP when EMBUA_USE_SRTP is set, the default whenever
  *    pjmedia has SRTP: the SDP offers/answers RTP/SAVP with a=crypto, and
  *    an offer without SRTP is rejected with 488. Otherwise plain RTP/AVP.
@@ -55,7 +56,8 @@
  *    application takes: "call <uri>", e.g. "call sip:alice@192.168.0.2",
  *    places an outgoing call, "mem" dumps the caching pool state (needs
  *    PJ_LOG_MAX_LEVEL >= 3), and "quit" disconnects all calls, unregisters,
- *    and exits. Any other request outside a dialog is answered with 400.
+ *    and exits. The sender is not authenticated, so this is for testing
+ *    only. Any other request outside a dialog is answered with 400.
  */
 
 /* Include all headers. */
@@ -286,6 +288,8 @@ static struct call_t
     pjmedia_transport_info  med_tpinfo;
     pjmedia_transport       *med_transport;
     pjmedia_sock_info       med_sock_info;
+
+    pj_bool_t                end_pending;  /* media failed, end the call */
 } g_calls[MAX_CALLS];
 
 /* MESSAGE method (RFC 3428) */
@@ -800,6 +804,32 @@ static void init(void)
 
 
 
+/* End the calls whose media could not be set up. call_on_media_update()
+ * only marks them, because it can run inside on_rx_request() while the
+ * INVITE is still being answered, and ending the session there would pull
+ * the call out from under it.
+ */
+static void end_failed_calls(void)
+{
+    unsigned i;
+
+    for (i=0; i<MAX_CALLS; ++i) {
+        struct call_t *call = &g_calls[i];
+        pjsip_tx_data *tdata;
+
+        if (!call->end_pending || call->inv == NULL)
+            continue;
+
+        call->end_pending = PJ_FALSE;
+        PJ_LOG(3,(THIS_FILE, "Call %d has no media, ending it", (int)i));
+        if (pjsip_inv_end_session(call->inv, PJSIP_SC_NOT_ACCEPTABLE_HERE,
+                                  NULL, &tdata) == PJ_SUCCESS && tdata)
+        {
+            pjsip_inv_send_msg(call->inv, tdata);
+        }
+    }
+}
+
 /* Number of call slots in use. */
 static unsigned active_calls(void)
 {
@@ -845,6 +875,8 @@ int main(void)
 #endif
 
         pjsip_endpt_handle_events(g.endpt, &timeout);
+
+        end_failed_calls();
 
 #if EMBUA_USE_REGISTRATION
         /* Send a REGISTER if one is due. Doing it here rather than from a
@@ -1126,16 +1158,17 @@ static void handle_message(pjsip_rx_data *rdata)
     pjsip_msg_body *body = rdata->msg_info.msg->body;
     char uri_buf[PJSIP_MAX_URL_SIZE];
     pj_str_t text, uri;
-#if EMBUA_SIP_TRANSPORT == SIP_TLS
-    pj_str_t tp_param = pj_str("transport=");
-#endif
 
     /* Accept the MESSAGE regardless of what it contains. This must be
      * stateful: the transaction then absorbs any retransmission, which
-     * would otherwise be processed again and place a second call.
+     * would otherwise be processed again and place a second call. Without
+     * a transaction nothing would absorb it, so do not act on it either.
      */
-    pjsip_endpt_respond(g.endpt, NULL, rdata, PJSIP_SC_OK, NULL,
-                        NULL, NULL, NULL);
+    if (pjsip_endpt_respond(g.endpt, NULL, rdata, PJSIP_SC_OK, NULL,
+                            NULL, NULL, NULL) != PJ_SUCCESS)
+    {
+        return;
+    }
 
     if (body == NULL || body->len == 0)
         return;
@@ -1173,20 +1206,13 @@ static void handle_message(pjsip_rx_data *rdata)
     uri.slen = text.slen - CMD_CALL.slen;
     pj_strtrim(&uri);
 
-    /* Leave room for the transport parameter appended below. */
-    if (uri.slen == 0 || uri.slen + 16 >= (pj_ssize_t)sizeof(uri_buf)) {
+    if (uri.slen == 0 || uri.slen >= (pj_ssize_t)sizeof(uri_buf)) {
         PJ_LOG(3,(THIS_FILE, "Ignoring MESSAGE: bad call URI"));
         return;
     }
 
     pj_memcpy(uri_buf, uri.ptr, uri.slen);
     uri_buf[uri.slen] = '\0';
-
-#if EMBUA_SIP_TRANSPORT == SIP_TLS
-    /* We only listen on TLS, so the INVITE must go out on TLS too. */
-    if (pj_stristr(&uri, &tp_param) == NULL)
-        pj_ansi_strxcat(uri_buf, ";transport=tls", sizeof(uri_buf));
-#endif
 
     uri = pj_str(uri_buf);
     make_call(&uri);
@@ -1395,23 +1421,27 @@ static void call_on_media_update( pjsip_inv_session *inv,
     pjmedia_stream_info stream_info;
     const pjmedia_sdp_session *local_sdp;
     const pjmedia_sdp_session *remote_sdp;
-    unsigned samples_per_frame, ptime;
+    unsigned samples_per_frame, ptime, codec_spf;
+    pjmedia_codec_param *param;
     pjmedia_port *port;
     pj_timestamp freq;
-
-    if (status != PJ_SUCCESS) {
-        app_perror(THIS_FILE, "SDP negotiation has failed", status);
-
-        /* Here we should disconnect call if we're not in the middle
-         * of initializing an UAS dialog and if this is not a re-INVITE.
-         */
-        return;
-    }
 
     if (call == NULL)
         return;
 
-    /* This may be a re-INVITE, so drop the previous stream first. */
+    /* A failed re-INVITE keeps the previous media. With no media yet this
+     * was the initial offer/answer, so the call is ended.
+     */
+    if (status != PJ_SUCCESS) {
+        app_perror(THIS_FILE, "SDP negotiation has failed", status);
+        if (call->med_port == NULL)
+            call->end_pending = PJ_TRUE;
+        return;
+    }
+
+    /* This may be a re-INVITE, so drop the previous stream first. From here
+     * on a failure leaves the call without media, so it is ended.
+     */
     stop_media(call);
 
     /* Get local and remote SDP.
@@ -1420,13 +1450,13 @@ static void call_on_media_update( pjsip_inv_session *inv,
     status = pjmedia_sdp_neg_get_active_local(inv->neg, &local_sdp);
     if (status != PJ_SUCCESS) {
         app_perror(THIS_FILE, "Unable to get local SDP", status);
-        return;
+        goto on_error;
     }
 
     status = pjmedia_sdp_neg_get_active_remote(inv->neg, &remote_sdp);
     if (status != PJ_SUCCESS) {
         app_perror(THIS_FILE, "Unable to get remote SDP", status);
-        return;
+        goto on_error;
     }
 
     /* Activate SRTP with the keys that have just been negotiated. */
@@ -1434,7 +1464,7 @@ static void call_on_media_update( pjsip_inv_session *inv,
                                            local_sdp, remote_sdp, 0);
     if (status != PJ_SUCCESS) {
         app_perror( THIS_FILE, "pjmedia_transport_media_start() error", status);
-        return;
+        goto on_error;
     }
 
     /* Create stream info based on the media audio SDP. */
@@ -1443,13 +1473,22 @@ static void call_on_media_update( pjsip_inv_session *inv,
                                           local_sdp, remote_sdp, 0);
     if (status != PJ_SUCCESS) {
         app_perror(THIS_FILE,"pjmedia_stream_info_from_sdp() error",status);
-        return;
+        goto on_error;
     }
 
-    /* If required, we can also change some settings in the stream info,
-     * (such as jitter buffer settings, codec settings, etc) before we
-     * create the stream.
+    /* The loopback buffer holds one 20 ms frame. A remote a=ptime above
+     * that would enlarge the stream's frame past it, so cap the frames per
+     * packet: ptime is only a preference.
      */
+    param = stream_info.param;
+    codec_spf = param->info.clock_rate * param->info.channel_cnt *
+                param->info.frm_ptime /
+                PJ_MAX(param->info.frm_ptime_denum, 1) / 1000;
+    if (codec_spf && param->setting.frm_per_pkt * codec_spf > MAX_FRAME_SAMPLES)
+    {
+        param->setting.frm_per_pkt =
+                (pj_uint8_t)PJ_MAX(MAX_FRAME_SAMPLES / codec_spf, 1);
+    }
 
     /* Create new audio media stream, passing the stream info, and also the
      * media transport that we created earlier.
@@ -1459,14 +1498,14 @@ static void call_on_media_update( pjsip_inv_session *inv,
                                    &call->med_stream);
     if (status != PJ_SUCCESS) {
         app_perror( THIS_FILE, "pjmedia_stream_create() error", status);
-        return;
+        goto on_error;
     }
 
     /* Start the audio stream */
     status = pjmedia_stream_start(call->med_stream);
     if (status != PJ_SUCCESS) {
         app_perror( THIS_FILE, "pjmedia_stream_start() error", status);
-        return;
+        goto on_error;
     }
 
     /* Arm the media clock. Setting med_port last is what makes media_poll()
@@ -1475,7 +1514,7 @@ static void call_on_media_update( pjsip_inv_session *inv,
     status = pjmedia_stream_get_port(call->med_stream, &port);
     if (status != PJ_SUCCESS) {
         app_perror( THIS_FILE, "pjmedia_stream_get_port() error", status);
-        return;
+        goto on_error;
     }
 
     samples_per_frame = PJMEDIA_PIA_SPF(&port->info);
@@ -1483,7 +1522,7 @@ static void call_on_media_update( pjsip_inv_session *inv,
     if (samples_per_frame > MAX_FRAME_SAMPLES || ptime == 0) {
         PJ_LOG(1,(THIS_FILE, "Call %d unsupported frame: %u samples/%u ms",
                   (int)(call - g_calls), samples_per_frame, ptime));
-        return;
+        goto on_error;
     }
 
     MEDIA_LOCK();
@@ -1498,6 +1537,10 @@ static void call_on_media_update( pjsip_inv_session *inv,
 
     PJ_LOG(3,(THIS_FILE, "Call %d media started (%u samples/%u ms)",
               (int)(call - g_calls), samples_per_frame, ptime));
+    return;
+
+on_error:
+    call->end_pending = PJ_TRUE;
 }
 
 #else   /* EMBUA_AUDIO_CODEC */
