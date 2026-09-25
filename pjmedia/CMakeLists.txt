@@ -248,9 +248,19 @@ cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_WMME
   "PJMEDIA_WITH_AUDIODEV;WIN32 OR CYGWIN OR MINGW" OFF
 )
 
-# Windows Audio Session API (WASAPI) backend
+# Windows Audio Session API (WASAPI) backend, off by default: on Windows
+# desktop WMME is the default and WASAPI is opt-in, see
+# PJMEDIA_AUDIO_DEV_HAS_WASAPI in pjmedia-audiodev/config.h.
+#
+# This stays off for a WindowsStore build too, even though CMake's WIN32 is
+# true there. The UWP backend is wasapi_dev.cpp, which is guarded on
+# PJ_WIN32_UWP, and nothing in this build system ever defines it: pjlib/
+# CMakeLists.txt sets PJ_WIN32 alone and pj/config.h only takes its UWP
+# branch when PJ_WIN32_UWP or _WIN32_UWP is defined for it. Turning WASAPI on
+# here would therefore select the desktop backend for a Store target. UWP is
+# built from the MSVC projects, which do define it.
 cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_WASAPI
-  "Enable WASAPI audio device backend" ON
+  "Enable WASAPI audio device backend" OFF
   "PJMEDIA_WITH_AUDIODEV;WIN32 OR CYGWIN OR MINGW" OFF
 )
 import_if_or_set(PJMEDIA_WITH_AUDIODEV_WASAPI OFF WASAPI)
@@ -832,6 +842,7 @@ add_library(pjmedia-audiodev
   src/pjmedia-audiodev/null_dev.c
   src/pjmedia-audiodev/oboe_dev.cpp
   src/pjmedia-audiodev/wasapi_dev.cpp
+  src/pjmedia-audiodev/wasapi_dev_win.cpp
   src/pjmedia-audiodev/wmme_dev.c
 
   $<$<BOOL:${APPLE}>:src/pjmedia-audiodev/coreaudio_dev.m>
@@ -851,6 +862,7 @@ target_sources(pjmedia-audiodev
       include/pjmedia-audiodev/audiotest.h
       include/pjmedia-audiodev/config.h
       include/pjmedia-audiodev/errno.h
+      include/pjmedia-audiodev/wasapi.h
 )
 
 #

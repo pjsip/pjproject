@@ -190,6 +190,30 @@ PJ_BEGIN_DECL
  /**
   * This setting controls whether Windows Audio Session API (WASAPI)
   * support should be included.
+  *
+  * On UWP and Windows Phone 8 this is the only audio backend, so it is
+  * enabled by default and implemented by wasapi_dev.cpp.
+  *
+  * On Windows desktop it is disabled by default, since WMME is the default
+  * backend there, and can be enabled in config_site.h. It is then
+  * implemented by wasapi_dev_win.cpp, which offers a lower latency than
+  * WMME. That desktop backend is **experimental**: it is new and has seen
+  * little field use, so enable it deliberately and test it for your case.
+  * The WASAPI devices are listed after the WMME ones, so enabling it does
+  * not change the existing device order.
+  *
+  * The first WASAPI device is named "Wave mapper", as the WMME one is, so an
+  * application selecting it by name only has to pass "WASAPI" instead of
+  * "WMME" as the driver name of #pjmedia_aud_dev_lookup(). Like the WMME
+  * one, it is only listed when both capture and playback devices exist.
+  *
+  * Note however that it only resolves the default endpoints once, when the
+  * stream is created, and then stays on them. The WMME device of that name is
+  * the WAVE_MAPPER, a virtual device that the OS keeps routing to whatever
+  * the default device currently is. So when an endpoint in use disappears,
+  * e.g: a USB headset is unplugged, WASAPI stops the stream and publishes
+  * PJMEDIA_EVENT_AUD_DEV_ERROR instead of switching over silently, and the
+  * application decides which device to recreate the stream on.
   */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_WASAPI
 #  if (defined(PJ_WIN32_UWP) && PJ_WIN32_UWP!=0) || \
@@ -198,6 +222,20 @@ PJ_BEGIN_DECL
 #  else
 #    define PJMEDIA_AUDIO_DEV_HAS_WASAPI        0
 #  endif
+#endif
+
+
+ /**
+  * This setting controls whether the Windows desktop WASAPI backend should
+  * open its streams in raw mode, which bypasses the audio processing objects
+  * (APO) of the endpoint, e.g: the effects added by the audio driver. Note
+  * that it requires Windows 8.1 or later, and that the backend falls back to
+  * the normal shared mode when the endpoint does not support it.
+  *
+  * Default: 0 (disabled)
+  */
+#ifndef PJMEDIA_WASAPI_DEV_USE_RAW_MODE
+#  define PJMEDIA_WASAPI_DEV_USE_RAW_MODE       0
 #endif
 
 
