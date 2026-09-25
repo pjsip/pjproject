@@ -297,7 +297,11 @@ static void cert_get_alt_name(const mbedtls_x509_crt *crt,
             type = PJ_SSL_CERT_NAME_URI;
             break;
         case MBEDTLS_X509_SAN_IP_ADDRESS:
-            type = PJ_SSL_CERT_NAME_IP;
+            /* Ignore malformed IP address */
+            if (len == sizeof(pj_in_addr) || len == sizeof(pj_in6_addr))
+                type = PJ_SSL_CERT_NAME_IP;
+            else
+                type = PJ_SSL_CERT_NAME_UNKNOWN;
             break;
         default:
             type = PJ_SSL_CERT_NAME_UNKNOWN;

@@ -2655,7 +2655,12 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci, X509 *x,
                 case GEN_IPADD:
                     p = (unsigned char*)M_ASN1_STRING_data(name->d.ip);
                     len = M_ASN1_STRING_length(name->d.ip);
-                    type = PJ_SSL_CERT_NAME_IP;
+                    /* Ignore malformed IP address */
+                    if (len == sizeof(pj_in_addr) ||
+                        len == sizeof(pj_in6_addr))
+                    {
+                        type = PJ_SSL_CERT_NAME_IP;
+                    }
                     break;
                 default:
                     break;
