@@ -292,8 +292,12 @@ static void st_entry_callback(pj_timer_heap_t *ht, pj_timer_entry *e)
 
     /* try to cancel this, a stress thread may have rescheduled it */
 #if RANDOMIZED_TEST
-    if (pj_timer_heap_cancel_if_active(ht, e, 10) > 0)
+    if (pj_timer_heap_cancel_if_active(ht, e, 10) > 0) {
+        while (pj_atomic_get(tparam->status[e - tparam->entries]) != 1)
+            pj_thread_sleep(10);
+        pj_atomic_set(tparam->status[e - tparam->entries], 0);
         pj_atomic_inc(tparam->n_cancel);
+    }
 #else
     pj_timer_heap_cancel_if_active(ht, e, 10);
 #endif
