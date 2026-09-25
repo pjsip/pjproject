@@ -51,8 +51,6 @@ SAMPLES := aidemo \
 	   vid_codec_test \
 	   vid_streamutil
 
-SAMPLES := embedded_ua
-
 PJSUA2_SAMPLES = pjsua2_demo pjsua2_hello_reg
 
 ifeq ($(EXCLUDE_APP),0)
