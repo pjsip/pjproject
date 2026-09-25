@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The manifest of the distributed AAR. A library manifest contributes to the
+  manifest of every app that merges it, so it declares only the package and
+  the API range and asks for nothing: the permissions PJSIP needs depend on
+  what the app uses it for, and a library that demanded INTERNET, RECORD_AUDIO
+  and CAMERA from everyone would be asking for permissions some consumers
+  never exercise.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.pjsip.pjsua2">
+
+    <!--
+      minSdkVersion is substituted from the ANDROID_API the native libraries
+      were compiled against. Hard-coding it lets the two disagree: a build at
+      a higher API would emit native code using symbols this manifest still
+      says are safe to install on 23, and the app would fail at run time on a
+      device that Play let it onto.
+
+      No targetSdkVersion: a library manifest's is ignored in favour of the
+      consuming application's, so stating one here only invites the two to
+      drift.
+    -->
+    <uses-sdk android:minSdkVersion="@MIN_SDK@" />
+
+</manifest>

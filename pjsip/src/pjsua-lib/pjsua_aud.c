@@ -37,6 +37,8 @@ static void close_snd_dev(pj_bool_t close_null_snd);
  * ownership/state.
  */
 static void close_snd_port(pjmedia_snd_port *old_snd);
+/* Sound device auto-close timer callback */
+static void close_snd_timer_cb(pj_timer_heap_t *th, pj_timer_entry *entry);
 /* Create audio device param */
 static pj_status_t create_aud_param(pjmedia_aud_param *param,
                                     pjmedia_aud_dev_index capture_dev,
@@ -344,6 +346,7 @@ pj_status_t pjsua_aud_subsys_init()
     param.bits_per_sample = pjsua_var.mconf_cfg.bits_per_sample;
     param.options = opt;
     param.worker_threads = pjsua_var.media_cfg.conf_threads-1;
+    param.worker_thread_prio = pjsua_var.media_cfg.conf_thread_prio;
 
     /* Init conference bridge. */
     status = pjmedia_conf_create2(pjsua_var.pool, &param, &pjsua_var.mconf);
@@ -378,6 +381,16 @@ pj_status_t pjsua_aud_subsys_init()
         pjmedia_conf_set_op_cb(pjsua_var.mconf,
                                pjsua_var.ua_cfg.cb.on_conf_op_completed);
     }
+
+    /* Initialize the sound device auto-close timer here rather than in
+     * pjsua_aud_subsys_start(), so that its callback is already set if
+     * the application is destroyed after a failure somewhere between
+     * pjsua_init() and pjsua_start(): the teardown path calls
+     * pjsua_check_snd_dev_idle(), which would otherwise schedule a timer
+     * entry with a NULL callback.
+     */
+    pj_timer_entry_init(&pjsua_var.snd_idle_timer, PJ_FALSE, NULL,
+                        &close_snd_timer_cb);
 
     return status;
 
@@ -460,13 +473,8 @@ static void close_snd_timer_cb( pj_timer_heap_t *th,
 
 pj_status_t pjsua_aud_subsys_start(void)
 {
-    pj_status_t status = PJ_SUCCESS;
-
-    pj_timer_entry_init(&pjsua_var.snd_idle_timer, PJ_FALSE, NULL,
-                        &close_snd_timer_cb);
-
     pjsua_check_snd_dev_idle();
-    return status;
+    return PJ_SUCCESS;
 }
 
 pj_status_t pjsua_aud_subsys_destroy()
@@ -2149,6 +2157,15 @@ static pj_status_t open_snd_dev(pjmedia_snd_port_param *param)
 
     PJ_ASSERT_RETURN(param, PJ_EINVAL);
 
+    /* The software clock setting is endpoint wide, so apply it here, in the
+     * common open path. Applying it at each call site is error prone:
+     * pjsua_conf_connect() reopens the device with a param of its own and
+     * used to drop the setting silently, reverting the sound port to the
+     * native clock for the rest of the session.
+     */
+    if (pjsua_var.media_cfg.snd_use_sw_clock)
+        param->options |= PJMEDIA_SND_PORT_USE_SW_CLOCK;
+
     /* Check if NULL sound device is used */
     if (PJSUA_SND_NULL_DEV==param->base.rec_id ||
         PJSUA_SND_NULL_DEV==param->base.play_id)
@@ -2213,8 +2230,11 @@ static pj_status_t open_snd_dev(pjmedia_snd_port_param *param)
         if (dev_id < 0)
             dev_id = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
 
-        pjmedia_snd_port_param_default(&cp_param);
-        pj_memcpy(&cp_param.base, &param->base, sizeof(cp_param.base));
+        /* Copy the whole param, not just the base: options, ec_options,
+         * user_data and the frame preview callbacks belong to the caller
+         * and were being dropped here.
+         */
+        pj_memcpy(&cp_param, param, sizeof(cp_param));
         cp_param.base.dir = PJMEDIA_DIR_PLAYBACK;
         cp_param.base.play_id = dev_id;
 
@@ -2574,8 +2594,6 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param)
 
         /* Open! */
         param.options = 0;
-        if (pjsua_var.media_cfg.snd_use_sw_clock)
-            param.options |= PJMEDIA_SND_PORT_USE_SW_CLOCK;
         status = open_snd_dev(&param);
         if (status == PJ_SUCCESS)
             break;

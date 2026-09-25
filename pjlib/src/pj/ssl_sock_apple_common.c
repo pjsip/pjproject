@@ -408,9 +408,50 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
         } else if (!CFStringCompare(label, CFSTR("IP Address"),
                                     kCFCompareCaseInsensitive))
         {
-            if (CFGetTypeID(value) != CFStringGetTypeID())
+            /* Normally in text form, but also accept the raw address.
+             * Either way, normalize it as the other backends do.
+             */
+            pj_uint8_t addr[16];
+            int af = 0;
+
+            if (CFGetTypeID(value) == CFStringGetTypeID()) {
+                pj_str_t ip;
+
+                if (!CFStringGetCString(value, buf, bufsize,
+                                        kCFStringEncodingUTF8))
+                {
+                    continue;
+                }
+                pj_cstr(&ip, buf);
+                if (ip.slen &&
+                    pj_inet_pton(pj_AF_INET(), &ip, addr) == PJ_SUCCESS)
+                {
+                    af = pj_AF_INET();
+                } else if (ip.slen &&
+                           pj_inet_pton(pj_AF_INET6(), &ip, addr) ==
+                                                                PJ_SUCCESS)
+                {
+                    af = pj_AF_INET6();
+                }
+            } else if (CFGetTypeID(value) == CFDataGetTypeID()) {
+                CFDataRef data = (CFDataRef)value;
+                CFIndex addr_len = CFDataGetLength(data);
+
+                if (addr_len == sizeof(pj_in_addr) ||
+                    addr_len == sizeof(pj_in6_addr))
+                {
+                    pj_memcpy(addr, CFDataGetBytePtr(data), addr_len);
+                    af = (addr_len == sizeof(pj_in6_addr))? pj_AF_INET6() :
+                                                            pj_AF_INET();
+                }
+            }
+
+            /* Ignore malformed IP address */
+            if (!af || pj_inet_ntop(af, addr, buf, (int)bufsize) !=
+                                                                PJ_SUCCESS)
+            {
                 continue;
-            CFStringGetCString(value, buf, bufsize, kCFStringEncodingUTF8);
+            }
             type = PJ_SSL_CERT_NAME_IP;
         } else if (!CFStringCompare(label, CFSTR("Email Address"),
                                     kCFCompareCaseInsensitive))
@@ -433,21 +474,9 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
 
         if (type != PJ_SSL_CERT_NAME_UNKNOWN) {
             ci->subj_alt_name.entry[ci->subj_alt_name.cnt].type = type;
-            if (type == PJ_SSL_CERT_NAME_IP) {
-                char ip_buf[PJ_INET6_ADDRSTRLEN+10];
-                int len = CFStringGetLength(value);
-                int af = pj_AF_INET();
-
-                if (len == sizeof(pj_in6_addr)) af = pj_AF_INET6();
-                pj_inet_ntop2(af, buf, ip_buf, sizeof(ip_buf));
-                pj_strdup2(pool,
-                    &ci->subj_alt_name.entry[ci->subj_alt_name.cnt].name,
-                    ip_buf);
-            } else {
-                pj_strdup2(pool,
-                    &ci->subj_alt_name.entry[ci->subj_alt_name.cnt].name,
-                    buf);
-            }
+            pj_strdup2(pool,
+                &ci->subj_alt_name.entry[ci->subj_alt_name.cnt].name,
+                buf);
             ci->subj_alt_name.cnt++;
         }
     }

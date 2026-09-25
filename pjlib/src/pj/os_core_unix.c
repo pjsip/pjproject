@@ -46,6 +46,9 @@
 #include <unistd.h>         // getpid()
 #include <errno.h>          // errno
 #include <time.h>           // clock_gettime()
+#if PJ_HAS_SCHED_YIELD
+#  include <sched.h>        // sched_yield()
+#endif
 
 #if PJ_HAS_THREADS
 #  if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L \
@@ -1200,6 +1203,31 @@ PJ_DEF(pj_status_t) pj_thread_sleep(unsigned msec)
     PJ_CHECK_STACK();
 
     pj_set_os_error(0);
+
+    /* A zero duration means "give up the CPU now": without this, the loop
+     * below would do nothing at all, since usleep() is never reached.
+     */
+    if (msec == 0) {
+#if PJ_HAS_SCHED_YIELD
+        /* sched_yield() is specified to return int on all platforms, so
+         * unlike usleep() below its return value can be checked directly.
+         */
+        if (sched_yield() != 0)
+            return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
+#else
+        /* usleep() is declared void on some platforms (see the note after
+         * the sleep loop below), hence the errno-based check, with the same
+         * ETIMEDOUT workaround the loop below needs.
+         */
+        usleep(0);
+        if (pj_get_native_os_error() != 0 &&
+            pj_get_native_os_error() != ETIMEDOUT)
+        {
+            return pj_get_os_error();
+        }
+#endif
+        return PJ_SUCCESS;
+    }
 
     /* Sleep in sub-second chunks to avoid overflow of msec*1000 for large
      * values, and to keep each usleep() argument below 1000000, which POSIX

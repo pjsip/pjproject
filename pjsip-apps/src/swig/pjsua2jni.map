@@ -1,0 +1,27 @@
+/* Exported symbols of libpjsua2.so.
+ *
+ * A JNI library is reached only through the JVM, which looks up JNI_OnLoad
+ * and the Java_<mangled> entry points by name. Nothing else needs to be
+ * visible, and everything else being visible is a problem: the library
+ * statically links libsrtp, libyuv, the WebRTC AEC, Speex, GSM and whatever
+ * else the configuration pulls in, and exports their symbols too. Those are
+ * exactly the libraries a WebRTC-based SDK in the same app also carries, and
+ * on Android the dynamic linker resolves such a clash by picking one
+ * definition for everybody rather than by failing -- so the symptom is the
+ * wrong implementation being called at run time, not a link error.
+ *
+ * Hiding the rest cuts the exported set from roughly eleven thousand symbols
+ * to the JNI entry points alone.
+ */
+{
+  global:
+    /* Patterns rather than exact names: the NDK links with
+     * --no-undefined-version, which rejects a version script naming a symbol
+     * the library does not define, and JNI_OnUnload is only present in some
+     * configurations. A pattern that matches nothing is not an error.
+     */
+    JNI_On*;
+    Java_org_pjsip_*;
+  local:
+    *;
+};

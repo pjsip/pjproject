@@ -1,3 +1,5 @@
+include(CMakeDependentOption)
+
 # ##############################################################################
 # pjsua
 
@@ -51,3 +53,17 @@ target_link_libraries(embedded_ua
     pjsip
     pjsip-ua
 )
+
+# ##############################################################################
+# SWIG bindings
+
+# Off by default: SWIG is a build dependency nothing else here needs, and most
+# people configuring this project only want the libraries. Gradle turns it on.
+cmake_dependent_option(PJ_BUILD_SWIG_JAVA
+  "Build the pjsua2 JNI bindings with SWIG" OFF
+  "ANDROID" OFF
+)
+
+if(PJ_BUILD_SWIG_JAVA)
+  add_subdirectory(src/swig)
+endif()

@@ -334,6 +334,37 @@ typedef struct pjmedia_conf_param
      * the pjsua2 level using the pjsua2::MediaConfig::confThreads parameter.
      */
     unsigned worker_threads;
+
+    /**
+     * The priority of the conference bridge worker threads. The valid value
+     * range is platform dependent, see #pj_thread_get_prio_min() and
+     * #pj_thread_get_prio_max().
+     *
+     * The thread calling get_frame() of the bridge is usually a high priority
+     * thread, e.g: the sound device thread or the media clock thread, and it
+     * has to wait for all worker threads to finish mixing before it can
+     * return the frame. So leaving the worker threads at the default priority
+     * may let other threads preempt them and delay the audio frame. Setting
+     * this to #pj_thread_get_prio_max() will run the worker threads at the
+     * same priority as the get_frame() thread.
+     *
+     * Note that raising the priority is only safe when the number of worker
+     * threads is below the number of the processor cores, otherwise the
+     * worker threads may starve the rest of the application. Also note that
+     * on some platforms, e.g: Linux, raising thread priority requires a
+     * specific privilege, without it the setting will have no effect.
+     *
+     * Zero means the worker threads will use the priority assigned by the OS.
+     * The default value is zero.
+     * This value is ignored by all conference backends except for the
+     * multithreaded conference bridge backend
+     * (PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND).
+     *
+     * The worker thread priority can be configured at the pjsua level using
+     * the pjsua_media_config::conf_thread_prio parameter, or at the pjsua2
+     * level using the pjsua2::MediaConfig::confThreadPrio parameter.
+     */
+    int worker_thread_prio;
 } pjmedia_conf_param;
 
 

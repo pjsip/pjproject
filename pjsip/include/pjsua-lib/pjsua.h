@@ -8170,8 +8170,16 @@ struct pjsua_media_config
     /**
      * Sound device uses \ref PJMEDIA_CLOCK instead of native sound device
      * clock, generally this will be able to reduce jitter and clock drift.
+     * It also moves the media processing (mixing, encoding, transmission)
+     * off the sound device callback, which then only moves frames in and
+     * out of the delay buffers.
      *
      * This option is not applicable for encoded/non-PCM format.
+     *
+     * Note that this applies to the main sound device only. An extra sound
+     * device created by pjsua_ext_snd_dev_create() takes its settings from
+     * the supplied #pjmedia_snd_port_param, so it needs
+     * PJMEDIA_SND_PORT_USE_SW_CLOCK set in its \a options field.
      *
      * Default value: PJSUA_DEFAULT_SND_USE_SW_CLOCK
      */
@@ -8220,6 +8228,21 @@ struct pjsua_media_config
      * Default value: PJMEDIA_CONF_THREADS
      */
     unsigned            conf_threads;
+
+    /**
+     * The priority of the conference bridge worker threads, see
+     * pjmedia_conf_param::worker_thread_prio for more info. The valid value
+     * range is platform dependent, see #pj_thread_get_prio_min() and
+     * #pj_thread_get_prio_max(), while zero means the worker threads will
+     * use the priority assigned by the OS.
+     *
+     * This value is ignored by all conference backends except for the
+     * multithreaded conference bridge backend
+     * (PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND).
+     *
+     * Default value: 0
+     */
+    int                 conf_thread_prio;
 
     /**
      * Specify whether the media manager should manage its own

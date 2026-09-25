@@ -101,3 +101,6 @@ configure.out
 
 # Apple XCFramework distribution build output
 /out/
+
+# Android AAR distribution build output
+/out-android/
