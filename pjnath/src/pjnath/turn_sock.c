@@ -855,7 +855,8 @@ static pj_status_t verify_server_cert(pj_turn_sock *turn_sock)
     if (info.remote_cert_info && info.remote_cert_info->version &&
         pj_ssl_cert_verify_name(info.remote_cert_info,
                                 &turn_sock->server_name,
-                                PJ_SSL_CERT_NAME_MATCH_WILDCARD)
+                                turn_sock->setting.tls_cfg
+                                                   .cert_name_match_flags)
                                                         == PJ_SUCCESS)
     {
         info.verify_status &= ~PJ_SSL_CERT_EIDENTITY_NOT_MATCH;

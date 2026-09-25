@@ -180,6 +180,7 @@ pjsip_cred_info AuthCredInfo::toPj() const
 TlsConfig::TlsConfig() : credDirectType(0),
                          privKeyDirect(NULL), certDirect(NULL),
                          method(PJSIP_SSL_UNSPECIFIED_METHOD),
+                         certNameMatchFlags(0),
                          qosType(PJ_QOS_TYPE_BEST_EFFORT)
 {
     pjsip_tls_setting ts;
@@ -314,6 +315,7 @@ void TlsConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
     NODE_READ_STRING_OPT( this_node, CaListPath);
     NODE_READ_UNSIGNED_OPT( this_node, proto);
     NODE_READ_BOOL_OPT( this_node, enableRenegotiation);
+    NODE_READ_UNSIGNED_OPT( this_node, certNameMatchFlags);
 }
 
 void TlsConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
@@ -343,6 +345,7 @@ void TlsConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
     NODE_WRITE_STRING  ( this_node, CaListPath);
     NODE_WRITE_UNSIGNED( this_node, proto);
     NODE_WRITE_BOOL    ( this_node, enableRenegotiation);
+    NODE_WRITE_UNSIGNED( this_node, certNameMatchFlags);
 }
 
 pj_turn_sock_tls_cfg TlsConfig::toTurnPj() const
@@ -379,6 +382,7 @@ pj_turn_sock_tls_cfg TlsConfig::toTurnPj() const
     }
 
     tc.verify_server    = this->verifyServer;
+    tc.cert_name_match_flags = this->certNameMatchFlags;
 
     tc.ssock_param.proto = this->proto;
     tc.ssock_param.ciphers_num = (unsigned)this->ciphers.size();
@@ -430,6 +434,7 @@ void TlsConfig::fromTurnPj(const pj_turn_sock_tls_cfg &prm)
     }
 
     this->verifyServer  = PJ2BOOL(prm.verify_server);
+    this->certNameMatchFlags = prm.cert_name_match_flags;
     this->proto         = sp.proto;
     // The following will only work if sizeof(enum)==sizeof(int)
     pj_assert(sizeof(sp.ciphers[0]) == sizeof(int));

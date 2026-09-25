@@ -2386,12 +2386,13 @@ on_return:
 
 static int cert_verify_name_test(void)
 {
-    enum { WC = PJ_SSL_CERT_NAME_MATCH_WILDCARD,
+    enum { NOWC = PJ_SSL_CERT_NAME_NO_WILDCARD,
            URI = PJ_SSL_CERT_NAME_MATCH_SIP_URI,
-           NOCN = PJ_SSL_CERT_NAME_MATCH_NO_CN };
+           CN = PJ_SSL_CERT_NAME_MATCH_CN };
     static const struct test_t {
         const char *cn;
-        const char *san;     /* "D:" DNS, "I:" IP, "U:" URI, ',' separated */
+        const char *san;     /* "D:" DNS, "I:" IP, "U:" URI, "E:" email,
+                              * ',' separated */
         const char *name;
         unsigned flags;
         pj_status_t result;
@@ -2404,16 +2405,22 @@ static int cert_verify_name_test(void)
         { "x", "D:turn.example.com", "turn.example.co", 0, PJ_ENOTFOUND },
         { "x", "D:turn.example.com", "xturn.example.com", 0, PJ_ENOTFOUND },
 
-        /* Wildcard */
-        { "x", "D:*.example.com", "turn.example.com", 0, PJ_ENOTFOUND },
-        { "x", "D:*.example.com", "turn.example.com", WC, PJ_SUCCESS },
-        { "x", "D:*.example.com", "a.turn.example.com", WC, PJ_ENOTFOUND },
-        { "x", "D:*.example.com", "example.com", WC, PJ_ENOTFOUND },
-        { "x", "D:*.example.com", ".example.com", WC, PJ_ENOTFOUND },
-        { "x", "D:*.com", "example.com", WC, PJ_ENOTFOUND },
-        { "x", "D:f*.example.com", "foo.example.com", WC, PJ_ENOTFOUND },
-        { "x", "D:*", "example", WC, PJ_ENOTFOUND },
-        { "x", "D:*.0.0.1", "127.0.0.1", WC, PJ_ENOTFOUND },
+        /* Wildcard, accepted by default (RFC 9525 section 1.3) */
+        { "x", "D:*.example.com", "turn.example.com", 0, PJ_SUCCESS },
+        { "x", "D:*.example.com", "turn.example.com", NOWC, PJ_ENOTFOUND },
+        { "x", "D:*.example.com", "a.turn.example.com", 0, PJ_ENOTFOUND },
+        { "x", "D:*.example.com", "example.com", 0, PJ_ENOTFOUND },
+        { "x", "D:*.example.com", ".example.com", 0, PJ_ENOTFOUND },
+        { "x", "D:f*.example.com", "foo.example.com", 0, PJ_ENOTFOUND },
+        { "x", "D:*", "example", 0, PJ_ENOTFOUND },
+        { "x", "D:*.0.0.1", "127.0.0.1", 0, PJ_ENOTFOUND },
+
+        /* Hardening beyond RFC 9525: a wildcard needs two labels after it.
+         * This rejects a wildcard on a top-level domain, not one on every
+         * public suffix, which RFC 9525 section 7.1 puts out of scope.
+         */
+        { "x", "D:*.com", "example.com", 0, PJ_ENOTFOUND },
+        { "x", "D:*.co.uk", "example.co.uk", 0, PJ_SUCCESS },
 
         /* IP SAN */
         { "x", "I:192.0.2.1", "192.0.2.1", 0, PJ_SUCCESS },
@@ -2428,22 +2435,28 @@ static int cert_verify_name_test(void)
         { "x", "U:sips:example.com", "example.com", URI, PJ_SUCCESS },
         { "x", "U:http://example.com", "example.com", URI, PJ_ENOTFOUND },
 
-        /* CN fallback, only when there is no SAN identity */
-        { "turn.example.com", "", "turn.example.com", 0, PJ_SUCCESS },
-        { "turn.example.com", "", "turn.example.com", NOCN, PJ_ENOTFOUND },
-        { "turn.example.com", "D:other.example.com", "turn.example.com", 0,
+        /* The Common Name is never matched without the flag */
+        { "turn.example.com", "", "turn.example.com", 0, PJ_ENOTFOUND },
+        { "turn.example.com", "", "turn.example.com", CN, PJ_SUCCESS },
+        { "*.example.com", "", "turn.example.com", CN, PJ_SUCCESS },
+        { "*.example.com", "", "turn.example.com", CN | NOWC, PJ_ENOTFOUND },
+        { "192.0.2.1", "", "192.0.2.1", CN, PJ_SUCCESS },
+
+        /* With the flag, any SubjectAltName entry still suppresses it */
+        { "turn.example.com", "D:other.example.com", "turn.example.com", CN,
           PJ_ENOTFOUND },
-        { "turn.example.com", "I:192.0.2.1", "turn.example.com", 0,
+        { "turn.example.com", "I:192.0.2.1", "turn.example.com", CN,
           PJ_ENOTFOUND },
-        { "turn.example.com", "U:http://x", "turn.example.com", 0,
-          PJ_SUCCESS },
-        { "example.com", "U:sip:x.example.com", "example.com", URI,
+        { "turn.example.com", "U:http://x", "turn.example.com", CN,
           PJ_ENOTFOUND },
-        { "*.example.com", "", "turn.example.com", 0, PJ_ENOTFOUND },
-        { "*.example.com", "", "turn.example.com", WC, PJ_SUCCESS },
-        { "192.0.2.1", "", "192.0.2.1", 0, PJ_SUCCESS },
-        { "", "", "", 0, PJ_ENOTFOUND },
-        { "", "", "example.com", 0, PJ_ENOTFOUND },
+        { "turn.example.com", "U:sip:other.example.com", "turn.example.com",
+          CN, PJ_ENOTFOUND },
+        { "turn.example.com", "E:admin@example.com", "turn.example.com", CN,
+          PJ_ENOTFOUND },
+        { "example.com", "U:sip:x.example.com", "example.com", URI | CN,
+          PJ_ENOTFOUND },
+        { "", "", "", CN, PJ_ENOTFOUND },
+        { "", "", "example.com", CN, PJ_ENOTFOUND },
     };
     pj_pool_t *pool;
     unsigned i;
@@ -2475,7 +2488,8 @@ static int cert_verify_name_test(void)
             ci.subj_alt_name.entry[n].type =
                             (p[0]=='D'? PJ_SSL_CERT_NAME_DNS :
                              (p[0]=='I'? PJ_SSL_CERT_NAME_IP :
-                              PJ_SSL_CERT_NAME_URI));
+                              (p[0]=='E'? PJ_SSL_CERT_NAME_RFC822 :
+                               PJ_SSL_CERT_NAME_URI)));
             pj_strset(&ci.subj_alt_name.entry[n].name, (char*)p + 2,
                       end - p - 2);
             p = (*end)? end + 1 : end;

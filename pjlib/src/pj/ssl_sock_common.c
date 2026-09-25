@@ -254,8 +254,7 @@ PJ_DEF(pj_status_t) pj_ssl_cert_verify_name(const pj_ssl_cert_info *ci,
                                             const pj_str_t *name,
                                             unsigned flags)
 {
-    pj_bool_t allow_wildcard = (flags & PJ_SSL_CERT_NAME_MATCH_WILDCARD);
-    pj_bool_t has_san = PJ_FALSE;
+    pj_bool_t allow_wildcard = !(flags & PJ_SSL_CERT_NAME_NO_WILDCARD);
     pj_uint8_t name_ip[16], san_ip[16];
     unsigned name_ip_len, i;
 
@@ -271,7 +270,6 @@ PJ_DEF(pj_status_t) pj_ssl_cert_verify_name(const pj_ssl_cert_info *ci,
 
         switch (ci->subj_alt_name.entry[i].type) {
         case PJ_SSL_CERT_NAME_DNS:
-            has_san = PJ_TRUE;
             if (!name_ip_len &&
                 match_dns_name(cert_name, name, allow_wildcard))
             {
@@ -279,7 +277,6 @@ PJ_DEF(pj_status_t) pj_ssl_cert_verify_name(const pj_ssl_cert_info *ci,
             }
             break;
         case PJ_SSL_CERT_NAME_IP:
-            has_san = PJ_TRUE;
             if (name_ip_len && parse_ip(cert_name, san_ip) == name_ip_len &&
                 pj_memcmp(name_ip, san_ip, name_ip_len) == 0)
             {
@@ -295,7 +292,6 @@ PJ_DEF(pj_status_t) pj_ssl_cert_verify_name(const pj_ssl_cert_info *ci,
                 char *p = pj_strchr(cert_name, ':') + 1;
 
                 pj_strset(&host, p, cert_name->slen - (p - cert_name->ptr));
-                has_san = PJ_TRUE;
                 if (pj_stricmp(&host, name) == 0)
                     return PJ_SUCCESS;
             }
@@ -305,7 +301,12 @@ PJ_DEF(pj_status_t) pj_ssl_cert_verify_name(const pj_ssl_cert_info *ci,
         }
     }
 
-    if (!has_san && !(flags & PJ_SSL_CERT_NAME_MATCH_NO_CN) &&
+    /* The Common Name is only an identity when the certificate carries no
+     * SubjectAltName at all, so an entry of a type not matched above, e.g:
+     * an email address, suppresses it too. Note that a type that no backend
+     * extracts, e.g: an SRVName, leaves the count at zero.
+     */
+    if ((flags & PJ_SSL_CERT_NAME_MATCH_CN) && ci->subj_alt_name.cnt == 0 &&
         match_dns_name(&ci->subject.cn, name,
                        allow_wildcard && !name_ip_len))
     {

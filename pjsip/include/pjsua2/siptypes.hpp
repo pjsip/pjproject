@@ -225,7 +225,8 @@ public:
  * AccountNatConfig::turnTlsConfig, where the following fields are ignored:
  * \a method, \a verifyClient, \a requireClientCert, \a qosType,
  * \a qosParams, and \a qosIgnoreError. For TURN TLS, the QoS settings are
- * taken from the media transport config.
+ * taken from the media transport config. Conversely, \a certNameMatchFlags
+ * is only used for TURN TLS.
  */
 struct TlsConfig : public PersistentObject
 {
@@ -377,6 +378,22 @@ struct TlsConfig : public PersistentObject
      * Default value is false.
      */
     bool                verifyServer;
+
+    /**
+     * Bitmask of pj_ssl_cert_name_match_flag customizing how the server
+     * name is matched against the certificate. Only used for TURN TLS.
+     *
+     * The default matches the DNS and IP address entries of the
+     * SubjectAltName extension only, as specified in RFC 9525. Set
+     * PJ_SSL_CERT_NAME_MATCH_CN to also accept a server certificate that
+     * carries no SubjectAltName extension and identifies the server with
+     * its subject Common Name, which RFC 8489 section 6.2.3 still allows
+     * for TURN and which self-signed and private CA certificates commonly
+     * do.
+     *
+     * Default value is 0.
+     */
+    unsigned            certNameMatchFlags;
 
     /**
      * Specifies TLS transport behavior on the client TLS certificate
