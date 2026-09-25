@@ -121,6 +121,11 @@
  * budget, like opening the device does. */
 #define WASAPI_EXIT_TIMEOUT_MS  10000
 
+/* A running direction that moves no data for this long is treated as a
+ * wedged device, even when no call reports an error, and the stream is
+ * halted so that the application can recreate it. */
+#define WASAPI_STALL_TIMEOUT_MS 3000
+
 /* Minimum capture buffer size in frames (overflow protection only) */
 #define WASAPI_CAP_MIN_FRAMES   4
 
@@ -245,6 +250,7 @@ struct wasapi_stream
     UINT32                  pb_target_frames;
     pj_timestamp            pb_ts;
     unsigned                pb_underrun;
+    DWORD                   pb_alive;       /* Tick of the last frame out   */
 
     /* Capture */
     IAudioClient           *cap_client;
@@ -254,6 +260,7 @@ struct wasapi_stream
     unsigned                cap_len;        /* Samples in cap_buf           */
     pj_timestamp            cap_ts;
     unsigned                cap_glitch;
+    DWORD                   cap_alive;      /* Tick of the last frame in    */
 };
 
 /* Prototypes */
@@ -1068,6 +1075,8 @@ static void process_capture(struct wasapi_stream *s)
 
         if (flags & AUDCLNT_BUFFERFLAGS_DATA_DISCONTINUITY)
             ++s->cap_glitch;
+        if (frames)
+            s->cap_alive = GetTickCount();
 
         src = (flags & AUDCLNT_BUFFERFLAGS_SILENT) ? NULL :
               (const pj_int16_t*)data;
@@ -1172,6 +1181,7 @@ static void process_playback(struct wasapi_stream *s)
         }
         s->pb_ts.u64 += s->frame_frames;
         padding += s->frame_frames;
+        s->pb_alive = GetTickCount();
 
         if (status != PJ_SUCCESS) {
             PJ_PERROR(4, (THIS_FILE, status, "WASAPI: playback callback "
@@ -1224,6 +1234,8 @@ static pj_status_t do_start(struct wasapi_stream *s)
         }
     }
 
+    /* Time spent stopped does not count as a stall */
+    s->cap_alive = s->pb_alive = GetTickCount();
     s->running = PJ_TRUE;
     PJ_LOG(4, (THIS_FILE, "WASAPI stream started"));
     return PJ_SUCCESS;
@@ -1309,6 +1321,29 @@ static pj_bool_t exec_cmd(struct wasapi_stream *s, enum wasapi_cmd cmd,
         break;
     }
     return quit;
+}
+
+/* Halt the stream when an opened direction has moved no data for too long.
+ * Each direction is checked on its own, as events of the other direction
+ * keep the thread waking and would hide a stall of this one.
+ */
+static void check_stall(struct wasapi_stream *s)
+{
+    DWORD now = GetTickCount();
+    pjmedia_dir dir;
+
+    if (s->cap_client && now - s->cap_alive >= WASAPI_STALL_TIMEOUT_MS)
+        dir = PJMEDIA_DIR_CAPTURE;
+    else if (s->pb_client && now - s->pb_alive >= WASAPI_STALL_TIMEOUT_MS)
+        dir = PJMEDIA_DIR_PLAYBACK;
+    else
+        return;
+
+    PJ_LOG(2, (THIS_FILE, "WASAPI: no %s data for %u ms, device seems "
+               "wedged, stopping",
+               (dir == PJMEDIA_DIR_CAPTURE ? "capture" : "playback"),
+               (unsigned)WASAPI_STALL_TIMEOUT_MS));
+    halt_stream(s, dir, PJMEDIA_EAUD_SYSERR);
 }
 
 static int PJ_THREAD_FUNC wasapi_thread(void *arg)
@@ -1420,6 +1455,7 @@ static int PJ_THREAD_FUNC wasapi_thread(void *arg)
 
             if (++stalls == 1 || stalls % 100 == 0)
                 PJ_LOG(3, (THIS_FILE, "WASAPI: no device events for 500 ms"));
+            check_stall(s);
             continue;
         }
 
@@ -1430,6 +1466,8 @@ static int PJ_THREAD_FUNC wasapi_thread(void *arg)
         /* A capture callback may have stopped the stream just now */
         if (s->pb_render && s->running && !s->halted)
             process_playback(s);
+        if (s->running && !s->halted)
+            check_stall(s);
     }
 
     thread_release(s);

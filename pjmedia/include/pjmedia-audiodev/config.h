@@ -213,7 +213,9 @@ PJ_BEGIN_DECL
   * the default device currently is. So when an endpoint in use disappears,
   * e.g: a USB headset is unplugged, WASAPI stops the stream and publishes
   * PJMEDIA_EVENT_AUD_DEV_ERROR instead of switching over silently, and the
-  * application decides which device to recreate the stream on.
+  * application decides which device to recreate the stream on. The same
+  * happens when a direction of a running stream moves no data for 3 seconds
+  * while the device reports no error, e.g: a USB device that hangs.
   */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_WASAPI
 #  if (defined(PJ_WIN32_UWP) && PJ_WIN32_UWP!=0) || \
