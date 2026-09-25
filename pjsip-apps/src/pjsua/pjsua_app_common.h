@@ -202,6 +202,10 @@ typedef struct pjsua_app_config
      * Only available when PJSUA_MEDIA_HAS_PJMEDIA=0 (alt media backend). */
     pj_str_t                custom_sdp;
 #endif
+
+    /* Set PJSUA_CALL_SDP_PASSTHROUGH on the default call setting used for
+     * outgoing and auto-answered incoming calls (--sdp-passthrough). */
+    pj_bool_t                sdp_passthrough;
 } pjsua_app_config;
 
 /** Extern variable declaration **/
