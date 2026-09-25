@@ -523,6 +523,81 @@ PJ_DECL(pj_status_t) pj_ssl_cert_get_verify_status_strings(
                                                  const char *error_strings[],
                                                  unsigned *count);
 
+
+/**
+ * Flags to customize the matching rules of pj_ssl_cert_verify_name().
+ */
+typedef enum pj_ssl_cert_name_match_flag
+{
+    /**
+     * Never match a wildcard in a DNS name of the certificate. Wildcards
+     * are accepted by default (RFC 9525 section 1.3), this flag is for the
+     * protocols that forbid them, e.g: SIP (RFC 5922 section 7.2).
+     */
+    PJ_SSL_CERT_NAME_NO_WILDCARD    = 1,
+
+    /**
+     * Also match "sip:" and "sips:" URI entries of the SubjectAltName
+     * extension, as specified in RFC 5922 section 7.1. The entry must be
+     * exactly the scheme followed by the name, e.g: "sip:example.com",
+     * so an entry with a user part, port, or parameters never matches.
+     *
+     * Matching a URI entry needs the application service type of the
+     * caller (RFC 9525 section 6.5), hence this flag rather than a default.
+     */
+    PJ_SSL_CERT_NAME_MATCH_SIP_URI  = 2,
+
+    /**
+     * Also match the subject Common Name, but only when the certificate
+     * presents no SubjectAltName entry that the TLS backend reports, which
+     * approximates the "no SubjectAltName extension" of RFC 5922 section
+     * 7.1: an entry of a type that no backend extracts, e.g: an SRVName,
+     * is not seen here and so does not suppress the Common Name. This is
+     * off by default, as RFC 9525 removed the Common Name as a service
+     * identifier, and any certificate of a public CA that has one repeats
+     * a SubjectAltName value in it (CA/Browser Forum Baseline Requirements
+     * section 7.1.4.3).
+     *
+     * It is still useful with the self-signed and private CA certificates
+     * that are commonly issued without a SubjectAltName extension, and
+     * RFC 8489 section 6.2.3 keeps allowing a Common Name identity for
+     * STUN and TURN.
+     */
+    PJ_SSL_CERT_NAME_MATCH_CN       = 4
+
+} pj_ssl_cert_name_match_flag;
+
+
+/**
+ * Verify that a certificate identifies the specified name, e.g: to check
+ * the identity of a server against the name used to connect to it. The SSL
+ * socket does not perform this check, application may use this function
+ * and set PJ_SSL_CERT_EIDENTITY_NOT_MATCH to the verification status when
+ * it fails.
+ *
+ * Without any flag, the matching follows RFC 9525: the name is matched
+ * case-insensitively against the DNS entries of the SubjectAltName
+ * extension, where a wildcard is accepted as the complete left-most label,
+ * and against the IP address entries, by comparing the address octets. An
+ * IP address name never matches a DNS entry, and the subject Common Name
+ * is not matched at all. Each flag names a deviation from that default.
+ *
+ * As a hardening beyond RFC 9525, which leaves this out of scope in its
+ * section 7.1, a wildcard must be followed by at least two labels, so
+ * "*.com" never matches.
+ *
+ * @param ci            The certificate info, e.g: the remote certificate
+ *                      info from pj_ssl_sock_get_info().
+ * @param name          The expected name, a hostname or an IP address.
+ * @param flags         Bitmask of #pj_ssl_cert_name_match_flag.
+ *
+ * @return              PJ_SUCCESS if the certificate identifies the name,
+ *                      PJ_ENOTFOUND if it does not.
+ */
+PJ_DECL(pj_status_t) pj_ssl_cert_verify_name(const pj_ssl_cert_info *ci,
+                                             const pj_str_t *name,
+                                             unsigned flags);
+
 /** 
  * Wipe out the keys in the SSL certificate. 
  *
