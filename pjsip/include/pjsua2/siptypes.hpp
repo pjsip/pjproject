@@ -386,7 +386,7 @@ struct TlsConfig : public PersistentObject
      * The default matches the DNS and IP address entries of the
      * SubjectAltName extension only, as specified in RFC 9525. Set
      * PJ_SSL_CERT_NAME_MATCH_CN to also accept a server certificate that
-     * carries no SubjectAltName extension and identifies the server with
+     * reports no SubjectAltName entry and identifies the server with
      * its subject Common Name, which RFC 8489 section 6.2.3 still allows
      * for TURN and which self-signed and private CA certificates commonly
      * do.

@@ -549,8 +549,11 @@ typedef enum pj_ssl_cert_name_match_flag
 
     /**
      * Also match the subject Common Name, but only when the certificate
-     * presents no SubjectAltName entry at all (RFC 5922 section 7.1). This
-     * is off by default, as RFC 9525 removed the Common Name as a service
+     * presents no SubjectAltName entry that the TLS backend reports, which
+     * approximates the "no SubjectAltName extension" of RFC 5922 section
+     * 7.1: an entry of a type that no backend extracts, e.g: an SRVName,
+     * is not seen here and so does not suppress the Common Name. This is
+     * off by default, as RFC 9525 removed the Common Name as a service
      * identifier, and any certificate of a public CA that has one repeats
      * a SubjectAltName value in it (CA/Browser Forum Baseline Requirements
      * section 7.1.4.3).
