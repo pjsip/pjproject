@@ -52,6 +52,11 @@
  *    connection drops. Without it the UA is reached at its own address.
  *  - Incoming calls are answered automatically, with 180 then 200. An
  *    incoming call beyond MAX_CALLS is rejected with 486.
+ *  - A new offer on an established call, in a re-INVITE or an UPDATE, is
+ *    answered and the stream rebuilt, so call hold and resume work (on hold
+ *    the UA answers recvonly and stops sending), as does a switch between
+ *    the registered codecs, i.e. between PCMU and PCMA with G.711. A call
+ *    whose media cannot be set up is ended.
  *  - An incoming MESSAGE (RFC 3428) carries the only commands the
  *    application takes: "call <uri>", e.g. "call sip:alice@192.168.0.2",
  *    places an outgoing call, "mem" dumps the caching pool state (needs
@@ -248,6 +253,7 @@ static struct global_t {
     pjsip_regc           *regc;
     pj_time_val           reg_due;   /* next REGISTER, {0,0} if none due */
     pj_bool_t             unregistering; /* un-REGISTER is in flight  */
+    pjsip_tp_state_callback prev_tp_state_cb; /* pjsip's own, chained */
 #endif
 #if EMBUA_USE_MEDIA_THREAD
     pj_thread_t          *media_thread;
@@ -302,6 +308,8 @@ static const pjsip_method message_method =
 static void call_on_media_update( pjsip_inv_session *inv, pj_status_t status);
 static void call_on_state_changed( pjsip_inv_session *inv, pjsip_event *e);
 static void call_on_forked(pjsip_inv_session *inv, pjsip_event *e);
+static void call_on_rx_offer(pjsip_inv_session *inv,
+                             const pjmedia_sdp_session *offer);
 static pj_bool_t on_rx_request( pjsip_rx_data *rdata );
 static void deinit_call(struct call_t *call);
 #if EMBUA_USE_REGISTRATION
@@ -617,7 +625,11 @@ static void on_tp_state_changed(pjsip_transport *tp,
 {
     pjsip_regc_info reg_info;
 
-    PJ_UNUSED_ARG(info);
+    /* The transport manager's own callback notifies the transactions using
+     * this transport, so it must keep seeing every event.
+     */
+    if (g.prev_tp_state_cb)
+        (*g.prev_tp_state_cb)(tp, state, info);
 
     /* Shutting down: the registration is being dropped on purpose, and a
      * transport going away now must not schedule a new REGISTER.
@@ -706,6 +718,8 @@ static void init(void)
     }
 
 #if EMBUA_USE_REGISTRATION
+    g.prev_tp_state_cb =
+        pjsip_tpmgr_get_state_cb(pjsip_endpt_get_tpmgr(g.endpt));
     CHKS( pjsip_tpmgr_set_state_cb(pjsip_endpt_get_tpmgr(g.endpt),
                                    &on_tp_state_changed), 35);
 #endif
@@ -727,6 +741,7 @@ static void init(void)
     inv_cb.on_state_changed = &call_on_state_changed;
     inv_cb.on_new_session = &call_on_forked;
     inv_cb.on_media_update = &call_on_media_update;
+    inv_cb.on_rx_offer = &call_on_rx_offer;
     CHKS( pjsip_inv_usage_init(g.endpt, &inv_cb), 80 );
 
     /* pjsip_inv_create_uac() attaches a 100rel handler unconditionally. */
@@ -1081,6 +1096,36 @@ static void call_on_forked(pjsip_inv_session *inv, pjsip_event *e)
     /* To be done... */
     PJ_UNUSED_ARG(inv);
     PJ_UNUSED_ARG(e);
+}
+
+/* Answer a new offer on an established call, e.g. hold or a session
+ * refresh. The stream itself is rebuilt in call_on_media_update() once the
+ * negotiation completes.
+ */
+static void call_on_rx_offer(pjsip_inv_session *inv,
+                             const pjmedia_sdp_session *offer)
+{
+    struct call_t *call = (struct call_t*)inv->mod_data[mod_embedded_ua.id];
+    pjmedia_sdp_session *answer;
+    pj_status_t status;
+
+    if (call == NULL)
+        return;
+
+    status = pjmedia_endpt_create_sdp(g.med_endpt, inv->pool_prov, 1,
+                                      &call->med_sock_info, &answer);
+    if (status == PJ_SUCCESS)
+        status = pjmedia_transport_media_create(call->med_transport,
+                                                inv->pool_prov, 0, offer, 0);
+    if (status == PJ_SUCCESS)
+        status = pjmedia_transport_encode_sdp(call->med_transport,
+                                              inv->pool_prov, answer, offer,
+                                              0);
+    if (status == PJ_SUCCESS)
+        status = pjsip_inv_set_sdp_answer(inv, answer);
+
+    if (status != PJ_SUCCESS)
+        app_perror(THIS_FILE, "Unable to answer the new offer", status);
 }
 
 /* Place an outgoing call to the given URI. */
