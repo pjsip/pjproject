@@ -55,7 +55,7 @@
  *  - Audio loopback: the far end hears itself, with no sound device.
  *
  *  Security
- *  - Optional SIP over TLS 1.2/1.3; the server certificate isn't verified.
+ *  - Optional SIP over TLS 1.2/1.3.
  *  - Optional SDES-SRTP (RFC 4568), required on every call when enabled.
  *  - SRTP suites: AES-CM-128/256 with HMAC-SHA1-80/32.
  *  - With SRTP: offers without it get 488; keys renegotiated on re-INVITE.
@@ -64,7 +64,7 @@
  *  NAT and network
  *  - rport (RFC 3581) for symmetric response routing.
  *  - Symmetric RTP: follows the peer's actual source address.
- *  - With TLS: incoming requests arrive over the registration connection.
+ *  - With TLS: incoming requests can reuse the registration connection.
  *  - With TLS: keep-alives hold the connection and NAT bindings open.
  *  - With TLS: re-registers over a new connection when the old one drops.
  *  - Transactions learn of transport failures instead of timing out.
@@ -85,10 +85,20 @@
  *
  *  Development
  *  - Controlled by SIP MESSAGE: "call <uri>", "mem" (pool usage, needs
- *    PJ_LOG_MAX_LEVEL >= 3) and "quit". Unauthenticated, for testing only.
+ *    PJ_LOG_MAX_LEVEL >= 3) and "quit".
  *  - Full SIP message trace.
  *  - A startup failure exits with a code identifying the failing step.
  *  - Builds with GNU make, CMake and Visual Studio.
+ *
+ * Limitations, mostly deliberate for a test application:
+ *  - The TLS server certificate is not verified.
+ *  - With no certificate of its own, the TLS transport cannot take new
+ *    inbound connections: incoming requests rely on the registrar reusing
+ *    the registration connection; SIP Outbound (RFC 5626) isn't implemented.
+ *  - MESSAGE commands are unauthenticated.
+ *  - SDES keys show in full SIP logs, and cross the wire in clear text
+ *    unless SIP runs over TLS.
+ *  - The server address and credentials are compile-time constants.
  */
 
 /* Include all headers. */
@@ -725,10 +735,13 @@ static void init(void)
     pj_log_set_log_func(log_printk);
 #endif
 
-    CHKS(pj_init(), 10);
+    /* Nothing to clean up yet, and deinit() needs the caching pool. */
+    if (pj_init() != PJ_SUCCESS)
+        exit(10);
+    pj_caching_pool_init(&g.cp, &pj_pool_factory_default_policy, 0);
+
     pj_log_set_level(5);
     CHKS(pjlib_util_init(), 20);
-    pj_caching_pool_init(&g.cp, &pj_pool_factory_default_policy, 0);
 
     g.pool = pj_pool_create(&g.cp.factory, "app%p", 1000, 1000, NULL);
 
@@ -1532,7 +1545,7 @@ static void call_on_media_update( pjsip_inv_session *inv,
     }
 
     /* Activate SRTP with the keys that have just been negotiated. */
-    status = pjmedia_transport_media_start(call->med_transport, call->pool,
+    status = pjmedia_transport_media_start(call->med_transport, inv->pool_prov,
                                            local_sdp, remote_sdp, 0);
     if (status != PJ_SUCCESS) {
         app_perror( THIS_FILE, "pjmedia_transport_media_start() error", status);
@@ -1540,7 +1553,7 @@ static void call_on_media_update( pjsip_inv_session *inv,
     }
 
     /* Create stream info based on the media audio SDP. */
-    status = pjmedia_stream_info_from_sdp(&stream_info, call->pool,
+    status = pjmedia_stream_info_from_sdp(&stream_info, inv->pool_prov,
                                           g.med_endpt,
                                           local_sdp, remote_sdp, 0);
     if (status != PJ_SUCCESS) {
