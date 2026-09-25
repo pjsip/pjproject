@@ -50,7 +50,7 @@
  *  - Voice activity detection with silence suppression.
  *  - ptime negotiation, capping requests above one 20 ms frame.
  *  - RTP validation: sequence, SSRC, duplicate and out-of-order checks.
- *  - Drift-free media clock that resynchronizes instead of bursting.
+ *  - Media clock paced by ptime, catching up gradually after a delay.
  *  - Media on its own thread when available, unaffected by SIP work.
  *  - Audio loopback: the far end hears itself, with no sound device.
  *
@@ -270,6 +270,12 @@
 #else
 #  define MEDIA_IDLE_POLL_MSEC  MAX_POLL_MSEC
 #endif
+
+/* Gap between frames while the media clock catches up after falling behind,
+ * e.g. while the main thread was busy. Every overdue frame is still
+ * processed, so none pile up, but spread out rather than all at once.
+ */
+#define MEDIA_CATCHUP_MSEC  2
 
 #define SIP_SERVER_IP       "192.168.0.7"
 #define SIP_REGISTRAR       "sip:" SIP_SERVER_IP SIP_TRANSPORT_PARAM
@@ -1202,7 +1208,8 @@ static pj_status_t make_call(const pj_str_t *dst_uri)
     if (status != PJ_SUCCESS)
         goto on_error;
 
-    status = pjsip_inv_create_uac(dlg, local_sdp, 0, &call->inv);
+    status = pjsip_inv_create_uac(dlg, local_sdp, PJSIP_INV_SUPPORT_100REL,
+                                  &call->inv);
     if (status != PJ_SUCCESS)
         goto on_error;
 
@@ -1421,9 +1428,10 @@ on_error:
  * Returns how many milliseconds the caller may block before the earliest
  * next frame is due, so that the poll paces the media rather than a per-call
  * thread sleeping. While any call has media this is the real time to its
- * next frame, i.e. at most one ptime; MEDIA_IDLE_POLL_MSEC applies only
- * when no call has any. One frame buffer serves all calls, because only one
- * call is being processed at any moment.
+ * next frame, i.e. at most one ptime, or MEDIA_CATCHUP_MSEC while catching
+ * up; MEDIA_IDLE_POLL_MSEC applies only when no call has any. One frame
+ * buffer serves all calls, because only one call is being processed at any
+ * moment.
  */
 static unsigned media_poll(void)
 {
@@ -1458,17 +1466,15 @@ static unsigned media_poll(void)
 
             pjmedia_port_put_frame(call->med_port, &frame);
 
-            /* Next frame one ptime later, without accumulating drift. If we
-             * are already past it, the loop fell behind: resynchronise
-             * rather than trying to catch up frame by frame.
-             */
+            /* Next frame one ptime later, without accumulating drift. */
             pj_add_timestamp32(&call->next_tick, call->ts_per_frame);
-            if (pj_cmp_timestamp(&now, &call->next_tick) > 0)
-                call->next_tick = now;
         }
 
+        /* Still overdue after this frame: the loop fell behind, so come back
+         * shortly for the next one.
+         */
         msec = (pj_cmp_timestamp(&now, &call->next_tick) < 0)?
-                pj_elapsed_msec(&now, &call->next_tick) : 0;
+                pj_elapsed_msec(&now, &call->next_tick) : MEDIA_CATCHUP_MSEC;
         if (msec < delay)
             delay = msec;
     }
