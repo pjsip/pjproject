@@ -1023,8 +1023,6 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
                  * queues this, and without TCP pj_ioqueue_connect() never
                  * leaves a key in that state.
                  */
-                pj_assert(!"Invalid event!");
-                break;
 #endif
             case NO_EVENT:
                 pj_assert(!"Invalid event!");

@@ -708,7 +708,14 @@
 
 /**
  * Support TCP in the library.
- * Disabling TCP will reduce the footprint slightly (about 6KB).
+ * Disabling TCP will reduce the footprint slightly (about 4KB). With TCP
+ * disabled:
+ *  - pj_sock_socket() returns PJ_ENOTSUP for AF_INET/AF_INET6 stream
+ *    sockets.
+ *  - pj_ioqueue_connect() and pj_activesock_start_connect() only support
+ *    immediate completion (e.g. for UDP), and never return PJ_EPENDING.
+ *  - PJ_HAS_SSL_SOCK must be disabled (e.g. with --disable-ssl), and the
+ *    UWP ioqueue backend is not supported.
  *
  * Default: 1
  */

@@ -573,6 +573,8 @@ PJ_DECL(pj_status_t) pj_activesock_start_accept(pj_activesock_t *asock,
  * Note that connect() is also applicable to datagram (e.g. UDP) socket, in
  * which case it merely sets the default destination address of the socket,
  * hence this function is available regardless of the setting of PJ_HAS_TCP.
+ * When PJ_HAS_TCP is disabled, the call completes synchronously: it never
+ * returns PJ_EPENDING and \a on_connect_complete() is never called.
  *
  * @param asock     The active socket.
  * @param pool      The pool to allocate some internal data for the

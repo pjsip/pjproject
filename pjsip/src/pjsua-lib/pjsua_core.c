@@ -3220,13 +3220,12 @@ PJ_DEF(pj_status_t) pjsua_transport_lis_restart(pjsua_transport_id id,
     if ((tp_type == PJSIP_TRANSPORT_TLS) || (tp_type == PJSIP_TRANSPORT_TCP)) {
         pjsip_tpfactory *factory = pjsua_var.tpdata[id].data.factory;
         
-        PJ_UNUSED_ARG(factory);
-
         if (tp_type == PJSIP_TRANSPORT_TCP) {
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
             status = pjsip_tcp_transport_restart(factory, &bind_addr,
                                                  &addr_name);
 #else
+            PJ_UNUSED_ARG(factory);
             status = PJ_ENOTSUP;
 #endif
         }

@@ -1009,7 +1009,11 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 #endif
 
 #if VALIDATE_FD_SET
+#  if PJ_HAS_TCP
     validate_sets(ioqueue, &rfdset, &wfdset, &xfdset);
+#  else
+    validate_sets(ioqueue, &rfdset, &wfdset, NULL);
+#  endif
 #endif
 
     nfds = ioqueue->nfds;
@@ -1137,8 +1141,6 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
                  * queues this, and without TCP pj_ioqueue_connect() never
                  * leaves a key in that state.
                  */
-                pj_assert(!"Invalid event!");
-                break;
 #endif
             case NO_EVENT:
                 pj_assert(!"Invalid event!");
