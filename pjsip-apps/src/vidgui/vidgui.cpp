@@ -22,7 +22,11 @@
 #   define SDL_MAIN_HANDLED
 #endif
 
+#if SDL_VERSION_ATLEAST(3,0,0)
+#include <SDL3/SDL.h>
+#else
 #include <SDL.h>
+#endif
 #include <assert.h>
 #include <QMessageBox>
 
@@ -709,7 +713,11 @@ int main(int argc, char *argv[])
         10 SDL_CreateWindow()
         ..
      */
+#if SDL_VERSION_ATLEAST(3,0,0)
+    if ( !SDL_InitSubSystem(SDL_INIT_VIDEO) ) {
+#else
     if ( SDL_InitSubSystem(SDL_INIT_VIDEO) < 0 ) {
+#endif
         printf("Unable to init SDL: %s\n", SDL_GetError());
         return 1;
     }
