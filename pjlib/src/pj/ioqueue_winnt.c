@@ -1964,7 +1964,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_connect( pj_ioqueue_key_t *key,
     pj_lock_release(ioqueue->lock);
 
     return PJ_EPENDING;
-#else
+#else  /* PJ_HAS_TCP */
     /* Only a connection oriented socket can report that connect() is still
      * in progress, and the asynchronous completion is compiled out here, so
      * no callback will ever come. Say so loudly rather than returning a
@@ -1973,7 +1973,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_connect( pj_ioqueue_key_t *key,
      */
     pj_assert(!"asynchronous connect() requires PJ_HAS_TCP");
     return PJ_ENOTSUP;
-#endif
+#endif  /* PJ_HAS_TCP */
 }
 
 

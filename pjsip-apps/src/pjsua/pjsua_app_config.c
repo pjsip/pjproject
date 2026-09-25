@@ -1664,9 +1664,14 @@ static pj_status_t parse_args(int argc, char *argv[],
             break;
 
         case OPT_CLI_TELNET_PORT:
+#if PJ_HAS_TCP
             cfg->cli_cfg.telnet_cfg.port = (pj_uint16_t)atoi(pj_optarg);
             cfg->cli_cfg.cli_fe |= CLI_FE_TELNET;
             break;
+#else
+            PJ_LOG(1,(THIS_FILE,"Error: telnet CLI requires TCP support"));
+            return PJ_EINVAL;
+#endif
 
         case OPT_DISABLE_CLI_CONSOLE:
             cfg->cli_cfg.cli_fe &= (~CLI_FE_CONSOLE);
