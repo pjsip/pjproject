@@ -25,44 +25,70 @@
  * constrained targets. Controllable via MESSAGE requests.
  * Everything is configured by compile time macros.
  *
- * Specification:
- *  - Up to MAX_CALLS (4) simultaneous calls, each with its own media
- *    transport and audio stream. No conference bridge.
- *  - Audio is looped back: every frame read from the stream is written
- *    straight back to it, so the peer hears itself. No sound device, no
- *    files.
- *  - One audio codec, G.711 (PCMU and PCMA) or G.722, selected by
- *    EMBUA_AUDIO_CODEC, plus the RFC 4733 telephone-event that pjmedia puts
- *    in the SDP. No video.
- *  - SIP over UDP or TLS, selected by EMBUA_SIP_TRANSPORT; TLS when the
- *    stack has it (which also requires PJ_HAS_TCP). The TLS transport has
- *    no certificate: it works as a client towards the registrar, and
- *    incoming requests then arrive over that same connection. The server's
- *    certificate is not verified.
- *  - Mandatory SDES-SRTP when EMBUA_USE_SRTP is set, the default whenever
- *    pjmedia has SRTP: the SDP offers/answers RTP/SAVP with a=crypto, and
- *    an offer without SRTP is rejected with 488. Otherwise plain RTP/AVP.
- *  - With EMBUA_USE_MEDIA_THREAD, the default when pjlib has threads, a
- *    media thread polls pjmedia's own ioqueue and runs the media clock, so
- *    audio keeps flowing while the main thread is busy in a TLS handshake
- *    or a blocking name lookup. Without it everything runs in main(), and
- *    the application builds with PJ_HAS_THREADS 0.
- *  - With EMBUA_USE_REGISTRATION, the default, registers to SIP_SERVER_IP
- *    with digest credentials, and retries when registration fails or its
- *    connection drops. Without it the UA is reached at its own address.
- *  - Incoming calls are answered automatically, with 180 then 200. An
- *    incoming call beyond MAX_CALLS is rejected with 486.
- *  - A new offer on an established call, in a re-INVITE or an UPDATE, is
- *    answered and the stream rebuilt, so call hold and resume work (on hold
- *    the UA answers recvonly and stops sending), as does a switch between
- *    the registered codecs, i.e. between PCMU and PCMA with G.711. A call
- *    whose media cannot be set up is ended.
- *  - An incoming MESSAGE (RFC 3428) carries the only commands the
- *    application takes: "call <uri>", e.g. "call sip:alice@192.168.0.2",
- *    places an outgoing call, "mem" dumps the caching pool state (needs
- *    PJ_LOG_MAX_LEVEL >= 3), and "quit" disconnects all calls, unregisters,
- *    and exits. The sender is not authenticated, so this is for testing
- *    only. Any other request outside a dialog is answered with 400.
+ * Features:
+ *
+ *  Signaling
+ *  - SIP user agent (RFC 3261), both making and receiving calls.
+ *  - Optional registration, with refresh, retry and un-registration.
+ *  - Digest authentication, answering 401/407 on REGISTER and INVITE.
+ *  - Multiple concurrent calls (4 by default); any beyond get 486.
+ *  - Incoming calls answered automatically, with 180 then 200.
+ *  - Reliable provisional responses with PRACK (RFC 3262).
+ *  - Mid-call offer/answer in re-INVITE and UPDATE (RFC 3311).
+ *  - Call hold and resume; while held the UA stops sending.
+ *  - Mid-call codec change between the registered codecs.
+ *  - SIP MESSAGE (RFC 3428), answered statefully.
+ *  - Advertises Allow/Supported, so method-filtering registrars keep it.
+ *
+ *  Media
+ *  - RTP/RTCP (RFC 3550), with RTCP reports and quality statistics.
+ *  - SDP offer/answer (RFC 3264), including RFC 3605 a=rtcp.
+ *  - G.711 (PCMU and PCMA) or G.722 wideband.
+ *  - RFC 4733 telephone-events (DTMF).
+ *  - Adaptive jitter buffer.
+ *  - Packet loss concealment.
+ *  - Voice activity detection with silence suppression.
+ *  - ptime negotiation, capping requests above one 20 ms frame.
+ *  - RTP validation: sequence, SSRC, duplicate and out-of-order checks.
+ *  - Drift-free media clock that resynchronizes instead of bursting.
+ *  - Media on its own thread when available, unaffected by SIP work.
+ *  - Audio loopback: the far end hears itself, with no sound device.
+ *
+ *  Security
+ *  - Optional SIP over TLS 1.2/1.3; the server certificate isn't verified.
+ *  - Optional SDES-SRTP (RFC 4568), required on every call when enabled.
+ *  - SRTP suites: AES-CM-128/256 with HMAC-SHA1-80/32.
+ *  - With SRTP: offers without it get 488; keys renegotiated on re-INVITE.
+ *  - With SRTP: media is authenticated and replay-protected.
+ *
+ *  NAT and network
+ *  - rport (RFC 3581) for symmetric response routing.
+ *  - Symmetric RTP: follows the peer's actual source address.
+ *  - With TLS: incoming requests arrive over the registration connection.
+ *  - With TLS: keep-alives hold the connection and NAT bindings open.
+ *  - With TLS: re-registers over a new connection when the old one drops.
+ *  - Transactions learn of transport failures instead of timing out.
+ *
+ *  Robustness
+ *  - Calls without usable media are ended, not left connected.
+ *  - A failed re-INVITE keeps the current media.
+ *  - Graceful exit: BYE to every call and un-REGISTER, with a timeout.
+ *
+ *  Embedded
+ *  - Single-threaded with no pthread dependency, or with a media thread.
+ *  - No sound device, filesystem or console needed.
+ *  - Works without a TCP stack, with SIP over UDP alone.
+ *  - SIP/media stack needs no heap: pools over a pluggable allocator.
+ *  - Low idle CPU: the SIP loop sleeps up to a second at a time.
+ *  - Built on pjsip and pjmedia only, without pjsua-lib.
+ *  - Portable ANSI C in a single source file.
+ *
+ *  Development
+ *  - Controlled by SIP MESSAGE: "call <uri>", "mem" (pool usage, needs
+ *    PJ_LOG_MAX_LEVEL >= 3) and "quit". Unauthenticated, for testing only.
+ *  - Full SIP message trace.
+ *  - A startup failure exits with a code identifying the failing step.
+ *  - Builds with GNU make, CMake and Visual Studio.
  */
 
 /* Include all headers. */
@@ -1280,7 +1306,7 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
     char contact_buf[80];
     pj_str_t contact_uri;
     pjsip_tx_data *tdata = NULL;
-    unsigned options = 0;
+    unsigned options = PJSIP_INV_SUPPORT_100REL;
     pj_status_t status;
 
     if (pjsip_method_cmp(&rdata->msg_info.msg->line.req.method,
@@ -1327,7 +1353,8 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
     if (status != PJ_SUCCESS)
         RESPOND_ERR(PJSIP_SC_INTERNAL_SERVER_ERROR);
 
-    status = pjsip_inv_create_uas( dlg, rdata, local_sdp, 0, &call->inv);
+    status = pjsip_inv_create_uas( dlg, rdata, local_sdp, options,
+                                   &call->inv);
     if (status != PJ_SUCCESS)
         RESPOND_ERR(PJSIP_SC_INTERNAL_SERVER_ERROR);
 
