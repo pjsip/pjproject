@@ -204,7 +204,8 @@ PJ_BEGIN_DECL
   *
   * The first WASAPI device is named "Wave mapper", as the WMME one is, so an
   * application selecting it by name only has to pass "WASAPI" instead of
-  * "WMME" as the driver name of #pjmedia_aud_dev_lookup().
+  * "WMME" as the driver name of #pjmedia_aud_dev_lookup(). Like the WMME
+  * one, it is only listed when both capture and playback devices exist.
   *
   * Note however that it only resolves the default endpoints once, when the
   * stream is created, and then stays on them. The WMME device of that name is

@@ -63,9 +63,12 @@ PJ_BEGIN_DECL
  * as a substitute: it is converted to ANSI and truncated to
  * #PJMEDIA_AUD_DEV_INFO_NAME_LEN, so two endpoints may well share it.
  *
- * The first device of the backend stands for the current default endpoints
- * and has no fixed ID of its own. For it, \a buf is left empty and
- * \a is_default is set to PJ_TRUE, and the application is expected to call
+ * When both a default capture and a default render endpoint exist, the
+ * first device of the backend stands for them and has no fixed ID of its
+ * own. Otherwise there is no such entry and every device is a fixed
+ * endpoint, so check \a is_default rather than the index. For the default
+ * entry, \a buf is left empty and \a is_default is set to PJ_TRUE, and the
+ * application is expected to call
  * IMMDeviceEnumerator::GetDefaultAudioEndpoint() instead. Pass eConsole as
  * the role, which is the one this backend uses: eCommunications may well
  * resolve to another endpoint than the one the pjmedia stream is on.
