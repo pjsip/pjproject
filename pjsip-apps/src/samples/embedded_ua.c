@@ -1206,6 +1206,11 @@ static pj_status_t make_call(const pj_str_t *dst_uri)
     if (status != PJ_SUCCESS)
         goto on_error;
 
+    /* The INVITE session owns the dialog now, and may destroy it before a
+     * failed pjsip_inv_send_msg() returns.
+     */
+    dlg = NULL;
+
     call->inv->mod_data[mod_embedded_ua.id] = call;
 
     status = pjsip_inv_invite(call->inv, &tdata);
@@ -1565,7 +1570,16 @@ static void call_on_media_update( pjsip_inv_session *inv,
      * that would enlarge the stream's frame past it, so cap the frames per
      * packet: ptime is only a preference.
      */
+    /* No codec parameters: the media line was rejected, e.g. port 0 in a
+     * re-INVITE removing the audio, so there is no stream to run.
+     */
     param = stream_info.param;
+    if (param == NULL) {
+        PJ_LOG(3,(THIS_FILE, "Call %d has no active media line",
+                  (int)(call - g_calls)));
+        goto on_error;
+    }
+
     codec_spf = param->info.clock_rate * param->info.channel_cnt *
                 param->info.frm_ptime /
                 PJ_MAX(param->info.frm_ptime_denum, 1) / 1000;
