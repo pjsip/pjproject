@@ -36,11 +36,13 @@ static pj_bool_t stun_on_data_recvfrom(pj_activesock_t *asock,
                                        const pj_sockaddr_t *src_addr,
                                        int addr_len,
                                        pj_status_t status);
+#if PJ_HAS_TCP
 static pj_bool_t turn_tcp_on_data_read(pj_activesock_t *asock,
                                        void *data,
                                        pj_size_t size,
                                        pj_status_t status,
                                        pj_size_t *remainder);
+#endif
 #if USE_TLS
 static pj_bool_t turn_tls_on_data_read(pj_ssl_sock_t *ssock,
                                        void *data,
@@ -60,11 +62,13 @@ static pj_bool_t turn_on_data_read(test_server *asock,
                                    const pj_sockaddr_t *src_addr,
                                    int addr_len,
                                    pj_status_t status);
+#if PJ_HAS_TCP
 static pj_bool_t turn_tcp_on_accept_complete(pj_activesock_t *asock,
                                              pj_sock_t newsock,
                                              const pj_sockaddr_t *src_addr,
                                              int src_addr_len,
                                              pj_status_t status);
+#endif
 #if USE_TLS
 static pj_bool_t turn_tls_on_accept_complete2(pj_ssl_sock_t *ssock,
                                               pj_ssl_sock_t *newsock,
@@ -235,7 +239,9 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
             test_srv->turn_server_port = pj_sockaddr_get_port(&turn_bound_addr);
             status = pj_activesock_start_recvfrom(test_srv->turn_sock, pool,
                                                   MAX_STUN_PKT, 0);
-        } else if (tp_type == PJ_TURN_TP_TCP) {
+        }
+#if PJ_HAS_TCP
+        else if (tp_type == PJ_TURN_TP_TCP) {
             pj_sock_t sock_fd;
             pj_activesock_cb turn_sock_cb;
             int name_len = sizeof(turn_bound_addr);
@@ -285,6 +291,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
             }
 
         } 
+#endif  /* PJ_HAS_TCP */
 #if USE_TLS
         else if (tp_type == PJ_TURN_TP_TLS) {
             pj_ssl_sock_t *ssock_serv = NULL;
@@ -537,6 +544,7 @@ static pj_stun_msg* create_success_response(test_server *test_srv,
     return resp;
 }
 
+#if PJ_HAS_TCP
 static pj_bool_t turn_tcp_on_data_read(pj_activesock_t *asock,
                                        void *data,
                                        pj_size_t size,
@@ -549,6 +557,7 @@ static pj_bool_t turn_tcp_on_data_read(pj_activesock_t *asock,
     return turn_on_data_read(test_srv, data, size, &test_srv->remote_addr, 
                             sizeof(test_srv->remote_addr), status);
 }
+#endif
 
 #if USE_TLS
 static pj_bool_t turn_tls_on_data_read(pj_ssl_sock_t *ssl_sock,
@@ -1036,6 +1045,7 @@ on_return:
     return PJ_TRUE;
 }
 
+#if PJ_HAS_TCP
 static pj_bool_t turn_tcp_on_accept_complete(pj_activesock_t *asock,
                                              pj_sock_t newsock,
                                              const pj_sockaddr_t *src_addr,
@@ -1083,6 +1093,7 @@ on_exit:
     return PJ_FALSE;
 
 }
+#endif  /* PJ_HAS_TCP */
 
 #if USE_TLS
 static pj_bool_t turn_tls_on_accept_complete2(pj_ssl_sock_t *ssock,

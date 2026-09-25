@@ -513,11 +513,13 @@ static int ioqueue_perf_test_imp(const pj_ioqueue_cfg *cfg)
         { pj_SOCK_DGRAM(), "udp", 8, 8},
         { pj_SOCK_DGRAM(), "udp", 16, 16},
 
+#if PJ_HAS_TCP
         { pj_SOCK_STREAM(), "tcp", 1, 1},
         { pj_SOCK_STREAM(), "tcp", 2, 2},
         { pj_SOCK_STREAM(), "tcp", 4, 4},
         { pj_SOCK_STREAM(), "tcp", 8, 8},
         { pj_SOCK_STREAM(), "tcp", 16, 16},
+#endif
     };
     pj_size_t best_bandwidth;
     int best_index = 0;

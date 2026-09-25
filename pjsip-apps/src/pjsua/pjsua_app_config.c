@@ -1664,9 +1664,14 @@ static pj_status_t parse_args(int argc, char *argv[],
             break;
 
         case OPT_CLI_TELNET_PORT:
+#if PJ_HAS_TCP
             cfg->cli_cfg.telnet_cfg.port = (pj_uint16_t)atoi(pj_optarg);
             cfg->cli_cfg.cli_fe |= CLI_FE_TELNET;
             break;
+#else
+            PJ_LOG(1,(THIS_FILE,"Error: telnet CLI requires TCP support"));
+            return PJ_EINVAL;
+#endif
 
         case OPT_DISABLE_CLI_CONSOLE:
             cfg->cli_cfg.cli_fe &= (~CLI_FE_CONSOLE);
@@ -1862,6 +1867,9 @@ static void default_config()
     pjsua_media_config_default(&cfg->media_cfg);
     pjsua_transport_config_default(&cfg->udp_cfg);
     cfg->udp_cfg.port = 5060;
+#if !defined(PJ_HAS_TCP) || PJ_HAS_TCP==0
+    cfg->no_tcp = PJ_TRUE;
+#endif
     pjsua_transport_config_default(&cfg->rtp_cfg);
     cfg->rtp_cfg.port = 4000;
     cfg->enable_rtcp_mux = PJ_FALSE;

@@ -43,6 +43,9 @@
 
 #endif
 
+/* The telnet front end is a TCP server, hence it needs TCP support. */
+#if PJ_HAS_TCP
+
 #define CLI_TELNET_BUF_SIZE 256
 
 #define CUT_MSG "<..data truncated..>\r\n"
@@ -1290,6 +1293,8 @@ static pj_status_t process_vt100_cmd(cli_telnet_sess *sess,
     return status;
 }
 
+#endif  /* PJ_HAS_TCP */
+
 PJ_DEF(void) pj_cli_telnet_cfg_default(pj_cli_telnet_cfg *param)
 {
     pj_assert(param);
@@ -1298,6 +1303,8 @@ PJ_DEF(void) pj_cli_telnet_cfg_default(pj_cli_telnet_cfg *param)
     param->port = PJ_CLI_TELNET_PORT;
     param->log_level = PJ_CLI_TELNET_LOG_LEVEL;
 }
+
+#if PJ_HAS_TCP
 
 /*
  * Send a message to a telnet session
@@ -2038,3 +2045,31 @@ PJ_DEF(pj_status_t) pj_cli_telnet_get_info(pj_cli_front_end *fe,
 
     return PJ_SUCCESS;
 }
+
+#else   /* PJ_HAS_TCP */
+
+/*
+ * Stubs for when TCP support is disabled.
+ */
+
+PJ_DEF(pj_status_t) pj_cli_telnet_create(pj_cli_t *cli,
+                                         pj_cli_telnet_cfg *param,
+                                         pj_cli_front_end **p_fe)
+{
+    PJ_UNUSED_ARG(cli);
+    PJ_UNUSED_ARG(param);
+    PJ_UNUSED_ARG(p_fe);
+
+    PJ_ASSERT_RETURN(!"Telnet CLI front end requires PJ_HAS_TCP", PJ_ENOTSUP);
+}
+
+PJ_DEF(pj_status_t) pj_cli_telnet_get_info(pj_cli_front_end *fe,
+                                           pj_cli_telnet_info *info)
+{
+    PJ_UNUSED_ARG(fe);
+    PJ_UNUSED_ARG(info);
+
+    PJ_ASSERT_RETURN(!"Telnet CLI front end requires PJ_HAS_TCP", PJ_ENOTSUP);
+}
+
+#endif  /* PJ_HAS_TCP */

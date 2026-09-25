@@ -148,7 +148,9 @@ int main()
 {
     pj_caching_pool cp;
     pj_cli_cfg cli_cfg;
+#if PJ_HAS_TCP
     pj_cli_telnet_cfg tcfg;
+#endif
     pj_str_t xml;
     pj_status_t status;
     unsigned i;
@@ -188,6 +190,7 @@ int main()
         }
     }
 
+#if PJ_HAS_TCP
     /*
      * Start telnet daemon
      */
@@ -202,6 +205,7 @@ int main()
     status = pj_cli_telnet_create(cli, &tcfg, NULL);
     if (status != PJ_SUCCESS)
         goto on_return;
+#endif  /* PJ_HAS_TCP */
 
     /*
      * Run the system specific main loop.

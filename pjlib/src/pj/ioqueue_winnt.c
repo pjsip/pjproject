@@ -946,7 +946,9 @@ static pj_status_t cancel_all_pending_op(pj_ioqueue_key_t *key)
     } while (0);
 #endif
 
+#if PJ_HAS_TCP
     key->connecting = 0;
+#endif
     pj_ioqueue_unlock_key(key);
 
     if (rc == 0) {
@@ -1108,7 +1110,9 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
             case PJ_IOQUEUE_OP_RECV_FROM:
             case PJ_IOQUEUE_OP_SEND:
             case PJ_IOQUEUE_OP_SEND_TO:
+#if PJ_HAS_TCP
             case PJ_IOQUEUE_OP_ACCEPT:
+#endif
                 op = (struct pending_op*)
                      ((char*)pOv - offsetof(struct pending_op, pending_key));
                 op_key = op->app_op_key;
@@ -1879,6 +1883,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
     /* Asynchronous Accept() has been submitted. */
     return PJ_EPENDING;
 }
+#endif  /* PJ_HAS_TCP */
 
 
 /*
@@ -1891,8 +1896,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_connect( pj_ioqueue_key_t *key,
                                         const pj_sockaddr_t *addr,
                                         int addrlen )
 {
+#if PJ_HAS_TCP
     HANDLE hEvent;
     pj_ioqueue_t *ioqueue;
+#endif
 
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(key && addr && addrlen, PJ_EINVAL);
@@ -1913,6 +1920,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_connect( pj_ioqueue_key_t *key,
         return PJ_SUCCESS;
     }
 
+#if PJ_HAS_TCP
     ioqueue = key->ioqueue;
 
     /* Add to the array of connecting socket to be polled */
@@ -1956,8 +1964,17 @@ PJ_DEF(pj_status_t) pj_ioqueue_connect( pj_ioqueue_key_t *key,
     pj_lock_release(ioqueue->lock);
 
     return PJ_EPENDING;
+#else  /* PJ_HAS_TCP */
+    /* Only a connection oriented socket can report that connect() is still
+     * in progress, and the asynchronous completion is compiled out here, so
+     * no callback will ever come. Say so loudly rather than returning a
+     * "would block" status, which the caller would read as "connecting
+     * asynchronously".
+     */
+    pj_assert(!"asynchronous connect() requires PJ_HAS_TCP");
+    return PJ_ENOTSUP;
+#endif  /* PJ_HAS_TCP */
 }
-#endif  /* #if PJ_HAS_TCP */
 
 
 PJ_DEF(void) pj_ioqueue_op_key_init( pj_ioqueue_op_key_t *op_key,

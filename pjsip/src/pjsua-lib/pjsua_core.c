@@ -3143,8 +3143,12 @@ PJ_DEF(pj_status_t) pjsua_transport_lis_start(pjsua_transport_id id,
             addr_name.host = cfg->public_addr;
 
         if (tp_type == PJSIP_TRANSPORT_TCP) {
+#if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
             status = pjsip_tcp_transport_lis_start(factory, &bind_addr,
                                                    &addr_name);
+#else
+            status = PJ_ENOTSUP;
+#endif
         }
 #if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
         else {
@@ -3218,8 +3222,13 @@ PJ_DEF(pj_status_t) pjsua_transport_lis_restart(pjsua_transport_id id,
         pjsip_tpfactory *factory = pjsua_var.tpdata[id].data.factory;
         
         if (tp_type == PJSIP_TRANSPORT_TCP) {
+#if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
             status = pjsip_tcp_transport_restart(factory, &bind_addr,
                                                  &addr_name);
+#else
+            PJ_UNUSED_ARG(factory);
+            status = PJ_ENOTSUP;
+#endif
         }
 #if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
         else {
@@ -4094,6 +4103,7 @@ static pj_status_t restart_listener(pjsua_transport_id id,
                                         NULL);
         break;
 #endif
+#if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
     case PJSIP_TRANSPORT_TCP:
     case PJSIP_TRANSPORT_TCP6:
         status = pjsip_tcp_transport_restart(
@@ -4101,6 +4111,7 @@ static pj_status_t restart_listener(pjsua_transport_id id,
                                         &bind_addr,
                                         NULL);
         break;
+#endif
 
     default:
         status = PJ_EINVAL;

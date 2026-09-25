@@ -527,6 +527,7 @@ static int perform_single_pass(test_desc *test)
      * Init server side
      */
     if (test->cfg.sock_type == pj_SOCK_STREAM()) {
+#if PJ_HAS_TCP
         CHECK(20, pj_sock_socket(pj_AF_INET(), test->cfg.sock_type, 0,
                                  &test->state.listen_sock));
         CHECK(21, pj_sock_bind_in(test->state.listen_sock, 0, 0));
@@ -557,6 +558,7 @@ static int perform_single_pass(test_desc *test)
                 CHECK(26, okud->server.status);
             }
         }
+#endif  /* PJ_HAS_TCP */
     } else {
         CHECK(30, pj_sock_socket(pj_AF_INET(), test->cfg.sock_type, 0,
                                  &test->state.socks[SERVER]));
@@ -1257,6 +1259,14 @@ int ioqueue_stress_test(void)
         test_desc *test = &tests[i];
         if (!test->cfg.title)
             break;
+
+#if !PJ_HAS_TCP
+        if (test->cfg.sock_type == SOCK_STREAM) {
+            PJ_LOG(3,(THIS_FILE, "%s: skipped (no TCP support)",
+                      test->cfg.title));
+            continue;
+        }
+#endif
 
         r = perform_test(&tests[i]);
         if (r && !retcode)

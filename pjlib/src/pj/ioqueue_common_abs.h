@@ -89,6 +89,13 @@ union operation_key
 #endif
 };
 
+#if PJ_HAS_TCP
+#   define CONNECTING_FIELD             \
+        int                 connecting;
+#else
+#   define CONNECTING_FIELD
+#endif
+
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
 #   define UNREG_FIELDS                 \
         unsigned            ref_count;  \
@@ -112,7 +119,7 @@ union operation_key
     int                     fd_type;                \
     void                   *user_data;              \
     pj_ioqueue_callback     cb;                     \
-    int                     connecting;             \
+    CONNECTING_FIELD                                \
     struct read_operation   read_list;              \
     struct write_operation  write_list;             \
     struct accept_operation accept_list;            \

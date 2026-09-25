@@ -1198,7 +1198,8 @@ PJ_DECL(pj_in_addr) pj_gethostaddr(void);
  *                  in which a case protocol can be specified as 0.
  * @param sock      New socket descriptor, or PJ_INVALID_SOCKET on error.
  *
- * @return          Zero on success.
+ * @return          Zero on success, or PJ_ENOTSUP if PJ_HAS_TCP is disabled
+ *                  and a TCP (AF_INET/AF_INET6 stream) socket is requested.
  */
 PJ_DECL(pj_status_t) pj_sock_socket(int family, 
                                     int type, 

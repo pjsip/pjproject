@@ -249,8 +249,12 @@ static pj_status_t init_stack()
     pj_sockaddr_init((pj_uint16_t)sip_af, &addr, NULL, (pj_uint16_t)sip_port);
     if (sip_af == pj_AF_INET()) {
         if (sip_tcp) {
+#if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
             CHECK( pjsip_tcp_transport_start( app.sip_endpt, &addr.ipv4, 1,
                                               NULL) );
+#else
+            CHECK( PJ_ENOTSUP );
+#endif
         } else {
             CHECK( pjsip_udp_transport_start( app.sip_endpt, &addr.ipv4,
                                               NULL, 1, NULL) );

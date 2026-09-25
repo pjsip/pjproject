@@ -286,8 +286,8 @@ typedef enum pj_ioqueue_operation_e
     PJ_IOQUEUE_OP_SEND_TO       = 32,   /**< sendto() operation.    */
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP != 0
     PJ_IOQUEUE_OP_ACCEPT        = 64,   /**< accept() operation.    */
-    PJ_IOQUEUE_OP_CONNECT       = 128   /**< connect() operation.   */
 #endif  /* PJ_HAS_TCP */
+    PJ_IOQUEUE_OP_CONNECT       = 128   /**< connect() operation.   */
 } pj_ioqueue_operation_e;
 
 
@@ -720,6 +720,8 @@ PJ_DECL(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
                                         pj_sockaddr_t *remote,
                                         int *addrlen );
 
+#endif  /* PJ_HAS_TCP */
+
 /**
  * Initiate non-blocking socket connect. If the socket can NOT be connected
  * immediately, asynchronous connect() will be scheduled and caller will be
@@ -727,7 +729,12 @@ PJ_DECL(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
  * socket is connected immediately, the function returns PJ_SUCCESS and
  * completion callback WILL NOT be called.
  *
- * @param key       The key associated with TCP socket
+ * Note that connect() is also applicable to datagram (e.g. UDP) socket, in
+ * which case it merely sets the default destination address of the socket
+ * and it will normally complete immediately, hence this function is
+ * available regardless of the setting of PJ_HAS_TCP.
+ *
+ * @param key       The key associated with the socket.
  * @param addr      The remote address.
  * @param addrlen   The remote address length.
  *
@@ -740,8 +747,6 @@ PJ_DECL(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
 PJ_DECL(pj_status_t) pj_ioqueue_connect( pj_ioqueue_key_t *key,
                                          const pj_sockaddr_t *addr,
                                          int addrlen );
-
-#endif  /* PJ_HAS_TCP */
 
 /**
  * Poll the I/O Queue for completed events.

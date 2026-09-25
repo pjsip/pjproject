@@ -693,10 +693,18 @@ PJ_DEF(int) pj_ioqueue_poll(pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
                 if (ioqueue_dispatch_write_event(ioqueue, queue[i].key))
                     ++processed_cnt;
                 break;
+#if PJ_HAS_TCP
             case EXCEPTION_EVENT:
                 if (ioqueue_dispatch_exception_event(ioqueue, queue[i].key))
                     ++processed_cnt;
                 break;
+#else
+            case EXCEPTION_EVENT:
+                /* Not reachable: only a key with a pending connect()
+                 * queues this, and without TCP pj_ioqueue_connect() never
+                 * leaves a key in that state.
+                 */
+#endif
             case NO_EVENT:
                 pj_assert(!"Invalid event!");
                 break;

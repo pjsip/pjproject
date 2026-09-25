@@ -223,6 +223,8 @@ on_return:
 
 
 
+#if PJ_HAS_TCP
+
 #define SIGNATURE   0xdeadbeef
 struct tcp_pkt
 {
@@ -578,17 +580,21 @@ on_return:
     return ret;
 }
 
+#endif  /* PJ_HAS_TCP */
+
 int activesock_test(void)
 {
     int rc;
     if ((rc=activesock_test0()) != 0)
         return rc;
 
+#if PJ_HAS_TCP
     if ((rc=activesock_test1()) != 0)
         return rc;
 
     if ((rc=activesock_close_send_cb_test()) != 0)
         return rc;
+#endif
 
     return 0;
 }

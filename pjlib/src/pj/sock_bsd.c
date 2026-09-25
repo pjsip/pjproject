@@ -517,6 +517,16 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
     PJ_ASSERT_RETURN((SOCKET)PJ_INVALID_SOCKET==INVALID_SOCKET, 
                      (*sock=PJ_INVALID_SOCKET, PJ_EINVAL));
 
+#if !PJ_HAS_TCP
+    /* No TCP. Stream sockets of other families are not affected. */
+    if ((af == PJ_AF_INET || af == PJ_AF_INET6) &&
+        (type & 0xF) == PJ_SOCK_STREAM)
+    {
+        *sock = PJ_INVALID_SOCKET;
+        return PJ_ENOTSUP;
+    }
+#endif
+
     *sock = WSASocket(af, type, proto, NULL, 0, WSA_FLAG_OVERLAPPED);
 
     if (*sock == PJ_INVALID_SOCKET) 
@@ -568,6 +578,16 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
     PJ_ASSERT_RETURN(sock!=NULL, PJ_EINVAL);
     PJ_ASSERT_RETURN(PJ_INVALID_SOCKET==-1, 
                      (*sock=PJ_INVALID_SOCKET, PJ_EINVAL));
+
+#if !PJ_HAS_TCP
+    /* No TCP. Stream sockets of other families are not affected. */
+    if ((af == PJ_AF_INET || af == PJ_AF_INET6) &&
+        (type & 0xF) == PJ_SOCK_STREAM)
+    {
+        *sock = PJ_INVALID_SOCKET;
+        return PJ_ENOTSUP;
+    }
+#endif
 
 #if !defined(SOCK_CLOEXEC)
     if ((type0 & pj_SOCK_CLOEXEC()) == pj_SOCK_CLOEXEC())

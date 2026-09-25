@@ -379,11 +379,13 @@ static pj_status_t init_endpt()
         return rc;
     }
 
+#if PJ_HAS_TCP
     rc = pjsip_tcp_transport_start(endpt, NULL, 1, NULL);
     if (rc != PJ_SUCCESS) {
         app_perror("tcp init", rc);
         return rc;
     }
+#endif
 
     rc = pjsip_endpt_create_resolver(endpt, &resolver);
     if (rc != PJ_SUCCESS) {
@@ -453,6 +455,7 @@ int tsx_destroy_test()
             1,
             20000
         },
+#if PJ_HAS_TCP
         {
             "tcp connect and destroy",
             &tsx_create_and_send_req,
@@ -467,6 +470,7 @@ int tsx_destroy_test()
             1,
             60000
         },
+#endif
     };
     int rc;
     unsigned i;

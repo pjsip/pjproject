@@ -490,7 +490,9 @@ static void mainProg4(MyEndpoint &ep)
     TransportConfig tcfg;
     tcfg.port = 5060;
     ep.transportCreate(PJSIP_TRANSPORT_UDP, tcfg);
+#if PJ_HAS_TCP
     ep.transportCreate(PJSIP_TRANSPORT_TCP, tcfg);
+#endif
 
     // Add account
     AccountConfig acc_cfg;
