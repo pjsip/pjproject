@@ -41,6 +41,19 @@ target_link_libraries(aidemo
     pjmedia-videodev
 )
 
+add_executable(embedded_ua src/samples/embedded_ua.c)
+target_link_libraries(embedded_ua
+  PRIVATE
+    pjlib
+    pjlib-util
+    pjnath
+    pjmedia
+    pjmedia-codec
+    pjmedia-audiodev
+    pjsip
+    pjsip-ua
+)
+
 # ##############################################################################
 # SWIG bindings
 

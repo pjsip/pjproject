@@ -33,6 +33,9 @@
     <ClCompile Include="..\src\samples\confsample.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\samples\embedded_ua.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\samples\encdec.c">
       <Filter>Source Files</Filter>
     </ClCompile>
