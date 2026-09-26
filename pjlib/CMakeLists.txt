@@ -661,6 +661,15 @@ block(SCOPE_FOR VARIABLES)
     check_symbol_exists(pthread_set_name_np pthread_np.h
       PJ_HAS_PTHREAD_SET_NAME_NP
     )
+  else()
+    # declared in pthread.h on Linux, Android and Darwin (glibc: _GNU_SOURCE)
+    include(CMakePushCheckState)
+    cmake_push_check_state()
+    set(CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
+    check_symbol_exists(pthread_setname_np pthread.h
+      PJ_HAS_PTHREAD_SETNAME_NP
+    )
+    cmake_pop_check_state()
   endif()
 
   #

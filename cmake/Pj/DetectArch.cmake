@@ -153,11 +153,8 @@ function(pj_detect_arch_simd_ext out_simd out_flags)
     ]=])
 
     if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang" AND UNIX)
-      if(CYGWIN OR MINGW)
-        set(simd_flags "-msse2")
-      else()
-        set(simd_flags "-mfma")
-      endif()
+      # FMA is enabled only for the AVX2 sources, see webrtc_aec3
+      set(simd_flags "-msse2")
     elseif(MSVC AND NOT (arch STREQUAL "x86_64" OR arch STREQUAL "x64"))
       set(simd_flags "/arch:SSE2")
     endif()

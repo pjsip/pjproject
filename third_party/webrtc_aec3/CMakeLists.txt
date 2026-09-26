@@ -171,7 +171,8 @@ endif()
 
 include(DetectWebRTCParameters)
 target_compile_options(webrtc_aec3 PRIVATE ${WEBRTC_COMPILE_OPTIONS})
-target_compile_definitions(webrtc_aec3 PRIVATE ${WEBRTC_COMPILE_DEFINITIONS})
+# public: echo_webrtc_aec3.cpp includes WebRTC headers that need them
+target_compile_definitions(webrtc_aec3 PUBLIC ${WEBRTC_COMPILE_DEFINITIONS})
 
 # Include SIMD source files
 if(WEBRTC_ARCH_SIMD STREQUAL "neon")
@@ -185,14 +186,24 @@ elseif(WEBRTC_ARCH_SIMD STREQUAL "sse2")
     PRIVATE
       src/common_audio/resampler/sinc_resampler_sse.cc
       src/common_audio/third_party/ooura/fft_size_128/ooura_fft_sse2.cc
-      src/common_audio/resampler/sinc_resampler_avx2.cc
-      src/modules/audio_processing/aec3/adaptive_fir_filter_erl_avx2.cc
-      src/modules/audio_processing/aec3/adaptive_fir_filter_avx2.cc
-      src/modules/audio_processing/aec3/fft_data_avx2.cc
-      src/modules/audio_processing/aec3/matched_filter_avx2.cc
-      src/modules/audio_processing/aec3/vector_math_avx2.cc
-      src/modules/audio_processing/agc2/rnn_vad/rnn_vector_math_avx2.cc
   )
+
+  # AVX2 sources run only after a runtime CPU check, so only they get AVX2/FMA
+  set(WEBRTC_AEC3_AVX2_SOURCES
+    src/common_audio/resampler/sinc_resampler_avx2.cc
+    src/modules/audio_processing/aec3/adaptive_fir_filter_erl_avx2.cc
+    src/modules/audio_processing/aec3/adaptive_fir_filter_avx2.cc
+    src/modules/audio_processing/aec3/fft_data_avx2.cc
+    src/modules/audio_processing/aec3/matched_filter_avx2.cc
+    src/modules/audio_processing/aec3/vector_math_avx2.cc
+    src/modules/audio_processing/agc2/rnn_vad/rnn_vector_math_avx2.cc
+  )
+  target_sources(webrtc_aec3 PRIVATE ${WEBRTC_AEC3_AVX2_SOURCES})
+  if(NOT MSVC)
+    set_source_files_properties(${WEBRTC_AEC3_AVX2_SOURCES}
+      PROPERTIES COMPILE_OPTIONS "-mavx2;-mfma"
+    )
+  endif()
 endif()
 
 # ##############################################################################
@@ -204,4 +215,9 @@ if (NOT (WIN32 OR CYGWIN OR MINGW))
   target_link_libraries(webrtc_aec3 PRIVATE "${MATH_LIBRARY}")
 elseif(NOT CMAKE_SYSTEM_NAME MATCHES "Windows(Store|Phone)")
   target_link_libraries(webrtc_aec3 PRIVATE winmm)
+endif()
+
+# logging uses __android_log_print
+if(ANDROID)
+  target_link_libraries(webrtc_aec3 PUBLIC log)
 endif()
