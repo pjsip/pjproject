@@ -1598,7 +1598,7 @@ static void call_on_media_update( pjsip_inv_session *inv,
     /* Create new audio media stream, passing the stream info, and also the
      * media transport that we created earlier.
      */
-    status = pjmedia_stream_create(g.med_endpt, call->pool, &stream_info,
+    status = pjmedia_stream_create(g.med_endpt, NULL, &stream_info,
                                    call->med_transport, NULL,
                                    &call->med_stream);
     if (status != PJ_SUCCESS) {
