@@ -4,7 +4,8 @@ on:
     branches:
       - 'master'
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
 
 # Cancel superseded runs on the same ref (e.g. a force-push to a PR) so they
 # stop holding the scarce concurrent macOS runner slots.
@@ -29,7 +30,10 @@ env:
   # Only affects ASan-instrumented binaries; harmless for non-ASan jobs.
   ASAN_OPTIONS: use_sigaltstack=0:detect_stack_use_after_return=0
 jobs:
+  # Draft PRs run the build only jobs. Skipping this job skips every test job
+  # that needs it.
   detect-changes:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     outputs:
       # macOS-specific code lives in pjlib (OS abstractions, ioqueue/kqueue,
@@ -41,6 +45,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: dorny/paths-filter@v3
+      if: github.event_name == 'pull_request'
       id: filter
       with:
         filters: |
@@ -93,7 +98,7 @@ jobs:
   default-pjlib-util-pjmedia-pjnath:
     # full bundle: enable all codecs + AEC + DTLS
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.mac_full_tests == 'true'
     runs-on: macos-latest
     name: Default / pjmedia,pjnath
     steps:
@@ -125,7 +130,7 @@ jobs:
 
   default-pjsua-test:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.mac_full_tests == 'true'
     runs-on: macos-latest
     name: Default / pjsua-test
     steps:
@@ -177,7 +182,7 @@ jobs:
 
   default-pjsip-test:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.mac_full_tests == 'true'
     runs-on: macos-latest
     name: Default / pjlib,util,pjsip-test
     steps:
@@ -211,7 +216,7 @@ jobs:
 
   openssl-1:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.mac_full_tests == 'true'
     runs-on: macos-latest
     name: OpenSSL / pjlib,util,pjnath,pjmedia
     steps:
@@ -267,7 +272,7 @@ jobs:
 
   openssl-2:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.mac_full_tests == 'true'
     runs-on: macos-latest
     name: OpenSSL / pjsip
     steps:
@@ -301,7 +306,7 @@ jobs:
 
   gnu-tls-1:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.mac_full_tests == 'true'
     runs-on: macos-latest
     name: GnuTLS / pjlib,util,pjmedia,pjnath
     steps:
@@ -355,7 +360,7 @@ jobs:
 
   gnu-tls-2:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.mac_full_tests == 'true'
     runs-on: macos-latest
     name: GnuTLS / pjsip-test
     steps:
@@ -387,7 +392,7 @@ jobs:
 
   video-openh264-1:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.mac_full_tests == 'true'
     runs-on: macos-latest
     name: Openh264+VPX / pjsua
     steps:
@@ -437,7 +442,7 @@ jobs:
 # Uncomment to restore.
 #  video-openh264-2:
 #    needs: [detect-changes]
-#    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
+#    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.mac_full_tests == 'true'
 #    runs-on: macos-latest
 #    name: Openh264+VPX / pjlib,util,pjnath
 #    steps:
@@ -471,7 +476,7 @@ jobs:
 
   video-openh264-3:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.mac_full_tests == 'true'
     runs-on: macos-latest
     name: Openh264+VPX / pjmedia,pjsip
     steps:
@@ -503,7 +508,7 @@ jobs:
 
   video-ffmpeg:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.mac_full_tests == 'true'
     runs-on: macos-latest
     name: FFMPEG+VPX+x264 / pjmedia
     steps:
@@ -543,7 +548,7 @@ jobs:
 
   video-vid-toolbox:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.mac_full_tests == 'true'
     runs-on: macos-latest
     name: VPX+VidToolbox / pjmedia
     steps:
@@ -577,7 +582,7 @@ jobs:
 
   ioq-cb-with-lock:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.mac_full_tests == 'true'
     runs-on: macos-latest
     name: ioq-cb-with-lock / pjlib,pjsua
     steps:
