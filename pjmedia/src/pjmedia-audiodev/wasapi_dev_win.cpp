@@ -251,6 +251,7 @@ struct wasapi_stream
     pj_timestamp            pb_ts;
     unsigned                pb_underrun;
     DWORD                   pb_alive;       /* Tick of the last frame out   */
+    DWORD                   stall_check;    /* Tick of the last stall check */
 
     /* Capture */
     IAudioClient           *cap_client;
@@ -1235,7 +1236,7 @@ static pj_status_t do_start(struct wasapi_stream *s)
     }
 
     /* Time spent stopped does not count as a stall */
-    s->cap_alive = s->pb_alive = GetTickCount();
+    s->cap_alive = s->pb_alive = s->stall_check = GetTickCount();
     s->running = PJ_TRUE;
     PJ_LOG(4, (THIS_FILE, "WASAPI stream started"));
     return PJ_SUCCESS;
@@ -1331,6 +1332,13 @@ static void check_stall(struct wasapi_stream *s)
 {
     DWORD now = GetTickCount();
     pjmedia_dir dir;
+
+    /* This thread itself did not run for that long, e.g: the system was
+     * suspended or a callback blocked, so the device cannot be blamed.
+     */
+    if (now - s->stall_check >= WASAPI_STALL_TIMEOUT_MS)
+        s->cap_alive = s->pb_alive = now;
+    s->stall_check = now;
 
     if (s->cap_client && now - s->cap_alive >= WASAPI_STALL_TIMEOUT_MS)
         dir = PJMEDIA_DIR_CAPTURE;
