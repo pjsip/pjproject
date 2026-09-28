@@ -2626,6 +2626,19 @@ void Endpoint::natUpdateStunServers(const StringVector &servers,
     PJSUA2_CHECK_EXPR(pjsua_update_stun_servers(count, srv, wait) );
 }
 
+void Endpoint::updateNameservers(const StringVector &servers)
+                                 PJSUA2_THROW(Error)
+{
+    vector<pj_str_t> srv(servers.size());
+    unsigned i;
+
+    for (i=0; i<servers.size(); ++i)
+        srv[i] = str2Pj(servers[i]);
+
+    PJSUA2_CHECK_EXPR(pjsua_update_nameservers((unsigned)srv.size(),
+                                               srv.empty()? NULL : &srv[0]));
+}
+
 void Endpoint::natCheckStunServers(const StringVector &servers,
                                    bool wait,
                                    Token token) PJSUA2_THROW(Error)

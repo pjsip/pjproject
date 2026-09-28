@@ -2585,6 +2585,7 @@ typedef struct pjsua_config
      * Number of nameservers. If no name server is configured, the SIP SRV
      * resolution would be disabled, and domain will be resolved with
      * standard pj_gethostbyname() function.
+     * The nameservers can be changed later with #pjsua_update_nameservers().
      */
     unsigned        nameserver_count;
 
@@ -2592,6 +2593,9 @@ typedef struct pjsua_config
      * Array of nameservers to be used by the SIP resolver subsystem.
      * The order of the name server specifies the priority (first name
      * server will be used first, unless it is not reachable).
+     * Each entry is an IP address or a hostname with an optional port,
+     * e.g: "8.8.8.8", "10.0.0.1:5353", or "[2001:db8::1]:5353". Invalid
+     * entries are ignored if at least one entry is valid.
      */
     pj_str_t        nameserver[4];
 
@@ -3418,6 +3422,26 @@ PJ_DECL(pj_status_t) pjsua_get_nat_type(pj_stun_nat_type *type);
  */
 PJ_DECL(pj_status_t) pjsua_update_stun_servers(unsigned count, pj_str_t srv[],
                                                pj_bool_t wait);
+
+
+/**
+ * Update the nameservers of the DNS resolver, e.g: after the device has
+ * moved to another network. An empty list disables the DNS resolver, the
+ * same as when no nameserver is configured. This function may block if
+ * an entry is a hostname. The #pjsua_init() must have been called before
+ * calling this function.
+ *
+ * @param count         Number of nameserver entries, at most four.
+ * @param srv           Array of nameserver entries. Please see the
+ *                      \a nameserver field in the #pjsua_config
+ *                      documentation about the format of this entry.
+ *
+ * @return              PJ_SUCCESS on success, PJLIB_UTIL_EDNSINNSADDR if
+ *                      none of the entries is valid, or the appropriate
+ *                      error code.
+ */
+PJ_DECL(pj_status_t) pjsua_update_nameservers(unsigned count,
+                                              const pj_str_t srv[]);
 
 
 /**

@@ -1141,6 +1141,102 @@ static int dns_destroy_pending_test(void)
 }
 
 
+////////////////////////////////////////////////////////////////////////////
+/* Changing the nameservers while a query is pending */
+
+#define IP_ADDR4    0x04040404
+
+static volatile pj_bool_t set_ns_cb_called;
+static pj_status_t set_ns_cb_status;
+static pj_uint32_t set_ns_cb_addr;
+
+static void dns_callback_set_ns(void *user_data,
+                                pj_status_t status,
+                                pj_dns_parsed_packet *resp)
+{
+    PJ_UNUSED_ARG(user_data);
+
+    set_ns_cb_status = status;
+    if (status == PJ_SUCCESS && resp && resp->hdr.anscount)
+        set_ns_cb_addr = resp->ans[0].rdata.a.ip_addr.s_addr;
+    set_ns_cb_called = PJ_TRUE;
+}
+
+
+/* A pending query must be retransmitted to the new nameserver. */
+static int dns_set_ns_during_query_test(void)
+{
+    pj_str_t name = pj_str("name_set_ns");
+    pj_str_t ns_addr = pj_str("127.0.0.1");
+    pj_uint16_t port;
+    pj_dns_parsed_packet *r;
+    pj_dns_resolver *res;
+    unsigned i;
+
+    PJ_LOG(3,(THIS_FILE, "  set nameservers during query test"));
+
+    set_ns_cb_called = PJ_FALSE;
+    set_ns_cb_status = PJ_EUNKNOWN;
+    set_ns_cb_addr = 0;
+
+    g_server[0].pkt_count = 0;
+    g_server[1].pkt_count = 0;
+    g_server[0].action = ACTION_IGNORE;
+
+    g_server[1].action = ACTION_REPLY;
+    r = &g_server[1].resp;
+    r->hdr.qdcount = 1;
+    r->hdr.anscount = 1;
+    r->q = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_query);
+    r->q[0].type = PJ_DNS_TYPE_A;
+    r->q[0].dnsclass = 1;
+    r->q[0].name = name;
+    r->ans = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_rr);
+    r->ans[0].type = PJ_DNS_TYPE_A;
+    r->ans[0].dnsclass = 1;
+    r->ans[0].name = name;
+    r->ans[0].rdata.a.ip_addr.s_addr = IP_ADDR4;
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_create(mem, NULL, 0, timer_heap, ioqueue,
+                                           &res),
+                    NULL, return -800);
+
+    port = g_server[0].port;
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(res, 1, &ns_addr, &port),
+                    NULL, { pj_dns_resolver_destroy(res, PJ_FALSE);
+                            return -805; });
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(
+                        res, &name, PJ_DNS_TYPE_A, 0,
+                        &dns_callback_set_ns, NULL, NULL),
+                    NULL, { pj_dns_resolver_destroy(res, PJ_FALSE);
+                            return -810; });
+
+    for (i = 0; i < 100 && g_server[0].pkt_count == 0; ++i)
+        pj_thread_sleep(20);
+    PJ_TEST_EQ(g_server[0].pkt_count, 1, NULL,
+               { pj_dns_resolver_destroy(res, PJ_FALSE); return -815; });
+
+    port = g_server[1].port;
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(res, 1, &ns_addr, &port),
+                    NULL, { pj_dns_resolver_destroy(res, PJ_FALSE);
+                            return -820; });
+
+    for (i = 0; i < 100 && !set_ns_cb_called; ++i)
+        pj_thread_sleep((unsigned)(set.qretr_delay / 20));
+
+    pj_dns_resolver_destroy(res, PJ_FALSE);
+
+    PJ_TEST_TRUE(set_ns_cb_called, NULL, return -825);
+    PJ_TEST_SUCCESS(set_ns_cb_status, NULL, return -830);
+    PJ_TEST_EQ(set_ns_cb_addr, IP_ADDR4, NULL, return -835);
+    PJ_TEST_EQ(g_server[0].pkt_count, 1, NULL, return -840);
+    PJ_TEST_GTE(g_server[1].pkt_count, 1, NULL, return -845);
+
+    return 0;
+}
+
+
 /* Callback for the start-during-destroy test: starts a new query from
  * inside the PJ_ECANCELLED notification delivered by
  * pj_dns_resolver_destroy(), the way the SRV resolver's fallback does.
@@ -2506,6 +2602,11 @@ int resolver_test(void)
 
     PJ_LOG(3,(THIS_FILE, "dns_destroy_pending_test"));
     rc = dns_destroy_pending_test();
+    if (rc != 0)
+        goto on_error;
+
+    PJ_LOG(3,(THIS_FILE, "dns_set_ns_during_query_test"));
+    rc = dns_set_ns_during_query_test();
     if (rc != 0)
         goto on_error;
 
