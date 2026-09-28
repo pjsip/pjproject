@@ -385,10 +385,7 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
     if (app_config.auto_answer > 0) {
         pjsua_call_setting opt;
 
-        pjsua_call_setting_default(&opt);
-        opt.aud_cnt = app_config.aud_cnt;
-        opt.vid_cnt = app_config.vid.vid_cnt;
-        opt.txt_cnt = app_config.txt_cnt;
+        app_config_init_call_setting(&opt);
 
         pjsua_call_answer2(call_id, &opt, app_config.auto_answer, NULL,
                            NULL);
@@ -2249,10 +2246,7 @@ static pj_status_t app_init(void)
     }
 
     /* Init call setting */
-    pjsua_call_setting_default(&call_opt);
-    call_opt.aud_cnt = app_config.aud_cnt;
-    call_opt.vid_cnt = app_config.vid.vid_cnt;
-    call_opt.txt_cnt = app_config.txt_cnt;
+    app_config_init_call_setting(&call_opt);
     if (app_config.enable_loam) {
         call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
     }
@@ -2324,10 +2318,7 @@ pj_status_t pjsua_app_run(pj_bool_t wait_telnet_cli)
 
     /* If user specifies URI to call, then call the URI */
     if (uri_arg.slen) {
-        pjsua_call_setting_default(&call_opt);
-        call_opt.aud_cnt = app_config.aud_cnt;
-        call_opt.vid_cnt = app_config.vid.vid_cnt;
-        call_opt.txt_cnt = app_config.txt_cnt;
+        app_config_init_call_setting(&call_opt);
 
         status = pjsua_call_make_call(current_acc, &uri_arg, &call_opt, NULL,
                                       NULL, NULL);

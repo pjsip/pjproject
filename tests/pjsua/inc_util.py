@@ -1,6 +1,7 @@
 import re
 import subprocess
 import sys
+from inc_cfg import TestError
 
 def has_rtcp_xr(exe):
    """Return True if the pjsua build under test was compiled with RTCP XR
@@ -170,6 +171,33 @@ def has_vid_codec(exe, codec_id):
 
    return re.search(re.escape(codec_id) + r'/\d+\s+\d+\s+\d+\.\d+',
                     out) is not None
+
+# Assert that the m=<media> section (e.g. media="audio" or "video") of
+# the next SDP body 'ua' logs carries an attribute matching 'attr' (an
+# unanchored regex, e.g. "a=sendrecv").
+# 'what' names it for the failure message.
+#
+# Scoping the match to that one section is the whole point of this helper.
+# expect() searches every line after the one it matched, with no notion of
+# where a media section -- or even the message -- ends, so expecting
+# "m=video" and then the attribute does NOT tie the two together: when the
+# section lacks the attribute, the search simply runs on into the next
+# section, or into the following SIP message, and another section's copy
+# of the same attribute satisfies it.
+#
+# Hence the second expect() matches either the attribute, the start of
+# the next media section, or the start line of the next SIP message,
+# whichever comes first, and treats the latter two as a failure: the
+# section ended without the attribute.
+_SDP_SECTION_END = r"^\s*(m=|SIP/2\.0 |[A-Z]+ \S+ SIP/2\.0$)"
+
+def expect_sdp_attr(ua, media, attr, what):
+    ua.expect(r"^\s*m=" + media + r" [1-9]")
+    line = ua.expect(_SDP_SECTION_END + r"|^\s*" + attr)
+    if re.match(_SDP_SECTION_END, line):
+        raise TestError(ua.name + ": no " + what + " in the m=" + media +
+                        " section, it ends at: " + line.strip())
+
 
 def load_module_from_file(module_name, module_path):
    if sys.version_info[0] == 3 and sys.version_info[1] >= 5:

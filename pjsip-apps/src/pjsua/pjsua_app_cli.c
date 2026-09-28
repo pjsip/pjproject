@@ -66,6 +66,7 @@
 #define CMD_CALL_RECWAV             ((CMD_CALL*10)+21)
 #define CMD_CALL_RECWAV_START       ((CMD_CALL_RECWAV*10)+1)
 #define CMD_CALL_RECWAV_STOP        ((CMD_CALL_RECWAV*10)+2)
+#define CMD_CALL_MEDIA_DIR          ((CMD_CALL*10)+22)
 
 /* im & presence level 2 command */
 #define CMD_PRESENCE_ADD_BUDDY      ((CMD_PRESENCE*10)+1)
@@ -2464,6 +2465,32 @@ static pj_status_t cmd_call_quality()
     return PJ_SUCCESS;
 }
 
+/* Set media direction for subsequent call offer/answer */
+static pj_status_t cmd_set_media_dir(pj_cli_cmd_val *cval)
+{
+    pjmedia_dir dir;
+    unsigned idx = 0, i;
+
+    if (app_parse_media_dir(&cval->argv[1], &dir) != PJ_SUCCESS)
+        return PJ_EINVAL;
+    if (cval->argc > 2)
+        idx = (unsigned)pj_strtoul(&cval->argv[2]);
+    if (idx >= PJ_ARRAY_SIZE(app_config.media_dir)) {
+        PJ_LOG(1,(THIS_FILE, "Invalid media index %d", idx));
+        return PJ_EINVAL;
+    }
+
+    for (i = app_config.media_dir_cnt; i < idx; ++i)
+        app_config.media_dir[i] = PJMEDIA_DIR_ENCODING_DECODING;
+    app_config.media_dir[idx] = dir;
+    if (idx >= app_config.media_dir_cnt)
+        app_config.media_dir_cnt = idx + 1;
+
+    PJ_LOG(3,(THIS_FILE, "Media #%d direction will be %s in next "
+              "offer/answer", idx, app_media_dir_name(dir)));
+    return PJ_SUCCESS;
+}
+
 /* Send arbitrary request */
 static pj_status_t cmd_send_arbitrary(pj_cli_cmd_val *cval)
 {
@@ -2576,10 +2603,7 @@ pj_status_t cmd_call_handler(pj_cli_cmd_val *cval)
     CHECK_PJSUA_RUNNING();
 
     /* Update call setting */
-    pjsua_call_setting_default(&call_opt);
-    call_opt.aud_cnt = app_config.aud_cnt;
-    call_opt.vid_cnt = app_config.vid.vid_cnt;
-    call_opt.txt_cnt = app_config.txt_cnt;
+    app_config_init_call_setting(&call_opt);
     if (app_config.enable_loam) {
         call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
     }
@@ -2631,6 +2655,9 @@ pj_status_t cmd_call_handler(pj_cli_cmd_val *cval)
         break;
     case CMD_CALL_DUMP_Q:
         status = cmd_call_quality();
+        break;
+    case CMD_CALL_MEDIA_DIR:
+        status = cmd_set_media_dir(cval);
         break;
     case CMD_CALL_SEND_ARB:
         status = cmd_send_arbitrary(cval);
@@ -3473,6 +3500,17 @@ static pj_status_t add_call_command(pj_cli_t *c)
         "    <CMD name='stop' id='10212' desc='Stop recording'>"
         "      <ARG name='call_id' type='int' desc='Call ID (-1=current/next)'/>"
         "    </CMD>"
+        "  </CMD>"
+        "  <CMD name='media_dir' id='1022' "
+        "   desc='Set media direction for next call offer/answer'>"
+        "    <ARG name='dir' type='choice' desc='Media direction'>"
+        "      <CHOICE value='sendrecv' desc='Send and receive'/>"
+        "      <CHOICE value='sendonly' desc='Send only'/>"
+        "      <CHOICE value='recvonly' desc='Receive only'/>"
+        "      <CHOICE value='inactive' desc='Inactive'/>"
+        "    </ARG>"
+        "    <ARG name='media_idx' type='int' optional='1' "
+        "     desc='Media index (default 0)'/>"
         "  </CMD>"
         "</CMD>";
 
