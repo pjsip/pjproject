@@ -3,7 +3,7 @@
 
 <!-- Registrar without SIP outbound (RFC 5626) support, over TCP. The 200 -->
 <!-- to the REGISTER offering outbound has no "Require: outbound", so the -->
-<!-- refresh must no longer carry reg-id in its Contact (#5159).          -->
+<!-- refresh Contact must no longer carry reg-id or +sip.instance (#5159).-->
 
 <scenario name="REGISTER refresh after 200 without Require: outbound">
   <!-- The first REGISTER must offer outbound, or the check on the       -->
@@ -34,8 +34,8 @@
   <!-- The refresh, sent 5 seconds before the 10 seconds expire.         -->
   <recv request="REGISTER" crlf="true">
     <action>
-      <ereg regexp="reg-id=" search_in="hdr" header="Contact:"
-            check_it_inverse="true" assign_to="2"/>
+      <ereg regexp="reg-id=|\+sip\.instance=" search_in="hdr"
+            header="Contact:" check_it_inverse="true" assign_to="2"/>
     </action>
   </recv>
 
