@@ -27,8 +27,14 @@ def test_func(t):
     caller.sync_stdout()
     callee.sync_stdout()
 
+    # The first per-call report (hangup/reinvite, or a failure) must not
+    # appear before completion.
     callee.send("ip_change")
-    callee.expect("IP change progress report : done")
+    line = callee.expect("IP change progress (report : (hangup call|"
+                         "reinvite call|done)|fail)")
+    if "report : done" not in line:
+        raise TestError("EARLY incoming call was not left alone on IP "
+                        "change: " + line)
 
     callee.sync_stdout()
     caller.sync_stdout()
