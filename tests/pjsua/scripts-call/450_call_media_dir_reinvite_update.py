@@ -20,7 +20,7 @@ REMOTE_HOLD = r"Call [0-9]+ media [0-9]+ .*, status is Remote hold"
 def change_dir(caller, callee, cmd, method, offer, answer,
                caller_state, callee_state):
     caller.send("call media_dir " + offer)
-    caller.expect("Media #0 direction will be " + offer)
+    caller.expect("Media #0 direction set to " + offer)
     caller.send("call " + cmd)
 
     callee.expect(method + " sips?:")

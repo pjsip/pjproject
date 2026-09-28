@@ -28,7 +28,7 @@ def test_func(t):
     util.expect_sdp_attr(callee, "audio", "a=sendrecv", "sendrecv offer")
     callee.expect(const.EVENT_INCOMING_CALL)
     callee.send("call media_dir recvonly")
-    callee.expect("Media #0 direction will be recvonly")
+    callee.expect("Media #0 direction set to recvonly")
     callee.send("call answer 200")
     callee.expect(REMOTE_HOLD)
     util.expect_sdp_attr(callee, "audio", "a=recvonly", "recvonly answer")

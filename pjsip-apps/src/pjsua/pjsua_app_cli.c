@@ -2465,20 +2465,24 @@ static pj_status_t cmd_call_quality()
     return PJ_SUCCESS;
 }
 
-/* Set media direction for subsequent call offer/answer */
+/* Set media direction for subsequent call offers/answers */
 static pj_status_t cmd_set_media_dir(pj_cli_cmd_val *cval)
 {
     pjmedia_dir dir;
-    unsigned idx = 0, i;
+    unsigned long ul = 0;
+    unsigned idx, i;
 
     if (app_parse_media_dir(&cval->argv[1], &dir) != PJ_SUCCESS)
         return PJ_EINVAL;
-    if (cval->argc > 2)
-        idx = (unsigned)pj_strtoul(&cval->argv[2]);
-    if (idx >= PJ_ARRAY_SIZE(app_config.media_dir)) {
-        PJ_LOG(1,(THIS_FILE, "Invalid media index %d", idx));
+    if (cval->argc > 2 &&
+        (pj_strtoul3(&cval->argv[2], &ul, 10) != PJ_SUCCESS ||
+         ul >= PJ_ARRAY_SIZE(app_config.media_dir)))
+    {
+        PJ_LOG(1,(THIS_FILE, "Invalid media index %.*s",
+                  (int)cval->argv[2].slen, cval->argv[2].ptr));
         return PJ_EINVAL;
     }
+    idx = (unsigned)ul;
 
     for (i = app_config.media_dir_cnt; i < idx; ++i)
         app_config.media_dir[i] = PJMEDIA_DIR_ENCODING_DECODING;
@@ -2486,8 +2490,8 @@ static pj_status_t cmd_set_media_dir(pj_cli_cmd_val *cval)
     if (idx >= app_config.media_dir_cnt)
         app_config.media_dir_cnt = idx + 1;
 
-    PJ_LOG(3,(THIS_FILE, "Media #%d direction will be %s in next "
-              "offer/answer", idx, app_media_dir_name(dir)));
+    PJ_LOG(3,(THIS_FILE, "Media #%u direction set to %s for subsequent "
+              "call offers/answers", idx, app_media_dir_name(dir)));
     return PJ_SUCCESS;
 }
 
@@ -3502,7 +3506,7 @@ static pj_status_t add_call_command(pj_cli_t *c)
         "    </CMD>"
         "  </CMD>"
         "  <CMD name='media_dir' id='1022' "
-        "   desc='Set media direction for next call offer/answer'>"
+        "   desc='Set media direction for subsequent call offers/answers'>"
         "    <ARG name='dir' type='choice' desc='Media direction'>"
         "      <CHOICE value='sendrecv' desc='Send and receive'/>"
         "      <CHOICE value='sendonly' desc='Send only'/>"

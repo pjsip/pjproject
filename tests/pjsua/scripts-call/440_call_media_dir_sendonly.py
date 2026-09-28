@@ -23,7 +23,7 @@ def test_func(t):
     caller = t.process[1]
 
     caller.send("call media_dir sendonly")
-    caller.expect("Media #0 direction will be sendonly")
+    caller.expect("Media #0 direction set to sendonly")
     caller.send("call new " + t.inst_params[0].uri)
     caller.expect(const.STATE_CALLING)
 
