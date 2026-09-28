@@ -666,6 +666,10 @@ block(SCOPE_FOR VARIABLES)
     include(CMakePushCheckState)
     cmake_push_check_state()
     set(CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
+    # glibc < 2.34 has it in libpthread only
+    if(TARGET Threads::Threads)
+      set(CMAKE_REQUIRED_LIBRARIES Threads::Threads)
+    endif()
     check_symbol_exists(pthread_setname_np pthread.h
       PJ_HAS_PTHREAD_SETNAME_NP
     )

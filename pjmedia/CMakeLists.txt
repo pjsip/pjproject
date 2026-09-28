@@ -58,6 +58,12 @@ endif()
 #
 
 # Speex Acoustic Echo Cancellation (AEC)
+# older versions forced this off when libspeexdsp was missing
+get_property(_pj_doc CACHE PJMEDIA_WITH_SPEEX_AEC PROPERTY HELPSTRING)
+if(_pj_doc MATCHES "\\(forced\\)$")
+  unset(PJMEDIA_WITH_SPEEX_AEC CACHE)
+endif()
+unset(_pj_doc)
 cmake_dependent_option(PJMEDIA_WITH_SPEEX_AEC
   "Enable Speex Acoustic Echo Cancellation (AEC) support" ON
   "TARGET Pj::Dep::Speex" OFF

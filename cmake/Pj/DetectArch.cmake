@@ -96,8 +96,9 @@ function(pj_detect_arch out_arch)
 endfunction()
 
 function(pj_detect_arch_simd_ext out_simd out_flags)
-  # if a cached values exists, return them
-  if(DEFINED CACHE{_pj_detected_simd_ext})
+  # if a cached values exists, return them; -mfma was cached by older versions
+  if(DEFINED CACHE{_pj_detected_simd_ext} AND
+     NOT "$CACHE{_pj_detected_simd_ext_flags}" MATCHES "-mfma")
     set("${out_simd}" "$CACHE{_pj_detected_simd_ext}" PARENT_SCOPE)
     set("${out_flags}" "$CACHE{_pj_detected_simd_ext_flags}" PARENT_SCOPE)
     return()
