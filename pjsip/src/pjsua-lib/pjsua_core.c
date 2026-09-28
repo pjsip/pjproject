@@ -3933,7 +3933,8 @@ static pj_status_t handle_ip_change_on_acc()
             pjsip_regc_get_info(acc->regc, &regc_info);
 
             /* Check if transport restart listener succeed. */
-            for (; j < PJ_ARRAY_SIZE(pjsua_var.tpdata); ++j) {
+            for (; regc_info.transport != NULL &&
+                   j < PJ_ARRAY_SIZE(pjsua_var.tpdata); ++j) {
                 if (pjsua_var.tpdata[j].data.ptr != NULL &&
                   pjsua_var.tpdata[j].restart_status != PJ_SUCCESS &&
                   pjsua_var.tpdata[j].type == regc_info.transport->key.type)
