@@ -145,6 +145,7 @@ static pjmedia_aud_stream_op android_strm_op =
 #define detach_jvm(attached)    pj_jni_detach_jvm(attached)
 #define THREAD_PRIORITY_AUDIO           -16
 #define THREAD_PRIORITY_URGENT_AUDIO    -19
+#define MAX_RESTART                     3
 
 
 static int AndroidRecorderCallback(void *userData)
@@ -154,6 +155,7 @@ static int AndroidRecorderCallback(void *userData)
     int size = stream->rec_buf_size / 2;
     jshortArray inputBuffer;
     jshort *buf;
+    unsigned nrestart = 0;
     JNIEnv *jni_env = 0;
     pj_bool_t attached = attach_jvm(&jni_env);
     
@@ -209,8 +211,37 @@ static int AndroidRecorderCallback(void *userData)
         if (shortRead <= 0 || shortRead != size) {
             PJ_LOG (4, (THIS_FILE, "Record thread : error %d reading data",
                                    shortRead));
+            /* A stopped AudioRecord returns 0 at once, so retrying the read
+             * would spin. Restart the recording a few times, then report.
+             */
+            if (shortRead <= 0 && stream->running && !stream->quit_flag) {
+                if (nrestart < MAX_RESTART) {
+                    ++nrestart;
+                    pj_thread_sleep(stream->param.samples_per_frame * 1000 /
+                                    stream->param.channel_count /
+                                    stream->param.clock_rate);
+                    (*jni_env)->CallVoidMethod(jni_env, stream->record,
+                                               stop_method);
+                    (*jni_env)->CallVoidMethod(jni_env, stream->record,
+                                               record_method);
+                } else {
+                    pjmedia_event e;
+
+                    PJ_LOG(3, (THIS_FILE, "Record thread stopped: unable to "
+                                          "read data"));
+                    pjmedia_event_init(&e, PJMEDIA_EVENT_AUD_DEV_ERROR,
+                                       &stream->rec_timestamp, &stream->base);
+                    e.data.aud_dev_err.dir = PJMEDIA_DIR_CAPTURE;
+                    e.data.aud_dev_err.status = PJMEDIA_EAUD_SYSERR;
+                    e.data.aud_dev_err.id = stream->param.rec_id;
+                    pjmedia_event_publish(NULL, &stream->base, &e,
+                                          PJMEDIA_EVENT_PUBLISH_DEFAULT);
+                    break;
+                }
+            }
             continue;
         }
+        nrestart = 0;
 
         buf = (*jni_env)->GetShortArrayElements(jni_env, inputBuffer, 0);
         frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
