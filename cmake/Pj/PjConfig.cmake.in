@@ -70,8 +70,8 @@ if(@PJMEDIA_WITH_VIDEODEV_METAL@)
   find_dependency(Metal)
 endif()
 
-# AEC backends
-if(@PJMEDIA_WITH_SPEEX_AEC@)
+# SpeexDSP, needed with system speex only
+if(@PJMEDIA_NEEDS_SPEEXDSP@)
   find_dependency(SpeexDSP)
 endif()
 

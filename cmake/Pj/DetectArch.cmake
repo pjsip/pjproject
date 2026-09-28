@@ -96,8 +96,9 @@ function(pj_detect_arch out_arch)
 endfunction()
 
 function(pj_detect_arch_simd_ext out_simd out_flags)
-  # if a cached values exists, return them
-  if(DEFINED CACHE{_pj_detected_simd_ext})
+  # if a cached values exists, return them; -mfma was cached by older versions
+  if(DEFINED CACHE{_pj_detected_simd_ext} AND
+     NOT "$CACHE{_pj_detected_simd_ext_flags}" MATCHES "-mfma")
     set("${out_simd}" "$CACHE{_pj_detected_simd_ext}" PARENT_SCOPE)
     set("${out_flags}" "$CACHE{_pj_detected_simd_ext_flags}" PARENT_SCOPE)
     return()
@@ -153,11 +154,8 @@ function(pj_detect_arch_simd_ext out_simd out_flags)
     ]=])
 
     if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang" AND UNIX)
-      if(CYGWIN OR MINGW)
-        set(simd_flags "-msse2")
-      else()
-        set(simd_flags "-mfma")
-      endif()
+      # FMA is enabled only for the AVX2 sources, see webrtc_aec3
+      set(simd_flags "-msse2")
     elseif(MSVC AND NOT (arch STREQUAL "x86_64" OR arch STREQUAL "x64"))
       set(simd_flags "/arch:SSE2")
     endif()
