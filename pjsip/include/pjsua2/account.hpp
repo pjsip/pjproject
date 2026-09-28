@@ -706,7 +706,7 @@ struct AccountNatConfig : public PersistentObject
 
     /**
      * Specify the connection type to be used to the TURN server. Valid
-     * values are PJ_TURN_TP_UDP or PJ_TURN_TP_TCP.
+     * values are PJ_TURN_TP_UDP, PJ_TURN_TP_TCP, or PJ_TURN_TP_TLS.
      *
      * Default: PJ_TURN_TP_UDP
      */
@@ -727,6 +727,19 @@ struct AccountNatConfig : public PersistentObject
      * Specify the password to authenticate with the TURN server.
      */
     string              turnPassword;
+
+    /**
+     * Specify the TLS settings for the connection to the TURN server, only
+     * used when \a turnConnType is PJ_TURN_TP_TLS. See TlsConfig for the
+     * fields that are ignored here. To verify the TURN server certificate,
+     * enable TlsConfig::verifyServer and specify the trusted CA
+     * certificates, e.g: via TlsConfig::CaListFile.
+     *
+     * The default values are the TURN TLS defaults, e.g: the TLS
+     * negotiation timeout, so modify this field in place rather than
+     * assigning a new TlsConfig instance, which has the SIP TLS defaults.
+     */
+    TlsConfig           turnTlsConfig;
 
     /**
      * This option is used to update the transport address and the Contact
@@ -878,7 +891,14 @@ public:
       sipOutboundUse(PJ_TRUE),
       udpKaIntervalSec(15),
       udpKaData("\r\n")
-    {}
+    {
+#if PJ_HAS_SSL_SOCK
+        pj_turn_sock_tls_cfg tls_cfg;
+
+        pj_turn_sock_tls_cfg_default(&tls_cfg);
+        turnTlsConfig.fromTurnPj(tls_cfg);
+#endif
+    }
 
     /**
      * Read this object from a container node.

@@ -240,6 +240,39 @@ typedef struct pj_turn_sock_tls_cfg
     pj_str_t    password;
 
     /**
+     * Specifies whether the TURN server certificate must be verified. When
+     * enabled, the connection is closed with PJNATH_ETURNTLSCERTVERIF if
+     * the certificate is not trusted (see #ca_list_file) or it does not
+     * identify the TURN server name given to pj_turn_sock_alloc(). The
+     * identity check follows RFC 9525, see #cert_name_match_flags. When
+     * disabled, verification failure is only logged.
+     *
+     * Note that some TLS backends, e.g: mbedTLS when a CA is configured,
+     * verify the certificate during the TLS handshake and abort it on
+     * failure regardless of this setting, in which case the connection
+     * fails with the backend error.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t   verify_server;
+
+    /**
+     * Bitmask of #pj_ssl_cert_name_match_flag customizing how the TURN
+     * server name is matched against the certificate.
+     *
+     * The default matches the DNS and IP address entries of the
+     * SubjectAltName extension only, as specified in RFC 9525. Set
+     * PJ_SSL_CERT_NAME_MATCH_CN to also accept a server certificate that
+     * reports no SubjectAltName entry and identifies the server with
+     * its subject Common Name, which RFC 8489 section 6.2.3 still allows
+     * for TURN and which self-signed and private CA certificates commonly
+     * do.
+     *
+     * Default: 0
+     */
+    unsigned    cert_name_match_flags;
+
+    /**
      * The ssl socket parameter.
      * These fields are used by TURN TLS:
      * - proto

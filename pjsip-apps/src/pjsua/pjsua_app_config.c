@@ -242,6 +242,7 @@ static void usage(void)
     puts  ("  --turn-tls-neg-timeout Specify TURN TLS negotiation timeout (default=no)");
     puts  ("  --turn-tls-cipher   Specify preferred TURN TLS cipher (optional).");
     puts  ("                      May be specified multiple times");
+    puts  ("  --turn-tls-verify-server  Verify TURN server TLS certificate (default=no)");
 #endif
     puts  ("");
     puts  ("Buddy List (can be more than one):");
@@ -415,6 +416,7 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_TURN_TCP, OPT_TURN_USER, OPT_TURN_PASSWD, OPT_TURN_TLS, 
            OPT_TURN_TLS_CA_FILE, OPT_TURN_TLS_CERT_FILE, 
            OPT_TURN_TLS_NEG_TIMEOUT, OPT_TURN_TLS_CIPHER,
+           OPT_TURN_TLS_VERIFY_SERVER,
            OPT_TURN_TLS_PRIV_FILE, OPT_TURN_TLS_PASSWORD,
            OPT_RTCP_MUX, OPT_RTCP_XR, OPT_SRTP_KEYING,
            OPT_PLAY_FILE, OPT_PLAY_TONE, OPT_RTP_PORT, OPT_ADD_CODEC,
@@ -531,6 +533,7 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "turn-tls-privkey-pwd",1,0, OPT_TURN_TLS_PASSWORD},
         { "turn-tls-neg-timeout", 1, 0, OPT_TURN_TLS_NEG_TIMEOUT},
         { "turn-tls-cipher", 1, 0, OPT_TURN_TLS_CIPHER},
+        { "turn-tls-verify-server", 0, 0, OPT_TURN_TLS_VERIFY_SERVER},
 #endif
         { "turn-user",  1, 0, OPT_TURN_USER},
         { "turn-passwd",1, 0, OPT_TURN_PASSWD},
@@ -1220,6 +1223,11 @@ static pj_status_t parse_args(int argc, char *argv[],
             cfg->media_cfg.turn_tls_setting.password =
                 cur_acc->turn_cfg.turn_tls_setting.password =
                     pj_str(pj_optarg);
+            break;
+
+        case OPT_TURN_TLS_VERIFY_SERVER:
+            cfg->media_cfg.turn_tls_setting.verify_server =
+                cur_acc->turn_cfg.turn_tls_setting.verify_server = PJ_TRUE;
             break;
 
         case OPT_TURN_TLS_NEG_TIMEOUT:

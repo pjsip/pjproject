@@ -216,6 +216,12 @@
  */
 #define PJNATH_ETURNINTP            (PJNATH_ERRNO_START+120) /* 370120 */
 
+/**
+ * @hideinitializer
+ * TURN server TLS certificate verification failed.
+ */
+#define PJNATH_ETURNTLSCERTVERIF    (PJNATH_ERRNO_START+121) /* 370121 */
+
 
 
 /**

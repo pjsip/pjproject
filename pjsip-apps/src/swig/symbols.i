@@ -163,6 +163,13 @@ typedef enum pj_ssl_cert_name_type
     PJ_SSL_CERT_NAME_IP
 } pj_ssl_cert_name_type;
 
+typedef enum pj_ssl_cert_name_match_flag
+{
+    PJ_SSL_CERT_NAME_NO_WILDCARD = 1,
+    PJ_SSL_CERT_NAME_MATCH_SIP_URI = 2,
+    PJ_SSL_CERT_NAME_MATCH_CN = 4
+} pj_ssl_cert_name_match_flag;
+
 typedef enum pj_ssl_cert_verify_flag_t
 {
     PJ_SSL_CERT_ESUCCESS = 0,

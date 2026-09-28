@@ -247,6 +247,8 @@ static void pjsua2_throw_java_runtime(JNIEnv *jenv, const char *msg)
 //
 %ignore fromPj;
 %ignore toPj;
+%ignore fromTurnPj;
+%ignore toTurnPj;
 
 %import "pj/config_site.h"
 %import "pjsua2/config.hpp"

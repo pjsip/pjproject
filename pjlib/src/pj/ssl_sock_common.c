@@ -206,3 +206,112 @@ PJ_DEF(pj_status_t) pj_ssl_cert_get_verify_status_strings(
 
     return PJ_SUCCESS;
 }
+
+
+/* Parse an IPv4 or IPv6 address literal, returns the address length. */
+static unsigned parse_ip(const pj_str_t *s, pj_uint8_t addr[16])
+{
+    if (s->slen <= 0)
+        return 0;
+    if (pj_inet_pton(pj_AF_INET(), s, addr) == PJ_SUCCESS)
+        return 4;
+    if (pj_inet_pton(pj_AF_INET6(), s, addr) == PJ_SUCCESS)
+        return 16;
+    return 0;
+}
+
+static pj_bool_t match_dns_name(const pj_str_t *pattern,
+                                const pj_str_t *name,
+                                pj_bool_t allow_wildcard)
+{
+    pj_str_t pat_rest, name_rest;
+    char *dot;
+
+    if (pj_stricmp(pattern, name) == 0)
+        return PJ_TRUE;
+
+    if (!allow_wildcard || pattern->slen < 3 ||
+        pattern->ptr[0] != '*' || pattern->ptr[1] != '.')
+    {
+        return PJ_FALSE;
+    }
+
+    /* Require at least two labels after the wildcard, e.g: reject "*.com" */
+    pj_strset(&pat_rest, pattern->ptr + 1, pattern->slen - 1);
+    if (!pj_memchr(pat_rest.ptr + 1, '.', pat_rest.slen - 1))
+        return PJ_FALSE;
+
+    /* The wildcard matches exactly one non-empty left-most label */
+    dot = (char*)pj_memchr(name->ptr, '.', name->slen);
+    if (!dot || dot == name->ptr)
+        return PJ_FALSE;
+    pj_strset(&name_rest, dot, name->slen - (dot - name->ptr));
+
+    return pj_stricmp(&pat_rest, &name_rest) == 0;
+}
+
+PJ_DEF(pj_status_t) pj_ssl_cert_verify_name(const pj_ssl_cert_info *ci,
+                                            const pj_str_t *name,
+                                            unsigned flags)
+{
+    pj_bool_t allow_wildcard = !(flags & PJ_SSL_CERT_NAME_NO_WILDCARD);
+    pj_uint8_t name_ip[16], san_ip[16];
+    unsigned name_ip_len, i;
+
+    PJ_ASSERT_RETURN(ci && name, PJ_EINVAL);
+
+    if (name->slen <= 0 || pj_memchr(name->ptr, 0, name->slen))
+        return PJ_ENOTFOUND;
+
+    name_ip_len = parse_ip(name, name_ip);
+
+    for (i = 0; i < ci->subj_alt_name.cnt; ++i) {
+        const pj_str_t *cert_name = &ci->subj_alt_name.entry[i].name;
+
+        switch (ci->subj_alt_name.entry[i].type) {
+        case PJ_SSL_CERT_NAME_DNS:
+            if (!name_ip_len &&
+                match_dns_name(cert_name, name, allow_wildcard))
+            {
+                return PJ_SUCCESS;
+            }
+            break;
+        case PJ_SSL_CERT_NAME_IP:
+            if (name_ip_len && parse_ip(cert_name, san_ip) == name_ip_len &&
+                pj_memcmp(name_ip, san_ip, name_ip_len) == 0)
+            {
+                return PJ_SUCCESS;
+            }
+            break;
+        case PJ_SSL_CERT_NAME_URI:
+            if ((flags & PJ_SSL_CERT_NAME_MATCH_SIP_URI) &&
+                (pj_strnicmp2(cert_name, "sip:", 4) == 0 ||
+                 pj_strnicmp2(cert_name, "sips:", 5) == 0))
+            {
+                pj_str_t host;
+                char *p = pj_strchr(cert_name, ':') + 1;
+
+                pj_strset(&host, p, cert_name->slen - (p - cert_name->ptr));
+                if (pj_stricmp(&host, name) == 0)
+                    return PJ_SUCCESS;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    /* The Common Name is only an identity when the certificate carries no
+     * SubjectAltName at all, so an entry of a type not matched above, e.g:
+     * an email address, suppresses it too. Note that a type that no backend
+     * extracts, e.g: an SRVName, leaves the count at zero.
+     */
+    if ((flags & PJ_SSL_CERT_NAME_MATCH_CN) && ci->subj_alt_name.cnt == 0 &&
+        match_dns_name(&ci->subject.cn, name,
+                       allow_wildcard && !name_ip_len))
+    {
+        return PJ_SUCCESS;
+    }
+
+    return PJ_ENOTFOUND;
+}

@@ -220,6 +220,13 @@ public:
 
 /**
  * TLS transport settings, to be specified in TransportConfig.
+ *
+ * This is also used for the TURN TLS settings in
+ * AccountNatConfig::turnTlsConfig, where the following fields are ignored:
+ * \a method, \a verifyClient, \a requireClientCert, \a qosType,
+ * \a qosParams, and \a qosIgnoreError. For TURN TLS, the QoS settings are
+ * taken from the media transport config. Conversely, \a certNameMatchFlags
+ * is only used for TURN TLS.
  */
 struct TlsConfig : public PersistentObject
 {
@@ -227,6 +234,11 @@ struct TlsConfig : public PersistentObject
      * Certificate of Authority (CA) list file.
      */
     string              CaListFile;
+
+    /**
+     * Certificate of Authority (CA) list directory path.
+     */
+    string              CaListPath;
 
     /**
      * Public endpoint certificate file, which will be used as client-
@@ -246,23 +258,23 @@ struct TlsConfig : public PersistentObject
     string              password;
 
     /**
-     * Certificate of Authority (CA) buffer. If CaListFile, certFile or
-     * privKeyFile are set, this setting will be ignored.
+     * Certificate of Authority (CA) buffer. If CaListFile, CaListPath,
+     * certFile or privKeyFile are set, this setting will be ignored.
      */
     string              CaBuf;
 
     /**
      * Public endpoint certificate buffer, which will be used as client-
      * side  certificate for outgoing TLS connection, and server-side
-     * certificate for incoming TLS connection. If CaListFile, certFile or
-     * privKeyFile are set, this setting will be ignored.
+     * certificate for incoming TLS connection. If CaListFile, CaListPath,
+     * certFile or privKeyFile are set, this setting will be ignored.
      */
     string              certBuf;
 
     /**
      * Optional private key buffer of the endpoint certificate to be used. 
-     * If CaListFile, certFile or privKeyFile are set, this setting will 
-     * be ignored.
+     * If CaListFile, CaListPath, certFile or privKeyFile are set, this
+     * setting will be ignored.
      */
     string              privKeyBuf;
 
@@ -352,9 +364,36 @@ struct TlsConfig : public PersistentObject
      * In any cases, application can inspect pjsip_tls_state_info in the
      * callback to see the verification detail.
      *
+     * For TURN TLS, if \a verifyServer is enabled, the connection to the
+     * TURN server is closed whenever there is any TLS verification error,
+     * including when the certificate does not identify the TURN server
+     * name, otherwise the error is only logged. Some TLS backends, e.g:
+     * mbedTLS when a CA is configured, may abort the TLS handshake on
+     * verification failure regardless of this setting.
+     *
+     * Note that verification requires the trusted CA certificates, e.g:
+     * via \a CaListFile, as some platforms, e.g: Android, provide no
+     * default CA store to the TLS backend.
+     *
      * Default value is false.
      */
     bool                verifyServer;
+
+    /**
+     * Bitmask of pj_ssl_cert_name_match_flag customizing how the server
+     * name is matched against the certificate. Only used for TURN TLS.
+     *
+     * The default matches the DNS and IP address entries of the
+     * SubjectAltName extension only, as specified in RFC 9525. Set
+     * PJ_SSL_CERT_NAME_MATCH_CN to also accept a server certificate that
+     * reports no SubjectAltName entry and identifies the server with
+     * its subject Common Name, which RFC 8489 section 6.2.3 still allows
+     * for TURN and which self-signed and private CA certificates commonly
+     * do.
+     *
+     * Default value is 0.
+     */
+    unsigned            certNameMatchFlags;
 
     /**
      * Specifies TLS transport behavior on the client TLS certificate
@@ -450,6 +489,16 @@ public:
 
     /** Convert from pjsip */
     void fromPj(const pjsip_tls_setting &prm);
+
+    /**
+     * Convert to TURN TLS setting. The result refers to the content of
+     * this object, so it is only valid as long as this object remains
+     * valid and unmodified.
+     */
+    pj_turn_sock_tls_cfg toTurnPj() const;
+
+    /** Convert from TURN TLS setting */
+    void fromTurnPj(const pj_turn_sock_tls_cfg &prm);
 
     /**
      * Read this object from a container node.
