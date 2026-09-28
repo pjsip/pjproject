@@ -55,6 +55,20 @@ typedef struct pj_ssl_sock_t pj_ssl_sock_t;
 /**
  * Opaque declaration of endpoint certificate or credentials. This may contains
  * certificate, private key, and trusted Certificate Authorities list.
+ *
+ * Which credential fields a backend honours varies:
+ *
+ * - OpenSSL honours all fields, including direct certificate instances
+ *   (\a cert_direct) and the OCSP stapling response (\a ocsp_resp_buf).
+ * - GnuTLS and mbedTLS honour the file and buffer fields; \a cert_direct and
+ *   \a ocsp_resp_buf are not supported.
+ * - The Apple backends take \a cert_file or \a cert_buf: on iOS a PKCS#12
+ *   bundle holding the private key; on Mac PKCS#12, a PEM sequence or a DER
+ *   certificate, with the private key looked up in the keychain. The CA
+ *   fields are honoured, \a privkey_pass is the import passphrase, and the
+ *   other \a privkey_* fields are ignored with a log message.
+ * - Schannel honours only the lookup criteria: the certificate is found in
+ *   the Windows certificate store, not loaded from supplied fields.
  */
 typedef struct pj_ssl_cert_t pj_ssl_cert_t;
 
