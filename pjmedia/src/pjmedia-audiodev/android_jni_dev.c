@@ -148,6 +148,15 @@ static pjmedia_aud_stream_op android_strm_op =
 #define MAX_RESTART                     3
 
 
+/* Call a void AudioRecord method, clearing any Java exception it throws. */
+static void call_record_method(JNIEnv *jni_env, jobject record,
+                               jmethodID method)
+{
+    (*jni_env)->CallVoidMethod(jni_env, record, method);
+    if ((*jni_env)->ExceptionCheck(jni_env))
+        (*jni_env)->ExceptionClear(jni_env);
+}
+
 static int AndroidRecorderCallback(void *userData)
 {
     struct android_aud_stream *stream = (struct android_aud_stream *)userData;
@@ -190,7 +199,7 @@ static int AndroidRecorderCallback(void *userData)
     pj_thread_set_prio(NULL, THREAD_PRIORITY_URGENT_AUDIO);
     pj_sem_wait(stream->rec_sem);
     if (!stream->quit_flag)
-        (*jni_env)->CallVoidMethod(jni_env, stream->record, record_method);
+        call_record_method(jni_env, stream->record, record_method);
     
     while (!stream->quit_flag) {
         pjmedia_frame frame;
@@ -198,16 +207,21 @@ static int AndroidRecorderCallback(void *userData)
         int shortRead;
         
         if (!stream->running) {
-            (*jni_env)->CallVoidMethod(jni_env, stream->record, stop_method);
+            call_record_method(jni_env, stream->record, stop_method);
             pj_sem_wait(stream->rec_sem);
             if (stream->quit_flag)
                 break;
-            (*jni_env)->CallVoidMethod(jni_env, stream->record, record_method);
+            call_record_method(jni_env, stream->record, record_method);
+            nrestart = 0;
         }
         
         shortRead = (*jni_env)->CallIntMethod(jni_env, stream->record,
                                               read_method, inputBuffer,
                                               0, size);
+        if ((*jni_env)->ExceptionCheck(jni_env)) {
+            (*jni_env)->ExceptionClear(jni_env);
+            shortRead = -1;
+        }
         if (shortRead <= 0 || shortRead != size) {
             PJ_LOG (4, (THIS_FILE, "Record thread : error %d reading data",
                                    shortRead));
@@ -220,23 +234,34 @@ static int AndroidRecorderCallback(void *userData)
                     pj_thread_sleep(stream->param.samples_per_frame * 1000 /
                                     stream->param.channel_count /
                                     stream->param.clock_rate);
-                    (*jni_env)->CallVoidMethod(jni_env, stream->record,
-                                               stop_method);
-                    (*jni_env)->CallVoidMethod(jni_env, stream->record,
-                                               record_method);
+                    call_record_method(jni_env, stream->record, stop_method);
+                    call_record_method(jni_env, stream->record,
+                                       record_method);
                 } else {
                     pjmedia_event e;
 
-                    PJ_LOG(3, (THIS_FILE, "Record thread stopped: unable to "
-                                          "read data"));
+                    PJ_LOG(3, (THIS_FILE, "Recording stopped: unable to read "
+                                          "data"));
+                    call_record_method(jni_env, stream->record, stop_method);
+
+                    /* Posted, so that the app may reopen the device from
+                     * the event callback.
+                     */
                     pjmedia_event_init(&e, PJMEDIA_EVENT_AUD_DEV_ERROR,
                                        &stream->rec_timestamp, &stream->base);
                     e.data.aud_dev_err.dir = PJMEDIA_DIR_CAPTURE;
                     e.data.aud_dev_err.status = PJMEDIA_EAUD_SYSERR;
                     e.data.aud_dev_err.id = stream->param.rec_id;
                     pjmedia_event_publish(NULL, &stream->base, &e,
-                                          PJMEDIA_EVENT_PUBLISH_DEFAULT);
-                    break;
+                                          PJMEDIA_EVENT_PUBLISH_POST_EVENT);
+
+                    /* Wait for strm_stop() + strm_start(), or destroy */
+                    pj_sem_wait(stream->rec_sem);
+                    if (stream->quit_flag)
+                        break;
+                    call_record_method(jni_env, stream->record,
+                                       record_method);
+                    nrestart = 0;
                 }
             }
             continue;
