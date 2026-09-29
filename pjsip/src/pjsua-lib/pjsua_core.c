@@ -149,7 +149,9 @@ PJ_DEF(void) pjsua_config_dup(pj_pool_t *pool,
         pjsip_cred_dup(pool, &dst->cred_info[i], &src->cred_info[i]);
     }
 
-    for (i=0; i<src->nameserver_count; ++i) {
+    for (i=0; i<src->nameserver_count && i<PJ_ARRAY_SIZE(dst->nameserver);
+         ++i)
+    {
         pj_strdup_with_null(pool, &dst->nameserver[i], &src->nameserver[i]);
     }
 
@@ -1227,6 +1229,11 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
     PJ_ASSERT_ON_FAIL(ua_cfg->outbound_proxy_cnt <=
                       PJ_ARRAY_SIZE(ua_cfg->outbound_proxy),
                       { status = PJ_EINVAL; goto on_error; });
+
+    if (ua_cfg->nameserver_count > PJ_ARRAY_SIZE(ua_cfg->nameserver)) {
+        status = PJ_ETOOMANY;
+        goto on_error;
+    }
 
     /* Initialize logging first so that info/errors can be captured */
     if (log_cfg) {

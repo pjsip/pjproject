@@ -393,6 +393,37 @@ static int init_test(void)
     return 0;
 }
 
+/* The count is checked before the config is copied into pjsua */
+static int too_many_test(void)
+{
+    pjsua_config ua_cfg;
+    pj_status_t status;
+    unsigned i;
+    int rc = 0;
+
+    status = pjsua_create();
+    if (status != PJ_SUCCESS)
+        return -2730;
+
+    pjsua_config_default(&ua_cfg);
+    ua_cfg.thread_cnt = 0;
+    for (i = 0; i < PJ_ARRAY_SIZE(ua_cfg.nameserver); ++i)
+        ua_cfg.nameserver[i] = pj_str("127.0.0.1");
+    ua_cfg.nameserver_count = PJ_ARRAY_SIZE(ua_cfg.nameserver) + 1;
+
+    status = pjsua_init(&ua_cfg, NULL, NULL);
+    if (status != PJ_ETOOMANY) {
+        PJ_PERROR(1,(THIS_FILE, status, "  pjsua_init returned"));
+        rc = -2731;
+    } else if (pjsua_get_var()->ua_cfg.nameserver_count != 0) {
+        PJ_LOG(1,(THIS_FILE, "  error: the config has been copied"));
+        rc = -2732;
+    }
+
+    pjsua_destroy2(PJSUA_DESTROY_NO_RX_MSG);
+    return rc;
+}
+
 int pjsua_dns_test(void)
 {
     pj_status_t status;
@@ -424,6 +455,11 @@ int pjsua_dns_test(void)
     }
     rc = init_test();
     stop_pjsua();
+    if (rc)
+        goto on_restore;
+
+    PJ_LOG(3,(THIS_FILE, "  initialized with too many nameservers"));
+    rc = too_many_test();
     if (rc)
         goto on_restore;
 
