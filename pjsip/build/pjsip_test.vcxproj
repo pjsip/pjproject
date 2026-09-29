@@ -551,6 +551,7 @@
     <ClCompile Include="..\src\test\pjsua_auth_test.c" />
     <ClCompile Include="..\src\test\pjsua_call_test.c" />
     <ClCompile Include="..\src\test\pjsua_acc_test.c" />
+    <ClCompile Include="..\src\test\srv_failover_test.c" />
     <ClCompile Include="..\src\test\pjsua_stress.c">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>

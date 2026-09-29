@@ -309,6 +309,60 @@ PJ_DECL(pj_status_t) pjsip_resolver_set_ext_resolver(
 PJ_DECL(pj_dns_resolver*) pjsip_resolver_get_resolver(pjsip_resolver_t *res);
 
 /**
+ * Mark a server address as failed for the specified duration, or clear the
+ * mark. While marked, the address is listed after the other addresses when
+ * the resolver resolves a target to it. The order of the addresses given by
+ * the external resolver, if any, is not changed, and an IP version
+ * preference in the transport selector comes first.
+ *
+ * When pjsip_cfg()->endpt.server_failover is enabled, for requests sent with
+ * #pjsip_endpt_send_request() the library marks an address that doesn't
+ * answer, or answers 503 with Retry-After, or can't be sent to, e.g: its TCP
+ * connection is refused, while another address answers. It clears the mark
+ * when the address answers.
+ *
+ * Note that application normally will use #pjsip_endpt_set_server_failed()
+ * instead.
+ *
+ * @param res       The SIP resolver engine.
+ * @param type      The transport type of the server address.
+ * @param addr      The server address.
+ * @param duration  Number of seconds to keep the mark, or zero to clear it.
+ *
+ * @return          PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_resolver_set_server_failed(
+                                            pjsip_resolver_t *res,
+                                            pjsip_transport_type_e type,
+                                            const pj_sockaddr_t *addr,
+                                            unsigned duration);
+
+/**
+ * Check whether a server address is marked as failed, see
+ * #pjsip_resolver_set_server_failed().
+ *
+ * @param res       The SIP resolver engine.
+ * @param type      The transport type of the server address.
+ * @param addr      The server address.
+ *
+ * @return          PJ_TRUE if the address is marked as failed.
+ */
+PJ_DECL(pj_bool_t) pjsip_resolver_is_server_failed(pjsip_resolver_t *res,
+                                                   pjsip_transport_type_e type,
+                                                   const pj_sockaddr_t *addr);
+
+/**
+ * Clear all failed server marks, including the ones set by the application,
+ * e.g: after the local network has changed.
+ *
+ * @param res       The SIP resolver engine.
+ *
+ * @return          PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_resolver_clear_failed_servers(
+                                            pjsip_resolver_t *res);
+
+/**
  * Destroy resolver engine. Note that this will also destroy the internal
  * DNS resolver inside the engine. If application doesn't want the internal
  * DNS resolver to be destroyed, it should set the internal DNS resolver

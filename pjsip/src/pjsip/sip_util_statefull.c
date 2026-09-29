@@ -32,7 +32,11 @@ struct tsx_data
 {
     void *token;
     void (*cb)(void*, pjsip_event*);
+    unsigned failed_servers_gen;    /* When the request was sent */
 };
+
+/* Defined in sip_endpoint.c */
+unsigned pjsip_endpt_failed_servers_gen(pjsip_endpoint *endpt);
 
 static void mod_util_on_tsx_state(pjsip_transaction*, pjsip_event*);
 
@@ -55,6 +59,108 @@ pjsip_module mod_stateful_util =
     &mod_util_on_tsx_state,         /* on_tsx_state()                   */
 };
 
+/* RFC 3263 section 4.3: a 503, or no response at all before a timeout or
+ * a transport error, is a failure of the server.
+ */
+static pj_bool_t is_server_failure(pjsip_transaction *tsx, pjsip_event *event)
+{
+    switch (event->body.tsx_state.type) {
+    case PJSIP_EVENT_RX_MSG:
+        return tsx->status_code == PJSIP_SC_SERVICE_UNAVAILABLE;
+    case PJSIP_EVENT_TIMER:
+    case PJSIP_EVENT_TRANSPORT_ERROR:
+        return event->body.tsx_state.prev_state == PJSIP_TSX_STATE_CALLING;
+    default:
+        return PJ_FALSE;
+    }
+}
+
+/* Whether the request is bound to a connection */
+static pj_bool_t is_pinned(const pjsip_tx_data *tdata)
+{
+    const pjsip_transport *tp = tdata->tp_sel.u.transport;
+
+    return tdata->tp_sel.type == PJSIP_TPSELECTOR_TRANSPORT && tp &&
+           (pjsip_transport_get_flag_from_type(
+                (pjsip_transport_type_e)tp->key.type) &
+            PJSIP_TRANSPORT_RELIABLE) != 0;
+}
+
+/* Mark the server of the transaction as failed, or clear the mark once it
+ * answers. RFC 3261 section 21.5.4 avoids a server that answers 503 only for
+ * the time in Retry-After.
+ */
+static void update_server_state(pjsip_transaction *tsx, pjsip_event *event,
+                                pj_bool_t failed)
+{
+    pjsip_tx_data *tdata = tsx->last_tx;
+    pjsip_event_id_e type = event->body.tsx_state.type;
+    unsigned idx = tdata->dest_info.cur_addr;
+    unsigned max_duration = pjsip_cfg()->endpt.failed_server_timeout;
+    unsigned duration = 0;
+    pjsip_transport_type_e tp_type;
+    const pj_sockaddr *addr;
+
+    if (max_duration == 0)
+        return;
+
+    if (is_pinned(tdata)) {
+        tp_type = (pjsip_transport_type_e)tdata->tp_sel.u.transport->key.type;
+        addr = &tdata->tp_sel.u.transport->key.rem_addr;
+    } else if (idx < tdata->dest_info.addr.count) {
+        tp_type = tdata->dest_info.addr.entry[idx].type;
+        addr = &tdata->dest_info.addr.entry[idx].addr;
+    } else {
+        return;
+    }
+
+    if (failed && type == PJSIP_EVENT_RX_MSG) {
+        pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;
+        pjsip_retry_after_hdr *ra;
+
+        ra = (pjsip_retry_after_hdr*)
+             pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_RETRY_AFTER,
+                                NULL);
+        if (!ra || ra->ivalue <= 0)
+            return;
+        duration = (unsigned)ra->ivalue < max_duration ?
+                   (unsigned)ra->ivalue : max_duration;
+    } else if (failed && type == PJSIP_EVENT_TRANSPORT_ERROR) {
+        /* May be the local network, see mark_refused_servers() */
+        return;
+    } else if (failed) {
+        duration = max_duration;
+    } else if (type != PJSIP_EVENT_RX_MSG) {
+        return;
+    }
+
+    pjsip_endpt_set_server_failed(tsx->endpt, tp_type, addr, duration);
+}
+
+/* The transport moved on from the addresses before cur_addr, as they could
+ * not be sent to, e.g: the connection was refused. Mark the ones of the
+ * transport type of the address that has answered: then the local network
+ * and transport are not the cause.
+ */
+static void mark_refused_servers(pjsip_transaction *tsx)
+{
+    const pjsip_tx_data *tdata = tsx->last_tx;
+    const pjsip_server_addresses *addr = &tdata->dest_info.addr;
+    unsigned i, duration = pjsip_cfg()->endpt.failed_server_timeout;
+
+    if (tdata->dest_info.cur_addr >= addr->count)
+        return;
+
+    for (i = 0; duration && i < tdata->dest_info.cur_addr; ++i) {
+        if (addr->entry[i].type != addr->entry[tdata->dest_info.cur_addr].type)
+            continue;
+        pjsip_endpt_set_server_failed(tsx->endpt,
+                                      tdata->dest_info.addr.entry[i].type,
+                                      &tdata->dest_info.addr.entry[i].addr,
+                                      duration);
+    }
+}
+
 static void mod_util_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
 {
     struct tsx_data *tsx_data;
@@ -76,6 +182,21 @@ static void mod_util_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
      * by clearing the transaction's module_data.
      */
     tsx->mod_data[mod_stateful_util.id] = NULL;
+
+    /* A request sent before the failed servers were cleared, e.g: on the
+     * previous network, says nothing about the servers.
+     */
+    if (pjsip_cfg()->endpt.server_failover &&
+        tsx_data->failed_servers_gen ==
+            pjsip_endpt_failed_servers_gen(tsx->endpt) &&
+        tsx->role == PJSIP_ROLE_UAC && tsx->last_tx &&
+        tsx->method.id != PJSIP_INVITE_METHOD &&
+        tsx->method.id != PJSIP_CANCEL_METHOD)
+    {
+        update_server_state(tsx, event, is_server_failure(tsx, event));
+        if (event->body.tsx_state.type == PJSIP_EVENT_RX_MSG)
+            mark_refused_servers(tsx);
+    }
 
     if (tsx_data->cb) {
         (*tsx_data->cb)(tsx_data->token, event);
@@ -124,9 +245,10 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request2( pjsip_endpoint *endpt,
 
     pjsip_tsx_set_transport(tsx, &tdata->tp_sel);
 
-    tsx_data = PJ_POOL_ALLOC_T(tsx->pool, struct tsx_data);
+    tsx_data = PJ_POOL_ZALLOC_T(tsx->pool, struct tsx_data);
     tsx_data->token = token;
     tsx_data->cb = cb;
+    tsx_data->failed_servers_gen = pjsip_endpt_failed_servers_gen(endpt);
 
     tsx->mod_data[mod_stateful_util.id] = tsx_data;
 

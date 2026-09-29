@@ -81,6 +81,9 @@ struct pjsip_endpoint
     /** DNS Resolver. */
     pjsip_resolver_t    *resolver;
 
+    /** Number of times the failed servers have been cleared. */
+    unsigned             failed_servers_gen;
+
     /** Modules lock. */
     pj_rwmutex_t        *mod_mutex;
 
@@ -1352,6 +1355,43 @@ PJ_DEF(void) pjsip_endpt_resolve( pjsip_endpoint *endpt,
                                   pjsip_resolver_callback *cb)
 {
     pjsip_resolve( endpt->resolver, pool, target, token, cb);
+}
+
+/*
+ * Set or clear a failed server address.
+ */
+PJ_DEF(pj_status_t) pjsip_endpt_set_server_failed(pjsip_endpoint *endpt,
+                                                  pjsip_transport_type_e type,
+                                                  const pj_sockaddr_t *addr,
+                                                  unsigned duration)
+{
+    return pjsip_resolver_set_server_failed(endpt->resolver, type, addr,
+                                            duration);
+}
+
+/*
+ * Check whether a server address has failed.
+ */
+PJ_DEF(pj_bool_t) pjsip_endpt_is_server_failed(pjsip_endpoint *endpt,
+                                               pjsip_transport_type_e type,
+                                               const pj_sockaddr_t *addr)
+{
+    return pjsip_resolver_is_server_failed(endpt->resolver, type, addr);
+}
+
+/*
+ * Forget all failed server addresses.
+ */
+PJ_DEF(pj_status_t) pjsip_endpt_clear_failed_servers(pjsip_endpoint *endpt)
+{
+    ++endpt->failed_servers_gen;
+    return pjsip_resolver_clear_failed_servers(endpt->resolver);
+}
+
+/* Internal, used by sip_util_statefull.c */
+unsigned pjsip_endpt_failed_servers_gen(pjsip_endpoint *endpt)
+{
+    return endpt->failed_servers_gen;
 }
 
 /*

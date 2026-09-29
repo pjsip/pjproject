@@ -97,6 +97,7 @@ extern pj_caching_pool caching_pool;
 #define INCLUDE_LOOP_TEST       INCLUDE_TRANSPORT_GROUP
 #define INCLUDE_TCP_TEST        (INCLUDE_TRANSPORT_GROUP && PJ_HAS_TCP)
 #define INCLUDE_RESOLVE_TEST    INCLUDE_TRANSPORT_GROUP
+#define INCLUDE_SRV_FAILOVER_TEST INCLUDE_TRANSPORT_GROUP
 #define INCLUDE_TSX_TEST        INCLUDE_TSX_GROUP
 #define INCLUDE_TSX_DESTROY_TEST INCLUDE_TSX_GROUP
 #define INCLUDE_INV_OA_TEST     INCLUDE_INV_GROUP
@@ -125,6 +126,7 @@ int transport_tcp_test(void);
 int transport_tcp_keep_alive_test(void);
 int transport_rx_overflow_test(void);
 int resolve_test(void);
+int srv_failover_test(void);
 int regc_test(void);
 int auth_async_test(void);
 int pjsua_auth_test(void);
@@ -189,7 +191,7 @@ PJ_INLINE(pj_bool_t) is_user_equal(const pjsip_fromto_hdr *hdr, const char *user
 /* Settings. */
 extern int log_level;
 
-#define UT_MAX_TESTS    32
+#define UT_MAX_TESTS    40
 #include "../../../pjlib/src/pjlib-test/test_util.h"
 
 struct test_app_t
