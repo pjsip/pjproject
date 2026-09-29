@@ -59,7 +59,7 @@ PJSUA_EXPECTS = []
 SIPP_TRANSPORT = ""
 
 # Default PJSUA param if test driver is not available:
-# - no-tcp as SIPp is on UDP only
+# - no-tcp as SIPp is on UDP here (a custom driver may set SIPP_TRANSPORT)
 # - id, username, and realm: to allow PJSUA sending re-INVITE with auth after receiving 401/407 response
 PJSUA_DEF_PARAM = "--null-audio --max-calls=1 --no-tcp --id=sip:a@localhost --username=a --realm=*"
 
@@ -175,9 +175,10 @@ def wait_sipp_listening():
     while time.time() - t0 < 10:
         try:
             socket.create_connection(("127.0.0.1", SIPP_PORT), 1).close()
-            return
+            return True
         except socket.error:
             time.sleep(0.1)
+    return False
 
 
 # Wait SIPp process to exit, returning SIPp exit code
@@ -285,10 +286,11 @@ def TEST_FUNC(t):
     if not sipp:
         raise TestError("Failed starting SIPp")
 
-    if SIPP_TRANSPORT and not SIPP_TRANSPORT.startswith("u"):
-        wait_sipp_listening()
-
-    ua_err_st = exec_pjsua_expects(t, sipp)
+    if SIPP_TRANSPORT and not SIPP_TRANSPORT.startswith("u") and \
+       not wait_sipp_listening():
+        ua_err_st = "SIPp not listening on port " + str(SIPP_PORT)
+    else:
+        ua_err_st = exec_pjsua_expects(t, sipp)
 
     sipp_ret_code = wait_sipp(sipp)
 
