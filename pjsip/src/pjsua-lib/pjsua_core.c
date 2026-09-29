@@ -1163,6 +1163,10 @@ static pj_status_t apply_nameservers(const nameserver_list *ns)
     }
 
     status = pj_dns_resolver_set_ns(res, ns->count, ns->addr, ns->port);
+    if (status == PJ_SUCCESS) {
+        /* The answers may be specific to the previous network */
+        pj_dns_resolver_clear_cache(res);
+    }
     if (status == PJ_SUCCESS && res != pjsua_var.resolver)
         status = pjsip_endpt_set_resolver(pjsua_var.endpt, res);
     if (status != PJ_SUCCESS) {

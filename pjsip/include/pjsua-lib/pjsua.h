@@ -3426,10 +3426,10 @@ PJ_DECL(pj_status_t) pjsua_update_stun_servers(unsigned count, pj_str_t srv[],
 
 /**
  * Update the nameservers of the DNS resolver, e.g: after the device has
- * moved to another network. An empty list disables the DNS resolver, the
- * same as when no nameserver is configured. This function may block if
- * an entry is a hostname. The #pjsua_init() must have been called before
- * calling this function.
+ * moved to another network. Cached DNS responses are discarded. An empty
+ * list disables the DNS resolver, the same as when no nameserver is
+ * configured. This function may block if an entry is a hostname. The
+ * #pjsua_init() must have been called before calling this function.
  *
  * @param count         Number of nameserver entries, at most four.
  * @param srv           Array of nameserver entries. Please see the

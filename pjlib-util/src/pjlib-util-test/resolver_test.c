@@ -1237,6 +1237,116 @@ static int dns_set_ns_during_query_test(void)
 }
 
 
+/* Clearing the cache, also from the callback of a cached answer */
+
+#define IP_ADDR5    0x05050505
+
+static pj_dns_resolver *clear_cache_res;
+static volatile pj_bool_t clear_cache_cb_called;
+static pj_status_t clear_cache_cb_status;
+static pj_uint32_t clear_cache_cb_addr;
+
+static void dns_callback_clear_cache(void *user_data,
+                                     pj_status_t status,
+                                     pj_dns_parsed_packet *resp)
+{
+    if (user_data)
+        pj_dns_resolver_clear_cache(clear_cache_res);
+
+    clear_cache_cb_status = status;
+    if (status == PJ_SUCCESS && resp && resp->hdr.anscount)
+        clear_cache_cb_addr = resp->ans[0].rdata.a.ip_addr.s_addr;
+    clear_cache_cb_called = PJ_TRUE;
+}
+
+static int clear_cache_query(pj_bool_t clear_in_cb)
+{
+    pj_str_t name = pj_str("name_clear_cache");
+    unsigned i;
+
+    clear_cache_cb_called = PJ_FALSE;
+    clear_cache_cb_status = PJ_EUNKNOWN;
+    clear_cache_cb_addr = 0;
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(
+                        clear_cache_res, &name, PJ_DNS_TYPE_A, 0,
+                        &dns_callback_clear_cache,
+                        (clear_in_cb ? &clear_cache_res : NULL), NULL),
+                    NULL, return -1);
+
+    for (i = 0; i < 100 && !clear_cache_cb_called; ++i)
+        pj_thread_sleep(20);
+
+    PJ_TEST_TRUE(clear_cache_cb_called, NULL, return -1);
+    PJ_TEST_SUCCESS(clear_cache_cb_status, NULL, return -1);
+    PJ_TEST_EQ(clear_cache_cb_addr, IP_ADDR5, NULL, return -1);
+    return 0;
+}
+
+static int dns_clear_cache_test(void)
+{
+    pj_str_t name = pj_str("name_clear_cache");
+    pj_str_t ns_addr = pj_str("127.0.0.1");
+    pj_uint16_t port;
+    pj_dns_parsed_packet *r;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  clear cache test"));
+
+    g_server[0].pkt_count = 0;
+    g_server[0].action = ACTION_REPLY;
+    r = &g_server[0].resp;
+    r->hdr.qdcount = 1;
+    r->hdr.anscount = 1;
+    r->q = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_query);
+    r->q[0].type = PJ_DNS_TYPE_A;
+    r->q[0].dnsclass = 1;
+    r->q[0].name = name;
+    r->ans = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_rr);
+    r->ans[0].type = PJ_DNS_TYPE_A;
+    r->ans[0].dnsclass = 1;
+    r->ans[0].name = name;
+    r->ans[0].ttl = 60;
+    r->ans[0].rdata.a.ip_addr.s_addr = IP_ADDR5;
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_create(mem, NULL, 0, timer_heap, ioqueue,
+                                           &clear_cache_res),
+                    NULL, return -850);
+
+    port = g_server[0].port;
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(clear_cache_res, 1, &ns_addr,
+                                           &port),
+                    NULL, { rc = -855; goto on_return; });
+
+    if (clear_cache_query(PJ_FALSE)) {
+        rc = -860;
+        goto on_return;
+    }
+    PJ_TEST_EQ(pj_dns_resolver_get_cached_count(clear_cache_res), 1, NULL,
+               { rc = -865; goto on_return; });
+
+    /* The callback reads the answer after the cache has been cleared */
+    if (clear_cache_query(PJ_TRUE)) {
+        rc = -870;
+        goto on_return;
+    }
+    PJ_TEST_EQ(g_server[0].pkt_count, 1, NULL, { rc = -875; goto on_return; });
+    PJ_TEST_EQ(pj_dns_resolver_get_cached_count(clear_cache_res), 0, NULL,
+               { rc = -880; goto on_return; });
+
+    if (clear_cache_query(PJ_FALSE)) {
+        rc = -885;
+        goto on_return;
+    }
+    PJ_TEST_EQ(g_server[0].pkt_count, 2, NULL, { rc = -890; goto on_return; });
+
+on_return:
+    pj_dns_resolver_destroy(clear_cache_res, PJ_FALSE);
+    clear_cache_res = NULL;
+    return rc;
+}
+
+
 /* Callback for the start-during-destroy test: starts a new query from
  * inside the PJ_ECANCELLED notification delivered by
  * pj_dns_resolver_destroy(), the way the SRV resolver's fallback does.
@@ -2607,6 +2717,11 @@ int resolver_test(void)
 
     PJ_LOG(3,(THIS_FILE, "dns_set_ns_during_query_test"));
     rc = dns_set_ns_during_query_test();
+    if (rc != 0)
+        goto on_error;
+
+    PJ_LOG(3,(THIS_FILE, "dns_clear_cache_test"));
+    rc = dns_clear_cache_test();
     if (rc != 0)
         goto on_error;
 

@@ -83,6 +83,14 @@ static int resolve(const char *host, const char *expected)
     }
     pj_pool_release(pool);
 
+    /* NULL expected address means the host must not resolve */
+    if (!expected) {
+        if (g_res.status == PJ_SUCCESS) {
+            PJ_LOG(1,(THIS_FILE, "  %s resolved to %s", host, g_res.addr));
+            return -1;
+        }
+        return 0;
+    }
     if (g_res.status != PJ_SUCCESS) {
         PJ_PERROR(1,(THIS_FILE, g_res.status, "  resolving %s failed", host));
         return -1;
@@ -214,6 +222,8 @@ static pj_status_t start_pjsua(pj_bool_t with_servers,
                                    &g_srv_b, &port_b);
         if (status == PJ_SUCCESS)
             status = add_a_rec(g_srv_b, NAME_THREE, "10.0.0.3");
+        if (status == PJ_SUCCESS)
+            status = add_a_rec(g_srv_b, NAME_ONE, "10.0.0.11");
         if (status != PJ_SUCCESS) {
             PJ_PERROR(1,(THIS_FILE, status, "  creating DNS servers failed"));
             stop_pjsua();
@@ -282,6 +292,8 @@ static int update_test(void)
     PJ_TEST_EQ(pjsua_get_var()->resolver, res, NULL, return -2622);
     if (resolve(NAME_ONE, "10.0.0.1"))
         return -2623;
+    if (resolve(NAME_TWO, NULL))
+        return -2624;
 
     PJ_LOG(3,(THIS_FILE, "  change nameservers"));
     entries[0] = g_ns_b;
@@ -291,6 +303,8 @@ static int update_test(void)
                return -2631);
     if (resolve(NAME_TWO, "10.0.0.2"))
         return -2632;
+    if (resolve(NAME_ONE, "10.0.0.11"))
+        return -2633;
 
     PJ_LOG(3,(THIS_FILE, "  no valid entry keeps the nameservers"));
     entries[0] = "1.2.3.4:abc";

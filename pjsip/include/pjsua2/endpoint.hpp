@@ -1748,10 +1748,11 @@ public:
 
     /**
      * Update the nameservers of the DNS resolver, e.g: after the device
-     * has moved to another network. An empty list disables the DNS
-     * resolver, the same as when no nameserver is configured. This
-     * function may block if an entry is a hostname. The libInit() must
-     * have been called before calling this function.
+     * has moved to another network. Cached DNS responses are discarded.
+     * An empty list disables the DNS resolver, the same as when no
+     * nameserver is configured. This function may block if an entry is a
+     * hostname. The libInit() must have been called before calling this
+     * function.
      *
      * @param prmServers        Array of nameservers, at most four. Please
      *                          see UaConfig.nameserver about the format
