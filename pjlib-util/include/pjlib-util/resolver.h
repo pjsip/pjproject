@@ -506,8 +506,9 @@ PJ_DECL(unsigned) pj_dns_resolver_get_cached_count(pj_dns_resolver *resolver);
 
 
 /**
- * Remove all entries from the response cache, e.g: after the nameservers
- * have changed.
+ * Clear the response cache, e.g: after the nameservers have changed.
+ * Entries added with #pj_dns_resolver_add_entry() without
+ * TTL are kept.
  *
  * @param resolver  The resolver instance.
  *

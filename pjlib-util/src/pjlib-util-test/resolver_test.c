@@ -1240,6 +1240,7 @@ static int dns_set_ns_during_query_test(void)
 /* Clearing the cache, also from the callback of a cached answer */
 
 #define IP_ADDR5    0x05050505
+#define IP_ADDR6    0x06060606
 
 static pj_dns_resolver *clear_cache_res;
 static volatile pj_bool_t clear_cache_cb_called;
@@ -1259,9 +1260,10 @@ static void dns_callback_clear_cache(void *user_data,
     clear_cache_cb_called = PJ_TRUE;
 }
 
-static int clear_cache_query(pj_bool_t clear_in_cb)
+static int clear_cache_query(const char *name_str, pj_uint32_t addr,
+                             pj_bool_t clear_in_cb)
 {
-    pj_str_t name = pj_str("name_clear_cache");
+    pj_str_t name = pj_str((char*)name_str);
     unsigned i;
 
     clear_cache_cb_called = PJ_FALSE;
@@ -1279,16 +1281,18 @@ static int clear_cache_query(pj_bool_t clear_in_cb)
 
     PJ_TEST_TRUE(clear_cache_cb_called, NULL, return -1);
     PJ_TEST_SUCCESS(clear_cache_cb_status, NULL, return -1);
-    PJ_TEST_EQ(clear_cache_cb_addr, IP_ADDR5, NULL, return -1);
+    PJ_TEST_EQ(clear_cache_cb_addr, addr, NULL, return -1);
     return 0;
 }
 
 static int dns_clear_cache_test(void)
 {
     pj_str_t name = pj_str("name_clear_cache");
+    pj_str_t static_name = pj_str("name_static");
     pj_str_t ns_addr = pj_str("127.0.0.1");
     pj_uint16_t port;
-    pj_dns_parsed_packet *r;
+    pj_dns_parsed_packet *r, static_pkt;
+    pj_dns_parsed_rr static_rr;
     int rc = 0;
 
     PJ_LOG(3,(THIS_FILE, "  clear cache test"));
@@ -1318,27 +1322,51 @@ static int dns_clear_cache_test(void)
                                            &port),
                     NULL, { rc = -855; goto on_return; });
 
-    if (clear_cache_query(PJ_FALSE)) {
+    /* An entry added without TTL must survive the clearing */
+    pj_bzero(&static_pkt, sizeof(static_pkt));
+    pj_bzero(&static_rr, sizeof(static_rr));
+    static_pkt.hdr.flags = PJ_DNS_SET_QR(1);
+    static_pkt.hdr.anscount = 1;
+    static_pkt.ans = &static_rr;
+    static_rr.type = PJ_DNS_TYPE_A;
+    static_rr.dnsclass = 1;
+    static_rr.name = static_name;
+    static_rr.rdata.a.ip_addr.s_addr = IP_ADDR6;
+    PJ_TEST_SUCCESS(pj_dns_resolver_add_entry(clear_cache_res, &static_pkt,
+                                              PJ_FALSE),
+                    NULL, { rc = -857; goto on_return; });
+
+    if (clear_cache_query("name_clear_cache", IP_ADDR5, PJ_FALSE)) {
         rc = -860;
         goto on_return;
     }
-    PJ_TEST_EQ(pj_dns_resolver_get_cached_count(clear_cache_res), 1, NULL,
+    PJ_TEST_EQ(pj_dns_resolver_get_cached_count(clear_cache_res), 2, NULL,
                { rc = -865; goto on_return; });
 
     /* The callback reads the answer after the cache has been cleared */
-    if (clear_cache_query(PJ_TRUE)) {
+    if (clear_cache_query("name_clear_cache", IP_ADDR5, PJ_TRUE)) {
         rc = -870;
         goto on_return;
     }
     PJ_TEST_EQ(g_server[0].pkt_count, 1, NULL, { rc = -875; goto on_return; });
-    PJ_TEST_EQ(pj_dns_resolver_get_cached_count(clear_cache_res), 0, NULL,
+    PJ_TEST_EQ(pj_dns_resolver_get_cached_count(clear_cache_res), 1, NULL,
                { rc = -880; goto on_return; });
 
-    if (clear_cache_query(PJ_FALSE)) {
+    if (clear_cache_query("name_static", IP_ADDR6, PJ_FALSE)) {
+        rc = -882;
+        goto on_return;
+    }
+    if (clear_cache_query("name_clear_cache", IP_ADDR5, PJ_FALSE)) {
         rc = -885;
         goto on_return;
     }
     PJ_TEST_EQ(g_server[0].pkt_count, 2, NULL, { rc = -890; goto on_return; });
+
+    /* Nothing holds the entries now, so they are freed at once */
+    PJ_TEST_SUCCESS(pj_dns_resolver_clear_cache(clear_cache_res), NULL,
+                    { rc = -892; goto on_return; });
+    PJ_TEST_EQ(pj_dns_resolver_get_cached_count(clear_cache_res), 1, NULL,
+               { rc = -895; goto on_return; });
 
 on_return:
     pj_dns_resolver_destroy(clear_cache_res, PJ_FALSE);

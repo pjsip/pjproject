@@ -2176,7 +2176,7 @@ PJ_DEF(unsigned) pj_dns_resolver_get_cached_count(pj_dns_resolver *resolver)
 
 
 /*
- * Remove all entries from the response cache.
+ * Clear the response cache.
  */
 PJ_DEF(pj_status_t) pj_dns_resolver_clear_cache(pj_dns_resolver *resolver)
 {
@@ -2191,14 +2191,18 @@ PJ_DEF(pj_status_t) pj_dns_resolver_clear_cache(pj_dns_resolver *resolver)
         struct cached_res *cache;
 
         cache = (struct cached_res*) pj_hash_this(resolver->hrescache, it);
+        it = pj_hash_next(resolver->hrescache, it);
+
+        /* Keep the entries added by the application without TTL */
+        if (cache->expiry_time.sec == 0x7FFFFFFFL)
+            continue;
+
         pj_hash_set(NULL, resolver->hrescache, &cache->key,
                     sizeof(cache->key), 0, NULL);
 
         /* An entry in use by a callback is freed when the callback returns */
         if (--cache->ref_cnt <= 0)
             free_entry(resolver, cache);
-
-        it = pj_hash_first(resolver->hrescache, &it_buf);
     }
 
     pj_grp_lock_release(resolver->grp_lock);
