@@ -168,6 +168,24 @@ static struct
     pj_bool_t     incoming_seen;
     /* Incoming (callee) leg of the most recent self-call. */
     pjsua_call_id incoming_call_id;
+    pj_bool_t     initial_app_managed_armed;
+    pj_bool_t     initial_app_managed_seen;
+    pj_bool_t     initial_app_managed_remote_offer;
+    pj_status_t   initial_app_managed_plain_status;
+    pj_status_t   initial_app_managed_invalid_status;
+    pj_status_t   initial_app_managed_oversize_status;
+    pj_status_t   initial_app_managed_answer_status;
+    pj_bool_t     first_class_offer_armed;
+    pjsua_call_id first_class_offer_caller;
+    pjsua_call_id first_class_offer_callee;
+    pj_status_t   first_class_set_status;
+    unsigned      first_class_offer_count;
+    int           first_class_reinv_code;
+    int           first_class_update_code;
+    unsigned      first_class_expected_port;
+    pj_bool_t     offerless_reinv_armed;
+    pj_bool_t     offerless_reinv_seen;
+    pj_status_t   offerless_reinv_set_status;
     /* When set, on_call_sdp_created appends an m=application line to the
      * local SDP offer, so the peer establishes a call holding a media slot
      * whose type is neither audio, video nor text. */
@@ -227,9 +245,77 @@ static struct
     int           app_med_reinv_code;
     pj_pool_t    *app_med_pool;
     pjmedia_sdp_session *app_med_offer;
+    /* ---- app-managed offerless INVITE (3PCC) ---- */
+
+    /* When armed, on_incoming_call records that the offerless INVITE left the
+     * negotiator unset, that answering without application SDP is rejected,
+     * and that supplying it with pjsua_call_set_sdp() then succeeds.
+     * on_call_rx_offer answers the offer the caller receives in the 200.
+     */
+    pj_bool_t     offerless_armed;
+    pj_bool_t     offerless_neg_null;
+    pj_status_t   offerless_plain_status;
+    pj_status_t   offerless_set_status;
+    pj_status_t   offerless_caller_set_status;
+    pj_status_t   offerless_answer_status;
+
+    pj_bool_t     answer_rollback_armed;
+    pj_bool_t     answer_rollback_inject;
+    pjsua_call_id answer_rollback_caller;
+    pjsua_call_id answer_rollback_callee;
+    pj_status_t   answer_rollback_set_status;
+    int           answer_rollback_reinv_code;
     /* Snapshot of med_state_cnt[], to wait for the next media update. */
     unsigned      med_state_base[PJSUA_MAX_CALLS];
 } g_ctx;
+
+static pjmedia_sdp_session *create_oversized_sdp(
+                                      pj_pool_t *pool,
+                                      const pjmedia_sdp_session *sdp)
+{
+    pjmedia_sdp_session *oversized;
+
+    oversized = pjmedia_sdp_session_clone(pool, sdp);
+    while (oversized->media_count <= PJSUA_MAX_CALL_MEDIA &&
+           oversized->media_count < PJMEDIA_MAX_SDP_MEDIA)
+    {
+        oversized->media[oversized->media_count] =
+            pjmedia_sdp_media_clone(pool, oversized->media[0]);
+        ++oversized->media_count;
+    }
+
+    if (oversized->media_count <= PJSUA_MAX_CALL_MEDIA)
+        oversized->media_count = PJSUA_MAX_CALL_MEDIA + 1;
+
+    return oversized;
+}
+
+static pjmedia_sdp_session *create_missing_conn_sdp(
+                                      pj_pool_t *pool,
+                                      const pjmedia_sdp_session *sdp)
+{
+    pjmedia_sdp_session *invalid;
+    unsigned i;
+
+    invalid = pjmedia_sdp_session_clone(pool, sdp);
+    invalid->conn = NULL;
+    for (i = 0; i < invalid->media_count; ++i)
+        invalid->media[i]->conn = NULL;
+
+    return invalid;
+}
+
+static pjmedia_sdp_session *create_missing_rtpmap_sdp(
+                                      pj_pool_t *pool,
+                                      const pjmedia_sdp_session *sdp)
+{
+    pjmedia_sdp_session *invalid;
+
+    invalid = pjmedia_sdp_session_clone(pool, sdp);
+    invalid->media[0]->desc.fmt[0] = pj_str("96");
+
+    return invalid;
+}
 
 
 /*****************************************************************************
@@ -245,13 +331,88 @@ static struct
 static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
                              pjsip_rx_data *rdata)
 {
+    static char app_managed_sdp[] =
+        "v=0\r\n"
+        "o=- 1 1 IN IP4 127.0.0.1\r\n"
+        "s=-\r\n"
+        "c=IN IP4 127.0.0.1\r\n"
+        "t=0 0\r\n"
+        "m=audio 4002 RTP/AVP 0\r\n"
+        "m=audio 4004 RTP/AVP 0\r\n";
     pjsua_call_setting opt;
+    pjmedia_sdp_session *sdp;
+    pjmedia_sdp_session *invalid;
+    pjmedia_sdp_session *oversized;
+    pj_pool_t *pool;
     pj_status_t status;
+    char buf[sizeof(app_managed_sdp)];
 
     PJ_UNUSED_ARG(acc_id);
     PJ_UNUSED_ARG(rdata);
 
     g_ctx.incoming_call_id = call_id;
+
+    if (g_ctx.offerless_armed) {
+        pjsua_call *call = &pjsua_var.calls[call_id];
+
+        g_ctx.offerless_neg_null = (call->inv && call->inv->neg == NULL);
+        g_ctx.offerless_plain_status =
+            pjsua_call_answer(call_id, 200, NULL, NULL);
+
+        pool = pjsua_pool_create("offerless-app-managed", 4096, 4096);
+        if (!pool) {
+            g_ctx.offerless_answer_status = PJ_ENOMEM;
+            return;
+        }
+
+        pj_memcpy(buf, app_managed_sdp, sizeof(app_managed_sdp));
+        status = pjmedia_sdp_parse(pool, buf, pj_ansi_strlen(buf), &sdp);
+        if (status == PJ_SUCCESS) {
+            g_ctx.offerless_set_status = pjsua_call_set_sdp(call_id, sdp);
+            status = pjsua_call_answer(call_id, 200, NULL, NULL);
+        }
+        g_ctx.offerless_answer_status = status;
+        pj_pool_release(pool);
+        return;
+    }
+
+    if (g_ctx.initial_app_managed_armed) {
+        pjsua_call *call = &pjsua_var.calls[call_id];
+
+        g_ctx.initial_app_managed_seen = PJ_TRUE;
+        g_ctx.initial_app_managed_remote_offer =
+            call->inv && call->inv->neg &&
+            pjmedia_sdp_neg_get_state(call->inv->neg) ==
+                PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER;
+        g_ctx.initial_app_managed_plain_status =
+            pjsua_call_answer2(call_id, NULL, 200, NULL, NULL);
+
+        pool = pjsua_pool_create("initial-app-managed", 4096, 4096);
+        if (!pool) {
+            g_ctx.initial_app_managed_answer_status = PJ_ENOMEM;
+            return;
+        }
+
+        pj_memcpy(buf, app_managed_sdp, sizeof(app_managed_sdp));
+        status = pjmedia_sdp_parse(pool, buf, pj_ansi_strlen(buf), &sdp);
+        if (status == PJ_SUCCESS) {
+            invalid = create_missing_conn_sdp(pool, sdp);
+            g_ctx.initial_app_managed_invalid_status =
+                pjsua_call_answer_with_sdp(call_id, invalid, NULL, 200,
+                                           NULL, NULL);
+            oversized = create_oversized_sdp(pool, sdp);
+            if (oversized) {
+                g_ctx.initial_app_managed_oversize_status =
+                    pjsua_call_answer_with_sdp(call_id, oversized, NULL, 200,
+                                               NULL, NULL);
+            }
+            status = pjsua_call_answer_with_sdp(call_id, sdp, NULL, 200,
+                                                NULL, NULL);
+        }
+        g_ctx.initial_app_managed_answer_status = status;
+        pj_pool_release(pool);
+        return;
+    }
 
     /* Probe: over-limit audio count must be rejected. answer2() leaves
      * call->opt_inited FALSE on failure, so the valid answer below still
@@ -394,7 +555,37 @@ static void on_call_rx_offer(pjsua_call_id call_id,
     PJ_UNUSED_ARG(call_id);
     PJ_UNUSED_ARG(reserved);
     PJ_UNUSED_ARG(code);
-    PJ_UNUSED_ARG(opt);
+
+    if (g_ctx.offerless_reinv_armed &&
+        call_id == g_ctx.first_class_offer_caller)
+    {
+        g_ctx.offerless_reinv_set_status =
+            pjsua_call_set_sdp(call_id, offer);
+        return;
+    }
+
+    if (g_ctx.first_class_offer_armed &&
+        call_id == g_ctx.first_class_offer_callee)
+    {
+        g_ctx.first_class_set_status =
+            pjsua_call_set_sdp(call_id, offer);
+        ++g_ctx.first_class_offer_count;
+        return;
+    }
+
+    if (g_ctx.offerless_armed && call_id != g_ctx.incoming_call_id) {
+        g_ctx.offerless_caller_set_status = pjsua_call_set_sdp(call_id, offer);
+        return;
+    }
+
+    if (g_ctx.answer_rollback_inject &&
+        call_id == g_ctx.answer_rollback_callee)
+    {
+        g_ctx.answer_rollback_set_status =
+            pjsip_inv_set_sdp_answer(pjsua_var.calls[call_id].inv, offer);
+        opt->flag |= PJSUA_CALL_MEDIA_APP_MANAGED;
+        return;
+    }
 
     /* Confirm the peer really receives a=rtcp-mux in the offer, so the
      * rtcp-mux sub-test cannot silently degrade into a no-op if the
@@ -484,6 +675,14 @@ static void on_call_rx_reinvite(pjsua_call_id call_id,
     PJ_UNUSED_ARG(rdata);
     PJ_UNUSED_ARG(reserved);
 
+    if (g_ctx.offerless_reinv_armed &&
+        call_id == g_ctx.first_class_offer_callee && offer == NULL)
+    {
+        g_ctx.offerless_reinv_seen = PJ_TRUE;
+        *async = PJ_TRUE;
+        return;
+    }
+
     /* T.38 offer on the armed callee leg: record it and, when taking over,
      * defer the answer to the test (see test_app_managed_media()).
      */
@@ -529,6 +728,25 @@ static void on_call_tsx_state(pjsua_call_id call_id,
         tsx->status_code >= 200 && g_ctx.app_med_reinv_code == 0)
     {
         g_ctx.app_med_reinv_code = tsx->status_code;
+    }
+
+    if (g_ctx.answer_rollback_armed &&
+        call_id == g_ctx.answer_rollback_caller &&
+        tsx->role == PJSIP_ROLE_UAC &&
+        tsx->method.id == PJSIP_INVITE_METHOD &&
+        tsx->status_code >= 200)
+    {
+        g_ctx.answer_rollback_reinv_code = tsx->status_code;
+    }
+
+    if (g_ctx.first_class_offer_armed &&
+        call_id == g_ctx.first_class_offer_caller &&
+        tsx->role == PJSIP_ROLE_UAC && tsx->status_code >= 200)
+    {
+        if (tsx->method.id == PJSIP_INVITE_METHOD)
+            g_ctx.first_class_reinv_code = tsx->status_code;
+        else if (pj_stricmp2(&tsx->method.name, "UPDATE") == 0)
+            g_ctx.first_class_update_code = tsx->status_code;
     }
 }
 
@@ -596,6 +814,53 @@ static pj_bool_t app_med_reinvite_done(pjsua_call_id call_id)
     return g_ctx.app_med_reinv_code != 0;
 }
 
+static pj_bool_t answer_rollback_done(pjsua_call_id call_id)
+{
+    PJ_UNUSED_ARG(call_id);
+    return g_ctx.answer_rollback_reinv_code != 0;
+}
+
+static pj_bool_t offerless_reinvite_seen(pjsua_call_id call_id)
+{
+    PJ_UNUSED_ARG(call_id);
+    return g_ctx.offerless_reinv_seen;
+}
+
+static pj_bool_t first_class_reinvite_done(pjsua_call_id call_id)
+{
+    PJ_UNUSED_ARG(call_id);
+    return g_ctx.first_class_reinv_code != 0;
+}
+
+static pj_bool_t first_class_sdp_applied(pjsua_call_id call_id)
+{
+    const pjmedia_sdp_session *local;
+    const pjmedia_sdp_session *remote;
+    pjsip_inv_session *caller_inv;
+    pjsip_inv_session *callee_inv;
+
+    PJ_UNUSED_ARG(call_id);
+
+    caller_inv = pjsua_var.calls[g_ctx.first_class_offer_caller].inv;
+    callee_inv = pjsua_var.calls[g_ctx.first_class_offer_callee].inv;
+    if (!caller_inv || !caller_inv->neg || !callee_inv || !callee_inv->neg ||
+        pjmedia_sdp_neg_get_state(caller_inv->neg) !=
+            PJMEDIA_SDP_NEG_STATE_DONE ||
+        pjmedia_sdp_neg_get_state(callee_inv->neg) !=
+            PJMEDIA_SDP_NEG_STATE_DONE ||
+        pjmedia_sdp_neg_get_active_local(caller_inv->neg, &local) !=
+            PJ_SUCCESS ||
+        pjmedia_sdp_neg_get_active_remote(callee_inv->neg, &remote) !=
+            PJ_SUCCESS ||
+        local->media_count < 1 || remote->media_count < 1)
+    {
+        return PJ_FALSE;
+    }
+
+    return local->media[0]->desc.port == g_ctx.first_class_expected_port &&
+           remote->media[0]->desc.port == g_ctx.first_class_expected_port;
+}
+
 /* True once the given leg has completed a media update since the snapshot
  * taken into med_state_base[].
  */
@@ -613,6 +878,70 @@ static pj_bool_t call_is_confirmed(pjsua_call_id call_id)
     if (pjsua_call_get_info(call_id, &ci) != PJ_SUCCESS)
         return PJ_FALSE;
     return ci.state == PJSIP_INV_STATE_CONFIRMED;
+}
+
+static pj_status_t make_call_with_sdp(pjsua_acc_id acc_id,
+                                      const pj_str_t *uri,
+                                      const pjsua_call_setting *opt,
+                                      const pjmedia_sdp_session *sdp,
+                                      pjsua_call_id *call_id)
+{
+    pjsua_call_op_param param;
+
+    pjsua_call_op_param_default(&param);
+    param.opt = opt;
+    param.sdp = sdp;
+    return pjsua_call_make_call2(acc_id, uri, &param, call_id);
+}
+
+static pj_status_t reinvite_with_sdp(pjsua_call_id call_id,
+                                     const pjsua_call_setting *opt,
+                                     const pjmedia_sdp_session *sdp)
+{
+    pjsua_call_op_param param;
+
+    pjsua_call_op_param_default(&param);
+    param.opt = opt;
+    param.sdp = sdp;
+    return pjsua_call_reinvite3(call_id, &param);
+}
+
+static pj_status_t update_with_sdp(pjsua_call_id call_id,
+                                   const pjsua_call_setting *opt,
+                                   const pjmedia_sdp_session *sdp)
+{
+    pjsua_call_op_param param;
+
+    pjsua_call_op_param_default(&param);
+    param.opt = opt;
+    param.sdp = sdp;
+    return pjsua_call_update3(call_id, &param);
+}
+
+static pj_bool_t call_media_slots_initialized(pjsua_call_id call_id,
+                                              unsigned count)
+{
+    pjsua_call *call = &pjsua_var.calls[call_id];
+    unsigned i;
+
+    if (call->med_cnt < count || call->med_prov_cnt < count)
+        return PJ_FALSE;
+
+    for (i = 0; i < count; ++i) {
+        pjsua_call_media *media = &call->media[i];
+        pjsua_call_media *prov = &call->media_prov[i];
+
+        if (media->call != call || media->idx != i ||
+            media->strm.a.conf_slot != PJSUA_INVALID_ID ||
+            !media->tp_auto_del || prov->call != call || prov->idx != i ||
+            prov->strm.a.conf_slot != PJSUA_INVALID_ID ||
+            !prov->tp_auto_del)
+        {
+            return PJ_FALSE;
+        }
+    }
+
+    return PJ_TRUE;
 }
 
 /* Tear down every call and pump the event loop until none remain (or a
@@ -800,6 +1129,658 @@ static int test_reinvite_reinit_bounds(void)
     drain_all_calls();
 
     return 0;
+}
+
+static int test_app_managed_mode_immutability(void)
+{
+    pjsua_call_setting opt;
+    pjsua_acc_config acc_cfg;
+    pj_str_t uri = pj_str(g_ctx.self_uri);
+    pj_pool_t *pool;
+    pj_status_t status, cancel_status;
+    pjsip_tx_data *tdata = NULL;
+    pjsua_call_id caller = PJSUA_INVALID_ID;
+    pjsua_call_id callee;
+    const pjmedia_sdp_session *active;
+    pj_bool_t acc_cfg_valid = PJ_FALSE;
+    int rc = 0;
+
+    PJ_LOG(3, (THIS_FILE, "  app-managed mode immutability"));
+
+    pool = pjsua_pool_create("app-managed-test", 4096, 4096);
+    if (!pool)
+        return -1250;
+
+    g_ctx.incoming_seen = PJ_FALSE;
+    pjsua_call_setting_default(&opt);
+    opt.aud_cnt = 1;
+    opt.vid_cnt = 0;
+    opt.txt_cnt = 0;
+    status = pjsua_call_make_call(g_ctx.acc_id, &uri, &opt, NULL, NULL,
+                                  &caller);
+    if (status != PJ_SUCCESS) {
+        rc = -1251;
+        goto on_return;
+    }
+    if (!wait_until(&call_is_confirmed, caller, 8000) ||
+        !g_ctx.incoming_seen)
+    {
+        rc = -1252;
+        goto on_return;
+    }
+    callee = g_ctx.incoming_call_id;
+
+    status = pjmedia_sdp_neg_get_active_local(
+                                pjsua_var.calls[caller].inv->neg, &active);
+    if (status != PJ_SUCCESS ||
+        pjsua_call_set_sdp(caller, active) != PJ_EINVALIDOP ||
+        reinvite_with_sdp(caller, NULL, active) != PJ_EINVALIDOP ||
+        update_with_sdp(caller, NULL, active) != PJ_EINVALIDOP)
+    {
+        rc = -1261;
+        goto on_return;
+    }
+
+    status = pjmedia_sdp_neg_modify_local_offer2(
+                            pjsua_var.calls[caller].inv->pool_prov,
+                            pjsua_var.calls[caller].inv->neg,
+                            pjsua_var.calls[caller].inv->sdp_neg_flags,
+                            active);
+    if (status != PJ_SUCCESS) {
+        rc = -1262;
+        goto on_return;
+    }
+
+    status = pjsip_inv_update(pjsua_var.calls[caller].inv, NULL, active,
+                              &tdata);
+    if (tdata)
+        pjsip_tx_data_dec_ref(tdata);
+    cancel_status = pjmedia_sdp_neg_cancel_offer(
+                            pjsua_var.calls[caller].inv->neg);
+    if (status != PJ_EINVALIDOP || cancel_status != PJ_SUCCESS)
+    {
+        rc = -1262;
+        goto on_return;
+    }
+
+    status = pjsua_acc_get_config(g_ctx.acc_id, pool, &acc_cfg);
+    if (status != PJ_SUCCESS) {
+        rc = -1253;
+        goto on_return;
+    }
+    acc_cfg_valid = PJ_TRUE;
+
+    acc_cfg.media_app_managed = PJ_TRUE;
+    status = pjsua_acc_modify(g_ctx.acc_id, &acc_cfg);
+    if (status != PJ_SUCCESS) {
+        rc = -1254;
+        goto on_return;
+    }
+
+    g_ctx.answer_rollback_armed = PJ_TRUE;
+    g_ctx.answer_rollback_inject = PJ_FALSE;
+    g_ctx.answer_rollback_caller = caller;
+    g_ctx.answer_rollback_callee = callee;
+    g_ctx.answer_rollback_reinv_code = 0;
+    status = pjsua_call_reinvite2(caller, NULL, NULL);
+
+    acc_cfg.media_app_managed = PJ_FALSE;
+    pjsua_acc_modify(g_ctx.acc_id, &acc_cfg);
+
+    if (status != PJ_SUCCESS ||
+        (pjsua_var.calls[caller].opt.flag &
+         PJSUA_CALL_MEDIA_APP_MANAGED) != 0)
+    {
+        rc = -1255;
+        goto on_return;
+    }
+    if (!wait_until(&answer_rollback_done, PJSUA_INVALID_ID, 8000) ||
+        g_ctx.answer_rollback_reinv_code != PJSIP_SC_OK)
+    {
+        rc = -1256;
+        goto on_return;
+    }
+
+    g_ctx.answer_rollback_inject = PJ_TRUE;
+    g_ctx.answer_rollback_set_status = PJ_EUNKNOWN;
+    g_ctx.answer_rollback_reinv_code = 0;
+    status = pjsua_call_reinvite2(caller, NULL, NULL);
+    if (status != PJ_SUCCESS ||
+        !wait_until(&answer_rollback_done, PJSUA_INVALID_ID, 8000))
+    {
+        rc = -1257;
+        goto on_return;
+    }
+    if (g_ctx.answer_rollback_set_status != PJ_SUCCESS ||
+        g_ctx.answer_rollback_reinv_code !=
+            PJSIP_SC_NOT_ACCEPTABLE_HERE)
+    {
+        rc = -1258;
+        goto on_return;
+    }
+    if (!call_is_confirmed(caller) || !call_is_confirmed(callee)) {
+        rc = -1259;
+        goto on_return;
+    }
+
+    g_ctx.answer_rollback_inject = PJ_FALSE;
+    g_ctx.answer_rollback_reinv_code = 0;
+    status = pjsua_call_reinvite2(caller, NULL, NULL);
+    if (status != PJ_SUCCESS ||
+        !wait_until(&answer_rollback_done, PJSUA_INVALID_ID, 8000) ||
+        g_ctx.answer_rollback_reinv_code != PJSIP_SC_OK)
+    {
+        rc = -1260;
+    }
+
+on_return:
+    if (acc_cfg_valid) {
+        acc_cfg.media_app_managed = PJ_FALSE;
+        pjsua_acc_modify(g_ctx.acc_id, &acc_cfg);
+    }
+    g_ctx.answer_rollback_armed = PJ_FALSE;
+    g_ctx.answer_rollback_inject = PJ_FALSE;
+    drain_all_calls();
+    pj_pool_release(pool);
+    return rc;
+}
+
+static int test_initial_app_managed_answer(void)
+{
+    static char sdp_str[] =
+        "v=0\r\n"
+        "o=- 1 1 IN IP4 127.0.0.1\r\n"
+        "s=-\r\n"
+        "c=IN IP4 127.0.0.1\r\n"
+        "t=0 0\r\n"
+        "m=audio 4000 RTP/AVP 0\r\n"
+        "m=audio 4002 RTP/AVP 0\r\n";
+    pjsua_acc_config acc_cfg;
+    pjsua_call_setting opt;
+    pjmedia_sdp_session *sdp;
+    pjmedia_sdp_session *offer;
+    pjmedia_sdp_session *invalid;
+    pjmedia_sdp_session *oversized;
+    pj_str_t uri = pj_str(g_ctx.self_uri);
+    pj_pool_t *pool;
+    pj_status_t status;
+    pjsua_call_id caller = PJSUA_INVALID_ID;
+    pjsua_call_id callee = PJSUA_INVALID_ID;
+    pjsua_call_id invalid_call = PJSUA_INVALID_ID;
+    pj_bool_t acc_cfg_valid = PJ_FALSE;
+    int rc = 0;
+    char buf[sizeof(sdp_str)];
+
+    PJ_LOG(3, (THIS_FILE, "  initial app-managed SDP answer"));
+
+    pool = pjsua_pool_create("initial-app-answer", 4096, 4096);
+    if (!pool)
+        return -1279;
+
+    pj_memcpy(buf, sdp_str, sizeof(sdp_str));
+    status = pjmedia_sdp_parse(pool, buf, pj_ansi_strlen(buf), &sdp);
+    if (status != PJ_SUCCESS) {
+        rc = -1280;
+        goto on_return;
+    }
+
+    status = pjsua_acc_get_config(g_ctx.acc_id, pool, &acc_cfg);
+    if (status != PJ_SUCCESS) {
+        rc = -1281;
+        goto on_return;
+    }
+    acc_cfg_valid = PJ_TRUE;
+
+    pjsua_call_setting_default(&opt);
+    opt.aud_cnt = 1;
+    opt.vid_cnt = 0;
+    opt.txt_cnt = 0;
+    opt.flag |= PJSUA_CALL_MEDIA_APP_MANAGED;
+    status = pjsua_call_make_call(g_ctx.acc_id, &uri, &opt, NULL, NULL,
+                                  &invalid_call);
+    if (status != PJ_EINVALIDOP || invalid_call != PJSUA_INVALID_ID) {
+        rc = -1278;
+        goto on_return;
+    }
+    opt.flag &= ~PJSUA_CALL_MEDIA_APP_MANAGED;
+
+    status = make_call_with_sdp(g_ctx.acc_id, &uri, &opt, sdp,
+                                &invalid_call);
+    if (status != PJ_EINVALIDOP || invalid_call != PJSUA_INVALID_ID) {
+        rc = -1282;
+        goto on_return;
+    }
+
+    acc_cfg.media_app_managed = PJ_TRUE;
+    status = pjsua_acc_modify(g_ctx.acc_id, &acc_cfg);
+    if (status != PJ_SUCCESS) {
+        rc = -1283;
+        goto on_return;
+    }
+
+    status = pjsua_call_make_call(g_ctx.acc_id, &uri, &opt, NULL, NULL,
+                                  &invalid_call);
+    if (status != PJ_EINVALIDOP || invalid_call != PJSUA_INVALID_ID) {
+        rc = -1277;
+        goto on_return;
+    }
+
+    oversized = create_oversized_sdp(pool, sdp);
+    if (!oversized) {
+        rc = -1284;
+        goto on_return;
+    }
+
+    opt.flag |= PJSUA_CALL_MEDIA_APP_MANAGED;
+    opt.aud_cnt = 0;
+    opt.vid_cnt = 0;
+    opt.txt_cnt = 0;
+    invalid = create_missing_conn_sdp(pool, sdp);
+    status = make_call_with_sdp(g_ctx.acc_id, &uri, &opt, invalid,
+                                &invalid_call);
+    if (status != PJMEDIA_SDP_EMISSINGCONN ||
+        invalid_call != PJSUA_INVALID_ID)
+    {
+        rc = -1285;
+        goto on_return;
+    }
+
+    status = make_call_with_sdp(g_ctx.acc_id, &uri, &opt, oversized,
+                                &invalid_call);
+    if (status != PJ_ETOOMANY || invalid_call != PJSUA_INVALID_ID) {
+        rc = -1286;
+        goto on_return;
+    }
+
+    g_ctx.initial_app_managed_armed = PJ_TRUE;
+    g_ctx.initial_app_managed_seen = PJ_FALSE;
+    g_ctx.initial_app_managed_remote_offer = PJ_FALSE;
+    g_ctx.initial_app_managed_plain_status = PJ_SUCCESS;
+    g_ctx.initial_app_managed_invalid_status = PJ_SUCCESS;
+    g_ctx.initial_app_managed_oversize_status = PJ_SUCCESS;
+    g_ctx.initial_app_managed_answer_status = PJ_EUNKNOWN;
+
+    status = make_call_with_sdp(g_ctx.acc_id, &uri, &opt, sdp, &caller);
+    if (status != PJ_SUCCESS ||
+        !wait_until(&call_is_confirmed, caller, 8000))
+    {
+        rc = -1287;
+        goto on_return;
+    }
+
+    /* The caller reaching CONFIRMED only means it has processed the 200
+     * OK; the callee only reaches CONFIRMED once it has processed the
+     * ACK, which is a separate, independently-scheduled packet. Wait for
+     * it explicitly instead of assuming it is already done.
+     */
+    if (!wait_until(&call_is_confirmed, g_ctx.incoming_call_id, 8000)) {
+        rc = -1288;
+        goto on_return;
+    }
+
+    if (!g_ctx.initial_app_managed_seen ||
+        !g_ctx.initial_app_managed_remote_offer ||
+        g_ctx.initial_app_managed_plain_status != PJ_EINVALIDOP ||
+        g_ctx.initial_app_managed_invalid_status !=
+            PJMEDIA_SDP_EMISSINGCONN ||
+        g_ctx.initial_app_managed_oversize_status != PJ_ETOOMANY ||
+        g_ctx.initial_app_managed_answer_status != PJ_SUCCESS ||
+        pjsua_var.calls[caller].med_cnt != 2 ||
+        pjsua_var.calls[g_ctx.incoming_call_id].med_cnt != 2 ||
+        pjsua_var.calls[caller].media[0].tp != NULL ||
+        pjsua_var.calls[caller].media[1].tp != NULL ||
+        pjsua_var.calls[g_ctx.incoming_call_id].media[0].tp != NULL ||
+        pjsua_var.calls[g_ctx.incoming_call_id].media[1].tp != NULL ||
+        !call_media_slots_initialized(caller, 2) ||
+        !call_media_slots_initialized(g_ctx.incoming_call_id, 2))
+    {
+        rc = -1289;
+        goto on_return;
+    }
+    callee = g_ctx.incoming_call_id;
+
+    invalid = create_missing_rtpmap_sdp(pool, sdp);
+    status = pjsua_call_set_sdp(caller, invalid);
+    if (status != PJMEDIA_SDP_EMISSINGRTPMAP) {
+        rc = -1290;
+        goto on_return;
+    }
+
+    status = reinvite_with_sdp(caller, NULL, invalid);
+    if (status != PJMEDIA_SDP_EMISSINGRTPMAP) {
+        rc = -1291;
+        goto on_return;
+    }
+
+    status = update_with_sdp(caller, NULL, invalid);
+    if (status != PJMEDIA_SDP_EMISSINGRTPMAP) {
+        rc = -1292;
+        goto on_return;
+    }
+
+    status = pjsua_call_set_sdp(caller, oversized);
+    if (status != PJ_ETOOMANY) {
+        rc = -1293;
+        goto on_return;
+    }
+
+    status = reinvite_with_sdp(caller, NULL, oversized);
+    if (status != PJ_ETOOMANY) {
+        rc = -1294;
+        goto on_return;
+    }
+
+    status = update_with_sdp(caller, NULL, oversized);
+    if (status != PJ_ETOOMANY) {
+        rc = -1295;
+        goto on_return;
+    }
+
+    g_ctx.first_class_offer_armed = PJ_TRUE;
+    g_ctx.first_class_offer_caller = caller;
+    g_ctx.first_class_offer_callee = callee;
+    g_ctx.first_class_set_status = PJ_EUNKNOWN;
+    g_ctx.first_class_offer_count = 0;
+    g_ctx.first_class_reinv_code = 0;
+    g_ctx.first_class_update_code = 0;
+
+    offer = pjmedia_sdp_session_clone(pool, sdp);
+    offer->media[0]->desc.port = 4100;
+    offer->media[1]->desc.port = 4102;
+    g_ctx.first_class_expected_port = 4100;
+    status = reinvite_with_sdp(caller, NULL, offer);
+    if (status != PJ_SUCCESS ||
+        !wait_until(&first_class_sdp_applied, PJSUA_INVALID_ID, 8000) ||
+        g_ctx.first_class_set_status != PJ_SUCCESS ||
+        g_ctx.first_class_offer_count != 1 ||
+        g_ctx.first_class_reinv_code != PJSIP_SC_OK)
+    {
+        rc = -1296;
+        goto on_return;
+    }
+    PJ_LOG(3,(THIS_FILE, "    reinvite3/set_sdp answer applied"));
+
+    offer = pjmedia_sdp_session_clone(pool, sdp);
+    offer->media[0]->desc.port = 4200;
+    offer->media[1]->desc.port = 4202;
+    g_ctx.first_class_expected_port = 4200;
+    g_ctx.first_class_set_status = PJ_EUNKNOWN;
+    g_ctx.first_class_update_code = 0;
+    status = pjsua_call_set_sdp(caller, offer);
+    if (status == PJ_SUCCESS)
+        status = pjsua_call_update(caller, 0, NULL);
+    if (status != PJ_SUCCESS ||
+        !wait_until(&first_class_sdp_applied, PJSUA_INVALID_ID, 8000) ||
+        g_ctx.first_class_set_status != PJ_SUCCESS ||
+        g_ctx.first_class_offer_count != 2 ||
+        g_ctx.first_class_update_code != PJSIP_SC_OK)
+    {
+        rc = -1297;
+        goto on_return;
+    }
+    PJ_LOG(3,(THIS_FILE, "    set_sdp/update answer applied"));
+
+    offer = pjmedia_sdp_session_clone(pool, sdp);
+    offer->media[0]->desc.port = 4300;
+    offer->media[1]->desc.port = 4302;
+    g_ctx.first_class_expected_port = 4300;
+    g_ctx.first_class_set_status = PJ_EUNKNOWN;
+    g_ctx.first_class_update_code = 0;
+    status = update_with_sdp(caller, NULL, offer);
+    if (status != PJ_SUCCESS ||
+        !wait_until(&first_class_sdp_applied, PJSUA_INVALID_ID, 8000) ||
+        g_ctx.first_class_set_status != PJ_SUCCESS ||
+        g_ctx.first_class_offer_count != 3 ||
+        g_ctx.first_class_update_code != PJSIP_SC_OK)
+    {
+        rc = -1298;
+        goto on_return;
+    }
+    PJ_LOG(3,(THIS_FILE, "    update3/set_sdp answer applied"));
+
+    offer = pjmedia_sdp_session_clone(pool, sdp);
+    offer->media[0]->desc.port = 0;
+    offer->media[1]->desc.port = 0;
+    g_ctx.first_class_expected_port = 0;
+    g_ctx.first_class_set_status = PJ_EUNKNOWN;
+    g_ctx.first_class_reinv_code = 0;
+    status = reinvite_with_sdp(caller, NULL, offer);
+    if (status != PJ_SUCCESS ||
+        !wait_until(&first_class_sdp_applied, PJSUA_INVALID_ID, 8000) ||
+        g_ctx.first_class_set_status != PJ_SUCCESS ||
+        g_ctx.first_class_offer_count != 4 ||
+        g_ctx.first_class_reinv_code != PJSIP_SC_OK)
+    {
+        rc = -1299;
+        goto on_return;
+    }
+    PJ_LOG(3,(THIS_FILE, "    all-disabled app SDP offer applied"));
+
+    offer = pjmedia_sdp_session_clone(pool, sdp);
+    offer->media[0]->desc.port = 4400;
+    offer->media[1]->desc.port = 4402;
+    g_ctx.first_class_expected_port = 4400;
+    g_ctx.first_class_reinv_code = 0;
+    g_ctx.offerless_reinv_seen = PJ_FALSE;
+    g_ctx.offerless_reinv_set_status = PJ_EUNKNOWN;
+    g_ctx.offerless_reinv_armed = PJ_TRUE;
+    opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
+    status = pjsua_call_reinvite2(caller, &opt, NULL);
+    if (status != PJ_SUCCESS ||
+        !wait_until(&offerless_reinvite_seen, callee, 8000))
+    {
+        rc = -1300;
+        goto on_return;
+    }
+    status = pjsua_call_answer_with_sdp(callee, offer, NULL,
+                                        PJSIP_SC_OK, NULL, NULL);
+    if (status != PJ_SUCCESS ||
+        !wait_until(&first_class_sdp_applied, PJSUA_INVALID_ID, 8000) ||
+        g_ctx.offerless_reinv_set_status != PJ_SUCCESS ||
+        g_ctx.first_class_reinv_code != PJSIP_SC_OK)
+    {
+        rc = -1301;
+        goto on_return;
+    }
+    PJ_LOG(3,(THIS_FILE, "    offerless re-INVITE app offer applied"));
+    g_ctx.offerless_reinv_armed = PJ_FALSE;
+
+    g_ctx.first_class_reinv_code = 0;
+    status = pjsua_call_reinvite2(caller, &opt, NULL);
+    if (status != PJ_SUCCESS ||
+        !wait_until(&first_class_reinvite_done, caller, 8000) ||
+        g_ctx.first_class_reinv_code != PJSIP_SC_NOT_ACCEPTABLE_HERE ||
+        !call_is_confirmed(caller) || !call_is_confirmed(callee))
+    {
+        rc = -1302;
+        goto on_return;
+    }
+    PJ_LOG(3,(THIS_FILE, "    missing app offer rejected"));
+
+    status = pjsua_call_set_hold(caller, NULL);
+    if (status != PJ_EINVALIDOP)
+        rc = -1303;
+
+on_return:
+    g_ctx.initial_app_managed_armed = PJ_FALSE;
+    g_ctx.first_class_offer_armed = PJ_FALSE;
+    g_ctx.offerless_reinv_armed = PJ_FALSE;
+    if (acc_cfg_valid) {
+        acc_cfg.media_app_managed = PJ_FALSE;
+        pjsua_acc_modify(g_ctx.acc_id, &acc_cfg);
+    }
+    drain_all_calls();
+    pj_pool_release(pool);
+    return rc;
+}
+
+static int test_app_managed_offerless_invite(void)
+{
+    pjsua_acc_config acc_cfg;
+    pjsua_call_setting opt;
+    pj_str_t uri = pj_str(g_ctx.self_uri);
+    pj_pool_t *pool;
+    pj_status_t status;
+    pjsua_call_id caller = PJSUA_INVALID_ID;
+    pj_bool_t acc_cfg_valid = PJ_FALSE;
+    int rc = 0;
+
+    PJ_LOG(3, (THIS_FILE, "  app-managed offerless INVITE (3PCC)"));
+
+    pool = pjsua_pool_create("offerless-invite", 4096, 4096);
+    if (!pool)
+        return -1310;
+
+    status = pjsua_acc_get_config(g_ctx.acc_id, pool, &acc_cfg);
+    if (status != PJ_SUCCESS) {
+        rc = -1311;
+        goto on_return;
+    }
+    acc_cfg_valid = PJ_TRUE;
+
+    acc_cfg.media_app_managed = PJ_TRUE;
+    status = pjsua_acc_modify(g_ctx.acc_id, &acc_cfg);
+    if (status != PJ_SUCCESS) {
+        rc = -1312;
+        goto on_return;
+    }
+
+    g_ctx.offerless_armed = PJ_TRUE;
+    g_ctx.offerless_neg_null = PJ_FALSE;
+    g_ctx.offerless_plain_status = PJ_SUCCESS;
+    g_ctx.offerless_set_status = PJ_EUNKNOWN;
+    g_ctx.offerless_caller_set_status = PJ_EUNKNOWN;
+    g_ctx.offerless_answer_status = PJ_EUNKNOWN;
+    g_ctx.incoming_call_id = PJSUA_INVALID_ID;
+
+    pjsua_call_setting_default(&opt);
+    opt.flag |= PJSUA_CALL_MEDIA_APP_MANAGED | PJSUA_CALL_NO_SDP_OFFER;
+    opt.aud_cnt = 0;
+    opt.vid_cnt = 0;
+    opt.txt_cnt = 0;
+
+    status = pjsua_call_make_call(g_ctx.acc_id, &uri, &opt, NULL, NULL,
+                                  &caller);
+    if (status != PJ_SUCCESS ||
+        !wait_until(&call_is_confirmed, caller, 8000))
+    {
+        rc = -1313;
+        goto on_return;
+    }
+
+    if (!wait_until(&call_is_confirmed, g_ctx.incoming_call_id, 8000)) {
+        rc = -1314;
+        goto on_return;
+    }
+
+    /* The INVITE carried no offer, so the callee's negotiator did not exist
+     * yet. Answering with a code that carries SDP must then be rejected until
+     * the application supplies its own offer.
+     */
+    if (!g_ctx.offerless_neg_null ||
+        g_ctx.offerless_plain_status != PJ_EINVALIDOP ||
+        g_ctx.offerless_set_status != PJ_SUCCESS ||
+        g_ctx.offerless_answer_status != PJ_SUCCESS ||
+        g_ctx.offerless_caller_set_status != PJ_SUCCESS)
+    {
+        rc = -1315;
+        goto on_return;
+    }
+
+    /* The established call must carry the application's media, and PJSUA must
+     * still own no media transport for it.
+     */
+    if (pjsua_var.calls[caller].med_cnt != 2 ||
+        pjsua_var.calls[g_ctx.incoming_call_id].med_cnt != 2 ||
+        pjsua_var.calls[caller].media[0].tp != NULL ||
+    pjsua_var.calls[caller].media[1].tp != NULL ||
+    pjsua_var.calls[g_ctx.incoming_call_id].media[0].tp != NULL ||
+    pjsua_var.calls[g_ctx.incoming_call_id].media[1].tp != NULL)
+    {
+        rc = -1316;
+        goto on_return;
+    }
+
+on_return:
+    g_ctx.offerless_armed = PJ_FALSE;
+    if (acc_cfg_valid) {
+        acc_cfg.media_app_managed = PJ_FALSE;
+        pjsua_acc_modify(g_ctx.acc_id, &acc_cfg);
+    }
+    drain_all_calls();
+    pj_pool_release(pool);
+    return rc;
+}
+
+static int test_outgoing_app_managed_reoffer_rejection(void)
+{
+    static char sdp_str[] =
+        "v=0\r\n"
+        "o=- 1 1 IN IP4 127.0.0.1\r\n"
+        "s=-\r\n"
+        "c=IN IP4 127.0.0.1\r\n"
+        "t=0 0\r\n"
+        "m=audio 4000 RTP/AVP 0\r\n";
+    pjsua_call_setting opt;
+    pjmedia_sdp_session *sdp;
+    pj_str_t uri = pj_str(g_ctx.self_uri);
+    pj_pool_t *pool;
+    pj_status_t status;
+    pjsua_call_id caller = PJSUA_INVALID_ID;
+    pjsua_call_id callee;
+    int rc = 0;
+    char buf[sizeof(sdp_str)];
+
+    PJ_LOG(3, (THIS_FILE, "  outgoing app-managed re-offer rejection"));
+
+    pool = pjsua_pool_create("app-managed-uac", 4096, 4096);
+    if (!pool)
+        return -1270;
+
+    pj_memcpy(buf, sdp_str, sizeof(sdp_str));
+    status = pjmedia_sdp_parse(pool, buf, pj_ansi_strlen(buf), &sdp);
+    if (status != PJ_SUCCESS) {
+        rc = -1271;
+        goto on_return;
+    }
+
+    g_ctx.incoming_seen = PJ_FALSE;
+    pjsua_call_setting_default(&opt);
+    opt.flag |= PJSUA_CALL_MEDIA_APP_MANAGED;
+    status = make_call_with_sdp(g_ctx.acc_id, &uri, &opt, sdp, &caller);
+    if (status != PJ_SUCCESS ||
+        !wait_until(&call_is_confirmed, caller, 8000) ||
+        !g_ctx.incoming_seen)
+    {
+        rc = -1272;
+        goto on_return;
+    }
+    callee = g_ctx.incoming_call_id;
+
+    g_ctx.answer_rollback_armed = PJ_TRUE;
+    g_ctx.answer_rollback_inject = PJ_FALSE;
+    g_ctx.answer_rollback_caller = callee;
+    g_ctx.answer_rollback_reinv_code = 0;
+    status = pjsua_call_reinvite2(callee, NULL, NULL);
+    if (status != PJ_SUCCESS ||
+        !wait_until(&answer_rollback_done, PJSUA_INVALID_ID, 8000))
+    {
+        rc = -1273;
+        goto on_return;
+    }
+    if (g_ctx.answer_rollback_reinv_code !=
+            PJSIP_SC_NOT_ACCEPTABLE_HERE ||
+        !call_is_confirmed(caller) || !call_is_confirmed(callee))
+    {
+        rc = -1274;
+    }
+
+on_return:
+    g_ctx.answer_rollback_armed = PJ_FALSE;
+    g_ctx.answer_rollback_inject = PJ_FALSE;
+    drain_all_calls();
+    pj_pool_release(pool);
+    return rc;
 }
 
 /* Same reinit/reoffer overflow guard, but with an established call that holds
@@ -2723,6 +3704,7 @@ static int test_app_managed_media(void)
     pjsua_call_id caller = PJSUA_INVALID_ID, callee = PJSUA_INVALID_ID;
     pjmedia_sdp_session *answer;
     const pjmedia_sdp_session *active;
+    pjsip_tsx_state_e tsx_state;
     unsigned i, img_idx;
     int rc;
 
@@ -2836,24 +3818,39 @@ static int test_app_managed_media(void)
         goto on_return;
     }
 
+    tsx_state = pjsua_var.calls[callee].inv->invite_tsx->state;
+    pjsua_var.calls[callee].inv->invite_tsx->state =
+        PJSIP_TSX_STATE_COMPLETED;
+    status = pjsua_call_answer_with_sdp(callee, answer, NULL, 200, NULL, NULL);
+    pjsua_var.calls[callee].inv->invite_tsx->state = tsx_state;
+    if (status != PJ_EINVALIDOP ||
+        pjmedia_sdp_neg_get_state(pjsua_var.calls[callee].inv->neg) !=
+            PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER)
+    {
+        PJ_LOG(1, (THIS_FILE, "    failed answer_with_sdp was not rolled "
+                   "back (%d)", status));
+        rc = -1822;
+        goto on_return;
+    }
+
     status = pjsua_call_answer_with_sdp(callee, answer, NULL, 200, NULL, NULL);
     if (status != PJ_SUCCESS) {
         PJ_LOG(1, (THIS_FILE, "    answer_with_sdp (T.38) failed (%d)",
                    status));
-        rc = -1822;
+        rc = -1823;
         goto on_return;
     }
 
     if (!wait_until(&app_med_reinvite_done, PJSUA_INVALID_ID, 8000)) {
         PJ_LOG(1, (THIS_FILE, "    app-managed T.38 re-INVITE got no final "
                    "response"));
-        rc = -1823;
+        rc = -1824;
         goto on_return;
     }
     if (g_ctx.app_med_reinv_code != PJSIP_SC_OK) {
         PJ_LOG(1, (THIS_FILE, "    app-managed T.38 re-INVITE answered with "
                    "%d, expected 200", g_ctx.app_med_reinv_code));
-        rc = -1824;
+        rc = -1825;
         goto on_return;
     }
     if (!wait_until(&media_state_advanced, callee, 8000) ||
@@ -2861,7 +3858,7 @@ static int test_app_managed_media(void)
     {
         PJ_LOG(1, (THIS_FILE, "    app-managed T.38 media update did not "
                    "complete"));
-        rc = -1825;
+        rc = -1826;
         goto on_return;
     }
 
@@ -3066,6 +4063,18 @@ int pjsua_call_test(void)
     if (rc != 0) goto on_return;
 
     rc = test_reinvite_reinit_bounds();
+    if (rc != 0) goto on_return;
+
+    rc = test_app_managed_mode_immutability();
+    if (rc != 0) goto on_return;
+
+    rc = test_initial_app_managed_answer();
+    if (rc != 0) goto on_return;
+
+    rc = test_app_managed_offerless_invite();
+    if (rc != 0) goto on_return;
+
+    rc = test_outgoing_app_managed_reoffer_rejection();
     if (rc != 0) goto on_return;
 
     rc = test_reinit_bounds_untyped_mline();

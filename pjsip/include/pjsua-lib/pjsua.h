@@ -1776,9 +1776,9 @@ typedef struct pjsua_callback
      * Otherwise, by default the re-INVITE will be answered automatically
      * after the callback returns.
      *
-     * Currently, this callback is only called for re-INVITE with
-     * SDP, but app should be prepared to handle the case of re-INVITE
-     * without SDP.
+     * For an application-managed call receiving a re-INVITE without SDP,
+     * application must set \a async to PJ_TRUE and later send the response
+     * with #pjsua_call_answer_with_sdp(), supplying the local SDP offer.
      *
      * Remarks: If manually answering at a later timing, application may
      * need to monitor on_call_tsx_state() callback to check whether
@@ -5320,6 +5320,11 @@ typedef struct pjsua_acc_config
     */
     pj_bool_t        auto_repond_sip_message;
 
+    /**
+     * Make new calls on this account application-managed from creation.
+     * Default: PJ_FALSE.
+     */
+    pj_bool_t        media_app_managed;
 
 } pjsua_acc_config;
 
@@ -6360,7 +6365,13 @@ typedef enum pjsua_call_flag
     /**
      * Disable inter-media synchronization.
      */
-    PJSUA_CALL_NO_MEDIA_SYNC = 256
+    PJSUA_CALL_NO_MEDIA_SYNC = 256,
+
+    /**
+     * Let the application manage all SDP media on this call. Set before
+     * creating the call; it cannot be enabled later.
+     */
+    PJSUA_CALL_MEDIA_APP_MANAGED = 512
 
 } pjsua_call_flag;
 
@@ -6533,6 +6544,26 @@ typedef struct pjsua_call_send_text_param
 
 } pjsua_call_send_text_param;
 
+/**
+ * Parameters for call operations with optional application SDP. Application
+ * should use #pjsua_call_op_param_default() to initialize this structure.
+ */
+typedef struct pjsua_call_op_param
+{
+    /** Optional call setting for all operations. */
+    const pjsua_call_setting        *opt;
+
+    /** Optional local SDP offer for all operations. */
+    const pjmedia_sdp_session       *sdp;
+
+    /** User data for #pjsua_call_make_call2(). */
+    void                            *user_data;
+
+    /** Optional SIP message data for all operations. */
+    const pjsua_msg_data            *msg_data;
+
+} pjsua_call_op_param;
+
 
 /**
  * Initialize call settings.
@@ -6540,6 +6571,13 @@ typedef struct pjsua_call_send_text_param
  * @param opt           The call setting to be initialized.
  */
 PJ_DECL(void) pjsua_call_setting_default(pjsua_call_setting *opt);
+
+/**
+ * Initialize call operation parameters.
+ *
+ * @param param         The call operation parameters to be initialized.
+ */
+PJ_DECL(void) pjsua_call_op_param_default(pjsua_call_op_param *param);
 
 
 /**
@@ -6618,6 +6656,25 @@ PJ_DECL(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
                                           const pjsua_call_setting *opt,
                                           void *user_data,
                                           const pjsua_msg_data *msg_data,
+                                          pjsua_call_id *p_call_id);
+
+/**
+ * Make an outgoing call with an optional application-supplied SDP offer.
+ * Supplying \a sdp requires PJSUA_CALL_MEDIA_APP_MANAGED in \a opt or the
+ * account's media_app_managed default.
+ *
+ * @param acc_id        Account ID.
+ * @param dst_uri       Destination URI.
+ * @param param         Optional call operation parameters. When specified,
+ *                      initialize with #pjsua_call_op_param_default().
+ * @param p_call_id     Pointer to receive call ID.
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_call_make_call2(
+                                          pjsua_acc_id acc_id,
+                                          const pj_str_t *dst_uri,
+                                          const pjsua_call_op_param *param,
                                           pjsua_call_id *p_call_id);
 
 
@@ -6824,11 +6881,12 @@ PJ_DECL(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
 
 
 /**
- * Same as #pjsua_call_answer2() but this function will set the SDP
- * answer first before sending the response.
+ * Same as #pjsua_call_answer2() but this function will set the local SDP
+ * first before sending the response. The SDP is used as an offer when
+ * answering an offerless INVITE or re-INVITE, and as an answer otherwise.
  *
  * @param call_id       Incoming call identification.
- * @param sdp           SDP answer. 
+ * @param sdp           Local SDP offer or answer.
  * @param opt           Optional call setting.
  * @param code          Status code, (100-699).
  * @param reason        Optional reason phrase. If NULL, default text
@@ -6990,6 +7048,51 @@ PJ_DECL(pj_status_t) pjsua_call_reinvite2(pjsua_call_id call_id,
                                           const pjsua_call_setting *opt,
                                           const pjsua_msg_data *msg_data);
 
+/**
+ * Send re-INVITE request or release hold, optionally using an
+ * application-supplied SDP offer. The SDP is applied atomically with request
+ * creation, after the call state and call setting have been validated.
+ * Supplying \a sdp requires the call to use
+ * PJSUA_CALL_MEDIA_APP_MANAGED.
+ *
+ * @param call_id       Call identification.
+ * @param param         Optional call operation parameters. When specified,
+ *                      initialize with #pjsua_call_op_param_default().
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_call_reinvite3(
+                                          pjsua_call_id call_id,
+                                          const pjsua_call_op_param *param);
+
+
+/**
+ * Set/replace the call's local SDP offer or answer directly, bypassing
+ * pjsua's own SDP generation (the on_call_sdp_created() callback). This is
+ * intended for calls where the application owns the media plane, e.g. a
+ * signalling-plane B2BUA relaying a body it received from elsewhere, or
+ * that it wants to fully control (see PJSUA_CALL_MEDIA_APP_MANAGED). If
+ * called while there is a pending remote offer, \a sdp is set as the local
+ * answer; otherwise it becomes a new/modified local offer (creating the
+ * negotiator first if the call doesn't have one yet).
+ *
+ * This function only updates the SDP negotiator state; it does not by
+ * itself send any SIP message. Follow up with the usual call operation
+ * (e.g. #pjsua_call_answer(), #pjsua_call_reinvite(),
+ * #pjsua_call_update()) to actually send it.
+ * The call must use PJSUA_CALL_MEDIA_APP_MANAGED.
+ *
+ * @param call_id       Call identification.
+ * @param sdp           The local SDP offer or answer to use verbatim.
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error
+ *                      code, e.g. if the call has no invite session yet,
+ *                      or the negotiator is in a state that cannot accept
+ *                      a local SDP right now.
+ */
+PJ_DECL(pj_status_t) pjsua_call_set_sdp(pjsua_call_id call_id,
+                                        const pjmedia_sdp_session *sdp);
+
 
 /**
  * Send UPDATE request.
@@ -7024,6 +7127,22 @@ PJ_DECL(pj_status_t) pjsua_call_update(pjsua_call_id call_id,
 PJ_DECL(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
                                         const pjsua_call_setting *opt,
                                         const pjsua_msg_data *msg_data);
+
+/**
+ * Send UPDATE request, optionally using an application-supplied SDP offer.
+ * The SDP is applied atomically with request creation, after the call state
+ * and call setting have been validated. Supplying \a sdp requires the call
+ * to use PJSUA_CALL_MEDIA_APP_MANAGED.
+ *
+ * @param call_id       Call identification.
+ * @param param         Optional call operation parameters. When specified,
+ *                      initialize with #pjsua_call_op_param_default().
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_call_update3(
+                                          pjsua_call_id call_id,
+                                          const pjsua_call_op_param *param);
 
 
 /**

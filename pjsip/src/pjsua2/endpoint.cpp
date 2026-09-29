@@ -1955,6 +1955,10 @@ void Endpoint::on_call_rx_offer(pjsua_call_id call_id,
                                 pjsip_status_code *code,
                                 pjsua_call_setting *opt)
 {
+    pj_pool_t *pool = NULL;
+    pjmedia_sdp_session *answer;
+    pj_status_t status;
+
     PJ_UNUSED_ARG(reserved);
 
     Call *call = Call::lookup(call_id);
@@ -1968,6 +1972,32 @@ void Endpoint::on_call_rx_offer(pjsua_call_id call_id,
     prm.opt.fromPj(*opt);
     
     call->onCallRxOffer(prm);
+
+    if (prm.statusCode == PJSIP_SC_OK && !prm.answer.wholeSdp.empty()) {
+        pj_str_t dup_sdp;
+        pj_str_t pj_sdp;
+
+        pool = pjsua_pool_create("rx-offer", 2048, 512);
+        if (!pool) {
+            status = PJ_ENOMEM;
+        } else {
+            pj_sdp = str2Pj(prm.answer.wholeSdp);
+            pj_strdup(pool, &dup_sdp, &pj_sdp);
+            status = pjmedia_sdp_parse(pool, dup_sdp.ptr, dup_sdp.slen,
+                                       &answer);
+            if (status == PJ_SUCCESS)
+                status = pjsua_call_set_sdp(call_id, answer);
+        }
+
+        if (pool)
+            pj_pool_release(pool);
+
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(1,(THIS_FILE, status,
+                         "Failed to set SDP answer for call %d", call_id));
+            prm.statusCode = PJSIP_SC_NOT_ACCEPTABLE_HERE;
+        }
+    }
     
     *code = prm.statusCode;
     *opt = prm.opt.toPj();

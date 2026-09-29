@@ -62,6 +62,10 @@ struct pjmedia_sdp_neg
     pj_bool_t             answer_with_multiple_codecs;
     pj_bool_t             has_remote_answer;
     pj_bool_t             answer_was_remote;
+    pj_bool_t             passthrough;         /**< See
+                                                 #pjmedia_sdp_neg_set_passthrough()
+                                                 */
+    pj_bool_t             initial_sdp_tmp_valid;
 
     pt_to_codec_map       pt_to_codec[PJMEDIA_MAX_SDP_MEDIA];
     codec_to_pt_map       codec_to_pt[PJMEDIA_MAX_SDP_MEDIA];
@@ -291,6 +295,18 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_set_answer_multiple_codecs(
 
 
 /*
+ * Enable/disable passthrough mode.
+ */
+PJ_DEF(pj_status_t) pjmedia_sdp_neg_set_passthrough(pjmedia_sdp_neg *neg,
+                                                    pj_bool_t passthrough)
+{
+    PJ_ASSERT_RETURN(neg, PJ_EINVAL);
+    neg->passthrough = passthrough;
+    return PJ_SUCCESS;
+}
+
+
+/*
  * Get SDP negotiator state.
  */
 PJ_DEF(pjmedia_sdp_neg_state) pjmedia_sdp_neg_get_state( pjmedia_sdp_neg *neg )
@@ -387,6 +403,17 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer( pj_pool_t *pool,
     return pjmedia_sdp_neg_modify_local_offer2(pool, neg, 0, local);
 }
 
+static void force_origin_identity(pj_pool_t *pool,
+                                  pjmedia_sdp_session *dst,
+                                  const pjmedia_sdp_session *src)
+{
+    pj_strdup(pool, &dst->origin.user, &src->origin.user);
+    dst->origin.id = src->origin.id;
+    pj_strdup(pool, &dst->origin.net_type, &src->origin.net_type);
+    pj_strdup(pool, &dst->origin.addr_type, &src->origin.addr_type);
+    pj_strdup(pool, &dst->origin.addr, &src->origin.addr);
+}
+
 PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
                                     pj_pool_t *pool,
                                     pjmedia_sdp_neg *neg,
@@ -419,11 +446,14 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
      */
     if (!neg->active_local_sdp) {
         neg->initial_sdp_tmp = NULL;
+        neg->initial_sdp_tmp_valid = PJ_TRUE;
         neg->initial_sdp = pjmedia_sdp_session_clone(pool, local);
 
-        /* Assign PT numbers for our offer and update the mapping. */
-        assign_pt_and_update_map(pool, neg, neg->initial_sdp,
-                                 PJ_TRUE, PJ_FALSE);
+        if (!neg->passthrough) {
+            /* Assign PT numbers for our offer and update the mapping. */
+            assign_pt_and_update_map(pool, neg, neg->initial_sdp,
+                                     PJ_TRUE, PJ_FALSE);
+        }
         neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, neg->initial_sdp);
 
         if (pjmedia_sdp_session_cmp(neg->last_sent, neg->neg_local_sdp, 0) !=
@@ -445,14 +475,10 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
      * previous SDP, except that the version in the origin field MUST
      * increment by one from the previous SDP.
      */
-    pj_strdup(pool, &new_offer->origin.user, &old_offer->origin.user);
-    new_offer->origin.id = old_offer->origin.id;
+    force_origin_identity(pool, new_offer, old_offer);
 
-    pj_strdup(pool, &new_offer->origin.net_type, &old_offer->origin.net_type);
-    pj_strdup(pool, &new_offer->origin.addr_type,&old_offer->origin.addr_type);
-    pj_strdup(pool, &new_offer->origin.addr, &old_offer->origin.addr);
-
-    if ((flags & PJMEDIA_SDP_NEG_ALLOW_MEDIA_CHANGE) == 0) {
+    if (!neg->passthrough &&
+        (flags & PJMEDIA_SDP_NEG_ALLOW_MEDIA_CHANGE) == 0) {
        /* Generating the new offer, in the case media lines doesn't match the
         * active SDP (e.g. current/active SDP's have m=audio and m=video lines,
         * and the new offer only has m=audio line), the negotiator will fix 
@@ -501,7 +527,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
                                 new_offer->media_count++, oi, &m);
             }
         }
-    } else {
+    } else if (!neg->passthrough) {
         /* If media type change is allowed, the negotiator only needs to fix 
          * the new offer by adding the missing media line(s) with port number
          * set to zero.
@@ -528,13 +554,14 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
     /* New_offer fixed */
     new_offer->origin.version = old_offer->origin.version;
 
-    /* Assign PT numbers for our offer and update the mapping. */
-    assign_pt_and_update_map(pool, neg, new_offer, PJ_TRUE, PJ_FALSE);
+    if (!neg->passthrough)
+        assign_pt_and_update_map(pool, neg, new_offer, PJ_TRUE, PJ_FALSE);
 
     if (pjmedia_sdp_session_cmp(neg->last_sent, new_offer, 0) != PJ_SUCCESS) {
         ++new_offer->origin.version;
     }
     neg->initial_sdp_tmp = neg->initial_sdp;
+    neg->initial_sdp_tmp_valid = PJ_TRUE;
     neg->initial_sdp = new_offer;
     neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, new_offer);
     neg->last_sent = neg->neg_local_sdp;
@@ -567,6 +594,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_send_local_offer( pj_pool_t *pool,
         /* Retain initial SDP */
         if (neg->initial_sdp) {
             neg->initial_sdp_tmp = neg->initial_sdp;
+            neg->initial_sdp_tmp_valid = PJ_TRUE;
             neg->initial_sdp = pjmedia_sdp_session_clone(pool,
                                                          neg->initial_sdp);
         }
@@ -646,7 +674,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_set_local_answer( pj_pool_t *pool,
                                   const pjmedia_sdp_session *local)
 {
     /* Check arguments are valid. */
-    PJ_ASSERT_RETURN(pool && neg && local, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pool && neg, PJ_EINVAL);
 
     /* Can only do this in STATE_REMOTE_OFFER or WAIT_NEGO.
      * If we already provide local offer, then set_remote_answer() should
@@ -655,14 +683,17 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_set_local_answer( pj_pool_t *pool,
     PJ_ASSERT_RETURN(neg->state == PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER ||
                      neg->state == PJMEDIA_SDP_NEG_STATE_WAIT_NEGO, 
                      PJMEDIA_SDPNEG_EINSTATE);
+    if (!local && !neg->initial_sdp)
+        return PJMEDIA_SDPNEG_ENOINITIAL;
 
     /* State now is STATE_WAIT_NEGO. */
     neg->state = PJMEDIA_SDP_NEG_STATE_WAIT_NEGO;
     if (local) {
         neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, local);
+        neg->initial_sdp_tmp = neg->initial_sdp;
+        neg->initial_sdp_tmp_valid = PJ_TRUE;
         if (neg->initial_sdp) {
             /* Retain initial_sdp value. */
-            neg->initial_sdp_tmp = neg->initial_sdp;
             neg->initial_sdp = pjmedia_sdp_session_clone(pool,
                                                          neg->initial_sdp);
         
@@ -672,13 +703,18 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_set_local_answer( pj_pool_t *pool,
              * Note that the version will be incremented in 
              * pjmedia_sdp_neg_negotiate()
              */
-            neg->neg_local_sdp->origin.id = neg->initial_sdp->origin.id;
+            if (!neg->passthrough) {
+                neg->neg_local_sdp->origin.id = neg->initial_sdp->origin.id;
+            } else {
+                force_origin_identity(pool, neg->neg_local_sdp,
+                                      neg->initial_sdp);
+            }
         } else {
             neg->initial_sdp = pjmedia_sdp_session_clone(pool, local);
         }
     } else {
-        PJ_ASSERT_RETURN(neg->initial_sdp, PJMEDIA_SDPNEG_ENOINITIAL);
         neg->initial_sdp_tmp = neg->initial_sdp;
+        neg->initial_sdp_tmp_valid = PJ_TRUE;
         neg->initial_sdp = pjmedia_sdp_session_clone(pool, neg->initial_sdp);
         neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, neg->initial_sdp);
     }
@@ -690,6 +726,24 @@ PJ_DEF(pj_bool_t) pjmedia_sdp_neg_has_local_answer(pjmedia_sdp_neg *neg)
 {
     pj_assert(neg && neg->state==PJMEDIA_SDP_NEG_STATE_WAIT_NEGO);
     return !neg->has_remote_answer;
+}
+
+PJ_DEF(pj_status_t)
+pjmedia_sdp_neg_cancel_local_answer(pjmedia_sdp_neg *neg)
+{
+    PJ_ASSERT_RETURN(neg, PJ_EINVAL);
+    PJ_ASSERT_RETURN(neg->state == PJMEDIA_SDP_NEG_STATE_WAIT_NEGO &&
+                     !neg->has_remote_answer,
+                     PJMEDIA_SDPNEG_EINSTATE);
+
+    if (neg->initial_sdp_tmp_valid)
+        neg->initial_sdp = neg->initial_sdp_tmp;
+    neg->initial_sdp_tmp = NULL;
+    neg->initial_sdp_tmp_valid = PJ_FALSE;
+    neg->neg_local_sdp = NULL;
+    neg->state = PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER;
+
+    return PJ_SUCCESS;
 }
 
 
@@ -2225,11 +2279,15 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_cancel_offer(pjmedia_sdp_neg *neg)
     }
 
     /* Revert back initial SDP */
-    if (neg->state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER)
+    if (neg->state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER &&
+        neg->initial_sdp_tmp_valid)
+    {
         neg->initial_sdp = neg->initial_sdp_tmp;
+    }
 
     /* Clear temporary SDP */
     neg->initial_sdp_tmp = NULL;
+    neg->initial_sdp_tmp_valid = PJ_FALSE;
     neg->neg_local_sdp = neg->neg_remote_sdp = NULL;
     neg->has_remote_answer = PJ_FALSE;
 
@@ -2259,18 +2317,28 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
 
 #if PJMEDIA_SDP_NEG_MAINTAIN_REMOTE_PT_MAP
     /* Update PT mapping based on remote SDP as well. */
-    assign_pt_and_update_map(pool, neg, neg->neg_remote_sdp,
-                             !neg->has_remote_answer, PJ_TRUE);
+    if (!neg->passthrough) {
+        assign_pt_and_update_map(pool, neg, neg->neg_remote_sdp,
+                                 !neg->has_remote_answer, PJ_TRUE);
+    }
 #endif
 
     if (neg->has_remote_answer) {
         pjmedia_sdp_session *active;
-        status = process_answer(pool, neg->neg_local_sdp, neg->neg_remote_sdp,
-                                allow_asym, &active);
+
+        if (neg->passthrough) {
+            active = pjmedia_sdp_session_clone(pool, neg->neg_local_sdp);
+            status = PJ_SUCCESS;
+        } else {
+            status = process_answer(pool, neg->neg_local_sdp,
+                                    neg->neg_remote_sdp, allow_asym, &active);
+        }
         if (status == PJ_SUCCESS) {
             /* Only update active SDPs when negotiation is successfull */
             neg->active_local_sdp = active;
-            neg->active_remote_sdp = neg->neg_remote_sdp;
+            neg->active_remote_sdp = neg->passthrough ?
+                pjmedia_sdp_session_clone(pool, neg->neg_remote_sdp) :
+                neg->neg_remote_sdp;
 
             /* Keep the pool used for allocating the active SDPs */
             neg->pool_active = pool;
@@ -2282,13 +2350,20 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
     } else {
         pjmedia_sdp_session *answer = NULL;
 
-        status = create_answer(pool, neg->prefer_remote_codec_order,
-                               neg->answer_with_multiple_codecs,
-                               neg->neg_local_sdp, neg->neg_remote_sdp,
-                               &answer);
+        if (neg->passthrough) {
+            answer = pjmedia_sdp_session_clone(pool, neg->neg_local_sdp);
+            status = PJ_SUCCESS;
+        } else {
+            status = create_answer(pool, neg->prefer_remote_codec_order,
+                                   neg->answer_with_multiple_codecs,
+                                   neg->neg_local_sdp, neg->neg_remote_sdp,
+                                   &answer);
+        }
         if (status == PJ_SUCCESS) {
             /* Assign PT numbers for our answer and update the mapping. */
-            assign_pt_and_update_map(pool, neg, answer, PJ_FALSE, PJ_FALSE);
+            if (!neg->passthrough)
+                assign_pt_and_update_map(pool, neg, answer, PJ_FALSE,
+                                         PJ_FALSE);
 
             if (neg->last_sent)
                 answer->origin.version = neg->last_sent->origin.version;
@@ -2302,7 +2377,9 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
 
             /* Only update active SDPs when negotiation is successfull */
             neg->active_local_sdp = answer;
-            neg->active_remote_sdp = neg->neg_remote_sdp;
+            neg->active_remote_sdp = neg->passthrough ?
+                pjmedia_sdp_session_clone(pool, neg->neg_remote_sdp) :
+                neg->neg_remote_sdp;
 
             /* This answer will be sent, so update the last sent SDP */
             neg->last_sent = answer;
@@ -2319,16 +2396,18 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
     neg->answer_was_remote = neg->has_remote_answer;
 
     /* Revert back initial SDP if nego fails */
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS && neg->initial_sdp_tmp_valid)
         neg->initial_sdp = neg->initial_sdp_tmp;
 
     /* Clear temporary SDP */
     neg->initial_sdp_tmp = NULL;
+    neg->initial_sdp_tmp_valid = PJ_FALSE;
     neg->neg_local_sdp = neg->neg_remote_sdp = NULL;
     neg->has_remote_answer = PJ_FALSE;
 
     return status;
 }
+
 
 
 static pj_status_t custom_fmt_match(pj_pool_t *pool,
@@ -2459,4 +2538,3 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_fmt_match(pj_pool_t *pool,
     return custom_fmt_match(pool, &o_rtpmap.enc_name,
                             offer, o_fmt_idx, answer, a_fmt_idx, option);
 }
-

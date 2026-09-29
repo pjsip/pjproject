@@ -267,9 +267,7 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     inv_cb.on_create_offer = &pjsua_call_on_create_offer;
     inv_cb.on_tsx_state_changed = &pjsua_call_on_tsx_state_changed;
     inv_cb.on_redirected = &pjsua_call_on_redirected;
-    if (pjsua_var.ua_cfg.cb.on_call_rx_reinvite) {
-        inv_cb.on_rx_reinvite = &pjsua_call_on_rx_reinvite;
-    }
+    inv_cb.on_rx_reinvite = &pjsua_call_on_rx_reinvite;
     if (pjsua_var.ua_cfg.cb.on_call_tsx_terminate_session) {
         inv_cb.on_uac_tsx_terminate_session =
                                     &pjsua_call_on_uac_tsx_terminate_session;
@@ -528,7 +526,8 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
     }
 
     /* Create offer */
-    if ((call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0) {
+    offer = call->async_call.call_var.out_call.local_sdp;
+    if (!offer && (call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0) {
         status = pjsua_media_channel_create_sdp(call->index, dlg->pool, NULL,
                                                 &offer, NULL);
         if (status != PJ_SUCCESS) {
@@ -553,6 +552,8 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
     {
         options |= PJSIP_INV_SUPPORT_TRICKLE_ICE;
     }
+    if (call->opt.flag & PJSUA_CALL_MEDIA_APP_MANAGED)
+        options |= PJSIP_INV_SDP_PASSTHROUGH;
 
     status = pjsip_inv_create_uac( dlg, offer, options, &inv);
     if (status != PJ_SUCCESS) {
@@ -710,6 +711,11 @@ PJ_DEF(void) pjsua_call_setting_default(pjsua_call_setting *opt)
     }
 }
 
+PJ_DEF(void) pjsua_call_op_param_default(pjsua_call_op_param *param)
+{
+    pj_bzero(param, sizeof(*param));
+}
+
 /* 
  * Initialize pjsua_call_send_dtmf_param default values. 
  */
@@ -730,27 +736,70 @@ PJ_DEF(void) pjsua_call_send_text_param_default(
     param->med_idx = -1;
 }
 
+/* Apply the account media-app-managed default. */
+static void apply_acc_media_app_managed_default(pjsua_call *call)
+{
+    if (call->acc_id != PJSUA_INVALID_ID &&
+        pjsua_var.acc[call->acc_id].cfg.media_app_managed)
+    {
+        call->opt.flag |= PJSUA_CALL_MEDIA_APP_MANAGED;
+    }
+}
+
+static pj_status_t validate_app_sdp(const pjmedia_sdp_session *sdp)
+{
+    pj_status_t status;
+
+    if (sdp && sdp->media_count > PJSUA_MAX_CALL_MEDIA) {
+        PJ_LOG(1,(THIS_FILE, "Application SDP media count %u exceeds "
+                  "maximum %u", sdp->media_count, PJSUA_MAX_CALL_MEDIA));
+        return PJ_ETOOMANY;
+    }
+
+    if (sdp) {
+        status = pjmedia_sdp_validate(sdp);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(1,(THIS_FILE, status, "Invalid application SDP"));
+            return status;
+        }
+    }
+
+    return PJ_SUCCESS;
+}
+
+static pj_status_t validate_managed_sdp(pj_bool_t media_app_managed,
+                                        const pjmedia_sdp_session *sdp)
+{
+    if (sdp && !media_app_managed) {
+        PJ_LOG(3,(THIS_FILE, "Application SDP requires app-managed media"));
+        return PJ_EINVALIDOP;
+    }
+
+    return validate_app_sdp(sdp);
+}
 
 static pj_status_t apply_call_setting(pjsua_call *call,
                                       const pjsua_call_setting *opt,
                                       const pjmedia_sdp_session *rem_sdp)
 {
     pjsua_call_setting prev_opt;
+    pj_bool_t media_app_managed;
 
     pj_assert(call);
 
-    /* Remember the current setting so it can be restored if re-initializing
-     * the media channel below fails: a rejected re-offer must not leave the
-     * call holding a setting it never applied (which could e.g. drop media on
-     * the next re-offer).
-     */
+    /* Restore this setting if media initialization fails. */
     prev_opt = call->opt;
+    media_app_managed =
+                (prev_opt.flag & PJSUA_CALL_MEDIA_APP_MANAGED) != 0;
 
-    /* Reject media counts that would overflow the call's fixed-size media
-     * arrays (pjsua_call.media[PJSUA_MAX_CALL_MEDIA]). This is application
-     * input, so fail gracefully rather than assert or overflow. The
-     * per-field checks precede the sum so the addition cannot overflow.
-     */
+    if (call->inv && opt &&
+        (opt->flag & PJSUA_CALL_MEDIA_APP_MANAGED) &&
+        !(prev_opt.flag & PJSUA_CALL_MEDIA_APP_MANAGED))
+    {
+        return PJ_EINVALIDOP;
+    }
+
+    /* Reject media counts exceeding the fixed call-media array. */
     if (opt &&
         (opt->aud_cnt > PJSUA_MAX_CALL_MEDIA ||
          opt->vid_cnt > PJSUA_MAX_CALL_MEDIA ||
@@ -769,6 +818,8 @@ static pj_status_t apply_call_setting(pjsua_call *call,
     } else {
         call->opt = *opt;
     }
+    if (media_app_managed)
+        call->opt.flag |= PJSUA_CALL_MEDIA_APP_MANAGED;
 
 #if !PJMEDIA_HAS_VIDEO
     pj_assert(call->opt.vid_cnt == 0);
@@ -799,7 +850,6 @@ static pj_status_t apply_call_setting(pjsua_call *call,
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE, "Error re-initializing media channel",
                          status);
-            /* Restore the previous setting; this re-offer was rejected. */
             call->opt = prev_opt;
             return status;
         }
@@ -921,12 +971,32 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
                                          const pjsua_msg_data *msg_data,
                                          pjsua_call_id *p_call_id)
 {
+    pjsua_call_op_param param;
+
+    pjsua_call_op_param_default(&param);
+    param.opt = opt;
+    param.user_data = user_data;
+    param.msg_data = msg_data;
+    return pjsua_call_make_call2(acc_id, dest_uri, &param, p_call_id);
+}
+
+PJ_DEF(pj_status_t) pjsua_call_make_call2(
+                                         pjsua_acc_id acc_id,
+                                         const pj_str_t *dest_uri,
+                                         const pjsua_call_op_param *param,
+                                         pjsua_call_id *p_call_id)
+{
+    const pjsua_call_setting *opt = param ? param->opt : NULL;
+    const pjmedia_sdp_session *sdp = param ? param->sdp : NULL;
+    void *user_data = param ? param->user_data : NULL;
+    const pjsua_msg_data *msg_data = param ? param->msg_data : NULL;
     pj_pool_t *tmp_pool = NULL;
     pjsip_dialog *dlg = NULL;
     pjsua_acc *acc;
     pjsua_call *call = NULL;
     int call_id = -1;
     pj_str_t contact;
+    pj_bool_t media_app_managed;
     pj_status_t status;
 
     /* Check that account is valid */
@@ -951,6 +1021,22 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
         goto on_error;
     }
 
+    media_app_managed =
+                    acc->cfg.media_app_managed ||
+                    (opt && (opt->flag & PJSUA_CALL_MEDIA_APP_MANAGED));
+    status = validate_managed_sdp(media_app_managed, sdp);
+    if (status != PJ_SUCCESS)
+        goto on_error;
+
+    if (media_app_managed && !sdp &&
+        (!opt || (opt->flag & PJSUA_CALL_NO_SDP_OFFER) == 0))
+    {
+        PJ_LOG(3,(THIS_FILE, "Application SDP offer required for "
+                             "app-managed call"));
+        status = PJ_EINVALIDOP;
+        goto on_error;
+    }
+
     /* Find free call slot. */
     call_id = alloc_call_id();
 
@@ -968,6 +1054,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
     /* Associate session with account */
     call->acc_id = acc_id;
     call->call_hold_type = acc->cfg.call_hold_type;
+    apply_acc_media_app_managed_default(call);
 
     /* Generate per-session RTCP CNAME, according to RFC 7022. */
     pj_create_random_string(call->cname_buf, call->cname.slen);
@@ -979,6 +1066,10 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
         goto on_error;
     } else if (!opt) {
         opt = &call->opt;
+    }
+    if (sdp && (call->opt.flag & PJSUA_CALL_NO_SDP_OFFER)) {
+        status = PJ_EINVAL;
+        goto on_error;
     }
     
     /* Create sound port if none is instantiated, to check if sound device
@@ -1122,6 +1213,10 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
         call->async_call.call_var.out_call.msg_data = pjsua_msg_data_clone(
                                                           dlg->pool, msg_data);
     }
+    if (sdp) {
+        call->async_call.call_var.out_call.local_sdp =
+            pjmedia_sdp_session_clone(dlg->pool, sdp);
+    }
     call->async_call.dlg = dlg;
 
     /* Temporarily increment dialog session. Without this, dialog will be
@@ -1130,7 +1225,9 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
      */
     pjsip_dlg_inc_session(dlg, &pjsua_var.mod);
 
-    if ((call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0) {
+    if ((call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0 &&
+        !(sdp && (call->opt.flag & PJSUA_CALL_MEDIA_APP_MANAGED)))
+    {
         /* Init media channel */
         status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC,
                                           call->secure_level, dlg->pool,
@@ -1504,7 +1601,7 @@ static pj_status_t verify_request(const pjsua_call *call,
                                   pjsip_tx_data **response)
 {
     const pjmedia_sdp_session *offer = NULL;
-    pjmedia_sdp_session *answer;    
+    pjmedia_sdp_session *answer = NULL;
     int err_code = 0;
     pj_status_t status;
     
@@ -1514,7 +1611,9 @@ static pj_status_t verify_request(const pjsua_call *call,
         pjmedia_sdp_neg_get_neg_remote(call->inv->neg, &offer);
     }
 
-    if (use_tmp_sdp) {
+    if (pjsua_call_media_is_app_managed(call)) {
+        status = PJ_SUCCESS;
+    } else if (use_tmp_sdp) {
         if (offer == NULL)
             return PJ_SUCCESS;
 
@@ -1899,6 +1998,23 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
         pjsua_call_set_user_data(call_id, replaced_call->user_data);
     }
 
+    if (replaced_dlg) {
+        pjsua_call *replaced_call;
+        int st_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
+        pj_str_t st_text = *pjsip_get_status_text(st_code);
+
+        replaced_call = (pjsua_call*)
+                        replaced_dlg->mod_data[pjsua_var.mod.id];
+        if (replaced_call->opt.flag & PJSUA_CALL_MEDIA_APP_MANAGED) {
+            PJ_LOG(3,(THIS_FILE, "Rejecting Replaces for app-managed "
+                                 "call %d", replaced_call->index));
+            pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata,
+                                st_code, &st_text, NULL, NULL, NULL);
+            ret_st_code = st_code;
+            goto on_return;
+        }
+    }
+
     if (!replaced_dlg) {
         /* Clone rdata — needed for on_incoming_call callback.
          * Without it, incoming_data stays NULL and on_incoming_call
@@ -1939,6 +2055,9 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
         }
     }
     call->call_hold_type = pjsua_var.acc[acc_id].cfg.call_hold_type;
+
+    /* Apply the account default before creating the invite session. */
+    apply_acc_media_app_managed_default(call);
 
     /* Get call's secure level */
     if (PJSIP_URI_SCHEME_IS_SIPS(rdata->msg_info.msg->line.req.uri))
@@ -2216,6 +2335,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
         if (cap_status == PJSIP_DIALOG_CAP_SUPPORTED)
             options |= PJSIP_INV_REQUIRE_100REL;
     }
+    if (call->opt.flag & PJSUA_CALL_MEDIA_APP_MANAGED)
+        options |= PJSIP_INV_SDP_PASSTHROUGH;
 
     /* Create invite session: */
     status = pjsip_inv_create_uas( dlg, rdata, NULL, options, &inv);
@@ -3137,6 +3258,20 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
         }
     }
 
+    if (code/100 == 2 &&
+        (call->opt.flag & PJSUA_CALL_MEDIA_APP_MANAGED) &&
+        (!call->inv->neg ||
+         pjmedia_sdp_neg_get_state(call->inv->neg) ==
+            PJMEDIA_SDP_NEG_STATE_NULL ||
+         pjmedia_sdp_neg_get_state(call->inv->neg) ==
+            PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER))
+    {
+        PJ_LOG(3,(THIS_FILE, "Application SDP required to answer "
+                             "app-managed call %d with %d", call_id, code));
+        status = PJ_EINVALIDOP;
+        goto on_return;
+    }
+
     PJSUA_LOCK();
 
     /* Ticket #1526: When the incoming call contains no SDP offer, the media
@@ -3148,8 +3283,8 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
      * - call setting has just been set, or SDP offer needs to be sent, i.e:
      *   answer code 183 or 2xx is issued
      */
-    if (!call->med_ch_cb &&
-        (call->opt_inited || (code==183 || code/100==2)) &&
+     if (!call->med_ch_cb &&
+         (call->opt_inited || (code==183 || code/100==2)) &&
         (!call->inv->neg ||
          pjmedia_sdp_neg_get_state(call->inv->neg) ==
                 PJMEDIA_SDP_NEG_STATE_NULL))
@@ -3263,7 +3398,7 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
 {
     pjsua_call *call;
     pjsip_dialog *dlg = NULL;
-    pj_status_t status;
+    pj_status_t status, cancel_status;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
                      PJ_EINVAL);
@@ -3273,14 +3408,51 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
         return status;
 
-    status = pjsip_inv_set_sdp_answer(call->inv, sdp);
+    status = validate_app_sdp(sdp);
+    if (status != PJ_SUCCESS) {
+        pjsip_dlg_dec_lock(dlg);
+        return status;
+    }
+
+    status = pjsip_inv_set_local_sdp(call->inv, sdp);
 
     pjsip_dlg_dec_lock(dlg);
     
     if (status != PJ_SUCCESS)
         return status;
-    
-    return pjsua_call_answer2(call_id, opt, code, reason, msg_data);
+
+    status = pjsua_call_answer2(call_id, opt, code, reason, msg_data);
+    if (status == PJ_SUCCESS)
+        return status;
+
+    cancel_status = acquire_call("pjsua_call_answer_with_sdp() rollback",
+                                 call_id, &call, &dlg);
+    if (cancel_status == PJ_SUCCESS) {
+        if (call->inv && call->inv->neg &&
+            pjmedia_sdp_neg_get_state(call->inv->neg) ==
+                PJMEDIA_SDP_NEG_STATE_WAIT_NEGO &&
+            pjmedia_sdp_neg_has_local_answer(call->inv->neg))
+        {
+            cancel_status =
+                pjmedia_sdp_neg_cancel_local_answer(call->inv->neg);
+            if (cancel_status != PJ_SUCCESS) {
+                pjsua_perror(THIS_FILE, "Unable to cancel SDP answer",
+                             cancel_status);
+            }
+        } else if (call->inv && call->inv->neg &&
+                   pjmedia_sdp_neg_get_state(call->inv->neg) ==
+                       PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER)
+        {
+            cancel_status = pjmedia_sdp_neg_cancel_offer(call->inv->neg);
+            if (cancel_status != PJ_SUCCESS) {
+                pjsua_perror(THIS_FILE, "Unable to cancel SDP offer",
+                             cancel_status);
+            }
+        }
+        pjsip_dlg_dec_lock(dlg);
+    }
+
+    return status;
 }
 
 
@@ -3591,6 +3763,12 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold2(pjsua_call_id call_id,
         goto on_return;
     }
 
+    if (pjsua_call_media_is_app_managed(call)) {
+        PJ_LOG(3,(THIS_FILE, "Application SDP is required to hold call"));
+        status = PJ_EINVALIDOP;
+        goto on_return;
+    }
+
     /* We may need to re-initialize media before creating SDP */
     if (call->med_prov_cnt == 0) {
         status = apply_call_setting(call, &call->opt, NULL);
@@ -3666,6 +3844,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
                                          const pjsua_msg_data *msg_data)
 {
     pjsua_call *call;
+    pjsua_call_setting opt;
     pjsip_dialog *dlg = NULL;
     pj_status_t status;
 
@@ -3681,10 +3860,9 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
         goto on_return;
     }
 
-    if (options != call->opt.flag)
-        call->opt.flag = options;
-
-    status = pjsua_call_reinvite2(call_id, &call->opt, msg_data);
+    opt = call->opt;
+    opt.flag = options;
+    status = pjsua_call_reinvite2(call_id, &opt, msg_data);
 
 on_return:
     if (dlg) pjsip_dlg_dec_lock(dlg);
@@ -3699,11 +3877,97 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite2(pjsua_call_id call_id,
                                          const pjsua_call_setting *opt,
                                          const pjsua_msg_data *msg_data)
 {
-    pjmedia_sdp_session *sdp = NULL;
+    pjsua_call_op_param param;
+
+    pjsua_call_op_param_default(&param);
+    param.opt = opt;
+    param.msg_data = msg_data;
+    return pjsua_call_reinvite3(call_id, &param);
+}
+
+
+static void cancel_created_local_offer(pjsua_call *call,
+                                       pjmedia_sdp_neg_state old_state)
+{
+    pj_status_t status;
+
+    if (!call->inv || !call->inv->neg ||
+        old_state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER ||
+        pjmedia_sdp_neg_get_state(call->inv->neg) !=
+            PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER)
+    {
+        return;
+    }
+
+    status = pjmedia_sdp_neg_cancel_offer(call->inv->neg);
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(3,(THIS_FILE, status,
+                     "Unable to cancel failed local SDP offer"));
+    }
+}
+
+static void rollback_failed_call_operation(pjsua_call *call,
+                                           pjmedia_sdp_neg_state old_state,
+                                           const pjsua_call_setting *old_opt)
+{
+    cancel_created_local_offer(call, old_state);
+    call->opt = *old_opt;
+}
+
+static pj_status_t create_unsupplied_offer(
+                                      pjsua_call *call,
+                                      const pjmedia_sdp_session **offer,
+                                      pjmedia_sdp_session **generated_offer)
+{
+    pj_status_t status;
+
+    *offer = NULL;
+    *generated_offer = NULL;
+
+    if (pjsua_call_media_is_app_managed(call)) {
+        if (call->opt.flag & PJSUA_CALL_NO_SDP_OFFER)
+            return PJ_SUCCESS;
+        if (!call->inv->neg)
+            return PJ_EINVALIDOP;
+        return pjmedia_sdp_neg_get_active_local(call->inv->neg, offer);
+    }
+
+    if (call->local_hold &&
+        (call->opt.flag & PJSUA_CALL_UNHOLD) == 0)
+    {
+        status = create_sdp_of_call_hold(call, generated_offer);
+    } else if ((call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0) {
+        status = pjsua_media_channel_create_sdp(call->index,
+                                                call->inv->pool_prov,
+                                                NULL, generated_offer, NULL);
+    } else {
+        return PJ_SUCCESS;
+    }
+
+    if (status == PJ_SUCCESS)
+        *offer = *generated_offer;
+    return status;
+}
+
+
+/*
+ * Send re-INVITE with an optional application-supplied SDP offer.
+ */
+PJ_DEF(pj_status_t) pjsua_call_reinvite3(
+                                         pjsua_call_id call_id,
+                                         const pjsua_call_op_param *param)
+{
+    const pjsua_call_setting *opt = param ? param->opt : NULL;
+    const pjmedia_sdp_session *offer = param ? param->sdp : NULL;
+    const pjsua_msg_data *msg_data = param ? param->msg_data : NULL;
+    const pjmedia_sdp_session *sdp = offer;
+    pjmedia_sdp_session *generated_sdp = NULL;
     pj_str_t *new_contact = NULL;
     pjsip_tx_data *tdata;
     pjsua_call *call;
+    pjsua_call_setting old_opt;
     pjsip_dialog *dlg = NULL;
+    pjmedia_sdp_neg_state old_neg_state = PJMEDIA_SDP_NEG_STATE_NULL;
     pj_status_t status;
 
 
@@ -3713,7 +3977,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite2(pjsua_call_id call_id,
     PJ_LOG(4,(THIS_FILE, "Sending re-INVITE on call %d", call_id));
     pj_log_push_indent();
 
-    status = acquire_call("pjsua_call_reinvite2()", call_id, &call, &dlg);
+    status = acquire_call("pjsua_call_reinvite3()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
         goto on_return;
 
@@ -3737,23 +4001,42 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite2(pjsua_call_id call_id,
         goto on_return;
     }
 
+    if (offer && call->inv->neg &&
+        pjmedia_sdp_neg_get_state(call->inv->neg) !=
+            PJMEDIA_SDP_NEG_STATE_DONE)
+    {
+        PJ_LOG(3,(THIS_FILE, "Can not set a new SDP offer while another "
+                            "offer is pending"));
+        status = PJ_EINVALIDOP;
+        goto on_return;
+    }
+
+    if (offer && opt && (opt->flag & PJSUA_CALL_NO_SDP_OFFER)) {
+        status = PJ_EINVAL;
+        goto on_return;
+    }
+    status = validate_managed_sdp(
+                    (call->opt.flag & PJSUA_CALL_MEDIA_APP_MANAGED) != 0,
+                    offer);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    old_opt = call->opt;
     status = apply_call_setting(call, opt, NULL);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Failed to apply call setting", status);
         goto on_return;
     }
 
-    /* Create SDP */
-    if (call->local_hold && (call->opt.flag & PJSUA_CALL_UNHOLD)==0) {
-        status = create_sdp_of_call_hold(call, &sdp);
-    } else if ((call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0) {
-        status = pjsua_media_channel_create_sdp(call->index,
-                                                call->inv->pool_prov,
-                                                NULL, &sdp, NULL);
-    }
+    if (call->inv->neg)
+        old_neg_state = pjmedia_sdp_neg_get_state(call->inv->neg);
+
+    if (!sdp)
+        status = create_unsupplied_offer(call, &sdp, &generated_sdp);
     if (status != PJ_SUCCESS) {
-        pjsua_perror(THIS_FILE, "Unable to get SDP from media endpoint",
+        pjsua_perror(THIS_FILE, "Unable to create SDP offer",
                      status);
+        rollback_failed_call_operation(call, old_neg_state, &old_opt);
         goto on_return;
     }
 
@@ -3775,6 +4058,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite2(pjsua_call_id call_id,
         status = dlg_set_target(dlg, &msg_data->target_uri);
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE, "Unable to set new target", status);
+            rollback_failed_call_operation(call, old_neg_state, &old_opt);
             goto on_return;
         }
     }
@@ -3783,6 +4067,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite2(pjsua_call_id call_id,
     status = pjsip_inv_reinvite( call->inv, new_contact, sdp, &tdata);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Unable to create re-INVITE", status);
+        rollback_failed_call_operation(call, old_neg_state, &old_opt);
         goto on_return;
     }
 
@@ -3799,6 +4084,53 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite2(pjsua_call_id call_id,
         call->local_hold = PJ_FALSE;
     } else if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Unable to send re-INVITE", status);
+        rollback_failed_call_operation(call, old_neg_state, &old_opt);
+        goto on_return;
+    }
+
+on_return:
+    if (dlg) pjsip_dlg_dec_lock(dlg);
+    pj_log_pop_indent();
+    return status;
+}
+
+
+/*
+ * Set/replace the call's local SDP directly, bypassing pjsua's own SDP
+ * generation (on_call_sdp_created()).
+ */
+PJ_DEF(pj_status_t) pjsua_call_set_sdp(pjsua_call_id call_id,
+                                       const pjmedia_sdp_session *sdp)
+{
+    pjsua_call *call;
+    pjsip_dialog *dlg = NULL;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
+                     PJ_EINVAL);
+    PJ_ASSERT_RETURN(sdp, PJ_EINVAL);
+
+    PJ_LOG(4,(THIS_FILE, "Setting local SDP on call %d", call_id));
+    pj_log_push_indent();
+
+    status = acquire_call("pjsua_call_set_sdp()", call_id, &call, &dlg);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    if (!call->inv) {
+        status = PJ_EINVALIDOP;
+        goto on_return;
+    }
+
+    status = validate_managed_sdp(
+                    (call->opt.flag & PJSUA_CALL_MEDIA_APP_MANAGED) != 0,
+                    sdp);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    status = pjsip_inv_set_local_sdp(call->inv, sdp);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE, "Unable to set local SDP", status);
         goto on_return;
     }
 
@@ -3817,6 +4149,7 @@ PJ_DEF(pj_status_t) pjsua_call_update( pjsua_call_id call_id,
                                        const pjsua_msg_data *msg_data)
 {
     pjsua_call *call;
+    pjsua_call_setting opt;
     pjsip_dialog *dlg = NULL;
     pj_status_t status;
 
@@ -3832,10 +4165,9 @@ PJ_DEF(pj_status_t) pjsua_call_update( pjsua_call_id call_id,
         goto on_return;
     }
 
-    if (options != call->opt.flag)
-        call->opt.flag = options;
-
-    status = pjsua_call_update2(call_id, &call->opt, msg_data);
+    opt = call->opt;
+    opt.flag = options;
+    status = pjsua_call_update2(call_id, &opt, msg_data);
 
 on_return:
     if (dlg) pjsip_dlg_dec_lock(dlg);
@@ -3850,11 +4182,33 @@ PJ_DEF(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
                                        const pjsua_call_setting *opt,
                                        const pjsua_msg_data *msg_data)
 {
-    pjmedia_sdp_session *sdp = NULL;
+    pjsua_call_op_param param;
+
+    pjsua_call_op_param_default(&param);
+    param.opt = opt;
+    param.msg_data = msg_data;
+    return pjsua_call_update3(call_id, &param);
+}
+
+
+/*
+ * Send UPDATE with an optional application-supplied SDP offer.
+ */
+PJ_DEF(pj_status_t) pjsua_call_update3(
+                                       pjsua_call_id call_id,
+                                       const pjsua_call_op_param *param)
+{
+    const pjsua_call_setting *opt = param ? param->opt : NULL;
+    const pjmedia_sdp_session *offer = param ? param->sdp : NULL;
+    const pjsua_msg_data *msg_data = param ? param->msg_data : NULL;
+    const pjmedia_sdp_session *sdp = offer;
+    pjmedia_sdp_session *generated_sdp = NULL;
     pj_str_t *new_contact = NULL;
     pjsip_tx_data *tdata;
     pjsua_call *call;
+    pjsua_call_setting old_opt;
     pjsip_dialog *dlg = NULL;
+    pjmedia_sdp_neg_state old_neg_state = PJMEDIA_SDP_NEG_STATE_NULL;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
@@ -3863,7 +4217,7 @@ PJ_DEF(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
     PJ_LOG(4,(THIS_FILE, "Sending UPDATE on call %d", call_id));
     pj_log_push_indent();
 
-    status = acquire_call("pjsua_call_update2()", call_id, &call, &dlg);
+    status = acquire_call("pjsua_call_update3()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
         goto on_return;
 
@@ -3884,24 +4238,43 @@ PJ_DEF(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
         goto on_return;
     }
 
+    if (offer && call->inv->neg &&
+        pjmedia_sdp_neg_get_state(call->inv->neg) !=
+            PJMEDIA_SDP_NEG_STATE_DONE)
+    {
+        PJ_LOG(3,(THIS_FILE, "Can not set a new SDP offer while another "
+                            "offer is pending"));
+        status = PJ_EINVALIDOP;
+        goto on_return;
+    }
+
+    if (offer && opt && (opt->flag & PJSUA_CALL_NO_SDP_OFFER)) {
+        status = PJ_EINVAL;
+        goto on_return;
+    }
+    status = validate_managed_sdp(
+                    (call->opt.flag & PJSUA_CALL_MEDIA_APP_MANAGED) != 0,
+                    offer);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    old_opt = call->opt;
     status = apply_call_setting(call, opt, NULL);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Failed to apply call setting", status);
         goto on_return;
     }
 
-    /* Create SDP */
-    if (call->local_hold && (call->opt.flag & PJSUA_CALL_UNHOLD)==0) {
-        status = create_sdp_of_call_hold(call, &sdp);
-    } else if ((call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0) {
-        status = pjsua_media_channel_create_sdp(call->index,
-                                                call->inv->pool_prov,
-                                                NULL, &sdp, NULL);
-    }
+    if (call->inv->neg)
+        old_neg_state = pjmedia_sdp_neg_get_state(call->inv->neg);
+
+    if (!sdp)
+        status = create_unsupplied_offer(call, &sdp, &generated_sdp);
 
     if (status != PJ_SUCCESS) {
-        pjsua_perror(THIS_FILE, "Unable to get SDP from media endpoint",
+        pjsua_perror(THIS_FILE, "Unable to create SDP offer",
                      status);
+        rollback_failed_call_operation(call, old_neg_state, &old_opt);
         goto on_return;
     }
 
@@ -3923,6 +4296,7 @@ PJ_DEF(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
         status = dlg_set_target(dlg, &msg_data->target_uri);
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE, "Unable to set new target", status);
+            rollback_failed_call_operation(call, old_neg_state, &old_opt);
             goto on_return;
         }
     }
@@ -3931,6 +4305,7 @@ PJ_DEF(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
     status = pjsip_inv_update(call->inv, new_contact, sdp, &tdata);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Unable to create UPDATE request", status);
+        rollback_failed_call_operation(call, old_neg_state, &old_opt);
         goto on_return;
     }
 
@@ -3947,6 +4322,7 @@ PJ_DEF(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
         call->local_hold = PJ_FALSE;
     } else if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Unable to send UPDATE request", status);
+        rollback_failed_call_operation(call, old_neg_state, &old_opt);
         goto on_return;
     }
 
@@ -4549,8 +4925,8 @@ static pj_bool_t check_lock_codec(pjsua_call *call)
             continue;
         }
 
-        /* Remote may answer with less media lines. */
-        if (i >= remote_sdp->media_count)
+        /* App-managed local and remote SDP counts may differ. */
+        if (i >= remote_sdp->media_count || i >= local_sdp->media_count)
             continue;
 
         rem_m = remote_sdp->media[i];
@@ -5970,6 +6346,7 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
     const pjmedia_sdp_session *offer = param->offer;
     pjsua_call_setting opt;
     pj_bool_t async = PJ_FALSE;
+    pj_bool_t app_answer = PJ_FALSE;
 
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
     if (call->hanging_up)
@@ -6033,7 +6410,6 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
             goto on_return;
         }
 
-        call->opt = opt;
     }
 
     if (pjsua_var.ua_cfg.cb.on_call_rx_offer && !async) {
@@ -6048,7 +6424,14 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
             goto on_return;
         }
 
-        call->opt = opt;
+    }
+
+    if (call->inv->neg &&
+        pjmedia_sdp_neg_get_state(call->inv->neg) ==
+            PJMEDIA_SDP_NEG_STATE_WAIT_NEGO &&
+        pjmedia_sdp_neg_has_local_answer(call->inv->neg))
+    {
+        app_answer = PJ_TRUE;
     }
 
     /* Re-init media for the new remote offer before creating SDP. When the
@@ -6057,21 +6440,39 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
      * here as "no media".
      */
     call->offer_app_managed = async;
-    status = apply_call_setting(call, &call->opt, offer);
+    status = apply_call_setting(call, &opt, offer);
     call->offer_app_managed = PJ_FALSE;
-    if (status != PJ_SUCCESS)
-        goto on_return;
-
-    status = pjsua_media_channel_create_sdp(call->index,
-                                            call->inv->pool_prov,
-                                            offer, &answer, NULL);
     if (status != PJ_SUCCESS) {
-        pjsua_perror(THIS_FILE, "Unable to create local SDP", status);
+        if (app_answer) {
+            pj_status_t cancel_status;
+
+            cancel_status =
+                pjmedia_sdp_neg_cancel_local_answer(call->inv->neg);
+            if (cancel_status != PJ_SUCCESS) {
+                pjsua_perror(THIS_FILE, "Unable to cancel SDP answer",
+                             cancel_status);
+            }
+        }
         goto on_return;
     }
 
     if (async) {
         call->rx_reinv_async = async;
+        goto on_return;
+    }
+
+    if (app_answer)
+        goto on_return;
+
+    if (call->opt.flag & PJSUA_CALL_MEDIA_APP_MANAGED) {
+        PJ_LOG(3,(THIS_FILE, "Application SDP answer is required"));
+        goto on_return;
+    }
+    status = pjsua_media_channel_create_sdp(call->index,
+                                            call->inv->pool_prov,
+                                            offer, &answer, NULL);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE, "Unable to create local SDP", status);
         goto on_return;
     }
 
@@ -6133,10 +6534,50 @@ static pj_status_t pjsua_call_on_rx_reinvite(pjsip_inv_session *inv,
     pjsua_call *call;
     pj_bool_t async;
 
-    PJ_UNUSED_ARG(offer);
-    PJ_UNUSED_ARG(rdata);
-
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+
+    if (!offer && pjsua_call_media_is_app_managed(call)) {
+        pjsua_call_setting opt;
+        pjsip_status_code code = PJSIP_SC_OK;
+        pjsip_tx_data *response = NULL;
+        pj_status_t status;
+
+        pjsua_call_cleanup_flag(&call->opt);
+        opt = call->opt;
+        async = PJ_FALSE;
+
+        if (pjsua_var.ua_cfg.cb.on_call_rx_reinvite) {
+            (*pjsua_var.ua_cfg.cb.on_call_rx_reinvite)(
+                                                call->index, NULL, rdata,
+                                                NULL, &async, &code, &opt);
+        }
+
+        if (code != PJSIP_SC_OK)
+            async = PJ_FALSE;
+
+        if (!async && code == PJSIP_SC_OK) {
+            PJ_LOG(3,(THIS_FILE, "Application SDP offer is required for "
+                                 "offerless re-INVITE on call %d",
+                                 call->index));
+            code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
+        }
+
+        status = pjsip_inv_initial_answer(inv, rdata,
+                                          async ? PJSIP_SC_TRYING : code,
+                                          NULL, NULL, &response);
+        if (status == PJ_SUCCESS)
+            status = pjsip_inv_send_msg(inv, response);
+        else if (response)
+            pjsip_tx_data_dec_ref(response);
+
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(3,(THIS_FILE, status,
+                         "Unable to respond to offerless re-INVITE"));
+        }
+
+        return PJ_SUCCESS;
+    }
+
     async = call->rx_reinv_async;
     call->rx_reinv_async = PJ_FALSE;
 
@@ -6290,6 +6731,11 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
         PJ_LOG(1,(THIS_FILE, "Unable to create offer%s",
                   call->hanging_up? ", call hanging up":
                   ERR_MEDIA_CHANGING));
+        goto on_return;
+    }
+
+    if (pjsua_call_media_is_app_managed(call)) {
+        *offer = NULL;
         goto on_return;
     }
     

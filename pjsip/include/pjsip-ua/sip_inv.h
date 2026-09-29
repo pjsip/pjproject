@@ -559,6 +559,12 @@ enum pjsip_inv_option
      * Indicate support for siprec
      */
     PJSIP_INV_SUPPORT_SIPREC      = 2048,
+
+    /**
+     * Keep local and remote SDP content application-managed for this
+     * invite session. This is a local creation-time mode.
+     */
+    PJSIP_INV_SDP_PASSTHROUGH     = 4096,
     
 };
 

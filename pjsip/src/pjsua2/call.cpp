@@ -446,6 +446,7 @@ struct call_param
     pjsua_call_setting *p_opt;
     pj_str_t           *p_reason;
     pjmedia_sdp_session *sdp;
+    pj_status_t         sdp_status;
 
 public:
     /**
@@ -476,6 +477,7 @@ call_param::call_param(const SipTxOption &tx_option)
     p_opt = NULL;
     p_reason = NULL;
     sdp = NULL;
+    sdp_status = PJ_SUCCESS;
 }
 
 call_param::call_param(const SipTxOption &tx_option, const CallSetting &setting,
@@ -500,21 +502,49 @@ call_param::call_param(const SipTxOption &tx_option, const CallSetting &setting,
     p_reason = (reason.slen == 0? NULL: &reason);
 
     sdp = NULL;
+    sdp_status = PJ_SUCCESS;
     if (pool != NULL && sdp_str != "") {
         pj_str_t dup_pj_sdp;
         pj_str_t pj_sdp_str = {(char*)sdp_str.c_str(),
                                (pj_ssize_t)sdp_str.size()};
-        pj_status_t status;
 
         pj_strdup(pool, &dup_pj_sdp, &pj_sdp_str);        
-        status = pjmedia_sdp_parse(pool, dup_pj_sdp.ptr,
-                                   dup_pj_sdp.slen, &sdp);
-        if (status != PJ_SUCCESS) {
-            PJ_PERROR(4,(THIS_FILE, status,
+        sdp_status = pjmedia_sdp_parse(pool, dup_pj_sdp.ptr,
+                                      dup_pj_sdp.slen, &sdp);
+        if (sdp_status != PJ_SUCCESS) {
+            PJ_PERROR(4,(THIS_FILE, sdp_status,
                          "Failed to parse SDP for call param"));
         }
     }
 }
+
+class CallPoolGuard
+{
+public:
+    CallPoolGuard(const char *name, const char *operation)
+    : pool_(NULL)
+    {
+        if (name) {
+            pool_ = pjsua_pool_create(name, 2048, 512);
+            if (!pool_)
+                PJSUA2_RAISE_ERROR2(PJ_ENOMEM, operation);
+        }
+    }
+
+    ~CallPoolGuard()
+    {
+        if (pool_)
+            pj_pool_release(pool_);
+    }
+
+    pj_pool_t *get() const
+    {
+        return pool_;
+    }
+
+private:
+    pj_pool_t *pool_;
+};
 
 Call::Call(Account& account, int call_id)
 : acc(&account), id(call_id), userData(NULL), child(NULL)
@@ -752,27 +782,31 @@ void Call::makeCall(const string &dst_uri, const CallOpParam &prm)
                     PJSUA2_THROW(Error)
 {
     pj_str_t pj_dst_uri = str2Pj(dst_uri);
-    call_param param(prm.txOption, prm.opt, prm.reason);
-    
-    PJSUA2_CHECK_EXPR( pjsua_call_make_call(acc->getId(), &pj_dst_uri,
-                                            param.p_opt, this,
-                                            param.p_msg_data, &id) );
+    CallPoolGuard pool_guard(prm.sdp.wholeSdp.empty()? NULL: "tmp-make-call",
+                             "Call::makeCall()");
+
+    call_param param(prm.txOption, prm.opt, prm.reason,
+                     pool_guard.get(), prm.sdp.wholeSdp);
+    pjsua_call_op_param op_param;
+    PJSUA2_CHECK_RAISE_ERROR2(param.sdp_status, "Call::makeCall()");
+
+    pjsua_call_op_param_default(&op_param);
+    op_param.opt = param.p_opt;
+    op_param.sdp = param.sdp;
+    op_param.user_data = this;
+    op_param.msg_data = param.p_msg_data;
+    PJSUA2_CHECK_EXPR( pjsua_call_make_call2(acc->getId(), &pj_dst_uri,
+                                             &op_param, &id) );
 }
 
 void Call::answer(const CallOpParam &prm) PJSUA2_THROW(Error)
 {
-    pj_pool_t *tmp_pool = NULL;
-    
-    /* Create temporary pool for SDP operations if SDP is provided */
-    if (!prm.sdp.wholeSdp.empty()) {
-        tmp_pool = pjsua_pool_create("tmp-answer", 2048, 512);
-        if (!tmp_pool) {
-            PJSUA2_RAISE_ERROR2(PJ_ENOMEM, "Call::answer()");
-        }
-    }
-    
+    CallPoolGuard pool_guard(prm.sdp.wholeSdp.empty()? NULL: "tmp-answer",
+                             "Call::answer()");
+
     call_param param(prm.txOption, prm.opt, prm.reason,
-                     tmp_pool, prm.sdp.wholeSdp);
+                     pool_guard.get(), prm.sdp.wholeSdp);
+    PJSUA2_CHECK_RAISE_ERROR2(param.sdp_status, "Call::answer()");
     
     if (param.sdp) {
         PJSUA2_CHECK_EXPR( pjsua_call_answer_with_sdp(id, param.sdp,
@@ -786,10 +820,6 @@ void Call::answer(const CallOpParam &prm) PJSUA2_THROW(Error)
                                               param.p_msg_data) );
     }
     
-    /* Release temporary pool */
-    if (tmp_pool) {
-        pj_pool_release(tmp_pool);
-    }
 }
 
 void Call::hangup(const CallOpParam &prm) PJSUA2_THROW(Error)
@@ -810,18 +840,36 @@ void Call::setHold(const CallOpParam &prm) PJSUA2_THROW(Error)
 
 void Call::reinvite(const CallOpParam &prm) PJSUA2_THROW(Error)
 {
-    call_param param(prm.txOption, prm.opt, prm.reason);
+    CallPoolGuard pool_guard(prm.sdp.wholeSdp.empty()? NULL: "tmp-reinvite",
+                             "Call::reinvite()");
 
-    PJSUA2_CHECK_EXPR( pjsua_call_reinvite2(id, param.p_opt,
-                                            param.p_msg_data) );
+    call_param param(prm.txOption, prm.opt, prm.reason,
+                     pool_guard.get(), prm.sdp.wholeSdp);
+    pjsua_call_op_param op_param;
+    PJSUA2_CHECK_RAISE_ERROR2(param.sdp_status, "Call::reinvite()");
+
+    pjsua_call_op_param_default(&op_param);
+    op_param.opt = param.p_opt;
+    op_param.sdp = param.sdp;
+    op_param.msg_data = param.p_msg_data;
+    PJSUA2_CHECK_EXPR( pjsua_call_reinvite3(id, &op_param) );
 }
 
 void Call::update(const CallOpParam &prm) PJSUA2_THROW(Error)
 {
-    call_param param(prm.txOption, prm.opt, prm.reason);
-    
-    PJSUA2_CHECK_EXPR( pjsua_call_update2(id, param.p_opt,
-                                          param.p_msg_data) );
+    CallPoolGuard pool_guard(prm.sdp.wholeSdp.empty()? NULL: "tmp-update",
+                             "Call::update()");
+
+    call_param param(prm.txOption, prm.opt, prm.reason,
+                     pool_guard.get(), prm.sdp.wholeSdp);
+    pjsua_call_op_param op_param;
+    PJSUA2_CHECK_RAISE_ERROR2(param.sdp_status, "Call::update()");
+
+    pjsua_call_op_param_default(&op_param);
+    op_param.opt = param.p_opt;
+    op_param.sdp = param.sdp;
+    op_param.msg_data = param.p_msg_data;
+    PJSUA2_CHECK_EXPR( pjsua_call_update3(id, &op_param) );
 }
 
 void Call::xfer(const string &dest, const CallOpParam &prm)

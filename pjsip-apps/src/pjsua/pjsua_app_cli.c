@@ -844,6 +844,7 @@ static pj_status_t cmd_add_account(pj_cli_cmd_val *cval)
     acc_cfg.rtp_cfg = app_config.rtp_cfg;
     acc_cfg.txt_red_level = app_config.txt_red_level;
     app_config_init_video(&acc_cfg);
+    app_config_apply_acc_setting(&acc_cfg);
 
     status = pjsua_acc_add(&acc_cfg, PJ_TRUE, NULL);
     if (status != PJ_SUCCESS) {
@@ -1979,8 +1980,33 @@ static pj_status_t cmd_make_single_call(pj_cli_cmd_val *cval)
 
         pjsua_msg_data_init(&msg_data);
         TEST_MULTIPART(&msg_data);
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+        if ((call_opt.flag & PJSUA_CALL_MEDIA_APP_MANAGED) &&
+            app_config.custom_sdp.slen)
+        {
+            pj_pool_t *pool;
+            pjmedia_sdp_session *sdp;
+            pjsua_call_op_param param;
+
+            pool = pjsua_pool_create("custom sdp", 1024, 1024);
+            status = app_parse_custom_sdp(pool, &sdp);
+            if (status == PJ_SUCCESS) {
+                pjsua_call_op_param_default(&param);
+                param.opt = &call_opt;
+                param.sdp = sdp;
+                param.msg_data = &msg_data;
+                status = pjsua_call_make_call2(current_acc, &tmp, &param,
+                                               &current_call);
+            }
+            pj_pool_release(pool);
+        } else {
+            status = pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL,
+                                          &msg_data, &current_call);
+        }
+#else
         status = pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL,
                                       &msg_data, &current_call);
+#endif
         if (status != PJ_SUCCESS)
             pjsua_perror(THIS_FILE, "Unable to make call", status);
 

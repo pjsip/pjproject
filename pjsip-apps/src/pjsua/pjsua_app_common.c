@@ -228,6 +228,30 @@ void app_config_init_video(pjsua_acc_config *acc_cfg)
 }
 #endif
 
+void app_config_apply_acc_setting(pjsua_acc_config *acc_cfg)
+{
+    if (app_config.sdp_passthrough)
+        acc_cfg->media_app_managed = PJ_TRUE;
+}
+
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+pj_status_t app_parse_custom_sdp(pj_pool_t *pool, pjmedia_sdp_session **sdp)
+{
+    pj_str_t sdp_str;
+
+    PJ_ASSERT_RETURN(app_config.custom_sdp.slen != 0, PJ_ENOTFOUND);
+
+    sdp_str.ptr = (char*)pj_pool_alloc(pool,
+                                       (pj_size_t)(app_config.custom_sdp.slen + 1));
+    pj_memcpy(sdp_str.ptr, app_config.custom_sdp.ptr,
+              (pj_size_t)app_config.custom_sdp.slen);
+    sdp_str.ptr[app_config.custom_sdp.slen] = '\0';
+    sdp_str.slen = app_config.custom_sdp.slen;
+
+    return pjmedia_sdp_parse(pool, sdp_str.ptr, (pj_size_t)sdp_str.slen, sdp);
+}
+#endif
+
 /* Indexed by pjmedia_dir */
 static const char *media_dir_names[] = { "inactive", "sendonly",
                                          "recvonly", "sendrecv" };
@@ -258,6 +282,8 @@ void app_config_init_call_setting(pjsua_call_setting *opt)
     opt->aud_cnt = app_config.aud_cnt;
     opt->vid_cnt = app_config.vid.vid_cnt;
     opt->txt_cnt = app_config.txt_cnt;
+    if (app_config.sdp_passthrough)
+        opt->flag |= PJSUA_CALL_MEDIA_APP_MANAGED;
 
     if (app_config.media_dir_cnt) {
         opt->flag |= PJSUA_CALL_SET_MEDIA_DIR;

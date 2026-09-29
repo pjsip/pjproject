@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+
+<!-- SIPp acts as UAC and sends an INVITE with a real-world SDP offer that
+     advertises multiple AMR variants: AMR-WB (PT 116 and PT 107), AMR
+     (PT 118 octet-align=0 and PT 96 octet-align=1), G.722 (PT 9) and two
+     telephone-event payloads (PT 111 and PT 110), plus QoS (a=curr/a=des)
+     and RTCP attributes. Note PT 118 and PT 96 share the same AMR/8000
+     rtpmap and differ only by the fmtp octet-align (packetization mode);
+     the "original problem" this test exists for: a duplicate encoding
+     name with a different fmtp must not be mutated/rejected.
+
+     alt_pjsua acts as UAS with the "sdp-passthrough" option and
+     auto-answers 200 OK with a custom answer (via "custom-sdp") that picks
+     PT 118 only. Since PJSUA_CALL_MEDIA_APP_MANAGED is set, this answer must
+     reach the wire unmodified regardless of what pjmedia's SDP negotiator
+     would normally reconcile/filter against the offer. SIPp verifies the
+     200 OK body carries the negotiated PT 118 rtpmap/fmtp verbatim, then
+     ACKs.
+
+     To also cover re-INVITEs (passthrough must not only apply to the
+     initial offer/answer), alt_pjsua is then driven (via its CLI) to send
+     a re-INVITE: this re-uses the *same* custom SDP as a new local offer
+     (see on_call_sdp_created_cb() in pjsua_app.c), so pjmedia's negotiator
+     must pass it through again on a re-offer without re-padding/forcing
+     "o=" (see pjmedia_sdp_neg_modify_local_offer2() passthrough mode).
+     SIPp (now acting as UAS for this re-INVITE) verifies the re-INVITE
+     body still carries PT 118 unmodified, answers it, and expects the
+     ACK. Finally SIPp sends BYE. -->
+
+<scenario name="alt_pjsua UAS multiple-AMR SDP passthrough (+ re-INVITE): SIPp as UAC">
+
+  <send retrans="500">
+    <![CDATA[
+
+      INVITE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+      To: sut <sip:[service]@[remote_ip]:[remote_port]>
+      Call-ID: [call_id]
+      CSeq: 1 INVITE
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Subject: alt_pjsua UAS multiple-AMR SDP passthrough test
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+v=0
+o=- 3832217418 3832217418 IN IP[local_ip_type] [local_ip]
+s=SS VOIP
+c=IN IP[media_ip_type] [media_ip]
+t=0 0
+m=audio [media_port] RTP/AVP 116 107 118 96 9 111 110
+b=AS:41
+b=RS:512
+b=RR:1537
+a=rtpmap:116 AMR-WB/16000
+a=fmtp:116 mode-change-capability=2;max-red=220
+a=rtpmap:107 AMR-WB/16000
+a=fmtp:107 octet-align=1;mode-change-capability=2;max-red=220
+a=rtpmap:118 AMR/8000
+a=fmtp:118 octet-align=0;mode-change-capability=2;max-red=220
+a=rtpmap:96 AMR/8000
+a=fmtp:96 octet-align=1;mode-change-capability=2;max-red=220
+a=rtpmap:9 G722/8000
+a=rtpmap:111 telephone-event/16000
+a=fmtp:111 0-15
+a=rtpmap:110 telephone-event/8000
+a=fmtp:110 0-15
+a=curr:qos local none
+a=curr:qos remote none
+a=des:qos mandatory local sendrecv
+a=des:qos optional remote sendrecv
+a=rtcp:[media_port+1] IN IP[media_ip_type] [media_ip]
+a=sendrecv
+a=ptime:20
+a=maxptime:240
+
+    ]]>
+  </send>
+
+  <recv response="100" optional="true">
+  </recv>
+
+  <recv response="180" optional="true">
+  </recv>
+
+  <recv response="200" rtd="true">
+    <action>
+      <!-- Verify the 200 OK carries the custom answer injected by alt_pjsua
+           unmodified: PT 118's own fmtp (octet-align=0), not reconciled/
+           merged against the offer's duplicate PT 96 (octet-align=1). The
+           condexec nops avoid SIPp 3.7 exiting on "referenced 1 times". -->
+      <ereg regexp="a=rtpmap:118 AMR/8000" search_in="msg"
+            check_it="true" assign_to="1"/>
+      <ereg regexp="a=fmtp:118 octet-align=0" search_in="msg"
+            check_it="true" assign_to="2"/>
+    </action>
+  </recv>
+  <nop condexec="1"></nop>
+  <nop condexec="2"></nop>
+
+  <send>
+    <![CDATA[
+
+      ACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+      To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 1 ACK
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <!-- No pause here: alt_pjsua is driven (via its CLI, see the test driver
+       .py) to send a re-INVITE as soon as it observes the call reach
+       CONFIRMED (right after processing this ACK), so SIPp must already be
+       ready to receive it; a pause here would risk SIPp treating the
+       re-INVITE as an unexpected message while paused. Receive it here and
+       verify the passthrough mode still holds: the re-offer must carry PT
+       118's own fmtp verbatim, not padded/reconciled, and not have its
+       "o=" user/id/address forced from the previous active local SDP. -->
+  <recv request="INVITE" crlf="true">
+    <action>
+      <ereg regexp="a=rtpmap:118 AMR/8000" search_in="msg"
+            check_it="true" assign_to="3"/>
+      <ereg regexp="a=fmtp:118 octet-align=0" search_in="msg"
+            check_it="true" assign_to="4"/>
+    </action>
+  </recv>
+  <nop condexec="3"></nop>
+  <nop condexec="4"></nop>
+
+  <send>
+    <![CDATA[
+
+      SIP/2.0 200 OK
+      [last_Via:]
+      [last_From:]
+      [last_To:];tag=[call_number]
+      [last_Call-ID:]
+      [last_CSeq:]
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+v=0
+o=sipp 1 2 IN IP[local_ip_type] [local_ip]
+s=-
+c=IN IP[media_ip_type] [media_ip]
+t=0 0
+m=audio [media_port] RTP/AVP 118
+a=rtpmap:118 AMR/8000
+a=fmtp:118 octet-align=0
+a=sendrecv
+
+    ]]>
+  </send>
+
+  <recv request="ACK" crlf="true">
+  </recv>
+
+  <pause milliseconds="200"/>
+
+  <send retrans="500">
+    <![CDATA[
+
+      OPTIONS sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bK-options
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+      To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 2 OPTIONS
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv response="500"/>
+
+  <recv request="UPDATE" crlf="true">
+    <action>
+      <ereg regexp="a=rtpmap:118 AMR/8000" search_in="msg"
+            check_it="true" assign_to="5"/>
+      <ereg regexp="a=fmtp:118 octet-align=0" search_in="msg"
+            check_it="true" assign_to="6"/>
+    </action>
+  </recv>
+  <nop condexec="5"></nop>
+  <nop condexec="6"></nop>
+
+  <send>
+    <![CDATA[
+
+      SIP/2.0 200 OK
+      [last_Via:]
+      [last_From:]
+      [last_To:]
+      [last_Call-ID:]
+      [last_CSeq:]
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+v=0
+o=sipp 1 3 IN IP[local_ip_type] [local_ip]
+s=-
+c=IN IP[media_ip_type] [media_ip]
+t=0 0
+m=audio [media_port] RTP/AVP 118
+a=rtpmap:118 AMR/8000
+a=fmtp:118 octet-align=0
+a=sendrecv
+
+    ]]>
+  </send>
+
+  <pause milliseconds="500"/>
+
+  <send retrans="500">
+    <![CDATA[
+
+      BYE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+      To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 3 BYE
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv response="200" crlf="true">
+  </recv>
+
+  <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>
+  <CallLengthRepartition value="10, 50, 100, 500, 1000, 5000, 10000"/>
+
+</scenario>

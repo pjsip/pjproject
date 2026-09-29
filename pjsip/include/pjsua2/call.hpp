@@ -1153,6 +1153,13 @@ struct OnCallRxOfferParam
      * The new offer received.
      */
     SdpSession          offer;
+
+    /**
+     * Optional SDP answer supplied by the application. Set
+     * #SdpSession::wholeSdp to answer the offer synchronously. This is
+     * required for calls using application-managed media.
+     */
+    SdpSession          answer;
     
     /**
      * Status code to be returned for answering the offer. On input,
@@ -1340,9 +1347,9 @@ struct OnCreateMediaTransportSrtpParam
  */
 
 /**
- * This structure contains parameters for Call::answer(), Call::hangup(),
- * Call::reinvite(), Call::update(), Call::xfer(), Call::xferReplaces(),
- * Call::setHold().
+ * This structure contains parameters for Call::makeCall(), Call::answer(),
+ * Call::hangup(), Call::reinvite(), Call::update(), Call::xfer(),
+ * Call::xferReplaces(), Call::setHold().
  */
 struct CallOpParam
 {
@@ -1374,7 +1381,13 @@ struct CallOpParam
     SipTxOption         txOption;
 
     /**
-     * SDP answer. Currently only used for Call::answer().
+     * Local SDP offer or answer to use verbatim instead of pjsua2's own
+     * generated SDP, bypassing the onCallSdpCreated() callback for this
+     * operation. Used by Call::makeCall() and Call::reinvite()/update() as
+     * the SDP offer, and by Call::answer() as the SDP answer.
+     * Supplying an offer requires mediaAppManaged to be enabled for the
+     * account or call.
+     * Leave empty to let pjsua2 generate the SDP as usual.
      */
     SdpSession          sdp;
     
@@ -2265,9 +2278,9 @@ public:
      * (i.e. re-INVITE/UPDATE with SDP is received). Application can
      * decide to accept/reject the offer by setting the code (default
      * is PJSIP_SC_OK (200)). If the offer is accepted, application can update
-     * the call setting to be applied in the answer. When this callback is
-     * not implemented, the default behavior is to accept the offer using
-     * current call setting.
+     * the call setting and supply the SDP answer to be applied. When this
+     * callback is not implemented, the default behavior is to accept the
+     * offer using current call setting.
      *
      * @param prm       Callback parameter.
      */
@@ -2474,4 +2487,3 @@ private:
 } // namespace pj
 
 #endif  /* __PJSUA2_CALL_HPP__ */
-
