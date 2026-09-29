@@ -228,6 +228,44 @@ void app_config_init_video(pjsua_acc_config *acc_cfg)
 }
 #endif
 
+/* Indexed by pjmedia_dir */
+static const char *media_dir_names[] = { "inactive", "sendonly",
+                                         "recvonly", "sendrecv" };
+
+pj_status_t app_parse_media_dir(const pj_str_t *name, pjmedia_dir *dir)
+{
+    unsigned i;
+
+    for (i = 0; i < PJ_ARRAY_SIZE(media_dir_names); ++i) {
+        if (!pj_stricmp2(name, media_dir_names[i])) {
+            *dir = (pjmedia_dir)i;
+            return PJ_SUCCESS;
+        }
+    }
+    return PJ_EINVAL;
+}
+
+const char *app_media_dir_name(pjmedia_dir dir)
+{
+    return media_dir_names[dir & PJMEDIA_DIR_ENCODING_DECODING];
+}
+
+void app_config_init_call_setting(pjsua_call_setting *opt)
+{
+    unsigned i;
+
+    pjsua_call_setting_default(opt);
+    opt->aud_cnt = app_config.aud_cnt;
+    opt->vid_cnt = app_config.vid.vid_cnt;
+    opt->txt_cnt = app_config.txt_cnt;
+
+    if (app_config.media_dir_cnt) {
+        opt->flag |= PJSUA_CALL_SET_MEDIA_DIR;
+        for (i = 0; i < app_config.media_dir_cnt; ++i)
+            opt->media_dir[i] = app_config.media_dir[i];
+    }
+}
+
 #ifdef HAVE_MULTIPART_TEST
   /*
    * Enable multipart in msg_data and add a dummy body into the

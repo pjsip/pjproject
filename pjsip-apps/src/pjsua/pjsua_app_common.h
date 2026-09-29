@@ -93,6 +93,8 @@ typedef struct pjsua_app_config
     pjsua_transport_config  rtp_cfg;
     pj_bool_t               enable_rtcp_mux;
     pj_bool_t               enable_rtcp_xr;
+    unsigned                media_dir_cnt;
+    pjmedia_dir             media_dir[PJMEDIA_MAX_SDP_MEDIA];
     pjsip_redirect_op       redir_op;
     int                     srtp_keying;
 
@@ -228,6 +230,9 @@ int write_settings(pjsua_app_config *cfg, char *buf, pj_size_t max);
 char *alloc_settings(pjsua_app_config *cfg, pj_pool_t **p_pool, int *p_len);
 pj_status_t dump_settings(pjsua_app_config *cfg);
 void app_config_init_video(pjsua_acc_config *acc_cfg);
+void app_config_init_call_setting(pjsua_call_setting *opt);
+pj_status_t app_parse_media_dir(const pj_str_t *name, pjmedia_dir *dir);
+const char *app_media_dir_name(pjmedia_dir dir);
 void arrange_window(pjsua_vid_win_id wid);
 
 /** Defined in pjsua_app_config.c **/
