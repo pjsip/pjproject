@@ -246,24 +246,11 @@
  */
 #define SIP_SHUTDOWN_TIMEOUT    5
 
-/* Longest the main loop blocks in pjsip_endpt_handle_events(). Every SIP
- * timer is scheduled from this thread and handle_events() already returns
- * as soon as the nearest one is due, so this only bounds how late the
- * REGISTER scheduled in g.reg_due can be. Keep it long: with a media
- * thread the main loop has nothing else to wake up for.
- */
+/* Longest the main loop blocks; SIP timers wake it earlier anyway. */
 #define MAX_POLL_MSEC       1000
 
-/* Longest the media clock waits when no call has a frame due.
- *
- * With a media thread this cannot be made large: pj_ioqueue_poll() fixes
- * its descriptor set on entry, so a transport registered by the SIP thread
- * while the media thread is already blocked stays invisible until the poll
- * returns, and the first frames of a new call would be that late. One frame
- * time bounds the delay at the price of an idle tick.
- *
- * Without a media thread the same loop registers the transport and polls,
- * so there is nothing to miss and the cap can be the main loop's.
+/* Longest the media clock waits when no call has a frame due. With a media
+ * thread, one frame: a transport added while it polls is only seen next poll.
  */
 #if EMBUA_USE_MEDIA_THREAD
 #  define MEDIA_IDLE_POLL_MSEC  FRAME_PTIME_MSEC
@@ -271,10 +258,7 @@
 #  define MEDIA_IDLE_POLL_MSEC  MAX_POLL_MSEC
 #endif
 
-/* Gap between frames while the media clock catches up after falling behind,
- * e.g. while the main thread was busy. Every overdue frame is still
- * processed, so none pile up, but spread out rather than all at once.
- */
+/* Gap between overdue frames while the media clock catches up. */
 #define MEDIA_CATCHUP_MSEC  2
 
 #define SIP_SERVER_IP       "192.168.0.7"
@@ -291,6 +275,8 @@ static struct global_t {
     pjmedia_endpt        *med_endpt;
     pjmedia_event_mgr    *event_mgr;
     pj_pool_t            *pool;
+    char                  contact_buf[80];
+    pj_str_t              contact;   /* our Contact URI, built at init */
 #if EMBUA_USE_REGISTRATION
     pjsip_regc           *regc;
     pj_time_val           reg_due;   /* next REGISTER, {0,0} if none due */
@@ -354,6 +340,8 @@ static void call_on_rx_offer(pjsip_inv_session *inv,
                              const pjmedia_sdp_session *offer);
 static pj_bool_t on_rx_request( pjsip_rx_data *rdata );
 static void deinit_call(struct call_t *call);
+static void clear_call(struct call_t *call);
+static void hangup_call(struct call_t *call, int code);
 #if EMBUA_USE_REGISTRATION
 static void send_unregister(void);
 #endif
@@ -532,17 +520,8 @@ static void app_quit(void)
     PJ_LOG(3,(THIS_FILE, "Quitting.."));
 
     for (i=0; i<MAX_CALLS; ++i) {
-        pjsip_inv_session *inv = g_calls[i].inv;
-        pjsip_tx_data *tdata;
-
-        if (inv == NULL)
-            continue;
-
-        if (pjsip_inv_end_session(inv, PJSIP_SC_OK, NULL, &tdata)==PJ_SUCCESS
-            && tdata)
-        {
-            pjsip_inv_send_msg(inv, tdata);
-        }
+        if (g_calls[i].inv)
+            hangup_call(&g_calls[i], PJSIP_SC_DECLINE);
     }
 
 #if EMBUA_USE_REGISTRATION
@@ -713,8 +692,10 @@ static void on_tp_state_changed(pjsip_transport *tp,
 }
 #endif  /* EMBUA_USE_REGISTRATION */
 
-/* Generate Contact URI */
-static pj_status_t create_contact(char *buf, int buf_size)
+/* Build our Contact URI into g.contact, once: the address is fixed for the
+ * life of the process.
+ */
+static pj_status_t create_contact(void)
 {
     pj_sockaddr hostaddr;
     char hostip[PJ_INET_ADDRSTRLEN];
@@ -724,8 +705,10 @@ static pj_status_t create_contact(char *buf, int buf_size)
         return status;
 
     pj_sockaddr_print(&hostaddr, hostip, sizeof(hostip), 2);
-    pj_ansi_snprintf(buf, buf_size, "<sip:%s@%s:%d%s>",
-                     AUTH_USERNAME, hostip, SIP_PORT, SIP_TRANSPORT_PARAM);
+    pj_ansi_snprintf(g.contact_buf, sizeof(g.contact_buf),
+                     "<sip:%s@%s:%d%s>", AUTH_USERNAME, hostip, SIP_PORT,
+                     SIP_TRANSPORT_PARAM);
+    g.contact = pj_str(g.contact_buf);
     return PJ_SUCCESS;
 }
 
@@ -839,20 +822,17 @@ static void init(void)
                            0, 0, &g.media_thread), 170);
 #endif
 
+    CHKS( create_contact(), 190);
+
 #if EMBUA_USE_REGISTRATION
     {
         pj_str_t registrar_uri = pj_str(SIP_REGISTRAR);
         pj_str_t aor = pj_str(SIP_AOR);
-        char contact_buf[80];
-        pj_str_t contact;
         pjsip_cred_info cred;
 
         CHKS( pjsip_regc_create(g.endpt, NULL, &regc_cb, &g.regc), 200);
-        CHKS( create_contact(contact_buf, sizeof(contact_buf)), 210 );
-        contact = pj_str(contact_buf);
-
         CHKS( pjsip_regc_init(g.regc, &registrar_uri, &aor, &aor, 1,
-                              &contact, SIP_REG_TIMEOUT), 220);
+                              &g.contact, SIP_REG_TIMEOUT), 220);
 
         init_cred(&cred);
         CHKS( pjsip_regc_set_credentials(g.regc, 1, &cred), 230);
@@ -875,18 +855,13 @@ static void end_failed_calls(void)
 
     for (i=0; i<MAX_CALLS; ++i) {
         struct call_t *call = &g_calls[i];
-        pjsip_tx_data *tdata;
 
         if (!call->end_pending || call->inv == NULL)
             continue;
 
         call->end_pending = PJ_FALSE;
         PJ_LOG(3,(THIS_FILE, "Call %d has no media, ending it", (int)i));
-        if (pjsip_inv_end_session(call->inv, PJSIP_SC_NOT_ACCEPTABLE_HERE,
-                                  NULL, &tdata) == PJ_SUCCESS && tdata)
-        {
-            pjsip_inv_send_msg(call->inv, tdata);
-        }
+        hangup_call(call, PJSIP_SC_NOT_ACCEPTABLE_HERE);
     }
 }
 
@@ -933,6 +908,8 @@ int main(void)
         /* Media first: it decides how long we may block below. */
         timeout.msec = media_poll();
 #endif
+        /* handle_events() passes it on to the ioqueue as it is */
+        pj_time_val_normalize(&timeout);
 
         pjsip_endpt_handle_events(g.endpt, &timeout);
 
@@ -969,6 +946,7 @@ int main(void)
 #else
         timeout.msec = media_poll();
 #endif
+        pj_time_val_normalize(&timeout);
 
         pjsip_endpt_handle_events(g.endpt, &timeout);
         pj_gettimeofday(&now);
@@ -1024,6 +1002,36 @@ static void deinit_call(struct call_t *call)
 
     pj_pool_release(call->pool);
     call->pool = NULL;
+}
+
+/* Abandon a call whose INVITE session could not be set up, without
+ * notification. Detach it first: terminating destroys the dialog, and the
+ * session with it, when nothing else holds them.
+ */
+static void clear_call(struct call_t *call)
+{
+    pjsip_inv_session *inv = call->inv;
+
+    if (inv) {
+        inv->mod_data[mod_embedded_ua.id] = NULL;
+        call->inv = NULL;
+        pjsip_inv_terminate(inv, PJSIP_SC_INTERNAL_SERVER_ERROR, PJ_FALSE);
+    }
+    deinit_call(call);
+}
+
+/* End a call: code is the final response to an incoming call not yet
+ * answered; any other call is cancelled or sent a BYE.
+ */
+static void hangup_call(struct call_t *call, int code)
+{
+    pjsip_tx_data *tdata;
+
+    if (pjsip_inv_end_session(call->inv, code, NULL, &tdata) == PJ_SUCCESS &&
+        tdata)
+    {
+        pjsip_inv_send_msg(call->inv, tdata);
+    }
 }
 
 /* Set up a call, for both the UAC and the UAS side: take a free call slot,
@@ -1182,8 +1190,6 @@ static pj_status_t make_call(const pj_str_t *dst_uri)
     pjsip_tx_data *tdata;
     pj_str_t local_uri = pj_str(SIP_AOR);
     pjsip_cred_info cred;
-    char contact_buf[80];
-    pj_str_t contact;
     pj_status_t status;
 
     status = create_call(NULL, &call, &local_sdp);
@@ -1192,13 +1198,8 @@ static pj_status_t make_call(const pj_str_t *dst_uri)
         return status;
     }
 
-    status = create_contact(contact_buf, sizeof(contact_buf));
-    if (status != PJ_SUCCESS)
-        goto on_error;
-    contact = pj_str(contact_buf);
-
-    status = pjsip_dlg_create_uac(pjsip_ua_instance(), &local_uri, &contact,
-                                  dst_uri, NULL, &dlg);
+    status = pjsip_dlg_create_uac(pjsip_ua_instance(), &local_uri,
+                                  &g.contact, dst_uri, NULL, &dlg);
     if (status != PJ_SUCCESS)
         goto on_error;
 
@@ -1233,12 +1234,9 @@ static pj_status_t make_call(const pj_str_t *dst_uri)
 
 on_error:
     app_perror(THIS_FILE, "Unable to make call", status);
-    if (call->inv)
-        pjsip_inv_terminate(call->inv, PJSIP_SC_INTERNAL_SERVER_ERROR,
-                            PJ_FALSE);
-    else if (dlg)
+    if (!call->inv && dlg)
         pjsip_dlg_terminate(dlg);
-    deinit_call(call);
+    clear_call(call);
     return status;
 }
 
@@ -1328,8 +1326,6 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
     pjsip_dialog *dlg = NULL;
     pjmedia_sdp_session *local_sdp;
     const pjmedia_sdp_session *rem_sdp;
-    char contact_buf[80];
-    pj_str_t contact_uri;
     pjsip_tx_data *tdata = NULL;
     unsigned options = PJSIP_INV_SUPPORT_100REL;
     pj_status_t status;
@@ -1364,17 +1360,19 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
                                       g.endpt, &tdata);
     if (status != PJ_SUCCESS) {
         deinit_call(call);
-        pjsip_endpt_send_response2( g.endpt, rdata, tdata, NULL, NULL);
+        /* The response is only there for a SIP-level rejection. */
+        if (tdata) {
+            pjsip_endpt_send_response2(g.endpt, rdata, tdata, NULL, NULL);
+        } else {
+            pjsip_endpt_respond_stateless(g.endpt, rdata,
+                                          PJSIP_SC_INTERNAL_SERVER_ERROR,
+                                          NULL, NULL, NULL);
+        }
         return PJ_TRUE;
     }
 
-    status = create_contact(contact_buf, sizeof(contact_buf));
-    if (status != PJ_SUCCESS)
-        RESPOND_ERR(PJSIP_SC_INTERNAL_SERVER_ERROR);
-    contact_uri = pj_str(contact_buf);
-
     status = pjsip_dlg_create_uas_and_inc_lock( pjsip_ua_instance(), rdata,
-                                                &contact_uri, &dlg);
+                                                &g.contact, &dlg);
     if (status != PJ_SUCCESS)
         RESPOND_ERR(PJSIP_SC_INTERNAL_SERVER_ERROR);
 
@@ -1401,10 +1399,16 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
         status = pjsip_inv_send_msg(call->inv, tdata);
 
     if (status != PJ_SUCCESS) {
+        pjsip_transaction *tsx = call->inv->invite_tsx;
+
         app_perror(THIS_FILE, "Unable to answer call", status);
-        pjsip_inv_terminate(call->inv, PJSIP_SC_INTERNAL_SERVER_ERROR,
-                            PJ_FALSE);
-        deinit_call(call);
+        /* Else the caller retransmits the INVITE until it times out. */
+        if (tsx && tsx->status_code < 200) {
+            pjsip_dlg_respond(call->inv->dlg, rdata,
+                              PJSIP_SC_INTERNAL_SERVER_ERROR,
+                              NULL, NULL, NULL);
+        }
+        clear_call(call);
     }
 
     return PJ_TRUE;
@@ -1420,18 +1424,8 @@ on_error:
 #undef RESPOND_ERR
 }
 
-/* Media clock, called from the media thread, or from the main loop when
- * there is none. For every call whose turn has come, read the decoded audio
- * from the stream and put it straight back, i.e. loopback the incoming
- * audio to the remote party.
- *
- * Returns how many milliseconds the caller may block before the earliest
- * next frame is due, so that the poll paces the media rather than a per-call
- * thread sleeping. While any call has media this is the real time to its
- * next frame, i.e. at most one ptime, or MEDIA_CATCHUP_MSEC while catching
- * up; MEDIA_IDLE_POLL_MSEC applies only when no call has any. One frame
- * buffer serves all calls, because only one call is being processed at any
- * moment.
+/* Media clock: loop back one frame for every call that is due. Returns how
+ * long the caller may block before the next frame is due.
  */
 static unsigned media_poll(void)
 {
@@ -1474,7 +1468,8 @@ static unsigned media_poll(void)
          * shortly for the next one.
          */
         msec = (pj_cmp_timestamp(&now, &call->next_tick) < 0)?
-                pj_elapsed_msec(&now, &call->next_tick) : MEDIA_CATCHUP_MSEC;
+                (pj_elapsed_usec(&now, &call->next_tick) + 999) / 1000 :
+                MEDIA_CATCHUP_MSEC;
         if (msec < delay)
             delay = msec;
     }
@@ -1485,10 +1480,8 @@ static unsigned media_poll(void)
 }
 
 #if EMBUA_USE_MEDIA_THREAD
-/* The media thread. It runs the media clock and polls pjmedia's ioqueue,
- * i.e. it both produces the outgoing frames and receives the incoming RTP,
- * so a busy main thread cannot stall the audio. media_poll() says how long
- * the ioqueue may block, which is what paces the clock.
+/* Runs the media clock and receives RTP, so a busy SIP thread cannot stall
+ * the audio.
  */
 static int media_thread_proc(void *arg)
 {
@@ -1501,6 +1494,7 @@ static int media_thread_proc(void *arg)
 
         timeout.sec = 0;
         timeout.msec = media_poll();
+        pj_time_val_normalize(&timeout);
 
         pj_ioqueue_poll(ioqueue, &timeout);
     }
