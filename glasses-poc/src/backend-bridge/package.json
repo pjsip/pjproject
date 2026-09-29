@@ -1,0 +1,9 @@
+{
+  "name": "glasses-backend-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Interconnects the glasses SIP client with WhatsApp Business Calling, PSTN/PBX and CRM",
+  "engines": { "node": ">=20" },
+  "scripts": { "start": "node server.js" }
+}

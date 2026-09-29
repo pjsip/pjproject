@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Glasses SIP client scaffold. Targets Android (pjsip-android pattern) and,
+  with the same manifest, Meta Horizon OS (Android-based) for VR Glasses.
+  Horizon-specific features are declared as optional so the APK still
+  installs on a plain AVD for testing without glasses.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:horizonos="http://schemas.horizonos.com/apk/res/horizonos"
+    package="org.pjsip.glasses">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- v207 Horizon OS: hand tracking + passthrough camera (VR Glasses) -->
+    <uses-permission android:name="com.oculus.permission.HAND_TRACKING" />
+    <uses-permission android:name="horizonos.permission.HEADSET_CAMERA" />
+
+    <uses-feature android:name="oculus.software.handtracking" android:required="false" />
+    <uses-feature android:name="oculus.feature.PASSTHROUGH" android:required="false" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
+    <application
+        android:label="Glasses SIP"
+        android:allowBackup="false">
+
+        <!-- Horizon OS: run as a panel app (2D overlay) rather than immersive -->
+        <meta-data android:name="com.oculus.supportedDevices" android:value="quest3|questpro|vrglasses" />
+
+        <service
+            android:name=".sip.SipService"
+            android:exported="false"
+            android:foregroundServiceType="phoneCall|microphone" />
+
+        <!-- Muse / Voice SDK intent entry point: "Hey Meta, call warehouse" -->
+        <receiver
+            android:name=".voice.VoiceTriggerReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="org.pjsip.glasses.action.VOICE_INTENT" />
+                <action android:name="android.intent.action.CALL" />
+                <action android:name="android.intent.action.VOICE_COMMAND" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Demo hook: simulated hand gestures from adb (see demo-scenarios/) -->
+        <receiver
+            android:name=".gesture.GestureDebugReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="org.pjsip.glasses.action.GESTURE" />
+            </intent-filter>
+        </receiver>
+
+        <activity
+            android:name=".overlay.PassthroughOverlayActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="com.oculus.intent.category.VR" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

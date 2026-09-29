@@ -1,0 +1,42 @@
+// Glasses SIP client module. Drop into pjsip-apps/src/swig/java/android/
+// next to the existing `pjsua2` library module (see settings.gradle there)
+// or point `pjsua2` at a prebuilt AAR produced by src/pjsip-native/build-android.sh.
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+}
+
+android {
+    namespace 'org.pjsip.glasses'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "org.pjsip.glasses"
+        minSdk 29            // Horizon OS is Android 12L+; 29 keeps plain AVDs usable
+        targetSdk 34
+        versionCode 1
+        versionName "0.1-poc"
+        ndk { abiFilters "arm64-v8a", "x86_64" }   // glasses + emulator
+    }
+    buildTypes {
+        release { minifyEnabled false }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions { jvmTarget = '17' }
+}
+
+dependencies {
+    // PJSUA2 Java bindings + libpjsua2.so (built by pjsip-native/build-android.sh)
+    implementation project(':pjsua2')
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    // Meta Horizon OS v207 SDK artifacts (placeholders; resolve from the
+    // Meta Maven repo once the project is registered in the developer hub)
+    // implementation 'com.meta.horizon:core-sdk:207.0.0'
+    // implementation 'com.meta.horizon:hand-tracking:207.0.0'
+    // implementation 'com.meta.horizon:passthrough:207.0.0'
+    // implementation 'com.meta.horizon:voice-sdk:207.0.0'
+}

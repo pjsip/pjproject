@@ -1,0 +1,20 @@
+{
+  "name": "glasses-ai-vision-call",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Camera frame + PCM -> STT -> Llama 4 Maverick -> SIP action for Meta glasses",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "tsc -p .",
+    "vision-call": "node --loader ts-node/esm src/cli.ts vision-call",
+    "transcribe": "node --loader ts-node/esm src/cli.ts transcribe",
+    "translate": "node --loader ts-node/esm src/cli.ts translate",
+    "typecheck": "tsc -p . --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.0"
+  }
+}
