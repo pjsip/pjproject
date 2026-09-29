@@ -780,14 +780,21 @@ PJ_DEF(pj_status_t) pjsip_tx_data_clone(const pjsip_tx_data *src,
 
     dst = *p_tdata;
 
-    msg = pjsip_msg_create(dst->pool, PJSIP_RESPONSE_MSG);
+    msg = pjsip_msg_create(dst->pool, src->msg->type);
     dst->msg = msg;
     pjsip_tx_data_add_ref(dst);
 
-    /* Duplicate status line */
-    msg->line.status.code = src->msg->line.status.code;
-    pj_strdup(dst->pool, &msg->line.status.reason,
-              &src->msg->line.status.reason);
+    /* Duplicate request or status line */
+    if (msg->type == PJSIP_REQUEST_MSG) {
+        pjsip_method_copy(dst->pool, &msg->line.req.method,
+                          &src->msg->line.req.method);
+        msg->line.req.uri = (pjsip_uri*)
+                            pjsip_uri_clone(dst->pool, src->msg->line.req.uri);
+    } else {
+        msg->line.status.code = src->msg->line.status.code;
+        pj_strdup(dst->pool, &msg->line.status.reason,
+                  &src->msg->line.status.reason);
+    }
 
     /* Duplicate all headers */
     hsrc = src->msg->hdr.next;
