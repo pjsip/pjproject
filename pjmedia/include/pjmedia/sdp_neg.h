@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -678,6 +678,19 @@ PJ_DECL(pj_bool_t) pjmedia_sdp_neg_has_local_answer(pjmedia_sdp_neg *neg);
 
 
 /**
+ * Cancel the pending local answer and return to remote-offer state.
+ * The negotiator must be in PJMEDIA_SDP_NEG_STATE_WAIT_NEGO state with
+ * a local answer.
+ *
+ * @param neg           The negotiator.
+ *
+ * @return              PJ_SUCCESS or the appropriate error code.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_sdp_neg_cancel_local_answer(pjmedia_sdp_neg *neg);
+
+
+/**
  * Cancel any pending offer, whether the offer is initiated by local or
  * remote, and move negotiator state back to previous stable state
  * (PJMEDIA_SDP_NEG_STATE_DONE). The negotiator must be in
@@ -717,6 +730,30 @@ PJ_DECL(pj_status_t) pjmedia_sdp_neg_cancel_offer(pjmedia_sdp_neg *neg);
 PJ_DECL(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
                                                 pjmedia_sdp_neg *neg,
                                                 pj_bool_t allow_asym);
+
+
+/**
+ * Enable SDP passthrough mode for a signalling-plane application.
+ *
+ * Codec/PT negotiation and media-line rewriting are skipped, while the
+ * negotiator retains its normal state handling and stack-managed "o=" line.
+ * Answers must have the same media-line count as their offers; negotiation
+ * fails with PJMEDIA_SDPNEG_EMISMEDIA otherwise.
+ * Local re-offers must retain at least the active SDP's media-line count;
+ * shortened re-offers fail with PJMEDIA_SDPNEG_EMISMEDIA.
+ * Local answers must be supplied explicitly; set_local_answer() with a
+ * NULL local SDP returns PJ_EINVAL instead of reusing previous SDP.
+ * Set this once for the negotiator lifetime.
+ *
+ * @param neg           The SDP negotiator instance.
+ * @param passthrough   PJ_TRUE to enable passthrough mode, PJ_FALSE to
+ *                      disable it (default is disabled).
+ *
+ * @return              PJ_SUCCESS on success, or PJ_EINVAL if \a neg is
+ *                      NULL.
+ */
+PJ_DECL(pj_status_t) pjmedia_sdp_neg_set_passthrough(pjmedia_sdp_neg *neg,
+                                                     pj_bool_t passthrough);
 
 
 /**
@@ -819,4 +856,3 @@ PJ_END_DECL
 
 
 #endif  /* __PJMEDIA_SDP_NEG_H__ */
-

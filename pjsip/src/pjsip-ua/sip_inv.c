@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -100,11 +100,15 @@ void (*pjsip_inv_process_hparam_ptr)(pjsip_inv_session *sess,
 /*
  * Static prototypes.
  */
+/* Internal 100rel query; the caller holds the dialog lock. */
+pj_bool_t pjsip_100rel_has_pending_sdp(const pjsip_inv_session *inv);
+
 static pj_status_t mod_inv_load(pjsip_endpoint *endpt);
 static pj_status_t mod_inv_unload(void);
 static pj_bool_t   mod_inv_on_rx_request(pjsip_rx_data *rdata);
 static pj_bool_t   mod_inv_on_rx_response(pjsip_rx_data *rdata);
 static void        mod_inv_on_tsx_state(pjsip_transaction*, pjsip_event*);
+static pj_bool_t   tx_data_has_sdp(pjsip_tx_data *tdata);
 
 static void inv_on_state_null( pjsip_inv_session *inv, pjsip_event *e);
 static void inv_on_state_calling( pjsip_inv_session *inv, pjsip_event *e);
@@ -936,6 +940,21 @@ static void mod_inv_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
     if (inv == NULL)
         return;
 
+    /* Track only outgoing UPDATEs carrying an unanswered SDP offer. */
+    if (tsx->role == PJSIP_ROLE_UAC &&
+        pjsip_method_cmp(&tsx->method, &pjsip_update_method)==0)
+    {
+        if (tsx->state == PJSIP_TSX_STATE_CALLING &&
+            tsx->last_tx && tx_data_has_sdp(tsx->last_tx))
+        {
+            inv->update_tsx = tsx;
+        } else if (tsx->state >= PJSIP_TSX_STATE_COMPLETED &&
+                   tsx == inv->update_tsx)
+        {
+            inv->update_tsx = NULL;
+        }
+    }
+
     /* Call on_tsx_state_changed() upon receipt of request (tsx state is
      * PJSIP_TSX_STATE_TRYING). We need to do this before calling the state
      * handler since the handler will send response and change the tsx state.
@@ -983,40 +1002,91 @@ static void mod_inv_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
     }
 }
 
+/*
+ * Check if the local offer awaits a response, ACK, or PRACK.
+ */
+static pj_bool_t inv_offer_tsx_pending(const pjsip_inv_session *inv)
+{
+    pjsip_transaction *tsx = inv->invite_tsx;
+    struct tsx_inv_data *tsx_inv_data;
+
+    if (inv->update_tsx)
+        return PJ_TRUE;
+    if (!tsx)
+        return PJ_FALSE;
+    tsx_inv_data = (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
+    if (tsx->role == PJSIP_ROLE_UAC)
+        return !tsx_inv_data || !tsx_inv_data->sdp_done;
+    if (pjsip_100rel_has_pending_sdp(inv))
+        return PJ_TRUE;
+
+    return tsx->last_tx && tx_data_has_sdp(tsx->last_tx) &&
+           (!tsx_inv_data || !tsx_inv_data->sdp_done) &&
+           (tsx->status_code/100 == 2 ||
+            (tsx->status_code/100 == 1 &&
+             (inv->options & PJSIP_INV_REQUIRE_100REL)));
+}
+
+PJ_DEF(pj_bool_t) pjsip_inv_has_pending_offerless_invite(
+                                                const pjsip_inv_session *inv)
+{
+    const pjsip_transaction *tsx;
+    const struct tsx_inv_data *data;
+
+    PJ_ASSERT_RETURN(inv, PJ_FALSE);
+
+    tsx = inv->invite_tsx;
+    if (!tsx || tsx->role != PJSIP_ROLE_UAS ||
+        tsx->state >= PJSIP_TSX_STATE_COMPLETED)
+    {
+        return PJ_FALSE;
+    }
+    data = (const struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
+    return !data || (!data->has_sdp && !data->sdp_done);
+}
+
 /* 
  * Check if tx_data has sdp. 
  */
-static pj_bool_t tx_data_has_sdp(const pjsip_tx_data *tdata)
+static pj_bool_t tx_data_has_sdp(pjsip_tx_data *tdata)
 {
-    pjsip_msg_body *body = tdata->msg->body;
-    pjsip_media_type app_sdp;
+    pjsip_sdp_info *info;
 
     PJ_ASSERT_RETURN(tdata, PJ_FALSE);
 
-    pjsip_media_type_init2(&app_sdp, "application", "sdp");
-
-    if (body &&
-        pj_stricmp(&body->content_type.type, &app_sdp.type)==0 && 
-        pj_stricmp(&body->content_type.subtype, &app_sdp.subtype)==0) 
-    {
-        return PJ_TRUE;
-
-    } else if (body && 
-               pj_stricmp2(&body->content_type.type, "multipart") && 
-               (pj_stricmp2(&body->content_type.subtype, "mixed")==0 ||
-                pj_stricmp2(&body->content_type.subtype, "alternative")==0))    
-    {
-        pjsip_multipart_part *part;
-
-        part = pjsip_multipart_find_part(body, &app_sdp, NULL);
-        if (part) {
-            return PJ_TRUE;
-        }
-    }
-
-    return PJ_FALSE;
+    info = pjsip_tdata_get_sdp_info(tdata);
+    return info->sdp || info->body.ptr;
 }
 
+
+static pj_status_t inv_create_neg_local_offer(pjsip_inv_session *inv,
+                                              const pjmedia_sdp_session *sdp)
+{
+    pj_status_t status;
+
+    status = pjmedia_sdp_neg_create_w_local_offer(inv->pool, sdp, &inv->neg);
+    if (status == PJ_SUCCESS)
+        status = pjmedia_sdp_neg_set_passthrough(
+                    inv->neg,
+                    (inv->options & PJSIP_INV_SDP_PASSTHROUGH) != 0);
+    return status;
+}
+
+static pj_status_t inv_create_neg_remote_offer(
+                                              pjsip_inv_session *inv,
+                                              const pjmedia_sdp_session *local,
+                                              const pjmedia_sdp_session *remote)
+{
+    pj_status_t status;
+
+    status = pjmedia_sdp_neg_create_w_remote_offer(inv->pool, local, remote,
+                                                  &inv->neg);
+    if (status == PJ_SUCCESS)
+        status = pjmedia_sdp_neg_set_passthrough(
+                    inv->neg,
+                    (inv->options & PJSIP_INV_SDP_PASSTHROUGH) != 0);
+    return status;
+}
 
 /*
  * Initialize the invite module.
@@ -1135,8 +1205,7 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
 
     /* Create negotiator if local_sdp is specified. */
     if (local_sdp) {
-        status = pjmedia_sdp_neg_create_w_local_offer(inv->pool, 
-                                                      local_sdp, &inv->neg);
+        status = inv_create_neg_local_offer(inv, local_sdp);
         if (status != PJ_SUCCESS) {
             pjsip_dlg_dec_lock(dlg);
             return status;
@@ -1925,13 +1994,10 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
 
     /* Create negotiator. */
     if (sdp_info->sdp) {
-        status = pjmedia_sdp_neg_create_w_remote_offer(inv->pool, local_sdp,
-                                                       sdp_info->sdp,
-                                                       &inv->neg);
+        status = inv_create_neg_remote_offer(inv, local_sdp, sdp_info->sdp);
                                                 
     } else if (local_sdp) {
-        status = pjmedia_sdp_neg_create_w_local_offer(inv->pool, 
-                                                      local_sdp, &inv->neg);
+        status = inv_create_neg_local_offer(inv, local_sdp);
     } else {
         status = PJ_SUCCESS;
     }
@@ -2779,9 +2845,7 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
                   pjsip_rx_data_get_info(rdata)));
 
         if (inv->neg == NULL) {
-            status=pjmedia_sdp_neg_create_w_remote_offer(inv->pool, NULL,
-                                                         sdp_info->sdp,
-                                                         &inv->neg);
+            status = inv_create_neg_remote_offer(inv, NULL, sdp_info->sdp);
         } else {
             status=pjmedia_sdp_neg_set_remote_offer(inv->pool_prov, inv->neg, 
                                                     sdp_info->sdp);
@@ -2899,9 +2963,7 @@ static pj_status_t process_answer( pjsip_inv_session *inv,
     if (local_sdp && (st_code/100==1 || st_code/100==2)) {
 
         if (inv->neg == NULL) {
-            status = pjmedia_sdp_neg_create_w_local_offer(inv->pool, 
-                                                          local_sdp,
-                                                          &inv->neg);
+            status = inv_create_neg_local_offer(inv, local_sdp);
         } else if (pjmedia_sdp_neg_get_state(inv->neg)==
                    PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER)
         {
@@ -3160,9 +3222,23 @@ PJ_DEF(pj_status_t) pjsip_inv_set_local_sdp(pjsip_inv_session *inv,
     const pjmedia_sdp_session *offer;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(inv && sdp, PJ_EINVAL);
+    PJ_ASSERT_RETURN(inv, PJ_EINVAL);
 
     pjsip_inv_add_ref(inv);
+
+    if (!sdp) {
+        if (!inv->neg ||
+            pjmedia_sdp_neg_get_state(inv->neg) !=
+                PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER ||
+            inv_offer_tsx_pending(inv))
+        {
+            PJ_LOG(3,(inv->obj_name, "No unsent local SDP offer to cancel"));
+            status = PJ_EINVALIDOP;
+        } else {
+            status = pjmedia_sdp_neg_cancel_offer(inv->neg);
+        }
+        goto on_return;
+    }
 
     /* If we have remote SDP offer, set local answer to respond to the offer,
      * otherwise we set/modify our local offer (and create an SDP negotiator
@@ -3177,20 +3253,43 @@ PJ_DEF(pj_status_t) pjsip_inv_set_local_sdp(pjsip_inv_session *inv,
         {
             status = pjsip_inv_set_sdp_answer(inv, sdp);
         }  else if (neg_state == PJMEDIA_SDP_NEG_STATE_DONE) {
-            status = pjmedia_sdp_neg_modify_local_offer2(inv->pool, inv->neg,
+            pjsip_transaction *tsx = inv->invite_tsx;
+            struct tsx_inv_data *data = tsx ?
+                (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id] : NULL;
+
+            if (tsx &&
+                ((tsx->role == PJSIP_ROLE_UAC &&
+                  (!data || !data->sdp_done)) ||
+                 (tsx->role == PJSIP_ROLE_UAS && data && data->has_sdp &&
+                  !data->sdp_done)))
+            {
+                PJ_LOG(3,(inv->obj_name, "Cannot stage a local offer "
+                                         "during the pending INVITE"));
+                status = PJ_EINVALIDOP;
+            } else {
+                status = pjmedia_sdp_neg_modify_local_offer2(inv->pool_prov,
+                                                         inv->neg,
                                                          inv->sdp_neg_flags,
                                                          sdp);
+            }
         } else {
-            pjsip_inv_dec_ref(inv);
-            return PJMEDIA_SDPNEG_EINSTATE;
+            status = PJMEDIA_SDPNEG_EINSTATE;
+            goto on_return;
         }
     } else {
-        status = pjmedia_sdp_neg_create_w_local_offer(inv->pool, 
-                                                      sdp, &inv->neg);
+        if (inv->invite_tsx &&
+            inv->invite_tsx->role == PJSIP_ROLE_UAC)
+        {
+            PJ_LOG(3,(inv->obj_name, "Cannot stage a local offer "
+                                     "during the pending INVITE"));
+            status = PJ_EINVALIDOP;
+            goto on_return;
+        }
+        status = inv_create_neg_local_offer(inv, sdp);
     }
 
+on_return:
     pjsip_inv_dec_ref(inv);
-
     return status;
 }
 
@@ -3841,8 +3940,8 @@ PJ_DEF(pj_status_t) pjsip_inv_reinvite( pjsip_inv_session *inv,
     /* Check arguments. */
     PJ_ASSERT_RETURN(inv && p_tdata, PJ_EINVAL);
 
-    /* Must NOT have a pending INVITE transaction */
-    if (inv->invite_tsx!=NULL)
+    /* Do not overlap INVITEs or an outstanding UPDATE offer. */
+    if (inv->invite_tsx != NULL || inv->update_tsx != NULL)
         return PJ_EINVALIDOP;
 
     pj_log_push_indent();
@@ -3866,9 +3965,7 @@ PJ_DEF(pj_status_t) pjsip_inv_reinvite( pjsip_inv_session *inv,
 
     if (new_offer) {
         if (!inv->neg) {
-            status = pjmedia_sdp_neg_create_w_local_offer(inv->pool, 
-                                                          new_offer,
-                                                          &inv->neg);
+            status = inv_create_neg_local_offer(inv, new_offer);
             if (status != PJ_SUCCESS)
                 goto on_return;
 
@@ -3931,6 +4028,8 @@ PJ_DEF(pj_status_t) pjsip_inv_update (  pjsip_inv_session *inv,
     pjsip_contact_hdr *contact_hdr = NULL;
     pjsip_tx_data *tdata = NULL;
     pjmedia_sdp_session *sdp_copy;
+    const pjmedia_sdp_session *pending_offer;
+    pjmedia_sdp_session comparable_offer;
     const pjsip_hdr *hdr;
     pjsip_supported_hdr *sup_hdr = NULL;
     pj_status_t status = PJ_SUCCESS;
@@ -3963,23 +4062,55 @@ PJ_DEF(pj_status_t) pjsip_inv_update (  pjsip_inv_session *inv,
 #endif
         }
 
-        if (pjmedia_sdp_neg_get_state(inv->neg)!=PJMEDIA_SDP_NEG_STATE_DONE) {
+        switch (pjmedia_sdp_neg_get_state(inv->neg)) {
+        case PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER:
+            if ((inv->options & PJSIP_INV_SDP_PASSTHROUGH) == 0) {
+                PJ_LOG(4,(inv->dlg->obj_name,
+                          "Invalid SDP offer/answer state for UPDATE"));
+                status = PJ_EINVALIDOP;
+                goto on_error;
+            }
+            /* Do not resend an offer awaiting a response, ACK, or PRACK. */
+            if (inv_offer_tsx_pending(inv)) {
+                PJ_LOG(4,(inv->dlg->obj_name,
+                          "Unable to send UPDATE, a pending offer is still "
+                          "outstanding in another transaction"));
+                status = PJ_EINVALIDOP;
+                goto on_error;
+            }
+            status = pjmedia_sdp_neg_get_neg_local(inv->neg, &pending_offer);
+            if (status != PJ_SUCCESS)
+                goto on_error;
+            comparable_offer = *offer;
+            comparable_offer.origin = pending_offer->origin;
+            if (pjmedia_sdp_session_cmp(&comparable_offer, pending_offer, 0) !=
+                PJ_SUCCESS)
+            {
+                PJ_LOG(3,(inv->obj_name, "UPDATE offer differs from "
+                                         "pending local offer"));
+                status = PJMEDIA_SDPNEG_EINSTATE;
+                goto on_error;
+            }
+            offer = pending_offer;
+            break;
+
+        case PJMEDIA_SDP_NEG_STATE_DONE:
+            /* Fix the new offer with the correct SDP origin. */
+            status = pjmedia_sdp_neg_modify_local_offer2(
+                                            inv->pool_prov, inv->neg,
+                                            inv->sdp_neg_flags, offer);
+            if (status != PJ_SUCCESS)
+                goto on_error;
+
+            pjmedia_sdp_neg_get_neg_local(inv->neg, &offer);
+            break;
+
+        default:
             PJ_LOG(4,(inv->dlg->obj_name,
                       "Invalid SDP offer/answer state for UPDATE"));
             status = PJ_EINVALIDOP;
             goto on_error;
         }
-
-        /* Notify negotiator about the new offer. This will fix the offer
-         * with correct SDP origin.
-         */
-        status = pjmedia_sdp_neg_modify_local_offer2(inv->pool_prov, inv->neg,
-                                                     inv->sdp_neg_flags, offer);
-        if (status != PJ_SUCCESS)
-            goto on_error;
-
-        /* Retrieve the "fixed" offer from negotiator */
-        pjmedia_sdp_neg_get_neg_local(inv->neg, &offer);
     }
 
     /* Update Contact if required */
@@ -4874,6 +5005,13 @@ static void inv_respond_incoming_prack(pjsip_inv_session *inv,
 
     /* No SDP in the PRACK request, respond with 200/OK without SDP */
     if (rdata->msg_info.msg->body == NULL) {
+        if (inv->neg &&
+            pjmedia_sdp_neg_get_state(inv->neg) ==
+                PJMEDIA_SDP_NEG_STATE_DONE &&
+            !pjsip_100rel_has_pending_sdp(inv))
+        {
+            inv->sdp_done_early_rel = PJ_TRUE;
+        }
         status = pjsip_dlg_create_response(inv->dlg, rdata, PJSIP_SC_OK, NULL,
                                            &tdata);
         goto on_return;
@@ -6705,4 +6843,3 @@ static void inv_on_state_disconnected( pjsip_inv_session *inv, pjsip_event *e)
         handle_uac_tsx_response(inv, e);
     }
 }
-

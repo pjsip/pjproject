@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1479,6 +1479,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
     /* User data */
     acc->cfg.user_data = cfg->user_data;
+    acc->cfg.media_app_managed = cfg->media_app_managed;
 
     /* Priority */
     if (acc->cfg.priority != cfg->priority) {

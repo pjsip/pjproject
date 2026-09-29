@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -559,6 +559,12 @@ enum pjsip_inv_option
      * Indicate support for siprec
      */
     PJSIP_INV_SUPPORT_SIPREC      = 2048,
+
+    /**
+     * Keep local and remote SDP content application-managed for this
+     * invite session. This is a local creation-time mode.
+     */
+    PJSIP_INV_SDP_PASSTHROUGH     = 4096,
     
 };
 
@@ -638,6 +644,10 @@ struct pjsip_inv_session
     pj_str_t             siprec_metadata;           /**< SIPREC metadata update
                                                          pending notification,
                                                          internal.           */
+    pjsip_transaction   *update_tsx;                /**< Pending outgoing
+                                                         UPDATE tsx carrying
+                                                         an unanswered
+                                                         offer, if any.     */
 };
 
 
@@ -897,6 +907,18 @@ PJ_DECL(pj_status_t) pjsip_inv_dec_ref( pjsip_inv_session *inv );
 
 
 /**
+ * Check whether a pending incoming INVITE without an SDP offer still needs
+ * offer/answer negotiation. The caller must hold the dialog lock.
+ *
+ * @param inv           The invite session.
+ * @return              PJ_TRUE if an unanswered offerless UAS INVITE has
+ *                      not completed offer/answer negotiation.
+ */
+PJ_DECL(pj_bool_t) pjsip_inv_has_pending_offerless_invite(
+                                                const pjsip_inv_session *inv);
+
+
+/**
  * Forcefully terminate and destroy INVITE session, regardless of
  * the state of the session. Note that this function should only be used
  * when there is failure in the INVITE session creation. After the
@@ -1089,10 +1111,15 @@ PJ_DECL(pj_status_t) pjsip_inv_answer(  pjsip_inv_session *inv,
 /**
  * Set local offer or answer depending on negotiator state (it may also
  * create a negotiator if it doesn't exist yet).
+ * A new local offer is refused with PJ_EINVALIDOP while an outgoing
+ * INVITE's offer/answer is incomplete, or an incoming INVITE's offer
+ * remains unanswered. Answers to pending remote offers are allowed.
+ * A NULL SDP cancels a staged local offer only if it has not been sent.
  *
  * @param inv           The invite session.
  * @param sdp           The SDP description which will be set as
- *                      an offer/answer to remote.
+ *                      an offer/answer to remote, or NULL to cancel an
+ *                      unsent local offer.
  *
  * @return              PJ_SUCCESS if local offer/answer can be accepted by
  *                      SDP negotiator.
@@ -1209,7 +1236,10 @@ PJ_DECL(pj_status_t) pjsip_inv_reinvite(pjsip_inv_session *inv,
  *                      contact, it can specify the new contact in this 
  *                      argument; otherwise this argument must be NULL.
  * @param offer         Offer to be sent to remote. This argument is
- *                      mandatory.
+ *                      mandatory. In passthrough mode, if a local offer is
+ *                      already staged, this must match the pending offer
+ *                      except for the stack-managed origin line;
+ *                      otherwise PJMEDIA_SDPNEG_EINSTATE is returned.
  * @param p_tdata       Pointer to receive the UPDATE request message to
  *                      be created.
  *

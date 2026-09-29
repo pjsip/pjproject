@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1896,6 +1896,647 @@ static int sdp_neg_static_pt_repr_test(pj_pool_t *pool)
     return 0;
 }
 
+/* Real-world SDP offer/answer pair used to verify that
+ * pjmedia_sdp_neg_negotiate_passthrough() promotes the fed-in SDP verbatim,
+ * without the fmtp reconciliation / payload-type bookkeeping that a normal
+ * pjmedia_sdp_neg_negotiate() would apply. The offer carries 6 payload
+ * types (AMR-WB/AMR/telephone-event), while the answer narrows this down
+ * to 2 with different fmtp parameters than the offer's — exactly the kind
+ * of content a normal negotiation would rewrite.
+ */
+static char pt_offer_str[] =
+    "v=0\r\n"
+    "o=- 893867431174198 4062473431 IN IP4 10.162.173.125\r\n"
+    "s=SS VOIP\r\n"
+    "c=IN IP4 10.186.99.36\r\n"
+    "t=0 0\r\n"
+    "m=audio 56832 RTP/AVP 116 107 118 96 111 110\r\n"
+    "b=AS:41\r\n"
+    "b=RS:512\r\n"
+    "b=RR:1537\r\n"
+    "a=rtpmap:116 AMR-WB/16000/1\r\n"
+    "a=fmtp:116 mode-change-capability=2;max-red=220\r\n"
+    "a=rtpmap:107 AMR-WB/16000/1\r\n"
+    "a=fmtp:107 octet-align=1;mode-change-capability=2;max-red=220\r\n"
+    "a=rtpmap:118 AMR/8000/1\r\n"
+    "a=fmtp:118 mode-change-capability=2;max-red=220\r\n"
+    "a=rtpmap:96 AMR/8000/1\r\n"
+    "a=fmtp:96 octet-align=1;mode-change-capability=2;max-red=220\r\n"
+    "a=rtpmap:111 telephone-event/16000\r\n"
+    "a=fmtp:111 0-15\r\n"
+    "a=rtpmap:110 telephone-event/8000\r\n"
+    "a=fmtp:110 0-15\r\n"
+    "a=curr:qos local none\r\n"
+    "a=curr:qos remote none\r\n"
+    "a=des:qos mandatory local sendrecv\r\n"
+    "a=des:qos optional remote sendrecv\r\n"
+    "a=sendrecv\r\n"
+    "a=ptime:20\r\n"
+    "a=maxptime:240\r\n";
+
+static char pt_answer_str[] =
+    "v=0\r\n"
+    "o=- 893867432491909 4062736973 IN IP4 10.162.173.125\r\n"
+    "s=-\r\n"
+    "t=0 0\r\n"
+    "a=msid-semantic: WMS\r\n"
+    "m=audio 56384 RTP/AVP 116 111\r\n"
+    "c=IN IP4 10.186.99.38\r\n"
+    "b=AS:41\r\n"
+    "a=rtpmap:116 AMR-WB/16000\r\n"
+    "a=fmtp:116 max-red=0; mode-change-capability=2; mode-change-neighbor=1;"
+        " mode-change-period=2\r\n"
+    "a=rtpmap:111 telephone-event/16000\r\n"
+    "a=fmtp:111 0-15\r\n"
+    "a=ptime:20\r\n"
+    "a=maxptime:40\r\n"
+    "a=msid:- 415221c9-141a-4cfa-905a-024af91d0e7c\r\n"
+    "a=ssrc:18411299 cname:NNI4WBv5F7m8JUWO\r\n"
+    "a=sendrecv\r\n";
+
+/* Second offer/answer pair for a passthrough re-offer/re-answer round
+ * (Case 3 of sdp_neg_passthrough_test()). The offer's "o=" user/id/
+ * net_type/addr are all deliberately different from pt_offer_str's, to
+ * verify modify_local_offer2() keeps the local SDP origin identity under
+ * passthrough mode.
+ */
+static char pt_offer2_str[] =
+    "v=0\r\n"
+    "o=testuser2 111222333 1 IN IP4 192.0.2.1\r\n"
+    "s=SS VOIP\r\n"
+    "c=IN IP4 192.0.2.1\r\n"
+    "t=0 0\r\n"
+    "m=audio 56832 RTP/AVP 116 107 118 96 111 110\r\n"
+    "b=AS:41\r\n"
+    "a=rtpmap:116 AMR-WB/16000/1\r\n"
+    "a=fmtp:116 mode-change-capability=2;max-red=220\r\n"
+    "a=rtpmap:107 AMR-WB/16000/1\r\n"
+    "a=fmtp:107 octet-align=1;mode-change-capability=2;max-red=220\r\n"
+    "a=rtpmap:118 AMR/8000/1\r\n"
+    "a=fmtp:118 mode-change-capability=2;max-red=220\r\n"
+    "a=rtpmap:96 AMR/8000/1\r\n"
+    "a=fmtp:96 octet-align=1;mode-change-capability=2;max-red=220\r\n"
+    "a=rtpmap:111 telephone-event/16000\r\n"
+    "a=fmtp:111 0-15\r\n"
+    "a=rtpmap:110 telephone-event/8000\r\n"
+    "a=fmtp:110 0-15\r\n"
+    "a=sendrecv\r\n"
+    "a=ptime:20\r\n"
+    "a=maxptime:240\r\n";
+
+static char pt_answer2_str[] =
+    "v=0\r\n"
+    "o=- 999888777 1 IN IP4 10.162.173.125\r\n"
+    "s=-\r\n"
+    "t=0 0\r\n"
+    "m=audio 56390 RTP/AVP 118 110\r\n"
+    "c=IN IP4 10.186.99.38\r\n"
+    "b=AS:41\r\n"
+    "a=rtpmap:118 AMR/8000\r\n"
+    "a=fmtp:118 octet-align=1;mode-change-capability=2;max-red=0\r\n"
+    "a=rtpmap:110 telephone-event/8000\r\n"
+    "a=fmtp:110 0-15\r\n"
+    "a=ptime:20\r\n"
+    "a=maxptime:40\r\n"
+    "a=sendrecv\r\n";
+
+static int passthrough_mismatched_answer_test(pj_pool_t *pool,
+                                             pj_bool_t remote_answer,
+                                             pj_bool_t extra_media)
+{
+    pjmedia_sdp_session *offer, *answer;
+    pjmedia_sdp_neg *neg;
+    const pjmedia_sdp_session *old_local, *old_remote;
+    const pjmedia_sdp_session *active_local, *active_remote;
+    pj_status_t status;
+    char b1[sizeof(pt_offer_str)], b2[sizeof(pt_answer_str)];
+
+    pj_memcpy(b1, pt_offer_str, sizeof(pt_offer_str));
+    pj_memcpy(b2, pt_answer_str, sizeof(pt_answer_str));
+    if (pjmedia_sdp_parse(pool, b1, pj_ansi_strlen(b1), &offer) != PJ_SUCCESS ||
+        pjmedia_sdp_parse(pool, b2, pj_ansi_strlen(b2), &answer) != PJ_SUCCESS ||
+        pjmedia_sdp_neg_create_w_local_offer(pool, offer, &neg) != PJ_SUCCESS)
+    {
+        return -3680;
+    }
+    pjmedia_sdp_neg_set_passthrough(neg, PJ_TRUE);
+    if (pjmedia_sdp_neg_set_remote_answer(pool, neg, answer) != PJ_SUCCESS ||
+        pjmedia_sdp_neg_negotiate(pool, neg, 0) != PJ_SUCCESS ||
+        pjmedia_sdp_neg_get_active_local(neg, &old_local) != PJ_SUCCESS ||
+        pjmedia_sdp_neg_get_active_remote(neg, &old_remote) != PJ_SUCCESS)
+    {
+        return -3690;
+    }
+
+    if (extra_media) {
+        answer->media[answer->media_count] =
+            pjmedia_sdp_media_clone(pool, answer->media[0]);
+        ++answer->media_count;
+    } else {
+        --answer->media_count;
+    }
+    if (remote_answer) {
+        status = pjmedia_sdp_neg_modify_local_offer2(pool, neg, 0, offer);
+        if (status == PJ_SUCCESS)
+            status = pjmedia_sdp_neg_set_remote_answer(pool, neg, answer);
+    } else {
+        status = pjmedia_sdp_neg_set_remote_offer(pool, neg, offer);
+        if (status == PJ_SUCCESS) {
+            if (pjmedia_sdp_neg_set_local_answer(pool, neg, NULL) != PJ_EINVAL ||
+                pjmedia_sdp_neg_get_state(neg) !=
+                    PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER)
+            {
+                return -3695;
+            }
+            status = pjmedia_sdp_neg_set_local_answer(pool, neg, answer);
+            if (status == PJ_SUCCESS &&
+                (pjmedia_sdp_neg_set_local_answer(pool, neg, NULL) !=
+                    PJ_EINVAL ||
+                 pjmedia_sdp_neg_get_state(neg) !=
+                    PJMEDIA_SDP_NEG_STATE_WAIT_NEGO))
+            {
+                return -3696;
+            }
+        }
+    }
+    if (status != PJ_SUCCESS ||
+        pjmedia_sdp_neg_negotiate(pool, neg, 0) != PJMEDIA_SDPNEG_EMISMEDIA ||
+        pjmedia_sdp_neg_get_state(neg) != PJMEDIA_SDP_NEG_STATE_DONE ||
+        pjmedia_sdp_neg_get_active_local(neg, &active_local) != PJ_SUCCESS ||
+        pjmedia_sdp_neg_get_active_remote(neg, &active_remote) != PJ_SUCCESS ||
+        active_local != old_local || active_remote != old_remote)
+    {
+        return -3700;
+    }
+    answer->media_count = offer->media_count;
+    answer->media[0]->desc.port = 0;
+    if (remote_answer) {
+        status = pjmedia_sdp_neg_modify_local_offer2(pool, neg, 0, offer);
+        if (status == PJ_SUCCESS)
+            status = pjmedia_sdp_neg_set_remote_answer(pool, neg, answer);
+    } else {
+        status = pjmedia_sdp_neg_set_remote_offer(pool, neg, offer);
+        if (status == PJ_SUCCESS)
+            status = pjmedia_sdp_neg_set_local_answer(pool, neg, answer);
+    }
+    if (status != PJ_SUCCESS ||
+        pjmedia_sdp_neg_negotiate(pool, neg, 0) != PJ_SUCCESS ||
+        pjmedia_sdp_neg_get_active_local(neg, &active_local) != PJ_SUCCESS ||
+        pjmedia_sdp_neg_get_active_remote(neg, &active_remote) != PJ_SUCCESS ||
+        active_local->media_count != active_remote->media_count ||
+        (remote_answer ? active_remote : active_local)->media[0]->desc.port != 0)
+    {
+        return -3710;
+    }
+    return 0;
+}
+
+/* Verify passthrough mode (#pjmedia_sdp_neg_set_passthrough()) for both
+ * negotiation directions: we answer a remote offer, and remote answers our
+ * offer. In both cases, the active local/remote SDP after negotiation must
+ * be content-identical to what was fed into the negotiator, unlike a
+ * normal #pjmedia_sdp_neg_negotiate() which would reconcile/filter the
+ * answer's fmtp against the offer's and reassign payload types. A third
+ * case then verifies a re-offer/re-answer round (#pjmedia_sdp_neg_modify_local_offer2())
+ * on top of an established passthrough negotiator is covered too: the
+ * "o=" remains stack-managed while content below it passes through.
+ */
+static int sdp_neg_passthrough_test(pj_pool_t *pool)
+{
+    pjmedia_sdp_session *offer, *answer;
+    pjmedia_sdp_neg *neg;
+    const pjmedia_sdp_session *active_local, *active_remote;
+    pj_status_t status;
+    char b1[sizeof(pt_offer_str)], b2[sizeof(pt_answer_str)];
+
+    /* Case 1: we answer a remote offer (has_remote_answer == PJ_FALSE). */
+    pj_memcpy(b1, pt_offer_str, sizeof(pt_offer_str));
+    pj_memcpy(b2, pt_answer_str, sizeof(pt_answer_str));
+    if (pjmedia_sdp_parse(pool, b1, pj_ansi_strlen(b1), &offer) != PJ_SUCCESS)
+        return -3000;
+    if (pjmedia_sdp_parse(pool, b2, pj_ansi_strlen(b2), &answer) != PJ_SUCCESS)
+        return -3010;
+
+    if (pjmedia_sdp_neg_create_w_remote_offer(pool, NULL, offer, &neg) !=
+        PJ_SUCCESS)
+    {
+        return -3020;
+    }
+    pjmedia_sdp_neg_set_passthrough(neg, PJ_TRUE);
+    if (pjmedia_sdp_neg_set_local_answer(pool, neg, answer) != PJ_SUCCESS)
+        return -3030;
+
+    status = pjmedia_sdp_neg_negotiate(pool, neg, 0);
+    if (status != PJ_SUCCESS) {
+        app_perror(status, "   sdp_neg_passthrough_test: negotiate failed");
+        return -3040;
+    }
+
+    if (pjmedia_sdp_neg_get_state(neg) != PJMEDIA_SDP_NEG_STATE_DONE)
+        return -3050;
+
+    if (pjmedia_sdp_neg_get_active_local(neg, &active_local) != PJ_SUCCESS)
+        return -3060;
+    if (pjmedia_sdp_neg_get_active_remote(neg, &active_remote) != PJ_SUCCESS)
+        return -3070;
+
+    /* Content must be identical to what was fed in, but origin.version is
+     * still managed by the negotiator: since there was no previous
+     * last_sent, negotiate() bumps it by one on top of the fed-in
+     * answer's own version.
+     */
+    {
+        pjmedia_sdp_session *expected_answer;
+        char b6[sizeof(pt_answer_str)];
+
+        pj_memcpy(b6, pt_answer_str, sizeof(pt_answer_str));
+        if (pjmedia_sdp_parse(pool, b6, pj_ansi_strlen(b6),
+                              &expected_answer) != PJ_SUCCESS)
+        {
+            return -3075;
+        }
+        expected_answer->origin.version = answer->origin.version + 1;
+
+        if (compare_sdp_string("passthrough answer", "expected answer",
+                               expected_answer, "active local", active_local,
+                               PJ_SUCCESS) != 0)
+        {
+            return -3080;
+        }
+    }
+    if (compare_sdp_string("passthrough offer", "fed-in offer", offer,
+                           "active remote", active_remote, PJ_SUCCESS) != 0)
+    {
+        return -3090;
+    }
+
+    /* Case 2: remote answers our offer (has_remote_answer == PJ_TRUE). */
+    pj_memcpy(b1, pt_offer_str, sizeof(pt_offer_str));
+    pj_memcpy(b2, pt_answer_str, sizeof(pt_answer_str));
+    if (pjmedia_sdp_parse(pool, b1, pj_ansi_strlen(b1), &offer) != PJ_SUCCESS)
+        return -3100;
+    if (pjmedia_sdp_parse(pool, b2, pj_ansi_strlen(b2), &answer) != PJ_SUCCESS)
+        return -3110;
+
+    if (pjmedia_sdp_neg_create_w_local_offer(pool, offer, &neg) != PJ_SUCCESS)
+        return -3120;
+    pjmedia_sdp_neg_set_passthrough(neg, PJ_TRUE);
+    if (pjmedia_sdp_neg_set_remote_answer(pool, neg, answer) != PJ_SUCCESS)
+        return -3130;
+
+    status = pjmedia_sdp_neg_negotiate(pool, neg, 0);
+    if (status != PJ_SUCCESS) {
+        app_perror(status, "   sdp_neg_passthrough_test: negotiate failed");
+        return -3140;
+    }
+
+    if (pjmedia_sdp_neg_get_state(neg) != PJMEDIA_SDP_NEG_STATE_DONE)
+        return -3150;
+
+    if (pjmedia_sdp_neg_get_active_local(neg, &active_local) != PJ_SUCCESS)
+        return -3160;
+    if (pjmedia_sdp_neg_get_active_remote(neg, &active_remote) != PJ_SUCCESS)
+        return -3170;
+
+    if (compare_sdp_string("passthrough offer", "fed-in offer", offer,
+                           "active local", active_local, PJ_SUCCESS) != 0)
+    {
+        return -3180;
+    }
+    if (compare_sdp_string("passthrough answer", "fed-in answer", answer,
+                           "active remote", active_remote, PJ_SUCCESS) != 0)
+    {
+        return -3190;
+    }
+
+    /* Case 3: a re-offer/re-answer round on top of Case 2's negotiator
+     * (still in passthrough mode), to verify modify_local_offer2()/
+     * negotiate() cover re-INVITE/UPDATE offers too, not just the
+     * initial offer/answer.
+     */
+    {
+        pjmedia_sdp_session *offer2, *answer2, *expected_offer2, *short_offer;
+        const pjmedia_sdp_session *old_active_local, *neg_local;
+        unsigned i;
+        char b3[sizeof(pt_offer2_str)], b4[sizeof(pt_answer2_str)];
+        char b5[sizeof(pt_offer2_str)];
+
+        if (pjmedia_sdp_neg_get_active_local(neg, &old_active_local) !=
+            PJ_SUCCESS)
+        {
+            return -3200;
+        }
+
+        pj_memcpy(b3, pt_offer2_str, sizeof(pt_offer2_str));
+        if (pjmedia_sdp_parse(pool, b3, pj_ansi_strlen(b3), &offer2) !=
+            PJ_SUCCESS)
+        {
+            return -3210;
+        }
+
+        short_offer = pjmedia_sdp_session_clone(pool, offer2);
+        short_offer->media_count = old_active_local->media_count - 1;
+        for (i = 0; i < 2; ++i) {
+            status = pjmedia_sdp_neg_modify_local_offer2(
+                        pool, neg,
+                        i ? PJMEDIA_SDP_NEG_ALLOW_MEDIA_CHANGE : 0,
+                        short_offer);
+            if (status != PJMEDIA_SDPNEG_EMISMEDIA ||
+                pjmedia_sdp_neg_get_state(neg) != PJMEDIA_SDP_NEG_STATE_DONE ||
+                pjmedia_sdp_neg_get_active_local(neg, &neg_local) !=
+                    PJ_SUCCESS ||
+                neg_local != old_active_local)
+            {
+                return -3215;
+            }
+        }
+
+        status = pjmedia_sdp_neg_modify_local_offer2(pool, neg, 0, offer2);
+        if (status != PJ_SUCCESS) {
+            app_perror(status, "   sdp_neg_passthrough_test: "
+                                "modify_local_offer2 failed");
+            return -3220;
+        }
+
+        if (pjmedia_sdp_neg_get_state(neg) !=
+            PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER)
+        {
+            return -3230;
+        }
+
+        /* SDP content passes through, but "o=" identity stays local. */
+        pj_memcpy(b5, pt_offer2_str, sizeof(pt_offer2_str));
+        if (pjmedia_sdp_parse(pool, b5, pj_ansi_strlen(b5),
+                              &expected_offer2) != PJ_SUCCESS)
+        {
+            return -3240;
+        }
+        expected_offer2->origin.user = old_active_local->origin.user;
+        expected_offer2->origin.id = old_active_local->origin.id;
+        expected_offer2->origin.net_type = old_active_local->origin.net_type;
+        expected_offer2->origin.addr_type = old_active_local->origin.addr_type;
+        expected_offer2->origin.addr = old_active_local->origin.addr;
+        expected_offer2->origin.version = old_active_local->origin.version+1;
+
+        if (pjmedia_sdp_neg_get_neg_local(neg, &neg_local) != PJ_SUCCESS)
+            return -3250;
+        if (compare_sdp_string("re-offer", "expected re-offer",
+                               expected_offer2, "neg local", neg_local,
+                               PJ_SUCCESS) != 0)
+        {
+            return -3260;
+        }
+
+        pj_memcpy(b4, pt_answer2_str, sizeof(pt_answer2_str));
+        if (pjmedia_sdp_parse(pool, b4, pj_ansi_strlen(b4), &answer2) !=
+            PJ_SUCCESS)
+        {
+            return -3270;
+        }
+
+        if (pjmedia_sdp_neg_set_remote_answer(pool, neg, answer2) !=
+            PJ_SUCCESS)
+        {
+            return -3280;
+        }
+
+        status = pjmedia_sdp_neg_negotiate(pool, neg, 0);
+        if (status != PJ_SUCCESS) {
+            app_perror(status, "   sdp_neg_passthrough_test: "
+                                "re-negotiate failed");
+            return -3290;
+        }
+
+        if (pjmedia_sdp_neg_get_state(neg) != PJMEDIA_SDP_NEG_STATE_DONE)
+            return -3300;
+
+        if (pjmedia_sdp_neg_get_active_local(neg, &active_local) !=
+            PJ_SUCCESS)
+        {
+            return -3310;
+        }
+        if (pjmedia_sdp_neg_get_active_remote(neg, &active_remote) !=
+            PJ_SUCCESS)
+        {
+            return -3320;
+        }
+
+        if (compare_sdp_string("re-offer", "expected re-offer",
+                               expected_offer2, "active local", active_local,
+                               PJ_SUCCESS) != 0)
+        {
+            return -3330;
+        }
+        if (compare_sdp_string("re-answer", "fed-in re-answer", answer2,
+                               "active remote", active_remote,
+                               PJ_SUCCESS) != 0)
+        {
+            return -3340;
+        }
+    }
+
+    /* Case 4: a re-answer keeps the original local "o=" identity. */
+    {
+        pjmedia_sdp_session *offer2, *answer2, *expected_answer2;
+        const pjmedia_sdp_session *base_local;
+        char b3[sizeof(pt_offer2_str)], b4[sizeof(pt_answer2_str)];
+        char b5[sizeof(pt_answer2_str)];
+
+        pj_memcpy(b1, pt_offer_str, sizeof(pt_offer_str));
+        pj_memcpy(b2, pt_answer_str, sizeof(pt_answer_str));
+        if (pjmedia_sdp_parse(pool, b1, pj_ansi_strlen(b1), &offer) !=
+            PJ_SUCCESS)
+        {
+            return -3350;
+        }
+        if (pjmedia_sdp_parse(pool, b2, pj_ansi_strlen(b2), &answer) !=
+            PJ_SUCCESS)
+        {
+            return -3360;
+        }
+        if (pjmedia_sdp_neg_create_w_remote_offer(pool, NULL, offer, &neg) !=
+            PJ_SUCCESS)
+        {
+            return -3370;
+        }
+        pjmedia_sdp_neg_set_passthrough(neg, PJ_TRUE);
+        if (pjmedia_sdp_neg_set_local_answer(pool, neg, answer) != PJ_SUCCESS ||
+            pjmedia_sdp_neg_negotiate(pool, neg, 0) != PJ_SUCCESS)
+        {
+            return -3380;
+        }
+        if (pjmedia_sdp_neg_get_active_local(neg, &base_local) != PJ_SUCCESS)
+            return -3390;
+
+        pj_memcpy(b3, pt_offer2_str, sizeof(pt_offer2_str));
+        if (pjmedia_sdp_parse(pool, b3, pj_ansi_strlen(b3), &offer2) !=
+            PJ_SUCCESS)
+        {
+            return -3400;
+        }
+        if (pjmedia_sdp_neg_set_remote_offer(pool, neg, offer2) != PJ_SUCCESS)
+            return -3410;
+
+        pj_memcpy(b4, pt_answer2_str, sizeof(pt_answer2_str));
+        if (pjmedia_sdp_parse(pool, b4, pj_ansi_strlen(b4), &answer2) !=
+            PJ_SUCCESS)
+        {
+            return -3420;
+        }
+        if (pjmedia_sdp_neg_set_local_answer(pool, neg, answer2) != PJ_SUCCESS ||
+            pjmedia_sdp_neg_negotiate(pool, neg, 0) != PJ_SUCCESS)
+        {
+            return -3430;
+        }
+        if (pjmedia_sdp_neg_get_active_local(neg, &active_local) != PJ_SUCCESS)
+            return -3440;
+
+        pj_memcpy(b5, pt_answer2_str, sizeof(pt_answer2_str));
+        if (pjmedia_sdp_parse(pool, b5, pj_ansi_strlen(b5),
+                              &expected_answer2) != PJ_SUCCESS)
+        {
+            return -3450;
+        }
+        expected_answer2->origin.user = base_local->origin.user;
+        expected_answer2->origin.id = base_local->origin.id;
+        expected_answer2->origin.net_type = base_local->origin.net_type;
+        expected_answer2->origin.addr_type = base_local->origin.addr_type;
+        expected_answer2->origin.addr = base_local->origin.addr;
+        expected_answer2->origin.version = base_local->origin.version + 1;
+
+        if (compare_sdp_string("re-answer", "expected re-answer",
+                               expected_answer2, "active local", active_local,
+                               PJ_SUCCESS) != 0)
+        {
+            return -3460;
+        }
+    }
+
+    /* Case 5: a pending local answer can be discarded safely. */
+    {
+        pjmedia_sdp_session *offer2, *answer2;
+        const pjmedia_sdp_session *neg_remote;
+        char b3[sizeof(pt_offer2_str)], b4[sizeof(pt_answer2_str)];
+
+        pj_memcpy(b3, pt_offer2_str, sizeof(pt_offer2_str));
+        if (pjmedia_sdp_parse(pool, b3, pj_ansi_strlen(b3), &offer2) !=
+            PJ_SUCCESS)
+        {
+            return -3470;
+        }
+        if (pjmedia_sdp_neg_set_remote_offer(pool, neg, offer2) != PJ_SUCCESS)
+            return -3480;
+
+        pj_memcpy(b4, pt_answer2_str, sizeof(pt_answer2_str));
+        if (pjmedia_sdp_parse(pool, b4, pj_ansi_strlen(b4), &answer2) !=
+            PJ_SUCCESS)
+        {
+            return -3490;
+        }
+        if (pjmedia_sdp_neg_set_local_answer(pool, neg, answer2) != PJ_SUCCESS)
+            return -3500;
+        if (pjmedia_sdp_neg_cancel_local_answer(neg) != PJ_SUCCESS)
+            return -3510;
+        if (pjmedia_sdp_neg_get_state(neg) !=
+            PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER)
+        {
+            return -3520;
+        }
+        if (pjmedia_sdp_neg_get_neg_remote(neg, &neg_remote) != PJ_SUCCESS)
+            return -3530;
+        if (compare_sdp_string("cancel answer", "remote offer", offer2,
+                               "neg remote", neg_remote, PJ_SUCCESS) != 0)
+        {
+            return -3540;
+        }
+        if (pjmedia_sdp_neg_set_local_answer(pool, neg, answer2) != PJ_SUCCESS ||
+            pjmedia_sdp_neg_negotiate(pool, neg, 0) != PJ_SUCCESS)
+        {
+            return -3550;
+        }
+    }
+
+    /* Case 6: cancellation preserves an initial answer supplied at
+     * negotiator creation.
+     */
+    {
+        pjmedia_sdp_session *initial;
+
+        pj_memcpy(b1, pt_offer_str, sizeof(pt_offer_str));
+        pj_memcpy(b2, pt_answer_str, sizeof(pt_answer_str));
+        if (pjmedia_sdp_parse(pool, b1, pj_ansi_strlen(b1), &offer) !=
+            PJ_SUCCESS)
+        {
+            return -3560;
+        }
+        if (pjmedia_sdp_parse(pool, b2, pj_ansi_strlen(b2), &initial) !=
+            PJ_SUCCESS)
+        {
+            return -3570;
+        }
+        if (pjmedia_sdp_neg_create_w_remote_offer(pool, initial, offer,
+                                                  &neg) != PJ_SUCCESS)
+        {
+            return -3580;
+        }
+        if (pjmedia_sdp_neg_cancel_local_answer(neg) != PJ_SUCCESS)
+            return -3590;
+        if (pjmedia_sdp_neg_set_local_answer(pool, neg, NULL) != PJ_SUCCESS)
+            return -3600;
+    }
+
+    /* Case 7: cancellation restores the absence of an initial answer. */
+    {
+        pj_memcpy(b1, pt_offer_str, sizeof(pt_offer_str));
+        pj_memcpy(b2, pt_answer_str, sizeof(pt_answer_str));
+        if (pjmedia_sdp_parse(pool, b1, pj_ansi_strlen(b1), &offer) !=
+            PJ_SUCCESS)
+        {
+            return -3610;
+        }
+        if (pjmedia_sdp_parse(pool, b2, pj_ansi_strlen(b2), &answer) !=
+            PJ_SUCCESS)
+        {
+            return -3620;
+        }
+        if (pjmedia_sdp_neg_create_w_remote_offer(pool, NULL, offer, &neg) !=
+            PJ_SUCCESS)
+        {
+            return -3630;
+        }
+        if (pjmedia_sdp_neg_set_local_answer(pool, neg, answer) != PJ_SUCCESS)
+            return -3640;
+        if (pjmedia_sdp_neg_cancel_local_answer(neg) != PJ_SUCCESS)
+            return -3650;
+        if (pjmedia_sdp_neg_set_local_answer(pool, neg, NULL) !=
+            PJMEDIA_SDPNEG_ENOINITIAL)
+        {
+            return -3660;
+        }
+        if (pjmedia_sdp_neg_get_state(neg) !=
+            PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER)
+        {
+            return -3670;
+        }
+    }
+
+    /* Mismatched answers must preserve the previously negotiated SDPs. */
+    status = passthrough_mismatched_answer_test(pool, PJ_FALSE, PJ_FALSE);
+    if (status != 0)
+        return status;
+    status = passthrough_mismatched_answer_test(pool, PJ_FALSE, PJ_TRUE);
+    if (status != 0)
+        return status;
+    status = passthrough_mismatched_answer_test(pool, PJ_TRUE, PJ_FALSE);
+    if (status != 0)
+        return status;
+    status = passthrough_mismatched_answer_test(pool, PJ_TRUE, PJ_TRUE);
+    if (status != 0)
+        return status;
+
+    return 0;
+}
+
 /* Regression: offer without c= on a port=0 media (passes lenient validation,
  * fails strict) must leave the negotiator in DONE state, not stuck in WAIT_NEGO. */
 static int sdp_neg_strict_validate_test(pj_pool_t *pool)
@@ -2241,6 +2882,21 @@ int sdp_neg_test()
 
         PJ_LOG(3,(THIS_FILE, "  sdp_neg_static_pt_repr_test"));
         status = sdp_neg_static_pt_repr_test(pool);
+        pj_pool_release(pool);
+
+        if (status != 0)
+            return status;
+    }
+
+    {
+        pj_pool_t *pool;
+
+        pool = pj_pool_create(mem, "sdp_neg_passthrough", 4000, 4000, NULL);
+        if (!pool)
+            return PJ_ENOMEM;
+
+        PJ_LOG(3,(THIS_FILE, "  sdp_neg_passthrough_test"));
+        status = sdp_neg_passthrough_test(pool);
         pj_pool_release(pool);
 
         if (status != 0)

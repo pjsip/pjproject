@@ -2834,6 +2834,13 @@ PJ_DEF(pj_status_t) pjsua_call_set_vid_strm (
     if (status != PJ_SUCCESS)
         goto on_return;
 
+    if (pjsua_call_media_is_app_managed(call)) {
+        PJ_LOG(3,(THIS_FILE, "Can not change video stream on "
+                  "app-managed call %d", call_id));
+        status = PJ_EINVALIDOP;
+        goto on_return;
+    }
+
     if (call->hanging_up) {
         PJ_LOG(3,(THIS_FILE,
                   "Can not change video stream on call %d while it is "

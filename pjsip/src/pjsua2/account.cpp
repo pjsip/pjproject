@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2013-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -399,6 +399,7 @@ void AccountCallConfig::readObject(const ContainerNode &node)
     NODE_READ_UNSIGNED( this_node, timerMinSESec);
     NODE_READ_UNSIGNED( this_node, timerSessExpiresSec);
     NODE_READ_BOOL_OPT( this_node, siprecRequireMetadata);
+    NODE_READ_BOOL_OPT( this_node, mediaAppManaged);
 }
 
 void AccountCallConfig::writeObject(ContainerNode &node) const
@@ -414,6 +415,7 @@ void AccountCallConfig::writeObject(ContainerNode &node) const
     NODE_WRITE_UNSIGNED( this_node, timerMinSESec);
     NODE_WRITE_UNSIGNED( this_node, timerSessExpiresSec);
     NODE_WRITE_BOOL    ( this_node, siprecRequireMetadata);
+    NODE_WRITE_BOOL    ( this_node, mediaAppManaged);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -752,6 +754,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.siprec_require_metadata = callConfig.siprecRequireMetadata;
     ret.timer_setting.min_se    = callConfig.timerMinSESec;
     ret.timer_setting.sess_expires = callConfig.timerSessExpiresSec;
+    ret.media_app_managed       = callConfig.mediaAppManaged;
 
     // AccountPresConfig
     for (i=0; i<presConfig.headers.size(); ++i) {
@@ -946,6 +949,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     callConfig.siprecRequireMetadata = PJ2BOOL(prm.siprec_require_metadata);
     callConfig.timerMinSESec    = prm.timer_setting.min_se;
     callConfig.timerSessExpiresSec = prm.timer_setting.sess_expires;
+    callConfig.mediaAppManaged  = PJ2BOOL(prm.media_app_managed);
 
     // AccountPresConfig
     presConfig.headers.clear();

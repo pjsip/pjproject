@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2013-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1955,6 +1955,9 @@ void Endpoint::on_call_rx_offer(pjsua_call_id call_id,
                                 pjsip_status_code *code,
                                 pjsua_call_setting *opt)
 {
+    pjmedia_sdp_session *answer;
+    pj_status_t status;
+
     PJ_UNUSED_ARG(reserved);
 
     Call *call = Call::lookup(call_id);
@@ -1963,11 +1966,36 @@ void Endpoint::on_call_rx_offer(pjsua_call_id call_id,
     }
     
     OnCallRxOfferParam prm;
+    bool media_app_managed =
+        (opt->flag & PJSUA_CALL_MEDIA_APP_MANAGED) != 0;
     prm.offer.fromPj(*offer);
     prm.statusCode = *code;
     prm.opt.fromPj(*opt);
     
     call->onCallRxOffer(prm);
+
+    if (!media_app_managed && !prm.answer.wholeSdp.empty()) {
+        PJ_LOG(2,(THIS_FILE, "Ignoring application SDP answer for ordinary "
+                  "call %d", call_id));
+    } else if (prm.statusCode == PJSIP_SC_OK &&
+               !prm.answer.wholeSdp.empty())
+    {
+        try {
+            PoolGuard pool_guard("rx-offer", "onCallRxOffer()");
+            status = parseCallSdp(pool_guard.get(), prm.answer.wholeSdp,
+                                  &answer);
+            if (status == PJ_SUCCESS)
+                status = pjsua_call_set_sdp(call_id, answer);
+        } catch (Error &err) {
+            status = err.status;
+        }
+
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(1,(THIS_FILE, status,
+                         "Failed to set SDP answer for call %d", call_id));
+            prm.statusCode = PJSIP_SC_NOT_ACCEPTABLE_HERE;
+        }
+    }
     
     *code = prm.statusCode;
     *opt = prm.opt.toPj();
@@ -1989,7 +2017,8 @@ void Endpoint::on_call_rx_reinvite(pjsua_call_id call_id,
     }
     
     OnCallRxReinviteParam prm;
-    prm.offer.fromPj(*offer);
+    if (offer)
+        prm.offer.fromPj(*offer);
     prm.rdata.fromPj(*rdata);
     prm.isAsync = PJ2BOOL(*async);
     prm.statusCode = *code;

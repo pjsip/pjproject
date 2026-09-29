@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -668,6 +668,34 @@ static pj_bool_t has_sdp(dlg_data *dd)
 }
 
 
+/* Internal query; the caller holds the dialog lock. */
+pj_bool_t
+pjsip_100rel_has_pending_sdp(const pjsip_inv_session *inv)
+{
+    dlg_data *dd;
+    tx_data_list_t *tl;
+
+    PJ_ASSERT_RETURN(inv, PJ_FALSE);
+    if (mod_100rel.mod.id < 0)
+        return PJ_FALSE;
+    dd = (dlg_data*)inv->dlg->mod_data[mod_100rel.mod.id];
+    if (!dd || !dd->uas_state)
+        return PJ_FALSE;
+
+    for (tl = dd->uas_state->tx_data_list.next;
+         tl != &dd->uas_state->tx_data_list; tl = tl->next)
+    {
+        pjsip_sdp_info *info = pjsip_tdata_get_sdp_info(tl->tdata);
+
+        if (info->sdp || info->body.ptr)
+        {
+            return PJ_TRUE;
+        }
+    }
+    return PJ_FALSE;
+}
+
+
 /* Send response reliably */
 PJ_DEF(pj_status_t) pjsip_100rel_tx_response(pjsip_inv_session *inv,
                                              pjsip_tx_data *tdata)
@@ -889,5 +917,3 @@ PJ_DEF(pj_status_t) pjsip_100rel_tx_response(pjsip_inv_session *inv,
     
     return status;
 }
-
-

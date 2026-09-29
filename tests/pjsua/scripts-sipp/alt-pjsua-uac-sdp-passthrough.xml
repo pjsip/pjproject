@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+
+<!-- SIPp acts as UAS. alt_pjsua (with the "sdp-passthrough" option) sends an INVITE
+     carrying the real-world SDP offer from real-world-sdp.txt (AMR-WB/AMR/
+     telephone-event, 6 payload types). SIPp verifies the offer's codecs
+     appear, then answers 200 OK with the real-world answer verbatim (only
+     2 payload types, with fmtp params that would normally be reconciled/
+     filtered against the offer by pjmedia's SDP negotiator). alt_pjsua
+     must accept this answer as-is (passthrough) and reach CONFIRMED. -->
+
+<scenario name="alt_pjsua UAC SDP passthrough: SIPp as UAS">
+
+  <recv request="INVITE" crlf="true">
+    <action>
+      <!-- Verify the INVITE carries the real-world offer injected by
+           alt_pjsua via the "custom-sdp" option. search_in="msg" searches
+           the entire SIP message. The condexec nops avoid SIPp 3.7 exiting
+           on "referenced 1 times" warning. -->
+      <ereg regexp="m=audio 56832 RTP/AVP 116 107 118 96 111 110"
+            search_in="msg" check_it="true" assign_to="1"/>
+      <ereg regexp="a=rtpmap:116 AMR-WB/16000/1" search_in="msg"
+            check_it="true" assign_to="2"/>
+      <ereg regexp="a=fmtp:116 mode-change-capability=2;max-red=220"
+            search_in="msg" check_it="true" assign_to="3"/>
+    </action>
+  </recv>
+  <nop condexec="1"></nop>
+  <nop condexec="2"></nop>
+  <nop condexec="3"></nop>
+
+  <send>
+    <![CDATA[
+
+      SIP/2.0 100 Trying
+      [last_Via:]
+      [last_From:]
+      [last_To:];tag=[call_number]
+      [last_Call-ID:]
+      [last_CSeq:]
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <send retrans="500">
+    <![CDATA[
+
+      SIP/2.0 200 OK
+      [last_Via:]
+      [last_From:]
+      [last_To:];tag=[call_number]
+      [last_Call-ID:]
+      [last_CSeq:]
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+v=0
+o=- 893867432491909 4062736973 IN IP4 10.162.173.125
+s=-
+t=0 0
+a=msid-semantic: WMS
+m=audio 56384 RTP/AVP 116 111
+c=IN IP4 10.186.99.38
+b=AS:41
+a=rtpmap:116 AMR-WB/16000
+a=fmtp:116 max-red=0; mode-change-capability=2; mode-change-neighbor=1; mode-change-period=2
+a=rtpmap:111 telephone-event/16000
+a=fmtp:111 0-15
+a=ptime:20
+a=maxptime:40
+a=msid:- 415221c9-141a-4cfa-905a-024af91d0e7c
+a=ssrc:18411299 cname:NNI4WBv5F7m8JUWO
+a=sendrecv
+
+    ]]>
+  </send>
+
+  <recv request="ACK" crlf="true">
+  </recv>
+
+  <recv request="BYE" crlf="true">
+  </recv>
+
+  <send>
+    <![CDATA[
+
+      SIP/2.0 200 OK
+      [last_Via:]
+      [last_From:]
+      [last_To:]
+      [last_Call-ID:]
+      [last_CSeq:]
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>
+  <CallLengthRepartition value="10, 50, 100, 500, 1000, 5000, 10000"/>
+
+</scenario>

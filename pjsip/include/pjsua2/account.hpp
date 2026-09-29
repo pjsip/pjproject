@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2013-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -431,6 +431,12 @@ struct AccountCallConfig : public PersistentObject
      */
     unsigned            timerSessExpiresSec;
 
+    /**
+     * Make new calls on this account application-managed from creation.
+     * Default: false.
+     */
+    bool                mediaAppManaged;
+
 public:
     /**
      * Default constructor
@@ -442,7 +448,8 @@ public:
                           siprecRequireLabel(false),
                           siprecRequireMetadata(false),
                           timerMinSESec(90),
-                          timerSessExpiresSec(PJSIP_SESS_TIMER_DEF_SE)
+                          timerSessExpiresSec(PJSIP_SESS_TIMER_DEF_SE),
+                          mediaAppManaged(false)
     {}
 
     /**
@@ -2702,4 +2709,3 @@ private:
 } // namespace pj
 
 #endif  /* __PJSUA2_ACCOUNT_HPP__ */
-
