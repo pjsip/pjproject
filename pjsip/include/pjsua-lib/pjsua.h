@@ -2917,6 +2917,18 @@ typedef struct pjsua_config
      */
     pj_bool_t        acc_server_affinity_default;
 
+    /**
+     * Remember the servers that don't answer, and use the other servers of
+     * a destination first, such as the next DNS SRV target of the registrar
+     * when a registration is retried. This sets
+     * pjsip_cfg()->endpt.server_failover. On an IP address change,
+     * the failed servers are forgotten, including the ones marked by the
+     * application, see #pjsip_endpt_clear_failed_servers().
+     *
+     * Default: PJSIP_SERVER_FAILOVER (disabled)
+     */
+    pj_bool_t        server_failover;
+
 } pjsua_config;
 
 

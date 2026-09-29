@@ -191,6 +191,7 @@ typedef struct pjsip_cfg_t
         /**
          * Remember the servers that fail, and list them after the other
          * addresses of a destination, see #pjsip_resolver_set_server_failed().
+         * PJSUA sets this from pjsua_config.server_failover.
          *
          * Default is PJSIP_SERVER_FAILOVER.
          */

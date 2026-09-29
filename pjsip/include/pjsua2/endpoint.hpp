@@ -1016,6 +1016,16 @@ struct UaConfig : public PersistentObject
      */
     bool                accServerAffinityDefault;
 
+    /**
+     * Remember the servers that don't answer, and use the other servers of
+     * a destination first, such as the next DNS SRV target of the registrar
+     * when a registration is retried. See also
+     * pjsua_config.server_failover.
+     *
+     * Default: PJSIP_SERVER_FAILOVER (disabled)
+     */
+    bool                serverFailover;
+
 public:
     /**
      * Default constructor to initialize with default values.

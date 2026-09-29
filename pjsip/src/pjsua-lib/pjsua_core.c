@@ -130,6 +130,7 @@ PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
     pjsua_srtp_opt_default(&cfg->srtp_opt);
     cfg->no_refer_sub = PJ_TRUE;
     cfg->acc_server_affinity_default = PJSUA_ACC_SERVER_AFFINITY_DEFAULT;
+    cfg->server_failover = PJSIP_SERVER_FAILOVER;
 }
 
 PJ_DEF(void) pjsua_config_dup(pj_pool_t *pool,
@@ -1164,6 +1165,8 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
                   "DNS resolver is disabled (PJSIP_HAS_RESOLVER==0)"));
 #endif
     }
+
+    pjsip_cfg()->endpt.server_failover = ua_cfg->server_failover;
 
     /* Init SIP UA: */
 
@@ -2224,6 +2227,7 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 
     /* Clear pjsua_var */
     pj_bzero(&pjsua_var, sizeof(pjsua_var));
+    pjsip_cfg()->endpt.server_failover = PJSIP_SERVER_FAILOVER;
 
     /* Done. */
     return PJ_SUCCESS;
@@ -4200,6 +4204,10 @@ PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
     }
 
     PJ_LOG(3, (THIS_FILE, "Start handling IP address change"));
+
+    /* The failed servers may work on the new network */
+    if (pjsua_var.ua_cfg.server_failover)
+        pjsip_endpt_clear_failed_servers(pjsua_var.endpt);
 
     /* Avoid call disconnection due to request timeout. Some requests may
      * be in progress when network is changing, they may eventually get

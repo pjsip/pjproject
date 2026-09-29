@@ -1015,3 +1015,108 @@ int srv_failover_test(void)
 }
 
 #endif  /* PJSIP_HAS_RESOLVER && PJ_HAS_THREADS */
+
+#if INCLUDE_PJSUA_ACC_TEST
+
+/*
+ * PJSUA: on an IP change, the failed servers are forgotten when the option
+ * is on, and the marks set by the application are kept when it's off.
+ */
+#include <pjsua-lib/pjsua.h>
+
+/* Recreate the test framework's endpoint + tsx layer after pjsua_destroy */
+static void restore_endpt(void)
+{
+    pj_status_t status;
+
+    status = pjsip_endpt_create(&caching_pool.factory, "endpt", &endpt);
+    if (status == PJ_SUCCESS)
+        status = pjsip_tsx_layer_init_module(endpt);
+    if (status != PJ_SUCCESS)
+        app_perror("    error: restoring endpoint", status);
+}
+
+static int pjsua_ip_change_case(pj_bool_t failover)
+{
+    pjsua_config ua_cfg;
+    pjsua_logging_config log_cfg;
+    pjsua_ip_change_param param;
+    pj_str_t ip = pj_str("192.0.2.1");
+    pj_sockaddr addr;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  IP change, option %s", failover ? "on" : "off"));
+
+    if (pjsua_create() != PJ_SUCCESS)
+        return -3101;
+
+    pjsua_config_default(&ua_cfg);
+    ua_cfg.thread_cnt = 0;
+    ua_cfg.server_failover = failover;
+    pjsua_logging_config_default(&log_cfg);
+    log_cfg.level = 3;
+    log_cfg.console_level = 3;
+    if (pjsua_init(&ua_cfg, &log_cfg, NULL) != PJ_SUCCESS) {
+        pjsua_destroy();
+        return -3102;
+    }
+    if (pjsua_start() != PJ_SUCCESS) {
+        rc = -3103;
+        goto on_return;
+    }
+    if (pjsip_cfg()->endpt.server_failover != failover) {
+        rc = -3104;
+        goto on_return;
+    }
+
+    pj_sockaddr_init(pj_AF_INET(), &addr, &ip, 5060);
+    pjsip_endpt_set_server_failed(pjsua_get_pjsip_endpt(),
+                                  PJSIP_TRANSPORT_UDP, &addr, 60);
+
+    pjsua_ip_change_param_default(&param);
+    param.restart_listener = PJ_FALSE;
+    param.shutdown_transport = PJ_FALSE;
+    if (pjsua_handle_ip_change(&param) != PJ_SUCCESS) {
+        rc = -3105;
+        goto on_return;
+    }
+    if (pjsip_endpt_is_server_failed(pjsua_get_pjsip_endpt(),
+                                     PJSIP_TRANSPORT_UDP, &addr) == failover)
+    {
+        rc = -3106;
+        goto on_return;
+    }
+    if (pjsip_cfg()->endpt.server_failover != failover)
+        rc = -3107;
+
+on_return:
+    pjsua_destroy();
+    if (rc == 0 &&
+        pjsip_cfg()->endpt.server_failover != PJSIP_SERVER_FAILOVER)
+    {
+        rc = -3110;
+    }
+    if (rc)
+        PJ_LOG(1,(THIS_FILE, "    error: IP change case failed [%d]", rc));
+    return rc;
+}
+
+int srv_failover_pjsua_test(void)
+{
+    int rc;
+
+    PJ_LOG(3,(THIS_FILE, "PJSUA server failover test"));
+
+    /* pjsua registers the tsx layer on its own endpoint */
+    pjsip_endpt_destroy(endpt);
+    endpt = NULL;
+
+    rc = pjsua_ip_change_case(PJ_TRUE);
+    if (rc == 0)
+        rc = pjsua_ip_change_case(PJ_FALSE);
+
+    restore_endpt();
+    return rc;
+}
+
+#endif  /* INCLUDE_PJSUA_ACC_TEST */
