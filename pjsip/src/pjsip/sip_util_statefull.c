@@ -37,6 +37,8 @@ struct tsx_data
     pj_bool_t allow_failover;
     pjsip_tx_data *orig_tdata;
     pjsip_transport *orig_tp;
+    pjsip_host_port via_addr;       /* As set by the application: the */
+    const void *via_tp;             /* send updates them in the request */
     pj_atomic_value_t failed_servers_gen;   /* When the request was sent */
 };
 
@@ -263,9 +265,9 @@ static pj_status_t send_to_next_server(pjsip_transaction *tsx,
     }
     tdata->dest_info.cur_addr = 0;
     pjsip_tx_data_set_transport(tdata, &old_tdata->tp_sel);
-    pj_strdup(tdata->pool, &tdata->via_addr.host, &old_tdata->via_addr.host);
-    tdata->via_addr.port = old_tdata->via_addr.port;
-    tdata->via_tp = old_tdata->via_tp;
+    pj_strdup(tdata->pool, &tdata->via_addr.host, &tsx_data->via_addr.host);
+    tdata->via_addr.port = tsx_data->via_addr.port;
+    tdata->via_tp = tsx_data->via_tp;
 
     /* A new transaction needs a new branch */
     via = (pjsip_via_hdr*) pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
@@ -429,6 +431,9 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request2( pjsip_endpoint *endpt,
     /* The caller can't follow a replaced transaction */
     tsx_data->allow_failover = (p_tsx == NULL);
     tsx_data->failed_servers_gen = pjsip_endpt_failed_servers_gen(endpt);
+    pj_strdup(tdata->pool, &tsx_data->via_addr.host, &tdata->via_addr.host);
+    tsx_data->via_addr.port = tdata->via_addr.port;
+    tsx_data->via_tp = tdata->via_tp;
 
     tsx->mod_data[mod_stateful_util.id] = tsx_data;
 
