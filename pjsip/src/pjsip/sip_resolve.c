@@ -274,6 +274,19 @@ static int get_ip_addr_ver(const pj_str_t *host)
 
 
 /*
+ * Internal:
+ * determine if an IPv6 address is an IPv4-mapped address
+ * (::ffff:x.x.x.x).
+ */
+static pj_bool_t is_ipv4_mapped(const pj_in6_addr *a)
+{
+    static const pj_uint8_t prefix[12] =
+        {0,0,0,0,0,0,0,0,0,0,0xff,0xff};
+    return pj_memcmp(a->s6_addr, prefix, sizeof(prefix)) == 0;
+}
+
+
+/*
  * This is the main function for performing server resolution.
  */
 PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
@@ -372,8 +385,12 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 
                     status2 = pj_getaddrinfo(pj_AF_INET6(),
                                             &target->addr.host, &count, ai);
+                    /* A v4-mapped result means no NAT64 synthesis
+                     * occurred; use plain IPv4 instead.
+                     */
                     if (status2 == PJ_SUCCESS && count > 0 &&
-                        ai[0].ai_addr.addr.sa_family == pj_AF_INET6())
+                        ai[0].ai_addr.addr.sa_family == pj_AF_INET6() &&
+                        !is_ipv4_mapped(&ai[0].ai_addr.ipv6.sin6_addr))
                     {
                         pj_sockaddr_init(pj_AF_INET6(),
                                          &svr_addr.entry[0].addr,
