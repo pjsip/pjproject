@@ -435,10 +435,18 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request2( pjsip_endpoint *endpt,
     /* The caller can't follow a replaced transaction */
     tsx_data->allow_failover = (p_tsx == NULL);
     tsx_data->first_addr = tdata->dest_info.cur_addr;
-    tsx_data->failed_servers_gen = pjsip_endpt_failed_servers_gen(endpt);
-    pj_strdup(tdata->pool, &tsx_data->via_addr.host, &tdata->via_addr.host);
-    tsx_data->via_addr.port = tdata->via_addr.port;
-    tsx_data->via_tp = tdata->via_tp;
+    if (pjsip_cfg()->endpt.server_failover) {
+        tsx_data->failed_servers_gen = pjsip_endpt_failed_servers_gen(endpt);
+        if (tsx_data->allow_failover) {
+            pj_strdup(tdata->pool, &tsx_data->via_addr.host,
+                      &tdata->via_addr.host);
+            tsx_data->via_addr.port = tdata->via_addr.port;
+            tsx_data->via_tp = tdata->via_tp;
+        }
+    } else {
+        /* Never counted, even if the option is enabled later */
+        tsx_data->failed_servers_gen = (pj_atomic_value_t)-1;
+    }
 
     tsx->mod_data[mod_stateful_util.id] = tsx_data;
 
