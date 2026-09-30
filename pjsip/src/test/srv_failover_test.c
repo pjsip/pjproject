@@ -71,6 +71,7 @@ struct fake_srv
     pj_sock_t           filler[MAX_CONN];
     volatile int        hits;
     volatile int        tsx_cnt;        /* Requests with a new Via */
+    volatile int        accepts;        /* Connections accepted */
     char                last_via[160];
 };
 
@@ -83,6 +84,9 @@ static struct
     struct fake_srv     srv[SRV_CNT];
     pj_dns_resolver    *resolver;
     unsigned            refusal_msec;   /* How long a refusal takes */
+#if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT
+    pjsip_tpfactory    *tls;
+#endif
 } g;
 
 static struct
@@ -164,8 +168,12 @@ static int handle_msg(struct fake_srv *srv, const char *msg, char *resp,
 
     const char *via;
 
-    if (!pj_ansi_strncmp(msg, "SIP/2.0", 7) || !pj_ansi_strncmp(msg, "ACK", 3))
+    /* Not a request, e.g: a response, or the start of a TLS handshake */
+    if (!pj_ansi_strncmp(msg, "SIP/2.0", 7) ||
+        !pj_ansi_strncmp(msg, "ACK", 3) || !strstr(msg, " SIP/2.0\r\n"))
+    {
         return 0;
+    }
 
     ++srv->hits;
     via = strstr(msg, "\r\nVia:");
@@ -294,6 +302,7 @@ static int server_thread(void *arg)
                 pj_sock_t c;
 
                 if (pj_sock_accept(srv->tcp, &c, NULL, NULL)==PJ_SUCCESS) {
+                    ++srv->accepts;
                     for (j = 0; j < MAX_CONN; ++j) {
                         if (srv->conn[j] == PJ_INVALID_SOCKET) {
                             srv->conn[j] = c;
@@ -439,9 +448,25 @@ static pj_status_t set_mode(struct fake_srv *srv, int mode)
     srv->mode = mode;
     srv->hits = 0;
     srv->tsx_cnt = 0;
+    srv->accepts = 0;
     srv->last_via[0] = '\0';
     pj_mutex_unlock(g.mutex);
     return status;
+}
+
+/* Close the connections of a server, as if it went down */
+static void drop_connections(struct fake_srv *srv)
+{
+    unsigned j;
+
+    pj_mutex_lock(g.mutex);
+    for (j = 0; j < MAX_CONN; ++j) {
+        if (srv->conn[j] != PJ_INVALID_SOCKET) {
+            pj_sock_close(srv->conn[j]);
+            srv->conn[j] = PJ_INVALID_SOCKET;
+        }
+    }
+    pj_mutex_unlock(g.mutex);
 }
 
 static void init_query(pj_dns_parsed_packet *pkt, pj_dns_parsed_query *q,
@@ -463,8 +488,9 @@ static void init_query(pj_dns_parsed_packet *pkt, pj_dns_parsed_query *q,
  */
 static pj_status_t add_dns_records(void)
 {
-    pj_str_t srv_name[2] = { { "_sip._udp." TEST_DOMAIN, 0 },
-                             { "_sip._tcp." TEST_DOMAIN, 0 } };
+    pj_str_t srv_name[3] = { { "_sip._udp." TEST_DOMAIN, 0 },
+                             { "_sip._tcp." TEST_DOMAIN, 0 },
+                             { "_sips._tcp." TEST_DOMAIN, 0 } };
     pj_str_t dup_name = { "_sip._udp." DUP_DOMAIN, 0 };
     pj_str_t dup_tcp_name = { "_sip._tcp." DUP_DOMAIN, 0 };
     pj_dns_parsed_rr rr[SRV_CNT];
@@ -485,7 +511,8 @@ static pj_status_t add_dns_records(void)
     dup_name.slen = pj_ansi_strlen(dup_name.ptr);
     dup_tcp_name.slen = pj_ansi_strlen(dup_tcp_name.ptr);
 
-    for (t = 0; t < 2; ++t) {
+    /* TLS is served on the TCP port too */
+    for (t = 0; t < 3; ++t) {
         srv_name[t].slen = pj_ansi_strlen(srv_name[t].ptr);
         for (i = 0; i < SRV_CNT; ++i) {
             pj_dns_init_srv_rr(&rr[i], &srv_name[t], PJ_DNS_CLASS_IN, 60,
@@ -579,6 +606,9 @@ struct test_case
     pj_bool_t   late_clear;     /* Clear the failed servers after sending */
     pj_bool_t   check_release;  /* The request must be released at the end */
     pj_bool_t   large;          /* Too large for UDP: sent with TCP first */
+    pj_bool_t   tls;            /* Send with TLS: no handshake completes */
+    pj_bool_t   drop_srv1;      /* Close the connections of srv1 once
+                                   srv2 has got the request */
 };
 
 /* Forget the servers that failed in the previous cases */
@@ -651,6 +681,7 @@ static int run_case(const struct test_case *tc)
     pjsip_transport *tp = NULL;
     unsigned *token;
     unsigned i, waited, td = TEST_TD;
+    pj_bool_t dropped = PJ_FALSE;
     int rc = 0;
     pj_status_t status;
 
@@ -674,6 +705,7 @@ static int run_case(const struct test_case *tc)
 
     pj_ansi_snprintf(target_buf, sizeof(target_buf), "sip:%s%s",
                      tc->domain ? tc->domain : TEST_DOMAIN,
+                     tc->tls ? ";transport=tls" :
                      tc->tcp ? ";transport=tcp" : "");
     target = pj_str(target_buf);
 
@@ -756,6 +788,16 @@ static int run_case(const struct test_case *tc)
          waited += 50)
     {
         flush_events(50);
+        if (g.srv[1].hits == 0 && g.srv[1].accepts == 0)
+            continue;
+        if (tc->drop_srv1 && !dropped) {
+            drop_connections(&g.srv[0]);
+            dropped = PJ_TRUE;
+        }
+    }
+    if (tc->drop_srv1 && !dropped) {
+        PJ_LOG(1,(THIS_FILE, "    error: done before srv2 got the request"));
+        rc = -3047;
     }
     if (tsx)
         pj_grp_lock_dec_ref(tsx->grp_lock);
@@ -1125,6 +1167,54 @@ static int large_request_test(void)
 }
 #endif
 
+#if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT
+/* A server that accepts the connection but never completes the TLS
+ * handshake: the request waits in the transport, which is not connected.
+ * Closing the connection of srv1 once the request has moved on must not
+ * disturb the others.
+ */
+static int tls_test(void)
+{
+    struct test_case tc;
+    pj_str_t lo = pj_str("127.0.0.1");
+    pj_sockaddr addr;
+    unsigned i;
+    int rc;
+
+    if (!g.tls)
+        return 0;
+
+    pj_bzero(&tc, sizeof(tc));
+    tc.title = "TLS, no handshake completes, srv1 closes after";
+    tc.mode[0] = tc.mode[1] = tc.mode[2] = MODE_SILENT;
+    tc.status = 408;
+    /* The request stays in the transport of srv1 until the connection is
+     * closed, so it can only be released after that.
+     */
+    tc.check_release = PJ_TRUE;
+    tc.tls = PJ_TRUE;
+    tc.drop_srv1 = PJ_TRUE;
+    rc = run_case(&tc);
+    if (rc)
+        return rc;
+
+    for (i = 0; i < SRV_CNT; ++i) {
+        if (g.srv[i].accepts != 1) {
+            PJ_LOG(1,(THIS_FILE, "    error: srv%u got %d connections",
+                      i + 1, g.srv[i].accepts));
+            return -3130;
+        }
+        pj_sockaddr_init(pj_AF_INET(), &addr, &lo, g.srv[i].tcp_port);
+        if (!pjsip_endpt_is_server_failed(endpt, &addr)) {
+            PJ_LOG(1,(THIS_FILE, "    error: srv%u is not remembered",
+                      i + 1));
+            return -3131;
+        }
+    }
+    return 0;
+}
+#endif
+
 #if PJ_HAS_TCP
 static struct
 {
@@ -1150,7 +1240,8 @@ static int regc_transport_test(void)
     pjsip_regc_info info;
     pjsip_tx_data *tdata;
     const pjsip_transport *seen[8];
-    unsigned seen_cnt = 0, waited, i;
+    unsigned seen_cnt = 0, waited, i, dropped_at = 0;
+    pj_bool_t released = PJ_FALSE;
     pj_status_t status;
     int rc = 0;
 
@@ -1182,8 +1273,9 @@ static int regc_transport_test(void)
         return -3122;
     }
 
-    /* Note each change of the reported transport, and release the one of
-     * the second attempt.
+    /* Note each change of the reported transport. Once the second attempt
+     * is reported, srv1 closes its connection, which must not change the
+     * report, then the transport of the second attempt is released.
      */
     for (waited = 0; !reg_result.done && waited < 4 * TEST_TD + 2000;
          waited += 50)
@@ -1193,14 +1285,20 @@ static int regc_transport_test(void)
         if (seen_cnt == 0 || info.transport != seen[seen_cnt - 1]) {
             if (seen_cnt < PJ_ARRAY_SIZE(seen))
                 seen[seen_cnt++] = info.transport;
-            if (seen_cnt == 2)
-                pjsip_regc_release_transport(regc);
+            if (seen_cnt == 2) {
+                drop_connections(&g.srv[0]);
+                dropped_at = waited;
+            }
+        }
+        if (seen_cnt == 2 && !released && dropped_at + 300 <= waited) {
+            pjsip_regc_release_transport(regc);
+            released = PJ_TRUE;
         }
     }
     pjsip_regc_get_info(regc, &info);
 
     PJ_LOG(3,(THIS_FILE, "  %-44s -> %d, %u transports reported",
-              "TCP, REGISTER, srv1 and srv2 never answer",
+              "TCP, REGISTER, srv1 and srv2 never answer, srv1 closes",
               reg_result.done ? reg_result.code : -1, seen_cnt));
     if (!reg_result.done || reg_result.code != 200)
         rc = -3123;
@@ -1216,6 +1314,10 @@ static int regc_transport_test(void)
         PJ_LOG(1,(THIS_FILE, "    error: the registration is on %p, not %p",
                   info.transport, seen[3]));
         rc = -3125;
+    } else if (!released) {
+        /* The report changed by itself when srv1 closed the connection */
+        PJ_LOG(1,(THIS_FILE, "    error: the transport was not released"));
+        rc = -3127;
     }
 
     for (waited = 0; pj_atomic_get(tdata->ref_cnt) > 1 && waited < 3000;
@@ -1285,6 +1387,13 @@ static void destroy(void)
     for (i = 0; i < SRV_CNT; ++i) {
         set_mode(&g.srv[i], MODE_CLOSED);
     }
+#if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT
+    if (g.tls) {
+        /* Let the connections that never completed fail first */
+        flush_events(500);
+        g.tls->destroy(g.tls);
+    }
+#endif
     if (g.resolver) {
         pjsip_endpt_set_resolver(endpt, NULL);
         pj_dns_resolver_destroy(g.resolver, PJ_FALSE);
@@ -1340,6 +1449,24 @@ int srv_failover_test(void)
     g.refusal_msec = get_refusal_delay();
     PJ_LOG(3,(THIS_FILE, "  a closed port refuses in %u ms", g.refusal_msec));
 
+#if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT
+    {
+        pjsip_tls_setting tls;
+        pj_str_t lo = pj_str("127.0.0.1");
+        pj_sockaddr local;
+
+        pjsip_tls_setting_default(&tls);
+        tls.verify_server = PJ_FALSE;
+        pj_sockaddr_init(pj_AF_INET(), &local, &lo, 0);
+        status = pjsip_tls_transport_start2(endpt, &tls, &local, NULL, 1,
+                                            &g.tls);
+        if (status != PJ_SUCCESS) {
+            app_perror("  TLS case skipped: transport not started", status);
+            g.tls = NULL;
+        }
+    }
+#endif
+
     pjsip_tsx_set_timers(TEST_T1, TEST_T2, TEST_T4, TEST_TD);
     pjsip_cfg()->endpt.server_failover = PJ_TRUE;
     forget_failed_servers(0);
@@ -1390,6 +1517,12 @@ int srv_failover_test(void)
         rc = status;
 
     status = regc_transport_test();
+    if (status && !rc)
+        rc = status;
+#endif
+
+#if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT
+    status = tls_test();
     if (status && !rc)
         rc = status;
 #endif
