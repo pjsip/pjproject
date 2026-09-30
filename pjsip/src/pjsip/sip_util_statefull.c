@@ -80,7 +80,10 @@ static pj_bool_t is_server_failure(pjsip_transaction *tsx, pjsip_event *event)
     }
 }
 
-/* Whether the request is bound to a connection */
+/* Whether the request is bound to a connection: the transport manager
+ * uses a selected reliable transport for every address, so a copy could
+ * only go to the same server.
+ */
 static pj_bool_t is_pinned(const pjsip_tx_data *tdata)
 {
     const pjsip_transport *tp = tdata->tp_sel.u.transport;
@@ -103,21 +106,12 @@ static void update_server_state(pjsip_transaction *tsx, pjsip_event *event,
     unsigned idx = tdata->dest_info.cur_addr;
     unsigned max_duration = pjsip_cfg()->endpt.failed_server_timeout;
     unsigned duration = 0;
-    pjsip_transport_type_e tp_type;
-    const pj_sockaddr *addr;
 
-    if (max_duration == 0)
+    /* A request bound to a connection gets the address of its peer as the
+     * only entry, see pjsip_endpt_send_request_stateless().
+     */
+    if (max_duration == 0 || idx >= tdata->dest_info.addr.count)
         return;
-
-    if (is_pinned(tdata)) {
-        tp_type = (pjsip_transport_type_e)tdata->tp_sel.u.transport->key.type;
-        addr = &tdata->tp_sel.u.transport->key.rem_addr;
-    } else if (idx < tdata->dest_info.addr.count) {
-        tp_type = tdata->dest_info.addr.entry[idx].type;
-        addr = &tdata->dest_info.addr.entry[idx].addr;
-    } else {
-        return;
-    }
 
     if (failed && type == PJSIP_EVENT_RX_MSG) {
         pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;
@@ -139,7 +133,10 @@ static void update_server_state(pjsip_transaction *tsx, pjsip_event *event,
         return;
     }
 
-    pjsip_endpt_set_server_failed(tsx->endpt, tp_type, addr, duration);
+    pjsip_endpt_set_server_failed(tsx->endpt,
+                                  tdata->dest_info.addr.entry[idx].type,
+                                  &tdata->dest_info.addr.entry[idx].addr,
+                                  duration);
 }
 
 /* Whether the address at index idx was already tried: the tried ones are
