@@ -711,6 +711,10 @@ static int run_case(const struct test_case *tc)
                                        tc->hold_tsx ? &tsx : NULL);
     if (status != PJ_SUCCESS) {
         app_perror("    error: sending request", status);
+        if (tc->check_release)
+            pjsip_tx_data_dec_ref(tdata);
+        if (tp)
+            pjsip_transport_dec_ref(tp);
         return -3030;
     }
     if (tc->late_clear)
