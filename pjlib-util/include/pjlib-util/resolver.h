@@ -506,6 +506,18 @@ PJ_DECL(unsigned) pj_dns_resolver_get_cached_count(pj_dns_resolver *resolver);
 
 
 /**
+ * Clear the response cache, e.g: after the nameservers have changed.
+ * Entries added with #pj_dns_resolver_add_entry() without
+ * TTL are kept.
+ *
+ * @param resolver  The resolver instance.
+ *
+ * @return          PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_dns_resolver_clear_cache(pj_dns_resolver *resolver);
+
+
+/**
  * Dump resolver state to the log.
  *
  * @param resolver  The resolver instance.

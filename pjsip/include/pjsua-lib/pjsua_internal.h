@@ -658,6 +658,7 @@ struct pjsua_data
     unsigned             stun_srv_idx; /**< Resolved STUN server index  */
     unsigned             stun_opt;  /**< STUN resolution option.        */
     pj_dns_resolver     *resolver;  /**< DNS resolver.                  */   
+    pj_dns_resolver     *resolver_detached; /**< Detached DNS resolver. */
 
     /* UPnP */
     pj_status_t          upnp_status; /**< UPnP status.                 */

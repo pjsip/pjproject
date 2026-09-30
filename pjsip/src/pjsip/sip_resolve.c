@@ -302,12 +302,16 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
     pj_bool_t report;
     pjsip_transport_type_e type = target->type;
     int af = pj_AF_UNSPEC();
+    pj_dns_resolver *dns_res;
 
     /* If an external implementation has been provided use it instead */
     if (resolver->ext_res) {
         (*resolver->ext_res->resolve)(resolver, pool, target, token, cb);
         return;
     }
+
+    /* Read once, the DNS resolver may be replaced by another thread */
+    dns_res = resolver->res;
 
     /* Is it IP address or hostname? And if it's an IP, which version? */
     ip_addr_ver = get_ip_addr_ver(&target->addr.host);
@@ -368,7 +372,7 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
     /* If target is an IP address, or if resolver is not configured, 
      * we can just finish the resolution now using pj_gethostbyname()
      */
-    if (ip_addr_ver || resolver->res == NULL) {
+    if (ip_addr_ver || dns_res == NULL) {
         char addr_str[PJ_INET6_ADDRSTRLEN+10];
         pj_uint16_t srv_port;
         unsigned i;
@@ -591,7 +595,7 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
         ++query->pending_cnt;
         status = pj_dns_srv_resolve(&query->naptr[0].name,
                                     &query->naptr[0].res_type,
-                                    query->req.def_port, pool, resolver->res,
+                                    query->req.def_port, pool, dns_res,
                                     opt, query, &srv_resolver_cb, NULL);
         if (status != PJ_SUCCESS)
             --query->pending_cnt;
@@ -601,7 +605,7 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
         /* Resolve DNS A record if address family is not fixed to IPv6 */
         if (af != pj_AF_INET6()) {
             ++query->pending_cnt;
-            status = pj_dns_resolver_start_query(resolver->res,
+            status = pj_dns_resolver_start_query(dns_res,
                                                  &query->naptr[0].name,
                                                  PJ_DNS_TYPE_A, 0,
                                                  &dns_a_callback,
@@ -613,7 +617,7 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
         /* Resolve DNS AAAA record if address family is not fixed to IPv4 */
         if (af != pj_AF_INET() && status == PJ_SUCCESS) {
             ++query->pending_cnt;
-            status = pj_dns_resolver_start_query(resolver->res,
+            status = pj_dns_resolver_start_query(dns_res,
                                                  &query->naptr[0].name,
                                                  PJ_DNS_TYPE_AAAA, 0,
                                                  &dns_aaaa_callback,

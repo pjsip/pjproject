@@ -890,6 +890,11 @@ struct UaConfig : public PersistentObject
      * Array of nameservers to be used by the SIP resolver subsystem.
      * The order of the name server specifies the priority (first name
      * server will be used first, unless it is not reachable).
+     *
+     * Each entry is an IP address or a hostname with an optional port,
+     * e.g: "8.8.8.8", "10.0.0.1:5353", or "[2001:db8::1]:5353". Invalid
+     * entries are ignored if at least one entry is valid. The nameservers
+     * can be changed later with Endpoint::updateNameservers().
      */
     StringVector        nameserver;
 
@@ -1740,6 +1745,21 @@ public:
      */
     void natUpdateStunServers(const StringVector &prmServers,
                               bool prmWait) PJSUA2_THROW(Error);
+
+    /**
+     * Update the nameservers of the DNS resolver, e.g: after the device
+     * has moved to another network. Cached DNS responses are discarded.
+     * An empty list disables the DNS resolver, the same as when no
+     * nameserver is configured. This function may block if an entry is a
+     * hostname. The libInit() must have been called before calling this
+     * function.
+     *
+     * @param prmServers        Array of nameservers, at most four. Please
+     *                          see UaConfig.nameserver about the format
+     *                          of the entries.
+     */
+    void updateNameservers(const StringVector &prmServers)
+                           PJSUA2_THROW(Error);
 
     /**
      * Auxiliary function to resolve and contact each of the STUN server
