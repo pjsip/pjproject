@@ -1063,11 +1063,11 @@ static pj_status_t parse_args(int argc, char *argv[],
             break;
 
         case OPT_NAMESERVER: /* nameserver */
-            cfg->cfg.nameserver[cfg->cfg.nameserver_count++] = pj_str(pj_optarg);
-            if (cfg->cfg.nameserver_count > PJ_ARRAY_SIZE(cfg->cfg.nameserver)) {
+            if (cfg->cfg.nameserver_count == PJ_ARRAY_SIZE(cfg->cfg.nameserver)) {
                 PJ_LOG(1,(THIS_FILE, "Error: too many nameservers"));
                 return PJ_ETOOMANY;
             }
+            cfg->cfg.nameserver[cfg->cfg.nameserver_count++] = pj_str(pj_optarg);
             break;
 
         case OPT_SERVER_FAILOVER:

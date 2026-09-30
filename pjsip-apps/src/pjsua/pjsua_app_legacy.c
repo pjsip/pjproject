@@ -1919,10 +1919,7 @@ void legacy_main(void)
         }
 
         /* Update call setting */
-        pjsua_call_setting_default(&call_opt);
-        call_opt.aud_cnt = app_config.aud_cnt;
-        call_opt.vid_cnt = app_config.vid.vid_cnt;
-        call_opt.txt_cnt = app_config.txt_cnt;
+        app_config_init_call_setting(&call_opt);
 
         switch (menuin[0]) {
 

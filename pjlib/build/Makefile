@@ -51,13 +51,19 @@ export TEST_OBJS += activesock.o atomic.o atomic_slist.o \
 		    fifobuf.o file.o hash_test.o ioq_perf.o ioq_udp.o \
 		    ioq_stress_test.o ioq_unreg.o ioq_tcp.o ioq_iocp_unreg_test.o \
 		    list.o mutex.o os.o pool.o pool_perf.o rand.o rbtree.o \
-		    select.o sleep.o sock.o sock_perf.o ssl_sock.o ssl_sock_stress.o \
+		    select.o sleep.o sock.o sock_perf.o ssl_sock.o \
+		    ssl_sock_apple_test.o ssl_sock_stress.o \
 		    string.o test.o thread.o timer.o timestamp.o \
 		    udp_echo_srv_sync.o udp_echo_srv_ioqueue.o \
 		    unittest_test.o util.o
 export TEST_CFLAGS += $(_CFLAGS)
 export TEST_CXXFLAGS += $(_CXXFLAGS)
 export TEST_LDFLAGS += $(PJLIB_LDLIB) $(_LDFLAGS)
+ifneq ($(findstring darwin,$(TARGET_NAME)),)
+# The Apple cert-info reader test calls Security.framework directly,
+# independent of which SSL backend configure selected.
+export TEST_LDFLAGS += -framework Security -framework CoreFoundation
+endif
 ifeq ($(EXCLUDE_APP),0)
 export TEST_EXE := pjlib-test-$(TARGET_NAME)$(HOST_EXE)
 endif

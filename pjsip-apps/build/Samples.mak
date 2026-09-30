@@ -22,6 +22,7 @@ SAMPLES := aidemo \
 	   aectest \
 	   clidemo \
 	   confsample \
+	   embedded_ua \
 	   encdec \
 	   httpdemo \
 	   icedemo \

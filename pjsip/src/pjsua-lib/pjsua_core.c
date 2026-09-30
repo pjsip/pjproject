@@ -150,6 +150,12 @@ PJ_DEF(void) pjsua_config_dup(pj_pool_t *pool,
         pjsip_cred_dup(pool, &dst->cred_info[i], &src->cred_info[i]);
     }
 
+    for (i=0; i<src->nameserver_count && i<PJ_ARRAY_SIZE(dst->nameserver);
+         ++i)
+    {
+        pj_strdup_with_null(pool, &dst->nameserver[i], &src->nameserver[i]);
+    }
+
     pj_strdup_with_null(pool, &dst->user_agent, &src->user_agent);
     pj_strdup_with_null(pool, &dst->stun_domain, &src->stun_domain);
     pj_strdup_with_null(pool, &dst->stun_host, &src->stun_host);
@@ -1073,6 +1079,124 @@ static void upnp_cb(pj_status_t status)
 }
 #endif
 
+#if PJSIP_HAS_RESOLVER
+
+#define MAX_NAMESERVERS     PJ_ARRAY_SIZE(pjsua_var.ua_cfg.nameserver)
+
+typedef struct nameserver_list
+{
+    unsigned        count;
+    pj_str_t        entry[MAX_NAMESERVERS];
+    pj_str_t        addr[MAX_NAMESERVERS];
+    pj_uint16_t     port[MAX_NAMESERVERS];
+    char            addr_buf[MAX_NAMESERVERS][PJ_INET6_ADDRSTRLEN];
+} nameserver_list;
+
+/* May block to resolve hostnames, so call it without holding the lock */
+static pj_status_t parse_nameservers(unsigned count, const pj_str_t srv[],
+                                     nameserver_list *ns)
+{
+    unsigned i;
+
+    PJ_ASSERT_RETURN(count == 0 || srv, PJ_EINVAL);
+
+    if (count > MAX_NAMESERVERS)
+        return PJ_ETOOMANY;
+
+    ns->count = 0;
+    for (i = 0; i < count; ++i) {
+        pj_str_t host;
+        pj_uint16_t port;
+        pj_sockaddr addr;
+        int af;
+        pj_status_t status;
+
+        status = pj_sockaddr_parse2(pj_AF_UNSPEC(), 0, &srv[i], &host,
+                                    &port, &af);
+        if (status == PJ_SUCCESS && host.slen == 0)
+            status = PJ_EINVAL;
+        if (status == PJ_SUCCESS) {
+            status = pj_sockaddr_init(af, &addr, &host, 0);
+            if (status != PJ_SUCCESS && af == pj_AF_INET())
+                status = pj_sockaddr_init(pj_AF_INET6(), &addr, &host, 0);
+        }
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(2,(THIS_FILE, status, "Ignoring invalid nameserver %.*s",
+                         (int)srv[i].slen, srv[i].ptr));
+            continue;
+        }
+
+        ns->entry[ns->count] = srv[i];
+        pj_sockaddr_print(&addr, ns->addr_buf[ns->count],
+                          sizeof(ns->addr_buf[0]), 0);
+        ns->addr[ns->count] = pj_str(ns->addr_buf[ns->count]);
+        ns->port[ns->count] = (pj_uint16_t)(port ? port : 53);
+        ++ns->count;
+    }
+
+    return (count && !ns->count) ? PJLIB_UTIL_EDNSINNSADDR : PJ_SUCCESS;
+}
+
+static pj_status_t apply_nameservers(const nameserver_list *ns)
+{
+    pj_dns_resolver *res = pjsua_var.resolver;
+    pj_bool_t created = PJ_FALSE;
+    unsigned i;
+    pj_status_t status;
+
+    if (ns->count == 0) {
+        /* Only detach it, STUN, TURN and ICE may still use the resolver */
+        if (res) {
+            pjsip_endpt_set_resolver(pjsua_var.endpt, NULL);
+            pjsua_var.resolver_detached = res;
+            pjsua_var.resolver = NULL;
+            PJ_LOG(4,(THIS_FILE, "DNS resolver disabled"));
+        }
+        pjsua_var.ua_cfg.nameserver_count = 0;
+        return PJ_SUCCESS;
+    }
+
+    if (!res)
+        res = pjsua_var.resolver_detached;
+    if (!res) {
+        status = pjsip_endpt_create_resolver(pjsua_var.endpt, &res);
+        if (status != PJ_SUCCESS)
+            return status;
+        created = PJ_TRUE;
+    }
+
+    status = pj_dns_resolver_set_ns(res, ns->count, ns->addr, ns->port);
+    if (status == PJ_SUCCESS) {
+        /* The answers may be specific to the previous network */
+        pj_dns_resolver_clear_cache(res);
+    }
+    if (status == PJ_SUCCESS && res != pjsua_var.resolver)
+        status = pjsip_endpt_set_resolver(pjsua_var.endpt, res);
+    if (status != PJ_SUCCESS) {
+        if (created)
+            pj_dns_resolver_destroy(res, PJ_FALSE);
+        return status;
+    }
+
+    pjsua_var.resolver = res;
+    pjsua_var.resolver_detached = NULL;
+
+    for (i = 0; i < ns->count; ++i) {
+        if (pj_strcmp(&pjsua_var.ua_cfg.nameserver[i], &ns->entry[i])) {
+            pj_strdup_with_null(pjsua_var.pool,
+                                &pjsua_var.ua_cfg.nameserver[i],
+                                &ns->entry[i]);
+        }
+        PJ_LOG(4,(THIS_FILE, "Nameserver %.*s added",
+                  (int)ns->entry[i].slen, ns->entry[i].ptr));
+    }
+    pjsua_var.ua_cfg.nameserver_count = ns->count;
+
+    return PJ_SUCCESS;
+}
+
+#endif  /* PJSIP_HAS_RESOLVER */
+
 /*
  * Initialize pjsua with the specified settings. All the settings are 
  * optional, and the default values will be used when the config is not
@@ -1107,6 +1231,11 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
                       PJ_ARRAY_SIZE(ua_cfg->outbound_proxy),
                       { status = PJ_EINVAL; goto on_error; });
 
+    if (ua_cfg->nameserver_count > PJ_ARRAY_SIZE(ua_cfg->nameserver)) {
+        status = PJ_ETOOMANY;
+        goto on_error;
+    }
+
     /* Initialize logging first so that info/errors can be captured */
     if (log_cfg) {
         status = pjsua_reconfigure_logging(log_cfg);
@@ -1122,49 +1251,6 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
         pj_activesock_enable_iphone_os_bg(PJ_FALSE);
     }
 #endif
-
-    /* If nameserver is configured, create DNS resolver instance and
-     * set it to be used by SIP resolver.
-     */
-    if (ua_cfg->nameserver_count) {
-#if PJSIP_HAS_RESOLVER
-        unsigned ii;
-
-        /* Create DNS resolver */
-        status = pjsip_endpt_create_resolver(pjsua_var.endpt, 
-                                             &pjsua_var.resolver);
-        if (status != PJ_SUCCESS) {
-            pjsua_perror(THIS_FILE, "Error creating resolver", status);
-            goto on_error;
-        }
-
-        /* Configure nameserver for the DNS resolver */
-        status = pj_dns_resolver_set_ns(pjsua_var.resolver, 
-                                        ua_cfg->nameserver_count,
-                                        ua_cfg->nameserver, NULL);
-        if (status != PJ_SUCCESS) {
-            pjsua_perror(THIS_FILE, "Error setting nameserver", status);
-            goto on_error;
-        }
-
-        /* Set this DNS resolver to be used by the SIP resolver */
-        status = pjsip_endpt_set_resolver(pjsua_var.endpt, pjsua_var.resolver);
-        if (status != PJ_SUCCESS) {
-            pjsua_perror(THIS_FILE, "Error setting DNS resolver", status);
-            goto on_error;
-        }
-
-        /* Print nameservers */
-        for (ii=0; ii<ua_cfg->nameserver_count; ++ii) {
-            PJ_LOG(4,(THIS_FILE, "Nameserver %.*s added",
-                      (int)ua_cfg->nameserver[ii].slen,
-                      ua_cfg->nameserver[ii].ptr));
-        }
-#else
-        PJ_LOG(2,(THIS_FILE, 
-                  "DNS resolver is disabled (PJSIP_HAS_RESOLVER==0)"));
-#endif
-    }
 
     pjsip_cfg()->endpt.server_failover = ua_cfg->server_failover;
 
@@ -1265,6 +1351,28 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
     status = pjsua_call_subsys_init(ua_cfg);
     if (status != PJ_SUCCESS)
         goto on_error;
+
+    /* If nameserver is configured, create DNS resolver instance and
+     * set it to be used by SIP resolver. Done after the config copy
+     * above, since it updates the nameserver list there.
+     */
+    if (ua_cfg->nameserver_count) {
+#if PJSIP_HAS_RESOLVER
+        nameserver_list ns;
+
+        status = parse_nameservers(ua_cfg->nameserver_count,
+                                   ua_cfg->nameserver, &ns);
+        if (status == PJ_SUCCESS)
+            status = apply_nameservers(&ns);
+        if (status != PJ_SUCCESS) {
+            pjsua_perror(THIS_FILE, "Error setting nameserver", status);
+            goto on_error;
+        }
+#else
+        PJ_LOG(2,(THIS_FILE,
+                  "DNS resolver is disabled (PJSIP_HAS_RESOLVER==0)"));
+#endif
+    }
 
     /* Convert deprecated STUN settings */
     if (pjsua_var.ua_cfg.stun_srv_cnt==0) {
@@ -1753,6 +1861,44 @@ PJ_DEF(pj_status_t) pjsua_update_stun_servers(unsigned count, pj_str_t srv[],
 
 
 /*
+ * Update nameservers.
+ */
+PJ_DEF(pj_status_t) pjsua_update_nameservers(unsigned count,
+                                             const pj_str_t srv[])
+{
+#if PJSIP_HAS_RESOLVER
+    nameserver_list ns;
+    pj_status_t status;
+
+    status = parse_nameservers(count, srv, &ns);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    PJSUA_LOCK();
+    if (pjsua_var.state < PJSUA_STATE_INIT ||
+        pjsua_var.state >= PJSUA_STATE_CLOSING)
+    {
+        status = PJ_EINVALIDOP;
+    } else if (pjsip_endpt_get_resolver(pjsua_var.endpt) !=
+               pjsua_var.resolver)
+    {
+        /* The application has replaced the resolver of the endpoint */
+        status = PJ_EINVALIDOP;
+    } else {
+        status = apply_nameservers(&ns);
+    }
+    PJSUA_UNLOCK();
+
+    return status;
+#else
+    PJ_UNUSED_ARG(count);
+    PJ_UNUSED_ARG(srv);
+    return PJ_EINVALIDOP;
+#endif
+}
+
+
+/*
  * Resolve STUN server.
  */
 PJ_DEF(pj_status_t) pjsua_resolve_stun_servers( unsigned count,
@@ -2155,6 +2301,12 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 
         /* Destroy media (to shutdown media endpoint, etc) */
         pjsua_media_subsys_destroy(flags);
+
+        /* The endpoint only destroys the resolver that is attached to it */
+        if (pjsua_var.resolver_detached) {
+            pj_dns_resolver_destroy(pjsua_var.resolver_detached, PJ_FALSE);
+            pjsua_var.resolver_detached = NULL;
+        }
 
         /* Must destroy endpoint first before destroying pools in
          * buddies or accounts, since shutting down transaction layer

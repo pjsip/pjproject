@@ -354,6 +354,10 @@ static int features_tests(int argc, char *argv[])
     UT_ADD_TEST(&test_app.ut_app, ssl_sock_stress_test, 0);
 #endif
 
+#if defined(PJ_DARWINOS) && PJ_DARWINOS != 0
+    UT_ADD_TEST(&test_app.ut_app, ssl_sock_apple_test, 0);
+#endif
+
 #if INCLUDE_IOCP_UNREG_TEST
     UT_ADD_TEST(&test_app.ut_app, iocp_unregister_test, 0);
 #endif

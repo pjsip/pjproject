@@ -107,6 +107,7 @@ extern pj_caching_pool caching_pool;
 #define INCLUDE_PJSUA_AUTH_TEST INCLUDE_REGC_GROUP
 #define INCLUDE_PJSUA_CALL_TEST INCLUDE_REGC_GROUP
 #define INCLUDE_PJSUA_ACC_TEST  INCLUDE_REGC_GROUP
+#define INCLUDE_PJSUA_DNS_TEST  INCLUDE_TRANSPORT_GROUP
 #define INCLUDE_DLG_CORE_TEST   INCLUDE_MESSAGING_GROUP
 
 
@@ -133,6 +134,7 @@ int pjsua_auth_test(void);
 int pjsua_call_test(void);
 int pjsua_acc_test(void);
 int srv_failover_pjsua_test(void);
+int pjsua_dns_test(void);
 int inv_offer_answer_test(void);
 int dlg_core_test(void);
 int dlg_target_refresh_test(void);

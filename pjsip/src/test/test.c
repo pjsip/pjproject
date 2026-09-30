@@ -480,6 +480,11 @@ int test_main(int argc, char *argv[])
                 PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
 #endif
 
+#if INCLUDE_PJSUA_DNS_TEST
+    UT_ADD_TEST(&test_app.ut_app, pjsua_dns_test,
+                PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
+#endif
+
 #if INCLUDE_SRV_FAILOVER_TEST && INCLUDE_PJSUA_ACC_TEST
     UT_ADD_TEST(&test_app.ut_app, srv_failover_pjsua_test,
                 PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);

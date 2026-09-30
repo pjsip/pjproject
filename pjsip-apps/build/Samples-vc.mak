@@ -81,6 +81,7 @@ SAMPLES = $(BINDIR)\aidemo.exe \
 	  $(BINDIR)\clidemo.exe \
 	  $(BINDIR)\confsample.exe \
 	  $(BINDIR)\confbench.exe \
+	  $(BINDIR)\embedded_ua.exe \
 	  $(BINDIR)\encdec.exe \
 	  $(BINDIR)\httpdemo.exe \
 	  $(BINDIR)\icedemo.exe \
