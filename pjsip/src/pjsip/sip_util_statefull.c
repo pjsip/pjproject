@@ -35,6 +35,8 @@ struct tsx_data
     void *token;
     void (*cb)(void*, pjsip_event*);
     pj_bool_t allow_failover;
+    unsigned first_addr;            /* Where this transaction started in
+                                       the address list */
     pjsip_tx_data *orig_tdata;
     /* The Via settings of the application, as the send updates them */
     pjsip_host_port via_addr;
@@ -167,12 +169,13 @@ static pj_bool_t is_tried(const pjsip_tx_data *tdata, unsigned idx)
     return PJ_FALSE;
 }
 
-/* The transport moved on from the addresses before cur_addr, as they could
- * not be sent to, e.g: the connection was refused. Mark the ones of the
- * transport type of the address that has answered: then the local network
- * and transport are not the cause.
+/* The transport moved on from the addresses this transaction started from
+ * up to cur_addr, as they could not be sent to, e.g: the connection was
+ * refused. Mark the ones of the transport type of the address that has
+ * answered: then the local network and transport are not the cause.
  */
-static void mark_refused_servers(pjsip_transaction *tsx)
+static void mark_refused_servers(pjsip_transaction *tsx,
+                                 const struct tsx_data *tsx_data)
 {
     const pjsip_tx_data *tdata = tsx->last_tx;
     const pjsip_server_addresses *addr = &tdata->dest_info.addr;
@@ -181,7 +184,9 @@ static void mark_refused_servers(pjsip_transaction *tsx)
     if (tdata->dest_info.cur_addr >= addr->count)
         return;
 
-    for (i = 0; duration && i < tdata->dest_info.cur_addr; ++i) {
+    for (i = tsx_data->first_addr; duration && i < tdata->dest_info.cur_addr;
+         ++i)
+    {
         if (addr->entry[i].type != addr->entry[tdata->dest_info.cur_addr].type)
             continue;
         pjsip_endpt_set_server_failed(tsx->endpt,
@@ -293,6 +298,7 @@ static pj_status_t send_to_next_server(pjsip_transaction *tsx,
 
     new_data = PJ_POOL_ALLOC_T(new_tsx->pool, struct tsx_data);
     *new_data = *tsx_data;
+    new_data->first_addr = 0;
     new_data->failed_servers_gen = pjsip_endpt_failed_servers_gen(tsx->endpt);
     if (!new_data->orig_tdata) {
         new_data->orig_tdata = old_tdata;
@@ -361,7 +367,7 @@ static void mod_util_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
 
         update_server_state(tsx, event, failed);
         if (event->body.tsx_state.type == PJSIP_EVENT_RX_MSG)
-            mark_refused_servers(tsx);
+            mark_refused_servers(tsx, tsx_data);
 
         if (failed && tsx_data->allow_failover && !is_pinned(tdata)) {
             next = find_next_server(tsx->endpt, tdata);
@@ -428,6 +434,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request2( pjsip_endpoint *endpt,
     tsx_data->cb = cb;
     /* The caller can't follow a replaced transaction */
     tsx_data->allow_failover = (p_tsx == NULL);
+    tsx_data->first_addr = tdata->dest_info.cur_addr;
     tsx_data->failed_servers_gen = pjsip_endpt_failed_servers_gen(endpt);
     pj_strdup(tdata->pool, &tsx_data->via_addr.host, &tdata->via_addr.host);
     tsx_data->via_addr.port = tdata->via_addr.port;

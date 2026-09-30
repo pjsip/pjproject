@@ -1368,6 +1368,73 @@ static int regc_transport_test(void)
 }
 #endif
 
+#if PJ_HAS_TCP
+/* A request sent again with its address list, from the address that
+ * answered last time, e.g: after a 401: the addresses before it were not
+ * refused now.
+ */
+static int resent_request_test(void)
+{
+    pj_str_t lo = pj_str("127.0.0.1");
+    pj_str_t target = pj_str("sip:" TEST_DOMAIN ";transport=tcp");
+    pj_str_t from = pj_str("<sip:test@" TEST_DOMAIN ">");
+    pjsip_tx_data *tdata;
+    pjsip_server_addresses *addr;
+    pj_sockaddr srv1;
+    unsigned *token, i, waited;
+    pj_status_t status;
+
+    for (i = 0; i < SRV_CNT; ++i) {
+        status = set_mode(&g.srv[i], MODE_OK);
+        if (status != PJ_SUCCESS)
+            return -3140;
+    }
+    flush_events(200);
+    forget_failed_servers(0);
+    pjsip_cfg()->endpt.server_failover = PJ_TRUE;
+
+    status = pjsip_endpt_create_request(endpt, &pjsip_options_method, &target,
+                                        &from, &target, NULL, NULL, -1, NULL,
+                                        &tdata);
+    if (status != PJ_SUCCESS)
+        return -3141;
+    addr = &tdata->dest_info.addr;
+    for (i = 0; i < 2; ++i) {
+        addr->entry[i].type = PJSIP_TRANSPORT_TCP;
+        pj_sockaddr_init(pj_AF_INET(), &addr->entry[i].addr, &lo,
+                         g.srv[i].tcp_port);
+        addr->entry[i].addr_len = sizeof(pj_sockaddr_in);
+        addr->entry[i].name = pj_str(g.srv[i].name);
+    }
+    addr->count = 2;
+    tdata->dest_info.cur_addr = 1;
+    pj_sockaddr_cp(&srv1, &addr->entry[0].addr);
+
+    token = PJ_POOL_ALLOC_T(tdata->pool, unsigned);
+    *token = TOKEN_MAGIC;
+    pj_bzero(&result, sizeof(result));
+    status = pjsip_endpt_send_request(endpt, tdata, -1, token, &send_cb);
+    if (status != PJ_SUCCESS)
+        return -3142;
+    for (waited = 0; !result.done && waited < 2000; waited += 50)
+        flush_events(50);
+
+    PJ_LOG(3,(THIS_FILE, "  %-44s -> %d, reached %s%s-",
+              "TCP, sent again from srv2", result.done ? result.status : -1,
+              g.srv[0].hits ? "1" : "-", g.srv[1].hits ? "2" : "-"));
+    if (!result.done || result.status != 200 || g.srv[0].hits ||
+        !g.srv[1].hits)
+    {
+        return -3143;
+    }
+    if (pjsip_endpt_is_server_failed(endpt, &srv1)) {
+        PJ_LOG(1,(THIS_FILE, "    error: srv1 is remembered"));
+        return -3144;
+    }
+    return 0;
+}
+#endif
+
 /* Marking and clearing a failed server from the application */
 static int failed_server_api_test(void)
 {
@@ -1550,6 +1617,10 @@ int srv_failover_test(void)
         rc = status;
 
     status = regc_transport_test();
+    if (status && !rc)
+        rc = status;
+
+    status = resent_request_test();
     if (status && !rc)
         rc = status;
 #endif
