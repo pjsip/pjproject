@@ -191,7 +191,10 @@ typedef struct pjsip_cfg_t
         /**
          * Remember the servers that fail, and list them after the other
          * addresses of a destination, see #pjsip_resolver_set_server_failed().
-         * PJSUA sets this from pjsua_config.server_failover.
+         * Also send a request that gets no answer or a 503 again to the next
+         * address, see #pjsip_endpt_send_request(). An application that
+         * sends such requests to another server by itself should keep this
+         * disabled. PJSUA sets this from pjsua_config.server_failover.
          *
          * Default is PJSIP_SERVER_FAILOVER.
          */
@@ -967,7 +970,9 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 /**
  * Remember the servers that fail, and list them after the other addresses
- * of a destination, see #pjsip_resolver_set_server_failed().
+ * of a destination, see #pjsip_resolver_set_server_failed(). Also send a
+ * request that gets no answer or a 503 again to the next address, see
+ * #pjsip_endpt_send_request().
  *
  * This option can also be controlled at run-time by the
  * \a server_failover setting in pjsip_cfg_t.

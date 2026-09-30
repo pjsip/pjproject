@@ -456,9 +456,9 @@ PJ_DECL(pj_bool_t) pjsip_endpt_is_server_failed(pjsip_endpoint *endpt,
 
 /**
  * Clear all failed server marks, including the ones set by the application,
- * e.g: after the local network has changed. The failures of the requests
- * sent before this are not remembered, as they may have been sent on the
- * previous network.
+ * e.g: after the local network has changed. The requests sent before this
+ * are not sent to another server when they fail, and their failures are not
+ * remembered, as they may have been sent on the previous network.
  *
  * @param endpt         The SIP endpoint instance.
  *

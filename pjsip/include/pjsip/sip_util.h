@@ -450,8 +450,8 @@ PJ_DECL(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
  * route URI was found by #pjsip_process_route_set(), this function will
  * do nothing.
  *
- * This function should only used internally by PJSIP client authentication
- * module.
+ * This function should only used internally by PJSIP, e.g: by the client
+ * authentication module.
  *
  * @param tdata     Transmit data containing request message.
  */
@@ -771,6 +771,18 @@ typedef void (*pjsip_endpt_send_callback)(void *token, pjsip_event *e);
  * requests outside a dialog. To send a request within a dialog, application
  * should use #pjsip_dlg_send_request instead.
  *
+ * When pjsip_cfg()->endpt.server_failover is enabled and the server answers
+ * 503, or there is no response at all because of a timeout or a transport
+ * error, the request is sent again as a new transaction to the next address
+ * the destination resolves to, as described in RFC 3263 section 4.3.
+ * Addresses already tried are skipped, and so are the ones marked as failed
+ * while others are left, see #pjsip_endpt_set_server_failed(). The callback
+ * only gets the result of the last attempt. This is not done for INVITE
+ * and CANCEL, or for a request bound to a connection with a transport
+ * selector. Note that a server that doesn't answer may still have got the
+ * request, e.g: when its answer is lost, so the request may reach two
+ * servers.
+ *
  * @param endpt     The endpoint instance.
  * @param tdata     The transmit data to be sent.
  * @param timeout   Optional timeout for final response to be received, or -1 
@@ -837,6 +849,8 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_request( pjsip_endpoint *endpt,
  *                  i.e. the transaction may already be completed by the time
  *                  application inspects this argument. The transaction is
  *                  also available in the event given to the callback.
+ *                  When this is set, the request is not sent to the next
+ *                  address on failure.
  *
  * @return          PJ_SUCCESS, or the appropriate error code.
  */

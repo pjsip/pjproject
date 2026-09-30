@@ -36,6 +36,8 @@
 #if PJSIP_HAS_RESOLVER && PJ_HAS_THREADS
 
 #define TEST_DOMAIN     "failover.test"
+/* Its SRV targets list srv1 twice, with srv2 before or after the second */
+#define DUP_DOMAIN      "dup." TEST_DOMAIN
 #define SRV_CNT         3
 #define MAX_CONN        16
 
@@ -67,6 +69,8 @@ struct fake_srv
     pj_sock_t           conn[MAX_CONN];
     pj_sock_t           filler[MAX_CONN];
     volatile int        hits;
+    volatile int        tsx_cnt;        /* Requests with a new Via */
+    char                last_via[160];
 };
 
 static struct
@@ -157,10 +161,23 @@ static int handle_msg(struct fake_srv *srv, const char *msg, char *resp,
 {
     int code;
 
+    const char *via;
+
     if (!pj_ansi_strncmp(msg, "SIP/2.0", 7) || !pj_ansi_strncmp(msg, "ACK", 3))
         return 0;
 
     ++srv->hits;
+    via = strstr(msg, "\r\nVia:");
+    if (via) {
+        const char *end = strstr(via + 2, "\r\n");
+        char buf[sizeof(srv->last_via)];
+
+        pj_ansi_snprintf(buf, sizeof(buf), "%.*s",
+                         end ? (int)(end - via - 2) : 0, via + 2);
+        if (pj_ansi_strcmp(buf, srv->last_via) != 0)
+            ++srv->tsx_cnt;
+        pj_ansi_strxcpy(srv->last_via, buf, sizeof(srv->last_via));
+    }
 
     switch (srv->mode) {
     case MODE_OK:       code = 200; break;
@@ -411,6 +428,8 @@ static pj_status_t set_mode(struct fake_srv *srv, int mode)
 
     srv->mode = mode;
     srv->hits = 0;
+    srv->tsx_cnt = 0;
+    srv->last_via[0] = '\0';
     pj_mutex_unlock(g.mutex);
     return status;
 }
@@ -436,11 +455,13 @@ static pj_status_t add_dns_records(void)
 {
     pj_str_t srv_name[2] = { { "_sip._udp." TEST_DOMAIN, 0 },
                              { "_sip._tcp." TEST_DOMAIN, 0 } };
+    pj_str_t dup_name = { "_sip._udp." DUP_DOMAIN, 0 };
+    pj_str_t dup_tcp_name = { "_sip._tcp." DUP_DOMAIN, 0 };
     pj_dns_parsed_rr rr[SRV_CNT];
     pj_dns_parsed_query q;
     pj_dns_parsed_packet pkt;
-    pj_str_t target[SRV_CNT];
-    char target_buf[SRV_CNT][32];
+    pj_str_t target[SRV_CNT + 1];
+    char target_buf[SRV_CNT + 1][32];
     pj_in_addr lo = pj_inet_addr2("127.0.0.1");
     unsigned i, t;
     pj_status_t status;
@@ -450,6 +471,9 @@ static pj_status_t add_dns_records(void)
                          "srv%d." TEST_DOMAIN, i + 1);
         target[i] = pj_str(target_buf[i]);
     }
+    target[SRV_CNT] = pj_str("srv0." TEST_DOMAIN);
+    dup_name.slen = pj_ansi_strlen(dup_name.ptr);
+    dup_tcp_name.slen = pj_ansi_strlen(dup_tcp_name.ptr);
 
     for (t = 0; t < 2; ++t) {
         srv_name[t].slen = pj_ansi_strlen(srv_name[t].ptr);
@@ -467,7 +491,35 @@ static pj_status_t add_dns_records(void)
             return status;
     }
 
-    for (i = 0; i < SRV_CNT; ++i) {
+    /* UDP SRV targets of DUP_DOMAIN: srv1, srv1 again as "srv0", srv2 */
+    pj_dns_init_srv_rr(&rr[0], &dup_name, PJ_DNS_CLASS_IN, 60, 1, 5,
+                       g.srv[0].udp_port, &target[0]);
+    pj_dns_init_srv_rr(&rr[1], &dup_name, PJ_DNS_CLASS_IN, 60, 2, 5,
+                       g.srv[0].udp_port, &target[SRV_CNT]);
+    pj_dns_init_srv_rr(&rr[2], &dup_name, PJ_DNS_CLASS_IN, 60, 3, 5,
+                       g.srv[1].udp_port, &target[1]);
+    init_query(&pkt, &q, PJ_DNS_TYPE_SRV, &dup_name);
+    pkt.hdr.anscount = 3;
+    pkt.ans = rr;
+    status = pj_dns_resolver_add_entry(g.resolver, &pkt, PJ_FALSE);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    /* TCP SRV targets of DUP_DOMAIN: srv1, srv2, srv1 again as "srv0" */
+    pj_dns_init_srv_rr(&rr[0], &dup_tcp_name, PJ_DNS_CLASS_IN, 60, 1, 5,
+                       g.srv[0].tcp_port, &target[0]);
+    pj_dns_init_srv_rr(&rr[1], &dup_tcp_name, PJ_DNS_CLASS_IN, 60, 2, 5,
+                       g.srv[1].tcp_port, &target[1]);
+    pj_dns_init_srv_rr(&rr[2], &dup_tcp_name, PJ_DNS_CLASS_IN, 60, 3, 5,
+                       g.srv[0].tcp_port, &target[SRV_CNT]);
+    init_query(&pkt, &q, PJ_DNS_TYPE_SRV, &dup_tcp_name);
+    pkt.hdr.anscount = 3;
+    pkt.ans = rr;
+    status = pj_dns_resolver_add_entry(g.resolver, &pkt, PJ_FALSE);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    for (i = 0; i <= SRV_CNT; ++i) {
         pj_dns_init_a_rr(&rr[0], &target[i], PJ_DNS_CLASS_IN, 60, &lo);
         init_query(&pkt, &q, PJ_DNS_TYPE_A, &target[i]);
         pkt.hdr.anscount = 1;
@@ -509,7 +561,13 @@ struct test_case
     pj_bool_t   no_failover;    /* Disable server_failover */
     pj_bool_t   srv1_first;     /* The resolver must still list srv1 first */
     pj_bool_t   pin_srv1;       /* Send on a connection to srv1 */
+    pj_bool_t   hold_tsx;       /* Send with pjsip_endpt_send_request2(),
+                                   keeping the transaction */
+    pj_bool_t   nat_via;        /* Send with a public address in Via */
+    const char *domain;         /* Send to this domain, not TEST_DOMAIN */
+    pj_bool_t   late_mark_srv2; /* Mark srv2 as failed after sending */
     pj_bool_t   late_clear;     /* Clear the failed servers after sending */
+    pj_bool_t   check_release;  /* The request must be released at the end */
 };
 
 /* Forget the servers that failed in the previous cases */
@@ -578,6 +636,7 @@ static int run_case(const struct test_case *tc)
     char target_buf[64];
     pj_str_t target, from = pj_str("<sip:tester@127.0.0.1>");
     pjsip_tx_data *tdata;
+    pjsip_transaction *tsx = NULL;
     pjsip_transport *tp = NULL;
     unsigned *token;
     unsigned i, waited, td = TEST_TD;
@@ -602,7 +661,8 @@ static int run_case(const struct test_case *tc)
     else if (tc->keep_srv1_only)
         forget_failed_servers(1);
 
-    pj_ansi_snprintf(target_buf, sizeof(target_buf), "sip:" TEST_DOMAIN "%s",
+    pj_ansi_snprintf(target_buf, sizeof(target_buf), "sip:%s%s",
+                     tc->domain ? tc->domain : TEST_DOMAIN,
                      tc->tcp ? ";transport=tcp" : "");
     target = pj_str(target_buf);
 
@@ -612,6 +672,11 @@ static int run_case(const struct test_case *tc)
     if (status != PJ_SUCCESS) {
         app_perror("    error: creating request", status);
         return -3020;
+    }
+
+    if (tc->nat_via) {
+        tdata->via_addr.host = pj_str("192.0.2.1");
+        tdata->via_addr.port = 5099;
     }
 
     if (tc->pin_srv1) {
@@ -637,24 +702,54 @@ static int run_case(const struct test_case *tc)
     token = PJ_POOL_ALLOC_T(tdata->pool, unsigned);
     *token = TOKEN_MAGIC;
 
+    if (tc->check_release)
+        pjsip_tx_data_add_ref(tdata);
+
     pjsip_cfg()->endpt.server_failover = !tc->no_failover;
     pj_bzero(&result, sizeof(result));
-    status = pjsip_endpt_send_request(endpt, tdata, -1, token, &send_cb);
+    status = pjsip_endpt_send_request2(endpt, tdata, -1, token, &send_cb,
+                                       tc->hold_tsx ? &tsx : NULL);
     if (status != PJ_SUCCESS) {
         app_perror("    error: sending request", status);
         return -3030;
     }
     if (tc->late_clear)
         pjsip_endpt_clear_failed_servers(endpt);
+    if (tc->late_mark_srv2) {
+        pj_str_t lo = pj_str("127.0.0.1");
+        pj_sockaddr addr;
+
+        pj_sockaddr_init(pj_AF_INET(), &addr, &lo,
+                         tc->tcp ? g.srv[1].tcp_port : g.srv[1].udp_port);
+        pjsip_endpt_set_server_failed(endpt, tc->tcp ? PJSIP_TRANSPORT_TCP :
+                                                       PJSIP_TRANSPORT_UDP,
+                                      &addr, 60);
+    }
 
     for (waited = 0; !result.done && waited < 4 * td + 2000;
          waited += 50)
     {
         flush_events(50);
     }
+    if (tsx)
+        pj_grp_lock_dec_ref(tsx->grp_lock);
     if (tp)
         pjsip_transport_dec_ref(tp);
     pjsip_cfg()->endpt.server_failover = PJ_TRUE;
+
+    if (tc->check_release) {
+        /* Only our reference is left once the transactions are gone */
+        for (waited = 0; pj_atomic_get(tdata->ref_cnt) > 1 && waited < 3000;
+             waited += 50)
+        {
+            flush_events(50);
+        }
+        if (pj_atomic_get(tdata->ref_cnt) > 1) {
+            PJ_LOG(1,(THIS_FILE, "    error: the request was not released"));
+            rc = -3046;
+        }
+        pjsip_tx_data_dec_ref(tdata);
+    }
 
     PJ_LOG(3,(THIS_FILE, "  %-44s -> %d, reached %s%s%s", tc->title,
               result.done ? result.status : -1,
@@ -670,10 +765,22 @@ static int run_case(const struct test_case *tc)
     for (i = 0; i < SRV_CNT; ++i) {
         if ((g.srv[i].hits != 0) != tc->reached[i])
             rc = -3050;
+        /* No server gets the request twice */
+        if (g.srv[i].tsx_cnt > 1) {
+            PJ_LOG(1,(THIS_FILE, "    error: srv%d got %d transactions",
+                      i + 1, g.srv[i].tsx_cnt));
+            rc = -3051;
+        }
     }
     if (rc == 0 && tc->pin_srv1 && g.srv[0].hits != 1) {
         PJ_LOG(1,(THIS_FILE, "    error: srv1 got %d requests", g.srv[0].hits));
         return -3059;
+    }
+    if (rc == 0 && tc->nat_via &&
+        !strstr(g.srv[1].last_via, "192.0.2.1:5099"))
+    {
+        PJ_LOG(1,(THIS_FILE, "    error: srv2 got %s", g.srv[1].last_via));
+        return -3056;
     }
     if (rc == 0 && tc->srv1_first && check_srv1_order(tc->tcp, PJ_FALSE)) {
         PJ_LOG(1,(THIS_FILE, "    error: srv1 is not listed first"));
@@ -696,37 +803,56 @@ static const struct test_case cases[] =
     { "UDP, srv1 answers",
       PJ_FALSE, { MODE_OK, MODE_OK, MODE_OK }, 200,
       { PJ_TRUE, PJ_FALSE, PJ_FALSE } },
-    { "UDP, srv1 never answers: it is remembered",
-      PJ_FALSE, { MODE_SILENT, MODE_OK, MODE_OK }, 408,
-      { PJ_TRUE, PJ_FALSE, PJ_FALSE }, PJ_FALSE, PJ_TRUE },
-    { "UDP, next request goes to srv2",
+    { "UDP, srv1 never answers",
+      PJ_FALSE, { MODE_SILENT, MODE_OK, MODE_OK }, 200,
+      { PJ_TRUE, PJ_TRUE, PJ_FALSE }, PJ_FALSE, PJ_TRUE },
+    { "UDP, next request skips the failed srv1",
       PJ_FALSE, { MODE_SILENT, MODE_OK, MODE_OK }, 200,
       { PJ_FALSE, PJ_TRUE, PJ_FALSE }, PJ_TRUE },
-    { "UDP, srv2 never answers",
-      PJ_FALSE, { MODE_OK, MODE_SILENT, MODE_OK }, 408,
-      { PJ_FALSE, PJ_TRUE, PJ_FALSE }, PJ_TRUE },
-    { "UDP, srv3 never answers",
-      PJ_FALSE, { MODE_OK, MODE_OK, MODE_SILENT }, 408,
-      { PJ_FALSE, PJ_FALSE, PJ_TRUE }, PJ_TRUE },
-    { "UDP, all failed: srv1 is tried, then forgotten",
+    { "UDP, the failed srv1 is tried last",
+      PJ_FALSE, { MODE_OK, MODE_503, MODE_503 }, 200,
+      { PJ_TRUE, PJ_TRUE, PJ_TRUE }, PJ_TRUE },
+    { "UDP, srv1 silent, the others 503 with Retry-After",
+      PJ_FALSE, { MODE_SILENT, MODE_503_RETRY, MODE_503_RETRY }, 503,
+      { PJ_TRUE, PJ_TRUE, PJ_TRUE }, PJ_TRUE },
+    { "UDP, all failed: the first one is tried",
       PJ_FALSE, { MODE_OK, MODE_OK, MODE_OK }, 200,
-      { PJ_TRUE, PJ_FALSE, PJ_FALSE }, PJ_TRUE, PJ_FALSE, PJ_FALSE,
-      PJ_FALSE, PJ_TRUE },
-    { "UDP, srv1 answers 503: not remembered",
-      PJ_FALSE, { MODE_503, MODE_OK, MODE_OK }, 503,
-      { PJ_TRUE, PJ_FALSE, PJ_FALSE }, PJ_FALSE, PJ_FALSE, PJ_FALSE,
+      { PJ_TRUE, PJ_FALSE, PJ_FALSE }, PJ_TRUE },
+    { "UDP, srv1 is first again after answering",
+      PJ_FALSE, { MODE_OK, MODE_OK, MODE_OK }, 200,
+      { PJ_TRUE, PJ_FALSE, PJ_FALSE }, PJ_TRUE, PJ_FALSE, PJ_TRUE },
+    { "UDP, only failed servers left: they are tried",
+      PJ_FALSE, { MODE_SILENT, MODE_OK, MODE_OK }, 200,
+      { PJ_TRUE, PJ_TRUE, PJ_FALSE }, PJ_TRUE, PJ_FALSE, PJ_TRUE },
+    { "UDP, srv1 answers 503 (not remembered)",
+      PJ_FALSE, { MODE_503, MODE_OK, MODE_OK }, 200,
+      { PJ_TRUE, PJ_TRUE, PJ_FALSE }, PJ_FALSE, PJ_FALSE, PJ_FALSE,
       PJ_FALSE, PJ_TRUE },
     { "UDP, srv1 answers 503 with Retry-After",
-      PJ_FALSE, { MODE_503_RETRY, MODE_OK, MODE_OK }, 503,
-      { PJ_TRUE, PJ_FALSE, PJ_FALSE }, PJ_FALSE, PJ_TRUE },
-    { "UDP, srv1 answers 100 only: not remembered",
-      PJ_FALSE, { MODE_TRYING, MODE_OK, MODE_OK }, 408,
+      PJ_FALSE, { MODE_503_RETRY, MODE_OK, MODE_OK }, 200,
+      { PJ_TRUE, PJ_TRUE, PJ_FALSE }, PJ_FALSE, PJ_TRUE },
+    { "UDP, the retry keeps the public address in Via",
+      PJ_FALSE, { MODE_503, MODE_OK, MODE_OK }, 200,
+      { PJ_TRUE, PJ_TRUE, PJ_FALSE }, PJ_FALSE, PJ_FALSE, PJ_FALSE,
+      PJ_FALSE, PJ_FALSE, PJ_FALSE, PJ_FALSE, PJ_TRUE },
+    { "UDP, srv1 and srv2 never answer",
+      PJ_FALSE, { MODE_SILENT, MODE_SILENT, MODE_OK }, 200,
+      { PJ_TRUE, PJ_TRUE, PJ_TRUE } },
+    { "UDP, all answer 503",
+      PJ_FALSE, { MODE_503, MODE_503, MODE_503 }, 503,
+      { PJ_TRUE, PJ_TRUE, PJ_TRUE } },
+    { "UDP, caller holds the transaction (no failover)",
+      PJ_FALSE, { MODE_SILENT, MODE_OK, MODE_OK }, 408,
       { PJ_TRUE, PJ_FALSE, PJ_FALSE }, PJ_FALSE, PJ_FALSE, PJ_FALSE,
-      PJ_FALSE, PJ_TRUE },
+      PJ_FALSE, PJ_FALSE, PJ_FALSE, PJ_TRUE },
     { "UDP, disabled: srv1 is not remembered",
       PJ_FALSE, { MODE_SILENT, MODE_OK, MODE_OK }, 408,
       { PJ_TRUE, PJ_FALSE, PJ_FALSE }, PJ_FALSE, PJ_FALSE, PJ_FALSE,
       PJ_TRUE, PJ_TRUE },
+    { "UDP, srv1 answers 100 only (no failover)",
+      PJ_FALSE, { MODE_TRYING, MODE_OK, MODE_OK }, 408,
+      { PJ_TRUE, PJ_FALSE, PJ_FALSE }, PJ_FALSE, PJ_FALSE, PJ_FALSE,
+      PJ_FALSE, PJ_TRUE },
 #if PJ_HAS_TCP
     { "TCP, srv1 answers",
       PJ_TRUE, { MODE_OK, MODE_OK, MODE_OK }, 200,
@@ -734,7 +860,7 @@ static const struct test_case cases[] =
     { "TCP, srv1 port closed",
       PJ_TRUE, { MODE_CLOSED, MODE_OK, MODE_OK }, 200,
       { PJ_FALSE, PJ_TRUE, PJ_FALSE }, PJ_FALSE, PJ_TRUE },
-    { "TCP, next request goes to srv2",
+    { "TCP, next request skips the closed srv1",
       PJ_TRUE, { MODE_OK, MODE_OK, MODE_OK }, 200,
       { PJ_FALSE, PJ_TRUE, PJ_FALSE }, PJ_TRUE },
     { "TCP, disabled: closed srv1 is not remembered",
@@ -742,14 +868,83 @@ static const struct test_case cases[] =
       { PJ_FALSE, PJ_TRUE, PJ_FALSE }, PJ_FALSE, PJ_FALSE, PJ_FALSE,
       PJ_TRUE, PJ_TRUE },
     { "TCP, srv1 never answers",
-      PJ_TRUE, { MODE_SILENT, MODE_OK, MODE_OK }, 408,
-      { PJ_TRUE, PJ_FALSE, PJ_FALSE }, PJ_FALSE, PJ_TRUE },
-    { "TCP, connection to srv1: srv1 is remembered",
+      PJ_TRUE, { MODE_SILENT, MODE_OK, MODE_OK }, 200,
+      { PJ_TRUE, PJ_TRUE, PJ_FALSE } },
+    { "TCP, srv1 answers 503",
+      PJ_TRUE, { MODE_503, MODE_OK, MODE_OK }, 200,
+      { PJ_TRUE, PJ_TRUE, PJ_FALSE } },
+    { "TCP, connection to srv1: no failover, srv1 is remembered",
       PJ_TRUE, { MODE_SILENT, MODE_OK, MODE_OK }, 408,
       { PJ_TRUE, PJ_FALSE, PJ_FALSE }, PJ_FALSE, PJ_TRUE, PJ_FALSE,
       PJ_FALSE, PJ_FALSE, PJ_TRUE },
+    { "TCP, srv1 closed, srv2 and srv3 never answer",
+      PJ_TRUE, { MODE_CLOSED, MODE_SILENT, MODE_SILENT }, 408,
+      { PJ_FALSE, PJ_TRUE, PJ_TRUE } },
+    { "TCP, srv1 closed, srv2 answers 503",
+      PJ_TRUE, { MODE_CLOSED, MODE_503, MODE_OK }, 200,
+      { PJ_FALSE, PJ_TRUE, PJ_TRUE } },
 #endif
 };
+
+/* An address listed twice, e.g: two SRV targets on the same host, is sent
+ * the request once.
+ */
+static int dup_address_test(void)
+{
+    static const struct test_case tc[] =
+    {
+        { "UDP, srv1 listed twice: tried once",
+          PJ_FALSE, { MODE_503, MODE_OK, MODE_OK }, 200,
+          { PJ_TRUE, PJ_TRUE, PJ_FALSE }, PJ_FALSE, PJ_FALSE, PJ_FALSE,
+          PJ_FALSE, PJ_FALSE, PJ_FALSE, PJ_FALSE, PJ_FALSE, DUP_DOMAIN },
+#if PJ_HAS_TCP
+        /* The transport moves on from the closed srv2 by itself */
+        { "TCP, srv1 listed again after closed srv2",
+          PJ_TRUE, { MODE_SILENT, MODE_CLOSED, MODE_OK }, 503,
+          { PJ_TRUE, PJ_FALSE, PJ_FALSE }, PJ_FALSE, PJ_FALSE, PJ_FALSE,
+          PJ_FALSE, PJ_FALSE, PJ_FALSE, PJ_FALSE, PJ_FALSE, DUP_DOMAIN },
+#endif
+    };
+    unsigned i;
+    int rc = 0;
+
+    for (i = 0; i < PJ_ARRAY_SIZE(tc) && rc == 0; ++i) {
+        rc = run_case(&tc[i]);
+        if (rc == 0 && g.srv[0].tsx_cnt != 1) {
+            PJ_LOG(1,(THIS_FILE, "    error: srv1 got %d transactions",
+                      g.srv[0].tsx_cnt));
+            rc = -3070;
+        }
+    }
+    return rc;
+}
+
+/* A server marked as failed while the request is being sent is tried last,
+ * even when it comes before the ones tried.
+ */
+static int late_mark_test(void)
+{
+    static const struct test_case tc[] =
+    {
+        { "UDP, srv2 marked after sending: tried last",
+          PJ_FALSE, { MODE_SILENT, MODE_OK, MODE_SILENT }, 200,
+          { PJ_TRUE, PJ_TRUE, PJ_TRUE }, PJ_FALSE, PJ_FALSE, PJ_FALSE,
+          PJ_FALSE, PJ_FALSE, PJ_FALSE, PJ_FALSE, PJ_FALSE, NULL, PJ_TRUE },
+#if PJ_HAS_TCP
+        /* The transport moves on from the closed srv2 by itself */
+        { "TCP, srv2 marked after sending and closed",
+          PJ_TRUE, { MODE_SILENT, MODE_CLOSED, MODE_SILENT }, 503,
+          { PJ_TRUE, PJ_FALSE, PJ_TRUE }, PJ_FALSE, PJ_FALSE, PJ_FALSE,
+          PJ_FALSE, PJ_FALSE, PJ_FALSE, PJ_FALSE, PJ_FALSE, NULL, PJ_TRUE },
+#endif
+    };
+    unsigned i;
+    int rc = 0;
+
+    for (i = 0; i < PJ_ARRAY_SIZE(tc) && rc == 0; ++i)
+        rc = run_case(&tc[i]);
+    return rc;
+}
 
 /* A refused connection is remembered only when another server answers:
  * when none does, the local network may be the cause.
@@ -789,6 +984,19 @@ static int refused_test(void)
     return rc;
 }
 
+/* The original request is kept until the callback, then released */
+static int release_test(void)
+{
+    static const struct test_case tc =
+    { "UDP, srv1 answers 503: the request is released",
+      PJ_FALSE, { MODE_503, MODE_OK, MODE_OK }, 200,
+      { PJ_TRUE, PJ_TRUE, PJ_FALSE }, PJ_FALSE, PJ_FALSE, PJ_FALSE,
+      PJ_FALSE, PJ_FALSE, PJ_FALSE, PJ_FALSE, PJ_FALSE, NULL, PJ_FALSE,
+      PJ_FALSE, PJ_TRUE };
+
+    return run_case(&tc);
+}
+
 /* A request sent before the failed servers are cleared, e.g: on the previous
  * network, is not sent to another server, and its failure is not remembered.
  */
@@ -811,8 +1019,8 @@ static int retry_after_limit_test(void)
 {
     static const struct test_case tc =
     { "UDP, Retry-After longer than failed_server_timeout",
-      PJ_FALSE, { MODE_503_RETRY, MODE_OK, MODE_OK }, 503,
-      { PJ_TRUE, PJ_FALSE, PJ_FALSE }, PJ_FALSE, PJ_TRUE };
+      PJ_FALSE, { MODE_503_RETRY, MODE_OK, MODE_OK }, 200,
+      { PJ_TRUE, PJ_TRUE, PJ_FALSE }, PJ_FALSE, PJ_TRUE };
     unsigned saved = pjsip_cfg()->endpt.failed_server_timeout;
     unsigned waited;
     int rc;
@@ -838,8 +1046,8 @@ static int hanging_test(void)
 {
     static const struct test_case tc =
     { "TCP, srv1 connection hangs",
-      PJ_TRUE, { MODE_HANGING, MODE_OK, MODE_OK }, 408,
-      { PJ_FALSE, PJ_FALSE, PJ_FALSE }, PJ_FALSE, PJ_TRUE };
+      PJ_TRUE, { MODE_HANGING, MODE_OK, MODE_OK }, 200,
+      { PJ_FALSE, PJ_TRUE, PJ_FALSE }, PJ_FALSE, PJ_TRUE };
 
     return run_case(&tc);
 }
@@ -970,7 +1178,19 @@ int srv_failover_test(void)
                   (int)PJ_ARRAY_SIZE(cases)));
     }
 
+    status = dup_address_test();
+    if (status && !rc)
+        rc = status;
+
+    status = late_mark_test();
+    if (status && !rc)
+        rc = status;
+
     status = late_clear_test();
+    if (status && !rc)
+        rc = status;
+
+    status = release_test();
     if (status && !rc)
         rc = status;
 
@@ -1015,6 +1235,7 @@ int srv_failover_test(void)
 }
 
 #endif  /* PJSIP_HAS_RESOLVER && PJ_HAS_THREADS */
+
 
 #if INCLUDE_PJSUA_ACC_TEST
 

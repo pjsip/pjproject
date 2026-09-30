@@ -28,10 +28,15 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 
+#define THIS_FILE   "sip_util_statefull.c"
+
 struct tsx_data
 {
     void *token;
     void (*cb)(void*, pjsip_event*);
+    pj_bool_t allow_failover;
+    pjsip_tx_data *orig_tdata;
+    pjsip_transport *orig_tp;
     unsigned failed_servers_gen;    /* When the request was sent */
 };
 
@@ -137,6 +142,24 @@ static void update_server_state(pjsip_transaction *tsx, pjsip_event *event,
     pjsip_endpt_set_server_failed(tsx->endpt, tp_type, addr, duration);
 }
 
+/* Whether the address at index idx was already tried: the tried ones are
+ * the ones up to cur_addr, see send_to_next_server().
+ */
+static pj_bool_t is_tried(const pjsip_tx_data *tdata, unsigned idx)
+{
+    const pjsip_server_addresses *addr = &tdata->dest_info.addr;
+    unsigned i;
+
+    for (i = 0; i <= tdata->dest_info.cur_addr && i < addr->count; ++i) {
+        if (addr->entry[i].type == addr->entry[idx].type &&
+            pj_sockaddr_cmp(&addr->entry[i].addr, &addr->entry[idx].addr) == 0)
+        {
+            return PJ_TRUE;
+        }
+    }
+    return PJ_FALSE;
+}
+
 /* The transport moved on from the addresses before cur_addr, as they could
  * not be sent to, e.g: the connection was refused. Mark the ones of the
  * transport type of the address that has answered: then the local network
@@ -159,6 +182,143 @@ static void mark_refused_servers(pjsip_transaction *tsx)
                                       &tdata->dest_info.addr.entry[i].addr,
                                       duration);
     }
+}
+
+/* Find the next address to try, skipping the ones already tried, and the
+ * ones known to have failed while there are others. Return the address
+ * count if there is none.
+ */
+static unsigned find_next_server(pjsip_endpoint *endpt,
+                                 const pjsip_tx_data *tdata)
+{
+    const pjsip_server_addresses *addr = &tdata->dest_info.addr;
+    unsigned i, failed_next = addr->count;
+
+    for (i = tdata->dest_info.cur_addr + 1; i < addr->count; ++i) {
+        if (is_tried(tdata, i))
+            continue;
+        if (!pjsip_endpt_is_server_failed(endpt, addr->entry[i].type,
+                                          &addr->entry[i].addr))
+        {
+            return i;
+        }
+        if (failed_next == addr->count)
+            failed_next = i;
+    }
+    return failed_next;
+}
+
+/* Send a copy, as the request may still be queued in a connecting transport.
+ * The original is kept until the callback: the token may be in its pool.
+ */
+static pj_status_t send_to_next_server(pjsip_transaction *tsx,
+                                       const struct tsx_data *tsx_data,
+                                       unsigned next)
+{
+    pjsip_tx_data *old_tdata = tsx->last_tx;
+    pjsip_tx_data *tdata;
+    pjsip_transaction *new_tsx;
+    struct tsx_data *new_data;
+    const pjsip_server_addresses *old_addr;
+    pjsip_server_addresses *addr;
+    pjsip_via_hdr *via;
+    unsigned i, pass;
+    pj_status_t status;
+
+    /* Sending applies the strict route again */
+    pjsip_restore_strict_route_set(old_tdata);
+
+    status = pjsip_tx_data_clone(old_tdata, 0, &tdata);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    /* The copy only gets the addresses not tried yet, starting with the
+     * next one and with the failed ones last, as the transport moves on to
+     * the following addresses by itself, and they may be sorted again by IP
+     * version.
+     */
+    tdata->dest_info = old_tdata->dest_info;
+    pj_strdup(tdata->pool, &tdata->dest_info.name, &old_tdata->dest_info.name);
+    old_addr = &old_tdata->dest_info.addr;
+    addr = &tdata->dest_info.addr;
+    addr->entry[0] = old_addr->entry[next];
+    pj_strdup(tdata->pool, &addr->entry[0].name, &old_addr->entry[next].name);
+    addr->count = 1;
+    for (pass = 0; pass < 2; ++pass) {
+        for (i = old_tdata->dest_info.cur_addr + 1; i < old_addr->count; ++i)
+        {
+            if (i == next || is_tried(old_tdata, i) ||
+                pjsip_endpt_is_server_failed(tsx->endpt,
+                                             old_addr->entry[i].type,
+                                             &old_addr->entry[i].addr) !=
+                (pass == 1))
+            {
+                continue;
+            }
+            addr->entry[addr->count] = old_addr->entry[i];
+            pj_strdup(tdata->pool, &addr->entry[addr->count].name,
+                      &old_addr->entry[i].name);
+            ++addr->count;
+        }
+    }
+    tdata->dest_info.cur_addr = 0;
+    pjsip_tx_data_set_transport(tdata, &old_tdata->tp_sel);
+    pj_strdup(tdata->pool, &tdata->via_addr.host, &old_tdata->via_addr.host);
+    tdata->via_addr.port = old_tdata->via_addr.port;
+    tdata->via_tp = old_tdata->via_tp;
+
+    /* A new transaction needs a new branch */
+    via = (pjsip_via_hdr*) pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
+    if (via)
+        via->branch_param.slen = 0;
+
+    status = pjsip_tsx_create_uac(&mod_stateful_util, tdata, &new_tsx);
+    if (status != PJ_SUCCESS) {
+        pjsip_tx_data_dec_ref(tdata);
+        return status;
+    }
+
+    {
+        char buf[PJ_INET6_ADDRSTRLEN + 10];
+
+        PJ_LOG(4,(THIS_FILE, "%s failed with %d, trying %s",
+                  pjsip_tx_data_get_info(old_tdata), tsx->status_code,
+                  pj_sockaddr_print(&addr->entry[0].addr, buf, sizeof(buf),
+                                    3)));
+    }
+
+    pjsip_tsx_set_transport(new_tsx, &tdata->tp_sel);
+
+    new_data = PJ_POOL_ALLOC_T(new_tsx->pool, struct tsx_data);
+    *new_data = *tsx_data;
+    new_data->failed_servers_gen = pjsip_endpt_failed_servers_gen(tsx->endpt);
+    if (!new_data->orig_tdata) {
+        new_data->orig_tdata = old_tdata;
+        pjsip_tx_data_add_ref(old_tdata);
+
+        /* The application may still refer to the transport of the first
+         * attempt, e.g: the registration client does. It is alive here, as
+         * the transaction or the pending send holds it.
+         */
+        new_data->orig_tp = tsx->transport ? tsx->transport :
+                            old_tdata->is_pending ?
+                                old_tdata->tp_info.transport : NULL;
+        if (new_data->orig_tp)
+            pjsip_transport_add_ref(new_data->orig_tp);
+    }
+    new_tsx->mod_data[mod_stateful_util.id] = new_data;
+
+    pj_grp_lock_add_ref(new_tsx->grp_lock);
+    status = pjsip_tsx_send_msg(new_tsx, NULL);
+    if (status != PJ_SUCCESS) {
+        pjsip_tx_data_dec_ref(tdata);
+        pjsip_tsx_terminate(new_tsx, new_tsx->status_code ?
+                            new_tsx->status_code :
+                            PJSIP_SC_SERVICE_UNAVAILABLE);
+    }
+    pj_grp_lock_dec_ref(new_tsx->grp_lock);
+
+    return PJ_SUCCESS;
 }
 
 static void mod_util_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
@@ -193,14 +353,32 @@ static void mod_util_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
         tsx->method.id != PJSIP_INVITE_METHOD &&
         tsx->method.id != PJSIP_CANCEL_METHOD)
     {
-        update_server_state(tsx, event, is_server_failure(tsx, event));
+        pjsip_tx_data *tdata = tsx->last_tx;
+        pj_bool_t failed = is_server_failure(tsx, event);
+        unsigned next;
+
+        update_server_state(tsx, event, failed);
         if (event->body.tsx_state.type == PJSIP_EVENT_RX_MSG)
             mark_refused_servers(tsx);
+
+        if (failed && tsx_data->allow_failover && !is_pinned(tdata)) {
+            next = find_next_server(tsx->endpt, tdata);
+            if (next < tdata->dest_info.addr.count &&
+                send_to_next_server(tsx, tsx_data, next) == PJ_SUCCESS)
+            {
+                return;
+            }
+        }
     }
 
     if (tsx_data->cb) {
         (*tsx_data->cb)(tsx_data->token, event);
     }
+
+    if (tsx_data->orig_tdata)
+        pjsip_tx_data_dec_ref(tsx_data->orig_tdata);
+    if (tsx_data->orig_tp)
+        pjsip_transport_dec_ref(tsx_data->orig_tp);
 }
 
 
@@ -248,6 +426,8 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request2( pjsip_endpoint *endpt,
     tsx_data = PJ_POOL_ZALLOC_T(tsx->pool, struct tsx_data);
     tsx_data->token = token;
     tsx_data->cb = cb;
+    /* The caller can't follow a replaced transaction */
+    tsx_data->allow_failover = (p_tsx == NULL);
     tsx_data->failed_servers_gen = pjsip_endpt_failed_servers_gen(endpt);
 
     tsx->mod_data[mod_stateful_util.id] = tsx_data;
