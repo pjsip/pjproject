@@ -430,8 +430,8 @@ PJ_DECL(pj_dns_resolver*) pjsip_endpt_get_resolver(pjsip_endpoint *endpt);
  * @param endpt         The SIP endpoint instance.
  * @param type          The transport type of the server address.
  * @param addr          The server address.
- * @param duration      Number of seconds to keep the mark, or zero to clear
- *                      it.
+ * @param duration      Number of seconds to keep the mark, at most 30 days,
+ *                      or zero to clear it.
  *
  * @return              PJ_SUCCESS on success.
  */

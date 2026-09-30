@@ -34,6 +34,11 @@
 
 #define THIS_FILE   "sip_resolve.c"
 
+/* The longest time a server stays marked as failed, see
+ * pjsip_resolver_set_server_failed().
+ */
+#define MAX_FAILED_DURATION (30 * 24 * 3600)
+
 struct naptr_target
 {
     pj_str_t                res_type;       /**< e.g. "_sip._udp"   */
@@ -265,6 +270,8 @@ PJ_DEF(pj_status_t) pjsip_resolver_set_server_failed(
             fs = &resolver->failed[oldest];
         }
 
+        if (duration > MAX_FAILED_DURATION)
+            duration = MAX_FAILED_DURATION;
         fs->type = type;
         pj_sockaddr_cp(&fs->addr, addr);
         pj_gettickcount(&fs->expiry);

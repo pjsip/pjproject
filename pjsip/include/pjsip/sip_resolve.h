@@ -328,7 +328,8 @@ PJ_DECL(pj_dns_resolver*) pjsip_resolver_get_resolver(pjsip_resolver_t *res);
  * @param res       The SIP resolver engine.
  * @param type      The transport type of the server address.
  * @param addr      The server address.
- * @param duration  Number of seconds to keep the mark, or zero to clear it.
+ * @param duration  Number of seconds to keep the mark, at most 30 days, or
+ *                  zero to clear it.
  *
  * @return          PJ_SUCCESS on success.
  */
