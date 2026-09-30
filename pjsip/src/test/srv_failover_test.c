@@ -28,6 +28,7 @@
 
 #include "test.h"
 #include <pjsip.h>
+#include <pjsip_ua.h>
 #include <pjlib-util.h>
 #include <pjlib.h>
 
@@ -1124,6 +1125,114 @@ static int large_request_test(void)
 }
 #endif
 
+#if PJ_HAS_TCP
+static struct
+{
+    volatile pj_bool_t  done;
+    int                 code;
+} reg_result;
+
+static void regc_cb(struct pjsip_regc_cbparam *param)
+{
+    reg_result.code = param->code;
+    reg_result.done = PJ_TRUE;
+}
+
+/* The registration client reports the transport of the current attempt,
+ * and no longer the one the application has released.
+ */
+static int regc_transport_test(void)
+{
+    pj_str_t uri = pj_str("sip:" TEST_DOMAIN ";transport=tcp");
+    pj_str_t from = pj_str("<sip:test@" TEST_DOMAIN ">");
+    pj_str_t contact = pj_str("<sip:test@127.0.0.1;transport=tcp>");
+    pjsip_regc *regc;
+    pjsip_regc_info info;
+    pjsip_tx_data *tdata;
+    const pjsip_transport *seen[8];
+    unsigned seen_cnt = 0, waited, i;
+    pj_status_t status;
+    int rc = 0;
+
+    for (i = 0; i < SRV_CNT; ++i) {
+        status = set_mode(&g.srv[i], i == SRV_CNT - 1 ? MODE_OK : MODE_SILENT);
+        if (status != PJ_SUCCESS)
+            return -3120;
+    }
+    pjsip_tsx_set_timers(TEST_T1, TEST_T2, TEST_T4, TEST_TD);
+    flush_events(200);
+    forget_failed_servers(0);
+    pjsip_cfg()->endpt.server_failover = PJ_TRUE;
+
+    status = pjsip_regc_create(endpt, NULL, &regc_cb, &regc);
+    if (status != PJ_SUCCESS)
+        return -3121;
+    status = pjsip_regc_init(regc, &uri, &from, &from, 1, &contact, 300);
+    if (status == PJ_SUCCESS)
+        status = pjsip_regc_register(regc, PJ_TRUE, &tdata);
+    if (status == PJ_SUCCESS) {
+        /* To check that the request is released at the end */
+        pjsip_tx_data_add_ref(tdata);
+        pj_bzero(&reg_result, sizeof(reg_result));
+        status = pjsip_regc_send(regc, tdata);
+    }
+    if (status != PJ_SUCCESS) {
+        app_perror("    error: registering", status);
+        pjsip_regc_destroy(regc);
+        return -3122;
+    }
+
+    /* Note each change of the reported transport, and release the one of
+     * the second attempt.
+     */
+    for (waited = 0; !reg_result.done && waited < 4 * TEST_TD + 2000;
+         waited += 50)
+    {
+        flush_events(50);
+        pjsip_regc_get_info(regc, &info);
+        if (seen_cnt == 0 || info.transport != seen[seen_cnt - 1]) {
+            if (seen_cnt < PJ_ARRAY_SIZE(seen))
+                seen[seen_cnt++] = info.transport;
+            if (seen_cnt == 2)
+                pjsip_regc_release_transport(regc);
+        }
+    }
+    pjsip_regc_get_info(regc, &info);
+
+    PJ_LOG(3,(THIS_FILE, "  %-44s -> %d, %u transports reported",
+              "TCP, REGISTER, srv1 and srv2 never answer",
+              reg_result.done ? reg_result.code : -1, seen_cnt));
+    if (!reg_result.done || reg_result.code != 200)
+        rc = -3123;
+    else if (seen_cnt != 4 || !seen[0] || !seen[1] || seen[2] || !seen[3] ||
+             seen[0] == seen[1] || seen[1] == seen[3])
+    {
+        PJ_LOG(1,(THIS_FILE, "    error: reported %p, %p, %p, %p",
+                  seen_cnt > 0 ? seen[0] : NULL, seen_cnt > 1 ? seen[1] : NULL,
+                  seen_cnt > 2 ? seen[2] : NULL,
+                  seen_cnt > 3 ? seen[3] : NULL));
+        rc = -3124;
+    } else if (info.transport != seen[3]) {
+        PJ_LOG(1,(THIS_FILE, "    error: the registration is on %p, not %p",
+                  info.transport, seen[3]));
+        rc = -3125;
+    }
+
+    for (waited = 0; pj_atomic_get(tdata->ref_cnt) > 1 && waited < 3000;
+         waited += 50)
+    {
+        flush_events(50);
+    }
+    if (pj_atomic_get(tdata->ref_cnt) > 1) {
+        PJ_LOG(1,(THIS_FILE, "    error: the request was not released"));
+        rc = -3126;
+    }
+    pjsip_tx_data_dec_ref(tdata);
+    pjsip_regc_destroy(regc);
+    return rc;
+}
+#endif
+
 /* Marking and clearing a failed server from the application */
 static int failed_server_api_test(void)
 {
@@ -1277,6 +1386,10 @@ int srv_failover_test(void)
 
 #if PJ_HAS_TCP
     status = large_request_test();
+    if (status && !rc)
+        rc = status;
+
+    status = regc_transport_test();
     if (status && !rc)
         rc = status;
 #endif

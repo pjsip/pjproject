@@ -636,7 +636,8 @@ struct pjsip_tx_data
     } dest_info;
 
     /** Transport information, only valid during on_tx_request() and 
-     *  on_tx_response() callback.
+     *  on_tx_response() callback. See #pjsip_endpt_send_request() for the
+     *  transport pointer of a request sent with it.
      */
     struct
     {

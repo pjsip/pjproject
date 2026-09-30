@@ -116,10 +116,16 @@ struct pjsip_regc
      */
     pjsip_transport             *last_transport;
 
-    /* Transport being used by pending transaction, for informational purpose,
-     * we don't keep this transport.
+    /* The request of the pending transaction. Its tp_info tells the
+     * transport it is on, which changes when it is sent to another server,
+     * for informational purpose: we don't keep that transport.
      */
-    pjsip_transport             *info_transport;
+    pjsip_tx_data               *pending_tdata;
+
+    /* The transport released with pjsip_regc_release_transport() while the
+     * transaction was pending, not to be reported again.
+     */
+    const pjsip_transport       *released_tp;
 };
 
 
@@ -210,6 +216,10 @@ PJ_DEF(pj_status_t) pjsip_regc_destroy2(pjsip_regc *regc, pj_bool_t force)
             pjsip_transport_dec_ref(regc->last_transport);
             regc->last_transport = NULL;
         }
+        if (regc->pending_tdata) {
+            pjsip_tx_data_dec_ref(regc->pending_tdata);
+            regc->pending_tdata = NULL;
+        }
         if (regc->timer.id != 0) {
             pjsip_endpt_cancel_timer(regc->endpt, &regc->timer);
             regc->timer.id = 0;
@@ -239,8 +249,13 @@ PJ_DEF(pj_status_t) pjsip_regc_get_info( pjsip_regc *regc,
     info->is_busy = (pj_atomic_get(regc->busy_ctr) || regc->has_tsx);
     info->auto_reg = regc->auto_reg;
     info->interval = regc->expires;
-    info->transport = regc->has_tsx? regc->info_transport :
-                                     regc->last_transport;
+    if (!regc->has_tsx)
+        info->transport = regc->last_transport;
+    else if (regc->pending_tdata &&
+             regc->pending_tdata->tp_info.transport != regc->released_tp)
+        info->transport = regc->pending_tdata->tp_info.transport;
+    else
+        info->transport = NULL;
     
     if (regc->has_tsx)
         info->next_reg = 0;
@@ -523,13 +538,14 @@ PJ_DEF(pj_status_t) pjsip_regc_set_transport( pjsip_regc *regc,
 PJ_DEF(pj_status_t) pjsip_regc_release_transport(pjsip_regc *regc)
 {
     PJ_ASSERT_RETURN(regc, PJ_EINVAL);
+    pj_lock_acquire(regc->lock);
     if (regc->last_transport) {
         pjsip_transport_dec_ref(regc->last_transport);
         regc->last_transport = NULL;
     }
-    if (regc->info_transport) {
-        regc->info_transport = NULL;
-    }
+    if (regc->pending_tdata)
+        regc->released_tp = regc->pending_tdata->tp_info.transport;
+    pj_lock_release(regc->lock);
     return PJ_SUCCESS;
 }
 
@@ -1226,6 +1242,10 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
     /* Decrement pending transaction counter. */
     pj_assert(regc->has_tsx);
     regc->has_tsx = PJ_FALSE;
+    if (regc->pending_tdata) {
+        pjsip_tx_data_dec_ref(regc->pending_tdata);
+        regc->pending_tdata = NULL;
+    }
 
     /* Add reference to the transport */
     if (tsx->transport != regc->last_transport) {
@@ -1653,10 +1673,12 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     if (expires_hdr && expires_hdr->ivalue)
         regc->expires_requested = expires_hdr->ivalue;
 
-    /* Prevent deletion of tdata, e.g: when something wrong in sending,
-     * we need tdata to retrieve the transport.
+    /* Keep the request until the transaction is over: its tp_info tells
+     * the transport of the registration.
      */
     pjsip_tx_data_add_ref(tdata);
+    regc->pending_tdata = tdata;
+    regc->released_tp = NULL;
 
     /* If via_addr is set, use this address for the Via header. */
     if (regc->via_addr.host.slen > 0) {
@@ -1686,36 +1708,14 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
          */
         if (cseq == regc->cseq_hdr->cseq) {
             regc->has_tsx = PJ_FALSE;
+            if (regc->pending_tdata == tdata) {
+                pjsip_tx_data_dec_ref(tdata);
+                regc->pending_tdata = NULL;
+            }
         }
 
         PJ_PERROR(4,(THIS_FILE, status, "Error sending request"));
     }
-
-    /* Get last transport used and add reference to it */
-    //if (tdata->tp_info.transport != regc->last_transport &&
-    //    status==PJ_SUCCESS)
-    //{
-    //    if (regc->last_transport) {
-    //        pjsip_transport_dec_ref(regc->last_transport);
-    //        regc->last_transport = NULL;
-    //    }
-
-    //    if (tdata->tp_info.transport) {
-    //        regc->last_transport = tdata->tp_info.transport;
-    //        pjsip_transport_add_ref(regc->last_transport);
-    //    }
-    //}
-    // Update: don't add_ref() or use the transport info from tdata other than
-    // for informational purpose (e.g: comparing the pointers to check
-    // if a disconnected transport is the registration transport), see
-    // pjsip_tx_data.tp_info docs about its valid period.
-    // Note that the send operation may be async and transport may
-    // have been destroyed here.
-    regc->info_transport = status==PJ_SUCCESS? tdata->tp_info.transport :
-                                               NULL;
-
-    /* Release tdata */
-    pjsip_tx_data_dec_ref(tdata);
 
     pj_lock_release(regc->lock);
 

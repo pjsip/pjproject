@@ -36,9 +36,9 @@ struct tsx_data
     void (*cb)(void*, pjsip_event*);
     pj_bool_t allow_failover;
     pjsip_tx_data *orig_tdata;
-    pjsip_transport *orig_tp;
-    pjsip_host_port via_addr;       /* As set by the application: the */
-    const void *via_tp;             /* send updates them in the request */
+    /* The Via settings of the application, as the send updates them */
+    pjsip_host_port via_addr;
+    const void *via_tp;
     pj_atomic_value_t failed_servers_gen;   /* When the request was sent */
 };
 
@@ -297,16 +297,6 @@ static pj_status_t send_to_next_server(pjsip_transaction *tsx,
     if (!new_data->orig_tdata) {
         new_data->orig_tdata = old_tdata;
         pjsip_tx_data_add_ref(old_tdata);
-
-        /* The application may still refer to the transport of the first
-         * attempt, e.g: the registration client does. It is alive here, as
-         * the transaction or the pending send holds it.
-         */
-        new_data->orig_tp = tsx->transport ? tsx->transport :
-                            old_tdata->is_pending ?
-                                old_tdata->tp_info.transport : NULL;
-        if (new_data->orig_tp)
-            pjsip_transport_add_ref(new_data->orig_tp);
     }
     new_tsx->mod_data[mod_stateful_util.id] = new_data;
 
@@ -317,6 +307,16 @@ static pj_status_t send_to_next_server(pjsip_transaction *tsx,
         pjsip_tsx_terminate(new_tsx, new_tsx->status_code ?
                             new_tsx->status_code :
                             PJSIP_SC_SERVICE_UNAVAILABLE);
+    } else {
+        /* Tell the application which transport its request is on now,
+         * e.g: the registration client looks. The original is held until
+         * mod_util_on_tsx_state() takes the module data, which may already
+         * have happened in another thread.
+         */
+        pj_grp_lock_acquire(new_tsx->grp_lock);
+        if (new_tsx->mod_data[mod_stateful_util.id] == new_data)
+            new_data->orig_tdata->tp_info = tdata->tp_info;
+        pj_grp_lock_release(new_tsx->grp_lock);
     }
     pj_grp_lock_dec_ref(new_tsx->grp_lock);
 
@@ -379,8 +379,6 @@ static void mod_util_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
 
     if (tsx_data->orig_tdata)
         pjsip_tx_data_dec_ref(tsx_data->orig_tdata);
-    if (tsx_data->orig_tp)
-        pjsip_transport_dec_ref(tsx_data->orig_tp);
 }
 
 

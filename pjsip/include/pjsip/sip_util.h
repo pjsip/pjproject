@@ -781,7 +781,11 @@ typedef void (*pjsip_endpt_send_callback)(void *token, pjsip_event *e);
  * and CANCEL, or for a request bound to a connection with a transport
  * selector. Note that a server that doesn't answer may still have got the
  * request, e.g: when its answer is lost, so the request may reach two
- * servers.
+ * servers. Until the callback, the tp_info of the request names the
+ * transport of the latest attempt, as a pointer to compare only. It is set
+ * when the attempt starts: a transport that moves on to another address by
+ * itself, e.g: as a connection is refused, is not reported until the next
+ * attempt.
  *
  * @param endpt     The endpoint instance.
  * @param tdata     The transmit data to be sent.
