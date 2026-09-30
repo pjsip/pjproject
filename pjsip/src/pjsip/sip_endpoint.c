@@ -82,7 +82,7 @@ struct pjsip_endpoint
     pjsip_resolver_t    *resolver;
 
     /** Number of times the failed servers have been cleared. */
-    unsigned             failed_servers_gen;
+    pj_atomic_t         *failed_servers_gen;
 
     /** Modules lock. */
     pj_rwmutex_t        *mod_mutex;
@@ -544,6 +544,10 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
         goto on_error;
     }
 
+    status = pj_atomic_create(endpt->pool, 0, &endpt->failed_servers_gen);
+    if (status != PJ_SUCCESS)
+        goto on_error;
+
     /* Create asynchronous DNS resolver. */
     status = pjsip_resolver_create(endpt->pool, &endpt->resolver);
     if (status != PJ_SUCCESS) {
@@ -569,6 +573,10 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
     return status;
 
 on_error:
+    if (endpt->failed_servers_gen) {
+        pj_atomic_destroy(endpt->failed_servers_gen);
+        endpt->failed_servers_gen = NULL;
+    }
     if (endpt->transport_mgr) {
         pjsip_tpmgr_destroy(endpt->transport_mgr);
         endpt->transport_mgr = NULL;
@@ -645,6 +653,8 @@ PJ_DEF(void) pjsip_endpt_destroy(pjsip_endpoint *endpt)
         (*ecb->func)(endpt);
         ecb = ecb->next;
     }
+
+    pj_atomic_destroy(endpt->failed_servers_gen);
 
     /* Delete endpoint mutex. */
     pj_mutex_destroy(endpt->mutex);
@@ -1384,14 +1394,14 @@ PJ_DEF(pj_bool_t) pjsip_endpt_is_server_failed(pjsip_endpoint *endpt,
  */
 PJ_DEF(pj_status_t) pjsip_endpt_clear_failed_servers(pjsip_endpoint *endpt)
 {
-    ++endpt->failed_servers_gen;
+    pj_atomic_inc(endpt->failed_servers_gen);
     return pjsip_resolver_clear_failed_servers(endpt->resolver);
 }
 
 /* Internal, used by sip_util_statefull.c */
-unsigned pjsip_endpt_failed_servers_gen(pjsip_endpoint *endpt)
+pj_atomic_value_t pjsip_endpt_failed_servers_gen(pjsip_endpoint *endpt)
 {
-    return endpt->failed_servers_gen;
+    return pj_atomic_get(endpt->failed_servers_gen);
 }
 
 /*

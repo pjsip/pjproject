@@ -37,11 +37,11 @@ struct tsx_data
     pj_bool_t allow_failover;
     pjsip_tx_data *orig_tdata;
     pjsip_transport *orig_tp;
-    unsigned failed_servers_gen;    /* When the request was sent */
+    pj_atomic_value_t failed_servers_gen;   /* When the request was sent */
 };
 
 /* Defined in sip_endpoint.c */
-unsigned pjsip_endpt_failed_servers_gen(pjsip_endpoint *endpt);
+pj_atomic_value_t pjsip_endpt_failed_servers_gen(pjsip_endpoint *endpt);
 
 static void mod_util_on_tsx_state(pjsip_transaction*, pjsip_event*);
 
