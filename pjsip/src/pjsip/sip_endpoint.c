@@ -1371,22 +1371,19 @@ PJ_DEF(void) pjsip_endpt_resolve( pjsip_endpoint *endpt,
  * Set or clear a failed server address.
  */
 PJ_DEF(pj_status_t) pjsip_endpt_set_server_failed(pjsip_endpoint *endpt,
-                                                  pjsip_transport_type_e type,
                                                   const pj_sockaddr_t *addr,
                                                   unsigned duration)
 {
-    return pjsip_resolver_set_server_failed(endpt->resolver, type, addr,
-                                            duration);
+    return pjsip_resolver_set_server_failed(endpt->resolver, addr, duration);
 }
 
 /*
  * Check whether a server address has failed.
  */
 PJ_DEF(pj_bool_t) pjsip_endpt_is_server_failed(pjsip_endpoint *endpt,
-                                               pjsip_transport_type_e type,
                                                const pj_sockaddr_t *addr)
 {
-    return pjsip_resolver_is_server_failed(endpt->resolver, type, addr);
+    return pjsip_resolver_is_server_failed(endpt->resolver, addr);
 }
 
 /*

@@ -403,8 +403,17 @@ static pj_status_t set_mode(struct fake_srv *srv, int mode)
     } else {
         if (srv->udp == PJ_INVALID_SOCKET)
             status = open_sock(pj_SOCK_DGRAM(), 0, &srv->udp_port, &srv->udp);
-        if (status == PJ_SUCCESS && srv->tcp == PJ_INVALID_SOCKET)
+        if (status == PJ_SUCCESS && srv->tcp == PJ_INVALID_SOCKET) {
+            /* On the UDP port, as servers usually are, when free */
+            if (srv->tcp_port == 0)
+                srv->tcp_port = srv->udp_port;
             status = open_sock(pj_SOCK_STREAM(), 8, &srv->tcp_port, &srv->tcp);
+            if (status != PJ_SUCCESS && srv->tcp_port == srv->udp_port) {
+                srv->tcp_port = 0;
+                status = open_sock(pj_SOCK_STREAM(), 8, &srv->tcp_port,
+                                   &srv->tcp);
+            }
+        }
         if (status == PJ_SUCCESS && srv->mode == MODE_HANGING)
             status = pj_sock_listen(srv->tcp, 8);
     }
@@ -568,6 +577,7 @@ struct test_case
     pj_bool_t   late_mark_srv2; /* Mark srv2 as failed after sending */
     pj_bool_t   late_clear;     /* Clear the failed servers after sending */
     pj_bool_t   check_release;  /* The request must be released at the end */
+    pj_bool_t   large;          /* Too large for UDP: sent with TCP first */
 };
 
 /* Forget the servers that failed in the previous cases */
@@ -579,9 +589,9 @@ static void forget_failed_servers(unsigned first)
 
     for (i = first; i < SRV_CNT; ++i) {
         pj_sockaddr_init(pj_AF_INET(), &addr, &lo, g.srv[i].udp_port);
-        pjsip_endpt_set_server_failed(endpt, PJSIP_TRANSPORT_UDP, &addr, 0);
+        pjsip_endpt_set_server_failed(endpt, &addr, 0);
         pj_sockaddr_set_port(&addr, g.srv[i].tcp_port);
-        pjsip_endpt_set_server_failed(endpt, PJSIP_TRANSPORT_TCP, &addr, 0);
+        pjsip_endpt_set_server_failed(endpt, &addr, 0);
     }
 }
 
@@ -679,6 +689,19 @@ static int run_case(const struct test_case *tc)
         tdata->via_addr.port = 5099;
     }
 
+    if (tc->large) {
+        pj_str_t name = pj_str("X-Padding");
+        pj_str_t value;
+
+        value.ptr = (char*) pj_pool_alloc(tdata->pool,
+                                          PJSIP_UDP_SIZE_THRESHOLD);
+        value.slen = PJSIP_UDP_SIZE_THRESHOLD;
+        pj_memset(value.ptr, 'x', value.slen);
+        pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)
+                          pjsip_generic_string_hdr_create(tdata->pool, &name,
+                                                          &value));
+    }
+
     if (tc->pin_srv1) {
         pj_str_t lo = pj_str("127.0.0.1");
         pjsip_tpselector sel;
@@ -725,9 +748,7 @@ static int run_case(const struct test_case *tc)
 
         pj_sockaddr_init(pj_AF_INET(), &addr, &lo,
                          tc->tcp ? g.srv[1].tcp_port : g.srv[1].udp_port);
-        pjsip_endpt_set_server_failed(endpt, tc->tcp ? PJSIP_TRANSPORT_TCP :
-                                                       PJSIP_TRANSPORT_UDP,
-                                      &addr, 60);
+        pjsip_endpt_set_server_failed(endpt, &addr, 60);
     }
 
     for (waited = 0; !result.done && waited < 4 * td + 2000;
@@ -976,8 +997,8 @@ static int refused_test(void)
         /* The first case remembers srv1 only, the second one none */
         for (j = 0; rc == 0 && j < SRV_CNT; ++j) {
             pj_sockaddr_init(pj_AF_INET(), &addr, &lo, g.srv[j].tcp_port);
-            if (pjsip_endpt_is_server_failed(endpt, PJSIP_TRANSPORT_TCP,
-                                             &addr) != (i == 0 && j == 0))
+            if (pjsip_endpt_is_server_failed(endpt, &addr) !=
+                (i == 0 && j == 0))
             {
                 PJ_LOG(1,(THIS_FILE, "    error: srv%d is %sremembered",
                           j + 1, (i == 0 && j == 0) ? "not " : ""));
@@ -1057,6 +1078,48 @@ static int hanging_test(void)
 }
 #endif
 
+#if PJ_HAS_TCP
+/* A request too large for UDP is sent with TCP to the same addresses (RFC
+ * 3261 section 18.1.1). A server that doesn't answer over TCP is remembered
+ * for UDP too, and is not tried again over UDP.
+ */
+static int large_request_test(void)
+{
+    struct test_case tc;
+    unsigned i;
+    int rc;
+
+    for (i = 0; i < SRV_CNT; ++i) {
+        if (g.srv[i].tcp_port != g.srv[i].udp_port) {
+            PJ_LOG(3,(THIS_FILE, "  large request cases skipped: the ports "
+                                 "of srv%u differ", i + 1));
+            return 0;
+        }
+    }
+
+    pj_bzero(&tc, sizeof(tc));
+    tc.title = "UDP, large request, srv1 never answers";
+    tc.mode[0] = MODE_SILENT;
+    tc.status = 200;
+    tc.reached[0] = PJ_TRUE;
+    tc.reached[1] = PJ_TRUE;
+    tc.srv1_last = PJ_TRUE;
+    tc.large = PJ_TRUE;
+    rc = run_case(&tc);
+    if (rc)
+        return rc;
+
+    pj_bzero(&tc, sizeof(tc));
+    tc.title = "UDP, large request, nobody answers";
+    tc.mode[0] = tc.mode[1] = tc.mode[2] = MODE_SILENT;
+    tc.status = 408;
+    tc.reached[0] = tc.reached[1] = tc.reached[2] = PJ_TRUE;
+    tc.check_release = PJ_TRUE;
+    tc.large = PJ_TRUE;
+    return run_case(&tc);
+}
+#endif
+
 /* Marking and clearing a failed server from the application */
 static int failed_server_api_test(void)
 {
@@ -1069,30 +1132,30 @@ static int failed_server_api_test(void)
     forget_failed_servers(0);
     pj_sockaddr_init(pj_AF_INET(), &addr, &lo, g.srv[0].udp_port);
 
-    PJ_TEST_SUCCESS(pjsip_endpt_set_server_failed(endpt, PJSIP_TRANSPORT_UDP,
-                                                  &addr, 60),
+    PJ_TEST_SUCCESS(pjsip_endpt_set_server_failed(endpt, &addr, 60),
                     NULL, return -3080);
-    PJ_TEST_TRUE(pjsip_endpt_is_server_failed(endpt, PJSIP_TRANSPORT_UDP,
-                                              &addr), NULL, return -3081);
-    /* The mark is for the transport type too */
-    PJ_TEST_TRUE(!pjsip_endpt_is_server_failed(endpt, PJSIP_TRANSPORT_TCP,
-                                               &addr), NULL, return -3082);
+    PJ_TEST_TRUE(pjsip_endpt_is_server_failed(endpt, &addr), NULL,
+                 return -3081);
+    /* The mark is for the port too */
+    pj_sockaddr_set_port(&addr, g.srv[1].udp_port);
+    PJ_TEST_TRUE(!pjsip_endpt_is_server_failed(endpt, &addr), NULL,
+                 return -3082);
+    pj_sockaddr_set_port(&addr, g.srv[0].udp_port);
     if ((rc = check_srv1_order(PJ_FALSE, PJ_TRUE)) != 0)
         return rc - 10;
 
-    PJ_TEST_SUCCESS(pjsip_endpt_set_server_failed(endpt, PJSIP_TRANSPORT_UDP,
-                                                  &addr, 0),
+    PJ_TEST_SUCCESS(pjsip_endpt_set_server_failed(endpt, &addr, 0),
                     NULL, return -3083);
-    PJ_TEST_TRUE(!pjsip_endpt_is_server_failed(endpt, PJSIP_TRANSPORT_UDP,
-                                               &addr), NULL, return -3084);
+    PJ_TEST_TRUE(!pjsip_endpt_is_server_failed(endpt, &addr), NULL,
+                 return -3084);
     if ((rc = check_srv1_order(PJ_FALSE, PJ_FALSE)) != 0)
         return rc - 20;
 
-    pjsip_endpt_set_server_failed(endpt, PJSIP_TRANSPORT_UDP, &addr, 60);
+    pjsip_endpt_set_server_failed(endpt, &addr, 60);
     PJ_TEST_SUCCESS(pjsip_endpt_clear_failed_servers(endpt), NULL,
                     return -3085);
-    PJ_TEST_TRUE(!pjsip_endpt_is_server_failed(endpt, PJSIP_TRANSPORT_UDP,
-                                               &addr), NULL, return -3086);
+    PJ_TEST_TRUE(!pjsip_endpt_is_server_failed(endpt, &addr), NULL,
+                 return -3086);
     rc = check_srv1_order(PJ_FALSE, PJ_FALSE);
     return rc ? rc - 30 : 0;
 }
@@ -1208,6 +1271,12 @@ int srv_failover_test(void)
     if (status && !rc)
         rc = status;
 
+#if PJ_HAS_TCP
+    status = large_request_test();
+    if (status && !rc)
+        rc = status;
+#endif
+
 #if PJ_HAS_TCP && defined(PJ_LINUX) && PJ_LINUX
     status = hanging_test();
     if (status && !rc)
@@ -1295,8 +1364,7 @@ static int pjsua_ip_change_case(pj_bool_t failover)
     }
 
     pj_sockaddr_init(pj_AF_INET(), &addr, &ip, 5060);
-    pjsip_endpt_set_server_failed(pjsua_get_pjsip_endpt(),
-                                  PJSIP_TRANSPORT_UDP, &addr, 60);
+    pjsip_endpt_set_server_failed(pjsua_get_pjsip_endpt(), &addr, 60);
 
     pjsua_ip_change_param_default(&param);
     param.restart_listener = PJ_FALSE;
@@ -1305,8 +1373,8 @@ static int pjsua_ip_change_case(pj_bool_t failover)
         rc = -3105;
         goto on_return;
     }
-    if (pjsip_endpt_is_server_failed(pjsua_get_pjsip_endpt(),
-                                     PJSIP_TRANSPORT_UDP, &addr) == failover)
+    if (pjsip_endpt_is_server_failed(pjsua_get_pjsip_endpt(), &addr) ==
+        failover)
     {
         rc = -3106;
         goto on_return;

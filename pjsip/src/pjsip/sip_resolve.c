@@ -91,7 +91,6 @@ struct query
 
 struct failed_server
 {
-    pjsip_transport_type_e   type;
     pj_sockaddr              addr;
     pj_time_val              expiry;
 };
@@ -191,17 +190,13 @@ PJ_DEF(pj_dns_resolver*) pjsip_resolver_get_resolver(pjsip_resolver_t *res)
 
 
 /* Find a failed server entry. Must be called with the group lock held. */
-static int find_failed(pjsip_resolver_t *resolver, pjsip_transport_type_e type,
-                       const pj_sockaddr_t *addr)
+static int find_failed(pjsip_resolver_t *resolver, const pj_sockaddr_t *addr)
 {
     unsigned i;
 
     for (i = 0; i < resolver->failed_cnt; ++i) {
-        if (resolver->failed[i].type == type &&
-            pj_sockaddr_cmp(&resolver->failed[i].addr, addr) == 0)
-        {
+        if (pj_sockaddr_cmp(&resolver->failed[i].addr, addr) == 0)
             return (int)i;
-        }
     }
     return -1;
 }
@@ -229,7 +224,6 @@ static void expire_failed(pjsip_resolver_t *resolver)
  */
 PJ_DEF(pj_status_t) pjsip_resolver_set_server_failed(
                                             pjsip_resolver_t *resolver,
-                                            pjsip_transport_type_e type,
                                             const pj_sockaddr_t *addr,
                                             unsigned duration)
 {
@@ -244,7 +238,7 @@ PJ_DEF(pj_status_t) pjsip_resolver_set_server_failed(
     pj_grp_lock_acquire(resolver->grp_lock);
 
     expire_failed(resolver);
-    idx = find_failed(resolver, type, addr);
+    idx = find_failed(resolver, addr);
 
     if (duration == 0) {
         if (idx >= 0)
@@ -272,7 +266,6 @@ PJ_DEF(pj_status_t) pjsip_resolver_set_server_failed(
 
         if (duration > MAX_FAILED_DURATION)
             duration = MAX_FAILED_DURATION;
-        fs->type = type;
         pj_sockaddr_cp(&fs->addr, addr);
         pj_gettickcount(&fs->expiry);
         fs->expiry.sec += duration;
@@ -286,7 +279,6 @@ PJ_DEF(pj_status_t) pjsip_resolver_set_server_failed(
  * Public API to check whether a server address has failed.
  */
 PJ_DEF(pj_bool_t) pjsip_resolver_is_server_failed(pjsip_resolver_t *resolver,
-                                                  pjsip_transport_type_e type,
                                                   const pj_sockaddr_t *addr)
 {
     pj_bool_t failed;
@@ -298,7 +290,7 @@ PJ_DEF(pj_bool_t) pjsip_resolver_is_server_failed(pjsip_resolver_t *resolver,
 
     pj_grp_lock_acquire(resolver->grp_lock);
     expire_failed(resolver);
-    failed = find_failed(resolver, type, addr) >= 0;
+    failed = find_failed(resolver, addr) >= 0;
     pj_grp_lock_release(resolver->grp_lock);
 
     return failed;
@@ -342,7 +334,7 @@ static void demote_failed_servers(pjsip_resolver_t *resolver,
     sorted.count = 0;
     for (pass = 0; pass < 2; ++pass) {
         for (i = 0; i < server->count; ++i) {
-            pj_bool_t is_failed = find_failed(resolver, server->entry[i].type,
+            pj_bool_t is_failed = find_failed(resolver,
                                               &server->entry[i].addr) >= 0;
             if (is_failed == (pass == 1))
                 sorted.entry[sorted.count++] = server->entry[i];

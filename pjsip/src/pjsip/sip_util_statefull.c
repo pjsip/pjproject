@@ -134,20 +134,28 @@ static void update_server_state(pjsip_transaction *tsx, pjsip_event *event,
     }
 
     pjsip_endpt_set_server_failed(tsx->endpt,
-                                  tdata->dest_info.addr.entry[idx].type,
                                   &tdata->dest_info.addr.entry[idx].addr,
                                   duration);
 }
 
-/* Whether the address at index idx was already tried: the tried ones are
- * the ones up to cur_addr, see send_to_next_server().
+/* Whether the address at index idx was already tried, see
+ * send_to_next_server(). The server at cur_addr has failed whatever the
+ * transport type, e.g: the same address is listed with TCP and UDP for a
+ * large request (RFC 3261 section 18.1.1). The ones before cur_addr were
+ * skipped by the transport, which may be specific to their type.
  */
 static pj_bool_t is_tried(const pjsip_tx_data *tdata, unsigned idx)
 {
     const pjsip_server_addresses *addr = &tdata->dest_info.addr;
+    unsigned cur = tdata->dest_info.cur_addr;
     unsigned i;
 
-    for (i = 0; i <= tdata->dest_info.cur_addr && i < addr->count; ++i) {
+    if (cur < addr->count &&
+        pj_sockaddr_cmp(&addr->entry[cur].addr, &addr->entry[idx].addr) == 0)
+    {
+        return PJ_TRUE;
+    }
+    for (i = 0; i < cur && i < addr->count; ++i) {
         if (addr->entry[i].type == addr->entry[idx].type &&
             pj_sockaddr_cmp(&addr->entry[i].addr, &addr->entry[idx].addr) == 0)
         {
@@ -175,7 +183,6 @@ static void mark_refused_servers(pjsip_transaction *tsx)
         if (addr->entry[i].type != addr->entry[tdata->dest_info.cur_addr].type)
             continue;
         pjsip_endpt_set_server_failed(tsx->endpt,
-                                      tdata->dest_info.addr.entry[i].type,
                                       &tdata->dest_info.addr.entry[i].addr,
                                       duration);
     }
@@ -194,11 +201,8 @@ static unsigned find_next_server(pjsip_endpoint *endpt,
     for (i = tdata->dest_info.cur_addr + 1; i < addr->count; ++i) {
         if (is_tried(tdata, i))
             continue;
-        if (!pjsip_endpt_is_server_failed(endpt, addr->entry[i].type,
-                                          &addr->entry[i].addr))
-        {
+        if (!pjsip_endpt_is_server_failed(endpt, &addr->entry[i].addr))
             return i;
-        }
         if (failed_next == addr->count)
             failed_next = i;
     }
@@ -246,7 +250,6 @@ static pj_status_t send_to_next_server(pjsip_transaction *tsx,
         {
             if (i == next || is_tried(old_tdata, i) ||
                 pjsip_endpt_is_server_failed(tsx->endpt,
-                                             old_addr->entry[i].type,
                                              &old_addr->entry[i].addr) !=
                 (pass == 1))
             {

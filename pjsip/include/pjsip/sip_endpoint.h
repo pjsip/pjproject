@@ -428,7 +428,6 @@ PJ_DECL(pj_dns_resolver*) pjsip_endpt_get_resolver(pjsip_endpoint *endpt);
  * mark. Please see #pjsip_resolver_set_server_failed() for more info.
  *
  * @param endpt         The SIP endpoint instance.
- * @param type          The transport type of the server address.
  * @param addr          The server address.
  * @param duration      Number of seconds to keep the mark, at most 30 days,
  *                      or zero to clear it.
@@ -436,7 +435,6 @@ PJ_DECL(pj_dns_resolver*) pjsip_endpt_get_resolver(pjsip_endpoint *endpt);
  * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_endpt_set_server_failed(pjsip_endpoint *endpt,
-                                                   pjsip_transport_type_e type,
                                                    const pj_sockaddr_t *addr,
                                                    unsigned duration);
 
@@ -445,13 +443,11 @@ PJ_DECL(pj_status_t) pjsip_endpt_set_server_failed(pjsip_endpoint *endpt,
  * #pjsip_resolver_set_server_failed() for more info.
  *
  * @param endpt         The SIP endpoint instance.
- * @param type          The transport type of the server address.
  * @param addr          The server address.
  *
  * @return              PJ_TRUE if the address is marked as failed.
  */
 PJ_DECL(pj_bool_t) pjsip_endpt_is_server_failed(pjsip_endpoint *endpt,
-                                                pjsip_transport_type_e type,
                                                 const pj_sockaddr_t *addr);
 
 /**

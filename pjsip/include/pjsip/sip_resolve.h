@@ -310,7 +310,8 @@ PJ_DECL(pj_dns_resolver*) pjsip_resolver_get_resolver(pjsip_resolver_t *res);
 
 /**
  * Mark a server address as failed for the specified duration, or clear the
- * mark. While marked, the address is listed after the other addresses when
+ * mark. The mark applies to the IP address and port, whatever the transport
+ * type. While marked, the address is listed after the other addresses when
  * the resolver resolves a target to it, and #pjsip_endpt_send_request()
  * tries it last when another server has failed. The order of the addresses
  * given by the external resolver, if any, is not changed, and an IP version
@@ -326,7 +327,6 @@ PJ_DECL(pj_dns_resolver*) pjsip_resolver_get_resolver(pjsip_resolver_t *res);
  * instead.
  *
  * @param res       The SIP resolver engine.
- * @param type      The transport type of the server address.
  * @param addr      The server address.
  * @param duration  Number of seconds to keep the mark, at most 30 days, or
  *                  zero to clear it.
@@ -335,7 +335,6 @@ PJ_DECL(pj_dns_resolver*) pjsip_resolver_get_resolver(pjsip_resolver_t *res);
  */
 PJ_DECL(pj_status_t) pjsip_resolver_set_server_failed(
                                             pjsip_resolver_t *res,
-                                            pjsip_transport_type_e type,
                                             const pj_sockaddr_t *addr,
                                             unsigned duration);
 
@@ -344,13 +343,11 @@ PJ_DECL(pj_status_t) pjsip_resolver_set_server_failed(
  * #pjsip_resolver_set_server_failed().
  *
  * @param res       The SIP resolver engine.
- * @param type      The transport type of the server address.
  * @param addr      The server address.
  *
  * @return          PJ_TRUE if the address is marked as failed.
  */
 PJ_DECL(pj_bool_t) pjsip_resolver_is_server_failed(pjsip_resolver_t *res,
-                                                   pjsip_transport_type_e type,
                                                    const pj_sockaddr_t *addr);
 
 /**
