@@ -2395,6 +2395,9 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
                               config->cfg.nameserver[i].ptr);
     }
 
+    if (config->cfg.server_failover)
+        cfg_add(&cfg, max, "--server-failover\n");
+
     /* Outbound proxy */
     for (i=0; i<config->cfg.outbound_proxy_cnt; ++i) {
         cfg_addf(&cfg, max, "--outbound %.*s\n",
