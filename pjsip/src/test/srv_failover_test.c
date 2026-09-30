@@ -609,6 +609,8 @@ struct test_case
     pj_bool_t   tls;            /* Send with TLS: no handshake completes */
     pj_bool_t   drop_srv1;      /* Close the connections of srv1 once
                                    srv2 has got the request */
+    pj_bool_t   clear_on_retry; /* Clear the failed servers once srv2 has
+                                   got the request */
 };
 
 /* Forget the servers that failed in the previous cases */
@@ -681,7 +683,7 @@ static int run_case(const struct test_case *tc)
     pjsip_transport *tp = NULL;
     unsigned *token;
     unsigned i, waited, td = TEST_TD;
-    pj_bool_t dropped = PJ_FALSE;
+    pj_bool_t dropped = PJ_FALSE, cleared = PJ_FALSE;
     int rc = 0;
     pj_status_t status;
 
@@ -794,8 +796,12 @@ static int run_case(const struct test_case *tc)
             drop_connections(&g.srv[0]);
             dropped = PJ_TRUE;
         }
+        if (tc->clear_on_retry && !cleared) {
+            pjsip_endpt_clear_failed_servers(endpt);
+            cleared = PJ_TRUE;
+        }
     }
-    if (tc->drop_srv1 && !dropped) {
+    if ((tc->drop_srv1 && !dropped) || (tc->clear_on_retry && !cleared)) {
         PJ_LOG(1,(THIS_FILE, "    error: done before srv2 got the request"));
         rc = -3047;
     }
@@ -1075,6 +1081,10 @@ static int release_test(void)
 static int late_clear_test(void)
 {
     struct test_case tc;
+    pj_str_t lo = pj_str("127.0.0.1");
+    pj_sockaddr addr;
+    unsigned i;
+    int rc;
 
     pj_bzero(&tc, sizeof(tc));
     tc.title = "UDP, sent before the failed servers are cleared";
@@ -1083,7 +1093,30 @@ static int late_clear_test(void)
     tc.reached[0] = PJ_TRUE;
     tc.srv1_first = PJ_TRUE;
     tc.late_clear = PJ_TRUE;
-    return run_case(&tc);
+    rc = run_case(&tc);
+    if (rc)
+        return rc;
+
+    /* Cleared during the retry: the retry says nothing about srv2 and the
+     * request does not go on to srv3.
+     */
+    pj_bzero(&tc, sizeof(tc));
+    tc.title = "UDP, cleared during the retry";
+    tc.mode[0] = tc.mode[1] = MODE_SILENT;
+    tc.status = 408;
+    tc.reached[0] = tc.reached[1] = PJ_TRUE;
+    tc.clear_on_retry = PJ_TRUE;
+    rc = run_case(&tc);
+    if (rc)
+        return rc;
+    for (i = 0; i < SRV_CNT; ++i) {
+        pj_sockaddr_init(pj_AF_INET(), &addr, &lo, g.srv[i].udp_port);
+        if (pjsip_endpt_is_server_failed(endpt, &addr)) {
+            PJ_LOG(1,(THIS_FILE, "    error: srv%u is remembered", i + 1));
+            return -3049;
+        }
+    }
+    return 0;
 }
 
 /* A 503 is remembered for its Retry-After, up to failed_server_timeout */
