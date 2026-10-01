@@ -39,6 +39,7 @@ struct req_state
 {
     pjsip_tx_data *cur;             /* The request of the current attempt */
     pjsip_transport *tp;
+    pj_bool_t released;             /* Not reported until it changes */
 };
 
 struct tsx_data
@@ -109,6 +110,7 @@ static pj_status_t mod_util_on_tx_request(pjsip_tx_data *tdata)
     if (state && state->cur == tdata && state->tp != tp) {
         old_tp = state->tp;
         state->tp = tp;
+        state->released = PJ_FALSE;
     } else {
         old_tp = tp;
     }
@@ -147,12 +149,15 @@ PJ_DEF(pj_status_t) pjsip_endpt_follow_request_transport(
     if (mod_stateful_util.id < 0)
         return PJ_EINVALIDOP;
 
-    /* A request sent again, e.g: with credentials, has one already */
+    /* A request sent again, e.g: with credentials, has one already, and
+     * is reported again.
+     */
     state = (struct req_state*) tdata->mod_data[mod_stateful_util.id];
     if (!state)
         state = PJ_POOL_ZALLOC_T(tdata->pool, struct req_state);
     pj_enter_critical_section();
     tdata->mod_data[mod_stateful_util.id] = state;
+    state->released = PJ_FALSE;
     pj_leave_critical_section();
     return PJ_SUCCESS;
 }
@@ -172,10 +177,30 @@ PJ_DEF(pjsip_transport*) pjsip_endpt_get_request_transport(
 
     pj_enter_critical_section();
     state = (struct req_state*) tdata->mod_data[mod_stateful_util.id];
-    if (state)
+    if (state && !state->released)
         tp = state->tp;
     pj_leave_critical_section();
     return tp;
+}
+
+PJ_DEF(pj_status_t) pjsip_endpt_release_request_transport(
+                                                    pjsip_endpoint *endpt,
+                                                    pjsip_tx_data *tdata)
+{
+    struct req_state *state;
+
+    PJ_ASSERT_RETURN(endpt && tdata, PJ_EINVAL);
+    PJ_UNUSED_ARG(endpt);
+
+    if (mod_stateful_util.id < 0)
+        return PJ_EINVALIDOP;
+
+    pj_enter_critical_section();
+    state = (struct req_state*) tdata->mod_data[mod_stateful_util.id];
+    if (state)
+        state->released = PJ_TRUE;
+    pj_leave_critical_section();
+    return PJ_SUCCESS;
 }
 
 /* RFC 3263 section 4.3: a 503, or no response at all before a timeout or
