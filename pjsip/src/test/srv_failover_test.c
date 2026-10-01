@@ -84,6 +84,7 @@ static struct
     volatile pj_bool_t  quit;
     struct fake_srv     srv[SRV_CNT];
     pj_dns_resolver    *resolver;
+    pj_dns_resolver    *prev_resolver;  /* The endpoint's, to restore */
     unsigned            refusal_msec;   /* How long a refusal takes */
 #if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT
     pjsip_tpfactory    *tls;
@@ -1628,7 +1629,8 @@ static void destroy(void)
     }
 #endif
     if (g.resolver) {
-        pjsip_endpt_set_resolver(endpt, NULL);
+        pjsip_endpt_clear_failed_servers(endpt);
+        pjsip_endpt_set_resolver(endpt, g.prev_resolver);
         pj_dns_resolver_destroy(g.resolver, PJ_FALSE);
     }
     if (g.mutex)
@@ -1667,6 +1669,7 @@ int srv_failover_test(void)
                         { rc = -3002; goto on_return; });
     }
 
+    g.prev_resolver = pjsip_endpt_get_resolver(endpt);
     PJ_TEST_SUCCESS(pjsip_endpt_create_resolver(endpt, &g.resolver), NULL,
                     { rc = -3006; goto on_return; });
     PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(g.resolver, 1, &ns, &dns_port),
@@ -1800,8 +1803,8 @@ int srv_failover_test(void)
 #if INCLUDE_PJSUA_ACC_TEST
 
 /*
- * PJSUA: on an IP change, the failed servers are forgotten when the option
- * is on, and the marks set by the application are kept when it's off.
+ * PJSUA: on an IP change, the failed servers are forgotten whatever the
+ * option, including the marks set by the application.
  */
 #include <pjsua-lib/pjsua.h>
 
