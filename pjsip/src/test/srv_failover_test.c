@@ -1897,14 +1897,17 @@ on_return:
     return rc;
 }
 
-/* PJSUA keeps the option an application has enabled itself */
-static int pjsua_keeps_option_case(void)
+/* PJSUA keeps the option an application has enabled itself, whether its
+ * own setting is the default or the same.
+ */
+static int pjsua_keeps_option_case(pj_bool_t own_setting)
 {
     pjsua_config ua_cfg;
     pjsua_logging_config log_cfg;
     int rc = 0;
 
-    PJ_LOG(3,(THIS_FILE, "  option enabled by the application"));
+    PJ_LOG(3,(THIS_FILE, "  option enabled by the application, %s",
+              own_setting ? "and by PJSUA" : "PJSUA default"));
 
     pjsip_cfg()->endpt.server_failover = PJ_TRUE;
     if (pjsua_create() != PJ_SUCCESS) {
@@ -1913,6 +1916,8 @@ static int pjsua_keeps_option_case(void)
     }
     pjsua_config_default(&ua_cfg);
     ua_cfg.thread_cnt = 0;
+    if (own_setting)
+        ua_cfg.server_failover = PJ_TRUE;
     pjsua_logging_config_default(&log_cfg);
     log_cfg.level = 3;
     log_cfg.console_level = 3;
@@ -1943,7 +1948,9 @@ int srv_failover_pjsua_test(void)
     if (rc == 0)
         rc = pjsua_ip_change_case(PJ_FALSE);
     if (rc == 0)
-        rc = pjsua_keeps_option_case();
+        rc = pjsua_keeps_option_case(PJ_FALSE);
+    if (rc == 0)
+        rc = pjsua_keeps_option_case(PJ_TRUE);
 
     restore_test_endpt();
     return rc;
