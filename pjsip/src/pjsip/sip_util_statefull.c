@@ -46,7 +46,6 @@ struct tsx_data
     void *token;
     void (*cb)(void*, pjsip_event*);
     struct req_state *state;
-    pjsip_tx_data *tdata;           /* The request of this attempt */
     pj_bool_t allow_failover;
     unsigned first_addr;            /* Where this transaction started in
                                        the address list */
@@ -453,7 +452,6 @@ static pj_status_t send_to_next_server(pjsip_transaction *tsx,
     new_data = PJ_POOL_ALLOC_T(new_tsx->pool, struct tsx_data);
     *new_data = *tsx_data;
     new_data->first_addr = 0;
-    new_data->tdata = tdata;
     if (!new_data->orig_tdata) {
         new_data->orig_tdata = old_tdata;
         pjsip_tx_data_add_ref(old_tdata);
@@ -500,8 +498,7 @@ static void mod_util_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
      * by clearing the transaction's module_data.
      */
     tsx->mod_data[mod_stateful_util.id] = NULL;
-    end_attempt(tsx_data->state, tsx_data->tdata,
-                tsx_data->orig_tdata != NULL);
+    end_attempt(tsx_data->state, tsx->last_tx, tsx_data->orig_tdata != NULL);
 
     /* A request sent before the failed servers were cleared, e.g: on the
      * previous network, says nothing about the servers.
@@ -602,7 +599,6 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request2( pjsip_endpoint *endpt,
     tsx_data = PJ_POOL_ZALLOC_T(tsx->pool, struct tsx_data);
     tsx_data->token = token;
     tsx_data->cb = cb;
-    tsx_data->tdata = tdata;
     if (req_mutex && tdata->mod_data[mod_stateful_util.id]) {
         /* See pjsip_endpt_follow_request_transport() */
         pj_mutex_lock(req_mutex);
