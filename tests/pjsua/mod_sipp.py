@@ -17,11 +17,15 @@
 ##   - $SIPP_URI            : SIPp SIP URI
 ##   - $PJSUA_PORT[N]            : binding port of PJSUA instance #N
 ##   - $PJSUA_URI[N]            : SIP URI of PJSUA instance #N
+##
+##   The custom driver may also set SIPP_TRANSPORT, the SIPp transport
+##   mode (-t option), e.g: "t1" for TCP. SIPp uses UDP if it is not set.
 import ctypes
 import time
 import sys
 import os
 import re
+import socket
 import subprocess
 from inc_cfg import *
 import inc_const
@@ -52,9 +56,10 @@ SIPP_BG_MODE = False
 # Will be updated based on the test driver file (a .py file whose the same name as SIPp XML file)
 PJSUA_INST_PARAM = []
 PJSUA_EXPECTS = []
+SIPP_TRANSPORT = ""
 
 # Default PJSUA param if test driver is not available:
-# - no-tcp as SIPp is on UDP only
+# - no-tcp as SIPp is on UDP here (a custom driver may set SIPP_TRANSPORT)
 # - id, username, and realm: to allow PJSUA sending re-INVITE with auth after receiving 401/407 response
 PJSUA_DEF_PARAM = "--null-audio --max-calls=1 --no-tcp --id=sip:a@localhost --username=a --realm=*"
 
@@ -92,6 +97,8 @@ if os.access(SIPP_SCEN_XML[:-4]+".py", os.R_OK):
         PJSUA_EXPECTS = cfg_file.PJSUA_CLI_EXPECTS
     else:
         PJSUA_EXPECTS = cfg_file.PJSUA_EXPECTS
+    if hasattr(cfg_file, 'SIPP_TRANSPORT'):
+        SIPP_TRANSPORT = cfg_file.SIPP_TRANSPORT
 else:
     # Generate default test driver
     if os.path.basename(SIPP_SCEN_XML)[0:3] == "uas":
@@ -109,6 +116,8 @@ def start_sipp():
     sipp_proc = None
 
     sipp_param = SIPP_PARAM + " -sf " + SIPP_SCEN_XML
+    if SIPP_TRANSPORT:
+        sipp_param = sipp_param + " -t " + SIPP_TRANSPORT
     if SIPP_BG_MODE:
         sipp_param = sipp_param + " -bg"
     if SIPP_TIMEOUT:
@@ -157,6 +166,19 @@ def start_sipp():
                 pid = hnd
 
         return pid
+
+
+# Wait until SIPp accepts connections. Unlike over UDP, a pjsua request sent
+# before SIPp listens is refused, no retransmission covers SIPp start-up.
+def wait_sipp_listening():
+    t0 = time.time()
+    while time.time() - t0 < 10:
+        try:
+            socket.create_connection(("127.0.0.1", SIPP_PORT), 1).close()
+            return True
+        except socket.error:
+            time.sleep(0.1)
+    return False
 
 
 # Wait SIPp process to exit, returning SIPp exit code
@@ -264,7 +286,11 @@ def TEST_FUNC(t):
     if not sipp:
         raise TestError("Failed starting SIPp")
 
-    ua_err_st = exec_pjsua_expects(t, sipp)
+    if SIPP_TRANSPORT and not SIPP_TRANSPORT.startswith("u") and \
+       not wait_sipp_listening():
+        ua_err_st = "SIPp not listening on port " + str(SIPP_PORT)
+    else:
+        ua_err_st = exec_pjsua_expects(t, sipp)
 
     sipp_ret_code = wait_sipp(sipp)
 
