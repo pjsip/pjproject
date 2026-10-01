@@ -54,6 +54,22 @@ target_link_libraries(embedded_ua
     pjsip-ua
 )
 
+add_executable(pjsua2_demo src/samples/pjsua2_demo.cpp)
+target_link_libraries(pjsua2_demo
+  PRIVATE
+    pjlib
+    pjlib-util
+    pjnath
+    pjmedia
+    pjmedia-audiodev
+    pjmedia-videodev
+    pjsip
+    pjsip-simple
+    pjsip-ua
+    pjsua-lib
+    pjsua2
+)
+
 # ##############################################################################
 # SWIG bindings
 
