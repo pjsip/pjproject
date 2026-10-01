@@ -39,6 +39,7 @@ if (NOT PJ_SKIP_EXPERIMENTAL_NOTICE)
     " * - Linux x86_64                                   *\n"
     " * - macOS                                          *\n"
     " * - Android (arm64-v8a, armeabi-v7a, x86_64, x86)  *\n"
+    " * - Windows x64 (Visual Studio 2022)               *\n"
     " ****************************************************\n"
     "Set `PJ_SKIP_EXPERIMENTAL_NOTICE=ON` to disable this warning"
   )
