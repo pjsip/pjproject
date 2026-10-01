@@ -422,6 +422,8 @@ PJ_DEF(pj_status_t) pjsip_endpt_add_capability( pjsip_endpoint *endpt,
             return PJ_ENOMEM;
         }
         pj_list_push_back(&endpt->cap_hdr, hdr);
+    } else if (hdr->count + count > PJ_ARRAY_SIZE(hdr->values)) {
+        return PJ_ETOOMANY;
     }
 
     /* Add the tags to the header. */
