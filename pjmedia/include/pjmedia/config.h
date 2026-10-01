@@ -146,21 +146,21 @@
  * 2.2. use pjmedia_conf_create2() with pjmedia_conf_param::worker_threads
  * initialized to a value > 0.
  *
- * Default is PJMEDIA_CONF_SERIAL_BRIDGE_BACKEND, 
- * however 
+ * Default is PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND,
+ * however
  * if PJMEDIA_CONF_USE_SWITCH_BOARD macro was defined, project system
  *   selects PJMEDIA_CONF_SWITCH_BOARD_BACKEND by default,
- * otherwise if PJMEDIA_CONF_THREADS macro was defined, project system 
- *   selects PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND by default.
+ * otherwise if threads are disabled (PJ_HAS_THREADS is 0), project system
+ *   selects PJMEDIA_CONF_SERIAL_BRIDGE_BACKEND by default.
  */
 #ifndef PJMEDIA_CONF_BACKEND
 #   if defined(PJMEDIA_CONF_USE_SWITCH_BOARD) && PJMEDIA_CONF_USE_SWITCH_BOARD!=0
 #       define PJMEDIA_CONF_BACKEND PJMEDIA_CONF_SWITCH_BOARD_BACKEND
-#   elif defined(PJMEDIA_CONF_THREADS)
+#   elif PJ_HAS_THREADS
 #       define PJMEDIA_CONF_BACKEND PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND
 #   else
 #       define PJMEDIA_CONF_BACKEND PJMEDIA_CONF_SERIAL_BRIDGE_BACKEND
-#   endif 
+#   endif
 #endif  //PJMEDIA_CONF_BACKEND
 
  /**
@@ -172,10 +172,16 @@
  * serial bridge, otherwise it will be implemented as a parallel bridge.
  * PJMEDIA_CONF_THREADS should not be less than 1.
  *
- * Default value: 1 - serial bridge
+ * Default value: 1 (serial bridge) on iOS, Android, and when threads are
+ * disabled, as these usually handle few calls, 4 otherwise.
  */
 #ifndef PJMEDIA_CONF_THREADS
-#   define PJMEDIA_CONF_THREADS  1
+#   if !PJ_HAS_THREADS || (defined(PJ_ANDROID) && PJ_ANDROID!=0) || \
+       (defined(PJ_DARWINOS) && PJ_DARWINOS!=0 && TARGET_OS_IPHONE)
+#       define PJMEDIA_CONF_THREADS  1
+#   else
+#       define PJMEDIA_CONF_THREADS  4
+#   endif
 #endif
 
 
