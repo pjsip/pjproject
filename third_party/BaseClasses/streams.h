@@ -202,7 +202,7 @@ const LONGLONG MAX_TIME = 0x7FFFFFFFFFFFFFFF;   /* Maximum LONGLONG value */
 #if defined(_MSC_VER) && !defined(min)
 #define min(a,b) (((a) < (b)) ? (a) : (b))
 #endif
-#if defined(_MSC_VER) && !defined(max)
+#ifndef max
 #define max(a,b) (((a) > (b)) ? (a) : (b))
 #endif
 

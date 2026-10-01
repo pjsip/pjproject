@@ -1,13 +1,20 @@
 # WASAPI is part of the Windows SDK. A compile check is used rather than
 # find_path()/find_library(): with the Visual Studio generators the SDK
 # directories are known to MSBuild only, so those never see them.
-# A C check, as PjConfig.cmake runs this in consumers that may not enable C++.
-include(CheckIncludeFile)
+# PjConfig.cmake runs this in consumers too, which may enable C or C++ only.
 include(CMakePushCheckState)
 
 cmake_push_check_state(RESET)
 set(CMAKE_REQUIRED_QUIET ${WASAPI_FIND_QUIETLY})
-check_include_file("audioclient.h" WASAPI_HAS_AUDIOCLIENT_H)
+get_property(_wasapi_languages GLOBAL PROPERTY ENABLED_LANGUAGES)
+if("C" IN_LIST _wasapi_languages)
+  include(CheckIncludeFile)
+  check_include_file("audioclient.h" WASAPI_HAS_AUDIOCLIENT_H)
+else()
+  include(CheckIncludeFileCXX)
+  check_include_file_cxx("audioclient.h" WASAPI_HAS_AUDIOCLIENT_H)
+endif()
+unset(_wasapi_languages)
 cmake_pop_check_state()
 
 # The desktop backend (wasapi_dev_win.cpp) needs COM only, and loads avrt.dll
