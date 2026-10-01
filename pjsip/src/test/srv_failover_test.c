@@ -1287,16 +1287,15 @@ static int regc_transport_case(pj_bool_t srv2_closed)
     const pjsip_transport *seen[8];
     unsigned seen_cnt = 0, waited, i, dropped_at = 0;
     unsigned first_port = 0, last_port = 0, td;
-    pj_bool_t released = PJ_FALSE;
+    pj_bool_t released = PJ_FALSE, shown_again = PJ_FALSE;
     pj_status_t status;
     int rc = 0;
 
-    /* With srv2 closed, srv3 answers 100 only, so that the request stays
-     * on its transport for a while.
+    /* srv3 answers 100 only, so that the request stays on its transport
+     * for a while, to be seen there.
      */
     for (i = 0; i < SRV_CNT; ++i) {
-        status = set_mode(&g.srv[i], i == 2 ? (srv2_closed ? MODE_TRYING :
-                                                             MODE_OK) :
+        status = set_mode(&g.srv[i], i == 2 ? MODE_TRYING :
                                      i == 1 && srv2_closed ? MODE_CLOSED :
                                      MODE_SILENT);
         if (status != PJ_SUCCESS)
@@ -1331,8 +1330,8 @@ static int regc_transport_case(pj_bool_t srv2_closed)
      * report, then the transport of the second attempt is released. With
      * srv2 closed, the second attempt moves on to srv3 by itself.
      */
-    /* Two timeouts, the second one after the refusal, and the answer */
-    for (waited = 0; !reg_result.done && waited < 2 * td + 3000;
+    /* Three timeouts, or two and a refusal, then srv3's timeout */
+    for (waited = 0; !reg_result.done && waited < 3 * td + 3000;
          waited += 50)
     {
         pjsip_regc_get_info(regc, &info);
@@ -1341,6 +1340,8 @@ static int regc_transport_case(pj_bool_t srv2_closed)
             last_port = pj_sockaddr_get_port(&info.transport->key.rem_addr);
             if (!first_port)
                 first_port = last_port;
+            if (released)
+                shown_again = PJ_TRUE;
         }
         flush_events(50);
         pjsip_regc_get_info(regc, &info);
@@ -1365,7 +1366,7 @@ static int regc_transport_case(pj_bool_t srv2_closed)
               srv2_closed ? "TCP, REGISTER, srv1 never answers, srv2 closed" :
               "TCP, REGISTER, srv1 and srv2 never answer, srv1 closes",
               reg_result.done ? reg_result.code : -1, seen_cnt));
-    if (!reg_result.done || reg_result.code != (srv2_closed ? 408 : 200))
+    if (!reg_result.done || reg_result.code != 408)
         rc = -3123;
     else if (srv2_closed) {
         /* Reported on srv1 first, and on srv3 while it waits there */
@@ -1391,6 +1392,9 @@ static int regc_transport_case(pj_bool_t srv2_closed)
         /* The report changed by itself when srv1 closed the connection */
         PJ_LOG(1,(THIS_FILE, "    error: the transport was not released"));
         rc = -3127;
+    } else if (!shown_again) {
+        PJ_LOG(1,(THIS_FILE, "    error: not reported again on srv3"));
+        rc = -3129;
     }
 
     for (waited = 0; pj_atomic_get(tdata->ref_cnt) > 1 && waited < 3000;
@@ -1574,6 +1578,7 @@ static int failed_server_api_test(void)
 {
     pj_str_t lo = pj_str("127.0.0.1");
     pj_sockaddr addr;
+    unsigned gen;
     int rc;
 
     PJ_LOG(3,(THIS_FILE, "  failed server API"));
@@ -1591,22 +1596,43 @@ static int failed_server_api_test(void)
                  return -3082);
     pj_sockaddr_set_port(&addr, g.srv[0].udp_port);
     if ((rc = check_srv1_order(PJ_FALSE, PJ_TRUE)) != 0)
-        return rc - 10;
+        return rc - 330;
 
     PJ_TEST_SUCCESS(pjsip_endpt_set_server_failed(endpt, &addr, 0),
                     NULL, return -3083);
     PJ_TEST_TRUE(!pjsip_endpt_is_server_failed(endpt, &addr), NULL,
                  return -3084);
     if ((rc = check_srv1_order(PJ_FALSE, PJ_FALSE)) != 0)
-        return rc - 20;
+        return rc - 340;
 
     pjsip_endpt_set_server_failed(endpt, &addr, 60);
     PJ_TEST_SUCCESS(pjsip_endpt_clear_failed_servers(endpt), NULL,
                     return -3085);
     PJ_TEST_TRUE(!pjsip_endpt_is_server_failed(endpt, &addr), NULL,
                  return -3086);
+    if ((rc = check_srv1_order(PJ_FALSE, PJ_FALSE)) != 0)
+        return rc - 300;
+
+    /* A mark from before the servers were cleared is ignored */
+    gen = pjsip_endpt_failed_servers_gen(endpt);
+    PJ_TEST_EQ(pjsip_endpt_set_server_failed_gen(endpt, &addr, 60, gen - 1),
+               PJ_EIGNORED, NULL, return -3087);
+    PJ_TEST_TRUE(!pjsip_endpt_is_server_failed(endpt, &addr), NULL,
+                 return -3088);
+    PJ_TEST_SUCCESS(pjsip_endpt_set_server_failed_gen(endpt, &addr, 60, gen),
+                    NULL, return -3089);
+    PJ_TEST_TRUE(pjsip_endpt_is_server_failed(endpt, &addr), NULL,
+                 return -3090);
+
+    /* The mark has no effect on the order while the option is off */
+    pjsip_cfg()->endpt.server_failover = PJ_FALSE;
     rc = check_srv1_order(PJ_FALSE, PJ_FALSE);
-    return rc ? rc - 30 : 0;
+    pjsip_cfg()->endpt.server_failover = PJ_TRUE;
+    if (rc)
+        return rc - 310;
+    rc = check_srv1_order(PJ_FALSE, PJ_TRUE);
+    pjsip_endpt_set_server_failed(endpt, &addr, 0);
+    return rc ? rc - 320 : 0;
 }
 
 static void destroy(void)
@@ -1871,6 +1897,38 @@ on_return:
     return rc;
 }
 
+/* PJSUA keeps the option an application has enabled itself */
+static int pjsua_keeps_option_case(void)
+{
+    pjsua_config ua_cfg;
+    pjsua_logging_config log_cfg;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  option enabled by the application"));
+
+    pjsip_cfg()->endpt.server_failover = PJ_TRUE;
+    if (pjsua_create() != PJ_SUCCESS) {
+        pjsip_cfg()->endpt.server_failover = PJSIP_SERVER_FAILOVER;
+        return -3111;
+    }
+    pjsua_config_default(&ua_cfg);
+    ua_cfg.thread_cnt = 0;
+    pjsua_logging_config_default(&log_cfg);
+    log_cfg.level = 3;
+    log_cfg.console_level = 3;
+    if (pjsua_init(&ua_cfg, &log_cfg, NULL) != PJ_SUCCESS)
+        rc = -3112;
+    else if (!pjsip_cfg()->endpt.server_failover)
+        rc = -3113;
+    pjsua_destroy();
+    if (rc == 0 && !pjsip_cfg()->endpt.server_failover)
+        rc = -3114;
+    pjsip_cfg()->endpt.server_failover = PJSIP_SERVER_FAILOVER;
+    if (rc)
+        PJ_LOG(1,(THIS_FILE, "    error: option case failed [%d]", rc));
+    return rc;
+}
+
 int srv_failover_pjsua_test(void)
 {
     int rc;
@@ -1884,6 +1942,8 @@ int srv_failover_pjsua_test(void)
     rc = pjsua_ip_change_case(PJ_TRUE);
     if (rc == 0)
         rc = pjsua_ip_change_case(PJ_FALSE);
+    if (rc == 0)
+        rc = pjsua_keeps_option_case();
 
     restore_test_endpt();
     return rc;
