@@ -1669,6 +1669,9 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     /* Bind to transport selector */
     pjsip_tx_data_set_transport(tdata, &regc->tp_sel);
 
+    /* To report the transport of the registration while it is pending */
+    pjsip_endpt_follow_request_transport(regc->endpt, tdata);
+
     regc->has_tsx = PJ_TRUE;
 
     /* Set current operation based on the value of Expires header */

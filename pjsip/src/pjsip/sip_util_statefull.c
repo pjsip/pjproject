@@ -165,6 +165,26 @@ static void end_attempt(struct req_state *state, pjsip_tx_data *tdata,
     pj_mutex_unlock(req_mutex);
 }
 
+PJ_DEF(pj_status_t) pjsip_endpt_follow_request_transport(
+                                                    pjsip_endpoint *endpt,
+                                                    pjsip_tx_data *tdata)
+{
+    PJ_ASSERT_RETURN(endpt && tdata, PJ_EINVAL);
+    PJ_UNUSED_ARG(endpt);
+
+    if (mod_stateful_util.id < 0 || !req_mutex)
+        return PJ_EINVALIDOP;
+
+    /* A request sent again, e.g: with credentials, has one already */
+    pj_mutex_lock(req_mutex);
+    if (!tdata->mod_data[mod_stateful_util.id]) {
+        tdata->mod_data[mod_stateful_util.id] =
+            PJ_POOL_ZALLOC_T(tdata->pool, struct req_state);
+    }
+    pj_mutex_unlock(req_mutex);
+    return PJ_SUCCESS;
+}
+
 PJ_DEF(pjsip_transport*) pjsip_endpt_get_request_transport(
                                                     pjsip_endpoint *endpt,
                                                     pjsip_tx_data *tdata)
@@ -565,16 +585,11 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request2( pjsip_endpoint *endpt,
     tsx_data->token = token;
     tsx_data->cb = cb;
     tsx_data->tdata = tdata;
-    if (req_mutex) {
-        /* A request sent again, e.g: with credentials, has one already */
+    if (req_mutex && tdata->mod_data[mod_stateful_util.id]) {
+        /* See pjsip_endpt_follow_request_transport() */
         pj_mutex_lock(req_mutex);
         tsx_data->state = (struct req_state*)
                           tdata->mod_data[mod_stateful_util.id];
-        if (!tsx_data->state) {
-            tsx_data->state = PJ_POOL_ZALLOC_T(tdata->pool,
-                                               struct req_state);
-            tdata->mod_data[mod_stateful_util.id] = tsx_data->state;
-        }
         tsx_data->state->cur = tdata;
         pj_mutex_unlock(req_mutex);
     }

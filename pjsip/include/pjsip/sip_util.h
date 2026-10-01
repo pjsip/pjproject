@@ -782,7 +782,7 @@ typedef void (*pjsip_endpt_send_callback)(void *token, pjsip_event *e);
  * selector. Note that a server that doesn't answer may still have got the
  * request, e.g: when its answer is lost, so the request may reach two
  * servers. Until the callback, #pjsip_endpt_get_request_transport() tells
- * the transport of the latest attempt.
+ * the transport of the latest attempt, when asked for beforehand.
  *
  * @param endpt     The endpoint instance.
  * @param tdata     The transmit data to be sent.
@@ -863,13 +863,29 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_request2(pjsip_endpoint *endpt,
                                                pjsip_transaction **p_tsx);
 
 /**
- * Get the transport a request sent with #pjsip_endpt_send_request() or
- * #pjsip_endpt_send_request2() is on, while it is pending: the one of the
- * latest attempt, also once the transport has moved on to another address
- * by itself. The transport is kept alive until the callback, so the pointer
- * may be used as long as the callback can't run, e.g: under a lock the
- * callback takes. It is NULL until the request has been sent, e.g: while
- * the destination is being resolved, and after the callback.
+ * Ask to follow the transport of a request about to be sent with
+ * #pjsip_endpt_send_request() or #pjsip_endpt_send_request2(), so that
+ * #pjsip_endpt_get_request_transport() tells it. This costs a lock at each
+ * send of the request, so it is not done by default.
+ *
+ * @param endpt     The endpoint instance.
+ * @param tdata     The request.
+ *
+ * @return          PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_endpt_follow_request_transport(
+                                                    pjsip_endpoint *endpt,
+                                                    pjsip_tx_data *tdata);
+
+/**
+ * Get the transport a followed request, see
+ * #pjsip_endpt_follow_request_transport(), is on while it is pending: the
+ * one of the latest attempt, also once the transport has moved on to
+ * another address by itself. The transport is kept alive until the
+ * callback, so the pointer may be used as long as the callback can't run,
+ * e.g: under a lock the callback takes. It is NULL until the request has
+ * been sent, e.g: while the destination is being resolved, after the
+ * callback, and for a request that is not followed.
  *
  * @param endpt     The endpoint instance.
  * @param tdata     The request.
