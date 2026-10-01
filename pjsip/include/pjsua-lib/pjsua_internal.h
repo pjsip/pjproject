@@ -165,6 +165,13 @@ PJ_INLINE(int) pjsua_med_udata_med_idx(const void *udata)
   */
 #define PJSUA_MAX_AVI_NUM_STREAMS       PJMEDIA_AVI_MAX_NUM_STREAMS
 
+/**
+ * Maximum number of transports
+ */
+#ifndef PJSUA_MAX_TRANSPORTS
+#    define PJSUA_MAX_TRANSPORTS 8
+#endif
+
 /* Call answer's list. */
 typedef struct call_answer
 {
@@ -643,7 +650,7 @@ struct pjsua_data
     /* SIP: */
     pjsip_endpoint      *endpt;     /**< Global endpoint.               */
     pjsip_module         mod;       /**< pjsua's PJSIP module.          */
-    pjsua_transport_data tpdata[8]; /**< Array of transports.           */
+    pjsua_transport_data tpdata[PJSUA_MAX_TRANSPORTS]; /**< Array of transports.           */
     pjsip_tp_state_callback old_tp_cb; /**< Old transport callback.     */
 
     /* Threading: */
