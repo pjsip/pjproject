@@ -338,12 +338,25 @@ static void mark_refused_servers(pjsip_transaction *tsx,
     }
 }
 
+/* Which of the addresses after cur_addr are known to have failed, asked
+ * once: a mark may be set or expire at any time.
+ */
+static void snapshot_failed(pjsip_endpoint *endpt, const pjsip_tx_data *tdata,
+                            pj_bool_t failed[PJSIP_MAX_RESOLVED_ADDRESSES])
+{
+    const pjsip_server_addresses *addr = &tdata->dest_info.addr;
+    unsigned i;
+
+    for (i = tdata->dest_info.cur_addr + 1; i < addr->count; ++i)
+        failed[i] = pjsip_endpt_is_server_failed(endpt, &addr->entry[i].addr);
+}
+
 /* Find the next address to try, skipping the ones already tried, and the
  * ones known to have failed while there are others. Return the address
  * count if there is none.
  */
-static unsigned find_next_server(pjsip_endpoint *endpt,
-                                 const pjsip_tx_data *tdata)
+static unsigned find_next_server(const pjsip_tx_data *tdata,
+                                 const pj_bool_t *failed)
 {
     const pjsip_server_addresses *addr = &tdata->dest_info.addr;
     unsigned i, failed_next = addr->count;
@@ -351,7 +364,7 @@ static unsigned find_next_server(pjsip_endpoint *endpt,
     for (i = tdata->dest_info.cur_addr + 1; i < addr->count; ++i) {
         if (is_tried(tdata, i))
             continue;
-        if (!pjsip_endpt_is_server_failed(endpt, &addr->entry[i].addr))
+        if (!failed[i])
             return i;
         if (failed_next == addr->count)
             failed_next = i;
@@ -364,7 +377,7 @@ static unsigned find_next_server(pjsip_endpoint *endpt,
  */
 static pj_status_t send_to_next_server(pjsip_transaction *tsx,
                                        const struct tsx_data *tsx_data,
-                                       unsigned next)
+                                       unsigned next, const pj_bool_t *failed)
 {
     pjsip_tx_data *old_tdata = tsx->last_tx;
     pjsip_tx_data *tdata;
@@ -398,13 +411,8 @@ static pj_status_t send_to_next_server(pjsip_transaction *tsx,
     for (pass = 0; pass < 2; ++pass) {
         for (i = old_tdata->dest_info.cur_addr + 1; i < old_addr->count; ++i)
         {
-            if (i == next || is_tried(old_tdata, i) ||
-                pjsip_endpt_is_server_failed(tsx->endpt,
-                                             &old_addr->entry[i].addr) !=
-                (pass == 1))
-            {
+            if (i == next || is_tried(old_tdata, i) || failed[i] != (pass == 1))
                 continue;
-            }
             addr->entry[addr->count] = old_addr->entry[i];
             pj_strdup(tdata->pool, &addr->entry[addr->count].name,
                       &old_addr->entry[i].name);
@@ -507,6 +515,7 @@ static void mod_util_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
     {
         pjsip_tx_data *tdata = tsx->last_tx;
         pj_bool_t failed = is_server_failure(tsx, event);
+        pj_bool_t failed_addr[PJSIP_MAX_RESOLVED_ADDRESSES];
         unsigned next;
 
         update_server_state(tsx, tsx_data, event, failed);
@@ -514,9 +523,11 @@ static void mod_util_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
             mark_refused_servers(tsx, tsx_data);
 
         if (failed && tsx_data->allow_failover && !is_pinned(tdata)) {
-            next = find_next_server(tsx->endpt, tdata);
+            snapshot_failed(tsx->endpt, tdata, failed_addr);
+            next = find_next_server(tdata, failed_addr);
             if (next < tdata->dest_info.addr.count &&
-                send_to_next_server(tsx, tsx_data, next) == PJ_SUCCESS)
+                send_to_next_server(tsx, tsx_data, next, failed_addr) ==
+                    PJ_SUCCESS)
             {
                 return;
             }
