@@ -2149,11 +2149,16 @@ PJ_DEF(pj_status_t) pjsua_acc_set_online_status2( pjsua_acc_id acc_id,
 
 /* Create reg_contact, adding SIP outbound params and other REGISTER specific
  * Contact params, i.e: reg_contact_params, reg_contact_uri_params.
+ * With push, also load it into the regc; pass PJ_FALSE where the regc takes
+ * it from pjsip_regc_init() or regc_tsx_cb()'s param->contact instead.
+ * Returns PJ_FALSE if the regc refused it, leaving reg_contact as it was.
  */
-static void update_regc_contact(pjsua_acc *acc)
+static pj_bool_t update_regc_contact(pjsua_acc *acc, pj_bool_t push)
 {
     pjsua_acc_config *acc_cfg = &acc->cfg;
     pj_bool_t need_outbound = PJ_FALSE;
+    pj_str_t prev_contact = acc->reg_contact;
+    unsigned prev_status = acc->rfc5626_status;
     const pj_str_t tcp_param = pj_str(";transport=tcp");
     const pj_str_t tls_param = pj_str(";transport=tls");
 
@@ -2299,6 +2304,21 @@ done:
              acc->rfc5626_status = OUTBOUND_NA;
         }
     }
+
+    if (push && acc->regc) {
+        pj_status_t status;
+
+        status = pjsip_regc_update_contact(acc->regc, 1, &acc->reg_contact);
+        if (status != PJ_SUCCESS) {
+            /* set_contact() validates first: the regc kept prev_contact */
+            pjsua_perror(THIS_FILE, "Failed updating registration Contact",
+                         status);
+            acc->reg_contact = prev_contact;
+            acc->rfc5626_status = prev_status;
+            return PJ_FALSE;
+        }
+    }
+    return PJ_TRUE;
 }
 
 /* Check if IP is private IP address */
@@ -2557,6 +2577,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
         pj_bool_t secure;
         pjsip_contact_hdr *new_hdr;
         pj_in6_addr v6_addr;
+        pj_str_t prev_contact;
 
         secure = pjsip_transport_get_flag_from_type(tp->key.type) &
                  PJSIP_TRANSPORT_SECURE;
@@ -2642,9 +2663,16 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
             destroy_regc(acc, PJ_TRUE);
         }
 
+        prev_contact = acc->contact;
         pj_strdup2_with_null(acc->pool, &acc->contact, tmp);
 
-        update_regc_contact(acc);
+        if (!update_regc_contact(acc, contact_rewrite_method ==
+                                      PJSUA_CONTACT_REWRITE_NO_UNREG))
+        {
+            acc->contact = prev_contact;
+            pj_pool_release(pool);
+            return PJ_FALSE;
+        }
 
         /* Always update, by https://github.com/pjsip/pjproject/issues/864. */
         /* Since the Via address will now be overwritten to the correct
@@ -2656,12 +2684,6 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
         tp->local_name.port = rport;
          */
 
-    }
-
-    if (contact_rewrite_method == PJSUA_CONTACT_REWRITE_NO_UNREG &&
-        acc->regc != NULL)
-    {
-        pjsip_regc_update_contact(acc->regc, 1, &acc->reg_contact);
     }
 
     /* Perform new registration */
@@ -2973,6 +2995,11 @@ static void update_rfc5626_status(pjsua_acc *acc, pjsip_rx_data *rdata)
     pjsip_require_hdr *hreq;
     const pj_str_t STR_OUTBOUND = {"outbound", 8};
     unsigned i;
+    pj_bool_t was_outbound;
+
+    /* Outbound was wanted or active when this REGISTER was sent */
+    was_outbound = (acc->rfc5626_status == OUTBOUND_WANTED ||
+                    acc->rfc5626_status == OUTBOUND_ACTIVE);
 
     if (acc->rfc5626_status == OUTBOUND_UNKNOWN) {
         goto on_return;
@@ -2995,9 +3022,9 @@ static void update_rfc5626_status(pjsua_acc *acc, pjsip_rx_data *rdata)
     acc->rfc5626_status = OUTBOUND_NA;
 
 on_return:
-    if (acc->rfc5626_status != OUTBOUND_ACTIVE) {
-        acc->reg_contact = acc->contact;
-    }
+    /* Unconfirmed outbound is not in use (RFC 5626 section 6): drop reg-id */
+    if (was_outbound && acc->rfc5626_status == OUTBOUND_NA)
+        update_regc_contact(acc, PJ_TRUE);
     PJ_LOG(4,(THIS_FILE, "SIP outbound status for acc %d is %s",
                          acc->index, (acc->rfc5626_status==OUTBOUND_ACTIVE?
                                          "active": "not active")));
@@ -3071,18 +3098,9 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
         return;
     }
 
-    /* Whether the REGISTER this callback reports on could have advertised SIP
-     * outbound. Captured up front because destroy_regc() below clears
-     * acc->contact. Used to tell a 439 that rejects our outbound from one
-     * returned for an unrelated reason.
-     *
-     * This mirrors the test update_regc_contact() uses to decide whether to
-     * emit outbound at all. rfc5626_status is not usable here even if read
-     * before destroy_regc() resets it: update_rfc5626_status() drops it to
-     * OUTBOUND_NA on a 200 that omits "Require: outbound" -- the normal reply
-     * from a registrar without outbound support -- while the regc goes on
-     * sending the reg-id Contact and option tag it was initialised with, so a
-     * later 439 would be missed and the account left unregistered.
+    /* Whether this REGISTER may have offered outbound, read before
+     * destroy_regc() clears acc->contact. Not rfc5626_status: a refresh
+     * without reg-id still sends "Supported: outbound", so a 439 is ours.
      */
     sent_outbound = acc->cfg.use_rfc5626 &&
                     (pj_stristr(&acc->contact, &tcp_param) != NULL ||
@@ -3477,7 +3495,7 @@ static pj_status_t pjsua_regc_init(int acc_id)
         }
 
         pj_strdup_with_null(acc->pool, &acc->contact, &tmp_contact);
-        update_regc_contact(acc);
+        update_regc_contact(acc, PJ_FALSE);
     }
 
     status = pjsip_regc_init( acc->regc,
@@ -5417,18 +5435,12 @@ static void auto_rereg_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
                     goto on_return;
                 }
             } else {
-                if (acc->contact.slen < tmp_contact.slen) {
-                    pj_strdup_with_null(acc->pool, &acc->contact,
-                                        &tmp_contact);
-                } else {
-                    pj_strncpy_with_null(&acc->contact, &tmp_contact,
-                                         PJSIP_MAX_URL_SIZE);
-                }
-                update_regc_contact(acc);
-                if (acc->regc) {
-                    pjsip_regc_update_contact(acc->regc, 1,
-                                              &acc->reg_contact);
-                }
+                /* A new buffer, so the old Contact survives a refusal */
+                pj_str_t prev_contact = acc->contact;
+
+                pj_strdup_with_null(acc->pool, &acc->contact, &tmp_contact);
+                if (!update_regc_contact(acc, PJ_TRUE))
+                    acc->contact = prev_contact;
             }
         }
         pj_pool_release(pool);
@@ -5687,15 +5699,25 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc)
                 update_keep_alive(acc, PJ_FALSE, NULL);
 
                 status = pjsua_regc_init(acc->index);
-                if (need_unreg || no_unreg)
-                    pjsip_regc_update_contact(acc->regc, 1, &old_reg_contact);
-                if (no_unreg)
-                    pjsip_regc_update_contact(acc->regc, 1, &acc->reg_contact);
-
                 if (status == PJ_SUCCESS) {
-                    status = pjsua_acc_set_registration(acc->index, !need_unreg);
-                    if (status == PJ_SUCCESS) {
-                        return status;
+                    pj_status_t rc = PJ_SUCCESS;
+
+                    if (need_unreg || no_unreg)
+                        rc = pjsip_regc_update_contact(acc->regc, 1,
+                                                       &old_reg_contact);
+                    if (rc == PJ_SUCCESS && no_unreg)
+                        rc = pjsip_regc_update_contact(acc->regc, 1,
+                                                       &acc->reg_contact);
+                    if (rc != PJ_SUCCESS) {
+                        pjsua_perror(THIS_FILE, "Failed updating registration "
+                                                "Contact", rc);
+                        status = rc;
+                    } else {
+                        status = pjsua_acc_set_registration(acc->index,
+                                                            !need_unreg);
+                        if (status == PJ_SUCCESS) {
+                            return status;
+                        }
                     }
                 }
             }
