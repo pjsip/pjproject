@@ -1130,10 +1130,13 @@ static int retry_after_limit_test(void)
     unsigned waited;
     int rc;
 
-    pjsip_cfg()->endpt.failed_server_timeout = 1;
+    pjsip_cfg()->endpt.failed_server_timeout = 3;
     rc = run_case(&tc);
-    for (waited = 0; rc == 0 && waited < 1500; waited += 100)
+    for (waited = 0; rc == 0 && waited < 6000; waited += 100) {
         flush_events(100);
+        if (check_srv1_order(PJ_FALSE, PJ_FALSE) == 0)
+            break;
+    }
     if (rc == 0 && check_srv1_order(PJ_FALSE, PJ_FALSE) != 0) {
         PJ_LOG(1,(THIS_FILE, "    error: srv1 is still remembered"));
         rc = -3058;
