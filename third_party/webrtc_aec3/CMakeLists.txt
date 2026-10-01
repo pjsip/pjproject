@@ -167,6 +167,13 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
       -Wno-return-type
       -Wno-deprecated-builtins
   )
+elseif(MSVC)
+  # As third_party/build/webrtc_aec3/libwebrtc_aec3.vcxproj
+  target_compile_options(webrtc_aec3
+    PRIVATE
+      /wd4005 /wd4100 /wd4127 /wd4244 /wd4267 /wd4305 /wd4311 /wd4456
+      /wd4530 /wd4715
+  )
 endif()
 
 include(DetectWebRTCParameters)
