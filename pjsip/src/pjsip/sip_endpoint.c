@@ -1355,6 +1355,53 @@ PJ_DEF(void) pjsip_endpt_resolve( pjsip_endpoint *endpt,
 }
 
 /*
+ * Set or clear a failed server address.
+ */
+PJ_DEF(pj_status_t) pjsip_endpt_set_server_failed(pjsip_endpoint *endpt,
+                                                  const pj_sockaddr_t *addr,
+                                                  unsigned duration)
+{
+    return pjsip_resolver_set_server_failed(endpt->resolver, addr, duration);
+}
+
+/*
+ * Check whether a server address has failed.
+ */
+PJ_DEF(pj_bool_t) pjsip_endpt_is_server_failed(pjsip_endpoint *endpt,
+                                               const pj_sockaddr_t *addr)
+{
+    return pjsip_resolver_is_server_failed(endpt->resolver, addr);
+}
+
+/*
+ * Forget all failed server addresses.
+ */
+PJ_DEF(pj_status_t) pjsip_endpt_clear_failed_servers(pjsip_endpoint *endpt)
+{
+    return pjsip_resolver_clear_failed_servers(endpt->resolver);
+}
+
+/* Internal, used by sip_util_statefull.c */
+unsigned pjsip_resolver_failed_servers_gen(pjsip_resolver_t *resolver);
+pj_status_t pjsip_resolver_set_server_failed_gen(pjsip_resolver_t *resolver,
+                                                 const pj_sockaddr_t *addr,
+                                                 unsigned duration,
+                                                 unsigned gen);
+
+unsigned pjsip_endpt_failed_servers_gen(pjsip_endpoint *endpt)
+{
+    return pjsip_resolver_failed_servers_gen(endpt->resolver);
+}
+
+pj_status_t pjsip_endpt_set_server_failed_gen(pjsip_endpoint *endpt,
+                                              const pj_sockaddr_t *addr,
+                                              unsigned duration, unsigned gen)
+{
+    return pjsip_resolver_set_server_failed_gen(endpt->resolver, addr,
+                                                duration, gen);
+}
+
+/*
  * Get transport manager.
  */
 PJ_DEF(pjsip_tpmgr*) pjsip_endpt_get_tpmgr(pjsip_endpoint *endpt)

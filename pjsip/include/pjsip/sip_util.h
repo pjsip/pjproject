@@ -450,8 +450,8 @@ PJ_DECL(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
  * route URI was found by #pjsip_process_route_set(), this function will
  * do nothing.
  *
- * This function should only used internally by PJSIP client authentication
- * module.
+ * This function should only used internally by PJSIP, e.g: by the client
+ * authentication module.
  *
  * @param tdata     Transmit data containing request message.
  */
@@ -771,6 +771,19 @@ typedef void (*pjsip_endpt_send_callback)(void *token, pjsip_event *e);
  * requests outside a dialog. To send a request within a dialog, application
  * should use #pjsip_dlg_send_request instead.
  *
+ * When pjsip_cfg()->endpt.server_failover is enabled and the server answers
+ * 503, or there is no response at all because of a timeout or a transport
+ * error, the request is sent again as a new transaction to the next address
+ * the destination resolves to, as described in RFC 3263 section 4.3.
+ * Addresses already tried are skipped, and so are the ones marked as failed
+ * while others are left, see #pjsip_endpt_set_server_failed(). The callback
+ * only gets the result of the last attempt. This is not done for INVITE
+ * and CANCEL, or for a request bound to a connection with a transport
+ * selector. Note that a server that doesn't answer may still have got the
+ * request, e.g: when its answer is lost, so the request may reach two
+ * servers. Until the callback, #pjsip_endpt_get_request_transport() tells
+ * the transport of the latest attempt, when asked for beforehand.
+ *
  * @param endpt     The endpoint instance.
  * @param tdata     The transmit data to be sent.
  * @param timeout   Optional timeout for final response to be received, or -1 
@@ -837,6 +850,8 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_request( pjsip_endpoint *endpt,
  *                  i.e. the transaction may already be completed by the time
  *                  application inspects this argument. The transaction is
  *                  also available in the event given to the callback.
+ *                  When this is set, the request is not sent to the next
+ *                  address on failure.
  *
  * @return          PJ_SUCCESS, or the appropriate error code.
  */
@@ -846,6 +861,40 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_request2(pjsip_endpoint *endpt,
                                                void *token,
                                                pjsip_endpt_send_callback cb,
                                                pjsip_transaction **p_tsx);
+
+/**
+ * Ask to follow the transport of a request about to be sent with
+ * #pjsip_endpt_send_request() or #pjsip_endpt_send_request2(), so that
+ * #pjsip_endpt_get_request_transport() tells it. This costs a lock at each
+ * send of the request, so it is not done by default.
+ *
+ * @param endpt     The endpoint instance.
+ * @param tdata     The request.
+ *
+ * @return          PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_endpt_follow_request_transport(
+                                                    pjsip_endpoint *endpt,
+                                                    pjsip_tx_data *tdata);
+
+/**
+ * Get the transport a followed request, see
+ * #pjsip_endpt_follow_request_transport(), is on while it is pending: the
+ * one of the latest attempt, also once the transport has moved on to
+ * another address by itself. The transport is kept alive until the
+ * callback, so the pointer may be used as long as the callback can't run,
+ * e.g: under a lock the callback takes. It is NULL until the request has
+ * been sent, e.g: while the destination is being resolved, after the
+ * callback, and for a request that is not followed.
+ *
+ * @param endpt     The endpoint instance.
+ * @param tdata     The request.
+ *
+ * @return          The transport, or NULL.
+ */
+PJ_DECL(pjsip_transport*) pjsip_endpt_get_request_transport(
+                                                    pjsip_endpoint *endpt,
+                                                    pjsip_tx_data *tdata);
 
 /**
  * @}

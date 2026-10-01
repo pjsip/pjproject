@@ -188,6 +188,28 @@ typedef struct pjsip_cfg_t
          */
         pj_bool_t keep_inv_after_tsx_timeout;
 
+        /**
+         * Remember the servers that fail, and list them after the other
+         * addresses of a destination, see #pjsip_resolver_set_server_failed().
+         * Also send a request that gets no answer or a 503 again to the next
+         * address, see #pjsip_endpt_send_request(). An application that
+         * sends such requests to another server by itself should keep this
+         * disabled. PJSUA sets this from pjsua_config.server_failover.
+         *
+         * Default is PJSIP_SERVER_FAILOVER.
+         */
+        pj_bool_t server_failover;
+
+        /**
+         * Maximum number of seconds the library remembers a server address
+         * that has failed and lists it after the other addresses of a
+         * destination. Zero disables this. The marks set by the application
+         * with #pjsip_endpt_set_server_failed() are not affected.
+         *
+         * Default is PJSIP_FAILED_SERVER_TIMEOUT.
+         */
+        unsigned failed_server_timeout;
+
     } endpt;
 
     /** Transaction layer settings. */
@@ -943,6 +965,55 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   else
 #       define PJSIP_MAX_RESOLVED_ADDRESSES         16
 #   endif
+#endif
+
+
+/**
+ * Remember the servers that fail, and list them after the other addresses
+ * of a destination, see #pjsip_resolver_set_server_failed(). Also send a
+ * request that gets no answer or a 503 again to the next address, see
+ * #pjsip_endpt_send_request().
+ *
+ * This option can also be controlled at run-time by the
+ * \a server_failover setting in pjsip_cfg_t.
+ *
+ * Default: 0
+ */
+#ifndef PJSIP_SERVER_FAILOVER
+#   define PJSIP_SERVER_FAILOVER                0
+#endif
+
+
+/**
+ * Maximum number of seconds the library remembers a server address that has
+ * failed and lists it after the other addresses of a destination, unless it
+ * answers earlier.
+ * A server that answers 503 is remembered for the time in its Retry-After
+ * header, up to this value. After that, the next request goes to the server
+ * again, and waits for its timeout if the server is still down, so e.g: a
+ * registration refreshed more often than this still tries a server that
+ * doesn't answer once per this period. The default is longer than the PJSUA
+ * registration retry interval, so that its retries skip the failed servers.
+ *
+ * This option can also be controlled at run-time by the
+ * \a failed_server_timeout setting in pjsip_cfg_t.
+ *
+ * Default: 1800
+ */
+#ifndef PJSIP_FAILED_SERVER_TIMEOUT
+#   define PJSIP_FAILED_SERVER_TIMEOUT          1800
+#endif
+
+
+/**
+ * Maximum number of failed server addresses remembered, see
+ * #pjsip_resolver_set_server_failed(). When full, the address that would
+ * be forgotten first is replaced.
+ *
+ * Default: 16
+ */
+#ifndef PJSIP_MAX_FAILED_SERVERS
+#   define PJSIP_MAX_FAILED_SERVERS             16
 #endif
 
 

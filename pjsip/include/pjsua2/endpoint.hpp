@@ -1021,6 +1021,16 @@ struct UaConfig : public PersistentObject
      */
     bool                accServerAffinityDefault;
 
+    /**
+     * Send a request again to the next server when the server answers 503
+     * or doesn't answer, such as the next DNS SRV target of the registrar,
+     * and remember the servers that failed. See also
+     * pjsua_config.server_failover.
+     *
+     * Default: PJSIP_SERVER_FAILOVER (disabled)
+     */
+    bool                serverFailover;
+
 public:
     /**
      * Default constructor to initialize with default values.

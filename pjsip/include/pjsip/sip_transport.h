@@ -771,7 +771,7 @@ PJ_DECL(pj_status_t) pjsip_tx_data_set_transport(pjsip_tx_data *tdata,
  * pjsip_tx_data (pjsip_tx_data.msg) and add reference count to the tdata.
  * Once application has finished using the cloned pjsip_tx_data,
  * it must release it by calling  #pjsip_tx_data_dec_ref().
- * Currently, this will only clone response message.
+ * Only the message is cloned, not the transport or destination info.
  *
  * @param src       The source to be cloned.
  * @param flags     Optional flags. Must be zero for now.
