@@ -2927,8 +2927,9 @@ typedef struct pjsua_config
      * and remember the servers that failed. This sets
      * pjsip_cfg()->endpt.server_failover, please see
      * #pjsip_endpt_send_request() for more info. On an IP address change,
-     * the failed servers are forgotten, including the ones marked by the
-     * application, see #pjsip_endpt_clear_failed_servers().
+     * the failed servers are forgotten whatever this setting, including the
+     * ones marked by the application, see
+     * #pjsip_endpt_clear_failed_servers().
      *
      * Default: PJSIP_SERVER_FAILOVER (disabled)
      */

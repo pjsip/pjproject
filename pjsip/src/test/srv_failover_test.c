@@ -1860,9 +1860,8 @@ static int pjsua_ip_change_case(pj_bool_t failover)
         rc = -3105;
         goto on_return;
     }
-    if (pjsip_endpt_is_server_failed(pjsua_get_pjsip_endpt(), &addr) ==
-        failover)
-    {
+    /* Cleared whatever the option: the application may have marked it */
+    if (pjsip_endpt_is_server_failed(pjsua_get_pjsip_endpt(), &addr)) {
         rc = -3106;
         goto on_return;
     }

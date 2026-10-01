@@ -4358,8 +4358,7 @@ PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
     PJ_LOG(3, (THIS_FILE, "Start handling IP address change"));
 
     /* The failed servers may work on the new network */
-    if (pjsua_var.ua_cfg.server_failover)
-        pjsip_endpt_clear_failed_servers(pjsua_var.endpt);
+    pjsip_endpt_clear_failed_servers(pjsua_var.endpt);
 
     /* Avoid call disconnection due to request timeout. Some requests may
      * be in progress when network is changing, they may eventually get
