@@ -1635,6 +1635,111 @@ static int failed_server_api_test(void)
     return rc ? rc - 320 : 0;
 }
 
+/* An external resolver that lists the servers in their order, or fails */
+static pj_bool_t ext_resolver_fails;
+
+static void ext_resolve(pjsip_resolver_t *resolver, pj_pool_t *pool,
+                        const pjsip_host_info *target, void *token,
+                        pjsip_resolver_callback *cb)
+{
+    pjsip_server_addresses addr;
+    pj_str_t lo = pj_str("127.0.0.1");
+    unsigned i;
+
+    PJ_UNUSED_ARG(resolver);
+    PJ_UNUSED_ARG(pool);
+
+    if (ext_resolver_fails) {
+        (*cb)(PJ_ERESOLVE, token, NULL);
+        return;
+    }
+    pj_bzero(&addr, sizeof(addr));
+    addr.count = SRV_CNT;
+    for (i = 0; i < SRV_CNT; ++i) {
+        pjsip_server_address_record *e = &addr.entry[i];
+        e->name = lo;
+        e->type = target->type;
+        e->priority = i;
+        pj_sockaddr_init(pj_AF_INET(), &e->addr, &lo, g.srv[i].udp_port);
+        e->addr_len = pj_sockaddr_get_len(&e->addr);
+    }
+    (*cb)(PJ_SUCCESS, token, &addr);
+}
+
+/* The endpoint's DNS resolver with the records of the test */
+static int create_dns_resolver(void)
+{
+    pj_str_t ns = pj_str("127.0.0.1");
+    pj_uint16_t dns_port = 9;
+
+    PJ_TEST_SUCCESS(pjsip_endpt_create_resolver(endpt, &g.resolver), NULL,
+                    return -3006);
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(g.resolver, 1, &ns, &dns_port),
+                    NULL, return -3007);
+    PJ_TEST_SUCCESS(add_dns_records(), NULL, return -3004);
+    PJ_TEST_SUCCESS(pjsip_endpt_set_resolver(endpt, g.resolver), NULL,
+                    return -3008);
+    return 0;
+}
+
+/* The failed servers are listed last from an external resolver too */
+static int ext_resolver_test(void)
+{
+    static pjsip_ext_resolver ext = { &ext_resolve };
+    pj_str_t lo = pj_str("127.0.0.1");
+    pj_sockaddr addr;
+    pjsip_host_info target;
+    unsigned waited;
+    int rc, status;
+
+    PJ_LOG(3,(THIS_FILE, "  external resolver"));
+
+    forget_failed_servers(0);
+    pj_sockaddr_init(pj_AF_INET(), &addr, &lo, g.srv[0].udp_port);
+    PJ_TEST_SUCCESS(pjsip_endpt_set_ext_resolver(endpt, &ext), NULL,
+                    return -3160);
+
+    rc = check_srv1_order(PJ_FALSE, PJ_FALSE);
+    if (rc == 0) {
+        pjsip_endpt_set_server_failed(endpt, &addr, 60);
+        rc = check_srv1_order(PJ_FALSE, PJ_TRUE);
+        if (rc)
+            rc -= 100;
+    }
+    if (rc == 0) {
+        /* The order of the external resolver is kept while the option
+         * is off
+         */
+        pjsip_cfg()->endpt.server_failover = PJ_FALSE;
+        rc = check_srv1_order(PJ_FALSE, PJ_FALSE);
+        pjsip_cfg()->endpt.server_failover = PJ_TRUE;
+        if (rc)
+            rc -= 200;
+    }
+    if (rc == 0) {
+        /* A failure is reported as it is */
+        pj_bzero(&target, sizeof(target));
+        target.type = PJSIP_TRANSPORT_UDP;
+        target.flag = pjsip_transport_get_flag_from_type(target.type);
+        target.addr.host = pj_str(TEST_DOMAIN);
+        ext_resolver_fails = PJ_TRUE;
+        pj_bzero(&resolved, sizeof(resolved));
+        pjsip_endpt_resolve(endpt, g.pool, &target, NULL, &resolve_cb);
+        for (waited = 0; !resolved.done && waited < 2000; waited += 50)
+            flush_events(50);
+        ext_resolver_fails = PJ_FALSE;
+        if (!resolved.done || resolved.status != PJ_ERESOLVE)
+            rc = -3161;
+    }
+
+    pjsip_endpt_set_server_failed(endpt, &addr, 0);
+    pjsip_endpt_set_ext_resolver(endpt, NULL);
+    /* Setting the external resolver destroyed the DNS resolver */
+    g.resolver = NULL;
+    status = create_dns_resolver();
+    return rc ? rc : status;
+}
+
 static void destroy(void)
 {
     unsigned i;
@@ -1670,8 +1775,6 @@ int srv_failover_test(void)
 {
     pjsip_cfg_t saved_cfg = *pjsip_cfg();
     /* Nothing listens there: all the answers come from the cache */
-    pj_str_t ns = pj_str("127.0.0.1");
-    pj_uint16_t dns_port = 9;
     unsigned i;
     int rc = 0, failed = 0;
     pj_status_t status;
@@ -1696,13 +1799,8 @@ int srv_failover_test(void)
     }
 
     g.prev_resolver = pjsip_endpt_get_resolver(endpt);
-    PJ_TEST_SUCCESS(pjsip_endpt_create_resolver(endpt, &g.resolver), NULL,
-                    { rc = -3006; goto on_return; });
-    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(g.resolver, 1, &ns, &dns_port),
-                    NULL, { rc = -3007; goto on_return; });
-    PJ_TEST_SUCCESS(add_dns_records(), NULL, { rc = -3004; goto on_return; });
-    PJ_TEST_SUCCESS(pjsip_endpt_set_resolver(endpt, g.resolver), NULL,
-                    { rc = -3008; goto on_return; });
+    if ((rc = create_dns_resolver()) != 0)
+        goto on_return;
 
     status = pj_thread_create(g.pool, "srvfo", &server_thread, NULL, 0, 0,
                               &g.thread);
@@ -1802,6 +1900,13 @@ int srv_failover_test(void)
     status = failed_server_api_test();
     if (status) {
         PJ_LOG(1,(THIS_FILE, "    error: failed server API [%d]", status));
+        if (!rc)
+            rc = status;
+    }
+
+    status = ext_resolver_test();
+    if (status) {
+        PJ_LOG(1,(THIS_FILE, "    error: external resolver [%d]", status));
         if (!rc)
             rc = status;
     }

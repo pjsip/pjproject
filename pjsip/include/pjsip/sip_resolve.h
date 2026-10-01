@@ -164,6 +164,11 @@ PJ_BEGIN_DECL
  * implementation needs feature from PJLIB-UTL DNS resolver, it has to create
  * its own PJLIB-UTL DNS resolver instance.
  *
+ * The addresses reported by the external resolver are used in its order,
+ * except that the servers marked as failed are listed last while
+ * pjsip_cfg()->endpt.server_failover is enabled, as with the other
+ * resolvers, see #pjsip_resolver_set_server_failed().
+ *
  * \section PJSIP_RESOLVE_REFERENCE Reference
  *
  * Reference:
