@@ -1252,8 +1252,6 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
     }
 #endif
 
-    pjsip_cfg()->endpt.server_failover = ua_cfg->server_failover;
-
     /* Init SIP UA: */
 
     /* Initialize transaction layer: */
@@ -1351,6 +1349,12 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
     status = pjsua_call_subsys_init(ua_cfg);
     if (status != PJ_SUCCESS)
         goto on_error;
+
+    /* Only enables it: the application may have enabled it itself. After
+     * the configuration is kept, so that pjsua_destroy() knows.
+     */
+    if (pjsua_var.ua_cfg.server_failover)
+        pjsip_cfg()->endpt.server_failover = PJ_TRUE;
 
     /* If nameserver is configured, create DNS resolver instance and
      * set it to be used by SIP resolver. Done after the config copy
@@ -2377,9 +2381,11 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
         pj_shutdown();
     }
 
+    if (pjsua_var.ua_cfg.server_failover)
+        pjsip_cfg()->endpt.server_failover = PJSIP_SERVER_FAILOVER;
+
     /* Clear pjsua_var */
     pj_bzero(&pjsua_var, sizeof(pjsua_var));
-    pjsip_cfg()->endpt.server_failover = PJSIP_SERVER_FAILOVER;
 
     /* Done. */
     return PJ_SUCCESS;

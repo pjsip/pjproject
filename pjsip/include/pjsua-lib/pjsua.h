@@ -2924,9 +2924,10 @@ typedef struct pjsua_config
     /**
      * Send a request again to the next server when the server answers 503
      * or doesn't answer, such as the next DNS SRV target of the registrar,
-     * and remember the servers that failed. This sets
-     * pjsip_cfg()->endpt.server_failover, please see
-     * #pjsip_endpt_send_request() for more info. On an IP address change,
+     * and remember the servers that failed. This enables
+     * pjsip_cfg()->endpt.server_failover, which the application may also
+     * enable itself, please see #pjsip_endpt_send_request() for more info.
+     * On an IP address change,
      * the failed servers are forgotten whatever this setting, including the
      * ones marked by the application, see
      * #pjsip_endpt_clear_failed_servers().
