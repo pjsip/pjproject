@@ -245,6 +245,21 @@ static void close_report(void)
 }
 
 
+/* Recreate the test endpoint after a test destroyed it, e.g: with PJSUA */
+void restore_test_endpt(void)
+{
+    pj_status_t status;
+
+    status = pjsip_endpt_create(&caching_pool.factory, "endpt", &endpt);
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(1, (THIS_FILE, status, "Error creating endpoint"));
+        return;
+    }
+    status = pjsip_tsx_layer_init_module(endpt);
+    if (status != PJ_SUCCESS)
+        PJ_PERROR(1, (THIS_FILE, status, "Error initializing tsx layer"));
+}
+
 /*
  * pjsip_ua_instance() and pjsip_inv_usage_instance() are process wide
  * singletons that more than one test initializes, so an unguarded

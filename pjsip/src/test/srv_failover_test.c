@@ -1808,18 +1808,6 @@ int srv_failover_test(void)
  */
 #include <pjsua-lib/pjsua.h>
 
-/* Recreate the test framework's endpoint + tsx layer after pjsua_destroy */
-static void restore_endpt(void)
-{
-    pj_status_t status;
-
-    status = pjsip_endpt_create(&caching_pool.factory, "endpt", &endpt);
-    if (status == PJ_SUCCESS)
-        status = pjsip_tsx_layer_init_module(endpt);
-    if (status != PJ_SUCCESS)
-        app_perror("    error: restoring endpoint", status);
-}
-
 static int pjsua_ip_change_case(pj_bool_t failover)
 {
     pjsua_config ua_cfg;
@@ -1897,7 +1885,7 @@ int srv_failover_pjsua_test(void)
     if (rc == 0)
         rc = pjsua_ip_change_case(PJ_FALSE);
 
-    restore_endpt();
+    restore_test_endpt();
     return rc;
 }
 
