@@ -259,6 +259,13 @@ enum pjmedia_conf_option
 };
 
 /**
+ * Special value for pjmedia_conf_param::worker_thread_prio to run the
+ * worker threads at the highest priority, as reported by
+ * #pj_thread_get_prio_max().
+ */
+#define PJMEDIA_CONF_THREAD_PRIO_MAX    PJ_MAXINT32
+
+/**
  * This structure specifies the conference bridge creation parameters.
  */
 typedef struct pjmedia_conf_param
@@ -345,18 +352,18 @@ typedef struct pjmedia_conf_param
      * thread, e.g: the sound device thread or the media clock thread, and it
      * has to wait for all worker threads to finish mixing before it can
      * return the frame. So leaving the worker threads at the default priority
-     * may let other threads preempt them and delay the audio frame. Setting
-     * this to #pj_thread_get_prio_max() will run the worker threads at the
-     * same priority as the get_frame() thread.
+     * may let other threads preempt them and delay the audio frame.
+     * #PJMEDIA_CONF_THREAD_PRIO_MAX will run the worker threads at the
+     * highest priority, like the media clock thread.
      *
-     * Note that raising the priority is only safe when the number of worker
-     * threads is below the number of the processor cores, otherwise the
-     * worker threads may starve the rest of the application. Also note that
-     * on some platforms, e.g: Linux, raising thread priority requires a
-     * specific privilege, without it the setting will have no effect.
+     * Note that the worker threads may starve the rest of the application
+     * when they are not fewer than the processor cores, in that case
+     * consider a lower priority. Also note that on some platforms, e.g:
+     * Linux, raising thread priority requires a specific privilege, without
+     * it the setting will have no effect.
      *
      * Zero means the worker threads will use the priority assigned by the OS.
-     * The default value is zero.
+     * The default value is #PJMEDIA_CONF_THREAD_PRIO_MAX.
      * This value is ignored by all conference backends except for the
      * multithreaded conference bridge backend
      * (PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND).
@@ -379,6 +386,7 @@ PJ_INLINE(void) pjmedia_conf_param_default(pjmedia_conf_param *param)
 #if defined(PJMEDIA_CONF_THREADS) && PJMEDIA_CONF_THREADS > 1
     param->worker_threads = PJMEDIA_CONF_THREADS-1;
 #endif
+    param->worker_thread_prio = PJMEDIA_CONF_THREAD_PRIO_MAX;
 }
 
 /**

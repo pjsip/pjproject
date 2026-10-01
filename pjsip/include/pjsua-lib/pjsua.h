@@ -8271,13 +8271,14 @@ struct pjsua_media_config
      * pjmedia_conf_param::worker_thread_prio for more info. The valid value
      * range is platform dependent, see #pj_thread_get_prio_min() and
      * #pj_thread_get_prio_max(), while zero means the worker threads will
-     * use the priority assigned by the OS.
+     * use the priority assigned by the OS, and #PJMEDIA_CONF_THREAD_PRIO_MAX
+     * the highest priority.
      *
      * This value is ignored by all conference backends except for the
      * multithreaded conference bridge backend
      * (PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND).
      *
-     * Default value: 0
+     * Default value: PJMEDIA_CONF_THREAD_PRIO_MAX
      */
     int                 conf_thread_prio;
 
