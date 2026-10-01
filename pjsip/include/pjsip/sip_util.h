@@ -781,11 +781,8 @@ typedef void (*pjsip_endpt_send_callback)(void *token, pjsip_event *e);
  * and CANCEL, or for a request bound to a connection with a transport
  * selector. Note that a server that doesn't answer may still have got the
  * request, e.g: when its answer is lost, so the request may reach two
- * servers. Until the callback, the tp_info of the request names the
- * transport of the latest attempt, as a pointer to compare only. It is set
- * when the attempt starts: a transport that moves on to another address by
- * itself, e.g: as a connection is refused, is not reported until the next
- * attempt.
+ * servers. Until the callback, #pjsip_endpt_get_request_transport() tells
+ * the transport of the latest attempt.
  *
  * @param endpt     The endpoint instance.
  * @param tdata     The transmit data to be sent.
@@ -864,6 +861,24 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_request2(pjsip_endpoint *endpt,
                                                void *token,
                                                pjsip_endpt_send_callback cb,
                                                pjsip_transaction **p_tsx);
+
+/**
+ * Get the transport a request sent with #pjsip_endpt_send_request() or
+ * #pjsip_endpt_send_request2() is on, while it is pending: the one of the
+ * latest attempt, also once the transport has moved on to another address
+ * by itself. The transport is kept alive until the callback, so the pointer
+ * may be used as long as the callback can't run, e.g: under a lock the
+ * callback takes. It is NULL until the request has been sent, e.g: while
+ * the destination is being resolved, and after the callback.
+ *
+ * @param endpt     The endpoint instance.
+ * @param tdata     The request.
+ *
+ * @return          The transport, or NULL.
+ */
+PJ_DECL(pjsip_transport*) pjsip_endpt_get_request_transport(
+                                                    pjsip_endpoint *endpt,
+                                                    pjsip_tx_data *tdata);
 
 /**
  * @}

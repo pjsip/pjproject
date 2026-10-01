@@ -116,9 +116,9 @@ struct pjsip_regc
      */
     pjsip_transport             *last_transport;
 
-    /* The request of the pending transaction. Its tp_info tells the
-     * transport it is on, which changes when it is sent to another server,
-     * for informational purpose: we don't keep that transport.
+    /* The request of the pending transaction, which tells the transport it
+     * is on, see pjsip_endpt_get_request_transport(). For informational
+     * purpose: we don't keep that transport.
      */
     pjsip_tx_data               *pending_tdata;
 
@@ -249,13 +249,17 @@ PJ_DEF(pj_status_t) pjsip_regc_get_info( pjsip_regc *regc,
     info->is_busy = (pj_atomic_get(regc->busy_ctr) || regc->has_tsx);
     info->auto_reg = regc->auto_reg;
     info->interval = regc->expires;
-    if (!regc->has_tsx)
+    info->transport = NULL;
+    if (!regc->has_tsx) {
         info->transport = regc->last_transport;
-    else if (regc->pending_tdata &&
-             regc->pending_tdata->tp_info.transport != regc->released_tp)
-        info->transport = regc->pending_tdata->tp_info.transport;
-    else
-        info->transport = NULL;
+    } else if (regc->pending_tdata) {
+        pjsip_transport *tp;
+
+        tp = pjsip_endpt_get_request_transport(regc->endpt,
+                                               regc->pending_tdata);
+        if (tp != regc->released_tp)
+            info->transport = tp;
+    }
     
     if (regc->has_tsx)
         info->next_reg = 0;
@@ -543,8 +547,11 @@ PJ_DEF(pj_status_t) pjsip_regc_release_transport(pjsip_regc *regc)
         pjsip_transport_dec_ref(regc->last_transport);
         regc->last_transport = NULL;
     }
-    if (regc->pending_tdata)
-        regc->released_tp = regc->pending_tdata->tp_info.transport;
+    if (regc->pending_tdata) {
+        regc->released_tp =
+            pjsip_endpt_get_request_transport(regc->endpt,
+                                              regc->pending_tdata);
+    }
     pj_lock_release(regc->lock);
     return PJ_SUCCESS;
 }
@@ -1673,8 +1680,8 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     if (expires_hdr && expires_hdr->ivalue)
         regc->expires_requested = expires_hdr->ivalue;
 
-    /* Keep the request until the transaction is over: its tp_info tells
-     * the transport of the registration.
+    /* Keep the request until the transaction is over: it tells the
+     * transport of the registration.
      */
     pjsip_tx_data_add_ref(tdata);
     regc->pending_tdata = tdata;

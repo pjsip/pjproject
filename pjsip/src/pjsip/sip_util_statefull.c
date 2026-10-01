@@ -25,15 +25,28 @@
 #include <pj/assert.h>
 #include <pj/lock.h>
 #include <pj/log.h>
+#include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/string.h>
 
 #define THIS_FILE   "sip_util_statefull.c"
 
+/* The transport of the latest attempt of a pending request, kept alive. In
+ * the pool of the original request, linked from the module data of the
+ * original and, while their attempt lasts, of the copies.
+ */
+struct req_state
+{
+    pjsip_tx_data *cur;             /* The request of the current attempt */
+    pjsip_transport *tp;
+};
+
 struct tsx_data
 {
     void *token;
     void (*cb)(void*, pjsip_event*);
+    struct req_state *state;
+    pjsip_tx_data *tdata;           /* The request of this attempt */
     pj_bool_t allow_failover;
     unsigned first_addr;            /* Where this transaction started in
                                        the address list */
@@ -47,6 +60,15 @@ struct tsx_data
 /* Defined in sip_endpoint.c */
 pj_atomic_value_t pjsip_endpt_failed_servers_gen(pjsip_endpoint *endpt);
 
+/* Guards the state of the pending requests: the transport reports its
+ * sends from its own threads.
+ */
+static pj_pool_t *mod_pool;
+static pj_mutex_t *req_mutex;
+
+static pj_status_t mod_util_load(pjsip_endpoint *endpt);
+static pj_status_t mod_util_unload(void);
+static pj_status_t mod_util_on_tx_request(pjsip_tx_data *tdata);
 static void mod_util_on_tsx_state(pjsip_transaction*, pjsip_event*);
 
 /* This module will be registered in pjsip_endpt.c */
@@ -57,16 +79,112 @@ pjsip_module mod_stateful_util =
     { "mod-stateful-util", 17 },    /* Name.                            */
     -1,                             /* Id                               */
     PJSIP_MOD_PRIORITY_APPLICATION, /* Priority                         */
-    NULL,                           /* load()                           */
+    &mod_util_load,                 /* load()                           */
     NULL,                           /* start()                          */
     NULL,                           /* stop()                           */
-    NULL,                           /* unload()                         */
+    &mod_util_unload,               /* unload()                         */
     NULL,                           /* on_rx_request()                  */
     NULL,                           /* on_rx_response()                 */
-    NULL,                           /* on_tx_request.                   */
+    &mod_util_on_tx_request,        /* on_tx_request.                   */
     NULL,                           /* on_tx_response()                 */
     &mod_util_on_tsx_state,         /* on_tsx_state()                   */
 };
+
+static pj_status_t mod_util_load(pjsip_endpoint *endpt)
+{
+    pj_status_t status;
+
+    mod_pool = pjsip_endpt_create_pool(endpt, "stfutil%p", 256, 256);
+    if (!mod_pool)
+        return PJ_ENOMEM;
+    status = pj_mutex_create_simple(mod_pool, "stfutil%p", &req_mutex);
+    if (status != PJ_SUCCESS) {
+        pj_pool_release(mod_pool);
+        mod_pool = NULL;
+    }
+    return status;
+}
+
+static pj_status_t mod_util_unload(void)
+{
+    if (req_mutex) {
+        pj_mutex_destroy(req_mutex);
+        req_mutex = NULL;
+    }
+    if (mod_pool) {
+        pj_pool_release(mod_pool);
+        mod_pool = NULL;
+    }
+    return PJ_SUCCESS;
+}
+
+/* The transport sends the request, or a copy, to an address: note the
+ * transport it uses.
+ */
+static pj_status_t mod_util_on_tx_request(pjsip_tx_data *tdata)
+{
+    struct req_state *state;
+    pjsip_transport *old_tp = NULL;
+
+    if (mod_stateful_util.id < 0 || !req_mutex ||
+        !tdata->mod_data[mod_stateful_util.id])
+    {
+        return PJ_SUCCESS;
+    }
+
+    pj_mutex_lock(req_mutex);
+    state = (struct req_state*) tdata->mod_data[mod_stateful_util.id];
+    if (state && state->cur == tdata &&
+        state->tp != tdata->tp_info.transport)
+    {
+        old_tp = state->tp;
+        state->tp = tdata->tp_info.transport;
+        if (state->tp)
+            pjsip_transport_add_ref(state->tp);
+    }
+    pj_mutex_unlock(req_mutex);
+
+    if (old_tp)
+        pjsip_transport_dec_ref(old_tp);
+    return PJ_SUCCESS;
+}
+
+/* The attempt is over: a late send of its request, e.g: to another address
+ * once a connection fails, is not reported. A copy may outlive the state.
+ */
+static void end_attempt(struct req_state *state, pjsip_tx_data *tdata,
+                        pj_bool_t is_copy)
+{
+    if (!state || !req_mutex)
+        return;
+    pj_mutex_lock(req_mutex);
+    if (state->cur == tdata)
+        state->cur = NULL;
+    if (is_copy)
+        tdata->mod_data[mod_stateful_util.id] = NULL;
+    pj_mutex_unlock(req_mutex);
+}
+
+PJ_DEF(pjsip_transport*) pjsip_endpt_get_request_transport(
+                                                    pjsip_endpoint *endpt,
+                                                    pjsip_tx_data *tdata)
+{
+    struct req_state *state;
+    pjsip_transport *tp = NULL;
+
+    PJ_ASSERT_RETURN(endpt && tdata, NULL);
+    PJ_UNUSED_ARG(endpt);
+
+    if (mod_stateful_util.id < 0 || !req_mutex)
+        return NULL;
+
+    pj_mutex_lock(req_mutex);
+    state = (struct req_state*) tdata->mod_data[mod_stateful_util.id];
+    if (state)
+        tp = state->tp;
+    pj_mutex_unlock(req_mutex);
+    return tp;
+}
 
 /* RFC 3263 section 4.3: a 503, or no response at all before a timeout or
  * a transport error, is a failure of the server.
@@ -300,11 +418,18 @@ static pj_status_t send_to_next_server(pjsip_transaction *tsx,
     *new_data = *tsx_data;
     new_data->first_addr = 0;
     new_data->failed_servers_gen = pjsip_endpt_failed_servers_gen(tsx->endpt);
+    new_data->tdata = tdata;
     if (!new_data->orig_tdata) {
         new_data->orig_tdata = old_tdata;
         pjsip_tx_data_add_ref(old_tdata);
     }
     new_tsx->mod_data[mod_stateful_util.id] = new_data;
+    if (new_data->state && req_mutex) {
+        pj_mutex_lock(req_mutex);
+        tdata->mod_data[mod_stateful_util.id] = new_data->state;
+        new_data->state->cur = tdata;
+        pj_mutex_unlock(req_mutex);
+    }
 
     pj_grp_lock_add_ref(new_tsx->grp_lock);
     status = pjsip_tsx_send_msg(new_tsx, NULL);
@@ -313,16 +438,6 @@ static pj_status_t send_to_next_server(pjsip_transaction *tsx,
         pjsip_tsx_terminate(new_tsx, new_tsx->status_code ?
                             new_tsx->status_code :
                             PJSIP_SC_SERVICE_UNAVAILABLE);
-    } else {
-        /* Tell the application which transport its request is on now,
-         * e.g: the registration client looks. The original is held until
-         * mod_util_on_tsx_state() takes the module data, which may already
-         * have happened in another thread.
-         */
-        pj_grp_lock_acquire(new_tsx->grp_lock);
-        if (new_tsx->mod_data[mod_stateful_util.id] == new_data)
-            new_data->orig_tdata->tp_info = tdata->tp_info;
-        pj_grp_lock_release(new_tsx->grp_lock);
     }
     pj_grp_lock_dec_ref(new_tsx->grp_lock);
 
@@ -350,6 +465,8 @@ static void mod_util_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
      * by clearing the transaction's module_data.
      */
     tsx->mod_data[mod_stateful_util.id] = NULL;
+    end_attempt(tsx_data->state, tsx_data->tdata,
+                tsx_data->orig_tdata != NULL);
 
     /* A request sent before the failed servers were cleared, e.g: on the
      * previous network, says nothing about the servers.
@@ -383,6 +500,21 @@ static void mod_util_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
         (*tsx_data->cb)(tsx_data->token, event);
     }
 
+    /* Release the transport, unless the callback has sent the request
+     * again, e.g: with credentials: then it is the one of that attempt.
+     */
+    if (tsx_data->state && req_mutex) {
+        pjsip_transport *tp = NULL;
+
+        pj_mutex_lock(req_mutex);
+        if (!tsx_data->state->cur) {
+            tp = tsx_data->state->tp;
+            tsx_data->state->tp = NULL;
+        }
+        pj_mutex_unlock(req_mutex);
+        if (tp)
+            pjsip_transport_dec_ref(tp);
+    }
     if (tsx_data->orig_tdata)
         pjsip_tx_data_dec_ref(tsx_data->orig_tdata);
 }
@@ -432,6 +564,20 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request2( pjsip_endpoint *endpt,
     tsx_data = PJ_POOL_ZALLOC_T(tsx->pool, struct tsx_data);
     tsx_data->token = token;
     tsx_data->cb = cb;
+    tsx_data->tdata = tdata;
+    if (req_mutex) {
+        /* A request sent again, e.g: with credentials, has one already */
+        pj_mutex_lock(req_mutex);
+        tsx_data->state = (struct req_state*)
+                          tdata->mod_data[mod_stateful_util.id];
+        if (!tsx_data->state) {
+            tsx_data->state = PJ_POOL_ZALLOC_T(tdata->pool,
+                                               struct req_state);
+            tdata->mod_data[mod_stateful_util.id] = tsx_data->state;
+        }
+        tsx_data->state->cur = tdata;
+        pj_mutex_unlock(req_mutex);
+    }
     /* The caller can't follow a replaced transaction */
     tsx_data->allow_failover = (p_tsx == NULL);
     tsx_data->first_addr = tdata->dest_info.cur_addr;

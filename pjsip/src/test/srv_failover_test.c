@@ -55,6 +55,7 @@ enum srv_mode
     MODE_503_RETRY,     /* Answer 503 with Retry-After */
     MODE_SILENT,        /* Never answer */
     MODE_TRYING,        /* Answer 100, then nothing */
+    MODE_401,           /* Challenge, then answer 100 only */
     MODE_CLOSED,        /* Nothing listens on the port */
     MODE_HANGING        /* TCP connections hang, the backlog is full */
 };
@@ -132,7 +133,8 @@ static int build_response(const char *req, int code, const char *name,
     static const char *copy[] = { "via:", "v:", "from:", "f:", "to:", "t:",
                                   "call-id:", "i:", "cseq:" };
     const char *reason = code == 100 ? "Trying" :
-                         code == 200 ? "OK" : "Service Unavailable";
+                         code == 200 ? "OK" :
+                         code == 401 ? "Unauthorized" : "Service Unavailable";
     const char *line = strstr(req, "\r\n");
     int len = 0;
 
@@ -193,12 +195,17 @@ static int handle_msg(struct fake_srv *srv, const char *msg, char *resp,
     case MODE_503:
     case MODE_503_RETRY: code = 503; break;
     case MODE_TRYING:   code = 100; break;
+    case MODE_401:      code = strstr(msg, "\r\nAuthorization:") ? 100 : 401;
+                        break;
     default:            return 0;
     }
 
     return build_response(msg, code, srv->name,
                           srv->mode == MODE_503_RETRY ?
-                              "Retry-After: 60\r\n" : "",
+                              "Retry-After: 60\r\n" :
+                          code == 401 ?
+                              "WWW-Authenticate: Digest realm=\"" TEST_DOMAIN
+                              "\", nonce=\"1\"\r\n" : "",
                           resp, size);
 }
 
@@ -1265,9 +1272,10 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 }
 
 /* The registration client reports the transport of the current attempt,
- * and no longer the one the application has released.
+ * also once the transport has moved on to another address by itself, and
+ * no longer the one the application has released.
  */
-static int regc_transport_test(void)
+static int regc_transport_case(pj_bool_t srv2_closed)
 {
     pj_str_t uri = pj_str("sip:" TEST_DOMAIN ";transport=tcp");
     pj_str_t from = pj_str("<sip:test@" TEST_DOMAIN ">");
@@ -1277,16 +1285,24 @@ static int regc_transport_test(void)
     pjsip_tx_data *tdata;
     const pjsip_transport *seen[8];
     unsigned seen_cnt = 0, waited, i, dropped_at = 0;
+    unsigned first_port = 0, last_port = 0, td;
     pj_bool_t released = PJ_FALSE;
     pj_status_t status;
     int rc = 0;
 
+    /* With srv2 closed, srv3 answers 100 only, so that the request stays
+     * on its transport for a while.
+     */
     for (i = 0; i < SRV_CNT; ++i) {
-        status = set_mode(&g.srv[i], i == SRV_CNT - 1 ? MODE_OK : MODE_SILENT);
+        status = set_mode(&g.srv[i], i == 2 ? (srv2_closed ? MODE_TRYING :
+                                                             MODE_OK) :
+                                     i == 1 && srv2_closed ? MODE_CLOSED :
+                                     MODE_SILENT);
         if (status != PJ_SUCCESS)
             return -3120;
     }
-    pjsip_tsx_set_timers(TEST_T1, TEST_T2, TEST_T4, TEST_TD);
+    td = TEST_TD + (srv2_closed ? 2 * g.refusal_msec : 0);
+    pjsip_tsx_set_timers(TEST_T1, TEST_T2, TEST_T4, td);
     flush_events(200);
     forget_failed_servers(0);
     pjsip_cfg()->endpt.server_failover = PJ_TRUE;
@@ -1311,22 +1327,33 @@ static int regc_transport_test(void)
 
     /* Note each change of the reported transport. Once the second attempt
      * is reported, srv1 closes its connection, which must not change the
-     * report, then the transport of the second attempt is released.
+     * report, then the transport of the second attempt is released. With
+     * srv2 closed, the second attempt moves on to srv3 by itself.
      */
-    for (waited = 0; !reg_result.done && waited < 4 * TEST_TD + 2000;
+    /* Two timeouts, the second one after the refusal, and the answer */
+    for (waited = 0; !reg_result.done && waited < 2 * td + 3000;
          waited += 50)
     {
+        pjsip_regc_get_info(regc, &info);
+        if (info.transport && !reg_result.done) {
+            /* The server it is on, as pjsua looks at the transport too */
+            last_port = pj_sockaddr_get_port(&info.transport->key.rem_addr);
+            if (!first_port)
+                first_port = last_port;
+        }
         flush_events(50);
         pjsip_regc_get_info(regc, &info);
         if (seen_cnt == 0 || info.transport != seen[seen_cnt - 1]) {
             if (seen_cnt < PJ_ARRAY_SIZE(seen))
                 seen[seen_cnt++] = info.transport;
-            if (seen_cnt == 2) {
+            if (seen_cnt == 2 && !srv2_closed) {
                 drop_connections(&g.srv[0]);
                 dropped_at = waited;
             }
         }
-        if (seen_cnt == 2 && !released && dropped_at + 300 <= waited) {
+        if (seen_cnt == 2 && !srv2_closed && !released &&
+            dropped_at + 300 <= waited)
+        {
             pjsip_regc_release_transport(regc);
             released = PJ_TRUE;
         }
@@ -1334,12 +1361,21 @@ static int regc_transport_test(void)
     pjsip_regc_get_info(regc, &info);
 
     PJ_LOG(3,(THIS_FILE, "  %-44s -> %d, %u transports reported",
+              srv2_closed ? "TCP, REGISTER, srv1 never answers, srv2 closed" :
               "TCP, REGISTER, srv1 and srv2 never answer, srv1 closes",
               reg_result.done ? reg_result.code : -1, seen_cnt));
-    if (!reg_result.done || reg_result.code != 200)
+    if (!reg_result.done || reg_result.code != (srv2_closed ? 408 : 200))
         rc = -3123;
-    else if (seen_cnt != 4 || !seen[0] || !seen[1] || seen[2] || !seen[3] ||
-             seen[0] == seen[1] || seen[1] == seen[3])
+    else if (srv2_closed) {
+        /* Reported on srv1 first, and on srv3 while it waits there */
+        if (first_port != g.srv[0].tcp_port || last_port != g.srv[2].tcp_port)
+        {
+            PJ_LOG(1,(THIS_FILE, "    error: reported on port %u, then %u",
+                      first_port, last_port));
+            rc = -3128;
+        }
+    } else if (seen_cnt != 4 || !seen[0] || !seen[1] || seen[2] ||
+               !seen[3] || seen[0] == seen[1] || seen[1] == seen[3])
     {
         PJ_LOG(1,(THIS_FILE, "    error: reported %p, %p, %p, %p",
                   seen_cnt > 0 ? seen[0] : NULL, seen_cnt > 1 ? seen[1] : NULL,
@@ -1368,6 +1404,100 @@ static int regc_transport_test(void)
     pjsip_tx_data_dec_ref(tdata);
     pjsip_regc_destroy(regc);
     return rc;
+}
+
+/* The registration client reports the transport of a request sent again
+ * with credentials, which is the same request, with or without failover.
+ */
+static int regc_auth_case(pj_bool_t failover)
+{
+    pj_str_t uri = pj_str("sip:" TEST_DOMAIN ";transport=tcp");
+    pj_str_t from = pj_str("<sip:test@" TEST_DOMAIN ">");
+    pj_str_t contact = pj_str("<sip:test@127.0.0.1;transport=tcp>");
+    pjsip_cred_info cred;
+    pjsip_regc *regc;
+    pjsip_regc_info info;
+    pjsip_tx_data *tdata;
+    unsigned waited, i, port = 0, samples = 0, missing = 0;
+    pj_status_t status;
+    int rc = 0;
+
+    for (i = 0; i < SRV_CNT; ++i) {
+        status = set_mode(&g.srv[i], i == 0 ? MODE_401 : MODE_OK);
+        if (status != PJ_SUCCESS)
+            return -3150;
+    }
+    pjsip_tsx_set_timers(TEST_T1, TEST_T2, TEST_T4, TEST_TD);
+    flush_events(200);
+    forget_failed_servers(0);
+    pjsip_cfg()->endpt.server_failover = failover;
+
+    pj_bzero(&cred, sizeof(cred));
+    cred.realm = pj_str(TEST_DOMAIN);
+    cred.scheme = pj_str("digest");
+    cred.username = pj_str("test");
+    cred.data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
+    cred.data = pj_str("secret");
+
+    status = pjsip_regc_create(endpt, NULL, &regc_cb, &regc);
+    if (status != PJ_SUCCESS)
+        return -3151;
+    status = pjsip_regc_init(regc, &uri, &from, &from, 1, &contact, 300);
+    if (status == PJ_SUCCESS)
+        status = pjsip_regc_set_credentials(regc, 1, &cred);
+    if (status == PJ_SUCCESS)
+        status = pjsip_regc_register(regc, PJ_TRUE, &tdata);
+    if (status == PJ_SUCCESS) {
+        pj_bzero(&reg_result, sizeof(reg_result));
+        status = pjsip_regc_send(regc, tdata);
+    }
+    if (status != PJ_SUCCESS) {
+        app_perror("    error: registering", status);
+        pjsip_regc_destroy(regc);
+        return -3152;
+    }
+
+    /* Once the request with credentials is out, the transport must be
+     * reported all the time it waits for the answer.
+     */
+    for (waited = 0; !reg_result.done && waited < 2 * TEST_TD + 3000;
+         waited += 50)
+    {
+        pjsip_regc_get_info(regc, &info);
+        if (g.srv[0].hits >= 2 && !reg_result.done) {
+            ++samples;
+            if (!info.transport)
+                ++missing;
+            else
+                port = pj_sockaddr_get_port(&info.transport->key.rem_addr);
+        }
+        flush_events(50);
+    }
+
+    PJ_LOG(3,(THIS_FILE, "  %-44s -> %d, reported in %u of %u samples",
+              failover ? "TCP, REGISTER, srv1 asks for credentials" :
+              "TCP, REGISTER, srv1 asks for credentials, no failover",
+              reg_result.done ? reg_result.code : -1, samples - missing,
+              samples));
+    if (!reg_result.done || reg_result.code != 408 || g.srv[0].hits != 2)
+        rc = -3153;
+    else if (samples == 0 || missing || port != g.srv[0].tcp_port)
+        rc = -3154;
+
+    pjsip_regc_destroy(regc);
+    pjsip_cfg()->endpt.server_failover = PJ_TRUE;
+    return rc;
+}
+
+static int regc_transport_test(void)
+{
+    int rc = regc_transport_case(PJ_FALSE);
+
+    if (rc == 0)
+        rc = regc_transport_case(PJ_TRUE);
+    if (rc == 0)
+        rc = regc_auth_case(PJ_TRUE);
+    return rc ? rc : regc_auth_case(PJ_FALSE);
 }
 #endif
 
