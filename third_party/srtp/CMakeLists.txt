@@ -9,7 +9,9 @@ if(SRTP_WITH_OPENSSL)
     find_package(OpenSSL COMPONENTS Crypto SSL CONFIG)
   endif()
   if(OPENSSL_FOUND)
-    # check GCM support
+    # check GCM support. Under its own cache key: an earlier version of this
+    # probe could fail into OPENSSL_HAS_GCM, and a cached result is never
+    # probed again.
     include(CheckCSourceCompiles)
     include(CMakePushCheckState)
 
@@ -23,8 +25,9 @@ if(SRTP_WITH_OPENSSL)
           EVP_aes_128_gcm();
           return 0;
         }
-      ]=] OPENSSL_HAS_GCM)
+      ]=] PJ_SRTP_OPENSSL_HAS_GCM)
     cmake_pop_check_state()
+    set(OPENSSL_HAS_GCM "${PJ_SRTP_OPENSSL_HAS_GCM}")
   else()
     set(SRTP_WITH_OPENSSL OFF CACHE BOOL "OpenSSL not found" FORCE)
   endif()
