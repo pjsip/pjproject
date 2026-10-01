@@ -30,6 +30,15 @@ if(SRTP_WITH_OPENSSL)
   endif()
 endif()
 
+# This links OpenSSL whatever pjlib's SSL backend is, so PjConfig.cmake.in has
+# to re-resolve it on its own; in the cache to be visible outside this
+# directory.
+if(SRTP_WITH_OPENSSL AND OPENSSL_HAS_GCM)
+  set(PJ_SRTP_WITH_OPENSSL ON CACHE INTERNAL "Bundled srtp links OpenSSL")
+else()
+  set(PJ_SRTP_WITH_OPENSSL OFF CACHE INTERNAL "Bundled srtp links OpenSSL")
+endif()
+
 # ##############################################################################
 # Target
 

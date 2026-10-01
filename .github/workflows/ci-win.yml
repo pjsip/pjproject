@@ -969,3 +969,91 @@ jobs:
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
+
+  cmake-build:
+    runs-on: windows-2022
+    name: CMake / ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: default
+            options: ''
+            expect: ''
+            tests: sock_test udp_ioqueue_test
+          - name: IOCP, schannel, WASAPI, DShow, AKA
+            options: >-
+              -DPJLIB_WITH_IOQUEUE=iocp -DPJLIB_WITH_SSL=schannel
+              -DPJMEDIA_WITH_AUDIODEV_WASAPI=ON
+              -DPJMEDIA_WITH_VIDEODEV_DSHOW=ON
+              -DPJSIP_WITH_DIGEST_AKA_AUTH=ON
+            expect: >-
+              PJLIB_WITH_IOQUEUE=iocp PJLIB_WITH_SSL=schannel
+              PJMEDIA_WITH_AUDIODEV_WASAPI=ON
+              PJMEDIA_WITH_VIDEODEV_DSHOW=ON
+              PJSIP_WITH_DIGEST_AKA_AUTH=ON
+            tests: sock_test udp_ioqueue_test iocp_unregister_test ssl_sock_test
+    env:
+      # Strawberry Perl and MSYS2 ship mingw builds of OpenSSL and other
+      # packages, which must not be picked up by an MSVC build.
+      PJ_IGNORE_PREFIX: C:/Strawberry/c;C:/msys64/mingw64;C:/msys64/usr
+    steps:
+    - uses: actions/checkout@v4
+    - name: configure
+      run: >-
+        cmake -B build -G "Visual Studio 17 2022" -A x64
+        "-DCMAKE_IGNORE_PREFIX_PATH=$env:PJ_IGNORE_PREFIX"
+        ${{ matrix.options }}
+    - name: check options
+      # A backend whose dependency is not found is switched off and the build
+      # then passes without it, so assert the requested ones survived.
+      if: matrix.expect != ''
+      run: |
+        $cache = cmake -LA -N build
+        $failed = $false
+        foreach ($e in "${{ matrix.expect }}".Split(' ', [StringSplitOptions]::RemoveEmptyEntries)) {
+          $name, $want = $e.Split('=')
+          $m = $cache | Select-String "^${name}:[^=]*=(.*)$"
+          $got = if ($m) { $m.Matches[0].Groups[1].Value } else { '' }
+          if ($got -ne $want) {
+            Write-Host "::error::$name is '$got', expected '$want'"
+            $failed = $true
+          } else {
+            Write-Host "$name=$got"
+          }
+        }
+        if ($failed) { exit 1 }
+    - name: OpenSSL runtime
+      # The runner's OpenSSL is used whenever found (by pjlib, or by srtp for
+      # AES-GCM), and its DLLs are needed to run anything linked to it.
+      run: |
+        $m = cmake -LA -N build | Select-String '^OPENSSL_INCLUDE_DIR:PATH=(.+)$'
+        if ($m) {
+          $bin = Join-Path (Split-Path $m.Matches[0].Groups[1].Value) bin
+          if (Test-Path $bin) {
+            Write-Host "OpenSSL: $bin"
+            Add-Content $env:GITHUB_PATH $bin
+          }
+        }
+    - name: build Debug
+      run: cmake --build build --config Debug --parallel
+    - name: build Release
+      run: cmake --build build --config Release --parallel
+    - name: pjlib-test
+      # Run from pjlib/bin, as the SSL tests load certificates from ../build/
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        New-Item -ItemType Directory -Force pjlib/bin | Out-Null
+        cd pjlib/bin
+        ../../build/pjlib/Release/pjlib-test.exe --ci-mode ${{ matrix.tests }}
+    - name: install
+      run: cmake --install build --config Release --prefix "${{ runner.temp }}/pj-install"
+    - name: test find_package
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        cmake -B build-consumer tests/cmake -G "Visual Studio 17 2022" -A x64 `
+          "-DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install" `
+          "-DCMAKE_IGNORE_PREFIX_PATH=$env:PJ_IGNORE_PREFIX"
+        cmake --build build-consumer --config Release
+        ./build-consumer/Release/test_consumer.exe
+        ./build-consumer/Release/test_consumer2.exe
