@@ -397,6 +397,7 @@ add_library(pjmedia
   src/pjmedia/clock_thread.c
   src/pjmedia/codec.c
   src/pjmedia/conference.c
+  src/pjmedia/conf_thread.c
   src/pjmedia/conf_switch.c
   src/pjmedia/converter.c
   src/pjmedia/converter_libswscale.c
