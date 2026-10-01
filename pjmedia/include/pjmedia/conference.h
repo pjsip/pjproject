@@ -318,7 +318,8 @@ typedef struct pjmedia_conf_param
      * of the processor cores. However, the optimal number of worker threads
      * is application and hardware dependent.
      * The default value is PJMEDIA_CONF_THREADS-1, i.e. 3 on desktop
-     * platforms and zero (sequential conference bridge) on iOS and Android.
+     * platforms and zero (sequential conference bridge) on iOS, Android,
+     * and when threads are disabled.
      * At compile time application developer can change the default value by 
      * setting #PJMEDIA_CONF_THREADS macro in the config_site.h.
      * PJMEDIA_CONF_THREADS is total number of conference bridge threads 
