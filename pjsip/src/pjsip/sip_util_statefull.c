@@ -439,10 +439,12 @@ static pj_status_t send_to_next_server(pjsip_transaction *tsx,
 
     pjsip_tsx_set_transport(new_tsx, &tdata->tp_sel);
 
+    /* The copy keeps the generation of the original: it is sent on the
+     * same network.
+     */
     new_data = PJ_POOL_ALLOC_T(new_tsx->pool, struct tsx_data);
     *new_data = *tsx_data;
     new_data->first_addr = 0;
-    new_data->failed_servers_gen = pjsip_endpt_failed_servers_gen(tsx->endpt);
     new_data->tdata = tdata;
     if (!new_data->orig_tdata) {
         new_data->orig_tdata = old_tdata;
