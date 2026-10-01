@@ -54,11 +54,14 @@ struct tsx_data
     /* The Via settings of the application, as the send updates them */
     pjsip_host_port via_addr;
     const void *via_tp;
-    pj_atomic_value_t failed_servers_gen;   /* When the request was sent */
+    unsigned failed_servers_gen;    /* When the request was sent */
 };
 
 /* Defined in sip_endpoint.c */
-pj_atomic_value_t pjsip_endpt_failed_servers_gen(pjsip_endpoint *endpt);
+unsigned pjsip_endpt_failed_servers_gen(pjsip_endpoint *endpt);
+pj_status_t pjsip_endpt_set_server_failed_gen(pjsip_endpoint *endpt,
+                                              const pj_sockaddr_t *addr,
+                                              unsigned duration, unsigned gen);
 
 /* Guards the state of the pending requests: the transport reports its
  * sends from its own threads.
@@ -240,8 +243,9 @@ static pj_bool_t is_pinned(const pjsip_tx_data *tdata)
  * answers. RFC 3261 section 21.5.4 avoids a server that answers 503 only for
  * the time in Retry-After.
  */
-static void update_server_state(pjsip_transaction *tsx, pjsip_event *event,
-                                pj_bool_t failed)
+static void update_server_state(pjsip_transaction *tsx,
+                                const struct tsx_data *tsx_data,
+                                pjsip_event *event, pj_bool_t failed)
 {
     pjsip_tx_data *tdata = tsx->last_tx;
     pjsip_event_id_e type = event->body.tsx_state.type;
@@ -275,9 +279,9 @@ static void update_server_state(pjsip_transaction *tsx, pjsip_event *event,
         return;
     }
 
-    pjsip_endpt_set_server_failed(tsx->endpt,
-                                  &tdata->dest_info.addr.entry[idx].addr,
-                                  duration);
+    pjsip_endpt_set_server_failed_gen(tsx->endpt,
+                                      &tdata->dest_info.addr.entry[idx].addr,
+                                      duration, tsx_data->failed_servers_gen);
 }
 
 /* Whether the address at index idx was already tried, see
@@ -327,9 +331,10 @@ static void mark_refused_servers(pjsip_transaction *tsx,
     {
         if (addr->entry[i].type != addr->entry[tdata->dest_info.cur_addr].type)
             continue;
-        pjsip_endpt_set_server_failed(tsx->endpt,
-                                      &tdata->dest_info.addr.entry[i].addr,
-                                      duration);
+        pjsip_endpt_set_server_failed_gen(tsx->endpt,
+                                          &tdata->dest_info.addr.entry[i].addr,
+                                          duration,
+                                          tsx_data->failed_servers_gen);
     }
 }
 
@@ -492,17 +497,17 @@ static void mod_util_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
      * previous network, says nothing about the servers.
      */
     if (pjsip_cfg()->endpt.server_failover &&
-        tsx_data->failed_servers_gen ==
-            pjsip_endpt_failed_servers_gen(tsx->endpt) &&
         tsx->role == PJSIP_ROLE_UAC && tsx->last_tx &&
         tsx->method.id != PJSIP_INVITE_METHOD &&
-        tsx->method.id != PJSIP_CANCEL_METHOD)
+        tsx->method.id != PJSIP_CANCEL_METHOD &&
+        tsx_data->failed_servers_gen ==
+            pjsip_endpt_failed_servers_gen(tsx->endpt))
     {
         pjsip_tx_data *tdata = tsx->last_tx;
         pj_bool_t failed = is_server_failure(tsx, event);
         unsigned next;
 
-        update_server_state(tsx, event, failed);
+        update_server_state(tsx, tsx_data, event, failed);
         if (event->body.tsx_state.type == PJSIP_EVENT_RX_MSG)
             mark_refused_servers(tsx, tsx_data);
 
@@ -606,7 +611,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request2( pjsip_endpoint *endpt,
         }
     } else {
         /* Never counted, even if the option is enabled later */
-        tsx_data->failed_servers_gen = (pj_atomic_value_t)-1;
+        tsx_data->failed_servers_gen = (unsigned)-1;
     }
 
     tsx->mod_data[mod_stateful_util.id] = tsx_data;

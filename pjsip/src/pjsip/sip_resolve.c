@@ -99,6 +99,7 @@ struct pjsip_resolver_t
 {
     pj_dns_resolver *res;
     pj_grp_lock_t   *grp_lock;
+    unsigned         failed_gen;    /* Times the failed servers were cleared */
     pjsip_ext_resolver *ext_res;
 
     unsigned                 failed_cnt;
@@ -219,13 +220,13 @@ static void expire_failed(pjsip_resolver_t *resolver)
     }
 }
 
-/*
- * Public API to set or clear a failed server address.
+/* Set or clear a failed server address. With a generation, only if the
+ * failed servers were not cleared since the request that failed was sent,
+ * e.g: the network has not changed.
  */
-PJ_DEF(pj_status_t) pjsip_resolver_set_server_failed(
-                                            pjsip_resolver_t *resolver,
-                                            const pj_sockaddr_t *addr,
-                                            unsigned duration)
+static pj_status_t set_server_failed(pjsip_resolver_t *resolver,
+                                     const pj_sockaddr_t *addr,
+                                     unsigned duration, const unsigned *gen)
 {
     int idx;
 
@@ -236,6 +237,11 @@ PJ_DEF(pj_status_t) pjsip_resolver_set_server_failed(
         return PJ_EINVALIDOP;
 
     pj_grp_lock_acquire(resolver->grp_lock);
+
+    if (gen && *gen != resolver->failed_gen) {
+        pj_grp_lock_release(resolver->grp_lock);
+        return PJ_EIGNORED;
+    }
 
     expire_failed(resolver);
     idx = find_failed(resolver, addr);
@@ -275,6 +281,39 @@ PJ_DEF(pj_status_t) pjsip_resolver_set_server_failed(
     return PJ_SUCCESS;
 }
 
+/* Internal: how many times the failed servers were cleared */
+unsigned pjsip_resolver_failed_servers_gen(pjsip_resolver_t *resolver)
+{
+    unsigned gen;
+
+    if (!resolver->grp_lock)
+        return 0;
+    pj_grp_lock_acquire(resolver->grp_lock);
+    gen = resolver->failed_gen;
+    pj_grp_lock_release(resolver->grp_lock);
+    return gen;
+}
+
+/* Internal, used by the stateful send */
+pj_status_t pjsip_resolver_set_server_failed_gen(pjsip_resolver_t *resolver,
+                                                 const pj_sockaddr_t *addr,
+                                                 unsigned duration,
+                                                 unsigned gen)
+{
+    return set_server_failed(resolver, addr, duration, &gen);
+}
+
+/*
+ * Public API to set or clear a failed server address.
+ */
+PJ_DEF(pj_status_t) pjsip_resolver_set_server_failed(
+                                            pjsip_resolver_t *resolver,
+                                            const pj_sockaddr_t *addr,
+                                            unsigned duration)
+{
+    return set_server_failed(resolver, addr, duration, NULL);
+}
+
 /*
  * Public API to check whether a server address has failed.
  */
@@ -309,6 +348,7 @@ PJ_DEF(pj_status_t) pjsip_resolver_clear_failed_servers(
 
     pj_grp_lock_acquire(resolver->grp_lock);
     resolver->failed_cnt = 0;
+    ++resolver->failed_gen;
     pj_grp_lock_release(resolver->grp_lock);
     return PJ_SUCCESS;
 }
