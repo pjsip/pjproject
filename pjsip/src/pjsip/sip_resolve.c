@@ -320,8 +320,11 @@ static void demote_failed_servers(pjsip_resolver_t *resolver,
     pjsip_server_addresses sorted;
     unsigned i, pass;
 
-    if (server->count < 2 || !resolver->grp_lock)
+    if (server->count < 2 || !resolver->grp_lock ||
+        !pjsip_cfg()->endpt.server_failover)
+    {
         return;
+    }
 
     pj_grp_lock_acquire(resolver->grp_lock);
 

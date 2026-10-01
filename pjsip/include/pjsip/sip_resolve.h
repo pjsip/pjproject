@@ -311,9 +311,10 @@ PJ_DECL(pj_dns_resolver*) pjsip_resolver_get_resolver(pjsip_resolver_t *res);
 /**
  * Mark a server address as failed for the specified duration, or clear the
  * mark. The mark applies to the IP address and port, whatever the transport
- * type. While marked, the address is listed after the other addresses when
- * the resolver resolves a target to it, and #pjsip_endpt_send_request()
- * tries it last when another server has failed. The order of the addresses
+ * type. While marked, and while pjsip_cfg()->endpt.server_failover is
+ * enabled, the address is listed after the other addresses when the
+ * resolver resolves a target to it, and #pjsip_endpt_send_request() tries
+ * it last when another server has failed. The order of the addresses
  * given by the external resolver, if any, is not changed, and an IP version
  * preference in the transport selector comes first.
  *
