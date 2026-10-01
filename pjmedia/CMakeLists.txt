@@ -927,6 +927,7 @@ target_link_libraries(pjmedia-audiodev
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_ALSA}>:ALSA::ALSA>
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_COREAUDIO}>:CoreAudio::CoreAudio>
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_OBOE}>:Oboe::Oboe>
+    $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_WASAPI}>:WASAPI::WASAPI>
     # TODO: add remaining APIs' dependencies
 )
 
@@ -1025,6 +1026,31 @@ target_link_libraries(pjmedia-videodev
     # transitive deps
     $<$<BOOL:${PJMEDIA_WITH_LIBYUV}>:Pj::Dep::YUV>
 )
+
+# DirectShow capture is the only user of the bundled BaseClasses, so they are
+# compiled in here rather than built and installed as a library of their own.
+if(PJMEDIA_WITH_VIDEODEV_DSHOW)
+  set(_baseclasses "${CMAKE_CURRENT_SOURCE_DIR}/../third_party/BaseClasses")
+  target_sources(pjmedia-videodev
+    PRIVATE
+      ${_baseclasses}/amfilter.cpp
+      ${_baseclasses}/amvideo.cpp
+      ${_baseclasses}/arithutil.cpp
+      ${_baseclasses}/combase.cpp
+      ${_baseclasses}/ctlutil.cpp
+      ${_baseclasses}/mtype.cpp
+      ${_baseclasses}/renbase.cpp
+      ${_baseclasses}/wxdebug.cpp
+      ${_baseclasses}/wxlist.cpp
+      ${_baseclasses}/wxutil.cpp
+  )
+  target_include_directories(pjmedia-videodev
+    PRIVATE
+      $<BUILD_INTERFACE:${_baseclasses}>
+  )
+  target_link_libraries(pjmedia-videodev PRIVATE strmiids quartz rpcrt4 ole32)
+  unset(_baseclasses)
+endif()
 
 # ##############################################################################
 #  Test application

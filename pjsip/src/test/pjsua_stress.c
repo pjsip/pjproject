@@ -70,6 +70,17 @@
 #  define PJSUA_STRESS_HAS_FAULT_PC 1
 #endif
 
+/* The Windows CRT has no rand_r(), and MinGW's ignores the seed */
+#if defined(PJ_WIN32) && PJ_WIN32 != 0
+static int stress_rand_r(unsigned *seed)
+{
+    *seed = *seed * 1103515245u + 12345u;
+    return (int)((*seed >> 16) & 0x7FFF);
+}
+#  undef rand_r
+#  define rand_r stress_rand_r
+#endif
+
 #define THIS_FILE  "pjsua_stress"
 
 /* Default CLI values. */

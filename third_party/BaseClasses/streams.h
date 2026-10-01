@@ -198,6 +198,14 @@ const LONGLONG MAX_TIME = 0x7FFFFFFFFFFFFFFF;   /* Maximum LONGLONG value */
 //#include <edevdefs.h>   // External device control interface defines
 //#include <audevcod.h>   // audio filter device error event codes
 
+/* windows.h omits min()/max() when NOMINMAX is set, as the CMake build does */
+#if defined(_MSC_VER) && !defined(min)
+#define min(a,b) (((a) < (b)) ? (a) : (b))
+#endif
+#if defined(_MSC_VER) && !defined(max)
+#define max(a,b) (((a) > (b)) ? (a) : (b))
+#endif
+
 #ifndef	_MSC_VER
 
 #define min(a,b) ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _a < _b ? _a : _b; })

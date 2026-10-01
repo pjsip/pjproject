@@ -50,6 +50,9 @@ endif()
 if(@PJMEDIA_WITH_AUDIODEV_OBOE@)
   find_dependency(Oboe)
 endif()
+if(@PJMEDIA_WITH_AUDIODEV_WASAPI@)
+  find_dependency(WASAPI)
+endif()
 
 # Video device backends
 if(@PJMEDIA_WITH_VIDEODEV_OPENGL@)

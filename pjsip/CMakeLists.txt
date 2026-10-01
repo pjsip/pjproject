@@ -9,6 +9,9 @@ cmake_dependent_option(PJSIP_WITH_TLS
   "PJLIB_WITH_SSL" OFF
 )
 
+# Include Digest AKAv1/AKAv2 authentication, using the bundled milenage
+option(PJSIP_WITH_DIGEST_AKA_AUTH "Enable Digest AKA authentication" OFF)
+
 # ##############################################################################
 # pjsip
 
@@ -86,6 +89,18 @@ target_link_libraries(pjsip
   PRIVATE
     pjlib-ssl
     pjlib-util
+)
+
+if(PJSIP_WITH_DIGEST_AKA_AUTH)
+  target_sources(pjsip
+    PRIVATE
+      ../third_party/milenage/milenage.c
+      ../third_party/milenage/rijndael.c
+  )
+endif()
+target_compile_definitions(pjsip
+  PUBLIC
+    PJSIP_HAS_DIGEST_AKA_AUTH=$<BOOL:${PJSIP_WITH_DIGEST_AKA_AUTH}>
 )
 
 # configuration

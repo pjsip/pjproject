@@ -32,7 +32,7 @@
 #cmakedefine PJ_WIN64            @PJ_WIN64@
 #cmakedefine PJ_WIN32            @PJ_WIN32@
 #cmakedefine PJ_WIN32_WINNT      @PJ_WIN32_WINNT@
-#cmakedefine WIN32_LEAN_AND_MEAN @WIN32_LEAN_AND_MEAN@
+#cmakedefine WIN32_LEAN_AND_MEAN
 #cmakedefine PJ_DARWINOS         @PJ_DARWINOS@
 #cmakedefine PJ_LINUX            @PJ_LINUX@
 #cmakedefine PJ_BSD              @PJ_BSD@

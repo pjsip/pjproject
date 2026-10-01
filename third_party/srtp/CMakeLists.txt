@@ -3,9 +3,10 @@
 
 option(SRTP_WITH_OPENSSL "Build SRTP with OpenSSL support" ON)
 if(SRTP_WITH_OPENSSL)
-  find_package(OpenSSL COMPONENTS Crypto SSL CONFIG)
+  # Same search order as pjlib, so that both link the same OpenSSL
+  find_package(OpenSSL COMPONENTS Crypto SSL MODULE)
   if(NOT OPENSSL_FOUND)
-    find_package(OpenSSL COMPONENTS Crypto SSL)
+    find_package(OpenSSL COMPONENTS Crypto SSL CONFIG)
   endif()
   if(OPENSSL_FOUND)
     # check GCM support
@@ -13,8 +14,7 @@ if(SRTP_WITH_OPENSSL)
     include(CMakePushCheckState)
 
     cmake_push_check_state(RESET)
-      set(CMAKE_REQUIRED_INCLUDES "${OPENSSL_INCLUDE_DIR}")
-      set(CMAKE_REQUIRED_LIBRARIES "${OPENSSL_CRYPTO_LIBRARIES}")
+      set(CMAKE_REQUIRED_LIBRARIES OpenSSL::Crypto)
       check_c_source_compiles([=[
         #include <openssl/evp.h>
 
