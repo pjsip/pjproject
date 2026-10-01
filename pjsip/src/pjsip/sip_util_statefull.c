@@ -57,12 +57,6 @@ struct tsx_data
     unsigned failed_servers_gen;    /* When the request was sent */
 };
 
-/* Defined in sip_endpoint.c */
-unsigned pjsip_endpt_failed_servers_gen(pjsip_endpoint *endpt);
-pj_status_t pjsip_endpt_set_server_failed_gen(pjsip_endpoint *endpt,
-                                              const pj_sockaddr_t *addr,
-                                              unsigned duration, unsigned gen);
-
 /* The state of the pending requests is guarded by the critical section of
  * PJLIB: the transport reports its sends from its own threads, and the
  * sections are short.

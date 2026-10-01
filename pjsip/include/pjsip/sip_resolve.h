@@ -399,6 +399,21 @@ PJ_DECL(void) pjsip_resolve( pjsip_resolver_t *resolver,
  * @}
  */
 
+/**
+ * Internal API for the stateful send: the number of times the failed
+ * servers were cleared.
+ */
+unsigned pjsip_resolver_failed_servers_gen(pjsip_resolver_t *res);
+
+/**
+ * Internal API for the stateful send: mark a server as failed, unless the
+ * failed servers were cleared since the request that failed was sent.
+ */
+pj_status_t pjsip_resolver_set_server_failed_gen(pjsip_resolver_t *res,
+                                                 const pj_sockaddr_t *addr,
+                                                 unsigned duration,
+                                                 unsigned gen);
+
 PJ_END_DECL
 
 #endif  /* __PJSIP_SIP_RESOLVE_H__ */
