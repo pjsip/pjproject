@@ -366,8 +366,9 @@ elseif(PJLIB_WITH_SSL STREQUAL "apple")
       "${Foundation_LIBRARY}"
   )
 elseif(PJLIB_WITH_SSL STREQUAL "schannel")
-  if(NOT WIN32)
-    message(FATAL_ERROR "PJLIB_WITH_SSL=schannel requires Windows")
+  # ssl_sock_schannel.c compiles to nothing on other Windows compilers
+  if(NOT MSVC)
+    message(FATAL_ERROR "PJLIB_WITH_SSL=schannel requires MSVC")
   endif()
   target_link_libraries(pjlib-ssl INTERFACE secur32 crypt32 bcrypt shlwapi)
 endif()
