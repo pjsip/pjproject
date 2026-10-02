@@ -957,6 +957,7 @@ if(BUILD_TESTING)
     src/test/tone_detector_test.c
     src/test/sdp_neg_test.c
     src/test/sdp_attr_test.c
+    src/test/transport_srtp_test.c
   )
 
   target_link_libraries(pjmedia-test

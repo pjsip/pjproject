@@ -115,6 +115,9 @@ int test_main(int argc, char *argv[])
 #if HAS_TONE_DETECTOR_TEST
     UT_ADD_TEST(&test_app.ut_app, tone_detector_test, 0);
 #endif
+#if HAS_TRANSPORT_SRTP_TEST
+    UT_ADD_TEST(&test_app.ut_app, transport_srtp_test, 0);
+#endif
 #if HAS_CODEC_VECTOR_TEST
     /* Run in exclusive mode: creates/destroys a local pjmedia_endpt which
      * sets/clears the global def_codec_mgr. If sdp_neg_test runs
