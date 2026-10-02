@@ -1610,6 +1610,83 @@ static int failed_server_api_test(void)
     return rc ? rc - 30 : 0;
 }
 
+/* Resolve a name through the endpoint, into the 'resolved' state */
+static void resolve_name(const char *host, pjsip_transport_type_e type)
+{
+    pjsip_host_info target;
+    unsigned waited;
+
+    pj_bzero(&target, sizeof(target));
+    target.type = type;
+    target.flag = pjsip_transport_get_flag_from_type(type);
+    target.addr.host = pj_str((char*)host);
+    pj_bzero(&resolved, sizeof(resolved));
+    pjsip_endpt_resolve(endpt, g.pool, &target, NULL, &resolve_cb);
+    for (waited = 0; !resolved.done && waited < 5000; waited += 50)
+        flush_events(50);
+}
+
+/* With the nameserver dead, a name not in the cache is resolved with the
+ * system resolver when the option is on, and a cached SRV record is still
+ * used. Last: the nameserver stays marked as bad for a while.
+ */
+static int fallback_test(void)
+{
+    pj_dns_settings saved, st;
+    pj_sockaddr lo;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  system resolver fallback"));
+
+    forget_failed_servers(0);
+    pj_dns_resolver_get_settings(g.resolver, &saved);
+    st = saved;
+    st.qretr_delay = 100;
+    st.qretr_count = 1;
+    pj_dns_resolver_set_settings(g.resolver, &st);
+
+    /* The nameserver never answers: the first query times out and marks
+     * it, the next ones fail at once
+     */
+    resolve_name("localhost", PJSIP_TRANSPORT_UDP);
+    PJ_TEST_TRUE(resolved.done && resolved.status != PJ_SUCCESS, NULL,
+                 { rc = -3170; goto on_return; });
+    resolve_name("localhost", PJSIP_TRANSPORT_UDP);
+    PJ_TEST_EQ(resolved.status, PJLIB_UTIL_EDNSNOWORKINGNS, NULL,
+               { rc = -3171; goto on_return; });
+
+    /* The option on: the system resolver, the default port */
+    pjsip_cfg()->endpt.resolver_fallback = PJ_TRUE;
+    resolve_name("localhost", PJSIP_TRANSPORT_UDP);
+    PJ_TEST_TRUE(resolved.done, NULL, { rc = -3172; goto on_return; });
+    PJ_TEST_SUCCESS(resolved.status, NULL, { rc = -3173; goto on_return; });
+    PJ_TEST_TRUE(resolved.addr.count >= 1, NULL, { rc = -3174; goto on_return; });
+    PJ_TEST_EQ(pj_sockaddr_get_port(&resolved.addr.entry[0].addr), 5060, NULL,
+               { rc = -3175; goto on_return; });
+    pj_sockaddr_init(pj_AF_INET(), &lo, NULL, 5060);
+    pj_sockaddr_cp(&lo, &resolved.addr.entry[0].addr);
+    PJ_TEST_TRUE(pj_sockaddr_has_addr(&lo), NULL, { rc = -3176; goto on_return; });
+
+    /* A cached SRV record is still used, from the DNS resolver */
+    if ((rc = check_srv1_order(PJ_FALSE, PJ_FALSE)) != 0) {
+        rc -= 400;
+        goto on_return;
+    }
+
+    /* The option off again: the failure is reported */
+    pjsip_cfg()->endpt.resolver_fallback = PJ_FALSE;
+    resolve_name("localhost", PJSIP_TRANSPORT_UDP);
+    PJ_TEST_EQ(resolved.status, PJLIB_UTIL_EDNSNOWORKINGNS, NULL,
+               { rc = -3177; goto on_return; });
+
+on_return:
+    pjsip_cfg()->endpt.resolver_fallback = PJ_FALSE;
+    pj_dns_resolver_set_settings(g.resolver, &saved);
+    if (rc)
+        PJ_LOG(1,(THIS_FILE, "    error: fallback [%d]", rc));
+    return rc;
+}
+
 static void destroy(void)
 {
     unsigned i;
@@ -1780,6 +1857,11 @@ int srv_failover_test(void)
         if (!rc)
             rc = status;
     }
+
+    /* Last: it leaves the nameserver marked as bad */
+    status = fallback_test();
+    if (status && !rc)
+        rc = status;
 
 on_return:
     pjsip_tsx_set_timers(saved_cfg.tsx.t1, saved_cfg.tsx.t2,

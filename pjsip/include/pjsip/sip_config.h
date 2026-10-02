@@ -210,6 +210,18 @@ typedef struct pjsip_cfg_t
          */
         unsigned failed_server_timeout;
 
+        /**
+         * Resolve a destination with the system resolver, as without a DNS
+         * resolver, while the DNS resolver has no working nameserver, see
+         * PJ_DNS_RESOLVER_BAD_NS_TTL: no DNS SRV, the default port of the
+         * transport. Answers still in the cache of the DNS resolver are used
+         * first, and the nameservers are tried again as usual, so DNS SRV
+         * resolution resumes as soon as one answers.
+         *
+         * Default is PJSIP_RESOLVER_FALLBACK.
+         */
+        pj_bool_t resolver_fallback;
+
     } endpt;
 
     /** Transaction layer settings. */
@@ -1002,6 +1014,21 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  */
 #ifndef PJSIP_FAILED_SERVER_TIMEOUT
 #   define PJSIP_FAILED_SERVER_TIMEOUT          1800
+#endif
+
+
+/**
+ * Resolve with the system resolver while the DNS resolver has no working
+ * nameserver, instead of failing until a nameserver answers again. Typical
+ * on mobile devices, where the nameservers come from the previous network.
+ *
+ * This option can also be controlled at run-time by the
+ * \a resolver_fallback setting in pjsip_cfg_t.
+ *
+ * Default: 0
+ */
+#ifndef PJSIP_RESOLVER_FALLBACK
+#   define PJSIP_RESOLVER_FALLBACK              0
 #endif
 
 
