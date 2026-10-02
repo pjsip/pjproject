@@ -422,6 +422,11 @@ PJ_DEF(pj_status_t) pjsip_endpt_add_capability( pjsip_endpoint *endpt,
             return PJ_ENOMEM;
         }
         pj_list_push_back(&endpt->cap_hdr, hdr);
+    } else if (hdr->count + count > PJ_ARRAY_SIZE(hdr->values)) {
+        PJ_LOG(2,(THIS_FILE, "Unable to add %u capabilities: not enough "
+                  "room in %.*s header", count, (int)hdr->name.slen,
+                  hdr->name.ptr));
+        return PJ_ETOOMANY;
     }
 
     /* Add the tags to the header. */

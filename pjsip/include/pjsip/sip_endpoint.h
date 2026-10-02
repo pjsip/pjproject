@@ -632,7 +632,9 @@ PJ_DECL(pj_bool_t) pjsip_endpt_has_capability( pjsip_endpoint *endpt,
  * @param tags      Array of tags describing the capabilities or extensions
  *                  to be added to the appropriate header.
  *
- * @return          PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success, PJ_ETOOMANY if the header has no
+ *                  room for all the tags (none of them is added then), or
+ *                  the appropriate error code on other failures.
  */
 PJ_DECL(pj_status_t) pjsip_endpt_add_capability( pjsip_endpoint *endpt,
                                                  pjsip_module *mod,
