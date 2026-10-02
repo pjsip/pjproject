@@ -4939,6 +4939,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\test\transport_srtp_test.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\test\test.c"
 				>
 				<FileConfiguration
