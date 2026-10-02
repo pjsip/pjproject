@@ -50,7 +50,6 @@ add_library(pjlib
   src/pj/ioqueue_epoll.c
   src/pj/ioqueue_kqueue.c
   src/pj/ioqueue_select.c
-  src/pj/ip_helper_generic.c
   src/pj/list.c
   src/pj/lock.c
   src/pj/log.c
@@ -185,11 +184,14 @@ if(WIN32 OR CYGWIN OR MINGW)
     PRIVATE
       src/pj/file_io_win32.c
       src/pj/guid_win32.c
+      src/pj/ioqueue_winnt.c
+      src/pj/ip_helper_win32.c
       src/pj/os_core_win32.c
       src/pj/os_error_win32.c
       src/pj/os_time_win32.c
       src/pj/os_timestamp_win32.c
       src/pj/sock_qos_bsd.c
+      src/pj/ssl_sock_schannel.c
       src/pj/unicode_win32.c
   )
 else()
@@ -197,6 +199,7 @@ else()
     PRIVATE
       src/pj/file_access_unistd.c
       src/pj/file_io_ansi.c
+      src/pj/ip_helper_generic.c
       src/pj/os_core_unix.c
       src/pj/os_error_unix.c
       src/pj/os_time_unix.c
@@ -235,10 +238,19 @@ include(CheckIncludeFile)
 if(WIN32 OR CYGWIN OR MINGW)
   check_include_file(winsock.h PJ_HAS_WINSOCK_H)
   check_include_file(winsock2.h PJ_HAS_WINSOCK2_H)
-  check_include_file(mswsock.h PJ_HAS_MSWSOCK_H)
+  # mswsock.h does not compile on its own, it needs winsock2.h first. Under
+  # its own cache key: the plain check of it once failed into
+  # PJ_HAS_MSWSOCK_H, and a cached result is never probed again.
+  include(CheckIncludeFiles)
+  check_include_files("winsock2.h;mswsock.h" PJ_HAS_WINSOCK2_MSWSOCK_H)
+  set(PJ_HAS_MSWSOCK_H "${PJ_HAS_WINSOCK2_MSWSOCK_H}")
   check_include_file(ws2tcpip.h PJ_HAS_WS2TCPIP_H)
 
-  target_link_libraries(pjlib PRIVATE ole32 winmm)
+  # iphlpapi for ip_helper_win32.c, mswsock for AcceptEx() in ioqueue_winnt.c
+  target_link_libraries(pjlib PRIVATE ole32 winmm iphlpapi)
+  if(PJ_HAS_MSWSOCK_H)
+    target_link_libraries(pjlib PRIVATE mswsock)
+  endif()
   if(PJ_HAS_WINSOCK2_H)
     target_link_libraries(pjlib PRIVATE ws2_32)
   elseif(PJ_HAS_WINSOCK_H)
@@ -354,7 +366,11 @@ elseif(PJLIB_WITH_SSL STREQUAL "apple")
       "${Foundation_LIBRARY}"
   )
 elseif(PJLIB_WITH_SSL STREQUAL "schannel")
-  message(FATAL_ERROR "TODO")
+  # ssl_sock_schannel.c compiles to nothing on other Windows compilers
+  if(NOT MSVC)
+    message(FATAL_ERROR "PJLIB_WITH_SSL=schannel requires MSVC")
+  endif()
+  target_link_libraries(pjlib-ssl INTERFACE secur32 crypt32 bcrypt shlwapi)
 endif()
 target_link_libraries(pjlib PRIVATE pjlib-ssl)
 
@@ -525,11 +541,32 @@ block(SCOPE_FOR VARIABLES)
   # empty expansion would turn this into an unset(), which would let that
   # stale cache entry show through again.
   set(PJ_HAS_IFADDRS_H "${PJ_HAS_GETIFADDRS}")
-  check_symbol_exists(inet_aton arpa/inet.h PJ_SOCK_HAS_INET_ATON)
-  check_symbol_exists(inet_pton arpa/inet.h PJ_SOCK_HAS_INET_PTON)
-  check_symbol_exists(inet_ntop arpa/inet.h PJ_SOCK_HAS_INET_NTOP)
-  check_symbol_exists(getaddrinfo netdb.h PJ_SOCK_HAS_GETADDRINFO)
-  check_symbol_exists(socketpair sys/socket.h PJ_SOCK_HAS_SOCKETPAIR)
+  if(WIN32)
+    # Probed against the same _WIN32_WINNT the build uses, as ws2tcpip.h
+    # declares inet_pton() and inet_ntop() only from Vista (0x0600). Under
+    # their own cache keys, for the same reason as PJ_HAS_GETIFADDRS above:
+    # the POSIX probes once failed into the PJ_SOCK_HAS_* names here.
+    include(CMakePushCheckState)
+    cmake_push_check_state()
+    set(CMAKE_REQUIRED_DEFINITIONS -D_WIN32_WINNT=${PJ_WIN32_WINNT})
+    set(CMAKE_REQUIRED_LIBRARIES ws2_32)
+    check_symbol_exists(inet_pton "winsock2.h;ws2tcpip.h"
+      PJ_WS2_HAS_INET_PTON)
+    check_symbol_exists(inet_ntop "winsock2.h;ws2tcpip.h"
+      PJ_WS2_HAS_INET_NTOP)
+    check_symbol_exists(getaddrinfo "winsock2.h;ws2tcpip.h"
+      PJ_WS2_HAS_GETADDRINFO)
+    cmake_pop_check_state()
+    set(PJ_SOCK_HAS_INET_PTON "${PJ_WS2_HAS_INET_PTON}")
+    set(PJ_SOCK_HAS_INET_NTOP "${PJ_WS2_HAS_INET_NTOP}")
+    set(PJ_SOCK_HAS_GETADDRINFO "${PJ_WS2_HAS_GETADDRINFO}")
+  else()
+    check_symbol_exists(inet_aton arpa/inet.h PJ_SOCK_HAS_INET_ATON)
+    check_symbol_exists(inet_pton arpa/inet.h PJ_SOCK_HAS_INET_PTON)
+    check_symbol_exists(inet_ntop arpa/inet.h PJ_SOCK_HAS_INET_NTOP)
+    check_symbol_exists(getaddrinfo netdb.h PJ_SOCK_HAS_GETADDRINFO)
+    check_symbol_exists(socketpair sys/socket.h PJ_SOCK_HAS_SOCKETPAIR)
+  endif()
 
   #
   # compilation checks
@@ -727,6 +764,9 @@ block(SCOPE_FOR VARIABLES)
   #
 
   # i/o queue implementation
+  if(PJLIB_WITH_IOQUEUE STREQUAL "iocp" AND NOT WIN32)
+    message(FATAL_ERROR "PJLIB_WITH_IOQUEUE=iocp requires Windows")
+  endif()
   if(NOT PJLIB_WITH_IOQUEUE STREQUAL "")
     string(TOUPPER "PJ_IOQUEUE_IMP_${PJLIB_WITH_IOQUEUE}" PJ_IOQUEUE_IMP)
   else()

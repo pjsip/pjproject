@@ -37,6 +37,11 @@ include(DetectWebRTCParameters)
 target_compile_options(webrtc PRIVATE ${WEBRTC_COMPILE_OPTIONS})
 target_compile_definitions(webrtc PRIVATE ${WEBRTC_COMPILE_DEFINITIONS})
 
+# As third_party/build/webrtc/libwebrtc.vcxproj
+if(MSVC)
+  target_compile_options(webrtc PRIVATE /wd4100 /wd4127 /wd4244)
+endif()
+
 # include SIMD source files
 if(WEBRTC_ARCH_SIMD STREQUAL "neon")
   target_sources(webrtc

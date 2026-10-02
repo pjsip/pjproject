@@ -927,6 +927,7 @@ target_link_libraries(pjmedia-audiodev
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_ALSA}>:ALSA::ALSA>
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_COREAUDIO}>:CoreAudio::CoreAudio>
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_OBOE}>:Oboe::Oboe>
+    $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_WASAPI}>:WASAPI::WASAPI>
     # TODO: add remaining APIs' dependencies
 )
 
@@ -1025,6 +1026,46 @@ target_link_libraries(pjmedia-videodev
     # transitive deps
     $<$<BOOL:${PJMEDIA_WITH_LIBYUV}>:Pj::Dep::YUV>
 )
+
+# DirectShow capture is the only user of the bundled BaseClasses, so they are
+# compiled in here rather than built and installed as a library of their own.
+if(PJMEDIA_WITH_VIDEODEV_DSHOW)
+  set(_baseclasses "${CMAKE_CURRENT_SOURCE_DIR}/../third_party/BaseClasses")
+  set(_baseclasses_sources
+    ${_baseclasses}/amfilter.cpp
+    ${_baseclasses}/amvideo.cpp
+    ${_baseclasses}/arithutil.cpp
+    ${_baseclasses}/combase.cpp
+    ${_baseclasses}/ctlutil.cpp
+    ${_baseclasses}/mtype.cpp
+    ${_baseclasses}/renbase.cpp
+    ${_baseclasses}/wxdebug.cpp
+    ${_baseclasses}/wxlist.cpp
+    ${_baseclasses}/wxutil.cpp
+  )
+  target_sources(pjmedia-videodev PRIVATE ${_baseclasses_sources})
+  target_include_directories(pjmedia-videodev
+    PRIVATE
+      $<BUILD_INTERFACE:${_baseclasses}>
+  )
+  # winmm for the multimedia timers in renbase.cpp: pjlib links it privately,
+  # which a shared pjlib does not pass on.
+  target_link_libraries(pjmedia-videodev
+    PRIVATE strmiids quartz rpcrt4 ole32 winmm)
+  # As third_party/build/baseclasses/Makefile: the BaseClasses carry MSVC-isms
+  # (e.g. calling a constructor directly) that GCC accepts only permissively.
+  if(NOT MSVC)
+    set_source_files_properties(${_baseclasses_sources}
+      TARGET_DIRECTORY pjmedia-videodev
+      PROPERTIES
+        COMPILE_OPTIONS "-fpermissive"
+        COMPILE_DEFINITIONS "__STRSAFE__NO_INLINE=1"
+    )
+    target_link_libraries(pjmedia-videodev PRIVATE oleaut32 uuid)
+  endif()
+  unset(_baseclasses_sources)
+  unset(_baseclasses)
+endif()
 
 # ##############################################################################
 #  Test application

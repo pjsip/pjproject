@@ -39,6 +39,7 @@ if (NOT PJ_SKIP_EXPERIMENTAL_NOTICE)
     " * - Linux x86_64                                   *\n"
     " * - macOS                                          *\n"
     " * - Android (arm64-v8a, armeabi-v7a, x86_64, x86)  *\n"
+    " * - Windows x64 (Visual Studio 2022)               *\n"
     " ****************************************************\n"
     "Set `PJ_SKIP_EXPERIMENTAL_NOTICE=ON` to disable this warning"
   )
@@ -430,6 +431,7 @@ _pj_collect_find_module(PJLIB_WITH_LIBUUID               UUID)
 _pj_collect_find_module(PJNATH_WITH_UPNP                 UPNP)
 _pj_collect_find_module(PJMEDIA_WITH_AUDIODEV_COREAUDIO   CoreAudio)
 _pj_collect_find_module(PJMEDIA_WITH_AUDIODEV_OBOE        Oboe)
+_pj_collect_find_module(PJMEDIA_WITH_AUDIODEV_WASAPI      WASAPI)
 _pj_collect_find_module(PJMEDIA_WITH_VIDEODEV_V4L2        V4L2)
 # PJ_OPENGL_PACKAGE is the name PjConfig.cmake.in calls find_dependency with,
 # so keying off it keeps the two from drifting apart. Only the OpenGLES module

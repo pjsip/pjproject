@@ -3,18 +3,20 @@
 
 option(SRTP_WITH_OPENSSL "Build SRTP with OpenSSL support" ON)
 if(SRTP_WITH_OPENSSL)
-  find_package(OpenSSL COMPONENTS Crypto SSL CONFIG)
+  # Same search order as pjlib, so that both link the same OpenSSL
+  find_package(OpenSSL COMPONENTS Crypto SSL MODULE)
   if(NOT OPENSSL_FOUND)
-    find_package(OpenSSL COMPONENTS Crypto SSL)
+    find_package(OpenSSL COMPONENTS Crypto SSL CONFIG)
   endif()
   if(OPENSSL_FOUND)
-    # check GCM support
+    # check GCM support. Under its own cache key: an earlier version of this
+    # probe could fail into OPENSSL_HAS_GCM, and a cached result is never
+    # probed again.
     include(CheckCSourceCompiles)
     include(CMakePushCheckState)
 
     cmake_push_check_state(RESET)
-      set(CMAKE_REQUIRED_INCLUDES "${OPENSSL_INCLUDE_DIR}")
-      set(CMAKE_REQUIRED_LIBRARIES "${OPENSSL_CRYPTO_LIBRARIES}")
+      set(CMAKE_REQUIRED_LIBRARIES OpenSSL::Crypto)
       check_c_source_compiles([=[
         #include <openssl/evp.h>
 
@@ -23,11 +25,21 @@ if(SRTP_WITH_OPENSSL)
           EVP_aes_128_gcm();
           return 0;
         }
-      ]=] OPENSSL_HAS_GCM)
+      ]=] PJ_SRTP_OPENSSL_HAS_GCM)
     cmake_pop_check_state()
+    set(OPENSSL_HAS_GCM "${PJ_SRTP_OPENSSL_HAS_GCM}")
   else()
     set(SRTP_WITH_OPENSSL OFF CACHE BOOL "OpenSSL not found" FORCE)
   endif()
+endif()
+
+# This links OpenSSL whatever pjlib's SSL backend is, so PjConfig.cmake.in has
+# to re-resolve it on its own; in the cache to be visible outside this
+# directory.
+if(SRTP_WITH_OPENSSL AND OPENSSL_HAS_GCM)
+  set(PJ_SRTP_WITH_OPENSSL ON CACHE INTERNAL "Bundled srtp links OpenSSL")
+else()
+  set(PJ_SRTP_WITH_OPENSSL OFF CACHE INTERNAL "Bundled srtp links OpenSSL")
 endif()
 
 # ##############################################################################
