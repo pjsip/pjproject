@@ -1048,6 +1048,13 @@ jobs:
         ../../build/pjlib/Release/pjlib-test.exe --ci-mode ${{ matrix.tests }}
     - name: install
       run: cmake --install build --config Release --prefix "${{ runner.temp }}/pj-install"
+    - name: check install layout
+      run: |
+        $p = "${{ runner.temp }}/pj-install"
+        foreach ($f in "lib/pjlib.lib", "lib/pkgconfig/libpjproject.pc") {
+          if (-not (Test-Path "$p/$f")) { Write-Host "::error::$f missing"; exit 1 }
+        }
+        if (Test-Path "$p/bin/pjlib.lib") { Write-Host "::error::library in bin/"; exit 1 }
     - name: test find_package
       run: |
         $PSNativeCommandUseErrorActionPreference = $true

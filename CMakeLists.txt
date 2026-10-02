@@ -35,11 +35,14 @@ if (NOT PJ_SKIP_EXPERIMENTAL_NOTICE)
     " ****************************************************\n"
     " * Building `pjproject` with CMake is experimental  *\n"
     " *--------------------------------------------------*\n"
-    " * Tested platforms:                                *\n"
+    " * Tested in CI:                                    *\n"
     " * - Linux x86_64                                   *\n"
     " * - macOS                                          *\n"
     " * - Android (arm64-v8a, armeabi-v7a, x86_64, x86)  *\n"
     " * - Windows x64 (Visual Studio 2022)               *\n"
+    " * Verified manually:                               *\n"
+    " * - iOS (device, simulator)                        *\n"
+    " * - Windows x64 (MinGW-w64)                        *\n"
     " ****************************************************\n"
     "Set `PJ_SKIP_EXPERIMENTAL_NOTICE=ON` to disable this warning"
   )
@@ -82,6 +85,10 @@ endif()
 
 # ##############################################################################
 # Sub-directories
+
+# The dependencies' imported targets have to be visible from this directory,
+# for the pkg-config file to be generated from them.
+set(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL ON)
 
 # base library
 add_subdirectory(pjlib)
@@ -320,7 +327,7 @@ install(
     COMPONENT PjRuntime
     NAMELINK_COMPONENT PjDevelopment
   ARCHIVE
-    DESTINATION  "${CMAKE_INSTALL_BINDIR}"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     COMPONENT PjDevelopment
 )
 
@@ -480,19 +487,21 @@ install(FILES
 # ##############################################################################
 # pkg-config file
 
-set(PREFIX "${CMAKE_INSTALL_PREFIX}") # this should be done at install time
-set(LIBDIR "${PREFIX}/${CMAKE_INSTALL_LIBDIR}")
-set(INCLUDEDIR "${PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}")
-set(PJ_VERSION "${PROJECT_VERSION}")
-set(PJ_INSTALL_LDFLAGS "")
-set(PJ_INSTALL_LDFLAGS "")
-
-configure_file(
+include(Pj/PkgConfig)
+# In link order
+set(_pj_pc_libs
+  pjsua2 pjsua-lib pjsip-ua pjsip-simple pjsip
+  pjmedia-codec pjmedia-videodev pjmedia-audiodev pjmedia
+  pjnath pjlib-util pjlib
+)
+foreach(_lib IN LISTS _pj_pc_libs)
+  if(NOT _lib IN_LIST install_targets)
+    list(REMOVE_ITEM _pj_pc_libs ${_lib})
+  endif()
+endforeach()
+pj_generate_pkgconfig(
   "${CMAKE_CURRENT_SOURCE_DIR}/libpjproject.pc.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/libpjproject.pc"
+  "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
+  ${_pj_pc_libs}
 )
-
-install(
-  FILES "${CMAKE_CURRENT_BINARY_DIR}/libpjproject.pc"
-  DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
-)
+unset(_pj_pc_libs)
