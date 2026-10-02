@@ -4780,8 +4780,9 @@ typedef struct pjsua_acc_config
     /**
      * Specify if source TCP port should be used as the initial Contact
      * address if TCP/TLS transport is used. Note that this feature will
-     * be automatically turned off when nameserver is configured because
-     * it may yield different destination address due to DNS SRV resolution.
+     * be automatically turned off when a DNS resolver or an external
+     * resolver is set, because they may yield a different destination
+     * address due to DNS SRV resolution.
      * Also some platforms are unable to report the local address of the
      * TCP socket when it is still connecting. In these cases, this
      * feature will also be turned off.

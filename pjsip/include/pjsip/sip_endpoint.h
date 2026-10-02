@@ -424,6 +424,18 @@ PJ_DECL(pj_status_t) pjsip_endpt_set_ext_resolver(pjsip_endpoint *endpt,
 PJ_DECL(pj_dns_resolver*) pjsip_endpt_get_resolver(pjsip_endpoint *endpt);
 
 /**
+ * Get the external resolver implementation set with
+ * #pjsip_endpt_set_ext_resolver().
+ *
+ * @param endpt         The SIP endpoint instance.
+ *
+ * @return              The external resolver implementation, or NULL when
+ *                      none is set.
+ */
+PJ_DECL(pjsip_ext_resolver*) pjsip_endpt_get_ext_resolver(
+                                                pjsip_endpoint *endpt);
+
+/**
  * Mark a server address as failed for the specified duration, or clear the
  * mark. Please see #pjsip_resolver_set_server_failed() for more info.
  *

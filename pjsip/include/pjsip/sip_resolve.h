@@ -309,6 +309,16 @@ PJ_DECL(pj_status_t) pjsip_resolver_set_ext_resolver(
 PJ_DECL(pj_dns_resolver*) pjsip_resolver_get_resolver(pjsip_resolver_t *res);
 
 /**
+ * Get the external resolver implementation of the SIP resolver engine.
+ *
+ * @param res       The SIP resolver engine.
+ *
+ * @return          The external resolver implementation (may be NULL)
+ */
+PJ_DECL(pjsip_ext_resolver*) pjsip_resolver_get_ext_resolver(
+                                                pjsip_resolver_t *res);
+
+/**
  * Mark a server address as failed for the specified duration, or clear the
  * mark. The mark applies to the IP address and port, whatever the transport
  * type. While marked, and while pjsip_cfg()->endpt.server_failover is
