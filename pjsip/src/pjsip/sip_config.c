@@ -41,7 +41,8 @@ pjsip_cfg_t pjsip_sip_cfg_var =
        PJSIP_ACCEPT_MULTIPLE_SDP_ANSWERS,
        0,
        PJSIP_SERVER_FAILOVER,
-       PJSIP_FAILED_SERVER_TIMEOUT
+       PJSIP_FAILED_SERVER_TIMEOUT,
+       PJSIP_RESOLVER_FALLBACK
     },
 
     /* Transaction settings */

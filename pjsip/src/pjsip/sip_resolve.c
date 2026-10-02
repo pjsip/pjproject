@@ -507,6 +507,149 @@ static pj_bool_t is_ipv4_mapped(const pj_in6_addr *a)
 }
 
 
+/* Resolve without a DNS resolver: the IP address itself, or the addresses
+ * of the name from the system resolver, on the port of the target or the
+ * default one of the transport type.
+ */
+static void resolve_with_getaddrinfo(pjsip_resolver_t *resolver,
+                                     const pjsip_host_info *target,
+                                     pjsip_transport_type_e type,
+                                     int af, int ip_addr_ver,
+                                     void *token, pjsip_resolver_callback *cb)
+{
+    pjsip_server_addresses svr_addr;
+    pj_status_t status = PJ_SUCCESS;
+    char addr_str[PJ_INET6_ADDRSTRLEN+10];
+    pj_uint16_t srv_port;
+    unsigned i;
+
+    if (ip_addr_ver != 0) {
+        /* Target is an IP address, no need to resolve */
+        svr_addr.count = 1;
+        if (ip_addr_ver == 4) {
+            if (af == pj_AF_INET6()) {
+                /* Generate a synthesized IPv6 address, if possible. */
+                unsigned int count = 1;
+                pj_addrinfo ai[1];
+                pj_status_t status2;
+
+                status2 = pj_getaddrinfo(pj_AF_INET6(),
+                                        &target->addr.host, &count, ai);
+                /* A v4-mapped result means no NAT64 synthesis
+                 * occurred; use plain IPv4 instead.
+                 */
+                if (status2 == PJ_SUCCESS && count > 0 &&
+                    ai[0].ai_addr.addr.sa_family == pj_AF_INET6() &&
+                    !is_ipv4_mapped(&ai[0].ai_addr.ipv6.sin6_addr))
+                {
+                    pj_sockaddr_init(pj_AF_INET6(),
+                                     &svr_addr.entry[0].addr,
+                                     NULL, 0);
+                    svr_addr.entry[0].addr.ipv6.sin6_addr =
+                        ai[0].ai_addr.ipv6.sin6_addr;
+                } else {
+                    pj_sockaddr_init(pj_AF_INET(),
+                                     &svr_addr.entry[0].addr, NULL, 0);
+                    pj_inet_pton(pj_AF_INET(), &target->addr.host,
+                                 &svr_addr.entry[0].addr.ipv4.sin_addr);
+                }
+            } else {
+                pj_sockaddr_init(pj_AF_INET(), &svr_addr.entry[0].addr,
+                                 NULL, 0);
+                pj_inet_pton(pj_AF_INET(), &target->addr.host,
+                             &svr_addr.entry[0].addr.ipv4.sin_addr);
+            }
+        } else {
+            pj_sockaddr_init(pj_AF_INET6(), &svr_addr.entry[0].addr,
+                             NULL, 0);
+            pj_inet_pton(pj_AF_INET6(), &target->addr.host,
+                         &svr_addr.entry[0].addr.ipv6.sin6_addr);
+        }
+    } else {
+        pj_addrinfo ai[PJSIP_MAX_RESOLVED_ADDRESSES];
+        unsigned count;
+
+        PJ_LOG(5,(THIS_FILE,
+                  "DNS resolver not available, target '%.*s:%d' type=%s "
+                  "will be resolved with getaddrinfo()",
+                  (int)target->addr.host.slen,
+                  target->addr.host.ptr,
+                  target->addr.port,
+                  pjsip_transport_get_type_name(target->type)));
+
+        /* Resolve */
+        count = PJSIP_MAX_RESOLVED_ADDRESSES;
+        status = pj_getaddrinfo(af, &target->addr.host, &count, ai);
+        if (status != PJ_SUCCESS) {
+            /* "Normalize" error to PJ_ERESOLVE. This is a special error
+             * because it will be translated to SIP status 502 by
+             * sip_transaction.c
+             */
+            status = PJ_ERESOLVE;
+            PJ_PERROR(4,(THIS_FILE, status, "Failed to resolve '%.*s'",
+                         (int)target->addr.host.slen,
+                         target->addr.host.ptr));
+            (*cb)(status, token, NULL);
+            return;
+        }
+
+        svr_addr.count = count;
+        for (i = 0; i < count; i++) {
+            pj_sockaddr_cp(&svr_addr.entry[i].addr, &ai[i].ai_addr);
+        }
+    }
+
+    for (i = 0; i < svr_addr.count; i++) {
+        /* After address resolution, update IPv6 bitflag in
+         * transport type.
+         */
+        af = svr_addr.entry[i].addr.addr.sa_family;
+        if (af == pj_AF_INET6()) {
+            type |= PJSIP_TRANSPORT_IPV6;
+        } else {
+            type &= ~PJSIP_TRANSPORT_IPV6;
+        }
+
+        /* Set the port number */
+        if (target->addr.port == 0) {
+           srv_port = (pj_uint16_t)
+                      pjsip_transport_get_default_port_for_type(type);
+        } else {
+           srv_port = (pj_uint16_t)target->addr.port;
+        }
+        pj_sockaddr_set_port(&svr_addr.entry[i].addr, srv_port);
+
+        PJ_LOG(5,(THIS_FILE,
+                  "Target '%.*s:%d' type=%s resolved to "
+                  "'%s' type=%s (%s)",
+                  (int)target->addr.host.slen,
+                  target->addr.host.ptr,
+                  target->addr.port,
+                  pjsip_transport_get_type_name(target->type),
+                  pj_sockaddr_print(&svr_addr.entry[i].addr, addr_str,
+                                    sizeof(addr_str), 3),
+                  pjsip_transport_get_type_name(type),
+                  pjsip_transport_get_type_desc(type)));
+
+        svr_addr.entry[i].name = target->addr.host;
+        svr_addr.entry[i].priority = 0;
+        svr_addr.entry[i].weight = 0;
+        svr_addr.entry[i].type = type;
+        svr_addr.entry[i].addr_len =
+                            pj_sockaddr_get_len(&svr_addr.entry[i].addr);
+    }
+
+    if (status == PJ_SUCCESS)
+        demote_failed_servers(resolver, &svr_addr);
+
+    /* Call the callback. */
+    (*cb)(status, token, &svr_addr);
+
+    /* Done. */
+    return;
+}
+
+
 /*
  * This is the main function for performing server resolution.
  */
@@ -516,7 +659,6 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
                             void *token,
                             pjsip_resolver_callback *cb)
 {
-    pjsip_server_addresses svr_addr;
     pj_status_t status = PJ_SUCCESS;
     int ip_addr_ver;
     struct query *query;
@@ -590,133 +732,12 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
     }
 
 
-    /* If target is an IP address, or if resolver is not configured, 
-     * we can just finish the resolution now using pj_gethostbyname()
+    /* If target is an IP address, or if resolver is not configured,
+     * we can just finish the resolution now with the system resolver.
      */
     if (ip_addr_ver || dns_res == NULL) {
-        char addr_str[PJ_INET6_ADDRSTRLEN+10];
-        pj_uint16_t srv_port;
-        unsigned i;
-
-        if (ip_addr_ver != 0) {
-            /* Target is an IP address, no need to resolve */
-            svr_addr.count = 1;
-            if (ip_addr_ver == 4) {
-                if (af == pj_AF_INET6()) {
-                    /* Generate a synthesized IPv6 address, if possible. */
-                    unsigned int count = 1;
-                    pj_addrinfo ai[1];
-                    pj_status_t status2;
-
-                    status2 = pj_getaddrinfo(pj_AF_INET6(),
-                                            &target->addr.host, &count, ai);
-                    /* A v4-mapped result means no NAT64 synthesis
-                     * occurred; use plain IPv4 instead.
-                     */
-                    if (status2 == PJ_SUCCESS && count > 0 &&
-                        ai[0].ai_addr.addr.sa_family == pj_AF_INET6() &&
-                        !is_ipv4_mapped(&ai[0].ai_addr.ipv6.sin6_addr))
-                    {
-                        pj_sockaddr_init(pj_AF_INET6(),
-                                         &svr_addr.entry[0].addr,
-                                         NULL, 0);
-                        svr_addr.entry[0].addr.ipv6.sin6_addr =
-                            ai[0].ai_addr.ipv6.sin6_addr;
-                    } else {
-                        pj_sockaddr_init(pj_AF_INET(),
-                                         &svr_addr.entry[0].addr, NULL, 0);
-                        pj_inet_pton(pj_AF_INET(), &target->addr.host,
-                                     &svr_addr.entry[0].addr.ipv4.sin_addr);
-                    }
-                } else {
-                    pj_sockaddr_init(pj_AF_INET(), &svr_addr.entry[0].addr, 
-                                     NULL, 0);
-                    pj_inet_pton(pj_AF_INET(), &target->addr.host,
-                                 &svr_addr.entry[0].addr.ipv4.sin_addr);
-                }
-            } else {
-                pj_sockaddr_init(pj_AF_INET6(), &svr_addr.entry[0].addr, 
-                                 NULL, 0);
-                pj_inet_pton(pj_AF_INET6(), &target->addr.host,
-                             &svr_addr.entry[0].addr.ipv6.sin6_addr);
-            }
-        } else {
-            pj_addrinfo ai[PJSIP_MAX_RESOLVED_ADDRESSES];
-            unsigned count;
-
-            PJ_LOG(5,(THIS_FILE,
-                      "DNS resolver not available, target '%.*s:%d' type=%s "
-                      "will be resolved with getaddrinfo()",
-                      (int)target->addr.host.slen,
-                      target->addr.host.ptr,
-                      target->addr.port,
-                      pjsip_transport_get_type_name(target->type)));
-
-            /* Resolve */
-            count = PJSIP_MAX_RESOLVED_ADDRESSES;
-            status = pj_getaddrinfo(af, &target->addr.host, &count, ai);
-            if (status != PJ_SUCCESS) {
-                /* "Normalize" error to PJ_ERESOLVE. This is a special error
-                 * because it will be translated to SIP status 502 by
-                 * sip_transaction.c
-                 */
-                status = PJ_ERESOLVE;
-                goto on_error;
-            }
-
-            svr_addr.count = count;
-            for (i = 0; i < count; i++) {
-                pj_sockaddr_cp(&svr_addr.entry[i].addr, &ai[i].ai_addr);
-            }
-        }
-
-        for (i = 0; i < svr_addr.count; i++) {
-            /* After address resolution, update IPv6 bitflag in
-             * transport type.
-             */
-            af = svr_addr.entry[i].addr.addr.sa_family;
-            if (af == pj_AF_INET6()) {
-                type |= PJSIP_TRANSPORT_IPV6;
-            } else {
-                type &= ~PJSIP_TRANSPORT_IPV6;
-            }
-
-            /* Set the port number */
-            if (target->addr.port == 0) {
-               srv_port = (pj_uint16_t)
-                          pjsip_transport_get_default_port_for_type(type);
-            } else {
-               srv_port = (pj_uint16_t)target->addr.port;
-            }
-            pj_sockaddr_set_port(&svr_addr.entry[i].addr, srv_port);
-
-            PJ_LOG(5,(THIS_FILE, 
-                      "Target '%.*s:%d' type=%s resolved to "
-                      "'%s' type=%s (%s)",
-                      (int)target->addr.host.slen,
-                      target->addr.host.ptr,
-                      target->addr.port,
-                      pjsip_transport_get_type_name(target->type),
-                      pj_sockaddr_print(&svr_addr.entry[i].addr, addr_str,
-                                        sizeof(addr_str), 3),
-                      pjsip_transport_get_type_name(type),
-                      pjsip_transport_get_type_desc(type)));
-
-            svr_addr.entry[i].name = target->addr.host;
-            svr_addr.entry[i].priority = 0;
-            svr_addr.entry[i].weight = 0;
-            svr_addr.entry[i].type = type;
-            svr_addr.entry[i].addr_len = 
-                                pj_sockaddr_get_len(&svr_addr.entry[i].addr);
-        }
-
-        if (status == PJ_SUCCESS)
-            demote_failed_servers(resolver, &svr_addr);
-
-        /* Call the callback. */
-        (*cb)(status, token, &svr_addr);
-
-        /* Done. */
+        resolve_with_getaddrinfo(resolver, target, type, af, ip_addr_ver,
+                                 token, cb);
         return;
     }
 
@@ -873,6 +894,20 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
      * in another thread.
      */
     report = can_report_result(query);
+
+    /* Nothing was started and nothing is pending because the DNS resolver
+     * has no working nameserver: the system resolver may answer instead.
+     */
+    if (report && status == PJLIB_UTIL_EDNSNOWORKINGNS &&
+        query->server.count == 0 && pjsip_cfg()->endpt.resolver_fallback)
+    {
+        pj_grp_lock_release(query->grp_lock);
+        PJ_LOG(4,(THIS_FILE, "No working nameserver, resolving '%.*s' with "
+                  "the system resolver",
+                  (int)target->addr.host.slen, target->addr.host.ptr));
+        resolve_with_getaddrinfo(resolver, target, type, af, 0, token, cb);
+        return;
+    }
 
     if (!report && status != PJ_SUCCESS) {
         /* Note that this must be logged before releasing the group lock: the
