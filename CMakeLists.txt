@@ -83,6 +83,10 @@ endif()
 # ##############################################################################
 # Sub-directories
 
+# The dependencies' imported targets have to be visible from this directory,
+# for the pkg-config file to be generated from them.
+set(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL ON)
+
 # base library
 add_subdirectory(pjlib)
 
@@ -320,7 +324,7 @@ install(
     COMPONENT PjRuntime
     NAMELINK_COMPONENT PjDevelopment
   ARCHIVE
-    DESTINATION  "${CMAKE_INSTALL_BINDIR}"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     COMPONENT PjDevelopment
 )
 
@@ -480,19 +484,21 @@ install(FILES
 # ##############################################################################
 # pkg-config file
 
-set(PREFIX "${CMAKE_INSTALL_PREFIX}") # this should be done at install time
-set(LIBDIR "${PREFIX}/${CMAKE_INSTALL_LIBDIR}")
-set(INCLUDEDIR "${PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}")
-set(PJ_VERSION "${PROJECT_VERSION}")
-set(PJ_INSTALL_LDFLAGS "")
-set(PJ_INSTALL_LDFLAGS "")
-
-configure_file(
+include(Pj/PkgConfig)
+# In link order
+set(_pj_pc_libs
+  pjsua2 pjsua-lib pjsip-ua pjsip-simple pjsip
+  pjmedia-codec pjmedia-videodev pjmedia-audiodev pjmedia
+  pjnath pjlib-util pjlib
+)
+foreach(_lib IN LISTS _pj_pc_libs)
+  if(NOT _lib IN_LIST install_targets)
+    list(REMOVE_ITEM _pj_pc_libs ${_lib})
+  endif()
+endforeach()
+pj_generate_pkgconfig(
   "${CMAKE_CURRENT_SOURCE_DIR}/libpjproject.pc.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/libpjproject.pc"
+  "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
+  ${_pj_pc_libs}
 )
-
-install(
-  FILES "${CMAKE_CURRENT_BINARY_DIR}/libpjproject.pc"
-  DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
-)
+unset(_pj_pc_libs)
