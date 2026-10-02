@@ -8254,10 +8254,9 @@ struct pjsua_media_config
      * Total number of threads that can be used by the conference bridge
      * including get_frame() thread.
      * 
-     * This value is used to determine if the conference bridge should be
-     * implemented as a parallel bridge or not.
-     * If the value is set to 0 or 1, the conference bridge will be implemented as a
-     * serial bridge, otherwise it will be implemented as a parallel bridge.
+     * If the value is set to 0 or 1, the conference bridge processes the
+     * ports sequentially in the get_frame() thread, otherwise it processes
+     * them in parallel using additional worker threads.
      * 
      * This value is ignored by all conference backends except for the 
      * multithreaded conference bridge backend
@@ -8272,13 +8271,14 @@ struct pjsua_media_config
      * pjmedia_conf_param::worker_thread_prio for more info. The valid value
      * range is platform dependent, see #pj_thread_get_prio_min() and
      * #pj_thread_get_prio_max(), while zero means the worker threads will
-     * use the priority assigned by the OS.
+     * use the priority assigned by the OS, and #PJMEDIA_CONF_THREAD_PRIO_MAX
+     * the highest priority.
      *
      * This value is ignored by all conference backends except for the
      * multithreaded conference bridge backend
      * (PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND).
      *
-     * Default value: 0
+     * Default value: PJMEDIA_CONF_THREAD_PRIO_MAX
      */
     int                 conf_thread_prio;
 

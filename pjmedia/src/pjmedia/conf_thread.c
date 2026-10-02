@@ -3973,21 +3973,28 @@ static int conf_thread(void *arg)
     }
 
     if (conf->running) {
+        int prio = conf->thread_prio;
 
         /* The get_frame() thread waits for the worker threads to finish
          * mixing, so leaving the workers at a lower priority will delay the
          * audio frame. Raise it only here: the startup loop above is a busy
          * wait, and at a real time priority the workers could otherwise
          * starve the thread that is still creating the pool.
+         * As in the media clock thread, skip the highest priority when it
+         * is not usable, e.g: on Linux without privilege.
          */
-        if (conf->thread_prio) {
-            pj_status_t status = pj_thread_set_prio(this_thread,
-                                                    conf->thread_prio);
+        if (prio == PJMEDIA_CONF_THREAD_PRIO_MAX) {
+            prio = pj_thread_get_prio_max(this_thread);
+            if (prio <= 0)
+                prio = 0;
+        }
+
+        if (prio) {
+            pj_status_t status = pj_thread_set_prio(this_thread, prio);
             if (status != PJ_SUCCESS) {
                 PJ_PERROR(3, (THIS_FILE, status,
                               "%s: unable to set thread priority to %d",
-                              pj_thread_get_name(this_thread),
-                              conf->thread_prio));
+                              pj_thread_get_name(this_thread), prio));
             }
         }
 

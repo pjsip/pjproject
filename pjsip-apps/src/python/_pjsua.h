@@ -562,11 +562,11 @@ static PyMemberDef PyObj_pjsua_media_config_members[] =
         offsetof(PyObj_pjsua_media_config, conf_threads), 0,
         "Total number of threads that can be used by the conference bridge "
         "including get_frame() thread. "
-        "This value is used to determine if the conference bridge should be "
-        "implemented as a parallel bridge or not. "
-        "If this value is set to 1, the conference bridge will be implemented "
-        "as a serial bridge, otherwise it will be implemented as a parallel "
-        "bridge. Should not be less than 1."
+        "If this value is set to 1, the conference bridge processes the "
+        "ports sequentially in the get_frame() thread, otherwise it processes "
+        "them in parallel using additional worker threads. "
+        "This value is only used by the multithreaded conference bridge "
+        "backend. Should not be less than 1."
     },
     {
         "has_ioqueue", T_INT, 
