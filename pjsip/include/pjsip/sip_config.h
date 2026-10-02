@@ -194,7 +194,8 @@ typedef struct pjsip_cfg_t
          * Also send a request that gets no answer or a 503 again to the next
          * address, see #pjsip_endpt_send_request(). An application that
          * sends such requests to another server by itself should keep this
-         * disabled. PJSUA sets this from pjsua_config.server_failover.
+         * disabled. PJSUA applies pjsua_config.server_failover to this when
+         * that differs from the default.
          *
          * Default is PJSIP_SERVER_FAILOVER.
          */

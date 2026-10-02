@@ -715,6 +715,20 @@ PJ_DECL(void) pjsip_endpt_log_error( pjsip_endpoint *endpt,
  */
 void pjsip_endpt_stop_handle_events(pjsip_endpoint *endpt);
 
+/**
+ * Internal API for the stateful send, see
+ * #pjsip_resolver_failed_servers_gen().
+ */
+unsigned pjsip_endpt_failed_servers_gen(pjsip_endpoint *endpt);
+
+/**
+ * Internal API for the stateful send, see
+ * #pjsip_resolver_set_server_failed_gen().
+ */
+pj_status_t pjsip_endpt_set_server_failed_gen(pjsip_endpoint *endpt,
+                                              const pj_sockaddr_t *addr,
+                                              unsigned duration, unsigned gen);
+
 PJ_END_DECL
 
 #endif  /* __PJSIP_SIP_ENDPOINT_H__ */

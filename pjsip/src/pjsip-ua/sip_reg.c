@@ -121,11 +121,6 @@ struct pjsip_regc
      * purpose: we don't keep that transport.
      */
     pjsip_tx_data               *pending_tdata;
-
-    /* The transport released with pjsip_regc_release_transport() while the
-     * transaction was pending, not to be reported again.
-     */
-    const pjsip_transport       *released_tp;
 };
 
 
@@ -253,12 +248,8 @@ PJ_DEF(pj_status_t) pjsip_regc_get_info( pjsip_regc *regc,
     if (!regc->has_tsx) {
         info->transport = regc->last_transport;
     } else if (regc->pending_tdata) {
-        pjsip_transport *tp;
-
-        tp = pjsip_endpt_get_request_transport(regc->endpt,
-                                               regc->pending_tdata);
-        if (tp != regc->released_tp)
-            info->transport = tp;
+        info->transport = pjsip_endpt_get_request_transport(
+                                        regc->endpt, regc->pending_tdata);
     }
     
     if (regc->has_tsx)
@@ -548,8 +539,7 @@ PJ_DEF(pj_status_t) pjsip_regc_release_transport(pjsip_regc *regc)
         regc->last_transport = NULL;
     }
     if (regc->pending_tdata) {
-        regc->released_tp =
-            pjsip_endpt_get_request_transport(regc->endpt,
+        pjsip_endpt_release_request_transport(regc->endpt,
                                               regc->pending_tdata);
     }
     pj_lock_release(regc->lock);
@@ -1688,7 +1678,6 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
      */
     pjsip_tx_data_add_ref(tdata);
     regc->pending_tdata = tdata;
-    regc->released_tp = NULL;
 
     /* If via_addr is set, use this address for the Via header. */
     if (regc->via_addr.host.slen > 0) {

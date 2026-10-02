@@ -1288,16 +1288,15 @@ static int regc_transport_case(pj_bool_t srv2_closed)
     const pjsip_transport *seen[8];
     unsigned seen_cnt = 0, waited, i, dropped_at = 0;
     unsigned first_port = 0, last_port = 0, td;
-    pj_bool_t released = PJ_FALSE;
+    pj_bool_t released = PJ_FALSE, shown_again = PJ_FALSE;
     pj_status_t status;
     int rc = 0;
 
-    /* With srv2 closed, srv3 answers 100 only, so that the request stays
-     * on its transport for a while.
+    /* srv3 answers 100 only, so that the request stays on its transport
+     * for a while, to be seen there.
      */
     for (i = 0; i < SRV_CNT; ++i) {
-        status = set_mode(&g.srv[i], i == 2 ? (srv2_closed ? MODE_TRYING :
-                                                             MODE_OK) :
+        status = set_mode(&g.srv[i], i == 2 ? MODE_TRYING :
                                      i == 1 && srv2_closed ? MODE_CLOSED :
                                      MODE_SILENT);
         if (status != PJ_SUCCESS)
@@ -1332,8 +1331,8 @@ static int regc_transport_case(pj_bool_t srv2_closed)
      * report, then the transport of the second attempt is released. With
      * srv2 closed, the second attempt moves on to srv3 by itself.
      */
-    /* Two timeouts, the second one after the refusal, and the answer */
-    for (waited = 0; !reg_result.done && waited < 2 * td + 3000;
+    /* Three timeouts, or two and a refusal, then srv3's timeout */
+    for (waited = 0; !reg_result.done && waited < 3 * td + 3000;
          waited += 50)
     {
         pjsip_regc_get_info(regc, &info);
@@ -1342,6 +1341,8 @@ static int regc_transport_case(pj_bool_t srv2_closed)
             last_port = pj_sockaddr_get_port(&info.transport->key.rem_addr);
             if (!first_port)
                 first_port = last_port;
+            if (released)
+                shown_again = PJ_TRUE;
         }
         flush_events(50);
         pjsip_regc_get_info(regc, &info);
@@ -1366,7 +1367,7 @@ static int regc_transport_case(pj_bool_t srv2_closed)
               srv2_closed ? "TCP, REGISTER, srv1 never answers, srv2 closed" :
               "TCP, REGISTER, srv1 and srv2 never answer, srv1 closes",
               reg_result.done ? reg_result.code : -1, seen_cnt));
-    if (!reg_result.done || reg_result.code != (srv2_closed ? 408 : 200))
+    if (!reg_result.done || reg_result.code != 408)
         rc = -3123;
     else if (srv2_closed) {
         /* Reported on srv1 first, and on srv3 while it waits there */
@@ -1392,6 +1393,9 @@ static int regc_transport_case(pj_bool_t srv2_closed)
         /* The report changed by itself when srv1 closed the connection */
         PJ_LOG(1,(THIS_FILE, "    error: the transport was not released"));
         rc = -3127;
+    } else if (!shown_again) {
+        PJ_LOG(1,(THIS_FILE, "    error: not reported again on srv3"));
+        rc = -3129;
     }
 
     for (waited = 0; pj_atomic_get(tdata->ref_cnt) > 1 && waited < 3000;
@@ -1575,6 +1579,7 @@ static int failed_server_api_test(void)
 {
     pj_str_t lo = pj_str("127.0.0.1");
     pj_sockaddr addr;
+    unsigned gen;
     int rc;
 
     PJ_LOG(3,(THIS_FILE, "  failed server API"));
@@ -1592,22 +1597,148 @@ static int failed_server_api_test(void)
                  return -3082);
     pj_sockaddr_set_port(&addr, g.srv[0].udp_port);
     if ((rc = check_srv1_order(PJ_FALSE, PJ_TRUE)) != 0)
-        return rc - 10;
+        return rc - 330;
 
     PJ_TEST_SUCCESS(pjsip_endpt_set_server_failed(endpt, &addr, 0),
                     NULL, return -3083);
     PJ_TEST_TRUE(!pjsip_endpt_is_server_failed(endpt, &addr), NULL,
                  return -3084);
     if ((rc = check_srv1_order(PJ_FALSE, PJ_FALSE)) != 0)
-        return rc - 20;
+        return rc - 340;
 
     pjsip_endpt_set_server_failed(endpt, &addr, 60);
     PJ_TEST_SUCCESS(pjsip_endpt_clear_failed_servers(endpt), NULL,
                     return -3085);
     PJ_TEST_TRUE(!pjsip_endpt_is_server_failed(endpt, &addr), NULL,
                  return -3086);
+    if ((rc = check_srv1_order(PJ_FALSE, PJ_FALSE)) != 0)
+        return rc - 300;
+
+    /* A mark from before the servers were cleared is ignored */
+    gen = pjsip_endpt_failed_servers_gen(endpt);
+    PJ_TEST_EQ(pjsip_endpt_set_server_failed_gen(endpt, &addr, 60, gen - 1),
+               PJ_EIGNORED, NULL, return -3087);
+    PJ_TEST_TRUE(!pjsip_endpt_is_server_failed(endpt, &addr), NULL,
+                 return -3088);
+    PJ_TEST_SUCCESS(pjsip_endpt_set_server_failed_gen(endpt, &addr, 60, gen),
+                    NULL, return -3089);
+    PJ_TEST_TRUE(pjsip_endpt_is_server_failed(endpt, &addr), NULL,
+                 return -3090);
+
+    /* The mark has no effect on the order while the option is off */
+    pjsip_cfg()->endpt.server_failover = PJ_FALSE;
     rc = check_srv1_order(PJ_FALSE, PJ_FALSE);
-    return rc ? rc - 30 : 0;
+    pjsip_cfg()->endpt.server_failover = PJ_TRUE;
+    if (rc)
+        return rc - 310;
+    rc = check_srv1_order(PJ_FALSE, PJ_TRUE);
+    pjsip_endpt_set_server_failed(endpt, &addr, 0);
+    return rc ? rc - 320 : 0;
+}
+
+/* An external resolver that lists the servers in their order, or fails */
+static pj_bool_t ext_resolver_fails;
+
+static void ext_resolve(pjsip_resolver_t *resolver, pj_pool_t *pool,
+                        const pjsip_host_info *target, void *token,
+                        pjsip_resolver_callback *cb)
+{
+    pjsip_server_addresses addr;
+    pj_str_t lo = pj_str("127.0.0.1");
+    unsigned i;
+
+    PJ_UNUSED_ARG(resolver);
+    PJ_UNUSED_ARG(pool);
+
+    if (ext_resolver_fails) {
+        (*cb)(PJ_ERESOLVE, token, NULL);
+        return;
+    }
+    pj_bzero(&addr, sizeof(addr));
+    addr.count = SRV_CNT;
+    for (i = 0; i < SRV_CNT; ++i) {
+        pjsip_server_address_record *e = &addr.entry[i];
+        e->name = lo;
+        e->type = target->type;
+        e->priority = i;
+        pj_sockaddr_init(pj_AF_INET(), &e->addr, &lo, g.srv[i].udp_port);
+        e->addr_len = pj_sockaddr_get_len(&e->addr);
+    }
+    (*cb)(PJ_SUCCESS, token, &addr);
+}
+
+/* The endpoint's DNS resolver with the records of the test */
+static int create_dns_resolver(void)
+{
+    pj_str_t ns = pj_str("127.0.0.1");
+    pj_uint16_t dns_port = 9;
+
+    PJ_TEST_SUCCESS(pjsip_endpt_create_resolver(endpt, &g.resolver), NULL,
+                    return -3006);
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(g.resolver, 1, &ns, &dns_port),
+                    NULL, return -3007);
+    PJ_TEST_SUCCESS(add_dns_records(), NULL, return -3004);
+    PJ_TEST_SUCCESS(pjsip_endpt_set_resolver(endpt, g.resolver), NULL,
+                    return -3008);
+    return 0;
+}
+
+/* The failed servers are listed last from an external resolver too */
+static int ext_resolver_test(void)
+{
+    static pjsip_ext_resolver ext = { &ext_resolve };
+    pj_str_t lo = pj_str("127.0.0.1");
+    pj_sockaddr addr;
+    pjsip_host_info target;
+    unsigned waited;
+    int rc, status;
+
+    PJ_LOG(3,(THIS_FILE, "  external resolver"));
+
+    forget_failed_servers(0);
+    pj_sockaddr_init(pj_AF_INET(), &addr, &lo, g.srv[0].udp_port);
+    PJ_TEST_SUCCESS(pjsip_endpt_set_ext_resolver(endpt, &ext), NULL,
+                    return -3160);
+
+    rc = check_srv1_order(PJ_FALSE, PJ_FALSE);
+    if (rc == 0) {
+        pjsip_endpt_set_server_failed(endpt, &addr, 60);
+        rc = check_srv1_order(PJ_FALSE, PJ_TRUE);
+        if (rc)
+            rc -= 100;
+    }
+    if (rc == 0) {
+        /* The order of the external resolver is kept while the option
+         * is off
+         */
+        pjsip_cfg()->endpt.server_failover = PJ_FALSE;
+        rc = check_srv1_order(PJ_FALSE, PJ_FALSE);
+        pjsip_cfg()->endpt.server_failover = PJ_TRUE;
+        if (rc)
+            rc -= 200;
+    }
+    if (rc == 0) {
+        /* A failure is reported as it is */
+        pj_bzero(&target, sizeof(target));
+        target.type = PJSIP_TRANSPORT_UDP;
+        target.flag = pjsip_transport_get_flag_from_type(target.type);
+        target.addr.host = pj_str(TEST_DOMAIN);
+        ext_resolver_fails = PJ_TRUE;
+        pj_bzero(&resolved, sizeof(resolved));
+        pjsip_endpt_resolve(endpt, g.pool, &target, NULL, &resolve_cb);
+        for (waited = 0; !resolved.done && waited < 2000; waited += 50)
+            flush_events(50);
+        ext_resolver_fails = PJ_FALSE;
+        if (!resolved.done || resolved.status != PJ_ERESOLVE)
+            rc = -3161;
+    }
+
+    pjsip_endpt_set_server_failed(endpt, &addr, 0);
+    pjsip_endpt_set_ext_resolver(endpt, NULL);
+    /* Setting the external resolver destroyed the DNS resolver */
+    g.resolver = NULL;
+    status = create_dns_resolver();
+    return rc ? rc : status;
 }
 
 static void destroy(void)
@@ -1645,8 +1776,6 @@ int srv_failover_test(void)
 {
     pjsip_cfg_t saved_cfg = *pjsip_cfg();
     /* Nothing listens there: all the answers come from the cache */
-    pj_str_t ns = pj_str("127.0.0.1");
-    pj_uint16_t dns_port = 9;
     unsigned i;
     int rc = 0, failed = 0;
     pj_status_t status;
@@ -1671,13 +1800,8 @@ int srv_failover_test(void)
     }
 
     g.prev_resolver = pjsip_endpt_get_resolver(endpt);
-    PJ_TEST_SUCCESS(pjsip_endpt_create_resolver(endpt, &g.resolver), NULL,
-                    { rc = -3006; goto on_return; });
-    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(g.resolver, 1, &ns, &dns_port),
-                    NULL, { rc = -3007; goto on_return; });
-    PJ_TEST_SUCCESS(add_dns_records(), NULL, { rc = -3004; goto on_return; });
-    PJ_TEST_SUCCESS(pjsip_endpt_set_resolver(endpt, g.resolver), NULL,
-                    { rc = -3008; goto on_return; });
+    if ((rc = create_dns_resolver()) != 0)
+        goto on_return;
 
     status = pj_thread_create(g.pool, "srvfo", &server_thread, NULL, 0, 0,
                               &g.thread);
@@ -1781,6 +1905,13 @@ int srv_failover_test(void)
             rc = status;
     }
 
+    status = ext_resolver_test();
+    if (status) {
+        PJ_LOG(1,(THIS_FILE, "    error: external resolver [%d]", status));
+        if (!rc)
+            rc = status;
+    }
+
 on_return:
     pjsip_tsx_set_timers(saved_cfg.tsx.t1, saved_cfg.tsx.t2,
                          saved_cfg.tsx.t4, saved_cfg.tsx.td);
@@ -1808,18 +1939,6 @@ int srv_failover_test(void)
  * option, including the marks set by the application.
  */
 #include <pjsua-lib/pjsua.h>
-
-/* Recreate the test framework's endpoint + tsx layer after pjsua_destroy */
-static void restore_endpt(void)
-{
-    pj_status_t status;
-
-    status = pjsip_endpt_create(&caching_pool.factory, "endpt", &endpt);
-    if (status == PJ_SUCCESS)
-        status = pjsip_tsx_layer_init_module(endpt);
-    if (status != PJ_SUCCESS)
-        app_perror("    error: restoring endpoint", status);
-}
 
 static int pjsua_ip_change_case(pj_bool_t failover)
 {
@@ -1884,6 +2003,88 @@ on_return:
     return rc;
 }
 
+/* PJSUA keeps the option an application has enabled itself, whether its
+ * own setting is the default or the same.
+ */
+static int pjsua_keeps_option_case(pj_bool_t own_setting)
+{
+    pjsua_config ua_cfg;
+    pjsua_logging_config log_cfg;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  option enabled by the application, %s",
+              own_setting ? "and by PJSUA" : "PJSUA default"));
+
+    pjsip_cfg()->endpt.server_failover = PJ_TRUE;
+    if (pjsua_create() != PJ_SUCCESS) {
+        pjsip_cfg()->endpt.server_failover = PJSIP_SERVER_FAILOVER;
+        return -3111;
+    }
+    pjsua_config_default(&ua_cfg);
+    ua_cfg.thread_cnt = 0;
+    if (own_setting)
+        ua_cfg.server_failover = PJ_TRUE;
+    pjsua_logging_config_default(&log_cfg);
+    log_cfg.level = 3;
+    log_cfg.console_level = 3;
+    if (pjsua_init(&ua_cfg, &log_cfg, NULL) != PJ_SUCCESS)
+        rc = -3112;
+    else if (!pjsip_cfg()->endpt.server_failover)
+        rc = -3113;
+    pjsua_destroy();
+    if (rc == 0 && !pjsip_cfg()->endpt.server_failover)
+        rc = -3114;
+    pjsip_cfg()->endpt.server_failover = PJSIP_SERVER_FAILOVER;
+    if (rc)
+        PJ_LOG(1,(THIS_FILE, "    error: option case failed [%d]", rc));
+    return rc;
+}
+
+/* A second pjsua_destroy(), as pjsua2 does, and a failed pjsua_init() leave
+ * the option the application enabled itself.
+ */
+static int pjsua_restore_once_case(pj_bool_t init_fails)
+{
+    pjsua_config ua_cfg;
+    pjsua_logging_config log_cfg;
+    pj_status_t status;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  option enabled by the application, %s",
+              init_fails ? "pjsua_init() fails" : "destroyed twice"));
+
+    pjsip_cfg()->endpt.server_failover = PJ_TRUE;
+    if (pjsua_create() != PJ_SUCCESS) {
+        pjsip_cfg()->endpt.server_failover = PJSIP_SERVER_FAILOVER;
+        return -3115;
+    }
+    pjsua_config_default(&ua_cfg);
+    ua_cfg.thread_cnt = 0;
+    if (init_fails) {
+        /* Applied by PJSUA in a build with the option off by default,
+         * then the nameserver fails pjsua_init()
+         */
+        ua_cfg.server_failover = PJ_TRUE;
+        ua_cfg.nameserver_count = 1;
+        ua_cfg.nameserver[0] = pj_str("999.999.999.999");
+    }
+    pjsua_logging_config_default(&log_cfg);
+    log_cfg.level = 3;
+    log_cfg.console_level = 3;
+    status = pjsua_init(&ua_cfg, &log_cfg, NULL);
+    if (init_fails ? status == PJ_SUCCESS : status != PJ_SUCCESS)
+        rc = -3116;
+    pjsua_destroy();
+    if (!init_fails)
+        pjsua_destroy();
+    if (rc == 0 && !pjsip_cfg()->endpt.server_failover)
+        rc = -3117;
+    pjsip_cfg()->endpt.server_failover = PJSIP_SERVER_FAILOVER;
+    if (rc)
+        PJ_LOG(1,(THIS_FILE, "    error: restore case failed [%d]", rc));
+    return rc;
+}
+
 int srv_failover_pjsua_test(void)
 {
     int rc;
@@ -1897,8 +2098,16 @@ int srv_failover_pjsua_test(void)
     rc = pjsua_ip_change_case(PJ_TRUE);
     if (rc == 0)
         rc = pjsua_ip_change_case(PJ_FALSE);
+    if (rc == 0)
+        rc = pjsua_keeps_option_case(PJ_FALSE);
+    if (rc == 0)
+        rc = pjsua_keeps_option_case(PJ_TRUE);
+    if (rc == 0)
+        rc = pjsua_restore_once_case(PJ_FALSE);
+    if (rc == 0)
+        rc = pjsua_restore_once_case(PJ_TRUE);
 
-    restore_endpt();
+    restore_test_endpt();
     return rc;
 }
 

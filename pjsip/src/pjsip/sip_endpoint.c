@@ -1386,13 +1386,6 @@ PJ_DEF(pj_status_t) pjsip_endpt_clear_failed_servers(pjsip_endpoint *endpt)
     return pjsip_resolver_clear_failed_servers(endpt->resolver);
 }
 
-/* Internal, used by sip_util_statefull.c */
-unsigned pjsip_resolver_failed_servers_gen(pjsip_resolver_t *resolver);
-pj_status_t pjsip_resolver_set_server_failed_gen(pjsip_resolver_t *resolver,
-                                                 const pj_sockaddr_t *addr,
-                                                 unsigned duration,
-                                                 unsigned gen);
-
 unsigned pjsip_endpt_failed_servers_gen(pjsip_endpoint *endpt)
 {
     return pjsip_resolver_failed_servers_gen(endpt->resolver);

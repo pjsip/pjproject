@@ -507,6 +507,31 @@ static pj_bool_t is_ipv4_mapped(const pj_in6_addr *a)
 }
 
 
+/* The addresses from the external resolver, with the failed servers last
+ * as from the other resolvers.
+ */
+struct ext_query
+{
+    pjsip_resolver_t          *resolver;
+    void                      *token;
+    pjsip_resolver_callback   *cb;
+};
+
+static void ext_resolver_cb(pj_status_t status, void *token,
+                            const struct pjsip_server_addresses *addr)
+{
+    struct ext_query *ext = (struct ext_query*)token;
+
+    if (status == PJ_SUCCESS && addr && addr->count > 1) {
+        pjsip_server_addresses sorted = *addr;
+        demote_failed_servers(ext->resolver, &sorted);
+        (*ext->cb)(status, ext->token, &sorted);
+    } else {
+        (*ext->cb)(status, ext->token, addr);
+    }
+}
+
+
 /*
  * This is the main function for performing server resolution.
  */
@@ -527,7 +552,12 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 
     /* If an external implementation has been provided use it instead */
     if (resolver->ext_res) {
-        (*resolver->ext_res->resolve)(resolver, pool, target, token, cb);
+        struct ext_query *ext = PJ_POOL_ALLOC_T(pool, struct ext_query);
+        ext->resolver = resolver;
+        ext->token = token;
+        ext->cb = cb;
+        (*resolver->ext_res->resolve)(resolver, pool, target, ext,
+                                      &ext_resolver_cb);
         return;
     }
 
