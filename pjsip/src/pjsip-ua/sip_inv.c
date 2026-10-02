@@ -3118,6 +3118,60 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(   pjsip_inv_session *inv,
         last_res->msg->body = NULL;
     }
 
+    /* An asynchronous confirmed UAS re-INVITE without an SDP offer is
+     * answered with a new local offer in the 2xx response. */
+    if (st_code/100 == 2 && inv->state == PJSIP_INV_STATE_CONFIRMED &&
+        inv->invite_tsx && inv->neg &&
+        pjmedia_sdp_neg_get_state(inv->neg) == PJMEDIA_SDP_NEG_STATE_DONE)
+    {
+        struct tsx_inv_data *tsx_inv_data;
+        const pjmedia_sdp_session *offer = local_sdp;
+        pjmedia_sdp_session *new_offer = NULL;
+        pj_bool_t cb_called = PJ_FALSE;
+        const pjmedia_sdp_session *local_offer = NULL;
+
+        tsx_inv_data = (struct tsx_inv_data*)
+                       inv->invite_tsx->mod_data[mod_inv.mod.id];
+        if (!tsx_inv_data) {
+            tsx_inv_data = PJ_POOL_ZALLOC_T(inv->invite_tsx->pool,
+                                            struct tsx_inv_data);
+            tsx_inv_data->inv = inv;
+            tsx_inv_data->has_sdp = PJ_FALSE;
+            inv->invite_tsx->mod_data[mod_inv.mod.id] = tsx_inv_data;
+        }
+        if (tsx_inv_data && !tsx_inv_data->has_sdp) {
+            if (!offer && mod_inv.cb.on_create_offer) {
+                cb_called = PJ_TRUE;
+                (*mod_inv.cb.on_create_offer)(inv, &new_offer);
+                if (new_offer)
+                    offer = new_offer;
+            }
+
+            if (offer) {
+                status = pjmedia_sdp_neg_modify_local_offer2(
+                            inv->pool_prov, inv->neg,
+                            inv->sdp_neg_flags, offer);
+            } else if (!cb_called) {
+                status = pjmedia_sdp_neg_send_local_offer(
+                            inv->pool_prov, inv->neg, &local_offer);
+            } else {
+                /* App callback was invoked but did not provide a usable
+                 * offer; do not silently re-offer the stale active SDP.
+                 */
+                status = PJ_EINVALIDOP;
+            }
+
+            if (status != PJ_SUCCESS) {
+                pjsip_tx_data_dec_ref(last_res);
+                pjsip_tx_data_dec_ref(last_res);
+                goto on_return;
+            }
+
+            /* local_sdp has already been installed as the offer above. */
+            local_sdp = NULL;
+        }
+    }
+
     /* Process SDP in answer */
     status = process_answer(inv, st_code, last_res, local_sdp);
     if (status != PJ_SUCCESS) {
