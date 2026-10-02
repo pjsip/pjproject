@@ -4522,16 +4522,19 @@ static pj_status_t get_uac_addr_for_sip_uri(pjsua_acc_id acc_id,
         }
 
         ip_addr_ver = get_ip_addr_ver(&dinfo.addr.host);
-        if (ip_addr_ver == 0 && pjsua_var.ua_cfg.nameserver_count) {
-            /* If nameserver is configured, PJSIP will resolve destinations
-             * by their DNS SRV record first. On the other hand, we will
-             * resolve destination with DNS A record via pj_getaddrinfo().
-             * They may yield different IP addresses, hence causing different
-             * TCP/TLS connection to be created and hence different source
+        if (ip_addr_ver == 0 &&
+            (pjsip_endpt_get_resolver(pjsua_var.endpt) ||
+             pjsip_endpt_get_ext_resolver(pjsua_var.endpt)))
+        {
+            /* With a DNS resolver or an external resolver, PJSIP resolves
+             * destinations by their DNS SRV record first. On the other
+             * hand, we would resolve the destination with its DNS A record
+             * via pj_getaddrinfo(). They may yield different addresses,
+             * hence a different TCP/TLS connection and a different source
              * address.
              */
             PJ_LOG(4,(THIS_FILE, "Warning: cannot use source TCP/TLS socket"
-                      " address for Contact when nameserver is configured."));
+                      " address for Contact when a resolver is set."));
             goto on_return;
         }
 

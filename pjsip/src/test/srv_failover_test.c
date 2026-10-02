@@ -1884,6 +1884,89 @@ on_return:
     return rc;
 }
 
+/* An external resolver that answers nothing, present for the next case */
+static void no_resolve(pjsip_resolver_t *resolver, pj_pool_t *pool,
+                       const pjsip_host_info *target, void *token,
+                       pjsip_resolver_callback *cb)
+{
+    PJ_UNUSED_ARG(resolver); PJ_UNUSED_ARG(pool); PJ_UNUSED_ARG(target);
+    (*cb)(PJ_ERESOLVE, token, NULL);
+}
+
+/* With an external resolver the destination may come from a DNS SRV
+ * record: the Contact takes the TCP listener's port, without a probing
+ * connection to the A record of the name.
+ */
+static int pjsua_contact_probe_case(void)
+{
+    static pjsip_ext_resolver ext = { &no_resolve };
+    pjsua_config ua_cfg;
+    pjsua_logging_config log_cfg;
+    pjsua_transport_config tcfg;
+    pjsua_transport_info tinfo;
+    pjsua_transport_id tp_id;
+    pjsua_acc_config acc_cfg;
+    pjsua_acc_id acc_id;
+    pjsip_tpmgr *tpmgr;
+    pj_pool_t *pool;
+    pj_str_t contact, uri = pj_str("sip:localhost;transport=tcp");
+    unsigned tp_cnt;
+    char *p;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  Contact with an external resolver"));
+
+    if (pjsua_create() != PJ_SUCCESS)
+        return -3120;
+    pjsua_config_default(&ua_cfg);
+    ua_cfg.thread_cnt = 0;
+    pjsua_logging_config_default(&log_cfg);
+    log_cfg.level = 3;
+    log_cfg.console_level = 3;
+    if (pjsua_init(&ua_cfg, &log_cfg, NULL) != PJ_SUCCESS) {
+        pjsua_destroy();
+        return -3121;
+    }
+    pjsip_endpt_set_ext_resolver(pjsua_get_pjsip_endpt(), &ext);
+    pjsua_transport_config_default(&tcfg);
+    tcfg.port = 0;
+    if (pjsua_transport_create(PJSIP_TRANSPORT_TCP, &tcfg, &tp_id) != PJ_SUCCESS ||
+        pjsua_start() != PJ_SUCCESS ||
+        pjsua_transport_get_info(tp_id, &tinfo) != PJ_SUCCESS)
+    {
+        pjsua_destroy();
+        return -3122;
+    }
+    pjsua_acc_config_default(&acc_cfg);
+    acc_cfg.id = pj_str("sip:test@localhost");
+    if (pjsua_acc_add(&acc_cfg, PJ_FALSE, &acc_id) != PJ_SUCCESS) {
+        pjsua_destroy();
+        return -3123;
+    }
+
+    tpmgr = pjsip_endpt_get_tpmgr(pjsua_get_pjsip_endpt());
+    tp_cnt = pjsip_tpmgr_get_transport_count(tpmgr);
+    pool = pjsua_pool_create("probe", 512, 512);
+    if (pjsua_acc_create_uac_contact(pool, &contact, acc_id, &uri) != PJ_SUCCESS) {
+        rc = -3124;
+    } else {
+        p = pj_strchr(&contact, '@');
+        p = p ? pj_memchr(p, ':', contact.ptr + contact.slen - p) : NULL;
+        if (!p || atoi(p + 1) != (int)tinfo.local_name.port) {
+            PJ_LOG(1,(THIS_FILE, "    Contact %.*s, listener port %d",
+                      (int)contact.slen, contact.ptr, tinfo.local_name.port));
+            rc = -3125;
+        } else if (pjsip_tpmgr_get_transport_count(tpmgr) != tp_cnt) {
+            rc = -3126;
+        }
+    }
+    pj_pool_release(pool);
+    pjsua_destroy();
+    if (rc)
+        PJ_LOG(1,(THIS_FILE, "    error: Contact case failed [%d]", rc));
+    return rc;
+}
+
 int srv_failover_pjsua_test(void)
 {
     int rc;
@@ -1897,6 +1980,8 @@ int srv_failover_pjsua_test(void)
     rc = pjsua_ip_change_case(PJ_TRUE);
     if (rc == 0)
         rc = pjsua_ip_change_case(PJ_FALSE);
+    if (rc == 0)
+        rc = pjsua_contact_probe_case();
 
     restore_endpt();
     return rc;

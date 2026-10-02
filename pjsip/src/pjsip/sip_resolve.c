@@ -190,6 +190,16 @@ PJ_DEF(pj_dns_resolver*) pjsip_resolver_get_resolver(pjsip_resolver_t *res)
 }
 
 
+/*
+ * Public API to get the external resolver implementation.
+ */
+PJ_DEF(pjsip_ext_resolver*) pjsip_resolver_get_ext_resolver(
+                                                pjsip_resolver_t *res)
+{
+    return res->ext_res;
+}
+
+
 /* Find a failed server entry. Must be called with the group lock held. */
 static int find_failed(pjsip_resolver_t *resolver, const pj_sockaddr_t *addr)
 {

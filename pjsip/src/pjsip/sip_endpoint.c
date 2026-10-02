@@ -1348,6 +1348,16 @@ PJ_DEF(pj_dns_resolver*) pjsip_endpt_get_resolver(pjsip_endpoint *endpt)
 }
 
 /*
+ * Get the external resolver implementation.
+ */
+PJ_DEF(pjsip_ext_resolver*) pjsip_endpt_get_ext_resolver(
+                                                pjsip_endpoint *endpt)
+{
+    PJ_ASSERT_RETURN(endpt, NULL);
+    return pjsip_resolver_get_ext_resolver(endpt->resolver);
+}
+
+/*
  * Resolve
  */
 PJ_DEF(void) pjsip_endpt_resolve( pjsip_endpoint *endpt,
