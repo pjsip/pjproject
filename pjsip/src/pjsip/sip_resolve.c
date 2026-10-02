@@ -27,11 +27,17 @@
 #include <pj/ctype.h>
 #include <pj/log.h>
 #include <pj/pool.h>
+#include <pj/os.h>
 #include <pj/rand.h>
 #include <pj/string.h>
 
 
 #define THIS_FILE   "sip_resolve.c"
+
+/* The longest time a server stays marked as failed, see
+ * pjsip_resolver_set_server_failed().
+ */
+#define MAX_FAILED_DURATION (30 * 24 * 3600)
 
 struct naptr_target
 {
@@ -45,6 +51,7 @@ struct naptr_target
 struct query
 {
     char                    *objname;
+    pjsip_resolver_t        *resolver;
 
     pj_dns_type              query_type;
     void                    *token;
@@ -82,11 +89,21 @@ struct query
 };
 
 
+struct failed_server
+{
+    pj_sockaddr              addr;
+    pj_time_val              expiry;
+};
+
 struct pjsip_resolver_t
 {
     pj_dns_resolver *res;
     pj_grp_lock_t   *grp_lock;
+    unsigned         failed_gen;    /* Times the failed servers were cleared */
     pjsip_ext_resolver *ext_res;
+
+    unsigned                 failed_cnt;
+    struct failed_server     failed[PJSIP_MAX_FAILED_SERVERS];
 };
 
 
@@ -173,6 +190,207 @@ PJ_DEF(pj_dns_resolver*) pjsip_resolver_get_resolver(pjsip_resolver_t *res)
 }
 
 
+/* Find a failed server entry. Must be called with the group lock held. */
+static int find_failed(pjsip_resolver_t *resolver, const pj_sockaddr_t *addr)
+{
+    unsigned i;
+
+    for (i = 0; i < resolver->failed_cnt; ++i) {
+        if (pj_sockaddr_cmp(&resolver->failed[i].addr, addr) == 0)
+            return (int)i;
+    }
+    return -1;
+}
+
+/* Remove the expired failed server entries. Must be called with the group
+ * lock held.
+ */
+static void expire_failed(pjsip_resolver_t *resolver)
+{
+    pj_time_val now;
+    unsigned i = 0;
+
+    pj_gettickcount(&now);
+    while (i < resolver->failed_cnt) {
+        if (PJ_TIME_VAL_GTE(now, resolver->failed[i].expiry)) {
+            resolver->failed[i] = resolver->failed[--resolver->failed_cnt];
+        } else {
+            ++i;
+        }
+    }
+}
+
+/* Set or clear a failed server address. With a generation, only if the
+ * failed servers were not cleared since the request that failed was sent,
+ * e.g: the network has not changed.
+ */
+static pj_status_t set_server_failed(pjsip_resolver_t *resolver,
+                                     const pj_sockaddr_t *addr,
+                                     unsigned duration, const unsigned *gen)
+{
+    int idx;
+
+    PJ_ASSERT_RETURN(resolver && addr, PJ_EINVAL);
+
+    /* The endpoint may be being destroyed */
+    if (!resolver->grp_lock)
+        return PJ_EINVALIDOP;
+
+    pj_grp_lock_acquire(resolver->grp_lock);
+
+    if (gen && *gen != resolver->failed_gen) {
+        pj_grp_lock_release(resolver->grp_lock);
+        return PJ_EIGNORED;
+    }
+
+    expire_failed(resolver);
+    idx = find_failed(resolver, addr);
+
+    if (duration == 0) {
+        if (idx >= 0)
+            resolver->failed[idx] = resolver->failed[--resolver->failed_cnt];
+    } else {
+        struct failed_server *fs;
+
+        if (idx >= 0) {
+            fs = &resolver->failed[idx];
+        } else if (resolver->failed_cnt < PJSIP_MAX_FAILED_SERVERS) {
+            fs = &resolver->failed[resolver->failed_cnt++];
+        } else {
+            unsigned i, oldest = 0;
+
+            /* Replace the entry that would expire first */
+            for (i = 1; i < resolver->failed_cnt; ++i) {
+                if (PJ_TIME_VAL_LT(resolver->failed[i].expiry,
+                                   resolver->failed[oldest].expiry))
+                {
+                    oldest = i;
+                }
+            }
+            fs = &resolver->failed[oldest];
+        }
+
+        if (duration > MAX_FAILED_DURATION)
+            duration = MAX_FAILED_DURATION;
+        pj_sockaddr_cp(&fs->addr, addr);
+        pj_gettickcount(&fs->expiry);
+        fs->expiry.sec += duration;
+    }
+
+    pj_grp_lock_release(resolver->grp_lock);
+    return PJ_SUCCESS;
+}
+
+/* Internal: how many times the failed servers were cleared */
+unsigned pjsip_resolver_failed_servers_gen(pjsip_resolver_t *resolver)
+{
+    unsigned gen;
+
+    if (!resolver->grp_lock)
+        return 0;
+    pj_grp_lock_acquire(resolver->grp_lock);
+    gen = resolver->failed_gen;
+    pj_grp_lock_release(resolver->grp_lock);
+    return gen;
+}
+
+/* Internal, used by the stateful send */
+pj_status_t pjsip_resolver_set_server_failed_gen(pjsip_resolver_t *resolver,
+                                                 const pj_sockaddr_t *addr,
+                                                 unsigned duration,
+                                                 unsigned gen)
+{
+    return set_server_failed(resolver, addr, duration, &gen);
+}
+
+/*
+ * Public API to set or clear a failed server address.
+ */
+PJ_DEF(pj_status_t) pjsip_resolver_set_server_failed(
+                                            pjsip_resolver_t *resolver,
+                                            const pj_sockaddr_t *addr,
+                                            unsigned duration)
+{
+    return set_server_failed(resolver, addr, duration, NULL);
+}
+
+/*
+ * Public API to check whether a server address has failed.
+ */
+PJ_DEF(pj_bool_t) pjsip_resolver_is_server_failed(pjsip_resolver_t *resolver,
+                                                  const pj_sockaddr_t *addr)
+{
+    pj_bool_t failed;
+
+    PJ_ASSERT_RETURN(resolver && addr, PJ_FALSE);
+
+    if (!resolver->grp_lock)
+        return PJ_FALSE;
+
+    pj_grp_lock_acquire(resolver->grp_lock);
+    expire_failed(resolver);
+    failed = find_failed(resolver, addr) >= 0;
+    pj_grp_lock_release(resolver->grp_lock);
+
+    return failed;
+}
+
+/*
+ * Public API to forget all failed server addresses.
+ */
+PJ_DEF(pj_status_t) pjsip_resolver_clear_failed_servers(
+                                            pjsip_resolver_t *resolver)
+{
+    PJ_ASSERT_RETURN(resolver, PJ_EINVAL);
+
+    if (!resolver->grp_lock)
+        return PJ_EINVALIDOP;
+
+    pj_grp_lock_acquire(resolver->grp_lock);
+    resolver->failed_cnt = 0;
+    ++resolver->failed_gen;
+    pj_grp_lock_release(resolver->grp_lock);
+    return PJ_SUCCESS;
+}
+
+/* List the failed servers after the others, keeping the order otherwise */
+static void demote_failed_servers(pjsip_resolver_t *resolver,
+                                  pjsip_server_addresses *server)
+{
+    pjsip_server_addresses sorted;
+    unsigned i, pass;
+
+    if (server->count < 2 || !resolver->grp_lock ||
+        !pjsip_cfg()->endpt.server_failover)
+    {
+        return;
+    }
+
+    pj_grp_lock_acquire(resolver->grp_lock);
+
+    expire_failed(resolver);
+    if (resolver->failed_cnt == 0) {
+        pj_grp_lock_release(resolver->grp_lock);
+        return;
+    }
+
+    sorted.count = 0;
+    for (pass = 0; pass < 2; ++pass) {
+        for (i = 0; i < server->count; ++i) {
+            pj_bool_t is_failed = find_failed(resolver,
+                                              &server->entry[i].addr) >= 0;
+            if (is_failed == (pass == 1))
+                sorted.entry[sorted.count++] = server->entry[i];
+        }
+    }
+
+    pj_grp_lock_release(resolver->grp_lock);
+
+    pj_memcpy(server->entry, sorted.entry,
+              server->count * sizeof(server->entry[0]));
+}
+
+
 /*
  * Public API to create destroy the resolver
  */
@@ -239,6 +457,9 @@ static pj_status_t get_result_status(struct query *query)
 static void report_result(struct query *query)
 {
     pj_status_t status = get_result_status(query);
+
+    if (status == PJ_SUCCESS)
+        demote_failed_servers(query->resolver, &query->server);
 
     (*query->cb)(status, query->token,
                  status == PJ_SUCCESS? &query->server: NULL);
@@ -489,6 +710,9 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
                                 pj_sockaddr_get_len(&svr_addr.entry[i].addr);
         }
 
+        if (status == PJ_SUCCESS)
+            demote_failed_servers(resolver, &svr_addr);
+
         /* Call the callback. */
         (*cb)(status, token, &svr_addr);
 
@@ -504,6 +728,7 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
     query->objname = THIS_FILE;
     query->token = token;
     query->cb = cb;
+    query->resolver = resolver;
     query->grp_lock = resolver->grp_lock;
     query->req.target = *target;
     pj_strdup(pool, &query->req.target.addr.host, &target->addr.host);

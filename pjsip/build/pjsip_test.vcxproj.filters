@@ -87,6 +87,9 @@
     <ClCompile Include="..\src\test\pjsua_auth_test.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\test\srv_failover_test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\test\pjsua_dns_test.c">
       <Filter>Source Files</Filter>
     </ClCompile>

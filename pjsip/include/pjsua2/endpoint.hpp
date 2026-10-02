@@ -1021,6 +1021,16 @@ struct UaConfig : public PersistentObject
      */
     bool                accServerAffinityDefault;
 
+    /**
+     * Send a request again to the next server when the server answers 503
+     * or doesn't answer, such as the next DNS SRV target of the registrar,
+     * and remember the servers that failed. See also
+     * pjsua_config.server_failover.
+     *
+     * Default: PJSIP_SERVER_FAILOVER (disabled)
+     */
+    bool                serverFailover;
+
 public:
     /**
      * Default constructor to initialize with default values.
@@ -1213,10 +1223,9 @@ public:
     /**
      * Total number of threads that can be used by the conference bridge
      * including get_frame() thread.
-     * This value is used to determine if the conference bridge should be
-     * implemented as a parallel bridge or not.
-     * If this value is set to 1, the conference bridge will be implemented as a
-     * serial bridge, otherwise it will be implemented as a parallel bridge.
+     * If this value is set to 1, the conference bridge processes the ports
+     * sequentially in the get_frame() thread, otherwise it processes them
+     * in parallel using additional worker threads.
      * Should not be less than 1.
      * This value is ignored by all conference backends except for the 
      * multithreaded conference bridge backend
@@ -1230,12 +1239,13 @@ public:
      * The priority of the conference bridge worker threads, see
      * pjmedia_conf_param::worker_thread_prio for more info. The valid value
      * range is platform dependent, while zero means the worker threads will
-     * use the priority assigned by the OS.
+     * use the priority assigned by the OS, and PJMEDIA_CONF_THREAD_PRIO_MAX
+     * the highest priority.
      * This value is ignored by all conference backends except for the
      * multithreaded conference bridge backend
      * (PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND).
      *
-     * Default value: 0
+     * Default value: PJMEDIA_CONF_THREAD_PRIO_MAX
      */
     int                 confThreadPrio;
 

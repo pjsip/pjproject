@@ -397,6 +397,11 @@ int test_main(int argc, char *argv[])
     UT_ADD_TEST(&test_app.ut_app, resolve_test, 0);
 #endif
 
+    /* Exclusive, as it changes the resolver and the transaction timers */
+#if INCLUDE_SRV_FAILOVER_TEST
+    UT_ADD_TEST(&test_app.ut_app, srv_failover_test, PJ_TEST_EXCLUSIVE);
+#endif
+
 #if INCLUDE_INV_OA_TEST
     UT_ADD_TEST(&test_app.ut_app, inv_offer_answer_test, 0);
 #endif
@@ -477,6 +482,11 @@ int test_main(int argc, char *argv[])
 
 #if INCLUDE_PJSUA_DNS_TEST
     UT_ADD_TEST(&test_app.ut_app, pjsua_dns_test,
+                PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
+#endif
+
+#if INCLUDE_SRV_FAILOVER_TEST && INCLUDE_PJSUA_ACC_TEST
+    UT_ADD_TEST(&test_app.ut_app, srv_failover_pjsua_test,
                 PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
 #endif
 

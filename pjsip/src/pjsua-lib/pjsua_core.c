@@ -130,6 +130,7 @@ PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
     pjsua_srtp_opt_default(&cfg->srtp_opt);
     cfg->no_refer_sub = PJ_TRUE;
     cfg->acc_server_affinity_default = PJSUA_ACC_SERVER_AFFINITY_DEFAULT;
+    cfg->server_failover = PJSIP_SERVER_FAILOVER;
 }
 
 PJ_DEF(void) pjsua_config_dup(pj_pool_t *pool,
@@ -447,7 +448,7 @@ PJ_DEF(void) pjsua_media_config_default(pjsua_media_config *cfg)
     cfg->audio_frame_ptime = PJSUA_DEFAULT_AUDIO_FRAME_PTIME;
     cfg->max_media_ports = PJSUA_MAX_CONF_PORTS;
     cfg->conf_threads = PJMEDIA_CONF_THREADS;
-    cfg->conf_thread_prio = 0;
+    cfg->conf_thread_prio = PJMEDIA_CONF_THREAD_PRIO_MAX;
     cfg->has_ioqueue = PJ_TRUE;
     cfg->thread_cnt = 1;
     cfg->quality = PJSUA_DEFAULT_CODEC_QUALITY;
@@ -1250,6 +1251,8 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
         pj_activesock_enable_iphone_os_bg(PJ_FALSE);
     }
 #endif
+
+    pjsip_cfg()->endpt.server_failover = ua_cfg->server_failover;
 
     /* Init SIP UA: */
 
@@ -2376,6 +2379,7 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 
     /* Clear pjsua_var */
     pj_bzero(&pjsua_var, sizeof(pjsua_var));
+    pjsip_cfg()->endpt.server_failover = PJSIP_SERVER_FAILOVER;
 
     /* Done. */
     return PJ_SUCCESS;
@@ -4352,6 +4356,9 @@ PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
     }
 
     PJ_LOG(3, (THIS_FILE, "Start handling IP address change"));
+
+    /* The failed servers may work on the new network */
+    pjsip_endpt_clear_failed_servers(pjsua_var.endpt);
 
     /* Avoid call disconnection due to request timeout. Some requests may
      * be in progress when network is changing, they may eventually get

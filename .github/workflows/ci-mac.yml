@@ -404,7 +404,7 @@ jobs:
     - name: install dependencies
       run: brew install openssl openh264 libvpx opencore-amr vo-amrwbenc swig sipp
     - name: config site
-      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo -e "#define PJMEDIA_HAS_VIDEO 1\n#define PJMEDIA_CONF_BACKEND PJMEDIA_CONF_SERIAL_BRIDGE_BACKEND" >> config_site.h
     - name: configure
       run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb) $(pkg-config --cflags opencore-amrwb) $(pkg-config --cflags vo-amrwbenc) -DHAS_VID_CODEC_TEST=0 -fPIC -fsanitize=address" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L opencore-amrnb) $(pkg-config --libs-only-L opencore-amrwb) $(pkg-config --libs-only-L vo-amrwbenc) -fsanitize=address" CXXFLAGS="-g -fPIC -fsanitize=address" ./configure
     - name: make

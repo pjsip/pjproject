@@ -39,7 +39,9 @@ pjsip_cfg_t pjsip_sip_cfg_var =
        0,
        PJSIP_ENCODE_SHORT_HNAME,
        PJSIP_ACCEPT_MULTIPLE_SDP_ANSWERS,
-       0
+       0,
+       PJSIP_SERVER_FAILOVER,
+       PJSIP_FAILED_SERVER_TIMEOUT
     },
 
     /* Transaction settings */
@@ -239,6 +241,10 @@ PJ_DEF(void) pjsip_dump_config(void)
                pjsip_cfg()->endpt.accept_multiple_sdp_answers));
     PJ_LOG(3, (id, " pjsip_cfg()->endpt.keep_inv_after_tsx_timeout      : %d", 
                pjsip_cfg()->endpt.keep_inv_after_tsx_timeout));
+    PJ_LOG(3, (id, " pjsip_cfg()->endpt.server_failover                 : %d",
+               pjsip_cfg()->endpt.server_failover));
+    PJ_LOG(3, (id, " pjsip_cfg()->endpt.failed_server_timeout           : %u",
+               pjsip_cfg()->endpt.failed_server_timeout));
     PJ_LOG(3, (id, " pjsip_cfg()->tsx.max_count                         : %d", 
                pjsip_cfg()->tsx.max_count));
     PJ_LOG(3, (id, " pjsip_cfg()->tsx.t1                                : %d", 

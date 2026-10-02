@@ -424,6 +424,45 @@ PJ_DECL(pj_status_t) pjsip_endpt_set_ext_resolver(pjsip_endpoint *endpt,
 PJ_DECL(pj_dns_resolver*) pjsip_endpt_get_resolver(pjsip_endpoint *endpt);
 
 /**
+ * Mark a server address as failed for the specified duration, or clear the
+ * mark. Please see #pjsip_resolver_set_server_failed() for more info.
+ *
+ * @param endpt         The SIP endpoint instance.
+ * @param addr          The server address.
+ * @param duration      Number of seconds to keep the mark, at most 30 days,
+ *                      or zero to clear it.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_endpt_set_server_failed(pjsip_endpoint *endpt,
+                                                   const pj_sockaddr_t *addr,
+                                                   unsigned duration);
+
+/**
+ * Check whether a server address is marked as failed. Please see
+ * #pjsip_resolver_set_server_failed() for more info.
+ *
+ * @param endpt         The SIP endpoint instance.
+ * @param addr          The server address.
+ *
+ * @return              PJ_TRUE if the address is marked as failed.
+ */
+PJ_DECL(pj_bool_t) pjsip_endpt_is_server_failed(pjsip_endpoint *endpt,
+                                                const pj_sockaddr_t *addr);
+
+/**
+ * Clear all failed server marks, including the ones set by the application,
+ * e.g: after the local network has changed. The requests sent before this
+ * are not sent to another server when they fail, and their failures are not
+ * remembered, as they may have been sent on the previous network.
+ *
+ * @param endpt         The SIP endpoint instance.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_endpt_clear_failed_servers(pjsip_endpoint *endpt);
+
+/**
  * Asynchronously resolve a SIP target host or domain according to rule 
  * specified in RFC 3263 (Locating SIP Servers). When the resolving operation
  * has completed, the callback will be called.

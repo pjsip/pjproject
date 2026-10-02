@@ -2702,6 +2702,29 @@ typedef struct pjsua_config
      */
     pj_bool_t        no_refer_sub;
 
+    /**
+     * Default value for pjsua_acc_config.server_affinity. New accounts
+     * with server_affinity set to PJSUA_SERVER_AFFINITY_UNSPECIFIED will
+     * inherit this value.
+     *
+     * Default: PJSUA_ACC_SERVER_AFFINITY_DEFAULT
+     */
+    pj_bool_t        acc_server_affinity_default;
+
+    /**
+     * Send a request again to the next server when the server answers 503
+     * or doesn't answer, such as the next DNS SRV target of the registrar,
+     * and remember the servers that failed. This sets
+     * pjsip_cfg()->endpt.server_failover, please see
+     * #pjsip_endpt_send_request() for more info. On an IP address change,
+     * the failed servers are forgotten whatever this setting, including the
+     * ones marked by the application, see
+     * #pjsip_endpt_clear_failed_servers().
+     *
+     * Default: PJSIP_SERVER_FAILOVER (disabled)
+     */
+    pj_bool_t        server_failover;
+
 } pjsua_config;
 
 
@@ -7860,10 +7883,9 @@ struct pjsua_media_config
      * Total number of threads that can be used by the conference bridge
      * including get_frame() thread.
      * 
-     * This value is used to determine if the conference bridge should be
-     * implemented as a parallel bridge or not.
-     * If the value is set to 0 or 1, the conference bridge will be implemented as a
-     * serial bridge, otherwise it will be implemented as a parallel bridge.
+     * If the value is set to 0 or 1, the conference bridge processes the
+     * ports sequentially in the get_frame() thread, otherwise it processes
+     * them in parallel using additional worker threads.
      * 
      * This value is ignored by all conference backends except for the 
      * multithreaded conference bridge backend
@@ -7872,6 +7894,22 @@ struct pjsua_media_config
      * Default value: PJMEDIA_CONF_THREADS
      */
     unsigned            conf_threads;
+
+    /**
+     * The priority of the conference bridge worker threads, see
+     * pjmedia_conf_param::worker_thread_prio for more info. The valid value
+     * range is platform dependent, see #pj_thread_get_prio_min() and
+     * #pj_thread_get_prio_max(), while zero means the worker threads will
+     * use the priority assigned by the OS, and #PJMEDIA_CONF_THREAD_PRIO_MAX
+     * the highest priority.
+     *
+     * This value is ignored by all conference backends except for the
+     * multithreaded conference bridge backend
+     * (PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND).
+     *
+     * Default value: PJMEDIA_CONF_THREAD_PRIO_MAX
+     */
+    int                 conf_thread_prio;
 
     /**
      * Specify whether the media manager should manage its own
