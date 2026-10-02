@@ -48,6 +48,11 @@ excluded_tests = [
     "alt-pjsua-uas-custom-sdp",
     "alt-pjsua-uas-amr-sdp",
     "alt-pjsua-uas-static-pt-no-rtpmap",
+    "alt-pjsua-uac-sdp-passthrough",
+    "alt-pjsua-uas-sdp-passthrough",
+    "alt-pjsua-uas-multiple-amr",
+    "alt-pjsua-uas-media-app-managed",
+    "alt-pjsua-uas-early-update-app-managed",
 ]
 
 # Exclude scripts-sipp/uac-reinvite-bad-via-branch on MacOS due to unreliable result

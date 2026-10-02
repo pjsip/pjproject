@@ -2457,29 +2457,16 @@ void pjsua_media_prov_revert(pjsua_call_id call_id)
     call->med_prov_cnt = call->med_cnt;
 }
 
-/* Does the SDP have any media line with non-zero port? */
-static pj_bool_t sdp_has_active_media(const pjmedia_sdp_session *sdp)
+/* Does pjsua manage this media line as a stream? */
+static pj_bool_t is_stream_media(const pjsua_call *call,
+                                 const pjmedia_sdp_media *m)
 {
-    unsigned i;
+    pjmedia_type type;
 
-    for (i = 0; i < sdp->media_count; ++i) {
-        if (sdp->media[i]->desc.port != 0)
-            return PJ_TRUE;
-    }
-    return PJ_FALSE;
-}
+    if (pjsua_call_media_is_app_managed(call))
+        return PJ_FALSE;
 
-/* Is the media type of the SDP media line one of the types pjsua implements a
- * stream for, i.e. handled by the type dispatch in
- * pjsua_media_channel_update()? Anything else, e.g. T.38 image/udptl, is left
- * to the application. Video is included regardless of PJMEDIA_HAS_VIDEO, so a
- * build without video keeps reporting an offered video line as unsupported
- * media instead of silently treating it as media the application owns.
- */
-static pj_bool_t is_stream_media(const pjmedia_sdp_media *m)
-{
-    pjmedia_type type = pjmedia_get_type(&m->desc.media);
-
+    type = pjmedia_get_type(&m->desc.media);
     return (type == PJMEDIA_TYPE_AUDIO || type == PJMEDIA_TYPE_VIDEO ||
             type == PJMEDIA_TYPE_TEXT);
 }
@@ -2597,12 +2584,8 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
                    mtxtidx, &mtxtcnt, &mtottxtcnt);
 
         if (maudcnt + mvidcnt + mtxtcnt == 0 &&
-            !(call->offer_app_managed && sdp_has_active_media(rem_sdp)))
+            !pjsua_call_media_is_app_managed(call))
         {
-            /* Expecting media in the offer, unless the app is answering the
-             * offer itself and may accept active media that pjsua does not
-             * manage (e.g. T.38), see pjsua_media_channel_update().
-             */
             if (sip_err_code)
                 *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
             status = PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_NOT_ACCEPTABLE_HERE);
@@ -2846,6 +2829,11 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
             }
         }
 
+        if (call->opt.flag & PJSUA_CALL_MEDIA_APP_MANAGED) {
+            /* The application owns all media transports. */
+            enabled = PJ_FALSE;
+        }
+
         if (call->opt.flag & PJSUA_CALL_SET_MEDIA_DIR) {
             call_med->def_dir = call->opt.media_dir[mi];
             PJ_LOG(4,(THIS_FILE, "Call %d: setting media direction "
@@ -3057,6 +3045,10 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
         pj_sockaddr_cp(&origin, &tpinfo.sock_info.rtp_addr_name);
         break;
     }
+
+    /* App-managed calls may have no transport address. */
+    if (origin.addr.sa_family == 0)
+        pj_sockaddr_init(pj_AF_INET(), &origin, NULL, 0);
 
     /* Create the base (blank) SDP */
     status = pjmedia_endpt_create_base_sdp(pjsua_var.med_endpt, pool, NULL,
@@ -4659,6 +4651,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     unsigned mtxtcnt = PJ_ARRAY_SIZE(mtxtidx);
     unsigned mtottxtcnt = PJ_ARRAY_SIZE(mtxtidx);
     pj_bool_t need_renego_sdp = PJ_FALSE;
+    pj_bool_t app_managed;
 
     if (pjsua_get_state() != PJSUA_STATE_RUNNING)
         return PJ_EBUSY;
@@ -4669,6 +4662,24 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     /* Destroy existing media session, if any. */
     //stop_media_session(call->index);
 
+    app_managed = pjsua_call_media_is_app_managed(call);
+
+    if (local_sdp->media_count > PJSUA_MAX_CALL_MEDIA) {
+        PJ_LOG(1,(THIS_FILE, "Call %d: SDP media count %u exceeds maximum "
+                  "%u", call_id, local_sdp->media_count,
+                  PJSUA_MAX_CALL_MEDIA));
+        status = PJ_ETOOMANY;
+        goto on_error;
+    }
+
+    if (app_managed && call->med_prov_cnt < local_sdp->media_count) {
+        mi = call->med_prov_cnt;
+        pj_memcpy(&call->media_prov[mi], &call->media[mi],
+                  sizeof(call->media[0]) *
+                  (local_sdp->media_count - call->med_prov_cnt));
+        call->med_prov_cnt = local_sdp->media_count;
+    }
+
     /* Call media count must be at least equal to SDP media. Note that
      * it may not be equal when remote removed any SDP media line.
      */
@@ -4677,75 +4688,86 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     /* Reset audio_idx first */
     call->audio_idx = -1;
 
-    /* Sort audio/video based on "quality" */
-    sort_media(local_sdp, &STR_AUDIO, acc->cfg.use_srtp,
-               maudidx, &maudcnt, &mtotaudcnt);
+    if (app_managed) {
+        maudcnt = mtotaudcnt = 0;
+        mvidcnt = mtotvidcnt = 0;
+        mtxtcnt = mtottxtcnt = 0;
+    } else {
+        /* Sort audio/video based on "quality" */
+        sort_media(local_sdp, &STR_AUDIO, acc->cfg.use_srtp,
+                   maudidx, &maudcnt, &mtotaudcnt);
 #if PJMEDIA_HAS_VIDEO
-    sort_media(local_sdp, &STR_VIDEO, acc->cfg.use_srtp,
-               mvididx, &mvidcnt, &mtotvidcnt);
+        sort_media(local_sdp, &STR_VIDEO, acc->cfg.use_srtp,
+                   mvididx, &mvidcnt, &mtotvidcnt);
 #else
-    PJ_UNUSED_ARG(STR_VIDEO);
-    mvidcnt = mtotvidcnt = 0;
+        PJ_UNUSED_ARG(STR_VIDEO);
+        mvidcnt = mtotvidcnt = 0;
 #endif
-    sort_media(local_sdp, &STR_TEXT, acc->cfg.use_srtp,
-               mtxtidx, &mtxtcnt, &mtottxtcnt);
+        sort_media(local_sdp, &STR_TEXT, acc->cfg.use_srtp,
+                   mtxtidx, &mtxtcnt, &mtottxtcnt);
 
-    /* We need to re-nego SDP or modify our answer when:
-     * - media count exceeds the configured limit,
-     * - RTCP-FB is enabled (so a=rtcp-fb will only be printed for negotiated
-     *   codecs)
-     */
-    if (!pjmedia_sdp_neg_was_answer_remote(call->inv->neg) &&
-        ((maudcnt > call->opt.aud_cnt || mvidcnt > call->opt.vid_cnt ||
-          mtxtcnt > call->opt.txt_cnt) ||
-        (acc->cfg.rtcp_fb_cfg.cap_count)))
-    {
-        pjmedia_sdp_session *local_sdp_renego = NULL;
+        /* We need to re-nego SDP or modify our answer when:
+         * - media count exceeds the configured limit,
+         * - RTCP-FB is enabled (so a=rtcp-fb will only be printed for
+         *   negotiated codecs)
+         */
+        if (!pjmedia_sdp_neg_was_answer_remote(call->inv->neg) &&
+            ((maudcnt > call->opt.aud_cnt || mvidcnt > call->opt.vid_cnt ||
+              mtxtcnt > call->opt.txt_cnt) ||
+             acc->cfg.rtcp_fb_cfg.cap_count))
+        {
+            pjmedia_sdp_session *local_sdp_renego;
 
-        local_sdp_renego = pjmedia_sdp_session_clone(tmp_pool, local_sdp);
-        local_sdp = local_sdp_renego;
-        need_renego_sdp = PJ_TRUE;
+            local_sdp_renego = pjmedia_sdp_session_clone(tmp_pool,
+                                                         local_sdp);
+            local_sdp = local_sdp_renego;
+            need_renego_sdp = PJ_TRUE;
 
-        /* Add RTCP-FB info into local SDP answer */
-        if (acc->cfg.rtcp_fb_cfg.cap_count) {
-            for (mi=0; mi < local_sdp_renego->media_count; ++mi) {
-                status = pjmedia_rtcp_fb_encode_sdp(
-                                        tmp_pool, pjsua_var.med_endpt,
-                                        &acc->cfg.rtcp_fb_cfg,
-                                        local_sdp_renego, mi, remote_sdp);
-                if (status != PJ_SUCCESS) {
-                    PJ_PERROR(3,(THIS_FILE, status,
-                                 "Call %d media %d: Failed to encode RTCP-FB "
-                                 "setting to SDP",
-                                 call_id, mi));
+            /* Add RTCP-FB info into local SDP answer */
+            if (acc->cfg.rtcp_fb_cfg.cap_count) {
+                for (mi=0; mi < local_sdp_renego->media_count; ++mi) {
+                    status = pjmedia_rtcp_fb_encode_sdp(
+                                            tmp_pool, pjsua_var.med_endpt,
+                                            &acc->cfg.rtcp_fb_cfg,
+                                            local_sdp_renego, mi, remote_sdp);
+                    if (status != PJ_SUCCESS) {
+                        PJ_PERROR(3,(THIS_FILE, status,
+                                     "Call %d media %d: Failed to encode "
+                                     "RTCP-FB setting to SDP",
+                                     call_id, mi));
+                    }
                 }
             }
-        }
 
-        /* Applying media count limitation. Note that in generating SDP
-         * answer, no media count limitation applied as we didn't know yet
-         * which media would pass the SDP negotiation.
-         */
-        if (maudcnt > call->opt.aud_cnt || mvidcnt > call->opt.vid_cnt ||
-            mtxtcnt > call->opt.txt_cnt)
-        {
-            maudcnt = PJ_MIN(maudcnt, call->opt.aud_cnt);
-            mvidcnt = PJ_MIN(mvidcnt, call->opt.vid_cnt);
-            mtxtcnt = PJ_MIN(mtxtcnt, call->opt.txt_cnt);
+            /* Applying media count limitation. Note that in generating SDP
+             * answer, no media count limitation applied as we didn't know
+             * yet which media would pass the SDP negotiation.
+             */
+            if (maudcnt > call->opt.aud_cnt ||
+                mvidcnt > call->opt.vid_cnt ||
+                mtxtcnt > call->opt.txt_cnt)
+            {
+                maudcnt = PJ_MIN(maudcnt, call->opt.aud_cnt);
+                mvidcnt = PJ_MIN(mvidcnt, call->opt.vid_cnt);
+                mtxtcnt = PJ_MIN(mtxtcnt, call->opt.txt_cnt);
 
-            for (mi=0; mi < local_sdp_renego->media_count; ++mi) {
-                pjmedia_sdp_media *m = local_sdp_renego->media[mi];
+                for (mi=0; mi < local_sdp_renego->media_count; ++mi) {
+                    pjmedia_sdp_media *m = local_sdp_renego->media[mi];
 
-                if (m->desc.port == 0 ||
-                    pj_memchr(maudidx, mi, maudcnt*sizeof(maudidx[0])) ||
-                    pj_memchr(mvididx, mi, mvidcnt*sizeof(mvididx[0])) ||
-                    pj_memchr(mtxtidx, mi, mtxtcnt*sizeof(mtxtidx[0])))
-                {
-                    continue;
+                    if (m->desc.port == 0 ||
+                        pj_memchr(maudidx, mi,
+                                  maudcnt*sizeof(maudidx[0])) ||
+                        pj_memchr(mvididx, mi,
+                                  mvidcnt*sizeof(mvididx[0])) ||
+                        pj_memchr(mtxtidx, mi,
+                                  mtxtcnt*sizeof(mtxtidx[0])))
+                    {
+                        continue;
+                    }
+
+                    /* Deactivate this excess media */
+                    pjmedia_sdp_media_deactivate(tmp_pool, m);
                 }
-            
-                /* Deactivate this excess media */
-                pjmedia_sdp_media_deactivate(tmp_pool, m);
             }
         }
     }
@@ -4811,18 +4833,8 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 #endif
         }
 
-        /* Media not managed by pjsua (e.g. T.38 image/udptl) is left to the
-         * app. The remote media type is the authoritative one here: the slot
-         * may still carry the type of a previous negotiation (e.g. audio
-         * re-offered as image), and the local SDP for a disabled slot is
-         * generated from that stale type, so match against the remote offer.
-         * Not an error: stop any stream still on the slot (while call_med->type
-         * is still that stale type, as stop_media_stream() dispatches on it),
-         * release our transport, and report the slot as disabled media. If the
-         * (app-supplied) answer keeps the line active, count it as media so the
-         * call is not dropped for having no media.
-         */
-        if (!is_stream_media(remote_sdp->media[mi])) {
+        /* Leave unsupported or app-managed media to the application. */
+        if (!is_stream_media(call, remote_sdp->media[mi])) {
             stop_media_stream(call, mi, PJ_FALSE);
             close_call_med_tp(call_med);
             call_med->type = PJMEDIA_TYPE_UNKNOWN;
@@ -5076,4 +5088,3 @@ pj_status_t pjsua_media_apply_xml_control(pjsua_call_id call_id,
 
     return PJ_ENOTSUP;
 }
-

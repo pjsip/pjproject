@@ -1479,6 +1479,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
     /* User data */
     acc->cfg.user_data = cfg->user_data;
+    acc->cfg.media_app_managed = cfg->media_app_managed;
 
     /* Priority */
     if (acc->cfg.priority != cfg->priority) {

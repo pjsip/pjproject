@@ -678,6 +678,19 @@ PJ_DECL(pj_bool_t) pjmedia_sdp_neg_has_local_answer(pjmedia_sdp_neg *neg);
 
 
 /**
+ * Cancel the pending local answer and return to remote-offer state.
+ * The negotiator must be in PJMEDIA_SDP_NEG_STATE_WAIT_NEGO state with
+ * a local answer.
+ *
+ * @param neg           The negotiator.
+ *
+ * @return              PJ_SUCCESS or the appropriate error code.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_sdp_neg_cancel_local_answer(pjmedia_sdp_neg *neg);
+
+
+/**
  * Cancel any pending offer, whether the offer is initiated by local or
  * remote, and move negotiator state back to previous stable state
  * (PJMEDIA_SDP_NEG_STATE_DONE). The negotiator must be in
@@ -717,6 +730,24 @@ PJ_DECL(pj_status_t) pjmedia_sdp_neg_cancel_offer(pjmedia_sdp_neg *neg);
 PJ_DECL(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
                                                 pjmedia_sdp_neg *neg,
                                                 pj_bool_t allow_asym);
+
+
+/**
+ * Enable SDP passthrough mode for a signalling-plane application.
+ *
+ * Codec/PT negotiation and media-line rewriting are skipped, while the
+ * negotiator retains its normal state handling and stack-managed "o=" line.
+ * Set this once for the negotiator lifetime.
+ *
+ * @param neg           The SDP negotiator instance.
+ * @param passthrough   PJ_TRUE to enable passthrough mode, PJ_FALSE to
+ *                      disable it (default is disabled).
+ *
+ * @return              PJ_SUCCESS on success, or PJ_EINVAL if \a neg is
+ *                      NULL.
+ */
+PJ_DECL(pj_status_t) pjmedia_sdp_neg_set_passthrough(pjmedia_sdp_neg *neg,
+                                                     pj_bool_t passthrough);
 
 
 /**
@@ -819,4 +850,3 @@ PJ_END_DECL
 
 
 #endif  /* __PJMEDIA_SDP_NEG_H__ */
-

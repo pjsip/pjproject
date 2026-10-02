@@ -387,8 +387,33 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 
         app_config_init_call_setting(&opt);
 
-        pjsua_call_answer2(call_id, &opt, app_config.auto_answer, NULL,
-                           NULL);
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+        if ((app_config.auto_answer == 183 ||
+             app_config.auto_answer/100 == 2) &&
+            (opt.flag & PJSUA_CALL_MEDIA_APP_MANAGED) &&
+            app_config.custom_sdp.slen)
+        {
+            pj_pool_t *pool;
+            pjmedia_sdp_session *sdp;
+            pj_status_t status;
+
+            pool = pjsua_pool_create("custom sdp", 1024, 1024);
+            status = app_parse_custom_sdp(pool, &sdp);
+            if (status == PJ_SUCCESS) {
+                status = pjsua_call_answer_with_sdp(call_id, sdp, &opt,
+                                                    app_config.auto_answer,
+                                                    NULL, NULL);
+            }
+            if (status != PJ_SUCCESS)
+                pjsua_perror(THIS_FILE, "Unable to answer with custom SDP",
+                             status);
+            pj_pool_release(pool);
+        } else
+#endif
+        {
+            pjsua_call_answer2(call_id, &opt, app_config.auto_answer, NULL,
+                               NULL);
+        }
     }
     
     if (app_config.auto_answer < 200) {
@@ -1299,7 +1324,6 @@ static void on_call_sdp_created_cb(pjsua_call_id call_id,
                                    const pjmedia_sdp_session *rem_sdp)
 {
     pjmedia_sdp_session *custom = NULL;
-    pj_str_t sdp_str;
     pj_status_t status;
 
     PJ_UNUSED_ARG(call_id);
@@ -1308,16 +1332,7 @@ static void on_call_sdp_created_cb(pjsua_call_id call_id,
     if (app_config.custom_sdp.slen == 0)
         return;
 
-    /* Make a writable copy since pjmedia_sdp_parse modifies the buffer */
-    sdp_str.ptr = (char*)pj_pool_alloc(pool,
-                                       (pj_size_t)(app_config.custom_sdp.slen + 1));
-    pj_memcpy(sdp_str.ptr, app_config.custom_sdp.ptr,
-              (pj_size_t)app_config.custom_sdp.slen);
-    sdp_str.ptr[app_config.custom_sdp.slen] = '\0';
-    sdp_str.slen = app_config.custom_sdp.slen;
-
-    status = pjmedia_sdp_parse(pool, sdp_str.ptr, (pj_size_t)sdp_str.slen,
-                               &custom);
+    status = app_parse_custom_sdp(pool, &custom);
     if (status != PJ_SUCCESS) {
         PJ_PERROR(1,(THIS_FILE, status,
                      "Failed to parse custom SDP, using generated SDP"));
@@ -1970,6 +1985,7 @@ static pj_status_t app_init(void)
             pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 
             app_config_init_video(&acc_cfg);
+            app_config_apply_acc_setting(&acc_cfg);
             acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             acc_cfg.enable_rtcp_mux = app_config.enable_rtcp_mux;
@@ -2017,6 +2033,7 @@ static pj_status_t app_init(void)
             pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 
             app_config_init_video(&acc_cfg);
+            app_config_apply_acc_setting(&acc_cfg);
             acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             acc_cfg.enable_rtcp_mux = app_config.enable_rtcp_mux;
@@ -2055,6 +2072,7 @@ static pj_status_t app_init(void)
             pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 
             app_config_init_video(&acc_cfg);
+            app_config_apply_acc_setting(&acc_cfg);
             acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             acc_cfg.enable_rtcp_mux = app_config.enable_rtcp_mux;
@@ -2088,6 +2106,7 @@ static pj_status_t app_init(void)
             pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 
             app_config_init_video(&acc_cfg);
+            app_config_apply_acc_setting(&acc_cfg);
             acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             acc_cfg.enable_rtcp_mux = app_config.enable_rtcp_mux;
@@ -2130,6 +2149,7 @@ static pj_status_t app_init(void)
             pjsua_acc_get_config(acc_id, tmp_pool, &acc_cfg);
 
             app_config_init_video(&acc_cfg);
+            app_config_apply_acc_setting(&acc_cfg);
             acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             acc_cfg.enable_rtcp_mux = app_config.enable_rtcp_mux;
@@ -2162,6 +2182,7 @@ static pj_status_t app_init(void)
             pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 
             app_config_init_video(&acc_cfg);
+            app_config_apply_acc_setting(&acc_cfg);
             acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             acc_cfg.enable_rtcp_mux = app_config.enable_rtcp_mux;
@@ -2190,6 +2211,7 @@ static pj_status_t app_init(void)
         app_config.acc_cfg[i].reg_first_retry_interval = 60;
 
         app_config_init_video(&app_config.acc_cfg[i]);
+        app_config_apply_acc_setting(&app_config.acc_cfg[i]);
         app_config.acc_cfg[i].txt_red_level = app_config.txt_red_level;
 
         status = pjsua_acc_add(&app_config.acc_cfg[i], PJ_TRUE, NULL);

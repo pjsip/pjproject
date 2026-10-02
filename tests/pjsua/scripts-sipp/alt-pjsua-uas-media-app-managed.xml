@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+<!-- Same exchange as alt-pjsua-uas-sdp-passthrough.xml, but exercising the
+     account-level pjsua_acc_config.media_app_managed setting (via
+     --acc-media-app-managed) instead of only the per-call
+     PJSUA_CALL_MEDIA_APP_MANAGED flag (via --sdp-passthrough at answer
+     time). The account-level setting matters because it takes effect
+     before the *initial* offer is processed, so pjsua never creates a
+     media transport for it -- unlike --sdp-passthrough alone, which is
+     only applied when pjsua_call_answer2() runs, by which point the
+     initial offer's media transport has already been created. See
+     tests/pjsua/scripts-sipp/alt-pjsua-uas-sdp-passthrough.xml for the
+     baseline scenario this is based on. -->
+
+<scenario name="alt_pjsua UAS account-level media_app_managed: SIPp as UAC">
+
+  <send retrans="500">
+    <![CDATA[
+
+      INVITE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+      To: sut <sip:[service]@[remote_ip]:[remote_port]>
+      Call-ID: [call_id]
+      CSeq: 1 INVITE
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Subject: alt_pjsua UAS SDP passthrough test
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+v=0
+o=- 893867431174198 4062473431 IN IP4 10.162.173.125
+s=SS VOIP
+c=IN IP4 10.186.99.36
+t=0 0
+m=audio 56832 RTP/AVP 116 107 118 96 111 110
+b=AS:41
+b=RS:512
+b=RR:1537
+a=rtpmap:116 AMR-WB/16000/1
+a=fmtp:116 mode-change-capability=2;max-red=220
+a=rtpmap:107 AMR-WB/16000/1
+a=fmtp:107 octet-align=1;mode-change-capability=2;max-red=220
+a=rtpmap:118 AMR/8000/1
+a=fmtp:118 mode-change-capability=2;max-red=220
+a=rtpmap:96 AMR/8000/1
+a=fmtp:96 octet-align=1;mode-change-capability=2;max-red=220
+a=rtpmap:111 telephone-event/16000
+a=fmtp:111 0-15
+a=rtpmap:110 telephone-event/8000
+a=fmtp:110 0-15
+a=curr:qos local none
+a=curr:qos remote none
+a=des:qos mandatory local sendrecv
+a=des:qos optional remote sendrecv
+a=sendrecv
+a=ptime:20
+a=maxptime:240
+m=audio 56834 RTP/AVP 123
+c=IN IP4 10.186.99.37
+a=rtpmap:123 X-APP-MANAGED/8000
+a=sendrecv
+
+    ]]>
+  </send>
+
+  <recv response="100" optional="true">
+  </recv>
+
+  <recv response="180" optional="true">
+  </recv>
+
+  <recv response="200" rtd="true">
+    <action>
+      <!-- Verify the 200 OK carries the real-world answer injected by
+           alt_pjsua via the "custom-sdp" option, unmodified: only 2
+           payload types (not reconciled against the offer's 6), and the
+           answer's own fmtp params (not the offer's). search_in="msg"
+           searches the entire SIP message. The condexec nops avoid SIPp
+           3.7 exiting on "referenced 1 times" warning. -->
+      <ereg regexp="m=audio 56384 RTP/AVP 116 111" search_in="msg"
+            check_it="true" assign_to="1"/>
+      <ereg regexp="a=rtpmap:116 AMR-WB/16000" search_in="msg"
+            check_it="true" assign_to="2"/>
+      <ereg regexp="a=fmtp:116 max-red=0; mode-change-capability=2; mode-change-neighbor=1; mode-change-period=2"
+            search_in="msg" check_it="true" assign_to="3"/>
+      <ereg regexp="a=rtpmap:111 telephone-event/16000" search_in="msg"
+            check_it="true" assign_to="4"/>
+      <ereg regexp="m=audio 56386 RTP/AVP 123" search_in="msg"
+            check_it="true" assign_to="5"/>
+      <ereg regexp="a=rtpmap:123 X-APP-MANAGED/8000" search_in="msg"
+            check_it="true" assign_to="6"/>
+      <ereg regexp="tag=([^;[:space:]>]+)" search_in="hdr" header="To:"
+            check_it="true" assign_to="7,8"/>
+    </action>
+  </recv>
+  <nop condexec="1"></nop>
+  <nop condexec="2"></nop>
+  <nop condexec="3"></nop>
+  <nop condexec="4"></nop>
+  <nop condexec="5"></nop>
+  <nop condexec="6"></nop>
+  <nop condexec="7"></nop>
+
+  <send>
+    <![CDATA[
+
+      ACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+      To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 1 ACK
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <pause milliseconds="500"/>
+
+  <!-- Replaces has no application-answer hook. It must be rejected without
+       accepting this call or disconnecting the established dialog. -->
+  <send retrans="500">
+    <![CDATA[
+
+      INVITE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bK-replace-[call_number]
+      From: replacer <sip:replacer@[local_ip]:[local_port]>;tag=replacer-[call_number]
+      To: sut <sip:[service]@[remote_ip]:[remote_port]>
+      Call-ID: [call_id]
+      CSeq: 1 INVITE
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Replaces: [call_id];to-tag=[$8];from-tag=[call_number]
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+v=0
+o=- 893867431174199 4062473432 IN IP4 10.162.173.125
+s=Replaces offer
+c=IN IP4 10.186.99.36
+t=0 0
+m=audio 56836 RTP/AVP 0
+a=sendrecv
+
+    ]]>
+  </send>
+
+  <recv response="100" optional="true">
+  </recv>
+
+  <recv response="488">
+  </recv>
+
+  <send>
+    <![CDATA[
+
+      ACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bK-replace-[call_number]
+      [last_From:]
+      [last_To:]
+      [last_Call-ID:]
+      CSeq: 1 ACK
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <send retrans="500">
+    <![CDATA[
+
+      BYE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+      To: sut <sip:[service]@[remote_ip]:[remote_port]>;tag=[$8]
+      Call-ID: [call_id]
+      CSeq: 2 BYE
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv response="200" crlf="true">
+  </recv>
+
+  <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>
+  <CallLengthRepartition value="10, 50, 100, 500, 1000, 5000, 10000"/>
+
+</scenario>

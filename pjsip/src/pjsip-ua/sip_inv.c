@@ -1141,6 +1141,9 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
             pjsip_dlg_dec_lock(dlg);
             return status;
         }
+        pjmedia_sdp_neg_set_passthrough(
+                    inv->neg,
+                    (inv->options & PJSIP_INV_SDP_PASSTHROUGH) != 0);
     }
 
     /* Register invite as dialog usage. */
@@ -1940,6 +1943,10 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
         pjsip_dlg_dec_lock(dlg);
         return status;
     }
+    if (inv->neg)
+        pjmedia_sdp_neg_set_passthrough(
+                    inv->neg,
+                    (inv->options & PJSIP_INV_SDP_PASSTHROUGH) != 0);
 
     /* Register invite as dialog usage. */
     status = pjsip_dlg_add_usage(dlg, &mod_inv.mod, inv);
@@ -2782,6 +2789,10 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
             status=pjmedia_sdp_neg_create_w_remote_offer(inv->pool, NULL,
                                                          sdp_info->sdp,
                                                          &inv->neg);
+            if (status == PJ_SUCCESS)
+                pjmedia_sdp_neg_set_passthrough(
+                    inv->neg,
+                    (inv->options & PJSIP_INV_SDP_PASSTHROUGH) != 0);
         } else {
             status=pjmedia_sdp_neg_set_remote_offer(inv->pool_prov, inv->neg, 
                                                     sdp_info->sdp);
@@ -2902,6 +2913,10 @@ static pj_status_t process_answer( pjsip_inv_session *inv,
             status = pjmedia_sdp_neg_create_w_local_offer(inv->pool, 
                                                           local_sdp,
                                                           &inv->neg);
+            if (status == PJ_SUCCESS)
+                pjmedia_sdp_neg_set_passthrough(
+                    inv->neg,
+                    (inv->options & PJSIP_INV_SDP_PASSTHROUGH) != 0);
         } else if (pjmedia_sdp_neg_get_state(inv->neg)==
                    PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER)
         {
@@ -3187,6 +3202,10 @@ PJ_DEF(pj_status_t) pjsip_inv_set_local_sdp(pjsip_inv_session *inv,
     } else {
         status = pjmedia_sdp_neg_create_w_local_offer(inv->pool, 
                                                       sdp, &inv->neg);
+        if (status == PJ_SUCCESS)
+            pjmedia_sdp_neg_set_passthrough(
+                    inv->neg,
+                    (inv->options & PJSIP_INV_SDP_PASSTHROUGH) != 0);
     }
 
     pjsip_inv_dec_ref(inv);
@@ -3871,6 +3890,9 @@ PJ_DEF(pj_status_t) pjsip_inv_reinvite( pjsip_inv_session *inv,
                                                           &inv->neg);
             if (status != PJ_SUCCESS)
                 goto on_return;
+            pjmedia_sdp_neg_set_passthrough(
+                    inv->neg,
+                    (inv->options & PJSIP_INV_SDP_PASSTHROUGH) != 0);
 
         } else switch (pjmedia_sdp_neg_get_state(inv->neg)) {
 
@@ -3963,23 +3985,38 @@ PJ_DEF(pj_status_t) pjsip_inv_update (  pjsip_inv_session *inv,
 #endif
         }
 
-        if (pjmedia_sdp_neg_get_state(inv->neg)!=PJMEDIA_SDP_NEG_STATE_DONE) {
+        switch (pjmedia_sdp_neg_get_state(inv->neg)) {
+        case PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER:
+            if ((inv->options & PJSIP_INV_SDP_PASSTHROUGH) == 0) {
+                PJ_LOG(4,(inv->dlg->obj_name,
+                          "Invalid SDP offer/answer state for UPDATE"));
+                status = PJ_EINVALIDOP;
+                goto on_error;
+            }
+            PJ_LOG(4,(inv->obj_name,
+                      "pjsip_inv_update: using pending local offer"));
+            status = pjmedia_sdp_neg_get_neg_local(inv->neg, &offer);
+            if (status != PJ_SUCCESS)
+                goto on_error;
+            break;
+
+        case PJMEDIA_SDP_NEG_STATE_DONE:
+            /* Fix the new offer with the correct SDP origin. */
+            status = pjmedia_sdp_neg_modify_local_offer2(
+                                            inv->pool_prov, inv->neg,
+                                            inv->sdp_neg_flags, offer);
+            if (status != PJ_SUCCESS)
+                goto on_error;
+
+            pjmedia_sdp_neg_get_neg_local(inv->neg, &offer);
+            break;
+
+        default:
             PJ_LOG(4,(inv->dlg->obj_name,
                       "Invalid SDP offer/answer state for UPDATE"));
             status = PJ_EINVALIDOP;
             goto on_error;
         }
-
-        /* Notify negotiator about the new offer. This will fix the offer
-         * with correct SDP origin.
-         */
-        status = pjmedia_sdp_neg_modify_local_offer2(inv->pool_prov, inv->neg,
-                                                     inv->sdp_neg_flags, offer);
-        if (status != PJ_SUCCESS)
-            goto on_error;
-
-        /* Retrieve the "fixed" offer from negotiator */
-        pjmedia_sdp_neg_get_neg_local(inv->neg, &offer);
     }
 
     /* Update Contact if required */
@@ -6705,4 +6742,3 @@ static void inv_on_state_disconnected( pjsip_inv_session *inv, pjsip_event *e)
         handle_uac_tsx_response(inv, e);
     }
 }
-

@@ -204,6 +204,10 @@ typedef struct pjsua_app_config
      * Only available when PJSUA_MEDIA_HAS_PJMEDIA=0 (alt media backend). */
     pj_str_t                custom_sdp;
 #endif
+
+    /* Set PJSUA_CALL_MEDIA_APP_MANAGED on the default call setting used for
+     * outgoing and auto-answered incoming calls (--sdp-passthrough). */
+    pj_bool_t                sdp_passthrough;
 } pjsua_app_config;
 
 /** Extern variable declaration **/
@@ -230,6 +234,11 @@ int write_settings(pjsua_app_config *cfg, char *buf, pj_size_t max);
 char *alloc_settings(pjsua_app_config *cfg, pj_pool_t **p_pool, int *p_len);
 pj_status_t dump_settings(pjsua_app_config *cfg);
 void app_config_init_video(pjsua_acc_config *acc_cfg);
+void app_config_apply_acc_setting(pjsua_acc_config *acc_cfg);
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+pj_status_t app_parse_custom_sdp(pj_pool_t *pool,
+                                 pjmedia_sdp_session **sdp);
+#endif
 void app_config_init_call_setting(pjsua_call_setting *opt);
 pj_status_t app_parse_media_dir(const pj_str_t *name, pjmedia_dir *dir);
 const char *app_media_dir_name(pjmedia_dir dir);
@@ -280,4 +289,3 @@ void app_config_show_video(int acc_id, const pjsua_acc_config *acc_cfg);
 PJ_END_DECL
     
 #endif  /* __PJSUA_APP_COMMON_H__ */
-

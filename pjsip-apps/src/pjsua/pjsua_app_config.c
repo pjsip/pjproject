@@ -189,6 +189,12 @@ static void usage(void)
     puts  ("  --custom-sdp=STR    Replace generated SDP with this string.");
     puts  ("                      Use \\r\\n or \\n as line separators. The full SDP is replaced as-is.");
 #endif
+    puts  ("  --sdp-passthrough  Keep and forward the local/remote SDP as-is during");
+    puts  ("                     negotiation for outgoing and auto-answered incoming calls.");
+    puts  ("  --acc-media-app-managed  Treat all media on calls received by the account");
+    puts  ("                     being configured as application-managed from the start,");
+    puts  ("                     so pjsua never creates a media transport for them (even");
+    puts  ("                     the initial incoming offer). See pjsua_acc_config.");
 
 #if PJSUA_HAS_VIDEO
     puts  ("");
@@ -444,7 +450,8 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_VCAPTURE_DEV, OPT_VRENDER_DEV, OPT_PLAY_AVI, OPT_AUTO_PLAY_AVI,
            OPT_REC_AVI, OPT_REC_AVI_SIZE, OPT_REC_AVI_AUDIO, OPT_AUTO_REC_AVI,
            OPT_USE_CLI, OPT_CLI_TELNET_PORT, OPT_DISABLE_CLI_CONSOLE,
-           OPT_SERVER_AFFINITY, OPT_SERVER_FAILOVER
+           OPT_SERVER_AFFINITY, OPT_SERVER_FAILOVER,
+           OPT_SDP_PASSTHROUGH, OPT_ACC_MEDIA_APP_MANAGED
 #if !PJSUA_MEDIA_HAS_PJMEDIA
            , OPT_CUSTOM_SDP
 #endif
@@ -611,6 +618,8 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "cli-telnet-port", 1, 0, OPT_CLI_TELNET_PORT},
         { "no-cli-console", 0, 0, OPT_DISABLE_CLI_CONSOLE},
         { "server-affinity", 2, 0, OPT_SERVER_AFFINITY},
+        { "sdp-passthrough", 0, 0, OPT_SDP_PASSTHROUGH},
+        { "acc-media-app-managed", 0, 0, OPT_ACC_MEDIA_APP_MANAGED},
 #if !PJSUA_MEDIA_HAS_PJMEDIA
         { "custom-sdp",     1, 0, OPT_CUSTOM_SDP},
 #endif
@@ -1715,6 +1724,14 @@ static pj_status_t parse_args(int argc, char *argv[],
                            "expected 'on' or 'off'", pj_optarg));
                 return PJ_EINVAL;
             }
+            break;
+
+        case OPT_SDP_PASSTHROUGH:
+            cfg->sdp_passthrough = PJ_TRUE;
+            break;
+
+        case OPT_ACC_MEDIA_APP_MANAGED:
+            cur_acc->media_app_managed = PJ_TRUE;
             break;
 
 #if !PJSUA_MEDIA_HAS_PJMEDIA
