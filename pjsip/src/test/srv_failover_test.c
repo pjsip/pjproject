@@ -383,7 +383,8 @@ static unsigned get_refusal_delay(void)
     }
     pj_sockaddr_in_init(&addr, &lo, port);
     pj_get_timestamp(&t0);
-    pj_sock_connect(sock, &addr, sizeof(addr));
+    /* Expected to fail; only the time it takes matters */
+    (void)pj_sock_connect(sock, &addr, sizeof(addr));
     pj_get_timestamp(&t1);
     pj_sock_close(sock);
     return pj_elapsed_msec(&t0, &t1);
@@ -1619,7 +1620,7 @@ static void destroy(void)
         pj_thread_destroy(g.thread);
     }
     for (i = 0; i < SRV_CNT; ++i) {
-        set_mode(&g.srv[i], MODE_CLOSED);
+        (void)set_mode(&g.srv[i], MODE_CLOSED);
     }
 #if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT
     if (g.tls) {
