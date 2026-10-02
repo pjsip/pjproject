@@ -679,6 +679,7 @@ struct pjsua_data
 
     /* Calls: */
     pjsua_config         ua_cfg;                /**< UA config.         */
+    pj_bool_t            server_failover_applied; /**< PJSUA set it     */
     pj_bool_t            prev_server_failover;  /**< Before pjsua_init()*/
     unsigned             call_cnt;              /**< Call counter.      */
     pjsua_call          *calls;                 /**< Calls array.       */

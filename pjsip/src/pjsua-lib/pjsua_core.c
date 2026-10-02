@@ -1351,12 +1351,14 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
         goto on_error;
 
     /* A setting other than the default applies, the default keeps what
-     * the application may have set itself. After the configuration is
-     * kept, so that pjsua_destroy() can restore the previous value.
+     * the application may have set itself. The previous value is kept
+     * for pjsua_destroy(), which restores it only when it was applied.
      */
-    pjsua_var.prev_server_failover = pjsip_cfg()->endpt.server_failover;
-    if (pjsua_var.ua_cfg.server_failover != PJSIP_SERVER_FAILOVER)
+    if (pjsua_var.ua_cfg.server_failover != PJSIP_SERVER_FAILOVER) {
+        pjsua_var.prev_server_failover = pjsip_cfg()->endpt.server_failover;
         pjsip_cfg()->endpt.server_failover = pjsua_var.ua_cfg.server_failover;
+        pjsua_var.server_failover_applied = PJ_TRUE;
+    }
 
     /* If nameserver is configured, create DNS resolver instance and
      * set it to be used by SIP resolver. Done after the config copy
@@ -2383,7 +2385,8 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
         pj_shutdown();
     }
 
-    if (pjsua_var.ua_cfg.server_failover != PJSIP_SERVER_FAILOVER)
+    /* Only once, pjsua_var is cleared below and this may be called again */
+    if (pjsua_var.server_failover_applied)
         pjsip_cfg()->endpt.server_failover = pjsua_var.prev_server_failover;
 
     /* Clear pjsua_var */

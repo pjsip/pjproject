@@ -2039,6 +2039,51 @@ static int pjsua_keeps_option_case(pj_bool_t own_setting)
     return rc;
 }
 
+/* A second pjsua_destroy(), as pjsua2 does, and a failed pjsua_init() leave
+ * the option the application enabled itself.
+ */
+static int pjsua_restore_once_case(pj_bool_t init_fails)
+{
+    pjsua_config ua_cfg;
+    pjsua_logging_config log_cfg;
+    pj_status_t status;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  option enabled by the application, %s",
+              init_fails ? "pjsua_init() fails" : "destroyed twice"));
+
+    pjsip_cfg()->endpt.server_failover = PJ_TRUE;
+    if (pjsua_create() != PJ_SUCCESS) {
+        pjsip_cfg()->endpt.server_failover = PJSIP_SERVER_FAILOVER;
+        return -3115;
+    }
+    pjsua_config_default(&ua_cfg);
+    ua_cfg.thread_cnt = 0;
+    if (init_fails) {
+        /* Applied by PJSUA in a build with the option off by default,
+         * then the nameserver fails pjsua_init()
+         */
+        ua_cfg.server_failover = PJ_TRUE;
+        ua_cfg.nameserver_count = 1;
+        ua_cfg.nameserver[0] = pj_str("999.999.999.999");
+    }
+    pjsua_logging_config_default(&log_cfg);
+    log_cfg.level = 3;
+    log_cfg.console_level = 3;
+    status = pjsua_init(&ua_cfg, &log_cfg, NULL);
+    if (init_fails ? status == PJ_SUCCESS : status != PJ_SUCCESS)
+        rc = -3116;
+    pjsua_destroy();
+    if (!init_fails)
+        pjsua_destroy();
+    if (rc == 0 && !pjsip_cfg()->endpt.server_failover)
+        rc = -3117;
+    pjsip_cfg()->endpt.server_failover = PJSIP_SERVER_FAILOVER;
+    if (rc)
+        PJ_LOG(1,(THIS_FILE, "    error: restore case failed [%d]", rc));
+    return rc;
+}
+
 int srv_failover_pjsua_test(void)
 {
     int rc;
@@ -2056,6 +2101,10 @@ int srv_failover_pjsua_test(void)
         rc = pjsua_keeps_option_case(PJ_FALSE);
     if (rc == 0)
         rc = pjsua_keeps_option_case(PJ_TRUE);
+    if (rc == 0)
+        rc = pjsua_restore_once_case(PJ_FALSE);
+    if (rc == 0)
+        rc = pjsua_restore_once_case(PJ_TRUE);
 
     restore_test_endpt();
     return rc;
