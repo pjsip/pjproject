@@ -513,7 +513,10 @@ static void mainProg4(MyEndpoint &ep)
 #endif
 
 
+/* SDL on mingw may define main as SDL_main, which needs C linkage */
+#ifdef main
 extern "C"
+#endif
 int main()
 {
     int ret = 0;
