@@ -502,6 +502,12 @@ public:
 
 /**
  * Audio Media Port.
+ *
+ * Implementations must call detachCallbacks() while the object and all
+ * callback-visible state are still valid, before tearing down that state.
+ * In particular, application code should detach before deleting the object,
+ * including before Java delete() or C# Dispose(). See detachCallbacks() for
+ * C++ destructor usage and the callback-locking requirements.
  */
 class AudioMediaPort : public AudioMedia
 {
@@ -551,7 +557,35 @@ public:
     virtual void onFrameReceived(MediaFrame &frame)
     { PJ_UNUSED_ARG(frame); }
 
+    /**
+     * Once the port has been created, permanently stop dispatching its frame
+     * callbacks to this object. Repeated calls are safe. Before createPort(),
+     * this does nothing and does not prevent callbacks after port creation.
+     *
+     * This acquires the port's recursive group lock. When called from a
+     * thread/context which does not already own that lock, it waits for
+     * in-progress callbacks to finish. Calling it from a callback (or while
+     * already owning the lock) does not wait for that callback to return;
+     * it must not be used as a way to wait for oneself.
+     *
+     * Call while the object and all callback-visible state are still fully
+     * valid, before tearing down derived members. Application code should
+     * call this before deleting the object. A C++ implementation can also
+     * call it as the first operation in the most-derived destructor, before
+     * any callback-visible state is torn down. Explicit detach before
+     * destruction begins is the strictest usage, particularly with multiple
+     * levels of inheritance. This is not a general guarantee of safe
+     * concurrent destruction.
+     * Do not hold application locks, other ports' locks, or library locks
+     * needed by an in-progress callback while calling this method.
+     *
+     * This does not unregister the conference port or destroy media resources.
+     */
+    void detachCallbacks();
+
 private:
+    /* Test access to raw frame dispatch without exposing media resources. */
+    friend class AudioMediaPortTest;
     pj_pool_t *pool;
     pjmedia_port *port;
 };
