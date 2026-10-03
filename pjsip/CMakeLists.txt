@@ -389,6 +389,7 @@ if(BUILD_TESTING)
     src/pjsua2-test/main.cpp
     src/pjsua2-test/instant_messaging.cpp
     src/pjsua2-test/auth_challenge.cpp
+    src/pjsua2-test/audio_media_port.cpp
   )
 
   target_link_libraries(pjsua2-test

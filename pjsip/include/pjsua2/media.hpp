@@ -551,7 +551,32 @@ public:
     virtual void onFrameReceived(MediaFrame &frame)
     { PJ_UNUSED_ARG(frame); }
 
+protected:
+    /**
+     * Permanently stop dispatching frame callbacks to this object from the
+     * created media port. Repeated calls are safe. If no port has been
+     * created, this does nothing.
+     *
+     * This acquires the port's recursive group lock. When called from a
+     * thread/context which does not already own that lock, it waits for
+     * in-progress callbacks to finish. Calling it from a callback (or while
+     * already owning the lock) does not wait for that callback to return;
+     * it must not be used as a way to wait for oneself.
+     *
+     * Call while the object and all callback-visible state are still fully
+     * valid, before tearing down derived members. In particular, with
+     * multiple levels of inheritance, explicitly detach before destruction
+     * begins. This is not a general guarantee of safe concurrent destruction.
+     * Do not hold application locks, other ports' locks, or library locks
+     * needed by an in-progress callback while calling this method.
+     *
+     * This does not unregister the conference port or destroy media resources.
+     */
+    void detachCallbacks();
+
 private:
+    /* Test access to raw frame dispatch without exposing media resources. */
+    friend class AudioMediaPortTest;
     pj_pool_t *pool;
     pjmedia_port *port;
 };

@@ -295,23 +295,23 @@ AudioMediaPort::AudioMediaPort()
 AudioMediaPort::~AudioMediaPort()
 {
     PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
+    detachCallbacks();
     if (port) {
-        struct port_data *pdata = static_cast<struct port_data *>
-                                  (port->port_data.pdata);
-
-        /* Make sure port no longer accesses this object in its
-         * get/put_frame() callback.
-         */
-        if (port->grp_lock) {
-            pj_grp_lock_acquire(port->grp_lock);
-            pdata->mport = NULL;
-            pj_grp_lock_release(port->grp_lock);
-        }
-
         pjmedia_port_destroy(port);
         /* We release the pool later in port.on_destroy since
          * the unregistration is async and may not have completed yet.
          */
+    }
+}
+
+void AudioMediaPort::detachCallbacks()
+{
+    if (port && port->grp_lock) {
+        struct port_data *pdata = static_cast<struct port_data *>
+                                  (port->port_data.pdata);
+        pj_grp_lock_acquire(port->grp_lock);
+        pdata->mport = NULL;
+        pj_grp_lock_release(port->grp_lock);
     }
 }
 
@@ -323,8 +323,11 @@ static pj_status_t get_frame(pjmedia_port *port, pjmedia_frame *frame)
     MediaFrame frame_;
 
     pj_grp_lock_acquire(port->grp_lock);
-    if ((mport = pdata->mport) == NULL)
+    if ((mport = pdata->mport) == NULL) {
+        frame->type = PJMEDIA_FRAME_TYPE_NONE;
+        frame->size = 0;
         goto on_return;
+    }
 
     frame_.size = (unsigned)frame->size;
     mport->onFrameRequested(frame_);
