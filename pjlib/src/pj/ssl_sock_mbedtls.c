@@ -38,9 +38,7 @@
 #if defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK != 0 && \
     (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_MBEDTLS)
 
-#include "mbedtls/ctr_drbg.h"
 #include "mbedtls/debug.h"
-#include "mbedtls/entropy.h"
 #include "mbedtls/error.h"
 #include "mbedtls/net_sockets.h"
 #include "mbedtls/oid.h"
@@ -49,8 +47,10 @@
 #include "mbedtls/ssl.h"
 #include "mbedtls/version.h"
 
-#ifdef MBEDTLS_DEBUG_C
-#define MBEDTLS_DEBUG_VERBOSE 1
+/* Mbed TLS 4.x takes its random numbers from PSA Crypto */
+#if MBEDTLS_VERSION_MAJOR < 4
+#  include "mbedtls/ctr_drbg.h"
+#  include "mbedtls/entropy.h"
 #endif
 
 #define SSL_SOCK_IMP_USE_CIRC_BUF
@@ -67,8 +67,10 @@ typedef struct mbedtls_sock_t {
 
     mbedtls_ssl_context ssl_ctx;
     mbedtls_ssl_config ssl_config;
+#if MBEDTLS_VERSION_MAJOR < 4
     mbedtls_entropy_context entropy;
     mbedtls_ctr_drbg_context ctr_drbg;
+#endif
     mbedtls_x509_crt cacert;
     mbedtls_x509_crt cert;
     mbedtls_pk_context pk_ctx;
@@ -81,6 +83,48 @@ typedef struct mbedtls_sock_t {
  * Static/internal functions.
  *******************************************************************
  */
+
+#ifdef MBEDTLS_PSA_CRYPTO_C
+/* PSA Crypto is global: every connection keeps its keys in the PSA key
+ * store, and mbedtls_psa_crypto_free() wipes all of them. So initialize it
+ * once, and free it only at pj_shutdown(), when no socket is left.
+ */
+static pj_bool_t psa_initialized;
+
+static void psa_shutdown(void)
+{
+    mbedtls_psa_crypto_free();
+    psa_initialized = PJ_FALSE;
+}
+
+static pj_status_t psa_init(void)
+{
+    psa_status_t ret;
+    pj_status_t status;
+
+    if (psa_initialized)
+        return PJ_SUCCESS;
+
+    ret = psa_crypto_init();
+    if (ret != PSA_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "Failed to initialize PSA Crypto, "
+                              "ret = %d", (int)ret));
+        return PJ_EUNKNOWN;
+    }
+
+    status = pj_atexit(&psa_shutdown);
+    if (status != PJ_SUCCESS) {
+        mbedtls_psa_crypto_free();
+        return status;
+    }
+
+    psa_initialized = PJ_TRUE;
+    return PJ_SUCCESS;
+}
+#endif
+
+#if defined(MBEDTLS_DEBUG_C)
+#define MBEDTLS_DEBUG_VERBOSE 1
 
 /* MbedTLS way of reporting internal operations. */
 static void mbedtls_print_logs(void *ctx, int level, const char *file,
@@ -97,6 +141,7 @@ static void mbedtls_print_logs(void *ctx, int level, const char *file,
 
     PJ_LOG(3, (THIS_FILE, "%s:%d: %s", file_name, line, str));
 }
+#endif
 
 /* Convert from MbedTLS error to pj_status_t. */
 static pj_status_t ssl_status_from_err(pj_ssl_sock_t *ssock, int err)
@@ -382,22 +427,37 @@ static pj_status_t set_ssl_protocol(pj_ssl_sock_t *ssock)
     mbedtls_sock_t *mssock = (mbedtls_sock_t *)ssock;
     mbedtls_ssl_protocol_version max_proto;
     mbedtls_ssl_protocol_version min_proto;
+    pj_uint32_t proto;
 
     if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT) {
         ssock->param.proto = PJ_SSL_SOCK_PROTO_TLS1_2 |
                              PJ_SSL_SOCK_PROTO_TLS1_3;
     }
 
-    if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_3) {
+    /* Only ask for the versions this Mbed TLS build has, otherwise
+     * mbedtls_ssl_setup() rejects the config. */
+    proto = ssock->param.proto &
+            (PJ_SSL_SOCK_PROTO_TLS1_2 | PJ_SSL_SOCK_PROTO_TLS1_3);
+#if !defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    proto &= ~PJ_SSL_SOCK_PROTO_TLS1_3;
+#endif
+#if !defined(MBEDTLS_SSL_PROTO_TLS1_2)
+    proto &= ~PJ_SSL_SOCK_PROTO_TLS1_2;
+#endif
+
+    if (proto & PJ_SSL_SOCK_PROTO_TLS1_3) {
         max_proto = MBEDTLS_SSL_VERSION_TLS1_3;
-    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_2) {
+    } else if (proto & PJ_SSL_SOCK_PROTO_TLS1_2) {
         max_proto = MBEDTLS_SSL_VERSION_TLS1_2;
     } else {
         PJ_LOG(1, (THIS_FILE, "Unsupported TLS protocol"));
         return PJ_EINVAL;
     }
 
-    if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_2) {
+    /* pj_ssl_sock_get_info() reports the protocols in use from here */
+    ssock->param.proto = proto;
+
+    if (proto & PJ_SSL_SOCK_PROTO_TLS1_2) {
         min_proto = MBEDTLS_SSL_VERSION_TLS1_2;
     } else {
         min_proto = MBEDTLS_SSL_VERSION_TLS1_3;
@@ -508,8 +568,11 @@ static pj_status_t set_cert(pj_ssl_sock_t *ssock)
                                    (const unsigned char *)cert->privkey_buf.ptr,
                                    cert->privkey_buf.slen,
                                    (const unsigned char *)cert->privkey_pass.ptr,
-                                   cert->privkey_pass.slen,
-                                   mbedtls_ctr_drbg_random, &mssock->ctr_drbg);
+                                   cert->privkey_pass.slen
+#if MBEDTLS_VERSION_MAJOR < 4
+                                   , mbedtls_ctr_drbg_random, &mssock->ctr_drbg
+#endif
+                                   );
         if (ret != 0) {
             PJ_LOG(1, (THIS_FILE, "Failed to mbedtls_pk_parse, "
                                   "ret = -0x%04X", -ret));
@@ -552,9 +615,12 @@ static pj_status_t set_cert(pj_ssl_sock_t *ssock)
 
         ret = mbedtls_pk_parse_keyfile(&mssock->pk_ctx,
                                        cert->privkey_file.ptr,
-                                       cert->privkey_pass.ptr,
-                                       mbedtls_ctr_drbg_random,
-                                       &mssock->ctr_drbg);
+                                       cert->privkey_pass.ptr
+#if MBEDTLS_VERSION_MAJOR < 4
+                                       , mbedtls_ctr_drbg_random,
+                                       &mssock->ctr_drbg
+#endif
+                                       );
         if (ret != 0) {
             PJ_LOG(1, (THIS_FILE, "Failed to mbedtls_pk_parse_keyfile, "
                                   "ret = -0x%04X", -ret));
@@ -626,12 +692,14 @@ static pj_ssl_sock_t *ssl_alloc(pj_pool_t *pool)
 static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 {
     mbedtls_sock_t *mssock = (mbedtls_sock_t *)ssock;
-    const char *pers = "ssl_client";
     pj_status_t status;
     int ret;
     int endpoint;
-    /* This version string is 18 bytes long, as advised by version.h. */
-    char version[18];
+#if MBEDTLS_VERSION_MAJOR < 4
+    const char *pers = "ssl_client";
+    /* version.h: 18 bytes at most, including the terminating null */
+    char version[24];
+#endif
 
     /* Suppress warnings */
     PJ_UNUSED_ARG(circ_reset);
@@ -651,22 +719,26 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
         return status;
     }
 
+#if MBEDTLS_VERSION_MAJOR >= 4
+    PJ_LOG(4, (THIS_FILE, "Mbed TLS version %s",
+               mbedtls_version_get_string_full()));
+#else
     mbedtls_version_get_string_full(version);
-    PJ_LOG(4, (THIS_FILE, "Mbed TLS version : %s", version));
+    PJ_LOG(4, (THIS_FILE, "Mbed TLS version %s", version));
+#endif
 
 #ifdef MBEDTLS_PSA_CRYPTO_C
-    ret = psa_crypto_init();
-    if (ret != PSA_SUCCESS) {
-        PJ_LOG(1, (THIS_FILE, "Failed to initialize PSA Crypto, "
-                              "ret = -0x%04X", ret));
-        return PJ_EUNKNOWN;
-    }
+    status = psa_init();
+    if (status != PJ_SUCCESS)
+        return status;
 #endif
 
     mbedtls_ssl_init(&mssock->ssl_ctx);
     mbedtls_ssl_config_init(&mssock->ssl_config);
+#if MBEDTLS_VERSION_MAJOR < 4
     mbedtls_ctr_drbg_init(&mssock->ctr_drbg);
     mbedtls_entropy_init(&mssock->entropy);
+#endif
     mbedtls_x509_crt_init(&mssock->cacert);
     mbedtls_x509_crt_init(&mssock->cert);
     mbedtls_pk_init(&mssock->pk_ctx);
@@ -682,6 +754,7 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
         goto out;
     }
 
+#if MBEDTLS_VERSION_MAJOR < 4
     ret = mbedtls_ctr_drbg_seed(&mssock->ctr_drbg, mbedtls_entropy_func,
                                 &mssock->entropy,
                                 (const unsigned char *)pers, strlen(pers));
@@ -694,6 +767,7 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     mbedtls_ssl_conf_rng(&mssock->ssl_config,
                          mbedtls_ctr_drbg_random,
                          &mssock->ctr_drbg);
+#endif
 
     status = set_ssl_protocol(ssock);
     if (status != PJ_SUCCESS)
@@ -750,14 +824,12 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
     mbedtls_ssl_free(&mssock->ssl_ctx);
     mbedtls_ssl_config_free(&mssock->ssl_config);
     mbedtls_x509_crt_free(&mssock->cacert);
+#if MBEDTLS_VERSION_MAJOR < 4
     mbedtls_ctr_drbg_free(&mssock->ctr_drbg);
     mbedtls_entropy_free(&mssock->entropy);
+#endif
     mbedtls_x509_crt_free(&mssock->cert);
     mbedtls_pk_free(&mssock->pk_ctx);
-
-#ifdef MBEDTLS_PSA_CRYPTO_C
-    mbedtls_psa_crypto_free();
-#endif
 
     /* Destroy circular buffers */
     circ_deinit(&ssock->ssl_read_buf);
@@ -876,9 +948,22 @@ static pj_status_t ssl_renegotiate(pj_ssl_sock_t *ssock)
     return PJ_SUCCESS;
 }
 
+/* Encrypted input received but not yet given to Mbed TLS. */
+static pj_size_t pending_input(pj_ssl_sock_t *ssock)
+{
+    pj_size_t size;
+
+    pj_lock_acquire(ssock->ssl_read_buf_mutex);
+    size = circ_size(&ssock->ssl_read_buf);
+    pj_lock_release(ssock->ssl_read_buf_mutex);
+
+    return size;
+}
+
 static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
 {
     mbedtls_sock_t *mssock = (mbedtls_sock_t *)ssock;
+    pj_size_t pending = 0;
     int ret;
 
     /* Hold write_mutex because mbedtls_ssl_read() may produce
@@ -886,17 +971,46 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
      * SSL_read approach).
      */
     pj_lock_acquire(ssock->write_mutex);
-    ret = mbedtls_ssl_read(&mssock->ssl_ctx, data, *size);
+    for (;;) {
+        pj_size_t left;
+
+        ret = mbedtls_ssl_read(&mssock->ssl_ctx, data, *size);
+
+        /* A TLS 1.3 NewSessionTicket has been consumed already */
+        if (ret == MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET)
+            continue;
+
+        /* A record without application data, e.g. a session ticket, can
+         * end the read with more input already buffered here, which no
+         * further network event would bring back: read on while it shrinks.
+         */
+        if (ret == MBEDTLS_ERR_SSL_WANT_READ &&
+            (left = pending_input(ssock)) != 0 && left != pending)
+        {
+            pending = left;
+            continue;
+        }
+        break;
+    }
     pj_lock_release(ssock->write_mutex);
+
     if (ret >= 0) {
         *size = ret;
         return PJ_SUCCESS;
-    } else if (ret == MBEDTLS_ERR_SSL_WANT_READ) {
-        *size = 0;
-        return PJ_SUCCESS;
-    } else {
-        return PJ_EUNKNOWN;
     }
+
+    /* The caller takes a non-zero size as data read. As with OpenSSL, the
+     * peer's close_notify is no error: the transport reports the EOF.
+     */
+    *size = 0;
+    if (ret == MBEDTLS_ERR_SSL_WANT_READ ||
+        ret == MBEDTLS_ERR_SSL_WANT_WRITE ||
+        ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY)
+    {
+        return PJ_SUCCESS;
+    }
+
+    return PJ_EUNKNOWN;
 }
 
 /* Caller must hold ssock->write_mutex. */
@@ -929,6 +1043,50 @@ static pj_status_t ssl_write(pj_ssl_sock_t *ssock, const void *data,
 
     *nwritten = nwritten_;
     return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pj_ssl_rand_bytes(void *buf, pj_size_t len)
+{
+#if MBEDTLS_VERSION_MAJOR >= 4
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(buf || len == 0, PJ_EINVAL);
+
+    status = psa_init();
+    if (status != PJ_SUCCESS)
+        return status;
+
+    if (psa_generate_random((uint8_t *)buf, len) != PSA_SUCCESS)
+        return PJ_EUNKNOWN;
+
+    return PJ_SUCCESS;
+#else
+    /* A DRBG of this call's own, so that no lock is needed */
+    const char *pers = "pj_ssl_rand_bytes";
+    mbedtls_entropy_context entropy;
+    mbedtls_ctr_drbg_context ctr_drbg;
+    unsigned char *p = (unsigned char *)buf;
+    int ret;
+
+    PJ_ASSERT_RETURN(buf || len == 0, PJ_EINVAL);
+
+    mbedtls_entropy_init(&entropy);
+    mbedtls_ctr_drbg_init(&ctr_drbg);
+    ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
+                                (const unsigned char *)pers,
+                                pj_ansi_strlen(pers));
+    while (ret == 0 && len > 0) {
+        pj_size_t n = PJ_MIN(len, MBEDTLS_CTR_DRBG_MAX_REQUEST);
+
+        ret = mbedtls_ctr_drbg_random(&ctr_drbg, p, n);
+        p += n;
+        len -= n;
+    }
+    mbedtls_ctr_drbg_free(&ctr_drbg);
+    mbedtls_entropy_free(&entropy);
+
+    return (ret == 0) ? PJ_SUCCESS : PJ_EUNKNOWN;
+#endif
 }
 
 #endif /* PJ_HAS_SSL_SOCK */

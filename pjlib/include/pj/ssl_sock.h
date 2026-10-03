@@ -849,6 +849,19 @@ PJ_DECL(const char*) pj_ssl_curve_name(pj_ssl_curve curve);
 PJ_DECL(pj_ssl_curve) pj_ssl_curve_id(const char *curve_name);
 
 /**
+ * Fill a buffer with cryptographically secure random bytes, from the random
+ * generator of the SSL backend. Currently supported with the OpenSSL, Apple
+ * and Mbed TLS backends.
+ *
+ * @param buf           The buffer to fill.
+ * @param len           Number of random bytes to write.
+ *
+ * @return              PJ_SUCCESS on success, PJ_ENOTSUP if the SSL backend
+ *                      does not provide random bytes, or another error code.
+ */
+PJ_DECL(pj_status_t) pj_ssl_rand_bytes(void *buf, pj_size_t len);
+
+/**
  * Entropy enumeration
  */
 typedef enum pj_ssl_entropy

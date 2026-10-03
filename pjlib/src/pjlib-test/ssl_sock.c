@@ -851,6 +851,9 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
             state_cli.send_str[i] = (char)(pj_rand() % 256);
     }
 
+    /* Verifying the server, below, needs the name its certificate is for */
+    param.server_name = pj_str("127.0.0.1");
+
     status = pj_ssl_sock_create(pool, &param, &ssock_cli);
     if (status != PJ_SUCCESS) {
         goto on_return;
