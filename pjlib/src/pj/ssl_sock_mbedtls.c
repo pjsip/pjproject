@@ -53,6 +53,17 @@
 #  include "mbedtls/entropy.h"
 #endif
 
+/* All sockets and pj_ssl_rand_bytes() share PSA Crypto */
+#if PJ_HAS_THREADS && defined(MBEDTLS_PSA_CRYPTO_C) && \
+    !defined(MBEDTLS_THREADING_C)
+#   ifdef _MSC_VER
+#       pragma message("Warning: Mbed TLS without MBEDTLS_THREADING_C: "\
+                       "PSA is not thread-safe")
+#   else
+#       warning "Mbed TLS without MBEDTLS_THREADING_C: PSA is not thread-safe"
+#   endif
+#endif
+
 #define SSL_SOCK_IMP_USE_CIRC_BUF
 
 #include "ssl_sock_imp_common.h"

@@ -3095,7 +3095,6 @@ static pj_status_t ssl_renegotiate(pj_ssl_sock_t *ssock)
 }
 
 
-/* Put back deprecation warning setting */
 PJ_DEF(pj_status_t) pj_ssl_rand_bytes(void *buf, pj_size_t len)
 {
     unsigned char *p = (unsigned char *)buf;
@@ -3122,6 +3121,7 @@ PJ_DEF(pj_status_t) pj_ssl_rand_bytes(void *buf, pj_size_t len)
 }
 
 
+/* Put back deprecation warning setting */
 #if defined(PJ_DARWINOS) && PJ_DARWINOS==1
 #  pragma GCC diagnostic pop
 #endif

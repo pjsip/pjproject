@@ -10219,9 +10219,7 @@ printf "%s\n" "** No GnuTLS libraries found, disabling SSL support **" >&6; }
         if test "x$ac_ssl_backend" = "x"; then
                                                 mbedtls_pkg_config="$PKG_CONFIG"
             if test "x$with_mbedtls" != "xno" -a "x$with_mbedtls" != "x"; then
-                CFLAGS="$CFLAGS -I$with_mbedtls/include"
-                LDFLAGS="$LDFLAGS -L$with_mbedtls/lib"
-                mbedtls_pkg_config="env PKG_CONFIG_PATH= PKG_CONFIG_LIBDIR=$with_mbedtls/lib/pkgconfig $PKG_CONFIG"
+                mbedtls_pkg_config="env PKG_CONFIG_PATH= PKG_CONFIG_LIBDIR=$with_mbedtls/lib/pkgconfig:$with_mbedtls/lib64/pkgconfig $PKG_CONFIG"
                 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Using MbedTLS prefix... $with_mbedtls" >&5
 printf "%s\n" "Using MbedTLS prefix... $with_mbedtls" >&6; }
             fi
@@ -10237,6 +10235,13 @@ printf "%s\n" "Using MbedTLS from pkg-config" >&6; }
                 CFLAGS="$CFLAGS `$mbedtls_pkg_config --cflags mbedtls mbedx509 mbedcrypto`"
                 mbedtls_libs="`$mbedtls_pkg_config --libs mbedtls mbedx509 mbedcrypto`"
             else
+                if test "x$with_mbedtls" != "xno" -a "x$with_mbedtls" != "x"; then
+                    CFLAGS="$CFLAGS -I$with_mbedtls/include"
+                    LDFLAGS="$LDFLAGS -L$with_mbedtls/lib"
+                    if test -d "$with_mbedtls/lib64"; then
+                        LDFLAGS="$LDFLAGS -L$with_mbedtls/lib64"
+                    fi
+                fi
                 mbedtls_libs="-lmbedtls -lmbedx509 -lmbedcrypto"
             fi
 
