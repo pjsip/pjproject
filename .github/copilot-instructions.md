@@ -102,6 +102,7 @@ https://github.com/pjsip/pjproject_docs
 - **Minimal comments**: avoid adding code comments unless necessary (i.e. only if the code itself is not self explanatory). When necessary, code comments must be as brief as possible to ensure readability and avoid overbloating.
 - **Module prefixes**: `pj_` (pjlib), `pjsip_` (sip), `pjmedia_` (media), `pjnath_` (nat)
 - **Constants**: ALL_CAPS with prefix (`PJSIP_MAX_URL_SIZE`, `PJ_TRUE`)
+- **Copyright year**: when modifying a file that has a Teluu copyright line, update its end year to the current year (e.g. in 2026, `Copyright (C) 2008-2011 Teluu Inc.` becomes `Copyright (C) 2008-2026 Teluu Inc.`). Leave other copyright lines (e.g. Benny Prijono) unchanged, and do not touch files under `third_party/`.
 
 ### Memory Management
 - Core C modules use **pool-based allocation** (`pj_pool_t`).
