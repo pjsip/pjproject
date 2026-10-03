@@ -323,8 +323,11 @@ static pj_status_t get_frame(pjmedia_port *port, pjmedia_frame *frame)
     MediaFrame frame_;
 
     pj_grp_lock_acquire(port->grp_lock);
-    if ((mport = pdata->mport) == NULL)
+    if ((mport = pdata->mport) == NULL) {
+        frame->type = PJMEDIA_FRAME_TYPE_NONE;
+        frame->size = 0;
         goto on_return;
+    }
 
     frame_.size = (unsigned)frame->size;
     mport->onFrameRequested(frame_);
