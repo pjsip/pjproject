@@ -2140,10 +2140,12 @@ AC_ARG_WITH(gnutls,
     [with_gnutls=no]
 )
 
-dnl # MbedTLS alt prefix
+dnl # MbedTLS prefix
 AC_ARG_WITH(mbedtls,
-    AS_HELP_STRING([--with-mbedtls=DIR], [Specify alternate MbedTLS prefix]),
-    [],
+    AS_HELP_STRING([--with-mbedtls=DIR], [Use MbedTLS installed in DIR]),
+    [if test "x$withval" = "xyes"; then
+         AC_MSG_ERROR([--with-mbedtls requires the MbedTLS directory])
+     fi],
     [with_mbedtls=no]
 )
 
@@ -2332,28 +2334,46 @@ AC_ARG_ENABLE(ssl,
         fi
 
         if test "x$ac_ssl_backend" = "x"; then
+            dnl # The pkg-config command for MbedTLS. With a prefix, it only
+            dnl # looks there, so that an MbedTLS installed elsewhere cannot
+            dnl # supply the flags.
+            mbedtls_pkg_config="$PKG_CONFIG"
             if test "x$with_mbedtls" != "xno" -a "x$with_mbedtls" != "x"; then
-                CFLAGS="$CFLAGS -I$with_mbedtls/include"
-                LDFLAGS="$LDFLAGS -L$with_mbedtls/lib"
+                mbedtls_pkg_config="env PKG_CONFIG_PATH= PKG_CONFIG_LIBDIR=$with_mbedtls/lib/pkgconfig:$with_mbedtls/lib64/pkgconfig $PKG_CONFIG"
                 AC_MSG_RESULT([Using MbedTLS prefix... $with_mbedtls])
             fi
 
             AC_MSG_RESULT([checking for MbedTLS installations..])
             AC_SUBST(mbedtls_h_present)
             AC_SUBST(libmbedtls_present)
+
+            dnl # Keep dependents first for static linking. MbedTLS 4.x
+            dnl # still installs libmbedcrypto, as an alias of libtfpsacrypto.
+            if test "$PKG_CONFIG" != "none" && $mbedtls_pkg_config --exists mbedtls mbedx509 mbedcrypto; then
+                AC_MSG_RESULT([Using MbedTLS from pkg-config])
+                CFLAGS="$CFLAGS `$mbedtls_pkg_config --cflags mbedtls mbedx509 mbedcrypto`"
+                mbedtls_libs="`$mbedtls_pkg_config --libs mbedtls mbedx509 mbedcrypto`"
+            else
+                if test "x$with_mbedtls" != "xno" -a "x$with_mbedtls" != "x"; then
+                    CFLAGS="$CFLAGS -I$with_mbedtls/include"
+                    LDFLAGS="$LDFLAGS -L$with_mbedtls/lib"
+                    if test -d "$with_mbedtls/lib64"; then
+                        LDFLAGS="$LDFLAGS -L$with_mbedtls/lib64"
+                    fi
+                fi
+                mbedtls_libs="-lmbedtls -lmbedx509 -lmbedcrypto"
+            fi
+
             AC_CHECK_HEADER(mbedtls/version.h, [mbedtls_h_present=1])
 
-            if test "$PKG_CONFIG" != "none"; then
-                if $PKG_CONFIG --exists mbedtls mbedcrypto mbedx509; then
-                    LIBS="$LIBS `$PKG_CONFIG --libs mbedtls mbedcrypto mbedx509`"
-                    libmbedtls_present=1
-                else
-                    AC_CHECK_LIB(mbedtls, mbedtls_version_get_number, [
-                        libmbedtls_present=1 && LIBS="$LIBS -lmbedtls"])
-                fi
-            else
-                AC_MSG_RESULT([*** Warning: neither pkg-config nor python is available, disabling mbedtls. ***])
-            fi
+            mbedtls_saved_libs="$LIBS"
+            LIBS="$LIBS $mbedtls_libs"
+            AC_MSG_CHECKING([for mbedtls_version_get_number in $mbedtls_libs])
+            AC_LINK_IFELSE([AC_LANG_CALL([], [mbedtls_version_get_number])],
+                           [AC_MSG_RESULT(yes)
+                            libmbedtls_present=1],
+                           [AC_MSG_RESULT(no)
+                            LIBS="$mbedtls_saved_libs"])
 
             if test "x$mbedtls_h_present" = "x1" -a "x$libmbedtls_present" = "x1"; then
                 AC_MSG_RESULT([MbedTLS library found, SSL support enabled])
