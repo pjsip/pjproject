@@ -126,9 +126,16 @@ public:
         /* Fencing must not unregister the port or release its resources. */
         CHECK(media.getPortInfo().portId == media.getPortId());
         for (unsigned i = 0; i < 3; ++i) {
+            /* Seed a stale audio result; detached reads must not expose it. */
+            pj_memset(buffer, 0xa5, sizeof(buffer));
             frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
             frame.size = sizeof(buffer);
             CHECK(pjmedia_port_get_frame(port, &frame) == PJ_SUCCESS);
+            CHECK(frame.type == PJMEDIA_FRAME_TYPE_NONE);
+            CHECK(frame.size == 0);
+            /* NONE/0 makes the payload invalid; it need not be overwritten. */
+            for (unsigned j = 0; j < sizeof(buffer); ++j)
+                CHECK(buffer[j] == 0xa5);
 
             frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
             frame.size = sizeof(buffer);
