@@ -102,11 +102,16 @@ static pj_status_t psa_init(void)
     psa_status_t ret;
     pj_status_t status;
 
-    if (psa_initialized)
+    pj_enter_critical_section();
+
+    if (psa_initialized) {
+        pj_leave_critical_section();
         return PJ_SUCCESS;
+    }
 
     ret = psa_crypto_init();
     if (ret != PSA_SUCCESS) {
+        pj_leave_critical_section();
         PJ_LOG(1, (THIS_FILE, "Failed to initialize PSA Crypto, "
                               "ret = %d", (int)ret));
         return PJ_EUNKNOWN;
@@ -115,10 +120,12 @@ static pj_status_t psa_init(void)
     status = pj_atexit(&psa_shutdown);
     if (status != PJ_SUCCESS) {
         mbedtls_psa_crypto_free();
+        pj_leave_critical_section();
         return status;
     }
 
     psa_initialized = PJ_TRUE;
+    pj_leave_critical_section();
     return PJ_SUCCESS;
 }
 #endif
