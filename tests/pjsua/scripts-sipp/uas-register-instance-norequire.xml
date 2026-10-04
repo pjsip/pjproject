@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+
+<!-- Registrar without SIP outbound (RFC 5626) support, over TCP, and an  -->
+<!-- account with a configured instance ID: the refresh Contact drops     -->
+<!-- reg-id but keeps +sip.instance (#5292).                              -->
+
+<scenario name="REGISTER refresh keeps a configured +sip.instance">
+  <!-- The first REGISTER must offer outbound, or the refresh below would -->
+  <!-- have no reg-id to drop.                                            -->
+  <recv request="REGISTER" crlf="true">
+    <action>
+      <ereg regexp="reg-id=" search_in="hdr" header="Contact:"
+            check_it="true" assign_to="1"/>
+    </action>
+  </recv>
+
+  <send>
+    <![CDATA[
+
+      SIP/2.0 200 OK
+      [last_Via:]
+      [last_From:]
+      [last_To:];tag=[call_number]
+      [last_Call-ID:]
+      [last_CSeq:]
+      [last_Contact:]
+      Expires: 10
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <!-- The refresh, sent 5 seconds before the 10 seconds expire.         -->
+  <recv request="REGISTER" crlf="true">
+    <action>
+      <ereg regexp="\+sip\.instance=.*000a95a0e128" search_in="hdr"
+            header="Contact:" check_it="true" assign_to="2"/>
+      <ereg regexp="reg-id=" search_in="hdr" header="Contact:"
+            check_it_inverse="true" assign_to="3"/>
+    </action>
+  </recv>
+
+  <send>
+    <![CDATA[
+
+      SIP/2.0 200 OK
+      [last_Via:]
+      [last_From:]
+      [last_To:];tag=[call_number]
+      [last_Call-ID:]
+      [last_CSeq:]
+      [last_Contact:]
+      Expires: 10
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <!-- The variables only carry the checks above.                        -->
+  <Reference variables="1,2,3"/>
+
+  <!-- definition of the response time repartition table (unit is ms)   -->
+  <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>
+
+  <!-- definition of the call length repartition table (unit is ms)     -->
+  <CallLengthRepartition value="10, 50, 100, 500, 1000, 5000, 10000"/>
+
+</scenario>
