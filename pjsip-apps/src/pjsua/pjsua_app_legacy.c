@@ -1051,6 +1051,7 @@ static void ui_add_account(pjsua_transport_config *rtp_cfg)
 
     acc_cfg.rtp_cfg = *rtp_cfg;
     acc_cfg.txt_red_level = app_config.txt_red_level;
+    acc_cfg.rfc5626_instance_id = app_config.instance_id;
     app_config_init_video(&acc_cfg);
 
     status = pjsua_acc_add(&acc_cfg, PJ_TRUE, NULL);

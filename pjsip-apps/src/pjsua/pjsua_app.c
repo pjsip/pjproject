@@ -2190,6 +2190,7 @@ static pj_status_t app_init(void)
 
         app_config_init_video(&app_config.acc_cfg[i]);
         app_config.acc_cfg[i].txt_red_level = app_config.txt_red_level;
+        app_config.acc_cfg[i].rfc5626_instance_id = app_config.instance_id;
 
         status = pjsua_acc_add(&app_config.acc_cfg[i], PJ_TRUE, NULL);
         if (status != PJ_SUCCESS)

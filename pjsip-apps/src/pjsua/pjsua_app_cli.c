@@ -843,6 +843,7 @@ static pj_status_t cmd_add_account(pj_cli_cmd_val *cval)
 
     acc_cfg.rtp_cfg = app_config.rtp_cfg;
     acc_cfg.txt_red_level = app_config.txt_red_level;
+    acc_cfg.rfc5626_instance_id = app_config.instance_id;
     app_config_init_video(&acc_cfg);
 
     status = pjsua_acc_add(&acc_cfg, PJ_TRUE, NULL);
