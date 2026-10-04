@@ -1,6 +1,6 @@
 /* $Id */
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -25,15 +25,16 @@
  * to the ioqueue. 
  */
 
+#include <pj/assert.h>
+#include <pj/errno.h>
 #include <pj/list.h>
 
 /*
  * The select ioqueue relies on socket functions (pj_sock_xxx()) to return
  * the correct error code.
  */
-#if PJ_RETURN_OS_ERROR(100) != PJ_STATUS_FROM_OS(100)
-#   error "Proper error reporting must be enabled for ioqueue to work!"
-#endif
+PJ_STATIC_ASSERT(PJ_RETURN_OS_ERROR(100) == PJ_STATUS_FROM_OS(100),
+                 os_error_reporting_must_be_enabled);
 
 
 struct generic_operation

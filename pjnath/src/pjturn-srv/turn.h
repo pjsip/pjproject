@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -193,6 +193,10 @@ struct pj_turn_permission
     /** Permission expiration time. */
     pj_time_val         expiry;
 };
+
+/* The channel number is used directly as a hash table key. */
+PJ_STATIC_ASSERT(sizeof(((pj_turn_permission*)0)->channel) == 2,
+                 turn_permission_channel_must_be_2_bytes);
 
 /**
  * Create new allocation.

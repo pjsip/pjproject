@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -26,6 +26,7 @@
  */
 #include <pjlib-util/types.h>
 #include <pj/sock.h>
+#include <pj/assert.h>
 
 PJ_BEGIN_DECL
 
@@ -139,6 +140,8 @@ typedef struct pj_dns_hdr
     pj_uint16_t  nscount;   /**< Nb. of NS records.         */
     pj_uint16_t  arcount;   /**< Nb. of additional records  */
 } pj_dns_hdr;
+
+PJ_STATIC_ASSERT(sizeof(pj_dns_hdr) == 12, pj_dns_hdr_must_be_12_bytes);
 
 /** Create RCODE flag */
 #define PJ_DNS_SET_RCODE(c)     ((pj_uint16_t)((c) & 0x0F))

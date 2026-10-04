@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -107,7 +107,6 @@ static pj_stun_tx_data* tsx_lookup(pj_stun_session *sess,
 
     tdata = sess->pending_request_list.next;
     while (tdata != &sess->pending_request_list) {
-        pj_assert(sizeof(tdata->msg_key)==sizeof(msg->hdr.tsx_id));
         if (tdata->msg_magic == msg->hdr.magic &&
             pj_memcmp(tdata->msg_key, msg->hdr.tsx_id, 
                       sizeof(msg->hdr.tsx_id))==0)
@@ -788,7 +787,6 @@ PJ_DEF(pj_status_t) pj_stun_session_create_req(pj_stun_session *sess,
         goto on_error;
 
     /* copy the request's transaction ID as the transaction key. */
-    pj_assert(sizeof(tdata->msg_key)==sizeof(tdata->msg->hdr.tsx_id));
     tdata->msg_magic = tdata->msg->hdr.magic;
     pj_memcpy(tdata->msg_key, tdata->msg->hdr.tsx_id,
               sizeof(tdata->msg->hdr.tsx_id));
@@ -904,7 +902,6 @@ PJ_DEF(pj_status_t) pj_stun_session_create_res( pj_stun_session *sess,
     }
 
     /* copy the request's transaction ID as the transaction key. */
-    pj_assert(sizeof(tdata->msg_key)==sizeof(rdata->msg->hdr.tsx_id));
     tdata->msg_magic = rdata->msg->hdr.magic;
     pj_memcpy(tdata->msg_key, rdata->msg->hdr.tsx_id, 
               sizeof(rdata->msg->hdr.tsx_id));

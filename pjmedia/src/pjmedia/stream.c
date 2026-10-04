@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -841,8 +841,6 @@ static void create_dtmf_payload(pjmedia_stream *stream,
     struct dtmf *digit = &stream->tx_dtmf_buf[0];
     unsigned duration = 0;
 
-    pj_assert(sizeof(pjmedia_rtp_dtmf_event) == 4);
-
     if (digit->send_duration)
     {
         float ts_modifier = 1.0;
@@ -1469,9 +1467,6 @@ static void handle_incoming_dtmf( pjmedia_stream *stream,
     pj_bool_t is_event_end;
     pj_bool_t emit_event;
     float ts_modifier = 1.0;
-
-    /* Check compiler packing. */
-    pj_assert(sizeof(pjmedia_rtp_dtmf_event)==4);
 
     /* Must have sufficient length before we proceed. */
     if (payloadlen < sizeof(pjmedia_rtp_dtmf_event))

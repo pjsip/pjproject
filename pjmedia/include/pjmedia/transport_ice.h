@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -27,6 +27,7 @@
 
 #include <pjmedia/stream.h>
 #include <pjnath/ice_strans.h>
+#include <pj/assert.h>
 
 
 /**
@@ -158,6 +159,11 @@ typedef struct pjmedia_ice_transport_info
     } comp[2];
 
 } pjmedia_ice_transport_info;
+
+/* It is stored in pjmedia_transport_specific_info.buffer. */
+PJ_STATIC_ASSERT(sizeof(pjmedia_ice_transport_info) <=
+                 PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXSIZE,
+                 pjmedia_ice_transport_info_too_large);
 
 
 /**

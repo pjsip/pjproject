@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -972,7 +972,6 @@ static pj_status_t decode_xored_sockaddr_attr(pj_pool_t *pool,
         for (i=0; i<4; ++i) {
             dst[i] ^= ((const pj_uint8_t*)&magic)[i];
         }
-        pj_assert(sizeof(msghdr->tsx_id[0]) == 1);
         for (i=0; i<12; ++i) {
             dst[i+4] ^= msghdr->tsx_id[i];
         }
@@ -1089,7 +1088,6 @@ static pj_status_t encode_sockaddr_attr(const void *a, pj_uint8_t *buf,
             for (i=0; i<4; ++i) {
                 dst[i] = (pj_uint8_t)(src[i] ^ ((const pj_uint8_t*)&magic)[i]);
             }
-            pj_assert(sizeof(msghdr->tsx_id[0]) == 1);
             for (i=0; i<12; ++i) {
                 dst[i+4] = (pj_uint8_t)(src[i+4] ^ msghdr->tsx_id[i]);
             }
@@ -1333,9 +1331,6 @@ static pj_status_t decode_empty_attr(pj_pool_t *pool,
     pj_stun_empty_attr *attr;
 
     PJ_UNUSED_ARG(msghdr);
-
-    /* Check that the struct address is valid */
-    pj_assert(sizeof(pj_stun_empty_attr) == ATTR_HDR_LEN);
 
     /* Create the attribute */
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_empty_attr);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2013-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,10 @@ using namespace pj;
 using namespace std;
 
 #define THIS_FILE       "siptypes.cpp"
+
+/* IntVector storage is passed to pjsip as a pj_ssl_cipher array. */
+PJ_STATIC_ASSERT(sizeof(pj_ssl_cipher) == sizeof(int),
+                 pj_ssl_cipher_must_be_int_sized);
 
 ///////////////////////////////////////////////////////////////////////////////
 namespace pj
@@ -220,8 +224,6 @@ pjsip_tls_setting TlsConfig::toPj() const
     ts.method           = this->method;
     ts.ciphers_num      = (unsigned)this->ciphers.size();
     ts.proto            = this->proto;
-    // The following will only work if sizeof(enum)==sizeof(int)
-    pj_assert(sizeof(ts.ciphers[0]) == sizeof(int));
     ts.ciphers          = ts.ciphers_num? 
                             (pj_ssl_cipher*)&this->ciphers[0] : NULL;
     ts.verify_server    = this->verifyServer;
@@ -273,8 +275,6 @@ void TlsConfig::fromPj(const pjsip_tls_setting &prm)
 
     this->method        = (pjsip_ssl_method)prm.method;
     this->proto         = prm.proto;
-    // The following will only work if sizeof(enum)==sizeof(int)
-    pj_assert(sizeof(prm.ciphers[0]) == sizeof(int));
     this->ciphers       = IntVector(prm.ciphers, prm.ciphers+prm.ciphers_num);
     this->verifyServer  = PJ2BOOL(prm.verify_server);
     this->verifyClient  = PJ2BOOL(prm.verify_client);
@@ -386,8 +386,6 @@ pj_turn_sock_tls_cfg TlsConfig::toTurnPj() const
 
     tc.ssock_param.proto = this->proto;
     tc.ssock_param.ciphers_num = (unsigned)this->ciphers.size();
-    // The following will only work if sizeof(enum)==sizeof(int)
-    pj_assert(sizeof(tc.ssock_param.ciphers[0]) == sizeof(int));
     tc.ssock_param.ciphers = tc.ssock_param.ciphers_num?
                              (pj_ssl_cipher*)&this->ciphers[0] : NULL;
     tc.ssock_param.timeout.sec  = this->msecTimeout / 1000;
@@ -436,8 +434,6 @@ void TlsConfig::fromTurnPj(const pj_turn_sock_tls_cfg &prm)
     this->verifyServer  = PJ2BOOL(prm.verify_server);
     this->certNameMatchFlags = prm.cert_name_match_flags;
     this->proto         = sp.proto;
-    // The following will only work if sizeof(enum)==sizeof(int)
-    pj_assert(sizeof(sp.ciphers[0]) == sizeof(int));
     if (sp.ciphers_num)
         this->ciphers   = IntVector(sp.ciphers, sp.ciphers+sp.ciphers_num);
     else
@@ -986,8 +982,9 @@ void SipTxOption::toPj(pjsua_msg_data &msg_data) const
         {
             pjsip_max_fwd_hdr *tmp = (pjsip_max_fwd_hdr*)&pj_hdr;
 
-            pj_assert(sizeof(pjsip_generic_string_hdr) >=
-                      sizeof(pjsip_max_fwd_hdr));
+            PJ_STATIC_ASSERT(sizeof(pjsip_generic_string_hdr) >=
+                             sizeof(pjsip_max_fwd_hdr),
+                             pjsip_max_fwd_hdr_does_not_fit_generic_hdr);
             pjsip_max_fwd_hdr_init(NULL, tmp, std::stoi(headers[i].hValue));
         }
 

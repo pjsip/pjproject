@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -39,10 +39,13 @@
 #define PART_FDSET_OR_NULL(ps)  (ps ? PART_FDSET(ps) : NULL)
 #define PART_COUNT(ps)          (ps->data[0])
 
+/* pj_fd_set_t must have room for the native fd_set after the count. */
+PJ_STATIC_ASSERT(sizeof(pj_fd_set_t)-sizeof(pj_sock_t) >= sizeof(fd_set),
+                 pj_fd_set_t_too_small_for_fd_set);
+
 PJ_DEF(void) PJ_FD_ZERO(pj_fd_set_t *fdsetp)
 {
     PJ_CHECK_STACK();
-    pj_assert(sizeof(pj_fd_set_t)-sizeof(pj_sock_t) >= sizeof(fd_set));
 
     FD_ZERO(PART_FDSET(fdsetp));
     PART_COUNT(fdsetp) = 0;
@@ -52,7 +55,6 @@ PJ_DEF(void) PJ_FD_ZERO(pj_fd_set_t *fdsetp)
 PJ_DEF(void) PJ_FD_SET(pj_sock_t fd, pj_fd_set_t *fdsetp)
 {
     PJ_CHECK_STACK();
-    pj_assert(sizeof(pj_fd_set_t)-sizeof(pj_sock_t) >= sizeof(fd_set));
 
     if (!PJ_FD_ISSET(fd, fdsetp))
         ++PART_COUNT(fdsetp);
@@ -63,7 +65,6 @@ PJ_DEF(void) PJ_FD_SET(pj_sock_t fd, pj_fd_set_t *fdsetp)
 PJ_DEF(void) PJ_FD_CLR(pj_sock_t fd, pj_fd_set_t *fdsetp)
 {
     PJ_CHECK_STACK();
-    pj_assert(sizeof(pj_fd_set_t)-sizeof(pj_sock_t) >= sizeof(fd_set));
 
     if (PJ_FD_ISSET(fd, fdsetp))
         --PART_COUNT(fdsetp);
@@ -74,8 +75,6 @@ PJ_DEF(void) PJ_FD_CLR(pj_sock_t fd, pj_fd_set_t *fdsetp)
 PJ_DEF(pj_bool_t) PJ_FD_ISSET(pj_sock_t fd, const pj_fd_set_t *fdsetp)
 {
     PJ_CHECK_STACK();
-    PJ_ASSERT_RETURN(sizeof(pj_fd_set_t)-sizeof(pj_sock_t) >= sizeof(fd_set),
-                     0);
 
     return FD_ISSET(fd, PART_FDSET(fdsetp));
 }
@@ -94,9 +93,6 @@ PJ_DEF(int) pj_sock_select( int n,
     struct timeval os_timeout, *p_os_timeout;
 
     PJ_CHECK_STACK();
-
-    PJ_ASSERT_RETURN(sizeof(pj_fd_set_t)-sizeof(pj_sock_t) >= sizeof(fd_set),
-                     PJ_EBUG);
 
     if (timeout) {
         os_timeout.tv_sec = timeout->sec;

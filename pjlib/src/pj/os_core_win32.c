@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -76,6 +76,9 @@ struct pj_thread_t
     int             caller_line;
 #endif
 };
+
+PJ_STATIC_ASSERT(sizeof(pj_thread_desc) >= sizeof(pj_thread_t),
+                 pj_thread_desc_too_small);
 
 
 /*
@@ -434,14 +437,6 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
     pj_status_t rc;
     pj_thread_t *thread = (pj_thread_t *)desc;
     pj_str_t thread_name = pj_str((char*)cstr_thread_name);
-
-    _STATIC_ASSERT(sizeof(pj_thread_desc) >= sizeof(pj_thread_t));
-
-    /* Size sanity check. */
-    if (sizeof(pj_thread_desc) < sizeof(pj_thread_t)) {
-        pj_assert(!"Not enough pj_thread_desc size!");
-        return PJ_EBUG;
-    }
 
     //pj_assert(pj_thread_local_get(thread_tls_id) == NULL);
 

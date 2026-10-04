@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -115,6 +115,67 @@
 //#else
 //#   define PJ_ASSERT_ON_FAIL(expr,exec_on_fail)    pj_assert(expr)
 //#endif
+
+/**
+ * @def PJ_STATIC_ASSERT(expr, msg)
+ * @hideinitializer
+ * Check a condition at compile time. If \a expr is false, the build fails
+ * with an error that includes \a msg. Unlike pj_assert(), nothing is
+ * evaluated at run time and no code is generated.
+ *
+ * Prefer it over a preprocessor \#if for clarity. It is required when the
+ * condition involves something the preprocessor cannot evaluate, such as
+ * sizeof().
+ *
+ * The macro can be used wherever a declaration is allowed (at file scope, or
+ * among the declarations of a block) and must be followed by a semicolon.
+ * Sample usage:
+ * \code
+   PJ_STATIC_ASSERT(sizeof(my_hdr) == 4, my_hdr_must_be_4_bytes);
+   \endcode
+ *
+ * @param expr      An integer constant expression. The build fails if it
+ *                  evaluates to zero.
+ * @param msg       An identifier, NOT a string literal: write it without
+ *                  quotes, e.g. buffer_too_small. It names the condition
+ *                  being checked and appears in the compiler's error
+ *                  message. It must be a valid C identifier because, on
+ *                  compilers without C11 _Static_assert, it becomes part of
+ *                  a typedef name.
+ *
+ * @note            On compilers without C11 _Static_assert, at most one
+ *                  PJ_STATIC_ASSERT() may appear per source line.
+ */
+#ifndef PJ_STATIC_ASSERT
+#   if defined(__cplusplus) && __cplusplus >= 201103L
+#       define PJ_STATIC_ASSERT(expr,msg)   static_assert(expr, #msg)
+#   elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#       define PJ_STATIC_ASSERT(expr,msg)   _Static_assert(expr, #msg)
+#   else
+        /* Fallback: an array whose size is negative when the expression is
+         * false. The typedef name carries the message and __LINE__, so
+         * several assertions may appear in the same scope -- but no more
+         * than one per line.
+         */
+
+        /* At block scope the typedef is never referenced, which -Wall
+         * reports as -Wunused-local-typedefs.
+         */
+#       if defined(__GNUC__) || defined(__clang__)
+#           define PJ_STATIC_ASSERT_UNUSED_ __attribute__((unused))
+#       else
+#           define PJ_STATIC_ASSERT_UNUSED_
+#       endif
+
+#       define PJ_STATIC_ASSERT_CAT_(a,b)   a ## b
+#       define PJ_STATIC_ASSERT_(expr,msg,line) \
+            typedef char PJ_STATIC_ASSERT_CAT_(pj_static_assert_##msg##_, \
+                                               line)[(expr) ? 1 : -1] \
+                                               PJ_STATIC_ASSERT_UNUSED_
+#       define PJ_STATIC_ASSERT(expr,msg) \
+            PJ_STATIC_ASSERT_(expr, msg, __LINE__)
+#   endif
+#endif
 
 /** @} */
 
