@@ -391,6 +391,17 @@ cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_DSHOW
   "PJMEDIA_WITH_VIDEODEV;WIN32 OR CYGWIN OR MINGW;PJ_WITH_CXX" OFF
 )
 
+# The top-level directory writes these into PjConfig.cmake. An option whose
+# cmake_dependent_option() condition turned false on a reconfigure is OFF in
+# this directory only, while its cache entry keeps the earlier value.
+get_cmake_property(_pj_vars VARIABLES)
+foreach(_var IN LISTS _pj_vars)
+  if(_var MATCHES "^PJMEDIA_WITH_")
+    set(${_var} "${${_var}}" PARENT_SCOPE)
+  endif()
+endforeach()
+unset(_pj_vars)
+
 # ##############################################################################
 # pjmedia
 
@@ -669,10 +680,13 @@ target_link_libraries(pjmedia
 )
 
 if (NOT (WIN32 OR CYGWIN OR MINGW))
-  # math library
+  # pjmedia calls libm functions (sin(), cos(), ...), a separate library on
+  # these systems that the final link needs. Linked by name so that a cross
+  # toolchain picks the libm matching its CPU flags; a Generic one resolves
+  # -lm through its multilib specs, where find_library() does not look.
   find_library(MATH_LIBRARY m)
-  if(MATH_LIBRARY)
-    target_link_libraries(pjmedia PRIVATE "${MATH_LIBRARY}")
+  if(MATH_LIBRARY OR CMAKE_SYSTEM_NAME STREQUAL "Generic")
+    target_link_libraries(pjmedia PRIVATE m)
   endif()
 endif()
 
