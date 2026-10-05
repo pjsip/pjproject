@@ -22,8 +22,18 @@ project(pjproject
   VERSION ${_pj_cmake_version}
   DESCRIPTION "Multimedia communication library"
   HOMEPAGE_URL "http://www.pjsip.org"
-  LANGUAGES C CXX
+  LANGUAGES C
 )
+
+# C++ is needed only by pjsua2 and a few backends (WebRTC AEC3, libyuv, Lyra,
+# OpenH264, Oboe, WASAPI, DirectShow, Android MediaCodec), by pjlib's
+# atomic_queue.cpp, which only those backends use, and by WebRTC's CPU
+# detection on x86. Off, the build is pure C, which is what an embedded
+# toolchain without a C++ runtime needs.
+option(PJ_WITH_CXX "Build the C++ components (pjsua2 and C++ backends)" ON)
+if(PJ_WITH_CXX)
+  enable_language(CXX)
+endif()
 
 # project modules
 list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -98,7 +108,10 @@ add_subdirectory(pjsip)
 # run one, and CMake would make each a bundle needing a destination and a
 # signing identity, so the iOS build stops at the libraries -- which is what
 # an iOS consumer links into an app of their own anyway.
-if(NOT IOS)
+# Nor does firmware for a target CMake calls Generic, with no OS or with an
+# RTOS such as Zephyr, so the applications can be left out there.
+option(PJ_BUILD_APPS "Build pjsua and the sample applications" ON)
+if(PJ_BUILD_APPS AND NOT IOS)
   add_subdirectory(pjsip-apps)
 endif()
 
@@ -286,12 +299,14 @@ set(install_targets
   pjsip-simple
   pjsip-ua
   pjsua-lib
-  pjsua2
 )
 
-if(NOT IOS)
-  list(APPEND install_targets pjsua)
-endif()
+# optional targets: pjsua2 needs PJ_WITH_CXX, pjsua PJ_BUILD_APPS and not iOS
+foreach(target pjsua2 pjsua)
+  if(TARGET ${target})
+    list(APPEND install_targets ${target})
+  endif()
+endforeach()
 
 # set `VERSION` and `SO_VERSION`
 foreach(target IN LISTS install_targets)

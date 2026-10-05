@@ -36,26 +36,39 @@ set(DEP_SRTP_PACKAGE "SRTP")
 list(APPEND DEPS SRTP)
 
 if(NOT (APPLE OR MINGW OR CYGWIN))
-  # WebRTC
-  set(DEP_WebRTC_HELP  "WebRTC implementation provider")
-  set(DEP_WebRTC_SUBDIR "webrtc")
-  list(APPEND DEPS WebRTC)
+  # WebRTC is C, except its x86 CPU feature detection (cpu_features.cc)
+  include(Pj/DetectArch)
+  pj_detect_arch(_pj_arch)
+  if(PJ_WITH_CXX OR NOT _pj_arch MATCHES "^(i386|x86_64|x64)$")
+    set(DEP_WebRTC_HELP  "WebRTC implementation provider")
+    set(DEP_WebRTC_SUBDIR "webrtc")
+    list(APPEND DEPS WebRTC)
+  else()
+    message(STATUS "[!] WebRTC needs C++ on x86. leaving it out")
+  endif()
+  unset(_pj_arch)
 
-  # WebRTC_AEC3
-  set(DEP_WebRTC_AEC3_HELP   "WebRTC AEC3 implementation provider")
-  set(DEP_WebRTC_AEC3_SUBDIR "webrtc_aec3")
-  list(APPEND DEPS WebRTC_AEC3)
+  # WebRTC_AEC3 (C++)
+  if(PJ_WITH_CXX)
+    set(DEP_WebRTC_AEC3_HELP   "WebRTC AEC3 implementation provider")
+    set(DEP_WebRTC_AEC3_SUBDIR "webrtc_aec3")
+    list(APPEND DEPS WebRTC_AEC3)
+  endif()
 endif()
 
-# YUV
-set(DEP_YUV_HELP    "libyuv codec implementation provider")
-set(DEP_YUV_SUBDIR  "yuv")
-set(DEP_YUV_PACKAGE "YUV")
-list(APPEND DEPS YUV)
+# YUV (C++)
+if(PJ_WITH_CXX)
+  set(DEP_YUV_HELP    "libyuv codec implementation provider")
+  set(DEP_YUV_SUBDIR  "yuv")
+  set(DEP_YUV_PACKAGE "YUV")
+  list(APPEND DEPS YUV)
+endif()
 
 # imports dependencies
 set(install_subdirs)
 foreach(dep IN LISTS DEPS)
+  unset(dep_target)
+
   # construct providers list
   set(dep_providers)
   if(DEP_${dep}_SUBDIR)
@@ -67,6 +80,9 @@ foreach(dep IN LISTS DEPS)
   if(NOT dep_providers)
     message(FATAL_ERROR "No providers were set for ${dep}")
   endif()
+  # "none" leaves the dependency out entirely; the features that need it
+  # test for the Pj::Dep:: target and switch themselves off.
+  list(APPEND dep_providers "none")
 
   # add option
   string(TOUPPER "PJ_DEP_${dep}" dep_option_name)

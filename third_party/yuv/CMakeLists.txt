@@ -94,7 +94,11 @@ endif()
 # Dependencies
 
 if (NOT (WIN32 OR CYGWIN OR MINGW))
-  # math library
-  find_library(MATH_LIBRARY m REQUIRED)
-  target_link_libraries(yuv PRIVATE "${MATH_LIBRARY}")
+  # libyuv calls libm functions (round()), a separate library on these
+  # systems that the final link needs. Linked by name so that a cross
+  # toolchain picks the libm matching its CPU flags.
+  find_library(MATH_LIBRARY m)
+  if(MATH_LIBRARY)
+    target_link_libraries(yuv PRIVATE m)
+  endif()
 endif()

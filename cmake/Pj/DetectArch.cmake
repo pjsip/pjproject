@@ -63,11 +63,14 @@ function(pj_detect_arch out_arch)
   endif()
 
   # try getting the value from a compile check
+  # detect-arch.c reports the architecture through a deliberate #error, so
+  # the probe is compile-only: the run result was never used, and try_run()
+  # cannot run a target binary when cross-compiling anyway.
   if(NOT arch)
-    try_run(_run_result compileResult
+    try_compile(compileResult
       SOURCES
         "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/detect-arch.c"
-      COMPILE_OUTPUT_VARIABLE
+      OUTPUT_VARIABLE
         compileOutput
     )
 
@@ -163,7 +166,11 @@ function(pj_detect_arch_simd_ext out_simd out_flags)
     set(simd_inst mips)
   endif()
 
-  set(_simd_supported TRUE)
+  # Do not set _simd_supported on a Generic system (no OS, or an RTOS such
+  # as Zephyr) so the SIMD check is performed.
+  if(NOT CMAKE_SYSTEM_NAME STREQUAL "Generic")
+    set(_simd_supported TRUE)
+  endif()
 
   if(simd_check_source)
     include(CheckCSourceCompiles)

@@ -192,13 +192,16 @@ option(PJMEDIA_WITH_BCG729_CODEC "Enable BCG729 codec" ON)
 import_if_or_set(PJMEDIA_WITH_BCG729_CODEC OFF BCG729)
 
 # Lyra codec
-option(PJMEDIA_WITH_LYRA_CODEC "Enable Lyra codec" ON)
+cmake_dependent_option(PJMEDIA_WITH_LYRA_CODEC
+  "Enable Lyra codec" ON
+  "PJ_WITH_CXX" OFF
+)
 import_if_or_set(PJMEDIA_WITH_LYRA_CODEC OFF Lyra)
 
 # Android MediaCodec codecs
 cmake_dependent_option(PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC
   "Enable Android MediaCodec codecs" ON
-  "ANDROID" OFF
+  "ANDROID;PJ_WITH_CXX" OFF
 )
 import_if_or_set(PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC OFF MediaNDK)
 
@@ -219,7 +222,7 @@ import_if_or_set(PJMEDIA_WITH_VID_TOOLBOX_CODEC OFF VideoToolbox)
 # OpenH264 codecs
 cmake_dependent_option(PJMEDIA_WITH_OPEN_H264_CODEC
   "Enable OpenH264 codecs support" ON
-  "PJMEDIA_WITH_VIDEO" OFF
+  "PJMEDIA_WITH_VIDEO;PJ_WITH_CXX" OFF
 )
 import_if_or_set(PJMEDIA_WITH_OPEN_H264_CODEC OFF OpenH264)
 
@@ -245,7 +248,7 @@ cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_JNI
 # where to point the build at an SDK.
 cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_OBOE
   "Enable OBOE audio device backend" ON
-  "PJMEDIA_WITH_AUDIODEV;ANDROID" OFF
+  "PJMEDIA_WITH_AUDIODEV;ANDROID;PJ_WITH_CXX" OFF
 )
 import_if_or_set(PJMEDIA_WITH_AUDIODEV_OBOE OFF Oboe)
 
@@ -282,7 +285,7 @@ cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_WMME
 # built from the MSVC projects, which do define it.
 cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_WASAPI
   "Enable WASAPI audio device backend" OFF
-  "PJMEDIA_WITH_AUDIODEV;WIN32 OR CYGWIN OR MINGW" OFF
+  "PJMEDIA_WITH_AUDIODEV;WIN32 OR CYGWIN OR MINGW;PJ_WITH_CXX" OFF
 )
 import_if_or_set(PJMEDIA_WITH_AUDIODEV_WASAPI OFF WASAPI)
 
@@ -379,7 +382,7 @@ import_if_or_set(PJMEDIA_WITH_VIDEODEV_V4L2 OFF V4L2)
 # DirectShow backend
 cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_DSHOW
   "Enable DirectShow video device backend" OFF
-  "PJMEDIA_WITH_VIDEODEV;WIN32 OR CYGWIN OR MINGW" OFF
+  "PJMEDIA_WITH_VIDEODEV;WIN32 OR CYGWIN OR MINGW;PJ_WITH_CXX" OFF
 )
 
 # ##############################################################################
@@ -408,7 +411,7 @@ add_library(pjmedia
   src/pjmedia/echo_speex.c
   src/pjmedia/echo_suppress.c
   src/pjmedia/echo_webrtc.c
-  src/pjmedia/echo_webrtc_aec3.cpp
+  $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia/echo_webrtc_aec3.cpp>
   src/pjmedia/endpoint.c
   src/pjmedia/errno.c
   src/pjmedia/event.c
@@ -687,10 +690,10 @@ add_library(pjmedia-codec
   src/pjmedia-codec/h264_packetizer.c
   src/pjmedia-codec/ilbc.c
   src/pjmedia-codec/l16.c
-  src/pjmedia-codec/lyra.cpp
+  $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-codec/lyra.cpp>
   src/pjmedia-codec/opencore_amr.c
   src/pjmedia-codec/speex_codec.c
-  src/pjmedia-codec/openh264.cpp
+  $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-codec/openh264.cpp>
   $<$<BOOL:${PJMEDIA_WITH_VID_TOOLBOX_CODEC}>:src/pjmedia-codec/vid_toolbox.m>
   src/pjmedia-codec/opus.c
   src/pjmedia-codec/silk.c
@@ -863,9 +866,9 @@ add_library(pjmedia-audiodev
   src/pjmedia-audiodev/android_jni_dev.c
   src/pjmedia-audiodev/errno.c
   src/pjmedia-audiodev/null_dev.c
-  src/pjmedia-audiodev/oboe_dev.cpp
-  src/pjmedia-audiodev/wasapi_dev.cpp
-  src/pjmedia-audiodev/wasapi_dev_win.cpp
+  $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-audiodev/oboe_dev.cpp>
+  $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-audiodev/wasapi_dev.cpp>
+  $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-audiodev/wasapi_dev_win.cpp>
   src/pjmedia-audiodev/wmme_dev.c
 
   $<$<BOOL:${APPLE}>:src/pjmedia-audiodev/coreaudio_dev.m>
@@ -940,7 +943,7 @@ add_library(pjmedia-videodev
   src/pjmedia-videodev/android_opengl.c
   src/pjmedia-videodev/colorbar_dev.c
   src/pjmedia-videodev/dshow_dev.c
-  src/pjmedia-videodev/dshowclasses.cpp
+  $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-videodev/dshowclasses.cpp>
   src/pjmedia-videodev/errno.c
   src/pjmedia-videodev/ffmpeg_dev.c
   src/pjmedia-videodev/null_dev.c
