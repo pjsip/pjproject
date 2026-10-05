@@ -180,8 +180,9 @@ target_sources(pjlib
 # atomic_queue is C++, used by the Android audio and codec backends only
 if(PJ_WITH_CXX)
   target_sources(pjlib PRIVATE src/pj/atomic_queue.cpp)
+  set(PJ_HAS_ATOMIC_QUEUE 1)
 else()
-  target_compile_definitions(pjlib PUBLIC PJ_HAS_ATOMIC_QUEUE=0)
+  set(PJ_HAS_ATOMIC_QUEUE 0)
 endif()
 
 # system APIs

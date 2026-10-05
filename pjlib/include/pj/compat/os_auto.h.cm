@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -228,6 +228,11 @@
 /* SSL socket availability. */
 #ifndef PJ_HAS_SSL_SOCK
 #cmakedefine01 PJ_HAS_SSL_SOCK
+#endif
+
+/* Atomic queue availability (its implementation is C++). */
+#ifndef PJ_HAS_ATOMIC_QUEUE
+#cmakedefine01 PJ_HAS_ATOMIC_QUEUE
 #endif
 #ifndef PJ_SSL_SOCK_IMP
 #cmakedefine PJ_SSL_SOCK_IMP @PJ_SSL_SOCK_IMP@
