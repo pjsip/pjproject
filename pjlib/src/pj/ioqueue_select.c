@@ -406,7 +406,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
 
     /* Set socket to nonblocking. */
     value = 1;
-#if defined(PJ_WIN32) && PJ_WIN32!=0 || \
+#if defined(PJ_SOCK_NONBLOCK_USE_FCNTL) && PJ_SOCK_NONBLOCK_USE_FCNTL != 0
+    PJ_UNUSED_ARG(value);
+    if (fcntl_set_nonblock(sock) < 0) {
+#elif defined(PJ_WIN32) && PJ_WIN32!=0 || \
     defined(PJ_WIN64) && PJ_WIN64 != 0 || \
     defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
     if (ioctlsocket(sock, FIONBIO, &value)) {
@@ -884,7 +887,9 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
     
     /* Set socket to nonblocking. */
     val = 1;
-#if defined(PJ_WIN32) && PJ_WIN32!=0 || \
+#if defined(PJ_SOCK_NONBLOCK_USE_FCNTL) && PJ_SOCK_NONBLOCK_USE_FCNTL != 0
+    if (fcntl_set_nonblock(new_sock) < 0) {
+#elif defined(PJ_WIN32) && PJ_WIN32!=0 || \
     defined(PJ_WIN64) && PJ_WIN64 != 0 || \
     defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
     if (ioctlsocket(new_sock, FIONBIO, &val)) {

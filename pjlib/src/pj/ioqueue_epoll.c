@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -472,7 +472,12 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
 
     /* Set socket to nonblocking. */
     value = 1;
+#if defined(PJ_SOCK_NONBLOCK_USE_FCNTL) && PJ_SOCK_NONBLOCK_USE_FCNTL != 0
+    PJ_UNUSED_ARG(value);
+    if ((rc=fcntl_set_nonblock(sock)) < 0) {
+#else
     if ((rc=os_ioctl(sock, FIONBIO, (ioctl_val_type)&value))) {
+#endif
         TRACE_((THIS_FILE, "pj_ioqueue_register_sock error: ioctl rc=%d", 
                 rc));
         status = pj_get_netos_error();

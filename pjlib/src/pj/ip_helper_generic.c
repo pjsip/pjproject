@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -278,7 +278,8 @@ static pj_status_t if_enum_by_af(int af,
 }
 
 
-#elif defined(PJ_HAS_NET_IF_H) && PJ_HAS_NET_IF_H != 0
+#elif defined(PJ_HAS_NET_IF_H) && PJ_HAS_NET_IF_H != 0 && \
+      defined(SIOCGIFFLAGS) && defined(SIOCGIFADDR)
 /* Note: this does not work with IPv6 */
 static pj_status_t if_enum_by_af(int af, unsigned *p_cnt, pj_sockaddr ifs[])
 {

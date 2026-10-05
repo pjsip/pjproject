@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2022-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -322,7 +322,12 @@ pj_ioqueue_register_sock2(pj_pool_t *pool, pj_ioqueue_t *ioqueue,
 
     /* Set socket to nonblocking. */
     value = 1;
+#if defined(PJ_SOCK_NONBLOCK_USE_FCNTL) && PJ_SOCK_NONBLOCK_USE_FCNTL != 0
+    PJ_UNUSED_ARG(value);
+    if (fcntl_set_nonblock(sock) < 0) {
+#else
     if (ioctl(sock, FIONBIO, &value)) {
+#endif
         rc = pj_get_netos_error();
         goto on_return;
     }

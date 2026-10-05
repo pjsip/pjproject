@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -733,6 +733,30 @@
 #  define PJ_HAS_IPV6               0
 #endif
 
+/**
+ * Specify whether gethostbyname() is available. It was removed from
+ * POSIX.1-2008 and some minimal socket layers provide only getaddrinfo().
+ * When this is 0, pj_gethostbyname() is implemented over getaddrinfo(),
+ * so PJ_SOCK_HAS_GETADDRINFO (auto-detected by configure) must be set.
+ *
+ * Default: 1
+ */
+#ifndef PJ_SOCK_HAS_GETHOSTBYNAME
+#  define PJ_SOCK_HAS_GETHOSTBYNAME 1
+#endif
+
+/**
+ * Specify whether inet_addr() is available. When this is 0 and inet_aton()
+ * is not available either (PJ_SOCK_HAS_INET_ATON is 0), pj_inet_aton()
+ * uses inet_pton(), so PJ_SOCK_HAS_INET_PTON must be set. Both of those
+ * are auto-detected by configure.
+ *
+ * Default: 1
+ */
+#ifndef PJ_SOCK_HAS_INET_ADDR
+#  define PJ_SOCK_HAS_INET_ADDR     1
+#endif
+
  /**
  * Maximum hostname length.
  * Libraries sometimes needs to make copy of an address to stack buffer;
@@ -1405,6 +1429,18 @@
  */
 #ifndef PJ_SOCK_DISABLE_WSAECONNRESET
 #   define PJ_SOCK_DISABLE_WSAECONNRESET    1
+#endif
+
+
+/**
+ * Use fcntl(F_SETFL, O_NONBLOCK) instead of ioctl(FIONBIO) to put sockets
+ * registered to the ioqueue in non-blocking mode, for socket layers that
+ * have no FIONBIO.
+ *
+ * Default: 0
+ */
+#ifndef PJ_SOCK_NONBLOCK_USE_FCNTL
+#   define PJ_SOCK_NONBLOCK_USE_FCNTL       0
 #endif
 
 

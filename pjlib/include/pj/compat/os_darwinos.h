@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -41,6 +41,7 @@
 #define PJ_HAS_STDIO_H              1
 #define PJ_HAS_STDLIB_H             1
 #define PJ_HAS_STRING_H             1
+#define PJ_HAS_STRINGS_H            1
 #define PJ_HAS_SYS_IOCTL_H          1
 #define PJ_HAS_SYS_SELECT_H         1
 #define PJ_HAS_SYS_SOCKET_H         1

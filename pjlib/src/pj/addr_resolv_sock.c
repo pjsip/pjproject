@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -39,6 +39,61 @@
 #define THIS_FILE       "addr_resolv_sock.c"
 #define ANDROID_DNS_TIMEOUT_MS       5000
 
+#if defined(PJ_SOCK_HAS_GETHOSTBYNAME) && PJ_SOCK_HAS_GETHOSTBYNAME == 0
+
+#if !defined(PJ_SOCK_HAS_GETADDRINFO) || PJ_SOCK_HAS_GETADDRINFO == 0
+#   error "PJ_SOCK_HAS_GETHOSTBYNAME=0 requires PJ_SOCK_HAS_GETADDRINFO"
+#endif
+
+/* Over getaddrinfo(). As with gethostbyname(), the result lives in static
+ * storage and is not reentrant.
+ */
+PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *hostname, pj_hostent *phe)
+{
+    static char name[PJ_MAX_HOSTNAME];
+    static pj_in_addr addr;
+    static char *aliases[1];
+    static char *addr_list[2];
+    struct addrinfo hint, *res = NULL;
+    int rc;
+
+    pj_assert(hostname && hostname ->slen < PJ_MAX_HOSTNAME);
+
+    if (hostname->slen >= PJ_MAX_HOSTNAME)
+        return PJ_ENAMETOOLONG;
+
+    pj_memcpy(name, hostname->ptr, hostname->slen);
+    name[ hostname->slen ] = '\0';
+
+    pj_bzero(&hint, sizeof(hint));
+    hint.ai_family = PJ_AF_INET;
+
+    rc = getaddrinfo(name, NULL, &hint, &res);
+    if (rc != 0 || res == NULL || res->ai_addr == NULL) {
+        if (res)
+            freeaddrinfo(res);
+        return PJ_ERESOLVE;
+    }
+
+    pj_memcpy(&addr, &((struct sockaddr_in*)res->ai_addr)->sin_addr,
+              sizeof(addr));
+    freeaddrinfo(res);
+
+    aliases[0] = NULL;
+    addr_list[0] = (char*)&addr;
+    addr_list[1] = NULL;
+
+    phe->h_name = name;
+    phe->h_aliases = aliases;
+    phe->h_addrtype = PJ_AF_INET;
+    phe->h_length = sizeof(addr);
+    phe->h_addr_list = addr_list;
+
+    return PJ_SUCCESS;
+}
+
+#else   /* PJ_SOCK_HAS_GETHOSTBYNAME */
+
 PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *hostname, pj_hostent *phe)
 {
     struct hostent *he;
@@ -69,6 +124,8 @@ PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *hostname, pj_hostent *phe)
 
     return PJ_SUCCESS;
 }
+
+#endif  /* PJ_SOCK_HAS_GETHOSTBYNAME */
 
 /* Resolve IPv4/IPv6 address */
 PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
