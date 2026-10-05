@@ -9,7 +9,8 @@
 #         -DPJ_WITH_CXX=OFF -DPJ_BUILD_APPS=OFF -DBUILD_TESTING=OFF \
 #         -DPJLIB_WITH_SSL=
 #
-# Settings, given with -D or in the environment:
+# Settings, given with -D or in the environment on the first configure of a
+# build directory, and remembered in its cache from then on:
 #   PJ_TOOLCHAIN_PREFIX   compiler prefix, including a path when it is not on
 #                         PATH (default: arm-none-eabi-), for example
 #                         /opt/sdk/arm-zephyr-eabi/bin/arm-zephyr-eabi-
@@ -19,16 +20,19 @@
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_PROCESSOR arm)
 
+# Kept in the cache, so a later configure of the same build directory uses
+# the same compiler and flags whether or not the environment still has them.
+# A -D value is already a cache entry and wins; set() does not replace it.
 foreach(_var PJ_TOOLCHAIN_PREFIX PJ_TARGET_CPU_FLAGS)
-  if(NOT ${_var} AND DEFINED ENV{${_var}})
-    set(${_var} "$ENV{${_var}}")
+  if(NOT DEFINED ${_var} AND DEFINED ENV{${_var}})
+    set(${_var} "$ENV{${_var}}" CACHE STRING "")
   endif()
 endforeach()
+set(PJ_TOOLCHAIN_PREFIX arm-none-eabi- CACHE STRING "compiler prefix")
+set(PJ_TARGET_CPU_FLAGS "-mcpu=cortex-m33 -mthumb" CACHE STRING
+  "code generation flags")
 if(NOT PJ_TOOLCHAIN_PREFIX)
-  set(PJ_TOOLCHAIN_PREFIX arm-none-eabi-)
-endif()
-if(NOT PJ_TARGET_CPU_FLAGS)
-  set(PJ_TARGET_CPU_FLAGS "-mcpu=cortex-m33 -mthumb")
+  set(PJ_TOOLCHAIN_PREFIX arm-none-eabi- CACHE STRING "compiler prefix" FORCE)
 endif()
 
 # try_compile() projects read this file again; give them the same settings

@@ -142,6 +142,23 @@ function(pj_detect_arch_simd_ext out_simd out_flags)
         endif()
       endif()
     endif()
+
+    # On a Generic system the CPU flags given to the toolchain decide. Adding
+    # -mfpu=neon would override them and compile NEON code for a core
+    # without it (a Cortex-M33 with its FPU, for instance).
+    if(CMAKE_SYSTEM_NAME STREQUAL "Generic")
+      set(simd_flags "")
+      set(simd_check_source [=[
+        #ifndef __ARM_NEON
+        #  error "the target's CPU flags do not enable NEON"
+        #endif
+        #include <arm_neon.h>
+
+        int main() {
+          return 0;
+        }
+      ]=])
+    endif()
   elseif(arch MATCHES "^(i386|x86_64|x64)$")
     set(simd_inst sse2)
     set(simd_check_source [=[

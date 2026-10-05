@@ -917,6 +917,15 @@ jobs:
           find build-cross/pjlib -name "$f.o" -o -name "$f.obj" | grep -q . || { echo "$f did not compile"; failed=1; }
         done
         test -z "$failed"
+    - name: configure for Cortex-M33 with its FPU
+      # hard-float flags let arm_neon.h compile, so only the probe's own
+      # NEON test keeps the NEON sources out
+      run: |
+        cmake -B build-cross-fpu --toolchain cmake/toolchains/arm-none-eabi.cmake \
+          "-DPJ_TARGET_CPU_FLAGS=-mcpu=cortex-m33 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard" \
+          -DPJ_WITH_CXX=OFF -DPJ_BUILD_APPS=OFF -DBUILD_TESTING=OFF \
+          -DPJLIB_WITH_SSL= -DPJ_SKIP_EXPERIMENTAL_NOTICE=ON
+        ! grep -e WEBRTC_HAS_NEON -e -mfpu=neon build-cross-fpu/third_party/webrtc/CMakeFiles/webrtc.dir/flags.make
     - name: configure without bundled dependencies
       run: |
         cmake -B build-cross-min --toolchain cmake/toolchains/arm-none-eabi.cmake \
