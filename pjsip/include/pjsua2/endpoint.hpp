@@ -1042,6 +1042,15 @@ struct UaConfig : public PersistentObject
      */
     bool                resolverFallback;
 
+    /**
+     * Enable Call::onCallSendAck() for application-controlled ACK handling.
+     * Set this before Endpoint::libInit(). When disabled, PJSIP sends ACK
+     * automatically without invoking the callback.
+     *
+     * Default: false
+     */
+    bool                enableCallSendAckCallback;
+
 public:
     /**
      * Default constructor to initialize with default values.

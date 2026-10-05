@@ -1058,6 +1058,11 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg);
 pj_status_t pjsua_call_subsys_start(void);
 
 /**
+ * Destroy call subsystem resources.
+ */
+void pjsua_call_subsys_destroy(void);
+
+/**
  * Init media subsystems.
  */
 pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg);
