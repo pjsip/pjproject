@@ -200,6 +200,7 @@ static void usage(void)
     puts  ("                     for this account as application-managed from the start,");
     puts  ("                     so pjsua never creates a media transport for them (even");
     puts  ("                     the initial incoming offer). See pjsua_acc_config.");
+    puts  ("  --dummy-codecs      Register dummy codecs for the alternative media backend.");
 #endif
 
 #if PJSUA_HAS_VIDEO
@@ -2887,6 +2888,9 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
         cfg_add(&cfg, max, "--custom-sdp \"");
         cfg_add_str(&cfg, max, &escaped);
         cfg_add(&cfg, max, "\"\n");
+    }
+    if (config->dummy_codecs) {
+        cfg_add(&cfg, max, "--dummy-codecs\n");
     }
 #endif /* !PJSUA_MEDIA_HAS_PJMEDIA */
 

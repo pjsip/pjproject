@@ -3220,7 +3220,12 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(   pjsip_inv_session *inv,
                 /* App callback was invoked but did not provide a usable
                  * offer; do not silently re-offer the stale active SDP.
                  */
-                status = PJ_EINVALIDOP;
+                st_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
+                status = pjsip_dlg_modify_response(inv->dlg, last_res,
+                                                   st_code, NULL);
+                if (status == PJ_SUCCESS)
+                    pjsip_tx_data_dec_ref(last_res);
+                last_res->msg->body = NULL;
             }
 
             if (status != PJ_SUCCESS) {

@@ -6986,6 +6986,8 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
  * function from within the #pjsua_callback.on_call_send_ack() callback,
  * to manually take over the ACK transmission, e.g. to attach an SDP answer
  * to the ACK for a late SDP offer received in the 2xx response.
+ * This function is safe to call synchronously from the
+ * #pjsua_callback.on_call_send_ack() callback.
  *
  * @param call_id       Call identification.
  * @param cseq          CSeq of the 2xx response that triggered the need to

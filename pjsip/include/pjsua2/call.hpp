@@ -222,6 +222,11 @@ struct SdpSession
 
 public:
     /**
+     * Default constructor
+     */
+    SdpSession() : pjSdpSession(nullptr) {}
+
+    /**
      * Convert from pjsip
      */
     void fromPj(const pjmedia_sdp_session &sdp);
@@ -845,13 +850,21 @@ struct OnCallSendAckParam
     SipRxData rdata;
 
     /**
-     * Output: application sets this to true to suppress the automatic
-     * session termination and keep the call alive. Default is false, i.e.
-     * the library will terminate the call as per default behavior.
+     * Output: application sets this to true if it has sent (or will send) 
+     * the ACK itself, to suppress the automatic ACK sending. Default is false,
+     * i.e. the library sends the ACK after this callback returns.
      */
     bool suppressSendAck;
 
-    OnCallSendAckParam() : suppressSendAck(false)
+    /**
+     * The CSeq of the 2xx response.
+     */
+    pj_int32_t cseq;
+    
+    /**
+     * Default constructor
+     */
+    OnCallSendAckParam() : suppressSendAck(false), cseq(-1)
     {}
 };
 
@@ -2168,10 +2181,12 @@ public:
      * Notify application when the framework needs to send an ACK request
      * after it receives an incoming 2xx response for INVITE (e.g. when the
      * 2xx response carries a late SDP offer). The default implementation
-     * simply sends the ACK without any SDP answer, using sendAck().
-     * Application can override this callback to attach an SDP answer to
-     * the ACK (e.g. for a late offer scenario), or to delay sending the
-     * ACK, by calling sendAck() itself.
+     * simply do nothing and let's framework send the ACK without any SDP answer.
+     * Application can set prm.suppressSendAck to true and than the application 
+     * is responsible for sending the ACK. 
+     *
+     * This callback is enabled only when
+     * UaConfig::enableCallSendAckCallback is set before Endpoint::libInit().
      *
      * @param prm       Callback parameter.
      */

@@ -2415,6 +2415,7 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
         pj_log_pop_indent();
 
         /* Shutdown PJLIB */
+        pjsua_call_subsys_destroy();
         pj_shutdown();
     }
 
