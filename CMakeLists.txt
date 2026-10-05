@@ -391,16 +391,19 @@ if(NOT (APPLE OR MINGW OR CYGWIN))
   list(APPEND _pj_all_deps WebRTC WebRTC_AEC3)
 endif()
 
+# Go by the target rather than the PJ_DEP_<X> cache entry, which outlives a
+# dependency that a later configure (PJ_WITH_CXX=OFF, provider none) left out.
 foreach(_dep IN LISTS _pj_all_deps)
-  string(TOUPPER "PJ_DEP_${_dep}" _dep_option)
-  if(DEFINED ${_dep_option})
-    if(${_dep_option} STREQUAL "bundled")
+  if(TARGET Pj::Dep::${_dep})
+    get_target_property(_dep_provider Pj::Dep::${_dep} PJ_DEP_PROVIDER)
+    if(_dep_provider STREQUAL "bundled")
       list(APPEND PJ_BUNDLED_DEPS "${_dep}")
-    elseif(${_dep_option} STREQUAL "system")
+    elseif(_dep_provider STREQUAL "system")
       list(APPEND PJ_SYSTEM_DEPS "${_dep}")
     endif()
   endif()
 endforeach()
+unset(_dep_provider)
 unset(_pj_all_deps)
 
 list(JOIN PJ_BUNDLED_DEPS ";" PJ_BUNDLED_DEPS_STR)

@@ -31,6 +31,10 @@ if(NOT PJ_TARGET_CPU_FLAGS)
   set(PJ_TARGET_CPU_FLAGS "-mcpu=cortex-m33 -mthumb")
 endif()
 
+# try_compile() projects read this file again; give them the same settings
+list(APPEND CMAKE_TRY_COMPILE_PLATFORM_VARIABLES
+  PJ_TOOLCHAIN_PREFIX PJ_TARGET_CPU_FLAGS CMAKE_FIND_ROOT_PATH)
+
 set(CMAKE_C_COMPILER   ${PJ_TOOLCHAIN_PREFIX}gcc)
 set(CMAKE_CXX_COMPILER ${PJ_TOOLCHAIN_PREFIX}g++)
 set(CMAKE_ASM_COMPILER ${PJ_TOOLCHAIN_PREFIX}gcc)

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -412,6 +412,16 @@
  */
 #ifndef PJ_HAS_FLOATING_POINT
 #  define PJ_HAS_FLOATING_POINT     1
+#endif
+
+/**
+ * Include the atomic queue API (see pj/atomic_queue.h). Its implementation
+ * is C++, so a build without a C++ compiler sets this to 0.
+ *
+ * Default: 1.
+ */
+#ifndef PJ_HAS_ATOMIC_QUEUE
+#  define PJ_HAS_ATOMIC_QUEUE       1
 #endif
 
 /**
