@@ -843,6 +843,34 @@ jobs:
         ./build-consumer/test_consumer
         ./build-consumer/test_consumer2
 
+  # The pure C configuration: everything that needs C++ is left out, and
+  # nothing left in may reference it.
+  cmake-build-c-only:
+    runs-on: ubuntu-latest
+    name: CMake / C only
+    steps:
+    - uses: actions/checkout@v4
+    - name: install dependencies
+      run: sudo apt-get update && sudo apt-get install -y libssl-dev
+    - name: configure
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DPJ_WITH_CXX=OFF
+    - name: check
+      run: |
+        ! grep '^CMAKE_CXX_COMPILER' build/CMakeCache.txt
+        grep '^#define PJ_HAS_ATOMIC_QUEUE 0' build/pjlib/include/pj/compat/os_auto.h
+    - name: build
+      run: cmake --build build -j $(nproc)
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+    - name: test find_package
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-consumer --verbose
+        ./build-consumer/test_consumer
+        test ! -e build-consumer/test_consumer2
+
   # Cross configure for a system CMake calls Generic (no OS, or an RTOS that
   # brings its own build system), with the Arm GNU toolchain Ubuntu packages.
   # pjlib does not compile without a socket layer yet, so this guards the
@@ -860,10 +888,12 @@ jobs:
           -DPJ_WITH_CXX=OFF -DPJ_BUILD_APPS=OFF -DBUILD_TESTING=OFF \
           -DPJLIB_WITH_SSL= -DPJ_SKIP_EXPERIMENTAL_NOTICE=ON
     - name: check
-      # the toolchain's libm rather than the host's, and no C++ compiler
+      # the toolchain's libm rather than the host's, no C++ compiler, and
+      # the SIMD probe kept NEON away from Cortex-M
       run: |
         grep '^MATH_LIBRARY:FILEPATH=/usr/lib/arm-none-eabi/' build-cross/CMakeCache.txt
         ! grep '^CMAKE_CXX_COMPILER' build-cross/CMakeCache.txt
+        ! grep -e WEBRTC_HAS_NEON -e -mfpu=neon build-cross/third_party/webrtc/CMakeFiles/webrtc.dir/flags.make
     - name: build
       run: cmake --build build-cross --target resample -j $(nproc)
     - name: check target
