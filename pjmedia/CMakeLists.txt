@@ -24,6 +24,12 @@ cmake_dependent_option(PJMEDIA_WITH_SRTP
 )
 
 # Include resampling implementation
+# an earlier configure forced this to none when libresample was left out
+get_property(_pj_doc CACHE PJMEDIA_WITH_RESAMPLE PROPERTY HELPSTRING)
+if(_pj_doc MATCHES "\\(forced\\)$")
+  unset(PJMEDIA_WITH_RESAMPLE CACHE)
+endif()
+unset(_pj_doc)
 pj_option(PJMEDIA_WITH_RESAMPLE "Enable resampling implementation"
   REQUIRED
   DEFAULT libresample
