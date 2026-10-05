@@ -64,9 +64,11 @@ target_sources(ilbc
 if (NOT (WIN32 OR CYGWIN OR MINGW))
   # The codec calls libm functions (cos(), sqrt(), ...), a separate library
   # on these systems that the final link needs. Linked by name so that a
-  # cross toolchain picks the libm matching its CPU flags.
+  # cross toolchain picks the libm matching its CPU flags; a Generic one
+  # resolves -lm through its multilib specs, where find_library() does
+  # not look.
   find_library(MATH_LIBRARY m)
-  if(MATH_LIBRARY)
+  if(MATH_LIBRARY OR CMAKE_SYSTEM_NAME STREQUAL "Generic")
     target_link_libraries(ilbc PRIVATE m)
   endif()
 endif()

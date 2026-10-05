@@ -875,7 +875,8 @@ jobs:
           -DPJ_WITH_CXX=OFF -DPJ_BUILD_APPS=OFF -DBUILD_TESTING=OFF \
           -DPJLIB_WITH_SSL= -DPJ_SKIP_EXPERIMENTAL_NOTICE=ON \
           -DPJ_DEP_G7221=none -DPJ_DEP_GSM=none -DPJ_DEP_ILBC=none \
-          -DPJ_DEP_SPEEX=none -DPJ_DEP_WEBRTC=none -DPJMEDIA_WITH_VIDEO=OFF
+          -DPJ_DEP_RESAMPLE=none -DPJ_DEP_SPEEX=none -DPJ_DEP_SRTP=none \
+          -DPJ_DEP_WEBRTC=none -DPJMEDIA_WITH_VIDEO=OFF
 
   # Short pjsua-stress runs under ASan/TSan on every PR / push to master.
   # The full weekly run (larger fleet, longer duration) lives in

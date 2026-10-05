@@ -11,8 +11,8 @@
 #
 # Settings, given with -D or in the environment:
 #   PJ_TOOLCHAIN_PREFIX   compiler prefix, including a path when it is not on
-#                         PATH, e.g. /opt/zephyr-sdk/arm-zephyr-eabi/bin/arm-zephyr-eabi-
-#                         (default: arm-none-eabi-)
+#                         PATH (default: arm-none-eabi-), for example
+#                         /opt/sdk/arm-zephyr-eabi/bin/arm-zephyr-eabi-
 #   PJ_TARGET_CPU_FLAGS   code generation flags
 #                         (default: -mcpu=cortex-m33 -mthumb)
 
@@ -46,25 +46,29 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 # packages. GCC's sysroot is used when it reports one. A toolchain built
 # without one (the Zephyr SDK, Debian's gcc-arm-none-eabi) is located through
 # the libc it links, which lives at <target tree>/lib[/<multilib>]/libc.a.
-execute_process(COMMAND ${CMAKE_C_COMPILER} -print-sysroot
-  OUTPUT_VARIABLE _pj_sysroot OUTPUT_STRIP_TRAILING_WHITESPACE
-  ERROR_QUIET)
-if(NOT _pj_sysroot)
-  execute_process(COMMAND ${CMAKE_C_COMPILER} -print-file-name=libc.a
-    OUTPUT_VARIABLE _pj_libc OUTPUT_STRIP_TRAILING_WHITESPACE
+if(NOT CMAKE_FIND_ROOT_PATH)
+  execute_process(COMMAND ${CMAKE_C_COMPILER} -print-sysroot
+    RESULT_VARIABLE _pj_cc_result
+    OUTPUT_VARIABLE _pj_sysroot OUTPUT_STRIP_TRAILING_WHITESPACE
     ERROR_QUIET)
-  if(IS_ABSOLUTE "${_pj_libc}")
-    get_filename_component(_pj_dir "${_pj_libc}" ABSOLUTE)
-    while(_pj_dir AND NOT _pj_dir MATCHES "/lib$")
-      get_filename_component(_pj_dir "${_pj_dir}" DIRECTORY)
-    endwhile()
-    if(_pj_dir)
-      get_filename_component(_pj_sysroot "${_pj_dir}" DIRECTORY)
+  if(_pj_cc_result EQUAL 0 AND NOT _pj_sysroot)
+    execute_process(COMMAND ${CMAKE_C_COMPILER} -print-file-name=libc.a
+      OUTPUT_VARIABLE _pj_libc OUTPUT_STRIP_TRAILING_WHITESPACE
+      ERROR_QUIET)
+    if(IS_ABSOLUTE "${_pj_libc}")
+      get_filename_component(_pj_libc "${_pj_libc}" ABSOLUTE)
+      if(_pj_libc MATCHES "^(.*)/lib(/.*)?/libc\\.a$")
+        set(_pj_sysroot "${CMAKE_MATCH_1}")
+      endif()
     endif()
   endif()
-endif()
-if(_pj_sysroot AND IS_DIRECTORY "${_pj_sysroot}")
-  set(CMAKE_FIND_ROOT_PATH "${_pj_sysroot}")
+  if(_pj_sysroot AND IS_DIRECTORY "${_pj_sysroot}")
+    set(CMAKE_FIND_ROOT_PATH "${_pj_sysroot}")
+  elseif(_pj_cc_result EQUAL 0)
+    # without a root the ONLY modes below would search the host instead
+    message(FATAL_ERROR "cannot locate the target tree of ${CMAKE_C_COMPILER}; "
+      "pass -DCMAKE_FIND_ROOT_PATH=<directory holding lib/libc.a>")
+  endif()
 endif()
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
