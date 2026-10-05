@@ -158,7 +158,7 @@ static pj_status_t if_enum_by_af(int af,
     return (*p_cnt != 0) ? PJ_SUCCESS : PJ_ENOTFOUND;
 }
 
-#elif defined(SIOCGIFCONF) && \
+#elif defined(SIOCGIFCONF) && defined(SIOCGIFFLAGS) && \
       defined(PJ_HAS_NET_IF_H) && PJ_HAS_NET_IF_H != 0
 
 /* Note: this does not work with IPv6 */
