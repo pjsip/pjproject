@@ -46,6 +46,8 @@
 /* Max number of hangup retries. */
 #define CALL_HANGUP_MAX_RETRY        4
 
+static long ack_callback_inv_tls = -1;
+
 /*
  * The INFO method.
  */
@@ -246,6 +248,12 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     /* Copy config */
     pjsua_config_dup(pjsua_var.pool, &pjsua_var.ua_cfg, cfg);
 
+    if (pjsua_var.ua_cfg.cb.on_call_send_ack) {
+        status = pj_thread_local_alloc(&ack_callback_inv_tls);
+        if (status != PJ_SUCCESS)
+            return status;
+    }
+
     /* Verify settings */
     if (pjsua_var.ua_cfg.max_calls > PJSUA_MAX_CALLS) 
         pjsua_var.ua_cfg.max_calls = PJSUA_MAX_CALLS;
@@ -324,6 +332,16 @@ pj_status_t pjsua_call_subsys_start(void)
 {
     /* Nothing to do */
     return PJ_SUCCESS;
+}
+
+
+/* Destroy call subsystem resources. */
+void pjsua_call_subsys_destroy(void)
+{
+    if (ack_callback_inv_tls != -1) {
+        pj_thread_local_free(ack_callback_inv_tls);
+        ack_callback_inv_tls = -1;
+    }
 }
 
 
@@ -3296,9 +3314,9 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
     return pjsua_call_answer2(call_id, opt, code, reason, msg_data);
 }
 
-PJ_DEF(pj_status_t) call_inv_send_ack(pjsip_inv_session *inv,
-                                      int cseq,
-                                      const pjmedia_sdp_session *sdp)
+static pj_status_t call_inv_send_ack(pjsip_inv_session *inv,
+                                     int cseq,
+                                     const pjmedia_sdp_session *sdp)
 {
     pjsip_tx_data *tdata;
     pj_status_t status;
@@ -3306,6 +3324,9 @@ PJ_DEF(pj_status_t) call_inv_send_ack(pjsip_inv_session *inv,
 
     if (inv == NULL)
         return PJ_EINVAL;
+
+    if (inv->neg == NULL)
+        return PJMEDIA_SDPNEG_EINSTATE;
 
     if (sdp) {
         neg_state = pjmedia_sdp_neg_get_state(inv->neg);
@@ -3346,6 +3367,7 @@ PJ_DEF(pj_status_t) pjsua_call_send_ack(pjsua_call_id call_id,
 {
     pjsua_call *call;
     pjsip_dialog *dlg = NULL;
+    pjsip_inv_session *callback_inv = NULL;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
@@ -3354,11 +3376,26 @@ PJ_DEF(pj_status_t) pjsua_call_send_ack(pjsua_call_id call_id,
     PJ_LOG(4,(THIS_FILE, "Sending ACK for call %d", call_id));
     pj_log_push_indent();
 
-    status = acquire_call("pjsua_call_send_ack()", call_id, &call, &dlg);
-    if (status != PJ_SUCCESS)
-        goto on_return;
+    if (ack_callback_inv_tls != -1)
+        callback_inv = (pjsip_inv_session*) pj_thread_local_get(ack_callback_inv_tls);
 
-    status = call_inv_send_ack(call->inv, cseq, sdp);
+    if (callback_inv) {
+        call = (pjsua_call*) callback_inv->dlg->mod_data[pjsua_var.mod.id];
+        if (!call || call->index != call_id) {
+            status = PJ_EINVALIDOP;
+            goto on_return;
+        }
+    }
+    else {
+        status = acquire_call("pjsua_call_send_ack()", call_id, &call, &dlg);
+        if (status != PJ_SUCCESS) {
+            goto on_return;
+        }
+
+        callback_inv = call->inv;
+    }
+
+    status = call_inv_send_ack(callback_inv, cseq, sdp);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Unable to send ACK", status);
     }
@@ -7543,6 +7580,8 @@ static void pjsua_call_on_send_ack(pjsip_inv_session *inv,
 {
     pj_bool_t skip_sending_ack = PJ_FALSE;
     pjsua_call *call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+    pjsip_inv_session *prev_inv = NULL;
+    pj_status_t status;
 
     if (!call) {
         call_inv_send_ack(inv, rdata->msg_info.cseq->cseq, NULL);
@@ -7552,10 +7591,20 @@ static void pjsua_call_on_send_ack(pjsip_inv_session *inv,
     pj_log_push_indent();
 
     if (pjsua_var.ua_cfg.cb.on_call_send_ack) {
-        skip_sending_ack = (*pjsua_var.ua_cfg.cb.on_call_send_ack)(call->index, rdata);
+        prev_inv = (pjsip_inv_session*) pj_thread_local_get(ack_callback_inv_tls);
+        status = pj_thread_local_set(ack_callback_inv_tls, inv);
+        if (status == PJ_SUCCESS) {
+            skip_sending_ack = (*pjsua_var.ua_cfg.cb.on_call_send_ack)(
+                                                            call->index,
+                                                            rdata);
+            pj_thread_local_set(ack_callback_inv_tls, prev_inv);
+        } else {
+            pjsua_perror(THIS_FILE, "Unable to set ACK callback context",
+                         status);
+        }
     }
     if (!skip_sending_ack) {
-        pjsua_call_send_ack(call->index, rdata->msg_info.cseq->cseq, NULL);
+        call_inv_send_ack(inv, rdata->msg_info.cseq->cseq, NULL);
     }
 
     pj_log_pop_indent();

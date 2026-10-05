@@ -189,6 +189,7 @@ static void usage(void)
 #if !PJSUA_MEDIA_HAS_PJMEDIA
     puts  ("  --custom-sdp=STR    Replace generated SDP with this string.");
     puts  ("                      Use \\r\\n or \\n as line separators. The full SDP is replaced as-is.");
+    puts  ("  --dummy-codecs      Register dummy codecs for the alternative media backend.");
 #endif
 
 #if PJSUA_HAS_VIDEO
@@ -2832,6 +2833,9 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
         cfg_add(&cfg, max, "--custom-sdp \"");
         cfg_add_str(&cfg, max, &escaped);
         cfg_add(&cfg, max, "\"\n");
+    }
+    if (config->dummy_codecs) {
+        cfg_add(&cfg, max, "--dummy-codecs\n");
     }
 #endif /* !PJSUA_MEDIA_HAS_PJMEDIA */
 

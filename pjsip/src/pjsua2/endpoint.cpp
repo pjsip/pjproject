@@ -299,7 +299,8 @@ void OnVideoMediaOpCompletedParam::fromPj(const pjmedia_vid_conf_op_info &info)
 
 ///////////////////////////////////////////////////////////////////////////////
 UaConfig::UaConfig()
-: mainThreadOnly(false)
+: mainThreadOnly(false),
+  enableCallSendAckCallback(false)
 {
     pjsua_config ua_cfg;
 
@@ -401,6 +402,7 @@ void UaConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
     NODE_READ_BOOL_OPT( this_node, noRefersub);
     NODE_READ_BOOL_OPT( this_node, accServerAffinityDefault);
     NODE_READ_BOOL_OPT( this_node, serverFailover);
+    NODE_READ_BOOL_OPT( this_node, enableCallSendAckCallback);
 }
 
 void UaConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
@@ -422,6 +424,7 @@ void UaConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
     NODE_WRITE_BOOL    ( this_node, noRefersub);
     NODE_WRITE_BOOL    ( this_node, accServerAffinityDefault);
     NODE_WRITE_BOOL    ( this_node, serverFailover);
+    NODE_WRITE_BOOL    ( this_node, enableCallSendAckCallback);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1579,6 +1582,7 @@ pj_bool_t Endpoint::on_call_send_ack(pjsua_call_id call_id,
 
     OnCallSendAckParam prm;
     prm.rdata.fromPj(*rdata);
+    prm.cseq = rdata->msg_info.cseq->cseq;
 
     call->onCallSendAck(prm);
     return prm.suppressSendAck ? PJ_TRUE : PJ_FALSE;
@@ -2357,7 +2361,9 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
                                         = &Endpoint::on_call_tsx_terminate_session;
     ua_cfg.cb.on_call_media_state       = &Endpoint::on_call_media_state;
     ua_cfg.cb.on_call_sdp_created       = &Endpoint::on_call_sdp_created;
-    ua_cfg.cb.on_call_send_ack          = &Endpoint::on_call_send_ack;
+    if (prmEpConfig.uaConfig.enableCallSendAckCallback) {
+        ua_cfg.cb.on_call_send_ack      = &Endpoint::on_call_send_ack;
+    }
     ua_cfg.cb.on_stream_precreate       = &Endpoint::on_stream_precreate;
     ua_cfg.cb.on_stream_created2        = &Endpoint::on_stream_created2;
     ua_cfg.cb.on_stream_destroyed       = &Endpoint::on_stream_destroyed;
