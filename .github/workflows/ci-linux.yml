@@ -873,8 +873,9 @@ jobs:
 
   # Cross configure for a system CMake calls Generic (no OS, or an RTOS that
   # brings its own build system), with the Arm GNU toolchain Ubuntu packages.
-  # pjlib does not compile without a socket layer yet, so this guards the
-  # configure, the toolchain file and one library that does build.
+  # A socket layer and pthreads come from the RTOS, so pjlib cannot link yet;
+  # this guards the configure, the toolchain file, the generated headers and
+  # the pjlib sources that need only the C library's headers.
   cmake-cross-arm-none-eabi:
     runs-on: ubuntu-latest
     name: CMake / cross arm-none-eabi
@@ -899,6 +900,23 @@ jobs:
     - name: check target
       run: |
         arm-none-eabi-readelf -A build-cross/third_party/resample/libresample.a | grep 'Tag_CPU_name: "8-M.MAIN"'
+    - name: build pjlib (libc-only files)
+      # Compile only, nothing links. The files that include pj/sock.h need a
+      # socket API and os_core_unix.c needs pthreads, which an RTOS supplies;
+      # every other file must compile against the C library's headers alone.
+      run: |
+        cmake --build build-cross --target pjlib -j $(nproc) -- -k > pjlib.log 2>&1 || true
+        grep -oE '\*\*\* \[[^]]*src/pj/[a-z_0-9]+\.c\.obj?\]' pjlib.log || true
+        for f in array.c atomic_slist.c config.c ctype.c errno.c except.c fifobuf.c \
+        file_access_unistd.c file_io_ansi.c guid.c guid_simple.c hash.c \
+        list.c lock.c log.c log_writer_stdout.c os_error_unix.c os_info.c \
+        os_time_common.c os_time_unix.c os_timestamp_common.c \
+        os_timestamp_posix.c pool.c pool_buf.c pool_caching.c pool_dbg.c \
+        pool_policy_malloc.c rand.c rbtree.c sock_select.c string.c timer.c \
+        types.c unittest.c; do
+          find build-cross/pjlib -name "$f.o" -o -name "$f.obj" | grep -q . || { echo "$f did not compile"; failed=1; }
+        done
+        test -z "$failed"
     - name: configure without bundled dependencies
       run: |
         cmake -B build-cross-min --toolchain cmake/toolchains/arm-none-eabi.cmake \
