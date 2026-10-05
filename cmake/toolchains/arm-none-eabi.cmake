@@ -56,13 +56,21 @@ if(NOT CMAKE_FIND_ROOT_PATH)
     OUTPUT_VARIABLE _pj_sysroot OUTPUT_STRIP_TRAILING_WHITESPACE
     ERROR_QUIET)
   if(_pj_cc_result EQUAL 0 AND NOT _pj_sysroot)
+    execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpmachine
+      OUTPUT_VARIABLE _pj_triplet OUTPUT_STRIP_TRAILING_WHITESPACE
+      ERROR_QUIET)
     execute_process(COMMAND ${CMAKE_C_COMPILER} -print-file-name=libc.a
       OUTPUT_VARIABLE _pj_libc OUTPUT_STRIP_TRAILING_WHITESPACE
       ERROR_QUIET)
-    if(IS_ABSOLUTE "${_pj_libc}")
+    # The target tree is the innermost directory on that path named after
+    # the triplet: /usr/lib/arm-none-eabi/{lib,newlib}/... on Debian,
+    # <sdk>/arm-zephyr-eabi/arm-zephyr-eabi/lib/... in the Zephyr SDK.
+    if(_pj_triplet AND IS_ABSOLUTE "${_pj_libc}")
       get_filename_component(_pj_libc "${_pj_libc}" ABSOLUTE)
-      if(_pj_libc MATCHES "^(.*)/lib(/.*)?/libc\\.a$")
-        set(_pj_sysroot "${CMAKE_MATCH_1}")
+      if(_pj_libc MATCHES "^(.*/${_pj_triplet})/")
+        if(IS_DIRECTORY "${CMAKE_MATCH_1}/include")
+          set(_pj_sysroot "${CMAKE_MATCH_1}")
+        endif()
       endif()
     endif()
   endif()
