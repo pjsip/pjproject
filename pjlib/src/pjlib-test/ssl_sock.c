@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -117,6 +117,21 @@ static void dump_ssl_info(const pj_ssl_sock_info *si)
     }
 }
 
+/* The local and remote raw chain must not share storage */
+static pj_status_t check_raw_chain(const pj_ssl_sock_info *si)
+{
+    const pj_ssl_cert_info *lci = si->local_cert_info;
+    const pj_ssl_cert_info *rci = si->remote_cert_info;
+
+    if (lci && rci && lci->raw_chain.cnt && rci->raw_chain.cnt &&
+        lci->raw_chain.cert_raw == rci->raw_chain.cert_raw)
+    {
+        return PJ_EBUG;
+    }
+
+    return PJ_SUCCESS;
+}
+
 
 static pj_bool_t ssl_on_connect_complete(pj_ssl_sock_t *ssock,
                                          pj_status_t status)
@@ -135,6 +150,12 @@ static pj_bool_t ssl_on_connect_complete(pj_ssl_sock_t *ssock,
     status = pj_ssl_sock_get_info(ssock, &info);
     if (status != PJ_SUCCESS) {
         app_perror("...ERROR pj_ssl_sock_get_info()", status);
+        goto on_return;
+    }
+
+    status = check_raw_chain(&info);
+    if (status != PJ_SUCCESS) {
+        app_perror("...ERROR local/remote raw chain overlap", status);
         goto on_return;
     }
 

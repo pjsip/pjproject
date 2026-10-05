@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2018 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2018-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2014-2017 Savoir-faire Linux.
  * (https://www.savoirfairelinux.com)
  *
@@ -1144,6 +1144,13 @@ static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
 
     pj_assert(ssock->ssl_state == SSL_STATE_ESTABLISHED);
 
+    /* Both raw chains live in info_pool, so release them together */
+    pj_pool_reset(ssock->info_pool);
+    pj_bzero(&ssock->local_cert_info.raw_chain,
+             sizeof(ssock->local_cert_info.raw_chain));
+    pj_bzero(&ssock->remote_cert_info.raw_chain,
+             sizeof(ssock->remote_cert_info.raw_chain));
+
     /* Get active local certificate */
     us = gnutls_certificate_get_ours(gssock->session);
     if (!us)
@@ -1159,7 +1166,6 @@ static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
         goto us_out;
 
     tls_cert_get_info(ssock->pool, &ssock->local_cert_info, cert);
-    pj_pool_reset(ssock->info_pool);
     tls_cert_get_chain_raw(ssock->info_pool, &ssock->local_cert_info, us, 1);
 
 us_out:
@@ -1187,7 +1193,6 @@ us_out:
         goto peer_out;
 
     tls_cert_get_info(ssock->pool, &ssock->remote_cert_info, cert);
-    pj_pool_reset(ssock->info_pool);
     tls_cert_get_chain_raw(ssock->info_pool, &ssock->remote_cert_info, certs,
                            certslen);
 
