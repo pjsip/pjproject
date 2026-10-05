@@ -123,7 +123,7 @@ struct pj_thread_t
 };
 
 PJ_STATIC_ASSERT(sizeof(pj_thread_desc) >= sizeof(pj_thread_t),
-                 pj_thread_desc_too_small);
+                 pj_thread_desc_must_hold_pj_thread_t);
 
 struct pj_atomic_t
 {
@@ -1508,7 +1508,7 @@ PJ_DEF(void) pj_atomic_add( pj_atomic_t *atomic_var,
 #if PJ_HAS_THREADS
 /* The pthread key is handed back to the caller as a long index. */
 PJ_STATIC_ASSERT(sizeof(pthread_key_t) <= sizeof(long),
-                 pthread_key_t_does_not_fit_in_long);
+                 pthread_key_t_must_fit_in_long);
 #endif
 
 /*

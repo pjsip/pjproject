@@ -137,11 +137,11 @@
  * @param expr      An integer constant expression. The build fails if it
  *                  evaluates to zero.
  * @param msg       An identifier, NOT a string literal: write it without
- *                  quotes, e.g. buffer_too_small. It names the condition
- *                  being checked and appears in the compiler's error
- *                  message. It must be a valid C identifier because, on
- *                  compilers without C11 _Static_assert, it becomes part of
- *                  a typedef name.
+ *                  quotes. It states the requirement being checked, e.g.
+ *                  my_hdr_must_be_4_bytes, and appears in the compiler's
+ *                  error message. It must be a valid C identifier because,
+ *                  on compilers without C11 _Static_assert, it becomes part
+ *                  of a typedef name.
  *
  * @note            On compilers without C11 _Static_assert, at most one
  *                  PJ_STATIC_ASSERT() may appear per source line.
@@ -169,7 +169,7 @@
 
 #       define PJ_STATIC_ASSERT_CAT_(a,b)   a ## b
 #       define PJ_STATIC_ASSERT_(expr,msg,line) \
-            typedef char PJ_STATIC_ASSERT_CAT_(pj_static_assert_##msg##_, \
+            typedef char PJ_STATIC_ASSERT_CAT_(pj_static_assert_##msg##_line, \
                                                line)[(expr) ? 1 : -1] \
                                                PJ_STATIC_ASSERT_UNUSED_
 #       define PJ_STATIC_ASSERT(expr,msg) \

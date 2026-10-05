@@ -49,7 +49,7 @@
  * PJ_IOQUEUE_MAX_HANDLES is not greater than FD_SETSIZE
  */
 PJ_STATIC_ASSERT(PJ_IOQUEUE_MAX_HANDLES <= FD_SETSIZE,
-                 PJ_IOQUEUE_MAX_HANDLES_exceeds_FD_SETSIZE);
+                 PJ_IOQUEUE_MAX_HANDLES_must_not_exceed_FD_SETSIZE);
 
 
 /*

@@ -163,7 +163,7 @@ typedef struct pjmedia_ice_transport_info
 /* It is stored in pjmedia_transport_specific_info.buffer. */
 PJ_STATIC_ASSERT(sizeof(pjmedia_ice_transport_info) <=
                  PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXSIZE,
-                 pjmedia_ice_transport_info_too_large);
+                 pjmedia_ice_transport_info_must_fit_specific_info);
 
 
 /**

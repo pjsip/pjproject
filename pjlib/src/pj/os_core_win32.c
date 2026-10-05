@@ -78,7 +78,7 @@ struct pj_thread_t
 };
 
 PJ_STATIC_ASSERT(sizeof(pj_thread_desc) >= sizeof(pj_thread_t),
-                 pj_thread_desc_too_small);
+                 pj_thread_desc_must_hold_pj_thread_t);
 
 
 /*

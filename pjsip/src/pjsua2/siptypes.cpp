@@ -984,7 +984,7 @@ void SipTxOption::toPj(pjsua_msg_data &msg_data) const
 
             PJ_STATIC_ASSERT(sizeof(pjsip_generic_string_hdr) >=
                              sizeof(pjsip_max_fwd_hdr),
-                             pjsip_max_fwd_hdr_does_not_fit_generic_hdr);
+                             pjsip_max_fwd_hdr_must_fit_generic_string_hdr);
             pjsip_max_fwd_hdr_init(NULL, tmp, std::stoi(headers[i].hValue));
         }
 
