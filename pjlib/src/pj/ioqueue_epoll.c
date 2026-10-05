@@ -478,8 +478,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
 #else
     if ((rc=os_ioctl(sock, FIONBIO, (ioctl_val_type)&value))) {
 #endif
-        TRACE_((THIS_FILE, "pj_ioqueue_register_sock error: ioctl rc=%d", 
-                rc));
+        TRACE_((THIS_FILE, "pj_ioqueue_register_sock error: set nonblocking "
+                "rc=%d", rc));
         status = pj_get_netos_error();
         goto on_return;
     }

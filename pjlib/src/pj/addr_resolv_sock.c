@@ -50,12 +50,14 @@
  */
 PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *hostname, pj_hostent *phe)
 {
+    /* Enough for typical multi-A-record hosts; same as pjsip's default. */
+    enum { MAX_ADDR = 16 };
     static char name[PJ_MAX_HOSTNAME];
-    static pj_in_addr addr;
+    static pj_in_addr addr[MAX_ADDR];
     static char *aliases[1];
-    static char *addr_list[2];
-    struct addrinfo hint, *res = NULL;
-    int rc;
+    static char *addr_list[MAX_ADDR + 1];
+    struct addrinfo hint, *res = NULL, *ai;
+    unsigned i;
 
     pj_assert(hostname && hostname ->slen < PJ_MAX_HOSTNAME);
 
@@ -67,26 +69,32 @@ PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *hostname, pj_hostent *phe)
 
     pj_bzero(&hint, sizeof(hint));
     hint.ai_family = PJ_AF_INET;
+    /* One entry per address, instead of one per socket type. */
+    hint.ai_socktype = SOCK_STREAM;
 
-    rc = getaddrinfo(name, NULL, &hint, &res);
-    if (rc != 0 || res == NULL || res->ai_addr == NULL) {
-        if (res)
-            freeaddrinfo(res);
+    if (getaddrinfo(name, NULL, &hint, &res) != 0)
         return PJ_ERESOLVE;
-    }
 
-    pj_memcpy(&addr, &((struct sockaddr_in*)res->ai_addr)->sin_addr,
-              sizeof(addr));
+    for (i=0, ai=res; i<MAX_ADDR && ai; ai=ai->ai_next) {
+        if (ai->ai_family != PJ_AF_INET || ai->ai_addr == NULL)
+            continue;
+        pj_memcpy(&addr[i], &((struct sockaddr_in*)ai->ai_addr)->sin_addr,
+                  sizeof(addr[i]));
+        addr_list[i] = (char*)&addr[i];
+        ++i;
+    }
     freeaddrinfo(res);
 
+    if (i == 0)
+        return PJ_ERESOLVE;
+
+    addr_list[i] = NULL;
     aliases[0] = NULL;
-    addr_list[0] = (char*)&addr;
-    addr_list[1] = NULL;
 
     phe->h_name = name;
     phe->h_aliases = aliases;
     phe->h_addrtype = PJ_AF_INET;
-    phe->h_length = sizeof(addr);
+    phe->h_length = sizeof(addr[0]);
     phe->h_addr_list = addr_list;
 
     return PJ_SUCCESS;
