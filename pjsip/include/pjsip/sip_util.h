@@ -885,7 +885,9 @@ PJ_DECL(pj_status_t) pjsip_endpt_follow_request_transport(
  * callback, so the pointer may be used as long as the callback can't run,
  * e.g: under a lock the callback takes. It is NULL until the request has
  * been sent, e.g: while the destination is being resolved, after the
- * callback, and for a request that is not followed.
+ * callback, for a request that is not followed, and after
+ * #pjsip_endpt_release_request_transport() until the transport changes or
+ * the request is sent again.
  *
  * @param endpt     The endpoint instance.
  * @param tdata     The request.
@@ -893,6 +895,21 @@ PJ_DECL(pj_status_t) pjsip_endpt_follow_request_transport(
  * @return          The transport, or NULL.
  */
 PJ_DECL(pjsip_transport*) pjsip_endpt_get_request_transport(
+                                                    pjsip_endpoint *endpt,
+                                                    pjsip_tx_data *tdata);
+
+/**
+ * Stop reporting the transport of a followed request, see
+ * #pjsip_endpt_get_request_transport(), until it moves to another one or
+ * the request is sent again, e.g: once the application has shut the
+ * transport down.
+ *
+ * @param endpt     The endpoint instance.
+ * @param tdata     The request.
+ *
+ * @return          PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_endpt_release_request_transport(
                                                     pjsip_endpoint *endpt,
                                                     pjsip_tx_data *tdata);
 

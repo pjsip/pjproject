@@ -471,22 +471,6 @@ on_return:
  * Main entry point
  *****************************************************************************/
 
-/* Recreate the test framework's endpoint + tsx layer after pjsua_destroy. */
-static void restore_endpt(void)
-{
-    pj_status_t status;
-
-    status = pjsip_endpt_create(&caching_pool.factory, "endpt", &endpt);
-    if (status != PJ_SUCCESS) {
-        PJ_PERROR(1, (THIS_FILE, status, "Error creating endpoint"));
-        return;
-    }
-    status = pjsip_tsx_layer_init_module(endpt);
-    if (status != PJ_SUCCESS) {
-        PJ_PERROR(1, (THIS_FILE, status, "Error initializing tsx layer"));
-    }
-}
-
 int pjsua_acc_test(void)
 {
     pjsua_config           ua_cfg;
@@ -501,7 +485,7 @@ int pjsua_acc_test(void)
 
     /* The pjsip test framework's global endpoint owns the tsx layer
      * singleton, which pjsua would try to register on its own endpoint.
-     * Destroy it here and recreate it via restore_endpt() afterwards.
+     * Destroy it here and recreate it via restore_test_endpt() afterwards.
      */
     pjsip_endpt_destroy(endpt);
     endpt = NULL;
@@ -509,7 +493,7 @@ int pjsua_acc_test(void)
     status = pjsua_create();
     if (status != PJ_SUCCESS) {
         PJ_LOG(1, (THIS_FILE, "  pjsua_create failed (%d)", status));
-        restore_endpt();
+        restore_test_endpt();
         return -2401;
     }
 
@@ -528,7 +512,7 @@ int pjsua_acc_test(void)
     if (status != PJ_SUCCESS) {
         PJ_LOG(1, (THIS_FILE, "  pjsua_init failed (%d)", status));
         pjsua_destroy();
-        restore_endpt();
+        restore_test_endpt();
         return -2402;
     }
 
@@ -539,7 +523,7 @@ int pjsua_acc_test(void)
     if (status != PJ_SUCCESS) {
         PJ_LOG(1, (THIS_FILE, "  pjsua_transport_create failed (%d)", status));
         pjsua_destroy();
-        restore_endpt();
+        restore_test_endpt();
         return -2403;
     }
 
@@ -547,7 +531,7 @@ int pjsua_acc_test(void)
     if (status != PJ_SUCCESS) {
         PJ_LOG(1, (THIS_FILE, "  pjsua_start failed (%d)", status));
         pjsua_destroy();
-        restore_endpt();
+        restore_test_endpt();
         return -2404;
     }
 
@@ -563,7 +547,7 @@ int pjsua_acc_test(void)
         PJ_LOG(1, (THIS_FILE, "  register mock registrar failed (%d)",
                    status));
         pjsua_destroy();
-        restore_endpt();
+        restore_test_endpt();
         return -2405;
     }
 
@@ -644,7 +628,7 @@ on_return:
     pjsua_handle_events(500);
     pjsua_destroy2(PJSUA_DESTROY_NO_RX_MSG);
 
-    restore_endpt();
+    restore_test_endpt();
 
     return rc;
 }
