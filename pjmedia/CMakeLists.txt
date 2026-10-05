@@ -555,6 +555,9 @@ target_compile_definitions(pjmedia
     # srtp
     PJMEDIA_HAS_SRTP=$<BOOL:${PJMEDIA_WITH_SRTP}>
 
+    # the null audio device changes what RTCP-XR reports (rtcp_xr.c)
+    PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO=$<BOOL:${PJMEDIA_WITH_AUDIODEV_NULL}>
+
     # resampling backend
     PJMEDIA_RESAMPLE_IMP=PJMEDIA_RESAMPLE_$<UPPER_CASE:${PJMEDIA_WITH_RESAMPLE}>
 
