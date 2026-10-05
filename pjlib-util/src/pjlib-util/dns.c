@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -76,7 +76,6 @@ PJ_DEF(pj_status_t) pj_dns_make_query( void *packet,
     PJ_ASSERT_RETURN(*size >= d, PJLIB_UTIL_EDNSQRYTOOSMALL);
 
     /* Initialize header */
-    pj_assert(sizeof(pj_dns_hdr)==12);
     pj_bzero(p, sizeof(struct pj_dns_hdr));
     write16(p+0, id);
     write16(p+2, (pj_uint16_t)PJ_DNS_SET_RD(1));

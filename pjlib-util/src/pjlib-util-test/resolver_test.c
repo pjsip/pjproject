@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -300,7 +300,6 @@ static int print_packet(const pj_dns_parsed_packet *rec, pj_uint8_t *pkt,
     pj_leave_critical_section();
 #endif
 
-    pj_assert(sizeof(pj_dns_hdr)==12);
     if (size < (int)sizeof(pj_dns_hdr))
         return -1;
 

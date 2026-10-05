@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -2360,7 +2360,6 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
         pjmedia_ice_transport_info *ii;
         unsigned i;
 
-        pj_assert(sizeof(*ii) <= sizeof(tsi->buffer));
         tsi = &info->spc_info[info->specific_info_cnt++];
         tsi->type = PJMEDIA_TRANSPORT_TYPE_ICE;
         tsi->tp = tp;

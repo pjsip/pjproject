@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -25,6 +25,7 @@
  * @brief RTP packet and RTP session declarations.
  */
 #include <pjmedia/types.h>
+#include <pj/assert.h>
 
 
 PJ_BEGIN_DECL
@@ -196,6 +197,9 @@ struct pjmedia_rtp_dtmf_event
  * @see pjmedia_rtp_dtmf_event
  */
 typedef struct pjmedia_rtp_dtmf_event pjmedia_rtp_dtmf_event;
+
+PJ_STATIC_ASSERT(sizeof(pjmedia_rtp_dtmf_event) == 4,
+                 pjmedia_rtp_dtmf_event_must_be_4_bytes);
 
 #pragma pack()
 

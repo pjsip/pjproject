@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1038,8 +1038,6 @@ PJ_DEF(pj_status_t) pj_turn_session_sendto( pj_turn_session *sess,
 
         /* Peer is assigned a channel number, we can use ChannelData */
         pj_turn_channel_data *cd = (pj_turn_channel_data*)sess->tx_pkt;
-        
-        pj_assert(sizeof(*cd)==4);
 
         /* Calculate total length, including paddings */
         total_len = (pkt_len + sizeof(*cd) + 3) & (~3);

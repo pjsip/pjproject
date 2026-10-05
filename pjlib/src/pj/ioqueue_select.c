@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -48,9 +48,8 @@
 /* Now that we have access to OS'es <sys/select>, lets check again that
  * PJ_IOQUEUE_MAX_HANDLES is not greater than FD_SETSIZE
  */
-#if PJ_IOQUEUE_MAX_HANDLES > FD_SETSIZE
-#   error "PJ_IOQUEUE_MAX_HANDLES cannot be greater than FD_SETSIZE"
-#endif
+PJ_STATIC_ASSERT(PJ_IOQUEUE_MAX_HANDLES <= FD_SETSIZE,
+                 PJ_IOQUEUE_MAX_HANDLES_must_not_exceed_FD_SETSIZE);
 
 
 /*
@@ -75,9 +74,8 @@
  * The select ioqueue relies on socket functions (pj_sock_xxx()) to return
  * the correct error code.
  */
-#if PJ_RETURN_OS_ERROR(100) != PJ_STATUS_FROM_OS(100)
-#   error "Error reporting must be enabled for this function to work!"
-#endif
+PJ_STATIC_ASSERT(PJ_RETURN_OS_ERROR(100) == PJ_STATUS_FROM_OS(100),
+                 os_error_reporting_must_be_enabled);
 
 /*
  * During debugging build, VALIDATE_FD_SET is set.
