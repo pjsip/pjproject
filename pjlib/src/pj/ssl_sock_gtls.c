@@ -1372,4 +1372,13 @@ static pj_status_t ssl_renegotiate(pj_ssl_sock_t *ssock)
     return tls_status_from_err(ssock, status);
 }
 
+PJ_DEF(pj_status_t) pj_ssl_rand_bytes(void *buf, pj_size_t len)
+{
+    PJ_UNUSED_ARG(buf);
+    PJ_UNUSED_ARG(len);
+    PJ_TODO(IMPLEMENT_PJ_SSL_RAND_BYTES);
+    return PJ_ENOTSUP;
+}
+
+
 #endif /* PJ_HAS_SSL_SOCK */

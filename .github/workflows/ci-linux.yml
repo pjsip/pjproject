@@ -362,6 +362,85 @@ jobs:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
 
+  # Mbed TLS backend, with both supported major versions. The full suites run
+  # in the Default jobs; only what depends on the TLS backend runs here.
+  mbedtls:
+    needs: [detect-changes]
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.any_src == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - version: 3.6.7
+            sha256: a7e8bcbec0e6f761b4af24f25677626b35f762f68eef79c08677a363212d11f6
+            config_py: scripts/config.py
+          - version: 4.2.0
+            sha256: 2bed9d713b4668f76553b097e72b8aa30bc8f112a940d7ae228d524bbde6ffea
+            config_py: tf-psa-crypto/scripts/config.py
+    name: Mbed TLS ${{ matrix.version }} / pjlib,pjnath,pjsua
+    steps:
+    - uses: actions/checkout@v2
+    - name: Mbed TLS prefix
+      run: echo "MBEDTLS_PREFIX=$HOME/mbedtls-${{ matrix.version }}" >> $GITHUB_ENV
+    - name: cache Mbed TLS
+      id: cache-mbedtls
+      uses: actions/cache@v4
+      with:
+        path: ~/mbedtls-${{ matrix.version }}
+        # Bump the suffix when the build recipe below changes
+        key: mbedtls-${{ matrix.version }}-${{ runner.os }}-threading-1
+    - name: build Mbed TLS
+      if: steps.cache-mbedtls.outputs.cache-hit != 'true'
+      run: |
+        cd $RUNNER_TEMP
+        curl -sSfL -o mbedtls.tar.bz2 \
+          https://github.com/Mbed-TLS/mbedtls/releases/download/mbedtls-${{ matrix.version }}/mbedtls-${{ matrix.version }}.tar.bz2
+        echo "${{ matrix.sha256 }}  mbedtls.tar.bz2" | sha256sum -c
+        tar xjf mbedtls.tar.bz2
+        cd mbedtls-${{ matrix.version }}
+        # PJSIP's threads share PSA Crypto, which needs the threading layer
+        python3 ${{ matrix.config_py }} set MBEDTLS_THREADING_C
+        python3 ${{ matrix.config_py }} set MBEDTLS_THREADING_PTHREAD
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+              -DENABLE_TESTING=OFF -DENABLE_PROGRAMS=OFF \
+              -DCMAKE_INSTALL_PREFIX=$MBEDTLS_PREFIX
+        cmake --build build -j 3
+        cmake --install build
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
+    - name: configure
+      run: ./configure --with-mbedtls=$MBEDTLS_PREFIX
+    - name: make
+      run: $MAKE_FAST
+    - name: get SSL info
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep SSL
+    - name: verify mbedtls is used
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep -E 'PJ_SSL_SOCK_IMP\s+:\s+6'
+    - name: pjlib-test (ssl_sock only)
+      run: cd pjlib/build && ../bin/pjlib-test-`make -s -C ../.. infotarget` $CI_MODE $CI_ARGS ssl_sock_test ssl_sock_stress_test
+    - name: pjnath-test (turn_sock_test only)
+      run: cd pjnath/build && ../bin/pjnath-test-`make -s -C ../.. infotarget` $CI_MODE $CI_ARGS turn_sock_test
+    - name: set up Python 3.10 for pjsua test
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.10'
+    # pjsip-test has no TLS tests. These are SIP calls over TLS between two
+    # pjsua, one acting as the TLS server, and SDES-SRTP calls, whose keys
+    # come from Mbed TLS.
+    - name: pjsua-test (TLS and SDES-SRTP only)
+      run: |
+        cd tests/pjsua
+        for t in 220_tls 230_sips 150_srtp_1_1 150_srtp_2_2; do
+          python run.py mod_call.py scripts-call/$t.py || exit 1
+        done
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ matrix.version }}-${{ github.run_id }}
+        path: artifacts
+
   vid-openh264-1:
     needs: [detect-changes]
     if: github.event_name != 'pull_request' || needs.detect-changes.outputs.any_src == 'true'

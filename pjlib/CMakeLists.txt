@@ -329,11 +329,17 @@ elseif(PJLIB_WITH_SSL STREQUAL "gnutls")
   target_link_libraries(pjlib-ssl INTERFACE GnuTLS::GnuTLS)
 elseif(PJLIB_WITH_SSL STREQUAL "mbedtls")
   find_package(MbedTLS CONFIG REQUIRED)
+  # Mbed TLS 4.x moved the crypto library to TF-PSA-Crypto
+  if(TARGET MbedTLS::tfpsacrypto)
+    set(_pj_mbedtls_crypto MbedTLS::tfpsacrypto)
+  else()
+    set(_pj_mbedtls_crypto MbedTLS::mbedcrypto)
+  endif()
   target_link_libraries(pjlib-ssl
     INTERFACE
       MbedTLS::mbedtls
-      MbedTLS::mbedcrypto
       MbedTLS::mbedx509
+      ${_pj_mbedtls_crypto}
   )
 elseif(PJLIB_WITH_SSL STREQUAL "darwin")
   if(NOT APPLE)
