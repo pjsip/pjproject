@@ -264,6 +264,7 @@ target_link_libraries(pjsua-lib
 # ##############################################################################
 # pjsua2
 
+if(PJ_WITH_CXX)
 add_library(pjsua2
   src/pjsua2/account.cpp
   src/pjsua2/endpoint.cpp
@@ -314,6 +315,7 @@ target_link_libraries(pjsua2
     pjsip-ua
     pjsua-lib
 )
+endif() # PJ_WITH_CXX
 
 # ##############################################################################
 # Test application
@@ -384,7 +386,8 @@ if(BUILD_TESTING)
       pjsua-lib
   )
 
-  # pjsua test application
+  # pjsua2 test application
+  if(PJ_WITH_CXX)
   add_executable(pjsua2-test
     src/pjsua2-test/main.cpp
     src/pjsua2-test/instant_messaging.cpp
@@ -407,4 +410,5 @@ if(BUILD_TESTING)
   )
 
   add_test(NAME pjsua2-test COMMAND pjsua2-test)
+  endif() # PJ_WITH_CXX
 endif()

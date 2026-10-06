@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(pj_find_package_test C CXX)
+project(pj_find_package_test C)
 
 find_package(Pj REQUIRED)
 
@@ -8,6 +8,10 @@ find_package(Pj REQUIRED)
 add_executable(test_consumer test_consumer.c)
 target_link_libraries(test_consumer PRIVATE Pj::pjsua-lib)
 
-# C++ consumer: exercise pjsua2 (C++ API) and transitive dependencies
-add_executable(test_consumer2 test_consumer2.cpp)
-target_link_libraries(test_consumer2 PRIVATE Pj::pjsua2)
+# C++ consumer: exercise pjsua2 (C++ API) and transitive dependencies.
+# An install made with PJ_WITH_CXX=OFF has no pjsua2.
+if(TARGET Pj::pjsua2)
+  enable_language(CXX)
+  add_executable(test_consumer2 test_consumer2.cpp)
+  target_link_libraries(test_consumer2 PRIVATE Pj::pjsua2)
+endif()

@@ -24,6 +24,12 @@ cmake_dependent_option(PJMEDIA_WITH_SRTP
 )
 
 # Include resampling implementation
+# an earlier configure forced this to none when libresample was left out
+get_property(_pj_doc CACHE PJMEDIA_WITH_RESAMPLE PROPERTY HELPSTRING)
+if(_pj_doc MATCHES "\\(forced\\)$")
+  unset(PJMEDIA_WITH_RESAMPLE CACHE)
+endif()
+unset(_pj_doc)
 pj_option(PJMEDIA_WITH_RESAMPLE "Enable resampling implementation"
   REQUIRED
   DEFAULT libresample
@@ -192,13 +198,16 @@ option(PJMEDIA_WITH_BCG729_CODEC "Enable BCG729 codec" ON)
 import_if_or_set(PJMEDIA_WITH_BCG729_CODEC OFF BCG729)
 
 # Lyra codec
-option(PJMEDIA_WITH_LYRA_CODEC "Enable Lyra codec" ON)
+cmake_dependent_option(PJMEDIA_WITH_LYRA_CODEC
+  "Enable Lyra codec" ON
+  "PJ_WITH_CXX" OFF
+)
 import_if_or_set(PJMEDIA_WITH_LYRA_CODEC OFF Lyra)
 
 # Android MediaCodec codecs
 cmake_dependent_option(PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC
   "Enable Android MediaCodec codecs" ON
-  "ANDROID" OFF
+  "ANDROID;PJ_WITH_CXX" OFF
 )
 import_if_or_set(PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC OFF MediaNDK)
 
@@ -219,7 +228,7 @@ import_if_or_set(PJMEDIA_WITH_VID_TOOLBOX_CODEC OFF VideoToolbox)
 # OpenH264 codecs
 cmake_dependent_option(PJMEDIA_WITH_OPEN_H264_CODEC
   "Enable OpenH264 codecs support" ON
-  "PJMEDIA_WITH_VIDEO" OFF
+  "PJMEDIA_WITH_VIDEO;PJ_WITH_CXX" OFF
 )
 import_if_or_set(PJMEDIA_WITH_OPEN_H264_CODEC OFF OpenH264)
 
@@ -245,7 +254,7 @@ cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_JNI
 # where to point the build at an SDK.
 cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_OBOE
   "Enable OBOE audio device backend" ON
-  "PJMEDIA_WITH_AUDIODEV;ANDROID" OFF
+  "PJMEDIA_WITH_AUDIODEV;ANDROID;PJ_WITH_CXX" OFF
 )
 import_if_or_set(PJMEDIA_WITH_AUDIODEV_OBOE OFF Oboe)
 
@@ -282,7 +291,7 @@ cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_WMME
 # built from the MSVC projects, which do define it.
 cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_WASAPI
   "Enable WASAPI audio device backend" OFF
-  "PJMEDIA_WITH_AUDIODEV;WIN32 OR CYGWIN OR MINGW" OFF
+  "PJMEDIA_WITH_AUDIODEV;WIN32 OR CYGWIN OR MINGW;PJ_WITH_CXX" OFF
 )
 import_if_or_set(PJMEDIA_WITH_AUDIODEV_WASAPI OFF WASAPI)
 
@@ -379,8 +388,19 @@ import_if_or_set(PJMEDIA_WITH_VIDEODEV_V4L2 OFF V4L2)
 # DirectShow backend
 cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_DSHOW
   "Enable DirectShow video device backend" OFF
-  "PJMEDIA_WITH_VIDEODEV;WIN32 OR CYGWIN OR MINGW" OFF
+  "PJMEDIA_WITH_VIDEODEV;WIN32 OR CYGWIN OR MINGW;PJ_WITH_CXX" OFF
 )
+
+# The top-level directory writes these into PjConfig.cmake. An option whose
+# cmake_dependent_option() condition turned false on a reconfigure is OFF in
+# this directory only, while its cache entry keeps the earlier value.
+get_cmake_property(_pj_vars VARIABLES)
+foreach(_var IN LISTS _pj_vars)
+  if(_var MATCHES "^PJMEDIA_WITH_")
+    set(${_var} "${${_var}}" PARENT_SCOPE)
+  endif()
+endforeach()
+unset(_pj_vars)
 
 # ##############################################################################
 # pjmedia
@@ -408,7 +428,7 @@ add_library(pjmedia
   src/pjmedia/echo_speex.c
   src/pjmedia/echo_suppress.c
   src/pjmedia/echo_webrtc.c
-  src/pjmedia/echo_webrtc_aec3.cpp
+  $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia/echo_webrtc_aec3.cpp>
   src/pjmedia/endpoint.c
   src/pjmedia/errno.c
   src/pjmedia/event.c
@@ -660,10 +680,13 @@ target_link_libraries(pjmedia
 )
 
 if (NOT (WIN32 OR CYGWIN OR MINGW))
-  # math library
+  # pjmedia calls libm functions (sin(), cos(), ...), a separate library on
+  # these systems that the final link needs. Linked by name so that a cross
+  # toolchain picks the libm matching its CPU flags; a Generic one resolves
+  # -lm through its multilib specs, where find_library() does not look.
   find_library(MATH_LIBRARY m)
-  if(MATH_LIBRARY)
-    target_link_libraries(pjmedia PRIVATE "${MATH_LIBRARY}")
+  if(MATH_LIBRARY OR CMAKE_SYSTEM_NAME STREQUAL "Generic")
+    target_link_libraries(pjmedia PRIVATE m)
   endif()
 endif()
 
@@ -687,10 +710,10 @@ add_library(pjmedia-codec
   src/pjmedia-codec/h264_packetizer.c
   src/pjmedia-codec/ilbc.c
   src/pjmedia-codec/l16.c
-  src/pjmedia-codec/lyra.cpp
+  $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-codec/lyra.cpp>
   src/pjmedia-codec/opencore_amr.c
   src/pjmedia-codec/speex_codec.c
-  src/pjmedia-codec/openh264.cpp
+  $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-codec/openh264.cpp>
   $<$<BOOL:${PJMEDIA_WITH_VID_TOOLBOX_CODEC}>:src/pjmedia-codec/vid_toolbox.m>
   src/pjmedia-codec/opus.c
   src/pjmedia-codec/silk.c
@@ -863,9 +886,9 @@ add_library(pjmedia-audiodev
   src/pjmedia-audiodev/android_jni_dev.c
   src/pjmedia-audiodev/errno.c
   src/pjmedia-audiodev/null_dev.c
-  src/pjmedia-audiodev/oboe_dev.cpp
-  src/pjmedia-audiodev/wasapi_dev.cpp
-  src/pjmedia-audiodev/wasapi_dev_win.cpp
+  $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-audiodev/oboe_dev.cpp>
+  $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-audiodev/wasapi_dev.cpp>
+  $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-audiodev/wasapi_dev_win.cpp>
   src/pjmedia-audiodev/wmme_dev.c
 
   $<$<BOOL:${APPLE}>:src/pjmedia-audiodev/coreaudio_dev.m>
@@ -940,7 +963,7 @@ add_library(pjmedia-videodev
   src/pjmedia-videodev/android_opengl.c
   src/pjmedia-videodev/colorbar_dev.c
   src/pjmedia-videodev/dshow_dev.c
-  src/pjmedia-videodev/dshowclasses.cpp
+  $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-videodev/dshowclasses.cpp>
   src/pjmedia-videodev/errno.c
   src/pjmedia-videodev/ffmpeg_dev.c
   src/pjmedia-videodev/null_dev.c

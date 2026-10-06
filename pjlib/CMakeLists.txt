@@ -37,7 +37,6 @@ add_library(pjlib
   src/pj/activesock.c
   src/pj/addr_resolv_sock.c
   src/pj/array.c
-  src/pj/atomic_queue.cpp
   src/pj/atomic_slist.c
   src/pj/config.c
   src/pj/ctype.c
@@ -178,6 +177,14 @@ target_sources(pjlib
         include/pj/unittest.h
 )
 
+# atomic_queue is C++, used by the Android audio and codec backends only
+if(PJ_WITH_CXX)
+  target_sources(pjlib PRIVATE src/pj/atomic_queue.cpp)
+  set(PJ_HAS_ATOMIC_QUEUE 1)
+else()
+  set(PJ_HAS_ATOMIC_QUEUE 0)
+endif()
+
 # system APIs
 if(WIN32 OR CYGWIN OR MINGW)
   target_sources(pjlib
@@ -277,13 +284,18 @@ if(APPLE)
   # needs the C++ runtime even when the consumer is pure C. Nothing surfaces
   # this while building the archive; it appears as undefined std::terminate()
   # when an application is linked.
-  target_link_libraries(pjlib PUBLIC c++)
+  if(PJ_WITH_CXX)
+    target_link_libraries(pjlib PUBLIC c++)
+  endif()
 endif()
 
 # math library
 if(NOT (WIN32 OR CYGWIN OR MINGW))
   find_library(MATH_LIBRARY m)
-  if(MATH_LIBRARY)
+  # A toolchain for a Generic system (no OS, or an RTOS such as Zephyr)
+  # ships libm beside its libc and resolves -lm through its multilib specs,
+  # where find_library() does not look.
+  if(MATH_LIBRARY OR CMAKE_SYSTEM_NAME STREQUAL "Generic")
     target_link_libraries(pjlib PUBLIC m)
   elseif(PJLIB_WITH_FLOATING_POINT)
     pj_force_set(PJLIB_WITH_FLOATING_POINT OFF "math library not found")

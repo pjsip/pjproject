@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2024-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,6 +34,8 @@
  */
 
 #include <pj/types.h>
+
+#if PJ_HAS_ATOMIC_QUEUE
 
 PJ_BEGIN_DECL
 
@@ -93,5 +95,7 @@ PJ_DECL(pj_status_t) pj_atomic_queue_get(pj_atomic_queue_t *atomic_queue,
  */
 
 PJ_END_DECL
+
+#endif  /* PJ_HAS_ATOMIC_QUEUE */
 
 #endif

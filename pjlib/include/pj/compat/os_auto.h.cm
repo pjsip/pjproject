@@ -230,6 +230,11 @@
 #ifndef PJ_HAS_SSL_SOCK
 #cmakedefine01 PJ_HAS_SSL_SOCK
 #endif
+
+/* Atomic queue availability (its implementation is C++). */
+#ifndef PJ_HAS_ATOMIC_QUEUE
+#cmakedefine01 PJ_HAS_ATOMIC_QUEUE
+#endif
 #ifndef PJ_SSL_SOCK_IMP
 #cmakedefine PJ_SSL_SOCK_IMP @PJ_SSL_SOCK_IMP@
 #endif

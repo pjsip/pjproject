@@ -415,6 +415,16 @@
 #endif
 
 /**
+ * Include the atomic queue API (see pj/atomic_queue.h). Its implementation
+ * is C++, so a build without a C++ compiler sets this to 0.
+ *
+ * Default: 1.
+ */
+#ifndef PJ_HAS_ATOMIC_QUEUE
+#  define PJ_HAS_ATOMIC_QUEUE       1
+#endif
+
+/**
  * Declare maximum logging level/verbosity. Lower number indicates higher
  * importance, with the highest importance has level zero. The least
  * important level is five in this implementation, but this can be extended
