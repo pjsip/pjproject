@@ -721,6 +721,16 @@ typedef struct pj_ice_sess_options
      */
     pj_bool_t check_src_addr;
 
+    /**
+     * Specify whether the session implements ICE-Lite. An ICE-Lite session
+     * always uses the controlled role, responds to connectivity checks, and
+     * never originates ordinary or triggered connectivity checks. The
+     * application is responsible for supplying host candidates only.
+     *
+     * Default value is PJ_FALSE.
+     */
+    pj_bool_t lite;
+
 } pj_ice_sess_options;
 
 
@@ -1170,4 +1180,3 @@ PJ_END_DECL
 
 
 #endif  /* __PJNATH_ICE_SESSION_H__ */
-

@@ -332,6 +332,7 @@ PJ_DEF(void) pj_ice_sess_options_default(pj_ice_sess_options *opt)
     opt->wait_valid_pair_timeout = PJ_ICE_WAIT_VALID_PAIR_TIMEOUT;
     opt->trickle = PJ_ICE_SESS_TRICKLE_DISABLED;
     opt->check_src_addr = PJ_ICE_SESS_CHECK_SRC_ADDR;
+    opt->lite = PJ_FALSE;
 }
 
 /*
@@ -458,7 +459,11 @@ PJ_DEF(pj_status_t) pj_ice_sess_set_options(pj_ice_sess *ice,
                                             const pj_ice_sess_options *opt)
 {
     PJ_ASSERT_RETURN(ice && opt, PJ_EINVAL);
+
+    pj_grp_lock_acquire(ice->grp_lock);
     pj_memcpy(&ice->opt, opt, sizeof(*opt));
+    if (ice->opt.lite)
+        ice->role = PJ_ICE_SESS_ROLE_CONTROLLED;
     ice->is_trickling = (ice->opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED);
     if (ice->is_trickling) {
         LOG5((ice->obj_name, "Trickle ICE is active (%s mode)",
@@ -474,6 +479,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_set_options(pj_ice_sess *ice,
 
     LOG5((ice->obj_name, "ICE nomination type set to %s",
           (ice->opt.aggressive ? "aggressive" : "regular")));
+    pj_grp_lock_release(ice->grp_lock);
     return PJ_SUCCESS;
 }
 
@@ -564,6 +570,9 @@ PJ_DEF(pj_status_t) pj_ice_sess_change_role(pj_ice_sess *ice,
                                             pj_ice_sess_role new_role)
 {
     PJ_ASSERT_RETURN(ice, PJ_EINVAL);
+
+    if (ice->opt.lite && new_role != PJ_ICE_SESS_ROLE_CONTROLLED)
+        return PJ_EINVALIDOP;
 
     if (new_role != ice->role) {
         ice->role = new_role;
@@ -2172,7 +2181,8 @@ static pj_status_t add_rcand_and_update_checklist(
     /* For trickle ICE: resume the periodic check, it may be halted when
      * there is no available check pair.
      */
-    if (ice->opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED &&
+    if (!ice->opt.lite &&
+        ice->opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED &&
         clist->count > 0 && !ice->is_complete &&
         clist->state == PJ_ICE_SESS_CHECKLIST_ST_RUNNING)
     {
@@ -2675,7 +2685,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
     pj_log_push_indent();
 
     /* If we are using aggressive nomination, set the is_nominating state */
-    if (ice->opt.aggressive)
+    if (ice->opt.aggressive && !ice->opt.lite)
         ice->is_nominating = PJ_TRUE;
 
     /* The agent examines the check list for the first media stream (a
@@ -2691,7 +2701,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
      */
 
     clist = &ice->clist;
-    for (i=0; i < clist->foundation_cnt; ++i) {
+    for (i=0; !ice->opt.lite && i < clist->foundation_cnt; ++i) {
         unsigned k;
         pj_ice_sess_check *chk = NULL;
 
@@ -2742,12 +2752,33 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
     }
     pj_list_init(&ice->early_check);
 
+    if (ice->opt.lite && !ice->is_complete &&
+        ice->timer.id == TIMER_NONE &&
+        ice->opt.controlled_agent_want_nom_timeout >= 0)
+    {
+        pj_time_val delay;
+
+        delay.sec = 0;
+        delay.msec = ice->opt.controlled_agent_want_nom_timeout;
+        pj_time_val_normalize(&delay);
+        status = pj_timer_heap_schedule_w_grp_lock(
+                                    ice->stun_cfg.timer_heap,
+                                    &ice->timer, &delay,
+                                    TIMER_CONTROLLED_WAIT_NOM,
+                                    ice->grp_lock);
+        if (status != PJ_SUCCESS) {
+            pj_grp_lock_release(ice->grp_lock);
+            pj_log_pop_indent();
+            return status;
+        }
+    }
+
     /* Start periodic check */
     /* We could start it immediately like below, but lets schedule timer 
      * instead to reduce stack usage:
      * return start_periodic_check(ice->stun_cfg.timer_heap, &clist->timer);
      */
-    if (!pj_timer_entry_running(&clist->timer)) {
+    if (!ice->opt.lite && !pj_timer_entry_running(&clist->timer)) {
         pj_time_val delay = {0, 0};
         status = pj_timer_heap_schedule_w_grp_lock(ice->stun_cfg.timer_heap,
                                                    &clist->timer, &delay,
@@ -3325,6 +3356,13 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
                                     src_addr, src_addr_len);
             pj_grp_lock_release(ice->grp_lock);
             return PJ_SUCCESS;
+        } else if (ice->opt.lite) {
+            /* An ICE-Lite agent never changes to the controlling role. */
+            pj_stun_session_respond(sess, rdata, PJ_STUN_SC_ROLE_CONFLICT,
+                                    NULL, token, PJ_TRUE,
+                                    src_addr, src_addr_len);
+            pj_grp_lock_release(ice->grp_lock);
+            return PJ_SUCCESS;
         } else {
             /* Switch role to controlled */
             LOG4((ice->obj_name, 
@@ -3437,6 +3475,47 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
     return PJ_SUCCESS;
 }
 
+
+/* Complete a candidate pair from an incoming ICE-Lite check. */
+static void complete_incoming_lite_check(pj_ice_sess *ice,
+                                         pj_ice_sess_check *check)
+{
+    pj_ice_sess_check *valid;
+    unsigned i;
+
+    for (i=0; i<ice->valid_list.count; ++i) {
+        valid = &ice->valid_list.checks[i];
+        if (valid->lcand == check->lcand && valid->rcand == check->rcand)
+            break;
+    }
+
+    if (i == ice->valid_list.count) {
+        if (ice->valid_list.count >= PJ_ICE_MAX_CHECKS) {
+            LOG4((ice->obj_name, "Unable to add ICE-Lite valid pair: "
+                  "valid list is full"));
+            check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_FAILED,
+                            PJ_ETOOMANY);
+            on_check_complete(ice, check);
+            return;
+        }
+
+        valid = &ice->valid_list.checks[ice->valid_list.count++];
+        pj_bzero(valid, sizeof(*valid));
+        valid->lcand = check->lcand;
+        valid->rcand = check->rcand;
+        valid->prio = check->prio;
+        valid->foundation_idx = check->foundation_idx;
+        valid->state = PJ_ICE_SESS_CHECK_STATE_SUCCEEDED;
+        valid->err_code = PJ_SUCCESS;
+    }
+
+    check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_SUCCEEDED,
+                    PJ_SUCCESS);
+    valid->nominated = (valid->nominated || check->nominated);
+    update_comp_check(ice, valid->lcand->comp_id, valid);
+    sort_checklist(ice, &ice->valid_list);
+    on_check_complete(ice, check);
+}
 
 /* Handle incoming Binding request and perform triggered check.
  * This function may be called by on_stun_rx_request(), or when
@@ -3569,6 +3648,11 @@ static void handle_incoming_check(pj_ice_sess *ice,
 
         rcand->checked = PJ_TRUE;
 
+        if (ice->opt.lite) {
+            complete_incoming_lite_check(ice, c);
+            return;
+        }
+
         if (c->state == PJ_ICE_SESS_CHECK_STATE_FROZEN ||
             c->state == PJ_ICE_SESS_CHECK_STATE_WAITING)
         {
@@ -3658,6 +3742,14 @@ static void handle_incoming_check(pj_ice_sess *ice,
         ++ice->clist.count;
 
         LOG4((ice->obj_name, "New triggered check added: %d", check_id));
+
+        if (ice->opt.lite) {
+            c->foundation_idx = get_check_foundation_idx(ice, lcand, rcand,
+                                                         PJ_TRUE);
+            complete_incoming_lite_check(ice, c);
+            sort_checklist(ice, &ice->clist);
+            return;
+        }
 
         /* If we are nominating in regular nomination, don't nominate this
          * newly found pair.
@@ -3931,5 +4023,3 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
 
     return status;
 }
-
-

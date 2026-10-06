@@ -249,6 +249,7 @@ static int test_inner(int argc, char *argv[])
 
 #if INCLUDE_ICE_TEST
     UT_ADD_TEST(&test_app.ut_app, ice_wait_valid_pair_test, 0);
+    UT_ADD_TEST(&test_app.ut_app, ice_lite_test, 0);
 #endif
 
 #if INCLUDE_TURN_SOCK_TEST
@@ -301,4 +302,3 @@ int test_main(int argc, char *argv[])
 
     return -1;
 }
-

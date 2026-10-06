@@ -1648,6 +1648,7 @@ struct wvp_sess
     pj_str_t         pass;
     pj_bool_t        completed;
     pj_status_t      status;
+    unsigned         binding_requests_sent;
 };
 
 static struct wvp_sess *wvp_find_dst(struct wvp_test *t,
@@ -1670,8 +1671,15 @@ static pj_status_t wvp_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id,
     struct wvp_test *t = src->test;
     struct wvp_sess *dst;
     struct wvp_pkt *p;
+    pj_uint16_t msg_type;
 
     PJ_UNUSED_ARG(dst_addr_len);
+
+    if (size >= sizeof(msg_type)) {
+        pj_memcpy(&msg_type, pkt, sizeof(msg_type));
+        if (pj_ntohs(msg_type) == PJ_STUN_BINDING_REQUEST)
+            ++src->binding_requests_sent;
+    }
 
     /* Sends to the bogon address fail synchronously, as if the local route
      * to it is prohibited (EPERM).
@@ -2026,6 +2034,250 @@ int ice_wait_valid_pair_test(void)
         PJ_LOG(3,(THIS_FILE, INDENT "ok: failed immediately when disabled"));
 
     s3_done:
+        if (callee.ice) pj_ice_sess_destroy(callee.ice);
+        pj_list_init(&t.txq);
+        if (rc) goto on_return;
+    }
+
+on_return:
+    destroy_stun_config(&app_sess);
+    pj_log_pop_indent();
+
+    return rc;
+}
+
+int ice_lite_test(void)
+{
+    app_sess_t app_sess;
+    pj_str_t bogon_ip;
+    pj_status_t status;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "ICE-Lite"));
+    pj_log_push_indent();
+
+    status = create_stun_config(&app_sess);
+    if (status != PJ_SUCCESS) {
+        pj_log_pop_indent();
+        return -10;
+    }
+
+    bogon_ip = pj_str((char*)WVP_BOGON_IP);
+
+    /* A full agent nominates a peer-reflexive pair on the ICE-Lite agent. */
+    {
+        struct wvp_test t;
+        struct wvp_sess caller, callee;
+        pj_ice_sess_cand rcand;
+        pj_ice_sess_options opt;
+        unsigned i;
+
+        pj_bzero(&t, sizeof(t));
+        pj_bzero(&caller, sizeof(caller));
+        pj_bzero(&callee, sizeof(callee));
+        t.stun_cfg = &app_sess.stun_cfg;
+        t.pool = app_sess.pool;
+        pj_list_init(&t.txq);
+        pj_sockaddr_init(pj_AF_INET(), &t.bogon, &bogon_ip, WVP_BOGON_PORT);
+        t.caller = &caller;
+        t.callee = &callee;
+
+        if ((rc=wvp_create_sess(&t, &caller, "liteUA1",
+                                PJ_ICE_SESS_ROLE_CONTROLLING, 34201, -2))) {
+            rc = -20; goto s1_done;
+        }
+        if ((rc=wvp_create_sess(&t, &callee, "liteUA2",
+                                PJ_ICE_SESS_ROLE_CONTROLLED, 34202, -2))) {
+            rc = -21; goto s1_done;
+        }
+
+        pj_ice_sess_get_options(callee.ice, &opt);
+        opt.lite = PJ_TRUE;
+        opt.trickle = PJ_ICE_SESS_TRICKLE_FULL;
+        if (pj_ice_sess_set_options(callee.ice, &opt) != PJ_SUCCESS) {
+            rc = -22; goto s1_done;
+        }
+        if (pj_ice_sess_change_role(callee.ice,
+                                    PJ_ICE_SESS_ROLE_CONTROLLING) !=
+                                    PJ_EINVALIDOP)
+        {
+            rc = -23; goto s1_done;
+        }
+
+        wvp_init_rcand(&rcand, &callee.addr);
+        if (pj_ice_sess_create_check_list(caller.ice, &callee.ufrag,
+                                          &callee.pass, 1, &rcand)) {
+            rc = -24; goto s1_done;
+        }
+        wvp_init_rcand(&rcand, &t.bogon);
+        if (pj_ice_sess_create_check_list(callee.ice, &caller.ufrag,
+                                          &caller.pass, 1, &rcand)) {
+            rc = -25; goto s1_done;
+        }
+
+        if (pj_ice_sess_start_check(callee.ice) != PJ_SUCCESS) {
+            rc = -26; goto s1_done;
+        }
+        if (pj_ice_sess_update_check_list(callee.ice, &caller.ufrag,
+                                          &caller.pass, 1, &rcand,
+                                          PJ_FALSE) != PJ_SUCCESS) {
+            rc = -27; goto s1_done;
+        }
+        if (pj_ice_sess_start_check(caller.ice) != PJ_SUCCESS) {
+            rc = -28; goto s1_done;
+        }
+
+        for (i=0; i<80 && !(caller.completed && callee.completed); ++i)
+            wvp_poll(&t, 100);
+
+        if (!caller.completed || caller.status != PJ_SUCCESS) {
+            rc = -29; goto s1_done;
+        }
+        if (!callee.completed || callee.status != PJ_SUCCESS) {
+            rc = -30; goto s1_done;
+        }
+        if (callee.ice->comp[0].nominated_check->rcand->type !=
+                PJ_ICE_CAND_TYPE_PRFLX)
+        {
+            rc = -31; goto s1_done;
+        }
+        if (caller.binding_requests_sent == 0 ||
+            callee.binding_requests_sent != 0)
+        {
+            rc = -32; goto s1_done;
+        }
+        if (t.shim_err) {
+            rc = -33; goto s1_done;
+        }
+
+        PJ_LOG(3,(THIS_FILE, INDENT "ok: peer-reflexive pair nominated "
+                  "without outbound checks"));
+
+    s1_done:
+        if (caller.ice) pj_ice_sess_destroy(caller.ice);
+        if (callee.ice) pj_ice_sess_destroy(callee.ice);
+        pj_list_init(&t.txq);
+        if (rc) goto on_return;
+    }
+
+    /* A silent peer causes bounded failure without an outbound check. */
+    {
+        struct wvp_test t;
+        struct wvp_sess callee;
+        pj_ice_sess_cand rcand;
+        pj_ice_sess_options opt;
+
+        pj_bzero(&t, sizeof(t));
+        pj_bzero(&callee, sizeof(callee));
+        t.stun_cfg = &app_sess.stun_cfg;
+        t.pool = app_sess.pool;
+        pj_list_init(&t.txq);
+        pj_sockaddr_init(pj_AF_INET(), &t.bogon, &bogon_ip, WVP_BOGON_PORT);
+        t.callee = &callee;
+
+        if ((rc=wvp_create_sess(&t, &callee, "liteUA3",
+                                PJ_ICE_SESS_ROLE_CONTROLLED, 34203, -2))) {
+            rc = -40; goto s2_done;
+        }
+
+        pj_ice_sess_get_options(callee.ice, &opt);
+        opt.lite = PJ_TRUE;
+        opt.controlled_agent_want_nom_timeout = 100;
+        if (pj_ice_sess_set_options(callee.ice, &opt) != PJ_SUCCESS) {
+            rc = -41; goto s2_done;
+        }
+        wvp_init_rcand(&rcand, &t.bogon);
+        if (pj_ice_sess_create_check_list(callee.ice, &callee.ufrag,
+                                          &callee.pass, 1, &rcand)) {
+            rc = -42; goto s2_done;
+        }
+        if (pj_ice_sess_start_check(callee.ice) != PJ_SUCCESS) {
+            rc = -43; goto s2_done;
+        }
+
+        wvp_poll(&t, 300);
+        if (!callee.completed ||
+            callee.status != PJNATH_EICENOMTIMEOUT ||
+            callee.binding_requests_sent != 0)
+        {
+            rc = -44; goto s2_done;
+        }
+
+        PJ_LOG(3,(THIS_FILE, INDENT "ok: silent peer timed out without "
+                  "outbound checks"));
+
+    s2_done:
+        if (callee.ice) pj_ice_sess_destroy(callee.ice);
+        pj_list_init(&t.txq);
+        if (rc) goto on_return;
+    }
+
+    /* An early nominated check completes after remote data is installed. */
+    {
+        struct wvp_test t;
+        struct wvp_sess caller, callee;
+        pj_ice_sess_cand rcand;
+        pj_ice_sess_options opt;
+        unsigned i;
+
+        pj_bzero(&t, sizeof(t));
+        pj_bzero(&caller, sizeof(caller));
+        pj_bzero(&callee, sizeof(callee));
+        t.stun_cfg = &app_sess.stun_cfg;
+        t.pool = app_sess.pool;
+        pj_list_init(&t.txq);
+        pj_sockaddr_init(pj_AF_INET(), &t.bogon, &bogon_ip, WVP_BOGON_PORT);
+        t.caller = &caller;
+        t.callee = &callee;
+
+        if ((rc=wvp_create_sess(&t, &caller, "liteUA4",
+                                PJ_ICE_SESS_ROLE_CONTROLLING, 34204, -2))) {
+            rc = -50; goto s3_done;
+        }
+        if ((rc=wvp_create_sess(&t, &callee, "liteUA5",
+                                PJ_ICE_SESS_ROLE_CONTROLLED, 34205, -2))) {
+            rc = -51; goto s3_done;
+        }
+
+        pj_ice_sess_get_options(callee.ice, &opt);
+        opt.lite = PJ_TRUE;
+        if (pj_ice_sess_set_options(callee.ice, &opt) != PJ_SUCCESS) {
+            rc = -52; goto s3_done;
+        }
+
+        wvp_init_rcand(&rcand, &callee.addr);
+        if (pj_ice_sess_create_check_list(caller.ice, &callee.ufrag,
+                                          &callee.pass, 1, &rcand)) {
+            rc = -53; goto s3_done;
+        }
+        if (pj_ice_sess_start_check(caller.ice) != PJ_SUCCESS) {
+            rc = -54; goto s3_done;
+        }
+        wvp_poll(&t, 100);
+
+        wvp_init_rcand(&rcand, &caller.addr);
+        if (pj_ice_sess_create_check_list(callee.ice, &caller.ufrag,
+                                          &caller.pass, 1, &rcand)) {
+            rc = -55; goto s3_done;
+        }
+        if (pj_ice_sess_start_check(callee.ice) != PJ_SUCCESS) {
+            rc = -56; goto s3_done;
+        }
+
+        for (i=0; i<20 && !callee.completed; ++i)
+            wvp_poll(&t, 100);
+
+        if (!callee.completed || callee.status != PJ_SUCCESS ||
+            callee.binding_requests_sent != 0 || t.shim_err)
+        {
+            rc = -57; goto s3_done;
+        }
+
+        PJ_LOG(3,(THIS_FILE, INDENT "ok: early check completed without "
+                  "outbound checks"));
+
+    s3_done:
+        if (caller.ice) pj_ice_sess_destroy(caller.ice);
         if (callee.ice) pj_ice_sess_destroy(callee.ice);
         pj_list_init(&t.txq);
         if (rc) goto on_return;
