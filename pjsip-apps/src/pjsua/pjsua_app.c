@@ -2186,7 +2186,6 @@ static pj_status_t app_init(void)
     /* Add accounts */
     for (i=0; i<app_config.acc_cnt; ++i) {
         app_config.acc_cfg[i].rtp_cfg = app_config.rtp_cfg;
-        app_config.acc_cfg[i].reg_retry_interval = 300;
         app_config.acc_cfg[i].reg_first_retry_interval = 60;
 
         app_config_init_video(&app_config.acc_cfg[i]);
