@@ -856,7 +856,7 @@ jobs:
       run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DPJ_WITH_CXX=OFF
     - name: check
       run: |
-        ! grep '^CMAKE_CXX_COMPILER' build/CMakeCache.txt
+        if grep '^CMAKE_CXX_COMPILER' build/CMakeCache.txt; then exit 1; fi
         grep '^#define PJ_HAS_ATOMIC_QUEUE 0' build/pjlib/include/pj/compat/os_auto.h
     - name: build
       run: cmake --build build -j $(nproc)
@@ -906,8 +906,8 @@ jobs:
       # the SIMD probe kept NEON away from Cortex-M
       run: |
         grep '^MATH_LIBRARY:FILEPATH=/usr/lib/arm-none-eabi/' build-cross/CMakeCache.txt
-        ! grep '^CMAKE_CXX_COMPILER' build-cross/CMakeCache.txt
-        ! grep -e WEBRTC_HAS_NEON -e -mfpu=neon build-cross/third_party/webrtc/CMakeFiles/webrtc.dir/flags.make
+        if grep '^CMAKE_CXX_COMPILER' build-cross/CMakeCache.txt; then exit 1; fi
+        if grep -e WEBRTC_HAS_NEON -e -mfpu=neon build-cross/third_party/webrtc/CMakeFiles/webrtc.dir/flags.make; then exit 1; fi
     - name: build
       run: cmake --build build-cross --target resample -j $(nproc)
     - name: check target
@@ -942,7 +942,7 @@ jobs:
           -D_pj_detected_simd_ext:INTERNAL=neon \
           -D_pj_detected_simd_ext_flags:INTERNAL=-mfpu=neon \
           -D_simd_supported:INTERNAL=1
-        ! grep -e WEBRTC_HAS_NEON -e -mfpu=neon build-cross-fpu/third_party/webrtc/CMakeFiles/webrtc.dir/flags.make
+        if grep -e WEBRTC_HAS_NEON -e -mfpu=neon build-cross-fpu/third_party/webrtc/CMakeFiles/webrtc.dir/flags.make; then exit 1; fi
     - name: configure without bundled dependencies
       run: |
         cmake -B build-cross-min --toolchain cmake/toolchains/arm-none-eabi.cmake \
