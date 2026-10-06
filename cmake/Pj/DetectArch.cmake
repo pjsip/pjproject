@@ -99,13 +99,19 @@ function(pj_detect_arch out_arch)
 endfunction()
 
 function(pj_detect_arch_simd_ext out_simd out_flags)
-  # if a cached values exists, return them; -mfma was cached by older versions
+  # Bump when the probe changes, so a result an older probe cached is not
+  # reused: version 1 cached -mfma, unversioned ones NEON for a Generic
+  # system. The compile check caches its own result and is reset with them.
+  set(probe_version 2)
   if(DEFINED CACHE{_pj_detected_simd_ext} AND
-     NOT "$CACHE{_pj_detected_simd_ext_flags}" MATCHES "-mfma")
+     "$CACHE{_pj_detected_simd_ext_version}" STREQUAL "${probe_version}")
     set("${out_simd}" "$CACHE{_pj_detected_simd_ext}" PARENT_SCOPE)
     set("${out_flags}" "$CACHE{_pj_detected_simd_ext_flags}" PARENT_SCOPE)
     return()
   endif()
+  unset(_pj_detected_simd_ext CACHE)
+  unset(_pj_detected_simd_ext_flags CACHE)
+  unset(_simd_supported CACHE)
 
   pj_detect_arch(arch)
   if(arch MATCHES "^arm")
@@ -205,6 +211,7 @@ function(pj_detect_arch_simd_ext out_simd out_flags)
     # cache values
     set(_pj_detected_simd_ext "${simd_inst}" CACHE INTERNAL "SIMD extensions")
     set(_pj_detected_simd_ext_flags "${simd_flags}" CACHE INTERNAL "")
+    set(_pj_detected_simd_ext_version "${probe_version}" CACHE INTERNAL "")
 
     set("${out_simd}" "${simd_inst}" PARENT_SCOPE)
     set("${out_flags}" "${simd_flags}" PARENT_SCOPE)

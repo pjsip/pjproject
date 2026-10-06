@@ -932,12 +932,16 @@ jobs:
         test -z "$failed"
     - name: configure for Cortex-M33 with its FPU
       # hard-float flags let arm_neon.h compile, so only the probe's own
-      # NEON test keeps the NEON sources out
+      # NEON test keeps the NEON sources out. The cache is seeded with what
+      # an older probe recorded for this target; it must be discarded.
       run: |
         cmake -B build-cross-fpu --toolchain cmake/toolchains/arm-none-eabi.cmake \
           "-DPJ_TARGET_CPU_FLAGS=-mcpu=cortex-m33 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard" \
           -DPJ_WITH_CXX=OFF -DPJ_BUILD_APPS=OFF -DBUILD_TESTING=OFF \
-          -DPJLIB_WITH_SSL= -DPJ_SKIP_EXPERIMENTAL_NOTICE=ON
+          -DPJLIB_WITH_SSL= -DPJ_SKIP_EXPERIMENTAL_NOTICE=ON \
+          -D_pj_detected_simd_ext:INTERNAL=neon \
+          -D_pj_detected_simd_ext_flags:INTERNAL=-mfpu=neon \
+          -D_simd_supported:INTERNAL=1
         ! grep -e WEBRTC_HAS_NEON -e -mfpu=neon build-cross-fpu/third_party/webrtc/CMakeFiles/webrtc.dir/flags.make
     - name: configure without bundled dependencies
       run: |
