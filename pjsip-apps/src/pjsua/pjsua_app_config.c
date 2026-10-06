@@ -77,6 +77,7 @@ static void usage(void)
             PJSUA_REG_INTERVAL);
     printf("  --rereg-delay=SEC   Optional auto retry registration interval (default %d)\n",
             PJSUA_REG_RETRY_INTERVAL);
+    puts  ("                      0 disables auto re-registration");
     puts  ("  --reg-use-proxy=N   Control the use of proxy settings in REGISTER.");
     puts  ("                      0=no proxy, 1=outbound only, 2=acc only, 3=all (default)");
     puts  ("  --server-affinity[=on|off]  Pin same SIP server across requests");
