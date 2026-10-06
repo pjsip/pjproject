@@ -5527,8 +5527,8 @@ static void schedule_reregistration(pjsua_acc *acc)
         if (delay.sec >= (long)acc->cfg.reg_retry_random_interval) {
             delay.msec = -rand_ms + (pj_rand() % (rand_ms * 2));
         } else {
-            delay.sec = 0;
             delay.msec = (pj_rand() % (delay.sec * 1000 + rand_ms));
+            delay.sec = 0;
         }
     }
     pj_time_val_normalize(&delay);

@@ -5172,7 +5172,11 @@ typedef struct pjsua_acc_config
      * This is useful to avoid all clients re-registering at the same time.
      * For example, if the registration retry interval is set to 100 seconds
      * and this is set to 10 seconds, the actual registration retry interval
-     * will be in the range of 90 to 110 seconds.
+     * will be in the range of 90 to 110 seconds. If the retry interval is
+     * shorter than this value, it cannot be reduced by that much, and the
+     * actual interval will be in the range of 0 to the retry interval plus
+     * this value instead: for example 0 to 15 seconds for a retry interval
+     * of 5 seconds.
      *
      * Default: 10
      */
