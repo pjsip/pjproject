@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -32,6 +32,13 @@
     PJ_DECL(int) strcasecmp(const char *s1, const char *s2);
     PJ_DECL(int) strncasecmp(const char *s1, const char *s2, int len);
 
+#endif
+
+/* strcasecmp() and strncasecmp() are declared in <strings.h>, which some
+ * libcs do not pull in from <string.h>.
+ */
+#if defined(PJ_HAS_STRINGS_H) && PJ_HAS_STRINGS_H != 0
+#   include <strings.h>
 #endif
 
 /* For sprintf family */

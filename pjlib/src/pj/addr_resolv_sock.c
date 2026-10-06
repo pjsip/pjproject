@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -39,6 +39,69 @@
 #define THIS_FILE       "addr_resolv_sock.c"
 #define ANDROID_DNS_TIMEOUT_MS       5000
 
+#if defined(PJ_SOCK_HAS_GETHOSTBYNAME) && PJ_SOCK_HAS_GETHOSTBYNAME == 0
+
+#if !defined(PJ_SOCK_HAS_GETADDRINFO) || PJ_SOCK_HAS_GETADDRINFO == 0
+#   error "PJ_SOCK_HAS_GETHOSTBYNAME=0 requires PJ_SOCK_HAS_GETADDRINFO"
+#endif
+
+/* Over getaddrinfo(). As with gethostbyname(), the result lives in static
+ * storage and is not reentrant.
+ */
+PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *hostname, pj_hostent *phe)
+{
+    /* Enough for typical multi-A-record hosts; same as pjsip's default. */
+    enum { MAX_ADDR = 16 };
+    static char name[PJ_MAX_HOSTNAME];
+    static pj_in_addr addr[MAX_ADDR];
+    static char *aliases[1];
+    static char *addr_list[MAX_ADDR + 1];
+    struct addrinfo hint, *res = NULL, *ai;
+    unsigned i;
+
+    pj_assert(hostname && hostname ->slen < PJ_MAX_HOSTNAME);
+
+    if (hostname->slen >= PJ_MAX_HOSTNAME)
+        return PJ_ENAMETOOLONG;
+
+    pj_memcpy(name, hostname->ptr, hostname->slen);
+    name[ hostname->slen ] = '\0';
+
+    pj_bzero(&hint, sizeof(hint));
+    hint.ai_family = PJ_AF_INET;
+    /* One entry per address, instead of one per socket type. */
+    hint.ai_socktype = SOCK_STREAM;
+
+    if (getaddrinfo(name, NULL, &hint, &res) != 0)
+        return PJ_ERESOLVE;
+
+    for (i=0, ai=res; i<MAX_ADDR && ai; ai=ai->ai_next) {
+        if (ai->ai_family != PJ_AF_INET || ai->ai_addr == NULL)
+            continue;
+        pj_memcpy(&addr[i], &((struct sockaddr_in*)ai->ai_addr)->sin_addr,
+                  sizeof(addr[i]));
+        addr_list[i] = (char*)&addr[i];
+        ++i;
+    }
+    freeaddrinfo(res);
+
+    if (i == 0)
+        return PJ_ERESOLVE;
+
+    addr_list[i] = NULL;
+    aliases[0] = NULL;
+
+    phe->h_name = name;
+    phe->h_aliases = aliases;
+    phe->h_addrtype = PJ_AF_INET;
+    phe->h_length = sizeof(addr[0]);
+    phe->h_addr_list = addr_list;
+
+    return PJ_SUCCESS;
+}
+
+#else   /* PJ_SOCK_HAS_GETHOSTBYNAME */
+
 PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *hostname, pj_hostent *phe)
 {
     struct hostent *he;
@@ -69,6 +132,8 @@ PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *hostname, pj_hostent *phe)
 
     return PJ_SUCCESS;
 }
+
+#endif  /* PJ_SOCK_HAS_GETHOSTBYNAME */
 
 /* Resolve IPv4/IPv6 address */
 PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
