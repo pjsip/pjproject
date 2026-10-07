@@ -651,6 +651,141 @@ on_return:
 }
 
 
+#if PJMEDIA_CONF_BACKEND != PJMEDIA_CONF_SWITCH_BOARD_BACKEND
+/* The operation callbacks delivered by the bridge, and how many of them
+ * carried the bridge and the user data it was created with.
+ */
+typedef struct op_record
+{
+    pjmedia_conf       *conf;
+    unsigned            count;
+    unsigned            ok_cnt;
+    pjmedia_conf_op_type types[8];
+    pj_status_t         statuses[8];
+} op_record;
+
+static op_record g_ops;
+static int g_op_user_data;
+
+static void record_op(const pjmedia_conf_op_info *info)
+{
+    if (g_ops.count < PJ_ARRAY_SIZE(g_ops.types)) {
+        g_ops.types[g_ops.count] = info->op_type;
+        g_ops.statuses[g_ops.count] = info->status;
+    }
+    if (info->conf == g_ops.conf && info->user_data == &g_op_user_data)
+        ++g_ops.ok_cnt;
+    ++g_ops.count;
+}
+
+static void reset_ops(pjmedia_conf *conf)
+{
+    pj_bzero(&g_ops, sizeof(g_ops));
+    g_ops.conf = conf;
+}
+
+/* Every operation callback carries pjmedia_conf_param::user_data: the
+ * queued operations, the cancelled operations and the synchronous removal
+ * of a port whose add-op is still queued, and the removals on destroy.
+ */
+static int op_user_data_test(void)
+{
+    pj_pool_t *pool = NULL;
+    pjmedia_conf *conf = NULL;
+    pjmedia_conf_param param;
+    pjmedia_port *master, *p1 = NULL, *p2 = NULL;
+    unsigned slot1 = 0, slot2 = 0;
+    int rc = 0;
+    pj_status_t status;
+
+    PJ_LOG(3, (THIS_FILE, "  conf op callback user data"));
+
+    pool = pj_pool_create(mem, "conf_op_ud", 4000, 4000, NULL);
+    if (!pool) return -500;
+
+    pjmedia_conf_param_default(&param);
+    param.max_slots = 8;
+    param.sampling_rate = CLOCK_RATE;
+    param.channel_count = CHANNELS;
+    param.samples_per_frame = SPF;
+    param.bits_per_sample = BPS;
+    param.options = PJMEDIA_CONF_NO_DEVICE;
+    param.user_data = &g_op_user_data;
+    status = pjmedia_conf_create2(pool, &param, &conf);
+    if (status != PJ_SUCCESS) { rc = -501; goto on_return; }
+    status = pjmedia_conf_set_op_cb(conf, &record_op);
+    if (status != PJ_SUCCESS) { rc = -502; goto on_return; }
+    master = pjmedia_conf_get_master_port(conf);
+
+    status = pjmedia_null_port_create(pool, CLOCK_RATE, CHANNELS, SPF, BPS,
+                                      &p1);
+    if (status != PJ_SUCCESS) { rc = -503; goto on_return; }
+    status = pjmedia_null_port_create(pool, CLOCK_RATE, CHANNELS, SPF, BPS,
+                                      &p2);
+    if (status != PJ_SUCCESS) { rc = -504; goto on_return; }
+
+    status = pjmedia_conf_add_port(conf, pool, p1, NULL, &slot1);
+    if (status != PJ_SUCCESS) { rc = -505; goto on_return; }
+    status = pjmedia_conf_add_port(conf, pool, p2, NULL, &slot2);
+    if (status != PJ_SUCCESS) { rc = -506; goto on_return; }
+    status = pjmedia_conf_connect_port(conf, slot1, slot2, 0);
+    if (status != PJ_SUCCESS) { rc = -507; goto on_return; }
+
+    /* No clock tick yet, so removing slot1 cancels its queued add-op and
+     * connect-op, and removes it synchronously.
+     */
+    reset_ops(conf);
+    status = pjmedia_conf_remove_port(conf, slot1);
+    if (status != PJ_SUCCESS) { rc = -510; goto on_return; }
+    if (g_ops.count != 3 ||
+        g_ops.types[0] != PJMEDIA_CONF_OP_ADD_PORT ||
+        g_ops.statuses[0] != PJ_ECANCELLED ||
+        g_ops.types[1] != PJMEDIA_CONF_OP_CONNECT_PORTS ||
+        g_ops.statuses[1] != PJ_ECANCELLED ||
+        g_ops.types[2] != PJMEDIA_CONF_OP_REMOVE_PORT ||
+        g_ops.statuses[2] != PJ_SUCCESS)
+    {
+        PJ_LOG(1, (THIS_FILE, "   sync removal: unexpected %u callbacks",
+                   g_ops.count));
+        rc = -511; goto on_return;
+    }
+    if (g_ops.ok_cnt != g_ops.count) { rc = -512; goto on_return; }
+
+    /* The add-op of slot2 is completed by the clock */
+    reset_ops(conf);
+    status = pump(master, 1);
+    if (status != PJ_SUCCESS) { rc = -520; goto on_return; }
+    if (g_ops.count != 1 ||
+        g_ops.types[0] != PJMEDIA_CONF_OP_ADD_PORT ||
+        g_ops.statuses[0] != PJ_SUCCESS)
+    {
+        PJ_LOG(1, (THIS_FILE, "   queued op: unexpected %u callbacks",
+                   g_ops.count));
+        rc = -521; goto on_return;
+    }
+    if (g_ops.ok_cnt != g_ops.count) { rc = -522; goto on_return; }
+
+    /* Destroying the bridge removes the remaining ports */
+    reset_ops(conf);
+    pjmedia_conf_destroy(conf);
+    conf = NULL;
+    if (g_ops.count == 0) { rc = -525; goto on_return; }
+    if (g_ops.ok_cnt != g_ops.count) { rc = -526; goto on_return; }
+
+on_return:
+    if (rc != 0 && g_ops.ok_cnt != g_ops.count) {
+        PJ_LOG(1, (THIS_FILE, "   only %u of %u callbacks carried the bridge "
+                   "and its user data", g_ops.ok_cnt, g_ops.count));
+    }
+    if (conf)
+        pjmedia_conf_destroy(conf);
+    if (pool)
+        pj_pool_release(pool);
+    return rc;
+}
+#endif
+
+
 int conf_test(void)
 {
     int rc;
@@ -662,6 +797,14 @@ int conf_test(void)
         PJ_LOG(1,(THIS_FILE, "  conf master capture test failed (rc=%d)", rc));
         return rc;
     }
+
+#if PJMEDIA_CONF_BACKEND != PJMEDIA_CONF_SWITCH_BOARD_BACKEND
+    rc = op_user_data_test();
+    if (rc != 0) {
+        PJ_LOG(1,(THIS_FILE, "  conf op user data test failed (rc=%d)", rc));
+        return rc;
+    }
+#endif
 
     rc = detach_replace_test();
     if (rc == 1) {

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -379,6 +379,7 @@ struct pjmedia_conf
     op_entry             *op_queue;     /**< Queue of operations.           */
     op_entry             *op_queue_free;/**< Queue of free entries.         */
     pjmedia_conf_op_cb    cb;           /**< OP callback.                   */
+    void                 *user_data;    /**< OP callback user data.         */
 
 
     pj_atomic_slist     *unused_slots;    /**< Unused port's slots.         */
@@ -579,6 +580,8 @@ static void handle_op_queue(pjmedia_conf *conf)
             pjmedia_conf_op_info info = { 0 };
 
             pj_log_push_indent();
+            info.conf = conf;
+            info.user_data = conf->user_data;
             info.op_type = type;
             info.status = status;
             info.op_param = param;
@@ -1096,6 +1099,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_create2(pj_pool_t *pool_,
 
     conf->options = param->options;
     conf->max_ports = param->max_slots;
+    conf->user_data = param->user_data;
     conf->sampling_rate = param->sampling_rate;
     conf->channel_count = param->channel_count;
     conf->samples_per_frame = param->samples_per_frame;
@@ -1339,6 +1343,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
 
                 pj_log_push_indent();
                 op_info.conf = conf;
+                op_info.user_data = conf->user_data;
                 op_info.op_type = PJMEDIA_CONF_OP_REMOVE_PORT;
                 op_info.status = status;
                 op_info.op_param = oprm;
@@ -2418,6 +2423,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
                 if (conf->cb) {
                     pj_log_push_indent();
                     op_info.conf = conf;
+                    op_info.user_data = conf->user_data;
                     op_info.status = PJ_ECANCELLED;
                     (*conf->cb)(&op_info);
                     pj_log_pop_indent();
@@ -2503,6 +2509,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
 
                 pj_log_push_indent();
                 op_info.conf = conf;
+                op_info.user_data = conf->user_data;
                 op_info.op_type = PJMEDIA_CONF_OP_REMOVE_PORT;
                 op_info.status = status;
                 op_info.op_param = prm;

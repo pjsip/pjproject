@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -233,6 +233,12 @@ typedef struct pjmedia_conf_op_info
      */
     pjmedia_conf_op_param   op_param;
 
+    /**
+     * The application data specified in pjmedia_conf_param::user_data
+     * when the conference bridge was created.
+     */
+    void                   *user_data;
+
 } pjmedia_conf_op_info;
 
 /**
@@ -373,6 +379,16 @@ typedef struct pjmedia_conf_param
      * level using the pjsua2::MediaConfig::confThreadPrio parameter.
      */
     int worker_thread_prio;
+
+    /**
+     * Application data, which will be passed back in
+     * pjmedia_conf_op_info::user_data of the callback set with
+     * #pjmedia_conf_set_op_cb().
+     *
+     * The default value is NULL.
+     */
+    void *user_data;
+
 } pjmedia_conf_param;
 
 
@@ -512,6 +528,9 @@ PJ_DECL(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf );
  * 
  * The callback will most likely be called from media threads,
  * thus application must not perform long/blocking processing in this callback.
+ *
+ * The application data specified in pjmedia_conf_param::user_data is
+ * passed to the callback in pjmedia_conf_op_info::user_data.
  * 
  * @param conf          The conference bridge.
  * @param cb            Callback to be called. Set this to NULL to unregister
