@@ -249,6 +249,9 @@ typedef struct pjmedia_srtp_setting
      * RTP sequence rollover counter initialization value for incoming
      * direction. This is useful to maintain ROC after media transport
      * recreation such as in IP change scenario.
+     * Note that once a packet has been authenticated, the transport
+     * updates this to the ROC of that packet, so callers of
+     * #pjmedia_transport_srtp_get_setting() may see it changed.
      */
     pjmedia_srtp_roc             rx_roc;
 
@@ -258,7 +261,9 @@ typedef struct pjmedia_srtp_setting
      * ROC but for some reason, they don't. Thus, when we encounter
      * SRTP packet unprotect failure during probation, we will retry to
      * unprotect with this ROC value as well.
-     * Set prev_rx_roc.ssrc to 0 to disable this feature.
+     * Set prev_rx_roc.ssrc to 0 to disable this feature. The transport
+     * clears prev_rx_roc.ssrc once a packet of rx_roc.ssrc has been
+     * authenticated, closing the retry window.
      */
     pjmedia_srtp_roc             prev_rx_roc;
 

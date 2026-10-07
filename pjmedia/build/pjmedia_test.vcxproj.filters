@@ -36,6 +36,9 @@
     <ClCompile Include="..\src\test\sdp_neg_test.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\test\transport_srtp_test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\test\sdptest.c">
       <Filter>Source Files</Filter>
     </ClCompile>
