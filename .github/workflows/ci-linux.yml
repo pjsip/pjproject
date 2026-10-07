@@ -842,6 +842,15 @@ jobs:
         cmake --build build-consumer --verbose
         ./build-consumer/test_consumer
         ./build-consumer/test_consumer2
+    - name: test pkg-config
+      run: |
+        prefix=${{ runner.temp }}/pj-install
+        test -f "$prefix/lib/libpjlib.a" && test ! -e "$prefix/bin/libpjlib.a"
+        export PKG_CONFIG_PATH="$prefix/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        cc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --static --cflags --libs libpjproject)
+        ./pc_consumer
 
   # The pure C configuration: everything that needs C++ is left out, and
   # nothing left in may reference it.
@@ -870,6 +879,14 @@ jobs:
         cmake --build build-consumer --verbose
         ./build-consumer/test_consumer
         test ! -e build-consumer/test_consumer2
+    - name: test pkg-config
+      run: |
+        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        if grep -e -lpjsua2 -e -lstdc++ "$PKG_CONFIG_PATH/libpjproject.pc"; then exit 1; fi
+        cc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --static --cflags --libs libpjproject)
+        ./pc_consumer
 
   # What a configure generates must not depend on values an earlier configure
   # of the same build directory left in the cache; see

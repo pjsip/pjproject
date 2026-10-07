@@ -238,10 +238,10 @@ import_if_or_set(PJMEDIA_WITH_OPEN_H264_CODEC OFF OpenH264)
 
 option(PJMEDIA_WITH_AUDIODEV "Enable audio device support" ON)
 
-# NULL audio backend
+# NULL audio backend, off by default as in pjmedia-audiodev/config.h
 cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_NULL
-  "Enable NULL audio device backend" ON
-  "PJMEDIA_WITH_AUDIO_DEVICE" OFF
+  "Enable NULL audio device backend" OFF
+  "PJMEDIA_WITH_AUDIODEV" OFF
 )
 
 # Android Java Native Interface backend
@@ -353,7 +353,7 @@ cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_FFMPEG
 
 # SDL backend
 cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_SDL
-  "Enable FFMPEG video device backend" ON
+  "Enable SDL video device backend" ON
   "PJMEDIA_WITH_VIDEODEV" OFF
 )
 import_if_or_set(PJMEDIA_WITH_VIDEODEV_SDL OFF SDL2)
@@ -574,6 +574,9 @@ target_compile_definitions(pjmedia
   PUBLIC
     # srtp
     PJMEDIA_HAS_SRTP=$<BOOL:${PJMEDIA_WITH_SRTP}>
+
+    # the null audio device changes what RTCP-XR reports (rtcp_xr.c)
+    PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO=$<BOOL:${PJMEDIA_WITH_AUDIODEV_NULL}>
 
     # resampling backend
     PJMEDIA_RESAMPLE_IMP=PJMEDIA_RESAMPLE_$<UPPER_CASE:${PJMEDIA_WITH_RESAMPLE}>
@@ -1124,3 +1127,6 @@ if(BUILD_TESTING)
 
   add_test(NAME pjmedia-test COMMAND pjmedia-test)
 endif()
+
+# For the pkg-config file: the files of the dependencies found here
+pj_pc_remember_imported_targets()

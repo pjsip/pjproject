@@ -145,3 +145,6 @@ target_include_directories(srtp BEFORE
 )
 
 target_compile_definitions(srtp PRIVATE HAVE_CONFIG_H=1)
+
+# For the pkg-config file: the files of the dependencies found here
+pj_pc_remember_imported_targets()

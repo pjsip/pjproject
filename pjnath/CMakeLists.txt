@@ -109,3 +109,6 @@ if(BUILD_TESTING)
 
   add_test(NAME pjnath-test COMMAND pjnath-test)
 endif()
+
+# For the pkg-config file: the files of the dependencies found here
+pj_pc_remember_imported_targets()

@@ -934,3 +934,6 @@ if(BUILD_TESTING AND FALSE) # does not compile
 
   add_test(NAME pjlib++-test COMMAND pjlib++-test)
 endif()
+
+# For the pkg-config file: the files of the dependencies found here
+pj_pc_remember_imported_targets()

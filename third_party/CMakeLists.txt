@@ -151,7 +151,7 @@ if(install_subdirs)
         COMPONENT PjRuntime
         OPTIONAL
       ARCHIVE
-        DESTINATION  "${CMAKE_INSTALL_BINDIR}/pjproject/third_party"
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}/pjproject/third_party"
         COMPONENT PjDevelopment
         OPTIONAL
       FILE_SET HEADERS
