@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -61,7 +61,12 @@ const pj_uint16_t PJ_AF_IRDA    = 0xFFFF;
 const pj_uint16_t PJ_SOCK_STREAM= SOCK_STREAM;
 const pj_uint16_t PJ_SOCK_DGRAM = SOCK_DGRAM;
 const pj_uint16_t PJ_SOCK_RAW   = SOCK_RAW;
+#ifdef SOCK_RDM
 const pj_uint16_t PJ_SOCK_RDM   = SOCK_RDM;
+#else
+/* Invalid socket type, so socket() fails cleanly. */
+const pj_uint16_t PJ_SOCK_RDM   = 0xFFFF;
+#endif
 
 #if defined(SOCK_CLOEXEC)
 const int PJ_SOCK_CLOEXEC = SOCK_CLOEXEC;
@@ -201,10 +206,22 @@ const pj_uint16_t PJ_IP_ADD_MEMBERSHIP  = 0xFFFF;
 const pj_uint16_t PJ_IP_DROP_MEMBERSHIP = 0xFFFF;
 #endif
 
-/* recv() and send() flags */
+/* recv() and send() flags. When a flag is not available it is 0, not
+ * 0xFFFF, since it is OR'd with other flags and must not set their bits.
+ * The trade-off is that the request is then silently ignored rather
+ * than rejected.
+ */
+#ifdef MSG_OOB
 const int PJ_MSG_OOB            = MSG_OOB;
+#else
+const int PJ_MSG_OOB            = 0;
+#endif
 const int PJ_MSG_PEEK           = MSG_PEEK;
+#ifdef MSG_DONTROUTE
 const int PJ_MSG_DONTROUTE      = MSG_DONTROUTE;
+#else
+const int PJ_MSG_DONTROUTE      = 0;
+#endif
 
 
 #if 0
@@ -296,6 +313,11 @@ PJ_DEF(int) pj_inet_aton(const pj_str_t *cp, pj_in_addr *inp)
 
 #if defined(PJ_SOCK_HAS_INET_ATON) && PJ_SOCK_HAS_INET_ATON != 0
     return inet_aton(tempaddr, (struct in_addr*)inp);
+#elif defined(PJ_SOCK_HAS_INET_ADDR) && PJ_SOCK_HAS_INET_ADDR == 0
+#   if !defined(PJ_SOCK_HAS_INET_PTON) || PJ_SOCK_HAS_INET_PTON == 0
+#       error "PJ_SOCK_HAS_INET_ADDR=0 requires PJ_SOCK_HAS_INET_PTON"
+#   endif
+    return inet_pton(AF_INET, tempaddr, inp) == 1;
 #else
     inp->s_addr = inet_addr(tempaddr);
     return inp->s_addr == PJ_INADDR_NONE ? 0 : 1;

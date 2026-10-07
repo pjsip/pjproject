@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -28,6 +28,19 @@
  */
 
 #define PENDING_RETRY   2
+
+#if defined(PJ_SOCK_NONBLOCK_USE_FCNTL) && PJ_SOCK_NONBLOCK_USE_FCNTL != 0
+#   include <fcntl.h>
+
+/* Returns -1 on error, like ioctl(FIONBIO). */
+static int fcntl_set_nonblock(pj_sock_t sock)
+{
+    int flags = fcntl(sock, F_GETFL, 0);
+    if (flags < 0)
+        return -1;
+    return fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+}
+#endif
 
 #if PJ_IOQUEUE_CALLBACK_NO_LOCK
 static unsigned ioqueue_dispatch_read_event_no_lock(pj_ioqueue_key_t* h,

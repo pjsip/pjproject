@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -964,8 +964,6 @@ PJ_DEF(void) pj_turn_allocation_on_rx_client_pkt(pj_turn_allocation *alloc,
         pj_turn_permission *perm;
         pj_ssize_t len;
 
-        pj_assert(sizeof(*cd)==4);
-
         /* For UDP check the packet length */
         if (alloc->transport->listener->tp_type == PJ_TURN_TP_UDP) {
             if (pkt->len < pj_ntohs(cd->length)+sizeof(*cd)) {
@@ -1289,7 +1287,6 @@ static pj_status_t stun_on_rx_request(pj_stun_session *sess,
         p2->channel = PJ_STUN_GET_CH_NB(ch_attr->value);
 
         /* Register to hash table */
-        pj_assert(sizeof(p2->channel)==2);
         pj_hash_set(alloc->pool, alloc->ch_table, &p2->channel,
                     sizeof(p2->channel), 0, p2);
 

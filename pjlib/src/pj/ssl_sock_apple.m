@@ -1853,4 +1853,18 @@ static pj_status_t ssl_renegotiate(pj_ssl_sock_t *ssock)
 }
 
 
+PJ_DEF(pj_status_t) pj_ssl_rand_bytes(void *buf, pj_size_t len)
+{
+    PJ_ASSERT_RETURN(buf || len == 0, PJ_EINVAL);
+
+    if (len && SecRandomCopyBytes(kSecRandomDefault, len, buf) !=
+               errSecSuccess)
+    {
+        return PJ_EUNKNOWN;
+    }
+
+    return PJ_SUCCESS;
+}
+
+
 #endif /* PJ_SSL_SOCK_IMP_APPLE */

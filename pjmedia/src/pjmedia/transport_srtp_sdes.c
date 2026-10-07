@@ -34,11 +34,8 @@
 #  endif
 #endif
 
-#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_APPLE)
-    #include <Security/SecRandom.h>
-#endif
-
 #include <pj/rand.h>
+#include <pj/ssl_sock.h>
 
 
 static pj_status_t sdes_media_create(pjmedia_transport *tp,
@@ -128,57 +125,27 @@ static pj_status_t generate_crypto_attr_value(pj_pool_t *pool,
                          PJ_ETOOSMALL);
 
         do {
-#if defined(PJ_HAS_SSL_SOCK) && (PJ_HAS_SSL_SOCK != 0) && \
-    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
-            int err = RAND_bytes((unsigned char*)key,
-                                 crypto_suites[cs_idx].cipher_key_len);
-            if (err != 1) {
-                PJ_LOG(4,(THIS_FILE, "Failed generating random key "
-                          "(native err=%d)", err));
-                return PJMEDIA_ERRNO_FROM_LIBSRTP(1);
-            }
-#elif defined(PJ_HAS_SSL_SOCK) && (PJ_HAS_SSL_SOCK != 0) && \
-      (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_APPLE)
-            int err = SecRandomCopyBytes(kSecRandomDefault,
-                                         crypto_suites[cs_idx].cipher_key_len,
-                                         &key);
-            if (err != errSecSuccess) {
-                PJ_LOG(4,(THIS_FILE, "Failed generating random key "
-                          "(native err=%d)", err));
-                return PJMEDIA_ERRNO_FROM_LIBSRTP(1);
-            }
-#elif defined(PJ_HAS_SSL_SOCK) && (PJ_HAS_SSL_SOCK != 0) && \
-      (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_MBEDTLS)
-            mbedtls_entropy_context entropy;
-            mbedtls_ctr_drbg_context ctr_drbg;
-            int err;
-
-            mbedtls_entropy_init(&entropy);
-            mbedtls_ctr_drbg_init(&ctr_drbg);
-            err = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func,
-                                        &entropy, NULL, 0);
-            if (err == 0) {
-                err = mbedtls_ctr_drbg_random(&ctr_drbg, (unsigned char*)key,
-                                        crypto_suites[cs_idx].cipher_key_len);
-            }
-            mbedtls_ctr_drbg_free(&ctr_drbg);
-            mbedtls_entropy_free(&entropy);
-            if (err != 0) {
-                PJ_LOG(4,(THIS_FILE, "Failed generating random key "
-                          "(native err=-0x%04X)", -err));
-                return PJMEDIA_ERRNO_FROM_LIBSRTP(1);
-            }
+#if defined(PJ_HAS_SSL_SOCK) && (PJ_HAS_SSL_SOCK != 0)
+            status = pj_ssl_rand_bytes(key,
+                                       crypto_suites[cs_idx].cipher_key_len);
 #else
-            PJ_LOG(3,(THIS_FILE, "Warning: simple random generator is used "
-                                 "for generating SRTP key"));
-            for (i=0; i<crypto_suites[cs_idx].cipher_key_len; ++i) {
-                pj_timestamp ts;
-                if (pj_rand() % 7 < 2)
-                    pj_thread_sleep(pj_rand() % 11);
-                pj_get_timestamp(&ts);
-                key[i] = (char)((pj_rand() + ts.u32.lo) & 0xFF);
-            }
+            status = PJ_ENOTSUP;
 #endif
+            if (status == PJ_ENOTSUP) {
+                PJ_LOG(3,(THIS_FILE, "Warning: simple random generator is "
+                                     "used for generating SRTP key"));
+                for (i=0; i<crypto_suites[cs_idx].cipher_key_len; ++i) {
+                    pj_timestamp ts;
+                    if (pj_rand() % 7 < 2)
+                        pj_thread_sleep(pj_rand() % 11);
+                    pj_get_timestamp(&ts);
+                    key[i] = (char)((pj_rand() + ts.u32.lo) & 0xFF);
+                }
+            } else if (status != PJ_SUCCESS) {
+                PJ_PERROR(4,(THIS_FILE, status,
+                             "Failed generating random key"));
+                return PJMEDIA_ERRNO_FROM_LIBSRTP(1);
+            }
 
             key_ok = PJ_TRUE;
             for (i=0; i<crypto_suites[cs_idx].cipher_key_len && key_ok; ++i)

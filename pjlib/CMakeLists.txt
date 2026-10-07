@@ -37,7 +37,6 @@ add_library(pjlib
   src/pj/activesock.c
   src/pj/addr_resolv_sock.c
   src/pj/array.c
-  src/pj/atomic_queue.cpp
   src/pj/atomic_slist.c
   src/pj/config.c
   src/pj/ctype.c
@@ -178,6 +177,14 @@ target_sources(pjlib
         include/pj/unittest.h
 )
 
+# atomic_queue is C++, used by the Android audio and codec backends only
+if(PJ_WITH_CXX)
+  target_sources(pjlib PRIVATE src/pj/atomic_queue.cpp)
+  set(PJ_HAS_ATOMIC_QUEUE 1)
+else()
+  set(PJ_HAS_ATOMIC_QUEUE 0)
+endif()
+
 # system APIs
 if(WIN32 OR CYGWIN OR MINGW)
   target_sources(pjlib
@@ -277,13 +284,18 @@ if(APPLE)
   # needs the C++ runtime even when the consumer is pure C. Nothing surfaces
   # this while building the archive; it appears as undefined std::terminate()
   # when an application is linked.
-  target_link_libraries(pjlib PUBLIC c++)
+  if(PJ_WITH_CXX)
+    target_link_libraries(pjlib PUBLIC c++)
+  endif()
 endif()
 
 # math library
 if(NOT (WIN32 OR CYGWIN OR MINGW))
   find_library(MATH_LIBRARY m)
-  if(MATH_LIBRARY)
+  # A toolchain for a Generic system (no OS, or an RTOS such as Zephyr)
+  # ships libm beside its libc and resolves -lm through its multilib specs,
+  # where find_library() does not look.
+  if(MATH_LIBRARY OR CMAKE_SYSTEM_NAME STREQUAL "Generic")
     target_link_libraries(pjlib PUBLIC m)
   elseif(PJLIB_WITH_FLOATING_POINT)
     pj_force_set(PJLIB_WITH_FLOATING_POINT OFF "math library not found")
@@ -329,11 +341,17 @@ elseif(PJLIB_WITH_SSL STREQUAL "gnutls")
   target_link_libraries(pjlib-ssl INTERFACE GnuTLS::GnuTLS)
 elseif(PJLIB_WITH_SSL STREQUAL "mbedtls")
   find_package(MbedTLS CONFIG REQUIRED)
+  # Mbed TLS 4.x moved the crypto library to TF-PSA-Crypto
+  if(TARGET MbedTLS::tfpsacrypto)
+    set(_pj_mbedtls_crypto MbedTLS::tfpsacrypto)
+  else()
+    set(_pj_mbedtls_crypto MbedTLS::mbedcrypto)
+  endif()
   target_link_libraries(pjlib-ssl
     INTERFACE
       MbedTLS::mbedtls
-      MbedTLS::mbedcrypto
       MbedTLS::mbedx509
+      ${_pj_mbedtls_crypto}
   )
 elseif(PJLIB_WITH_SSL STREQUAL "darwin")
   if(NOT APPLE)
@@ -504,6 +522,7 @@ block(SCOPE_FOR VARIABLES)
   check_include_file(stdint.h PJ_HAS_STDINT_H)
   check_include_file(stdlib.h PJ_HAS_STDLIB_H)
   check_include_file(string.h PJ_HAS_STRING_H)
+  check_include_file(strings.h PJ_HAS_STRINGS_H)
   check_include_file(inttypes.h PJ_HAS_INTTYPES_H)
   check_include_file(sys/ioctl.h PJ_HAS_SYS_IOCTL_H)
   check_include_file(sys/select.h PJ_HAS_SYS_SELECT_H)

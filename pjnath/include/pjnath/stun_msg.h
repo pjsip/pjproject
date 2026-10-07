@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -26,6 +26,7 @@
 
 #include <pjnath/types.h>
 #include <pj/sock.h>
+#include <pj/assert.h>
 
 
 PJ_BEGIN_DECL
@@ -476,6 +477,9 @@ typedef struct pj_stun_msg_hdr
 } pj_stun_msg_hdr;
 #pragma pack()
 
+PJ_STATIC_ASSERT(sizeof(((pj_stun_msg_hdr*)0)->tsx_id[0]) == 1,
+                 stun_tsx_id_must_be_a_byte_array);
+
 
 /**
  * This structre describes STUN attribute header. Each attribute is
@@ -570,6 +574,9 @@ typedef struct pj_stun_empty_attr
     pj_stun_attr_hdr    hdr;
 
 } pj_stun_empty_attr;
+
+PJ_STATIC_ASSERT(sizeof(pj_stun_empty_attr) == sizeof(pj_stun_attr_hdr),
+                 pj_stun_empty_attr_must_match_attr_hdr);
 
 
 /**

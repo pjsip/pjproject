@@ -54,6 +54,7 @@ target_link_libraries(embedded_ua
     pjsip-ua
 )
 
+if(PJ_WITH_CXX)
 add_executable(pjsua2_demo src/samples/pjsua2_demo.cpp)
 target_link_libraries(pjsua2_demo
   PRIVATE
@@ -69,6 +70,7 @@ target_link_libraries(pjsua2_demo
     pjsua-lib
     pjsua2
 )
+endif() # PJ_WITH_CXX
 
 # ##############################################################################
 # SWIG bindings
@@ -77,7 +79,7 @@ target_link_libraries(pjsua2_demo
 # people configuring this project only want the libraries. Gradle turns it on.
 cmake_dependent_option(PJ_BUILD_SWIG_JAVA
   "Build the pjsua2 JNI bindings with SWIG" OFF
-  "ANDROID" OFF
+  "ANDROID;PJ_WITH_CXX" OFF
 )
 
 if(PJ_BUILD_SWIG_JAVA)

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -362,6 +362,11 @@ struct pj_stun_tx_data
 
     pj_timer_entry       res_timer;     /**< Response cache timer.          */
 };
+
+/* msg_key is a copy of the message's transaction ID. */
+PJ_STATIC_ASSERT(sizeof(((pj_stun_tx_data*)0)->msg_key) ==
+                 sizeof(((pj_stun_msg_hdr*)0)->tsx_id),
+                 stun_msg_key_must_match_tsx_id);
 
 
 /**

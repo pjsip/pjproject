@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -34,7 +34,8 @@ public:
     //
     Pj_String() 
     { 
-        pj_assert(sizeof(Pj_String) == sizeof(pj_str_t));
+        PJ_STATIC_ASSERT(sizeof(Pj_String) == sizeof(pj_str_t),
+                         Pj_String_must_match_pj_str_t);
         ptr=NULL; 
         slen=0; 
     }

@@ -402,6 +402,7 @@ static int codec_test_decode(pjmedia_codec_mgr *mgr,
 
         if (has_frame) {
             count2 = 2;
+            ts.u64 = 0;
             if (pjmedia_codec_parse(codec, pkt, encoded_len, &ts, 
                                     &count2, in_frame) != PJ_SUCCESS) 
             {

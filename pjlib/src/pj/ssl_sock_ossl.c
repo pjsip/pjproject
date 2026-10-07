@@ -3095,6 +3095,32 @@ static pj_status_t ssl_renegotiate(pj_ssl_sock_t *ssock)
 }
 
 
+PJ_DEF(pj_status_t) pj_ssl_rand_bytes(void *buf, pj_size_t len)
+{
+    unsigned char *p = (unsigned char *)buf;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(buf || len == 0, PJ_EINVAL);
+
+    /* Make sure OpenSSL library has been initialized */
+    status = init_openssl();
+    if (status != PJ_SUCCESS)
+        return status;
+
+    /* RAND_bytes() takes an int length */
+    while (len > 0) {
+        int n = (int)PJ_MIN(len, 65536);
+
+        if (RAND_bytes(p, n) != 1)
+            return PJ_EUNKNOWN;
+        p += n;
+        len -= n;
+    }
+
+    return PJ_SUCCESS;
+}
+
+
 /* Put back deprecation warning setting */
 #if defined(PJ_DARWINOS) && PJ_DARWINOS==1
 #  pragma GCC diagnostic pop

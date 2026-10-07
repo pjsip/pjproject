@@ -63,11 +63,14 @@ function(pj_detect_arch out_arch)
   endif()
 
   # try getting the value from a compile check
+  # detect-arch.c reports the architecture through a deliberate #error, so
+  # the probe is compile-only: the run result was never used, and try_run()
+  # cannot run a target binary when cross-compiling anyway.
   if(NOT arch)
-    try_run(_run_result compileResult
+    try_compile(compileResult
       SOURCES
         "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/detect-arch.c"
-      COMPILE_OUTPUT_VARIABLE
+      OUTPUT_VARIABLE
         compileOutput
     )
 
@@ -96,13 +99,19 @@ function(pj_detect_arch out_arch)
 endfunction()
 
 function(pj_detect_arch_simd_ext out_simd out_flags)
-  # if a cached values exists, return them; -mfma was cached by older versions
+  # Bump when the probe changes, so a result an older probe cached is not
+  # reused: version 1 cached -mfma, unversioned ones NEON for a Generic
+  # system. The compile check caches its own result and is reset with them.
+  set(probe_version 2)
   if(DEFINED CACHE{_pj_detected_simd_ext} AND
-     NOT "$CACHE{_pj_detected_simd_ext_flags}" MATCHES "-mfma")
+     "$CACHE{_pj_detected_simd_ext_version}" STREQUAL "${probe_version}")
     set("${out_simd}" "$CACHE{_pj_detected_simd_ext}" PARENT_SCOPE)
     set("${out_flags}" "$CACHE{_pj_detected_simd_ext_flags}" PARENT_SCOPE)
     return()
   endif()
+  unset(_pj_detected_simd_ext CACHE)
+  unset(_pj_detected_simd_ext_flags CACHE)
+  unset(_simd_supported CACHE)
 
   pj_detect_arch(arch)
   if(arch MATCHES "^arm")
@@ -139,6 +148,23 @@ function(pj_detect_arch_simd_ext out_simd out_flags)
         endif()
       endif()
     endif()
+
+    # On a Generic system the CPU flags given to the toolchain decide. Adding
+    # -mfpu=neon would override them and compile NEON code for a core
+    # without it (a Cortex-M33 with its FPU, for instance).
+    if(CMAKE_SYSTEM_NAME STREQUAL "Generic")
+      set(simd_flags "")
+      set(simd_check_source [=[
+        #ifndef __ARM_NEON
+        #  error "the target's CPU flags do not enable NEON"
+        #endif
+        #include <arm_neon.h>
+
+        int main() {
+          return 0;
+        }
+      ]=])
+    endif()
   elseif(arch MATCHES "^(i386|x86_64|x64)$")
     set(simd_inst sse2)
     set(simd_check_source [=[
@@ -163,7 +189,11 @@ function(pj_detect_arch_simd_ext out_simd out_flags)
     set(simd_inst mips)
   endif()
 
-  set(_simd_supported TRUE)
+  # Do not set _simd_supported on a Generic system (no OS, or an RTOS such
+  # as Zephyr) so the SIMD check is performed.
+  if(NOT CMAKE_SYSTEM_NAME STREQUAL "Generic")
+    set(_simd_supported TRUE)
+  endif()
 
   if(simd_check_source)
     include(CheckCSourceCompiles)
@@ -181,6 +211,7 @@ function(pj_detect_arch_simd_ext out_simd out_flags)
     # cache values
     set(_pj_detected_simd_ext "${simd_inst}" CACHE INTERNAL "SIMD extensions")
     set(_pj_detected_simd_ext_flags "${simd_flags}" CACHE INTERNAL "")
+    set(_pj_detected_simd_ext_version "${probe_version}" CACHE INTERNAL "")
 
     set("${out_simd}" "${simd_inst}" PARENT_SCOPE)
     set("${out_flags}" "${simd_flags}" PARENT_SCOPE)
