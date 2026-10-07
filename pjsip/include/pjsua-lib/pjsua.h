@@ -2938,6 +2938,20 @@ typedef struct pjsua_config
      */
     pj_bool_t        server_failover;
 
+    /**
+     * Resolve with the system resolver while no nameserver answers, see
+     * #PJ_DNS_RESOLVER_SYS_FALLBACK: a DNS A or AAAA query which no
+     * nameserver answers is resolved with the system resolver instead, as
+     * without a nameserver, until one answers again. This is applied to the
+     * DNS resolver of PJSUA when it is created, from \a nameserver here or
+     * with #pjsua_update_nameservers(). Note that #pjsua_destroy() then
+     * waits for a lookup in progress, up to the timeout of the system
+     * resolver.
+     *
+     * Default: PJ_DNS_RESOLVER_SYS_FALLBACK (disabled)
+     */
+    pj_bool_t        resolver_fallback;
+
 } pjsua_config;
 
 

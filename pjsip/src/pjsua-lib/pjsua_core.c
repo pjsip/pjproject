@@ -131,6 +131,7 @@ PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
     cfg->no_refer_sub = PJ_TRUE;
     cfg->acc_server_affinity_default = PJSUA_ACC_SERVER_AFFINITY_DEFAULT;
     cfg->server_failover = PJSIP_SERVER_FAILOVER;
+    cfg->resolver_fallback = PJ_DNS_RESOLVER_SYS_FALLBACK;
 }
 
 PJ_DEF(void) pjsua_config_dup(pj_pool_t *pool,
@@ -1159,10 +1160,16 @@ static pj_status_t apply_nameservers(const nameserver_list *ns)
     if (!res)
         res = pjsua_var.resolver_detached;
     if (!res) {
+        pj_dns_settings st;
+
         status = pjsip_endpt_create_resolver(pjsua_var.endpt, &res);
         if (status != PJ_SUCCESS)
             return status;
         created = PJ_TRUE;
+
+        pj_dns_resolver_get_settings(res, &st);
+        st.sys_fallback = pjsua_var.ua_cfg.resolver_fallback;
+        pj_dns_resolver_set_settings(res, &st);
     }
 
     status = pj_dns_resolver_set_ns(res, ns->count, ns->addr, ns->port);

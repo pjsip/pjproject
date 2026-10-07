@@ -2258,6 +2258,9 @@ static int pjsua_ip_change_nameservers_case(void)
     }
     res = pjsip_endpt_get_resolver(pjsua_get_pjsip_endpt());
     pj_dns_resolver_get_settings(res, &st);
+    /* The probing of the nameserver, (count + 2) * delay, expires at once:
+     * it is marked as bad after the first query times out
+     */
     st.qretr_delay = 100;
     st.qretr_count = 1;
     pj_dns_resolver_set_settings(res, &st);
@@ -2314,6 +2317,82 @@ static int pjsua_ip_change_nameservers_case(void)
         PJ_LOG(1,(THIS_FILE, "    error: IP change nameservers [%d]", rc));
     return rc;
 }
+
+#if PJ_HAS_THREADS
+/* PJSUA applies its resolver fallback setting to its resolver: a name is
+ * resolved with the system resolver once the nameserver times out.
+ */
+static int pjsua_resolver_fallback_case(void)
+{
+    pjsua_config ua_cfg;
+    pjsua_logging_config log_cfg;
+    pj_dns_resolver *res;
+    pj_dns_settings st;
+    pj_pool_t *pool;
+    pj_bool_t at_once, unanswered;
+    pj_status_t status;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  resolver fallback option"));
+
+    if (pjsua_create() != PJ_SUCCESS)
+        return -3220;
+    pjsua_config_default(&ua_cfg);
+    ua_cfg.thread_cnt = 0;
+    ua_cfg.nameserver_count = 1;
+    ua_cfg.nameserver[0] = pj_str("127.0.0.1:9");
+    ua_cfg.resolver_fallback = PJ_TRUE;
+    pjsua_logging_config_default(&log_cfg);
+    log_cfg.level = 3;
+    log_cfg.console_level = 3;
+    if (pjsua_init(&ua_cfg, &log_cfg, NULL) != PJ_SUCCESS ||
+        pjsua_start() != PJ_SUCCESS)
+    {
+        pjsua_destroy();
+        return -3221;
+    }
+    res = pjsip_endpt_get_resolver(pjsua_get_pjsip_endpt());
+    pj_dns_resolver_get_settings(res, &st);
+    if (!st.sys_fallback) {
+        pjsua_destroy();
+        return -3222;
+    }
+    st.qretr_delay = 100;
+    st.qretr_count = 1;
+    pj_dns_resolver_set_settings(res, &st);
+    pool = pjsua_pool_create("res", 512, 512);
+    if (!pool) {
+        pjsua_destroy();
+        return -3223;
+    }
+
+    /* The nameserver never answers: resolved by the system resolver after
+     * the timeout, then at once
+     */
+    status = pjsua_resolve(pool, "localhost", &at_once);
+    unanswered = status == PJSUA_RESOLVE_NO_ANSWER;
+    if (status != PJ_SUCCESS || at_once) {
+        PJ_LOG(1,(THIS_FILE, "    first query: status %d, at once %d",
+                  status, at_once));
+        rc = -3224;
+    } else {
+        status = pjsua_resolve(pool, "localhost", &at_once);
+        unanswered |= status == PJSUA_RESOLVE_NO_ANSWER;
+        if (status != PJ_SUCCESS || at_once) {
+            PJ_LOG(1,(THIS_FILE, "    next query: status %d, at once %d",
+                      status, at_once));
+            rc = -3225;
+        }
+    }
+
+    if (!unanswered)
+        pj_pool_release(pool);
+    pjsua_destroy();
+    if (rc)
+        PJ_LOG(1,(THIS_FILE, "    error: resolver fallback [%d]", rc));
+    return rc;
+}
+#endif  /* PJ_HAS_THREADS */
 #endif  /* PJSIP_HAS_RESOLVER */
 
 int srv_failover_pjsua_test(void)
@@ -2344,6 +2423,10 @@ int srv_failover_pjsua_test(void)
 #if PJSIP_HAS_RESOLVER
     if (rc == 0)
         rc = pjsua_ip_change_nameservers_case();
+#if PJ_HAS_THREADS
+    if (rc == 0)
+        rc = pjsua_resolver_fallback_case();
+#endif
 #endif
 
     restore_test_endpt();
