@@ -123,6 +123,8 @@ static void setup_signal_handler(void) {}
 
 int main_func(int argc, char *argv[])
 {
+    int exit_code = PJSUA_APP_EXIT_SUCCESS;
+
     pj_bzero(&cfg, sizeof(cfg));
     cfg.on_started = &on_app_started;
     cfg.on_stopped = &on_app_stopped;
@@ -135,8 +137,12 @@ int main_func(int argc, char *argv[])
     while (running) {        
         if (pjsua_app_init(&cfg) == PJ_SUCCESS) {
             pjsua_app_run(PJ_TRUE);
+            exit_code = pjsua_app_exit_code;
+            if (app_config.exit_on_call_end)
+                running = PJ_FALSE;
         } else {
             running = PJ_FALSE;
+            exit_code = PJSUA_APP_EXIT_CALL_FAILED;
         }
 
         if (!receive_end_sig) {
@@ -148,7 +154,7 @@ int main_func(int argc, char *argv[])
             pj_thread_join(sig_thread);
         }
     }
-    return 0;
+    return exit_code;
 }
 
 int main(int argc, char *argv[])

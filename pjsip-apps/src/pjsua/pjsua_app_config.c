@@ -160,6 +160,7 @@ static void usage(void)
     puts  ("                      This can be specified multiple times.");
     puts  ("  --auto-play         Automatically play the file (to incoming calls only)");
     puts  ("  --auto-play-hangup  Automatically hangup the file after file play completes");
+    puts  ("  --exit-on-call-end  Exit after the outgoing call ends");
     puts  ("  --auto-loop         Automatically loop incoming RTP to outgoing RTP");
     puts  ("  --auto-conf         Automatically put calls in conference with others");
     puts  ("  --rec-file=file     Open file recorder (extension can be .wav or .mp3)");
@@ -410,7 +411,8 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_REG_RETRY_INTERVAL, OPT_REG_USE_PROXY,
            OPT_MWI, OPT_NAMESERVER, OPT_STUN_SRV, OPT_UPNP, OPT_OUTB_RID,
            OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
-           OPT_AUTO_ANSWER, OPT_AUTO_PLAY, OPT_AUTO_PLAY_HANGUP, OPT_AUTO_LOOP,
+           OPT_AUTO_ANSWER, OPT_AUTO_PLAY, OPT_AUTO_PLAY_HANGUP, OPT_EXIT_ON_CALL_END,
+           OPT_AUTO_LOOP,
            OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_SND_CLOCK_RATE, OPT_STEREO,
            OPT_USE_ICE, OPT_ICE_REGULAR, OPT_ICE_TRICKLE,
            OPT_USE_SRTP, OPT_SRTP_SECURE,
@@ -512,6 +514,7 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "auto-answer",1, 0, OPT_AUTO_ANSWER},
         { "auto-play",  0, 0, OPT_AUTO_PLAY},
         { "auto-play-hangup",0, 0, OPT_AUTO_PLAY_HANGUP},
+        { "exit-on-call-end",0, 0, OPT_EXIT_ON_CALL_END},
         { "auto-rec",   0, 0, OPT_AUTO_REC},
         { "auto-loop",  0, 0, OPT_AUTO_LOOP},
         { "auto-conf",  0, 0, OPT_AUTO_CONF},
@@ -1111,6 +1114,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 
         case OPT_AUTO_PLAY_HANGUP:
             cfg->auto_play_hangup = 1;
+            break;
+
+        case OPT_EXIT_ON_CALL_END:
+            cfg->exit_on_call_end = PJ_TRUE;
             break;
 
         case OPT_AUTO_REC:
@@ -1895,6 +1902,8 @@ static void default_config()
     cfg->enable_rtcp_xr = (PJMEDIA_HAS_RTCP_XR && PJMEDIA_STREAM_ENABLE_XR);
     cfg->redir_op = PJSIP_REDIRECT_ACCEPT_REPLACE;
     cfg->duration = PJSUA_APP_NO_LIMIT_DURATION;
+    cfg->exit_code = PJSUA_APP_EXIT_SUCCESS;
+    cfg->call_finished = PJ_FALSE;
     cfg->wav_id = PJSUA_INVALID_ID;
     cfg->rec_id = PJSUA_INVALID_ID;
     cfg->wav_port = PJSUA_INVALID_ID;
@@ -2412,6 +2421,9 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
     }
     if (config->enable_qos) {
         cfg_add(&cfg, max, "--set-qos\n");
+    }
+    if (config->exit_on_call_end) {
+        cfg_add(&cfg, max, "--exit-on-call-end\n");
     }
     /* When there are no registered accounts, --rtcp-mux is not written by
      * write_account_settings(), so emit it here from the global flag. */
