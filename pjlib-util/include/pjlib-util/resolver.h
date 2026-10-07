@@ -24,6 +24,7 @@
  * @brief Asynchronous DNS resolver
  */
 #include <pjlib-util/dns.h>
+#include <pj/addr_resolv.h>
 
 
 PJ_BEGIN_DECL
@@ -105,9 +106,11 @@ PJ_BEGIN_DECL
  * periodically to process events. If application does not specify the
  * timer and ioqueue instance for the resolver, an internal timer and
  * ioqueue will be created by the resolver. And since the resolver does not
- * create it's own thread, application MUST poll the resolver periodically
- * by calling #pj_dns_resolver_handle_events() to allow events (network and 
- * timer) to be processed.
+ * create it's own thread, apart from the lookup thread of the
+ * \a sys_fallback setting which only asks the system resolver, application
+ * MUST poll the resolver periodically by calling
+ * #pj_dns_resolver_handle_events() to allow events (network and timer) to
+ * be processed.
  *
  * Next, application MUST configure the nameservers to be used by the
  * resolver, by calling #pj_dns_resolver_set_ns().
@@ -184,6 +187,17 @@ typedef void pj_dns_callback(void *user_data,
 
 
 /**
+ * Type of the function resolving a name with the system resolver for
+ * the \a sys_fallback setting, see #PJ_DNS_RESOLVER_SYS_FALLBACK. It has
+ * the signature of #pj_getaddrinfo(), which is used when none is set, and
+ * is called from the lookup thread of the resolver, or from its timer
+ * without threads.
+ */
+typedef pj_status_t pj_dns_sys_lookup(int af, const pj_str_t *name,
+                                      unsigned *count, pj_addrinfo ai[]);
+
+
+/**
  * This structure describes resolver settings.
  */
 typedef struct pj_dns_settings
@@ -201,6 +215,12 @@ typedef struct pj_dns_settings
                                      is on by default; a zero-initialized struct
                                      keeps it on).
                                      See #PJ_DNS_RESOLVER_DISABLE_RESPONSE_SRC_CHECK */
+    pj_bool_t   sys_fallback;   /**< Resolve with the system resolver while
+                                     no nameserver answers.
+                                     See #PJ_DNS_RESOLVER_SYS_FALLBACK       */
+    pj_dns_sys_lookup *sys_lookup;
+                                /**< The system resolver for \a sys_fallback,
+                                     #pj_getaddrinfo() when NULL.            */
 } pj_dns_settings;
 
 
@@ -389,7 +409,8 @@ PJ_DECL(void) pj_dns_resolver_handle_events(pj_dns_resolver *resolver,
 
 
 /**
- * Destroy DNS resolver instance.
+ * Destroy DNS resolver instance. With the \a sys_fallback setting, this
+ * waits for a lookup in progress, up to the timeout of the system resolver.
  *
  * @param resolver  The resolver object to be destryed
  * @param notify    If non-zero, all pending asynchronous queries will be
@@ -445,7 +466,9 @@ PJ_DECL(pj_status_t) pj_dns_resolver_start_query(pj_dns_resolver *resolver,
                                                  pj_dns_async_query **p_query);
 
 /**
- * Cancel a pending query.
+ * Cancel a pending query: its callback will not be called anymore. The
+ * query itself goes on until it completes, for the queries of the same
+ * name and type which joined it.
  *
  * @param query     The pending asynchronous query to be cancelled.
  * @param notify    If non-zero, the callback will be called with failure

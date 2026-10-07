@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -88,7 +88,8 @@
 
 
 /**
- * Maximum numbers of DNS nameservers that can be configured in resolver.
+ * Maximum numbers of DNS nameservers that can be configured in resolver,
+ * at most 32.
  */
 #ifndef PJ_DNS_RESOLVER_MAX_NS
 #   define PJ_DNS_RESOLVER_MAX_NS                   16
@@ -189,6 +190,33 @@
  */
 #ifndef PJ_DNS_RESOLVER_DISABLE_RESPONSE_SRC_CHECK
 #   define PJ_DNS_RESOLVER_DISABLE_RESPONSE_SRC_CHECK   PJ_FALSE
+#endif
+
+
+/**
+ * Default value of the resolver's setting to resolve with the system
+ * resolver while no nameserver answers (pj_dns_settings.sys_fallback).
+ *
+ * A DNS A or AAAA query which no nameserver answers, because none can be
+ * sent to or because it timed out, is then resolved with pj_getaddrinfo()
+ * instead, and the addresses found are reported as its response, without
+ * caching them, so the nameservers take over again as soon as one answers.
+ * A query of another type, e.g. DNS SRV, fails as it does without the
+ * setting, but asynchronously, so that #pj_dns_srv_resolve() falls back to
+ * the address of the domain as it does when the nameservers answer that
+ * there is no SRV record. The nameservers a query timed out with are
+ * marked as bad for #PJ_DNS_RESOLVER_BAD_NS_TTL, so that the next queries
+ * don't wait for them.
+ *
+ * The system resolver is asked from a thread of the resolver, created
+ * when first needed, which #pj_dns_resolver_destroy() waits for. Without
+ * threads, it is asked from the timer of the resolver, which blocks its
+ * polling for as long as the lookup takes.
+ *
+ * Default: PJ_FALSE
+ */
+#ifndef PJ_DNS_RESOLVER_SYS_FALLBACK
+#   define PJ_DNS_RESOLVER_SYS_FALLBACK                 PJ_FALSE
 #endif
 
 
