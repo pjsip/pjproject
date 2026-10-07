@@ -114,9 +114,9 @@ struct AccountRegConfig : public PersistentObject
      * disable auto re-registration. Note that if the registration retry
      * occurs because of transport failure, the first retry will be done
      * after \a firstRetryIntervalSec seconds instead. Also note that
-     * the interval will be randomized slightly by some seconds (specified
-     * in \a reg_retry_random_interval) to avoid all clients re-registering
-     * at the same time.
+     * the interval will be randomized by \a randomRetryIntervalSec to
+     * avoid all clients re-registering at the same time; see there for
+     * the resulting range.
      *
      * See also \a firstRetryIntervalSec and \a randomRetryIntervalSec
      * settings.
@@ -128,9 +128,9 @@ struct AccountRegConfig : public PersistentObject
     /**
      * This specifies the interval for the first registration retry. The
      * registration retry is explained in \a retryIntervalSec. Note that
-     * the value here will also be randomized by some seconds (specified
-     * in \a reg_retry_random_interval) to avoid all clients re-registering
-     * at the same time.
+     * the value here will also be randomized by \a randomRetryIntervalSec
+     * to avoid all clients re-registering at the same time; see there for
+     * the resulting range.
      *
      * See also \a retryIntervalSec and \a randomRetryIntervalSec settings.
      *
@@ -141,11 +141,15 @@ struct AccountRegConfig : public PersistentObject
     /**
      * This specifies maximum randomized value to be added/substracted
      * to/from the registration retry interval specified in \a
-     * reg_retry_interval and \a reg_first_retry_interval, in second.
+     * retryIntervalSec and \a firstRetryIntervalSec, in second.
      * This is useful to avoid all clients re-registering at the same time.
      * For example, if the registration retry interval is set to 100 seconds
      * and this is set to 10 seconds, the actual registration retry interval
-     * will be in the range of 90 to 110 seconds.
+     * will be in the range of 90 to 110 seconds. If the retry interval is
+     * shorter than \a randomRetryIntervalSec, it cannot be reduced by that
+     * much, and the actual interval will be in the range of 0 to the retry
+     * interval plus \a randomRetryIntervalSec instead: for example 0 to 15
+     * seconds for a retry interval of 5 seconds.
      *
      * See also \a retryIntervalSec and \a firstRetryIntervalSec settings.
      *

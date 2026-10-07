@@ -5470,8 +5470,9 @@ on_return:
 }
 
 
-/* Schedule reregistration for specified account. Note that the first 
- * re-registration after a registration failure will be done immediately.
+/* Schedule reregistration for specified account. Until a registration
+ * succeeds again, the first retry waits reg_first_retry_interval and later
+ * ones reg_retry_interval, both randomized by reg_retry_random_interval.
  * Also note that this function should be called within PJSUA mutex.
  */
 static void schedule_reregistration(pjsua_acc *acc)
@@ -5519,19 +5520,27 @@ static void schedule_reregistration(pjsua_acc *acc)
     acc->auto_rereg.timer.cb = &auto_rereg_timer_cb;
     acc->auto_rereg.timer.user_data = acc;
 
-    /* Reregistration attempt. The first attempt will be done immediately. */
+    /* Reregistration attempt. The first one since the last successful
+     * registration waits reg_first_retry_interval.
+     */
     delay.sec = acc->auto_rereg.attempt_cnt? acc->cfg.reg_retry_interval :
                                              acc->cfg.reg_first_retry_interval;
     delay.msec = 0;
 
-    /* Randomize interval by +/- reg_retry_random_interval, if configured */
+    /* Randomize interval by +/- reg_retry_random_interval, if configured.
+     * The lower bound is clamped at 0: an interval shorter than that gives
+     * a delay between 0 and the interval plus reg_retry_random_interval.
+     */
     if (acc->cfg.reg_retry_random_interval) {
         long rand_ms = acc->cfg.reg_retry_random_interval * 1000;
         if (delay.sec >= (long)acc->cfg.reg_retry_random_interval) {
             delay.msec = -rand_ms + (pj_rand() % (rand_ms * 2));
         } else {
-            delay.sec = 0;
+            /* A huge unsigned interval may not fit in a long */
+            if (delay.sec < 0)
+                delay.sec = 0;
             delay.msec = (pj_rand() % (delay.sec * 1000 + rand_ms));
+            delay.sec = 0;
         }
     }
     pj_time_val_normalize(&delay);
