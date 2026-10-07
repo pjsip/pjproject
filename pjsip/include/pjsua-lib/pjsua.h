@@ -5144,9 +5144,9 @@ typedef struct pjsua_acc_config
      * 6xx (global failure), and failure caused by transport problem.
      * For registration retry caused by transport failure, the first retry
      * will be done after \a reg_first_retry_interval seconds instead.
-     * Note that the interval will be randomized slightly by some seconds
-     * (specified in \a reg_retry_random_interval) to avoid all clients
-     * re-registering at the same time.
+     * Note that the interval will be randomized by
+     * \a reg_retry_random_interval to avoid all clients re-registering at
+     * the same time; see there for the resulting range.
      *
      * See also \a reg_first_retry_interval setting.
      *
@@ -5157,9 +5157,9 @@ typedef struct pjsua_acc_config
     /**
      * This specifies the interval for the first registration retry. The
      * registration retry is explained in \a reg_retry_interval. Note that
-     * the value here will also be randomized by some seconds (specified
-     * in \a reg_retry_random_interval) to avoid all clients re-registering
-     * at the same time.
+     * the value here will also be randomized by
+     * \a reg_retry_random_interval to avoid all clients re-registering at
+     * the same time; see there for the resulting range.
      *
      * Default: 0
      */
