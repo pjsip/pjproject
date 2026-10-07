@@ -505,11 +505,18 @@ install(FILES
 # ##############################################################################
 # pkg-config file
 
-# The libraries in link order
-pj_generate_pkgconfig(
-  "${CMAKE_CURRENT_SOURCE_DIR}/libpjproject.pc.in"
-  "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
-  pjsua2 pjsua-lib pjsip-ua pjsip-simple pjsip
+# The libraries in link order; pjsua2 needs PJ_WITH_CXX
+set(_pj_pc_libs
+  pjsua-lib pjsip-ua pjsip-simple pjsip
   pjmedia-codec pjmedia-videodev pjmedia-audiodev pjmedia
   pjnath pjlib-util pjlib
 )
+if(TARGET pjsua2)
+  list(PREPEND _pj_pc_libs pjsua2)
+endif()
+pj_generate_pkgconfig(
+  "${CMAKE_CURRENT_SOURCE_DIR}/libpjproject.pc.in"
+  "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
+  ${_pj_pc_libs}
+)
+unset(_pj_pc_libs)

@@ -19,7 +19,8 @@ snapshot() {
     cmake --build "$dir" --target help | sort > "$out/targets"
     for f in $(cd "$dir" && find . \( -name flags.make -o -name link.txt \
                  -o -name '*_auto.h' -o -name sip_autoconf.h \
-                 -o -name PjConfig.cmake -o -name PjDeps.cmake \) \
+                 -o -name PjConfig.cmake -o -name PjDeps.cmake \
+                 -o -name libpjproject.pc \) \
                  -not -path './CMakeFiles/*'); do
         case $f in
         */CMakeFiles/*.dir/*)

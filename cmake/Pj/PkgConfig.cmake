@@ -562,7 +562,7 @@ function(pj_generate_pkgconfig template destination)
   list(REVERSE private)
   list(REVERSE third_party)
 
-  # pjlib has C++ sources, so a static link from C needs the C++ runtime
+  # With PJ_WITH_CXX, a static link from C needs the C++ runtime
   set(cxx_runtime ${CMAKE_CXX_IMPLICIT_LINK_LIBRARIES})
   if(cxx_runtime AND CMAKE_C_IMPLICIT_LINK_LIBRARIES)
     list(REMOVE_ITEM cxx_runtime ${CMAKE_C_IMPLICIT_LINK_LIBRARIES})
