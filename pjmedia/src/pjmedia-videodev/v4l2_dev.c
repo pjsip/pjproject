@@ -285,6 +285,7 @@ static pj_status_t v4l2_scan_devs(vid4lin_factory *f)
     if (f->dev_pool) {
         pj_pool_release(f->dev_pool);
         f->dev_pool = NULL;
+        f->dev_info = NULL;
     }
 
     pj_bzero(vdi, sizeof(vdi));
@@ -368,7 +369,7 @@ static pj_status_t v4l2_scan_devs(vid4lin_factory *f)
 
         v4l2_close(fd);
 
-        if (j < fmt_cnt)
+        if (pdi->info.fmt_cnt == 0)
             continue;
 
         f->dev_count++;
