@@ -86,6 +86,10 @@ endif()
 # ##############################################################################
 # Sub-directories
 
+# For pj_pc_remember_imported_targets(), which the sub-directories that find
+# dependencies call for the pkg-config file
+include(Pj/PkgConfig)
+
 # base library
 add_subdirectory(pjlib)
 
@@ -483,21 +487,11 @@ install(FILES
 # ##############################################################################
 # pkg-config file
 
-include(Pj/PkgConfig)
-# In link order
-set(_pj_pc_libs
+# The libraries in link order
+pj_generate_pkgconfig(
+  "${CMAKE_CURRENT_SOURCE_DIR}/libpjproject.pc.in"
+  "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
   pjsua2 pjsua-lib pjsip-ua pjsip-simple pjsip
   pjmedia-codec pjmedia-videodev pjmedia-audiodev pjmedia
   pjnath pjlib-util pjlib
 )
-foreach(_lib IN LISTS _pj_pc_libs)
-  if(NOT _lib IN_LIST install_targets)
-    list(REMOVE_ITEM _pj_pc_libs ${_lib})
-  endif()
-endforeach()
-pj_generate_pkgconfig(
-  "${CMAKE_CURRENT_SOURCE_DIR}/libpjproject.pc.in"
-  "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
-  ${_pj_pc_libs}
-)
-unset(_pj_pc_libs)

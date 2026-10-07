@@ -1103,3 +1103,6 @@ if(BUILD_TESTING)
 
   add_test(NAME pjmedia-test COMMAND pjmedia-test)
 endif()
+
+# For the pkg-config file: the files of the dependencies found here
+pj_pc_remember_imported_targets()
