@@ -22,42 +22,10 @@ find_library(Speex_LIBRARY
 )
 mark_as_advanced(Speex_LIBRARY)
 
+# Only pkg-config gives the version: speex.h has none, its
+# SPEEX_LIB_GET_*_VERSION are speex_lib_ctl() request codes
 if(DEFINED PC_Speex_VERSION AND NOT PC_Speex_VERSION STREQUAL "")
   set(Speex_VERSION "${PC_Speex_VERSION}")
-elseif(Speex_INCLUDE_DIR)
-  cmake_path(APPEND _speex_header "${UPNP_INCLUDE_DIR}" speex.h)
-
-  if(IS_READABLE _speex_header)
-    include(Pj/GetMacroValue)
-    foreach(label in ITEMS major minor micro extra)
-      string(TOUPPER "SPEEX_LIB_GET_${label}_VERSION" macro)
-      pj_get_macro_value("${_speex_header}" "${macro}" "_speex_${label}")
-    endforeach()
-    unset(label)
-    unset(macro)
-
-    if (NOT _speex_major STREQUAL "" AND
-        NOT _speex_minor STREQUAL "" AND
-        NOT _speex_micro STREQUAL "")
-      set(_speex_version
-        "${_speex_major}.${_speex_minor}.${_speex_micro}" PARENT_SCOPE
-      )
-
-      if(NOT _speex_extra STREQUAL "")
-        set(_speex_version "${_speex_version}.${_speex_extra}")
-      endif()
-
-      set(SPEEX_VERSION "${_speex_version}")
-
-      unset(_speex_major)
-      unset(_speex_minor)
-      unset(_speex_micro)
-      unset(_speex_extra)
-      unset(_speex_version)
-    endif()
-  endif()
-
-  unset(_speex_header)
 endif()
 mark_as_advanced(Speex_VERSION)
 

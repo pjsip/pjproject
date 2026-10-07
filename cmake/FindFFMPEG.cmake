@@ -114,7 +114,7 @@ function(_ffmpeg_find_component component)
     "version.h"
   )
 
-  if(IS_READABLE "${version_header}")
+  if(EXISTS "${version_header}")
     include(Pj/GetMacroValue)
     foreach(label IN ITEMS major minor micro)
       string(TOUPPER "LIB${component}_VERSION_${label}" macro)
@@ -148,10 +148,11 @@ if(TARGET FFMPEG::avutil)
     "ffversion.h"
   )
 
-  if(IS_READABLE "${_ffmpeg_version_header}")
+  if(EXISTS "${_ffmpeg_version_header}")
     include(Pj/GetMacroValue)
     pj_get_macro_value("${_ffmpeg_version_header}" FFMPEG_VERSION
       _ffmpeg_version_value
+      TYPE pattern
       PATTERN [["n?([^"]*)"]]
     )
 

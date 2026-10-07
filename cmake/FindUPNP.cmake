@@ -40,7 +40,7 @@ if(DEFINED PC_UPNP_VERSION AND NOT PC_UPNP_VERSION STREQUAL "")
 elseif(UPNP_INCLUDE_DIR)
   cmake_path(APPEND _upnp_config_header "${UPNP_INCLUDE_DIR}" upnpconfig.h)
 
-  if(IS_READABLE _upnp_config_header)
+  if(EXISTS "${_upnp_config_header}")
     include(Pj/GetMacroValue)
     pj_get_macro_value("${_upnp_config_header}" UPNP_VERSION_STRING
       _upnp_version_value
@@ -73,12 +73,17 @@ if(UPNP_FOUND)
 
   if(NOT TARGET UPNP::UPNP)
     add_library(UPNP::UPNP UNKNOWN IMPORTED)
+    # Quoted: an empty value would shift the property/value pairs
     set_target_properties(UPNP::UPNP PROPERTIES
-      IMPORTED_LOCATION ${UPNP_LIBRARIES}
-      INTERFACE_INCLUDE_DIRECTORIES ${UPNP_INCLUDE_DIRS}
-      INTERFACE_LINK_LIBRARIES ${UPNP_IXML_LIBRARY}
-      INTERFACE_COMPILE_OPTIONS ${UPNP_DEFINITIONS}
+      IMPORTED_LOCATION "${UPNP_LIBRARIES}"
+      INTERFACE_INCLUDE_DIRECTORIES "${UPNP_INCLUDE_DIRS}"
+      INTERFACE_COMPILE_OPTIONS "${UPNP_DEFINITIONS}"
     )
+    if(UPNP_IXML_LIBRARY)
+      set_target_properties(UPNP::UPNP PROPERTIES
+        INTERFACE_LINK_LIBRARIES "${UPNP_IXML_LIBRARY}"
+      )
+    endif()
   endif()
 endif()
 
