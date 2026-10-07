@@ -2071,7 +2071,9 @@ static pj_status_t app_init(void)
         pjsua_acc_id aid;
         pjsip_transport_type_e type = PJSIP_TRANSPORT_TCP6;
 
-        tcp_cfg.port += 10;
+        if (tcp_cfg.port != 0) {
+            tcp_cfg.port += 10;
+        }
 
         status = pjsua_transport_create(type,
                                         &tcp_cfg,
@@ -2113,11 +2115,15 @@ static pj_status_t app_init(void)
                   sizeof(tcp_cfg.qos_params));
 
         /* Set TLS port as TCP port+1 */
-        tcp_cfg.port++;
+        if (tcp_cfg.port != 0) {
+            tcp_cfg.port++;
+        }
         status = pjsua_transport_create(PJSIP_TRANSPORT_TLS,
                                         &tcp_cfg, 
                                         &transport_id);
-        tcp_cfg.port--;
+        if (tcp_cfg.port != 0) {
+            tcp_cfg.port--;
+        }
         if (status != PJ_SUCCESS)
             goto on_error;
         
@@ -2145,7 +2151,9 @@ static pj_status_t app_init(void)
         pjsua_acc_id aid;
         pjsip_transport_type_e type = PJSIP_TRANSPORT_TLS6;
 
-        tcp_cfg.port += 10;
+        if (tcp_cfg.port != 0) {
+            tcp_cfg.port += 10;
+        }
 
         status = pjsua_transport_create(type,
                                         &tcp_cfg,
