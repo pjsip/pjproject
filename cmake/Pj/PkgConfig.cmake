@@ -1,46 +1,84 @@
 # Generates libpjproject.pc from libpjproject.pc.in, the template the GNU build
 # fills too.
 #
-# Libs lists the PJSIP libraries, Libs.private everything they link, for
-# `pkg-config --static`, and Cflags the include directory and the compile
-# definitions consumers need. These are read off the targets' link and
-# compile properties. Those hold a few simple generator expressions, which
-# are evaluated here; anything else, and the file locations of imported
-# libraries, is left to file(GENERATE). Library files are turned into -L/-l
-# flags at install time (PkgConfigInstall.cmake), as their per-configuration
-# locations are only known then. The prefix is relative to the .pc file
-# itself, so the file follows `cmake --install --prefix` and a relocated
-# installation.
+# Libs lists the PJSIP libraries and Cflags the compile definitions consumers
+# need. For `pkg-config --static`, Libs.private lists what those libraries
+# link, and Requires.private the dependencies that have a pkg-config module
+# of their own.
 #
-# Needs the dependencies' imported targets to be visible from the top-level
-# directory, which CMAKE_FIND_PACKAGE_TARGETS_GLOBAL makes them.
+# Only targets this project builds are walked. Their link and compile
+# properties hold a few generator expressions, all evaluated here, so nothing
+# depends on how a dependency's own targets are written. A dependency target
+# is looked up in _PJ_PC_DEPENDENCIES instead: it goes to Requires.private
+# when pkg-config knows its module for the same library CMake found, and is
+# otherwise linked through the library file CMake found.
+#
+# Everything is known at configure time, so the .pc is written then, and
+# installed like any other file. Its prefix is relative to the file itself,
+# so it follows `cmake --install --prefix` and a relocated installation.
 
-# Marks a library file, for PkgConfigInstall.cmake to turn into -L/-l
-set(_PJ_PC_FILE_BEGIN "@PJ_PC_FILE@")
-set(_PJ_PC_FILE_END "@PJ_PC_FILE_END@")
+# Dependency targets: "<target>|<pkg-config modules>|<library variables>|
+# <libraries to link when neither is known>". The modules are alternatives.
+# The variables are those the Find module caches its library files in, one
+# per library; "a/b" takes the first that is set, as FindOpenSSL caches
+# OPENSSL_SSL_LIBRARY, but SSL_EAY_RELEASE or SSL_EAY on Windows.
+set(_PJ_PC_DEPENDENCIES
+  "OpenSSL::SSL|libssl|OPENSSL_SSL_LIBRARY/SSL_EAY_RELEASE/SSL_EAY|ssl"
+  "OpenSSL::Crypto|libcrypto|OPENSSL_CRYPTO_LIBRARY/LIB_EAY_RELEASE/LIB_EAY|crypto"
+  "GnuTLS::GnuTLS|gnutls|GNUTLS_LIBRARY|gnutls"
+  "MbedTLS::mbedtls|mbedtls||mbedtls"
+  "MbedTLS::mbedx509|mbedx509||mbedx509"
+  "MbedTLS::mbedcrypto|mbedcrypto||mbedcrypto"
+  "UUID::UUID|uuid,libuuid|UUID_LIBRARY|uuid"
+  "UPNP::UPNP|libupnp,upnp|UPNP_UPNP_LIBRARY,UPNP_IXML_LIBRARY|upnp,ixml"
+  "ALSA::ALSA|alsa|ALSA_LIBRARY|asound"
+  "SDL2::SDL2|sdl2||SDL2"
+  "OpenGL::GL|gl|OPENGL_gl_LIBRARY|GL"
+  "OpenGL::GLES2|glesv2|OPENGL_gles2_LIBRARY|GLESv2"
+  "V4L2::V4L2|libv4l2,v4l2|V4L2_LIBRARY|v4l2"
+  "FFMPEG::avutil|libavutil|FFMPEG_avutil_LIBRARY|avutil"
+  "FFMPEG::swscale|libswscale|FFMPEG_swscale_LIBRARY|swscale"
+  "FFMPEG::avcodec|libavcodec|FFMPEG_avcodec_LIBRARY|avcodec"
+  "FFMPEG::avformat|libavformat|FFMPEG_avformat_LIBRARY|avformat"
+  "FFMPEG::avdevice|libavdevice|FFMPEG_avdevice_LIBRARY|avdevice"
+  "OPUS::OPUS|opus|OPUS_LIBRARY|opus"
+  "VPX::VPX|vpx|VPX_LIBRARY|vpx"
+  "OpenH264::OpenH264|openh264|OpenH264_LIBRARY|openh264"
+  "Silk::Silk|SKP_SILK_SDK|Silk_LIBRARY|SKP_SILK_SDK"
+  "BCG729::BCG729|bcg729,libbcg729|BCG729_LIBRARY|bcg729"
+  "Lyra::Lyra|lyra|Lyra_LIBRARY|lyra"
+  "OpenCoreAMRNB::OpenCoreAMRNB|opencore-amrnb|OpenCoreAMRNB_LIBRARY|opencore-amrnb"
+  "OpenCoreAMRWB::OpenCoreAMRWB|opencore-amrwb|OpenCoreAMRWB_LIBRARY|opencore-amrwb"
+  "VisualOnAMRWBEnc::VisualOnAMRWBEnc|vo-amrwbenc,libvo-amrwbenc|VisualOnAMRWBEnc_LIBRARY|vo-amrwbenc"
+  "SpeexDSP::SpeexDSP|speexdsp,libspeexdsp|SpeexDSP_LIBRARY|speexdsp"
+  "SampleRate::SampleRate|samplerate,libsamplerate|SampleRate_LIBRARY|samplerate"
+  "Oboe::Oboe||Oboe_LIBRARY,Oboe_LIBRARY_OpenSLES,Oboe_LIBRARY_log|oboe"
+  # PJ_DEP_<name>=system
+  "SRTP::SRTP|libsrtp3,libsrtp2,srtp2|SRTP_LIBRARY|srtp2"
+  "Speex::Speex|speex,libspeex|Speex_LIBRARY|speex"
+  "GSM::GSM|gsm,libgsm|GSM_LIBRARY|gsm"
+  "YUV::YUV|libyuv,yuv|YUV_LIBRARY|yuv"
+  "Resample::Resample|resample,libresample|Resample_LIBRARY|resample"
+)
 
-# Evaluates the generator expressions in `value` that the targets use, and
-# leaves the others in place for file(GENERATE), along with any expression
-# whose argument contains one of them.
+# Options that take their argument as the next item, e.g. -framework;Foo
+set(_PJ_PC_PAIRED_OPTIONS "-framework;-weak_framework;-Xlinker")
+
+# Evaluates the generator expressions this project's targets use; their
+# arguments are literal values by now. Any other is dropped with a warning,
+# so that it cannot reach file(GENERATE) and fail the generate step.
 function(_pj_pc_eval out value)
   set(v "${value}")
-  set(n 0)
   while(v MATCHES "\\$<([^<>$:]*)(:([^<>$]*))?>")
     set(expr "${CMAKE_MATCH_0}")
     set(name "${CMAKE_MATCH_1}")
     set(arg "${CMAKE_MATCH_3}")
     string(TOUPPER "${arg}" uarg)
-    set(r "")
-    set(keep FALSE)
-    # These need not look at their argument, and file(GENERATE) would
-    # reject LINK_ONLY, so they are resolved even around one kept below
     if(name STREQUAL "LINK_ONLY" OR name STREQUAL "INSTALL_INTERFACE"
        OR name STREQUAL "1")
       set(r "${arg}")
     elseif(name STREQUAL "BUILD_INTERFACE" OR name STREQUAL "0")
       set(r "")
-    elseif(arg MATCHES "@PJ_PC_GENEX_[0-9]+@")
-      set(keep TRUE)
     elseif(name STREQUAL "BOOL")
       # As CMake's: false only for the false constants
       if(uarg MATCHES "^(|0|OFF|NO|FALSE|N|IGNORE|NOTFOUND|.*-NOTFOUND)$")
@@ -54,284 +92,354 @@ function(_pj_pc_eval out value)
       else()
         set(r 1)
       endif()
+    elseif((name STREQUAL "OR" OR name STREQUAL "AND")
+           AND arg MATCHES "^[01](,[01])*$")
+      if(name STREQUAL "OR" AND arg MATCHES "1")
+        set(r 1)
+      elseif(name STREQUAL "AND" AND NOT arg MATCHES "0")
+        set(r 1)
+      else()
+        set(r 0)
+      endif()
     elseif(name STREQUAL "STREQUAL" AND arg MATCHES "^([^,]*),([^,]*)$")
       if(CMAKE_MATCH_1 STREQUAL CMAKE_MATCH_2)
         set(r 1)
       else()
         set(r 0)
       endif()
+    elseif(name STREQUAL "")
+      # What remains of a condition already dropped below
+      set(r "")
+    elseif(name STREQUAL "UPPER_CASE")
+      set(r "${uarg}")
+    elseif(name STREQUAL "LOWER_CASE")
+      string(TOLOWER "${arg}" r)
     else()
-      set(keep TRUE)
-    endif()
-    if(keep)
-      # Hide it from the loop, to be restored below
-      set(r "@PJ_PC_GENEX_${n}@")
-      set(_genex_${n} "${expr}")
-      math(EXPR n "${n} + 1")
+      message(AUTHOR_WARNING
+        "pkg-config: ${expr} is not supported, and left out of "
+        "libpjproject.pc. Add it to cmake/Pj/PkgConfig.cmake.")
+      set(r "")
     endif()
     string(REPLACE "${expr}" "${r}" v "${v}")
-  endwhile()
-  while(v MATCHES "@PJ_PC_GENEX_([0-9]+)@")
-    string(REPLACE "${CMAKE_MATCH_0}" "${_genex_${CMAKE_MATCH_1}}" v "${v}")
   endwhile()
   set(${out} "${v}" PARENT_SCOPE)
 endfunction()
 
-# Splits a list as list() does, but not at a ";" inside a generator
-# expression, which becomes a space there instead.
-function(_pj_pc_split out value)
+# Joins an option with its argument, e.g. -framework;Foo, into one item
+function(_pj_pc_pair_options out items)
   set(result "")
-  set(current "")
-  set(depth 0)
-  foreach(part IN LISTS value)
-    if(depth GREATER 0)
-      # Flags in a .pc file are separated by spaces
-      string(APPEND current " ${part}")
+  set(pending "")
+  foreach(item IN LISTS items)
+    if(pending)
+      list(APPEND result "${pending} ${item}")
+      set(pending "")
+    elseif(item IN_LIST _PJ_PC_PAIRED_OPTIONS)
+      set(pending "${item}")
     else()
-      set(current "${part}")
-    endif()
-    string(REGEX MATCHALL "\\$<" opens "${part}")
-    string(REGEX MATCHALL ">" closes "${part}")
-    list(LENGTH opens o)
-    list(LENGTH closes c)
-    math(EXPR depth "${depth} + ${o} - ${c}")
-    if(depth LESS_EQUAL 0)
-      set(depth 0)
-      list(APPEND result "${current}")
+      list(APPEND result "${item}")
     endif()
   endforeach()
-  if(depth GREATER 0)
-    list(APPEND result "${current}")
-  endif()
   set(${out} "${result}" PARENT_SCOPE)
 endfunction()
 
-# The flag, or marked library file, that links `target`; empty for an
-# interface library.
-function(_pj_pc_target_file out target)
-  get_target_property(type ${target} TYPE)
-  get_target_property(imported ${target} IMPORTED)
-  if(type STREQUAL "INTERFACE_LIBRARY" OR NOT imported)
-    set(${out} "" PARENT_SCOPE)
-  else()
-    set(${out}
-      "${_PJ_PC_FILE_BEGIN}$<TARGET_LINKER_FILE:${target}>${_PJ_PC_FILE_END}"
-      PARENT_SCOPE)
-  endif()
-endfunction()
-
-# Splits a generator expression $<condition:content> into "$<condition:"
-# and the content; `head` is empty if `item` is not one whole expression.
-function(_pj_pc_genex_parts head content item)
-  set(${head} "" PARENT_SCOPE)
-  string(LENGTH "${item}" len)
-  if(len LESS 4 OR NOT item MATCHES "^\\$<.*>$")
+# Whether the linker searches `dir` anyway: an implicit link directory itself,
+# or anything inside a sysroot
+function(_pj_pc_searched out dir)
+  set(${out} FALSE PARENT_SCOPE)
+  if(dir IN_LIST CMAKE_C_IMPLICIT_LINK_DIRECTORIES)
+    set(${out} TRUE PARENT_SCOPE)
     return()
   endif()
-  set(depth 1)
-  set(i 2)
-  set(colon -1)
-  math(EXPR last "${len} - 1")
-  while(i LESS last)
-    string(SUBSTRING "${item}" ${i} 2 two)
-    string(SUBSTRING "${item}" ${i} 1 one)
-    if(two STREQUAL "$<")
-      math(EXPR depth "${depth} + 1")
-      math(EXPR i "${i} + 2")
-      continue()
-    elseif(one STREQUAL ">")
-      math(EXPR depth "${depth} - 1")
-      if(depth EQUAL 0)
-        return()   # closes before the end: not one whole expression
+  # CMAKE_OSX_SYSROOT may be an SDK name, e.g. iphoneos, rather than a path
+  foreach(sysroot IN ITEMS "${CMAKE_OSX_SYSROOT}" "${CMAKE_SYSROOT}")
+    if(IS_ABSOLUTE "${sysroot}")
+      string(FIND "${dir}/" "${sysroot}/" pos)
+      if(pos EQUAL 0)
+        set(${out} TRUE PARENT_SCOPE)
       endif()
-    elseif(one STREQUAL ":" AND depth EQUAL 1 AND colon EQUAL -1)
-      set(colon ${i})
-    endif()
-    math(EXPR i "${i} + 1")
-  endwhile()
-  if(colon EQUAL -1)
-    return()
-  endif()
-  math(EXPR head_len "${colon} + 1")
-  math(EXPR content_len "${last} - ${head_len}")
-  string(SUBSTRING "${item}" 0 ${head_len} h)
-  string(SUBSTRING "${item}" ${head_len} ${content_len} c)
-  set(${head} "${h}" PARENT_SCOPE)
-  set(${content} "${c}" PARENT_SCOPE)
-endfunction()
-
-# Splits the content of an expression into items, at ";" and at the spaces
-# _pj_pc_split puts there, but not inside a nested expression.
-function(_pj_pc_content_items out content)
-  string(REPLACE " " ";" parts "${content}")
-  _pj_pc_split(items "${parts}")
-  set(${out} "${items}" PARENT_SCOPE)
-endfunction()
-
-# Turns one link item, or link option when `options` is set, into a flag in
-# `out`, and visits the targets among them. `conditional` is set for an item
-# inside an expression left for file(GENERATE): a target there becomes its
-# file, and what it links is collected regardless of the condition.
-function(_pj_pc_flag out item options conditional)
-  set(${out} "" PARENT_SCOPE)
-  # "::@" marks the directory a cross-directory link was made from
-  if(item STREQUAL "" OR item MATCHES "-NOTFOUND$" OR item MATCHES "^::@")
-    return()
-  endif()
-
-  if(item MATCHES "\\$<")
-    _pj_pc_genex_parts(head content "${item}")
-    if(NOT head)
-      # Not of the form $<condition:items>; passed on as it is
-      set(${out} "${item}" PARENT_SCOPE)
-      return()
-    endif()
-    _pj_pc_content_items(parts "${content}")
-    set(converted "")
-    set(pending "")
-    foreach(part IN LISTS parts)
-      if(pending)
-        list(APPEND converted "${pending} ${part}")
-        set(pending "")
-        continue()
-      elseif(part MATCHES "^-(framework|weak_framework|Xlinker)$")
-        set(pending "${part}")
-        continue()
-      endif()
-      _pj_pc_flag(flag "${part}" "${options}" TRUE)
-      if(flag)
-        list(APPEND converted "${flag}")
-      endif()
-    endforeach()
-    if(converted)
-      list(JOIN converted " " converted)
-      set(${out} "${head}${converted}>" PARENT_SCOPE)
-    endif()
-    return()
-  endif()
-
-  if(options)
-    if(item MATCHES "^SHELL:(.*)$")
-      set(${out} "${CMAKE_MATCH_1}" PARENT_SCOPE)
-    elseif(item MATCHES "^LINKER:(.*)$")
-      string(REPLACE "," "${CMAKE_C_LINKER_WRAPPER_FLAG_SEP}" args
-        "${CMAKE_MATCH_1}")
-      if(CMAKE_C_LINKER_WRAPPER_FLAG)
-        set(${out} "${CMAKE_C_LINKER_WRAPPER_FLAG}${args}" PARENT_SCOPE)
-      else()
-        set(${out} "${args}" PARENT_SCOPE)
-      endif()
-    else()
-      set(${out} "${item}" PARENT_SCOPE)
-    endif()
-  elseif(TARGET "${item}")
-    if(conditional)
-      get_target_property(aliased ${item} ALIASED_TARGET)
-      if(aliased)
-        set(item "${aliased}")
-      endif()
-      _pj_pc_visit(${item} NO_SELF)
-      _pj_pc_target_file(file ${item})
-      set(${out} "${file}" PARENT_SCOPE)
-    else()
-      _pj_pc_visit("${item}")
-    endif()
-  elseif(item MATCHES "^-")
-    set(${out} "${item}" PARENT_SCOPE)
-  elseif(item MATCHES "/([^/]+)\\.framework/?$")
-    set(${out} "-framework ${CMAKE_MATCH_1}" PARENT_SCOPE)
-  elseif(IS_ABSOLUTE "${item}")
-    set(${out} "${_PJ_PC_FILE_BEGIN}${item}${_PJ_PC_FILE_END}" PARENT_SCOPE)
-  else()
-    set(${out} "-l${item}" PARENT_SCOPE)
-  endif()
-endfunction()
-
-# Turns link items, or link options when `options` is set, into flags in
-# `out`, and visits the targets among them.
-function(_pj_pc_items out items options)
-  set(flags "")
-  set(pending "")
-  foreach(item IN LISTS items)
-    # An option taking the next item as its argument, e.g. -framework;Foo
-    if(pending)
-      list(APPEND flags "${pending} ${item}")
-      set(pending "")
-      continue()
-    elseif(item MATCHES "^-(framework|weak_framework|Xlinker)$")
-      set(pending "${item}")
-      continue()
-    endif()
-    _pj_pc_flag(flag "${item}" "${options}" FALSE)
-    if(flag)
-      list(APPEND flags "${flag}")
     endif()
   endforeach()
+endfunction()
+
+# A Homebrew Cellar directory as the formula's opt/ link, which survives an
+# upgrade, when that leads to the same place
+function(_pj_pc_stable_dir out dir)
+  set(${out} "${dir}" PARENT_SCOPE)
+  if(dir MATCHES "^(.+)/Cellar/([^/]+)/[^/]+(/.*)?$")
+    set(opt "${CMAKE_MATCH_1}/opt/${CMAKE_MATCH_2}${CMAKE_MATCH_3}")
+    if(IS_DIRECTORY "${opt}")
+      file(REAL_PATH "${opt}" real_opt)
+      file(REAL_PATH "${dir}" real_dir)
+      if(real_opt STREQUAL real_dir)
+        set(${out} "${opt}" PARENT_SCOPE)
+      endif()
+    endif()
+  endif()
+endfunction()
+
+function(_pj_pc_quote out path)
+  if(path MATCHES " ")
+    set(${out} "\"${path}\"" PARENT_SCOPE)
+  else()
+    set(${out} "${path}" PARENT_SCOPE)
+  endif()
+endfunction()
+
+# Whether `path` is a static library with a shared one of the same name
+# beside it, which -l<name> would pick instead
+function(_pj_pc_static_beside_shared out path)
+  set(${out} FALSE PARENT_SCOPE)
+  get_filename_component(dir "${path}" DIRECTORY)
+  get_filename_component(name "${path}" NAME)
+  if(name MATCHES "\\.dll\\.a$" OR NOT name MATCHES "^lib(.+)\\.a$")
+    return()
+  endif()
+  set(lib "${CMAKE_MATCH_1}")
+  file(GLOB shared "${dir}/lib${lib}.so" "${dir}/lib${lib}.so.*"
+    "${dir}/lib${lib}.dylib" "${dir}/lib${lib}.tbd" "${dir}/lib${lib}.dll.a")
+  if(shared)
+    set(${out} TRUE PARENT_SCOPE)
+  endif()
+endfunction()
+
+# The flags that link a library file: -L/-l, or -F/-framework for a
+# framework. A static library stays a full path when a shared one of the same
+# name is beside it, as -l would pick the shared one; so does a file whose
+# name is not a library name.
+function(_pj_pc_file_flags out path)
+  get_filename_component(dir "${path}" DIRECTORY)
+  get_filename_component(name "${path}" NAME)
+  _pj_pc_stable_dir(dir "${dir}")
+  _pj_pc_searched(searched "${dir}")
+
+  if(path MATCHES "/([^/]+)\\.framework/?$")
+    set(flags "-framework ${CMAKE_MATCH_1}")
+    if(NOT searched AND NOT dir MATCHES "^(/System)?/Library/Frameworks$")
+      _pj_pc_quote(qdir "${dir}")
+      list(PREPEND flags "-F${qdir}")
+    endif()
+    set(${out} "${flags}" PARENT_SCOPE)
+    return()
+  endif()
+
+  # One test per if(): a failed MATCHES clears CMAKE_MATCH_<n>
+  set(lib "")
+  if(name MATCHES "^lib(.+)\\.dll\\.a$")
+    set(lib "${CMAKE_MATCH_1}")
+  elseif(name MATCHES "^lib(.+)\\.a$")
+    set(lib "${CMAKE_MATCH_1}")
+  elseif(name MATCHES "^lib(.+)\\.(so|dylib|tbd)$")
+    set(lib "${CMAKE_MATCH_1}")
+  elseif(name MATCHES "^lib(.+)\\.so\\.[0-9.]+$")
+    set(lib "${CMAKE_MATCH_1}")
+  elseif(name MATCHES "^(.+)\\.lib$")
+    set(lib "${CMAKE_MATCH_1}")
+  endif()
+  _pj_pc_static_beside_shared(ambiguous "${path}")
+
+  if(NOT lib OR ambiguous)
+    set(${out} "\"${dir}/${name}\"" PARENT_SCOPE)
+    return()
+  endif()
+  set(flags "-l${lib}")
+  if(NOT searched)
+    _pj_pc_quote(qdir "${dir}")
+    list(PREPEND flags "-L${qdir}")
+  endif()
   set(${out} "${flags}" PARENT_SCOPE)
 endfunction()
-# Records what `target` links, depth-first, then the target itself unless
-# NO_SELF is given.
-function(_pj_pc_visit target)
-  get_target_property(aliased ${target} ALIASED_TARGET)
-  if(aliased)
-    set(target "${aliased}")
+
+# The pkg-config module among `modules` that describes the library at `path`,
+# found by comparing its libdir: a module found elsewhere may describe
+# another copy, e.g. the host's when cross-compiling, or MSYS2's in an MSVC
+# build.
+function(_pj_pc_find_module out modules path)
+  set(${out} "" PARENT_SCOPE)
+  if(NOT PKG_CONFIG_EXECUTABLE OR NOT modules)
+    return()
   endif()
+  get_filename_component(want "${path}" DIRECTORY)
+  file(REAL_PATH "${want}" want)
+  foreach(module IN LISTS modules)
+    execute_process(
+      COMMAND "${PKG_CONFIG_EXECUTABLE}" --variable=libdir "${module}"
+      RESULT_VARIABLE result
+      OUTPUT_VARIABLE libdir
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      ERROR_QUIET
+    )
+    if(NOT result EQUAL 0 OR NOT IS_DIRECTORY "${libdir}")
+      continue()
+    endif()
+    file(REAL_PATH "${libdir}" libdir)
+    if(NOT libdir STREQUAL want)
+      continue()
+    endif()
+    set(${out} "${module}" PARENT_SCOPE)
+    return()
+  endforeach()
+endfunction()
+
+# Records how to link the dependency target `target`
+function(_pj_pc_dependency target)
+  if(target STREQUAL "Threads::Threads")
+    # Part of the C library on Windows and Apple platforms
+    if(UNIX AND NOT APPLE)
+      set_property(GLOBAL APPEND PROPERTY _PJ_PC_PRIVATE "-pthread")
+    endif()
+    return()
+  endif()
+
+  foreach(entry IN LISTS _PJ_PC_DEPENDENCIES)
+    string(REPLACE "|" ";" fields "${entry}")
+    list(GET fields 0 name)
+    if(NOT name STREQUAL target)
+      continue()
+    endif()
+    list(GET fields 1 modules)
+    list(GET fields 2 variables)
+    list(GET fields 3 names)
+    string(REPLACE "," ";" modules "${modules}")
+    string(REPLACE "," ";" variables "${variables}")
+    string(REPLACE "," ";" names "${names}")
+
+    set(paths "")
+    foreach(alternatives IN LISTS variables)
+      string(REPLACE "/" ";" alternatives "${alternatives}")
+      foreach(variable IN LISTS alternatives)
+        set(value "${${variable}}")
+        if(NOT value STREQUAL "" AND NOT value MATCHES "-NOTFOUND$")
+          list(APPEND paths "${value}")
+          break()
+        endif()
+      endforeach()
+    endforeach()
+    # A module's -l would pick a shared library over a static one CMake
+    # linked deliberately, e.g. with OPENSSL_USE_STATIC_LIBS
+    set(static FALSE)
+    foreach(path IN LISTS paths)
+      _pj_pc_static_beside_shared(ambiguous "${path}")
+      if(ambiguous)
+        set(static TRUE)
+      endif()
+    endforeach()
+    if(paths AND NOT static)
+      list(GET paths 0 first)
+      _pj_pc_find_module(module "${modules}" "${first}")
+      if(module)
+        set_property(GLOBAL APPEND PROPERTY _PJ_PC_REQUIRES "${module}")
+        return()
+      endif()
+    endif()
+    set(flags "")
+    if(paths)
+      foreach(path IN LISTS paths)
+        _pj_pc_file_flags(file_flags "${path}")
+        list(APPEND flags ${file_flags})
+      endforeach()
+    else()
+      foreach(lib IN LISTS names)
+        list(APPEND flags "-l${lib}")
+      endforeach()
+    endif()
+    list(REVERSE flags)
+    set_property(GLOBAL APPEND PROPERTY _PJ_PC_PRIVATE ${flags})
+    return()
+  endforeach()
+
+  # Not in the table, but visible here: this project's own Find modules make
+  # their interface targets (Apple frameworks, WASAPI, ...) global, and
+  # third_party/CMakeLists.txt the PJ_DEP_<name>=system ones. An interface
+  # target is read; a library is linked through its file, without reading
+  # what it links.
+  if(TARGET "${target}")
+    get_target_property(type ${target} TYPE)
+    if(type STREQUAL "INTERFACE_LIBRARY")
+      _pj_pc_visit(${target})
+      return()
+    endif()
+    foreach(property IN ITEMS IMPORTED_IMPLIB_RELEASE IMPORTED_IMPLIB
+                              IMPORTED_LOCATION_RELEASE
+                              IMPORTED_LOCATION_NOCONFIG IMPORTED_LOCATION)
+      get_target_property(path ${target} ${property})
+      if(path)
+        _pj_pc_file_flags(flags "${path}")
+        list(REVERSE flags)
+        set_property(GLOBAL APPEND PROPERTY _PJ_PC_PRIVATE ${flags})
+        return()
+      endif()
+    endforeach()
+  endif()
+  message(STATUS "pkg-config: no entry for ${target}, which "
+    "libpjproject.pc leaves out")
+endfunction()
+
+# Records what `target`, a target this project builds, links, depth-first,
+# then the target itself, so that the reversed result lists every library
+# before what it needs, as a static link needs
+function(_pj_pc_visit target)
   get_property(seen GLOBAL PROPERTY _PJ_PC_SEEN)
   if(target IN_LIST seen)
     return()
   endif()
-  if(NOT ARGV1 STREQUAL "NO_SELF")
-    set_property(GLOBAL APPEND PROPERTY _PJ_PC_SEEN "${target}")
-  endif()
+  set_property(GLOBAL APPEND PROPERTY _PJ_PC_SEEN "${target}")
   get_property(pj_libs GLOBAL PROPERTY _PJ_PC_LIBS)
 
-  get_target_property(imported ${target} IMPORTED)
   get_target_property(type ${target} TYPE)
+  get_target_property(imported ${target} IMPORTED)
   set(items "")
-  if(NOT imported AND NOT type STREQUAL "INTERFACE_LIBRARY")
+  if(NOT type STREQUAL "INTERFACE_LIBRARY")
     get_target_property(items ${target} LINK_LIBRARIES)
   endif()
-  get_target_property(ilibs ${target} INTERFACE_LINK_LIBRARIES)
-  if(ilibs)
-    list(APPEND items ${ilibs})
+  get_target_property(interface_items ${target} INTERFACE_LINK_LIBRARIES)
+  if(interface_items)
+    list(APPEND items ${interface_items})
   endif()
+  # Evaluated as a whole, as an expression may hold a ";"
   _pj_pc_eval(items "${items}")
-  _pj_pc_split(items "${items}")
-  # A bundled library linking PJSIP ones (srtp calls pj_log) needs them
-  # again after it
-  if(NOT imported AND NOT target IN_LIST pj_libs)
-    foreach(item IN LISTS items)
-      if(item IN_LIST pj_libs)
-        set_property(GLOBAL APPEND PROPERTY _PJ_PC_THIRD_PARTY_NEEDS "${item}")
-      endif()
-    endforeach()
-  endif()
-  _pj_pc_items(flags "${items}" FALSE)
+  _pj_pc_pair_options(items "${items}")
 
-  if(imported)
-    get_target_property(opts ${target} INTERFACE_LINK_OPTIONS)
-    if(opts)
-      _pj_pc_eval(opts "${opts}")
-      _pj_pc_split(opts "${opts}")
-      _pj_pc_items(opt_flags "${opts}" TRUE)
-      list(APPEND flags ${opt_flags})
+  set(flags "")
+  foreach(item IN LISTS items)
+    # "::@" marks the directory a cross-directory link was made from
+    if(item STREQUAL "" OR item MATCHES "-NOTFOUND$" OR item MATCHES "^::@")
+      continue()
     endif()
-  endif()
-
+    if(TARGET "${item}")
+      get_target_property(aliased ${item} ALIASED_TARGET)
+      if(aliased)
+        set(item "${aliased}")
+      endif()
+      get_target_property(item_imported ${item} IMPORTED)
+      if(item_imported)
+        _pj_pc_dependency("${item}")
+      else()
+        if(NOT imported AND NOT target IN_LIST pj_libs
+           AND item IN_LIST pj_libs)
+          # A bundled library linking PJSIP ones (srtp calls pj_log)
+          set_property(GLOBAL APPEND PROPERTY _PJ_PC_THIRD_PARTY_NEEDS
+            "${item}")
+        endif()
+        _pj_pc_visit("${item}")
+      endif()
+    elseif(item MATCHES "::")
+      # A dependency's target, imported in another directory
+      _pj_pc_dependency("${item}")
+    elseif(item MATCHES "^-")
+      list(APPEND flags "${item}")
+    elseif(IS_ABSOLUTE "${item}")
+      _pj_pc_file_flags(file_flags "${item}")
+      list(APPEND flags ${file_flags})
+    else()
+      list(APPEND flags "-l${item}")
+    endif()
+  endforeach()
   # Reversed, as the whole list is reversed at the end
   list(REVERSE flags)
   set_property(GLOBAL APPEND PROPERTY _PJ_PC_PRIVATE ${flags})
 
-  if(ARGV1 STREQUAL "NO_SELF")
-    return()
-  endif()
-  if(imported)
-    _pj_pc_target_file(file ${target})
-    if(file)
-      set_property(GLOBAL APPEND PROPERTY _PJ_PC_PRIVATE "${file}")
-    endif()
-  elseif(NOT type STREQUAL "INTERFACE_LIBRARY"
-         AND NOT target IN_LIST pj_libs)
+  if(NOT imported AND NOT type STREQUAL "INTERFACE_LIBRARY"
+     AND NOT target IN_LIST pj_libs)
     set_property(GLOBAL APPEND PROPERTY _PJ_PC_THIRD_PARTY "${target}")
   endif()
 endfunction()
@@ -341,39 +449,37 @@ endfunction()
 # The libraries are those to list in Libs, in link order.
 function(pj_generate_pkgconfig template destination)
   set(pj_libs ${ARGN})
-  set(libs "")
-  set(cflags "")
+  find_package(PkgConfig QUIET)
 
+  set(defs "")
   foreach(lib IN LISTS pj_libs)
-    string(APPEND libs " -l$<TARGET_LINKER_FILE_BASE_NAME:${lib}>")
-    get_target_property(defs ${lib} INTERFACE_COMPILE_DEFINITIONS)
-    if(defs)
-      _pj_pc_eval(defs "${defs}")
-      foreach(def IN LISTS defs)
-        if(def AND NOT " ${cflags} " MATCHES " -D${def} ")
-          string(APPEND cflags " -D${def}")
+    get_target_property(lib_defs ${lib} INTERFACE_COMPILE_DEFINITIONS)
+    if(lib_defs)
+      _pj_pc_eval(lib_defs "${lib_defs}")
+      foreach(def IN LISTS lib_defs)
+        if(def AND NOT def IN_LIST defs)
+          list(APPEND defs "${def}")
         endif()
       endforeach()
     endif()
   endforeach()
 
-  # Everything the libraries link. The walk records each target after what
-  # it links, so the reversed result lists every library before its
-  # dependencies, as a static link needs. Duplicates are removed at
-  # install time, after the library files have become flags.
   set_property(GLOBAL PROPERTY _PJ_PC_LIBS "${pj_libs}")
   set_property(GLOBAL PROPERTY _PJ_PC_SEEN "")
   set_property(GLOBAL PROPERTY _PJ_PC_PRIVATE "")
+  set_property(GLOBAL PROPERTY _PJ_PC_REQUIRES "")
   set_property(GLOBAL PROPERTY _PJ_PC_THIRD_PARTY "")
   set_property(GLOBAL PROPERTY _PJ_PC_THIRD_PARTY_NEEDS "")
   foreach(lib IN LISTS pj_libs)
     _pj_pc_visit(${lib})
   endforeach()
   get_property(private GLOBAL PROPERTY _PJ_PC_PRIVATE)
+  get_property(requires GLOBAL PROPERTY _PJ_PC_REQUIRES)
   get_property(third_party GLOBAL PROPERTY _PJ_PC_THIRD_PARTY)
   get_property(third_party_needs GLOBAL PROPERTY _PJ_PC_THIRD_PARTY_NEEDS)
   list(REVERSE private)
   list(REVERSE third_party)
+  list(REMOVE_DUPLICATES requires)
 
   # pjlib has C++ sources, so a static link from C needs the C++ runtime
   set(cxx_runtime ${CMAKE_CXX_IMPLICIT_LINK_LIBRARIES})
@@ -382,7 +488,8 @@ function(pj_generate_pkgconfig template destination)
   endif()
   foreach(lib IN LISTS cxx_runtime)
     if(IS_ABSOLUTE "${lib}")
-      list(APPEND private "${_PJ_PC_FILE_BEGIN}${lib}${_PJ_PC_FILE_END}")
+      _pj_pc_file_flags(file_flags "${lib}")
+      list(APPEND private ${file_flags})
     elseif(lib MATCHES "^-")
       list(APPEND private "${lib}")
     else()
@@ -390,20 +497,46 @@ function(pj_generate_pkgconfig template destination)
     endif()
   endforeach()
 
-  set(tp_flags "")
+  # The bundled libraries, then the PJSIP ones they need, in Libs order
+  set(bundled "")
   if(third_party)
-    set(tp_flags "-L\${libdir}/pjproject/third_party")
+    list(APPEND bundled "-L\${libdir}/pjproject/third_party")
     foreach(lib IN LISTS third_party)
-      string(APPEND tp_flags " -l$<TARGET_LINKER_FILE_BASE_NAME:${lib}>")
+      list(APPEND bundled "-l${lib}")
     endforeach()
-    # In Libs order, which is link order
     foreach(lib IN LISTS pj_libs)
       if(lib IN_LIST third_party_needs)
-        string(APPEND tp_flags " -l$<TARGET_LINKER_FILE_BASE_NAME:${lib}>")
+        list(APPEND bundled "-l${lib}")
       endif()
     endforeach()
   endif()
-  list(JOIN private " " private)
+
+  # -L and -F first, each once; anything else once, at its last place, as a
+  # static link needs a library after everything that uses it
+  set(search "")
+  set(others "")
+  foreach(flag IN LISTS bundled private)
+    if(flag MATCHES "^-[LF]")
+      if(NOT flag IN_LIST search)
+        list(APPEND search "${flag}")
+      endif()
+    else()
+      list(REMOVE_ITEM others "${flag}")
+      list(APPEND others "${flag}")
+    endif()
+  endforeach()
+  list(JOIN search " " search)
+  list(JOIN others " " others)
+  string(STRIP "${search} ${others}" PJ_INSTALL_LDFLAGS_PRIVATE)
+
+  set(PJ_INSTALL_LDFLAGS "-L\${libdir}")
+  foreach(lib IN LISTS pj_libs)
+    string(APPEND PJ_INSTALL_LDFLAGS " -l${lib}")
+  endforeach()
+  set(PJ_INSTALL_CFLAGS "-I\${includedir}")
+  foreach(def IN LISTS defs)
+    string(APPEND PJ_INSTALL_CFLAGS " -D${def}")
+  endforeach()
 
   if(IS_ABSOLUTE "${CMAKE_INSTALL_LIBDIR}")
     set(PREFIX "${CMAKE_INSTALL_PREFIX}")
@@ -420,41 +553,28 @@ function(pj_generate_pkgconfig template destination)
     set(INCLUDEDIR "\${prefix}/${CMAKE_INSTALL_INCLUDEDIR}")
   endif()
   set(PJ_VERSION "${PROJECT_VERSION}")
-  set(PJ_INSTALL_LDFLAGS "-L\${libdir}${libs}")
-  string(STRIP "${tp_flags} ${private}" PJ_INSTALL_LDFLAGS_PRIVATE)
-  set(PJ_INSTALL_CFLAGS "-I\${includedir}${cflags}")
 
   file(READ "${template}" content)
   string(CONFIGURE "${content}" content @ONLY)
-  file(GENERATE
-    OUTPUT "${CMAKE_BINARY_DIR}/pkgconfig/libpjproject-$<CONFIG>.pc.in"
-    CONTENT "${content}"
-  )
-
-  # Directories the linker searches anyway need no -L: the implicit link
-  # directories themselves, and anything inside a sysroot
-  set(sysroots "")
-  if(CMAKE_OSX_SYSROOT)
-    list(APPEND sysroots "${CMAKE_OSX_SYSROOT}")
+  # The template, shared with the GNU build, has no Requires.private
+  if(requires)
+    list(JOIN requires ", " requires)
+    string(REPLACE "\nLibs:" "\nRequires.private: ${requires}\nLibs:"
+      content "${content}")
   endif()
-  if(CMAKE_SYSROOT)
-    list(APPEND sysroots "${CMAKE_SYSROOT}")
+  # Written as it is, as a second substitution pass could alter a path with
+  # an "@" in it; and only when changed, so it is not rewritten every time
+  set(output "${CMAKE_BINARY_DIR}/libpjproject.pc")
+  set(previous "")
+  if(EXISTS "${output}")
+    file(READ "${output}" previous)
   endif()
-  # A single-config build generates only the file for CMAKE_BUILD_TYPE, and
-  # its libraries install whatever `cmake --install --config` says
-  get_property(multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
-  if(multi_config)
-    set(config "\${CMAKE_INSTALL_CONFIG_NAME}")
-  else()
-    set(config "${CMAKE_BUILD_TYPE}")
+  if(NOT content STREQUAL previous)
+    file(WRITE "${output}" "${content}")
   endif()
-  install(CODE "
-    set(PJ_PC_INPUT \"${CMAKE_BINARY_DIR}/pkgconfig/libpjproject-${config}.pc.in\")
-    set(PJ_PC_DESTINATION \"${destination}\")
-    set(PJ_PC_IMPLICIT_DIRS \"${CMAKE_C_IMPLICIT_LINK_DIRECTORIES}\")
-    set(PJ_PC_SYSROOTS \"${sysroots}\")
-    include(\"${CMAKE_CURRENT_FUNCTION_LIST_DIR}/PkgConfigInstall.cmake\")
-    "
+  install(
+    FILES "${output}"
+    DESTINATION "${destination}"
     COMPONENT PjDevelopment
   )
 endfunction()

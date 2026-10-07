@@ -86,10 +86,6 @@ endif()
 # ##############################################################################
 # Sub-directories
 
-# The dependencies' imported targets have to be visible from this directory,
-# for the pkg-config file to be generated from them.
-set(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL ON)
-
 # base library
 add_subdirectory(pjlib)
 
