@@ -15,6 +15,7 @@
 #   define CERT_CA_FILE             CERT_DIR "cacert.pem"
 #endif
 #define CERT_FILE                   CERT_DIR "cacert.pem"
+#define CERT_DER_FILE               CERT_DIR "cacert.der"
 #define CERT_PRIVKEY_FILE           CERT_DIR "privkey.pem"
 #define CERT_PRIVKEY_PASS           "privkeypass"
 

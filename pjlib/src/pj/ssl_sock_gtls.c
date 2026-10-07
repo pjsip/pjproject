@@ -1141,15 +1141,12 @@ static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
     const gnutls_datum_t *certs;
     unsigned int certslen = 0;
     int ret = GNUTLS_CERT_INVALID;
+    pj_bool_t updated = PJ_FALSE;
 
     pj_assert(ssock->ssl_state == SSL_STATE_ESTABLISHED);
 
     /* Both raw chains live in info_pool, so release them together */
     pj_pool_reset(ssock->info_pool);
-    pj_bzero(&ssock->local_cert_info.raw_chain,
-             sizeof(ssock->local_cert_info.raw_chain));
-    pj_bzero(&ssock->remote_cert_info.raw_chain,
-             sizeof(ssock->remote_cert_info.raw_chain));
 
     /* Get active local certificate */
     us = gnutls_certificate_get_ours(gssock->session);
@@ -1167,15 +1164,17 @@ static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
 
     tls_cert_get_info(ssock->pool, &ssock->local_cert_info, cert);
     tls_cert_get_chain_raw(ssock->info_pool, &ssock->local_cert_info, us, 1);
+    updated = PJ_TRUE;
 
 us_out:
     tls_last_error = ret;
     if (cert)
         gnutls_x509_crt_deinit(cert);
-    else
+    if (!updated)
         pj_bzero(&ssock->local_cert_info, sizeof(pj_ssl_cert_info));
 
     cert = NULL;
+    updated = PJ_FALSE;
 
     /* Get active remote certificate */
     certs = gnutls_certificate_get_peers(gssock->session, &certslen);
@@ -1195,12 +1194,13 @@ us_out:
     tls_cert_get_info(ssock->pool, &ssock->remote_cert_info, cert);
     tls_cert_get_chain_raw(ssock->info_pool, &ssock->remote_cert_info, certs,
                            certslen);
+    updated = PJ_TRUE;
 
 peer_out:
     tls_last_error = ret;
     if (cert)
         gnutls_x509_crt_deinit(cert);
-    else
+    if (!updated)
         pj_bzero(&ssock->remote_cert_info, sizeof(pj_ssl_cert_info));
 }
 

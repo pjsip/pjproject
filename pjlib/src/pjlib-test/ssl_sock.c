@@ -117,14 +117,47 @@ static void dump_ssl_info(const pj_ssl_sock_info *si)
     }
 }
 
-/* The local and remote raw chain must not share storage */
-static pj_status_t check_raw_chain(const pj_ssl_sock_info *si)
+/* The local raw chain must hold the local certificate, in storage of its
+ * own rather than the peer chain's. Backends that don't report the local
+ * raw chain, e.g. OpenSSL, leave cnt zero and are skipped.
+ */
+static pj_status_t check_raw_chain(const pj_ssl_sock_info *si,
+                                   pj_pool_t *pool)
 {
     const pj_ssl_cert_info *lci = si->local_cert_info;
     const pj_ssl_cert_info *rci = si->remote_cert_info;
+    pj_str_t der_file = pj_str(CERT_DER_FILE);
+    pj_oshandle_t fd = NULL;
+    pj_ssize_t size;
+    pj_str_t der;
+    pj_status_t status;
 
-    if (lci && rci && lci->raw_chain.cnt && rci->raw_chain.cnt &&
+    if (!lci || lci->raw_chain.cnt == 0)
+        return PJ_SUCCESS;
+
+    if (rci && rci->raw_chain.cnt &&
         lci->raw_chain.cert_raw == rci->raw_chain.cert_raw)
+    {
+        return PJ_EBUG;
+    }
+
+    size = (pj_ssize_t)pj_file_size(der_file.ptr);
+    if (size <= 0)
+        return PJ_ENOTFOUND;
+
+    status = pj_file_open(pool, der_file.ptr, PJ_O_RDONLY, &fd);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    der.ptr = (char*)pj_pool_alloc(pool, size);
+    status = pj_file_read(fd, der.ptr, &size);
+    der.slen = size;
+    pj_file_close(fd);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    if (lci->raw_chain.cert_raw[0].slen != der.slen ||
+        pj_memcmp(lci->raw_chain.cert_raw[0].ptr, der.ptr, der.slen))
     {
         return PJ_EBUG;
     }
@@ -153,9 +186,9 @@ static pj_bool_t ssl_on_connect_complete(pj_ssl_sock_t *ssock,
         goto on_return;
     }
 
-    status = check_raw_chain(&info);
+    status = check_raw_chain(&info, st->pool);
     if (status != PJ_SUCCESS) {
-        app_perror("...ERROR local/remote raw chain overlap", status);
+        app_perror("...ERROR invalid local raw chain", status);
         goto on_return;
     }
 
@@ -244,6 +277,16 @@ static pj_bool_t ssl_on_accept_complete(pj_ssl_sock_t *ssock,
     if (status != PJ_SUCCESS) {
         app_perror("...ERROR pj_ssl_sock_get_info()", status);
         goto on_return;
+    }
+
+    status = check_raw_chain(&info, st->pool);
+    if (status != PJ_SUCCESS) {
+        app_perror("...ERROR invalid local raw chain", status);
+        /* Report through the parent, don't close from this callback:
+         * on_handshake_complete() still uses ssock->parent afterwards.
+         */
+        parent_st->err = status;
+        return PJ_TRUE;
     }
 
     pj_sockaddr_print(src_addr, buf, sizeof(buf), 1);
