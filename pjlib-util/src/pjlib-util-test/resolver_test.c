@@ -2678,6 +2678,147 @@ static int srv_resolver_many_test(void)
 ////////////////////////////////////////////////////////////////////////////
 
 
+////////////////////////////////////////////////////////////////////////////
+/* Resetting the state of the nameservers */
+
+static volatile pj_bool_t reset_ns_cb_called;
+static pj_status_t reset_ns_cb_status;
+static pj_uint32_t reset_ns_cb_addr;
+
+static void dns_callback_reset_ns(void *user_data,
+                                  pj_status_t status,
+                                  pj_dns_parsed_packet *resp)
+{
+    PJ_UNUSED_ARG(user_data);
+
+    reset_ns_cb_status = status;
+    if (status == PJ_SUCCESS && resp && resp->hdr.anscount)
+        reset_ns_cb_addr = resp->ans[0].rdata.a.ip_addr.s_addr;
+    reset_ns_cb_called = PJ_TRUE;
+}
+
+static int wait_reset_ns_cb(void)
+{
+    unsigned i;
+
+    for (i = 0; !reset_ns_cb_called && i < 500; ++i)
+        pj_thread_sleep(10);
+    return reset_ns_cb_called ? 0 : -1;
+}
+
+/* Wait for the servers to have counted the packets sent to them */
+static int wait_pkt_count(unsigned count)
+{
+    unsigned i;
+
+    for (i = 0; g_server[0].pkt_count + g_server[1].pkt_count < count &&
+                i < 500; ++i)
+    {
+        pj_thread_sleep(10);
+    }
+    return g_server[0].pkt_count + g_server[1].pkt_count >= count ? 0 : -1;
+}
+
+/* After the reset, a nameserver marked as bad is tried again, while the
+ * cache and the pending queries are kept.
+ */
+static int dns_reset_ns_state_test(void)
+{
+    pj_str_t name1 = pj_str("name_reset1");
+    pj_str_t name2 = pj_str("name_reset2");
+    pj_str_t ns_addr = pj_str("127.0.0.1");
+    pj_uint16_t port = g_server[0].port;
+    pj_dns_parsed_packet *r;
+    pj_dns_resolver *res;
+    pj_dns_settings lset;
+    pj_dns_async_query *q;
+    unsigned sent;
+
+    PJ_LOG(3,(THIS_FILE, "  reset nameserver state test"));
+
+    /* A single nameserver, so that a response marks it alone */
+    PJ_TEST_SUCCESS(pj_dns_resolver_create(mem, NULL, 0, timer_heap, ioqueue,
+                                           &res),
+                    NULL, return -900);
+    pj_dns_resolver_get_settings(res, &lset);
+    lset.qretr_delay = 200;
+    lset.qretr_count = 3;
+    pj_dns_resolver_set_settings(res, &lset);
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(res, 1, &ns_addr, &port),
+                    NULL, return -901);
+
+    /* A refusal marks the nameserver as bad */
+    g_server[0].action = PJ_DNS_RCODE_REFUSED;
+    g_server[0].pkt_count = 0;
+    reset_ns_cb_called = PJ_FALSE;
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name1, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_reset_ns, NULL,
+                                                NULL),
+                    NULL, return -902);
+    PJ_TEST_EQ(wait_reset_ns_cb(), 0, NULL, return -903);
+    PJ_TEST_EQ(reset_ns_cb_status,
+               PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_REFUSED),
+               NULL, return -904);
+
+    /* Marked as bad: a query can't be sent */
+    sent = g_server[0].pkt_count + g_server[1].pkt_count;
+    PJ_TEST_EQ(pj_dns_resolver_start_query(res, &name2, PJ_DNS_TYPE_A, 0,
+                                           &dns_callback_reset_ns, NULL,
+                                           NULL),
+               PJLIB_UTIL_EDNSNOWORKINGNS, NULL, return -905);
+
+    /* Tried again after the reset */
+    PJ_TEST_SUCCESS(pj_dns_resolver_reset_ns_state(res), NULL, return -906);
+    g_server[0].action = ACTION_IGNORE;
+    reset_ns_cb_called = PJ_FALSE;
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name2, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_reset_ns, NULL,
+                                                &q),
+                    NULL, return -907);
+    PJ_TEST_NOT_NULL(q, NULL, return -908);
+    PJ_TEST_EQ(wait_pkt_count(sent + 1), 0, NULL, return -909);
+
+    /* The pending query goes on after another reset, and gets the answer
+     * to its retransmission
+     */
+    PJ_TEST_SUCCESS(pj_dns_resolver_reset_ns_state(res), NULL, return -910);
+    r = &g_server[0].resp;
+    r->hdr.qdcount = 1;
+    r->hdr.anscount = 1;
+    r->q = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_query);
+    r->q[0].type = PJ_DNS_TYPE_A;
+    r->q[0].dnsclass = 1;
+    r->q[0].name = name2;
+    r->ans = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_rr);
+    r->ans[0].type = PJ_DNS_TYPE_A;
+    r->ans[0].dnsclass = 1;
+    r->ans[0].name = name2;
+    r->ans[0].ttl = 300;
+    r->ans[0].rdata.a.ip_addr.s_addr = IP_ADDR0;
+    g_server[0].action = ACTION_REPLY;
+    PJ_TEST_EQ(wait_reset_ns_cb(), 0, NULL, return -911);
+    PJ_TEST_SUCCESS(reset_ns_cb_status, NULL, return -912);
+    PJ_TEST_EQ(reset_ns_cb_addr, IP_ADDR0, NULL, return -913);
+
+    /* The cache is kept: answered from it, nothing sent */
+    sent = g_server[0].pkt_count + g_server[1].pkt_count;
+    PJ_TEST_SUCCESS(pj_dns_resolver_reset_ns_state(res), NULL, return -914);
+    reset_ns_cb_called = PJ_FALSE;
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name2, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_reset_ns, NULL,
+                                                &q),
+                    NULL, return -915);
+    PJ_TEST_TRUE(q == NULL, NULL, return -916);
+    PJ_TEST_TRUE(reset_ns_cb_called, NULL, return -917);
+    PJ_TEST_EQ(g_server[0].pkt_count + g_server[1].pkt_count, sent, NULL,
+               return -918);
+
+    pj_dns_resolver_destroy(res, PJ_FALSE);
+
+    return 0;
+}
+
+
 int resolver_test(void)
 {
     int rc;
@@ -2759,6 +2900,11 @@ int resolver_test(void)
 
     PJ_LOG(3,(THIS_FILE, "dns_start_during_destroy_test"));
     rc = dns_start_during_destroy_test();
+    if (rc != 0)
+        goto on_error;
+
+    PJ_LOG(3,(THIS_FILE, "dns_reset_ns_state_test"));
+    rc = dns_reset_ns_state_test();
     if (rc != 0)
         goto on_error;
 

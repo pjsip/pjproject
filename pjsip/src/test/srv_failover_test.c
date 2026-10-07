@@ -2182,6 +2182,140 @@ static int pjsua_contact_probe_case(void)
 }
 #endif
 
+#if PJSIP_HAS_RESOLVER
+static struct {
+    volatile pj_bool_t  done;
+    pj_status_t         status;
+} pjsua_resolved;
+
+static void pjsua_resolve_cb(pj_status_t status, void *token,
+                             const struct pjsip_server_addresses *addr)
+{
+    PJ_UNUSED_ARG(token);
+    PJ_UNUSED_ARG(addr);
+    pjsua_resolved.status = status;
+    pjsua_resolved.done = PJ_TRUE;
+}
+
+/* Resolve a name through PJSUA's endpoint, polling its events. A query
+ * that can't be sent fails before pjsip_endpt_resolve() returns, a sent
+ * one is answered later, here by its timeout.
+ */
+#define PJSUA_RESOLVE_NO_ANSWER    (-1)
+
+static pj_status_t pjsua_resolve(pj_pool_t *pool, const char *host,
+                                 pj_bool_t *at_once)
+{
+    pjsip_host_info target;
+    unsigned waited;
+
+    pj_bzero(&target, sizeof(target));
+    target.type = PJSIP_TRANSPORT_UDP;
+    target.flag = pjsip_transport_get_flag_from_type(target.type);
+    target.addr.host = pj_str((char*)host);
+    pj_bzero(&pjsua_resolved, sizeof(pjsua_resolved));
+    pjsip_endpt_resolve(pjsua_get_pjsip_endpt(), pool, &target, NULL,
+                        &pjsua_resolve_cb);
+    *at_once = pjsua_resolved.done;
+    for (waited = 0; !pjsua_resolved.done && waited < 5000; waited += 20)
+        pjsua_handle_events(20);
+    return pjsua_resolved.done ? pjsua_resolved.status :
+                                 PJSUA_RESOLVE_NO_ANSWER;
+}
+
+/* An IP change makes PJSUA try the nameservers marked as bad again: the
+ * query is sent, instead of failing at once.
+ */
+static int pjsua_ip_change_nameservers_case(void)
+{
+    pjsua_config ua_cfg;
+    pjsua_logging_config log_cfg;
+    pjsua_ip_change_param param;
+    pj_dns_resolver *res;
+    pj_dns_settings st;
+    pj_pool_t *pool;
+    pj_bool_t keep_inv = pjsip_cfg()->endpt.keep_inv_after_tsx_timeout;
+    pj_bool_t at_once, unanswered = PJ_FALSE;
+    pj_status_t status;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  IP change, nameserver marked as bad"));
+
+    if (pjsua_create() != PJ_SUCCESS)
+        return -3210;
+    pjsua_config_default(&ua_cfg);
+    ua_cfg.thread_cnt = 0;
+    ua_cfg.nameserver_count = 1;
+    ua_cfg.nameserver[0] = pj_str("127.0.0.1:9");
+    pjsua_logging_config_default(&log_cfg);
+    log_cfg.level = 3;
+    log_cfg.console_level = 3;
+    if (pjsua_init(&ua_cfg, &log_cfg, NULL) != PJ_SUCCESS ||
+        pjsua_start() != PJ_SUCCESS)
+    {
+        pjsua_destroy();
+        return -3211;
+    }
+    res = pjsip_endpt_get_resolver(pjsua_get_pjsip_endpt());
+    pj_dns_resolver_get_settings(res, &st);
+    st.qretr_delay = 100;
+    st.qretr_count = 1;
+    pj_dns_resolver_set_settings(res, &st);
+    pool = pjsua_pool_create("res", 512, 512);
+    if (!pool) {
+        pjsua_destroy();
+        return -3216;
+    }
+
+    /* The nameserver never answers: marked after the first query, the
+     * next one fails at once
+     */
+    status = pjsua_resolve(pool, "localhost", &at_once);
+    unanswered |= status == PJSUA_RESOLVE_NO_ANSWER;
+    if (status == PJ_SUCCESS || at_once) {
+        PJ_LOG(1,(THIS_FILE, "    first query: status %d, at once %d",
+                  status, at_once));
+        rc = -3212;
+    } else {
+        status = pjsua_resolve(pool, "localhost", &at_once);
+        unanswered |= status == PJSUA_RESOLVE_NO_ANSWER;
+        if (status != PJLIB_UTIL_EDNSNOWORKINGNS || !at_once) {
+            PJ_LOG(1,(THIS_FILE, "    next query: status %d, at once %d",
+                      status, at_once));
+            rc = -3213;
+        }
+    }
+
+    /* Sent again after the IP change */
+    if (rc == 0) {
+        pjsua_ip_change_param_default(&param);
+        param.restart_listener = PJ_FALSE;
+        param.shutdown_transport = PJ_FALSE;
+        if (pjsua_handle_ip_change(&param) != PJ_SUCCESS) {
+            rc = -3214;
+        } else {
+            status = pjsua_resolve(pool, "localhost", &at_once);
+            unanswered |= status == PJSUA_RESOLVE_NO_ANSWER;
+            if (status == PJ_SUCCESS || at_once) {
+                PJ_LOG(1,(THIS_FILE, "    after the change: status %d, "
+                          "at once %d", status, at_once));
+                rc = -3215;
+            }
+        }
+    }
+
+    /* A query without an answer may still refer to the pool */
+    if (!unanswered)
+        pj_pool_release(pool);
+    pjsua_destroy();
+    /* The IP change sets this, and its timer died with PJSUA */
+    pjsip_cfg()->endpt.keep_inv_after_tsx_timeout = keep_inv;
+    if (rc)
+        PJ_LOG(1,(THIS_FILE, "    error: IP change nameservers [%d]", rc));
+    return rc;
+}
+#endif  /* PJSIP_HAS_RESOLVER */
+
 int srv_failover_pjsua_test(void)
 {
     int rc;
@@ -2206,6 +2340,10 @@ int srv_failover_pjsua_test(void)
 #if PJ_HAS_TCP
     if (rc == 0)
         rc = pjsua_contact_probe_case();
+#endif
+#if PJSIP_HAS_RESOLVER
+    if (rc == 0)
+        rc = pjsua_ip_change_nameservers_case();
 #endif
 
     restore_test_endpt();

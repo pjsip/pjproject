@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -676,6 +676,34 @@ PJ_DEF(pj_status_t) pj_dns_resolver_set_ns( pj_dns_resolver *resolver,
     return PJ_SUCCESS;
 }
 
+
+
+/*
+ * Reset the state of the name servers.
+ */
+PJ_DEF(pj_status_t) pj_dns_resolver_reset_ns_state(pj_dns_resolver *resolver)
+{
+    unsigned i;
+    pj_time_val now;
+
+    PJ_ASSERT_RETURN(resolver, PJ_EINVAL);
+
+    pj_grp_lock_acquire(resolver->grp_lock);
+
+    /* As pj_dns_resolver_set_ns() does, keeping what the pending queries
+     * use: the response time and the query measuring it.
+     */
+    pj_gettimeofday(&now);
+    for (i = 0; i < resolver->ns_count; ++i) {
+        resolver->ns[i].state = STATE_ACTIVE;
+        resolver->ns[i].state_expiry = now;
+    }
+    if (resolver->ns_count)
+        PJ_LOG(4,(resolver->name.ptr, "Nameserver state reset"));
+
+    pj_grp_lock_release(resolver->grp_lock);
+    return PJ_SUCCESS;
+}
 
 
 /*

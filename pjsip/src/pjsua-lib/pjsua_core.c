@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -4370,6 +4370,15 @@ PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
 
     /* The failed servers may work on the new network */
     pjsip_endpt_clear_failed_servers(pjsua_var.endpt);
+
+#if PJSIP_HAS_RESOLVER
+    /* So may the nameservers marked as bad */
+    {
+        pj_dns_resolver *res = pjsip_endpt_get_resolver(pjsua_var.endpt);
+        if (res)
+            pj_dns_resolver_reset_ns_state(res);
+    }
+#endif
 
     /* Avoid call disconnection due to request timeout. Some requests may
      * be in progress when network is changing, they may eventually get
