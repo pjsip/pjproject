@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -312,6 +312,20 @@ PJ_DECL(pj_status_t) pjsip_resolver_set_ext_resolver(
  * @return          The DNS resolver instance (may be NULL)
  */
 PJ_DECL(pj_dns_resolver*) pjsip_resolver_get_resolver(pjsip_resolver_t *res);
+
+/**
+ * Get the external resolver implementation of the SIP resolver engine.
+ *
+ * Note that application normally will use #pjsip_endpt_get_ext_resolver()
+ * instead since it does not normally have access to the SIP resolver
+ * instance.
+ *
+ * @param res       The SIP resolver engine.
+ *
+ * @return          The external resolver implementation (may be NULL)
+ */
+PJ_DECL(pjsip_ext_resolver*) pjsip_resolver_get_ext_resolver(
+                                                pjsip_resolver_t *res);
 
 /**
  * Mark a server address as failed for the specified duration, or clear the

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -4783,8 +4783,12 @@ typedef struct pjsua_acc_config
     /**
      * Specify if source TCP port should be used as the initial Contact
      * address if TCP/TLS transport is used. Note that this feature will
-     * be automatically turned off when nameserver is configured because
-     * it may yield different destination address due to DNS SRV resolution.
+     * be automatically turned off when nameservers are configured
+     * (\a pjsua_config.nameserver) or when the application sets a DNS
+     * resolver or an external resolver on the SIP endpoint
+     * (#pjsip_endpt_set_resolver(),
+     * #pjsip_endpt_set_ext_resolver()), because they may yield a different
+     * destination address due to DNS SRV resolution.
      * Also some platforms are unable to report the local address of the
      * TCP socket when it is still connecting. In these cases, this
      * feature will also be turned off.
