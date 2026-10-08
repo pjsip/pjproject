@@ -279,7 +279,7 @@ static pj_status_t v4l2_scan_devs(vid4lin_factory *f)
 {
     vid4lin_dev_info vdi[V4L2_MAX_DEVS];
     char dev_name[32];
-    unsigned i, old_count;
+    unsigned i;
     pj_status_t status;
 
     if (f->dev_pool) {
@@ -289,7 +289,6 @@ static pj_status_t v4l2_scan_devs(vid4lin_factory *f)
     }
 
     pj_bzero(vdi, sizeof(vdi));
-    old_count = f->dev_count;
     f->dev_count = 0;
     f->dev_pool = pj_pool_create(f->pf, DRIVER_NAME, 500, 500, NULL);
 
@@ -378,12 +377,11 @@ static pj_status_t v4l2_scan_devs(vid4lin_factory *f)
     if (f->dev_count == 0)
         return PJ_SUCCESS;
 
-    if (f->dev_count > old_count || f->dev_info == NULL) {
-        f->dev_info = (vid4lin_dev_info*)
-                      pj_pool_calloc(f->dev_pool,
-                                     f->dev_count,
-                                     sizeof(vid4lin_dev_info));
-    }
+    f->dev_info = (vid4lin_dev_info*)
+                  pj_pool_calloc(f->dev_pool,
+                                 f->dev_count,
+                                 sizeof(vid4lin_dev_info));
+
     pj_memcpy(f->dev_info, vdi, f->dev_count * sizeof(vid4lin_dev_info));
 
     return PJ_SUCCESS;
