@@ -112,9 +112,8 @@ struct res_key
 };
 
 
-/* Lookup threads of the system resolver fallback at most, and the queries
- * their semaphore may count waiting for one: Windows refuses a post above
- * the maximum of a semaphore.
+/* Lookup threads at most, and the maximum count of their semaphore:
+ * Windows refuses a post above it.
  */
 #define SYS_MAX_THREADS     16
 #define SYS_SEM_MAX         0x7FFF
@@ -1190,9 +1189,7 @@ static pj_bool_t name_is_unknown(pj_dns_resolver *resolver,
 }
 
 
-/* Whether some nameserver is trusted: then a timeout is about the query,
- * not about the nameservers, and the fallback doesn't apply.
- */
+/* Whether some nameserver is still trusted */
 static pj_bool_t has_active_ns(pj_dns_resolver *resolver)
 {
     unsigned i;
@@ -1210,9 +1207,7 @@ static pj_bool_t has_active_ns(pj_dns_resolver *resolver)
 }
 
 
-/* Whether the query, or a query which joined it, still waits for it:
- * a cancelled query keeps its callback cleared.
- */
+/* Whether the query, or a query which joined it, is still waited for */
 static pj_bool_t query_has_cb(const pj_dns_async_query *q)
 {
     const pj_dns_async_query *cq;
@@ -1321,9 +1316,7 @@ static int sys_thread_proc(void *arg)
             pj_list_erase(q);
             resolver->sys_queued--;
 
-            /* Nobody waits for it anymore, or the option went off: the
-             * error of the nameservers instead of a lookup
-             */
+            /* Nobody waits for it, or the option is off: no lookup */
             if (!query_has_cb(q) || !resolver->settings.sys_fallback) {
                 q->sys.lookup = PJ_FALSE;
                 q->sys.pending = PJ_FALSE;
@@ -1356,9 +1349,8 @@ static int sys_thread_proc(void *arg)
 }
 
 
-/* Have a thread for the query being queued: a new one while every one is
- * busy or has a query waiting, up to the setting. Fails only when none
- * could be created at all.
+/* A new lookup thread while all are busy, up to the setting. Fails only
+ * when there is none at all.
  */
 static pj_status_t sys_thread_start(pj_dns_resolver *resolver)
 {
@@ -1511,8 +1503,8 @@ static void report_sys(pj_dns_resolver *resolver, pj_dns_async_query *q)
                      pj_dns_get_type_name(q->key.qtype), q->key.name,
                      pj_strerror(status, errmsg, sizeof(errmsg)).ptr));
 
-        /* The nameserver's error stands then, cached as without the
-         * fallback, for PJ_DNS_RESOLVER_INVALID_TTL
+        /* Both failed: the nameserver's error is cached, as without the
+         * fallback
          */
         if (status == PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_REFUSED))
             rcode = PJ_DNS_RCODE_REFUSED;
@@ -1561,9 +1553,7 @@ static void report_sys(pj_dns_resolver *resolver, pj_dns_async_query *q)
 
     pj_grp_lock_acquire(resolver->grp_lock);
 
-    /* Cached, after the callbacks as a nameserver's answer is, for the
-     * time a nameserver marked as bad is left alone
-     */
+    /* Cached as a nameserver's answer is, for bad_ns_ttl */
     if (resp && !resolver->shutting_down)
         update_res_cache(resolver, &q->key, PJ_SUCCESS, PJ_TRUE, &pkt);
 
@@ -1606,9 +1596,7 @@ static void on_done_timer( pj_timer_heap_t *timer_heap,
         }
         pj_grp_lock_release(resolver->grp_lock);
 
-        /* Without a lookup thread, the lookup runs here, the queries
-         * started for the name meanwhile joining it
-         */
+        /* Without threads, the lookup runs here */
         if (q->sys.pending) {
             sys_lookup_run(resolver, q);
             pj_grp_lock_acquire(resolver->grp_lock);
@@ -2450,9 +2438,7 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
         }
     }
 
-    /* No nameserver is trusted, none answered this query: the system
-     * resolver may. The state of the nameservers is left to them.
-     */
+    /* No trusted nameserver answered: ask the system resolver */
     if (resolver->settings.sys_fallback && !has_active_ns(resolver)) {
         pj_hash_set(NULL, resolver->hquerybyid, &q->id, sizeof(q->id), 0,
                     NULL);
@@ -2673,9 +2659,8 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     pj_hash_set(NULL, resolver->hquerybyid, &q->id, sizeof(q->id), 0, NULL);
     pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key), 0, NULL);
 
-    /* The nameserver refused, or failed on an address: not an answer
-     * about the name, which the system resolver may know; a failed
-     * AAAA stands, some nameservers fail an address type they lack.
+    /* A refusal, or a failed A query, says nothing about the name. A
+     * failed AAAA query stands: some nameservers fail a missing AAAA.
      */
     if (resolver->settings.sys_fallback &&
         (q->key.qtype == PJ_DNS_TYPE_A || q->key.qtype == PJ_DNS_TYPE_AAAA) &&

@@ -197,42 +197,29 @@
  * Default value of the resolver's setting to resolve with the system
  * resolver while no nameserver answers (pj_dns_settings.sys_fallback).
  *
- * A DNS A or AAAA query which no nameserver answers, because none can be
- * sent to or because it timed out while none is trusted, is then resolved
- * with pj_getaddrinfo() instead, and the addresses found are reported as
- * its response. They are cached for #PJ_DNS_RESOLVER_BAD_NS_TTL, the time
- * a nameserver marked as bad is left alone, so that the requests of
- * that time don't ask the system resolver again, and an answer of a
- * nameserver replaces them. So is a query the nameserver refused, or failed
- * for a DNS A query, e.g. the nameserver of a captive portal: that is
- * about the nameserver, not about the name, and the error is cached as
- * usual only when the system resolver fails too. A query of another type,
- * e.g. DNS SRV, fails as it does without the setting, but asynchronously,
- * so that #pj_dns_srv_resolve() falls back to the address of the domain
- * as it does when the nameservers answer that there is no SRV record.
+ * A DNS A or AAAA query is then resolved with pj_getaddrinfo() when no
+ * nameserver can be sent to, when it times out while no nameserver is
+ * trusted, or when the nameserver refuses it or fails a DNS A query, e.g.
+ * on a captive portal. The addresses are reported as its response and
+ * cached for #PJ_DNS_RESOLVER_BAD_NS_TTL; an answer of a nameserver
+ * replaces them. A query of another type, e.g. DNS SRV, fails as without
+ * the setting, but asynchronously, so that #pj_dns_srv_resolve() falls
+ * back to the address of the domain as on a negative answer.
  *
- * The setting leaves the state of the nameservers to the resolver: while
- * one is trusted, i.e. answered within #PJ_DNS_RESOLVER_GOOD_NS_TTL, a
- * timeout is reported as without the setting. The nameservers are not
- * trusted right after they are set or reset, e.g. by
- * #pj_dns_resolver_reset_ns_state() after a network change, and after
- * they are marked as bad: the query which probes them again then waits
- * for its retransmissions before the system resolver is asked, i.e. for
- * #PJ_DNS_RESOLVER_QUERY_RETRANSMIT_COUNT times
- * #PJ_DNS_RESOLVER_QUERY_RETRANSMIT_DELAY, 10 s by default, as it would
- * before failing without the setting, and so do the queries sent while
- * the probing lasts, two delays more; a request resolved with DNS SRV
- * waits for the probing to end, 14 s. The nameservers are probed again by
- * the first query after #PJ_DNS_RESOLVER_BAD_NS_TTL, so with sparse
- * traffic every request after a quiet minute pays this wait.
+ * The setting doesn't change the state of the nameservers: while one is
+ * trusted, i.e. answered within #PJ_DNS_RESOLVER_GOOD_NS_TTL, a timeout is
+ * reported as without it. They are not trusted right after being set or
+ * reset, e.g. by #pj_dns_resolver_reset_ns_state() on a network change, nor
+ * while marked as bad. A query which probes them again still waits for its
+ * retransmissions, 10 s by default, 14 s with DNS SRV, as without the
+ * setting, then gets the answer of the system resolver. With sparse
+ * traffic, that is every request after #PJ_DNS_RESOLVER_BAD_NS_TTL of
+ * quiet.
  *
- * The system resolver is asked from threads of the resolver, created
- * when needed, up to #PJ_DNS_RESOLVER_SYS_FALLBACK_THREADS, which
- * #pj_dns_resolver_destroy() waits for, and the answer is reported from
- * the timer of the resolver, or from the thread itself when the timer
- * can't be scheduled, out of memory. Without threads, it is asked from
- * the timer of the resolver, which blocks its polling for as long as the
- * lookup takes.
+ * The lookups run in threads of the resolver, up to
+ * #PJ_DNS_RESOLVER_SYS_FALLBACK_THREADS, which #pj_dns_resolver_destroy()
+ * waits for. Without threads they run from the timer of the resolver and
+ * block its polling meanwhile.
  *
  * Default: PJ_FALSE
  */
@@ -242,13 +229,11 @@
 
 
 /**
- * Default value of the resolver's setting for the threads asking the
- * system resolver at most (pj_dns_settings.sys_threads), see
- * #PJ_DNS_RESOLVER_SYS_FALLBACK. The lookups of the names of a request,
- * e.g. the A and AAAA records of a domain, its STUN and TURN servers, run
- * at the same time rather than one after the other, each taking up to the
- * timeout of the system resolver when it is slow too. The threads are
- * created when needed, none with the setting off, and at most 16.
+ * Default value of the resolver's setting for the most lookups with the
+ * system resolver at a time (pj_dns_settings.sys_threads), see
+ * #PJ_DNS_RESOLVER_SYS_FALLBACK, so that e.g. the A and AAAA records of a
+ * domain and its STUN and TURN servers don't wait for each other. One
+ * thread per lookup, created when needed, at most 16.
  *
  * Default: 4
  */

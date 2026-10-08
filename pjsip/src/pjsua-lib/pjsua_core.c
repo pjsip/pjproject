@@ -1202,9 +1202,7 @@ static pj_status_t apply_nameservers(const nameserver_list *ns)
     return PJ_SUCCESS;
 }
 
-/* Turn the system resolver fallback off on the resolvers of PJSUA, so that
- * no lookup starts anymore: destroying them waits for the lookups running.
- */
+/* No new lookups with the system resolver once destroying starts */
 static void stop_resolver_fallback(void)
 {
     pj_dns_resolver *res[2];
