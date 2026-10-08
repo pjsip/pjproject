@@ -41,6 +41,7 @@ extern int encryption_benchmark();
 extern int stun_test();
 extern int test_main(int argc, char *argv[]);
 extern int resolver_test(void);
+extern int resolver_nothreads_test(void);
 extern int http_client_test();
 extern int websock_test(void);
 

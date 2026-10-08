@@ -1229,15 +1229,24 @@ static pj_bool_t query_has_cb(const pj_dns_async_query *q)
 
 
 /* Queue the query for the done_timer to report it. */
+/* No query joins it anymore */
+static void sys_unjoin(pj_dns_resolver *resolver, const pj_dns_async_query *q)
+{
+    if (pj_hash_get(resolver->hquerybyres, &q->key, sizeof(q->key), NULL) == q)
+        pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key), 0,
+                    NULL);
+}
+
+
+/* Queue the query for the done_timer to report it. */
 static pj_status_t report_later(pj_dns_resolver *resolver,
                                 pj_dns_async_query *q)
 {
     pj_time_val delay = {0, 0};
 
-    /* No query joins it anymore */
-    if (pj_hash_get(resolver->hquerybyres, &q->key, sizeof(q->key), NULL) == q)
-        pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key), 0,
-                    NULL);
+    /* Without threads, joined until looked up from the done_timer */
+    if (!q->sys.pending)
+        sys_unjoin(resolver, q);
     pj_list_push_back(&resolver->done_list, q);
 
     /* Once destroy has started, it reports the queries itself */
@@ -1254,6 +1263,7 @@ static pj_status_t report_later(pj_dns_resolver *resolver,
                          "Error scheduling the report of DNS %s query for %s",
                          pj_dns_get_type_name(q->key.qtype), q->key.name));
             pj_list_erase(q);
+            sys_unjoin(resolver, q);
             return status;
         }
         resolver->done_scheduled = PJ_TRUE;
@@ -1597,9 +1607,15 @@ static void on_done_timer( pj_timer_heap_t *timer_heap,
         }
         pj_grp_lock_release(resolver->grp_lock);
 
-        /* Without a lookup thread, the lookup runs here */
-        if (q->sys.pending)
+        /* Without a lookup thread, the lookup runs here, the queries
+         * started for the name meanwhile joining it
+         */
+        if (q->sys.pending) {
             sys_lookup_run(resolver, q);
+            pj_grp_lock_acquire(resolver->grp_lock);
+            sys_unjoin(resolver, q);
+            pj_grp_lock_release(resolver->grp_lock);
+        }
         report_sys(resolver, q);
 
         pj_grp_lock_acquire(resolver->grp_lock);
@@ -1616,8 +1632,7 @@ static void sys_collect(pj_dns_resolver *resolver, struct query_head *list)
     while (!pj_list_empty(&resolver->sys_jobs)) {
         pj_dns_async_query *q = resolver->sys_jobs.next;
         pj_list_erase(q);
-        pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key), 0,
-                    NULL);
+        sys_unjoin(resolver, q);
         pj_list_push_back(list, q);
     }
 #if PJ_HAS_THREADS
@@ -1626,6 +1641,7 @@ static void sys_collect(pj_dns_resolver *resolver, struct query_head *list)
     while (!pj_list_empty(&resolver->done_list)) {
         pj_dns_async_query *q = resolver->done_list.next;
         pj_list_erase(q);
+        sys_unjoin(resolver, q);
         pj_list_push_back(list, q);
     }
 }

@@ -88,6 +88,9 @@ static int test_inner(int argc, char *argv[])
 
 #if INCLUDE_RESOLVER_TEST
     UT_ADD_TEST(&test_app.ut_app, resolver_test, 0);
+#if !PJ_HAS_THREADS
+    UT_ADD_TEST(&test_app.ut_app, resolver_nothreads_test, 0);
+#endif
 #endif
 
 #if INCLUDE_HTTP_CLIENT_TEST

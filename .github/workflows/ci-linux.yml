@@ -314,6 +314,8 @@ jobs:
         exit $rc
     - name: pjlib-test
       run: make pjlib-test
+    - name: pjlib-util-test (resolver without threads)
+      run: cd pjlib-util/build && ../bin/pjlib-util-test-`make -s -C ../.. infotarget` $CI_MODE resolver_nothreads_test
     - name: upload artifacts on failure
       if: ${{ failure() }}
       uses: actions/upload-artifact@v4

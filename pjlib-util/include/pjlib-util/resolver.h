@@ -190,8 +190,8 @@ typedef void pj_dns_callback(void *user_data,
  * Type of the function resolving a name with the system resolver for
  * the \a sys_fallback setting, see #PJ_DNS_RESOLVER_SYS_FALLBACK. It has
  * the signature of #pj_getaddrinfo(), which is used when none is set, and
- * is called from the lookup thread of the resolver, or from its timer
- * without threads.
+ * is called from a lookup thread of the resolver, or from its timer
+ * without threads. It must not call the functions of the resolver.
  */
 typedef pj_status_t pj_dns_sys_lookup(int af, const pj_str_t *name,
                                       unsigned *count, pj_addrinfo ai[]);
