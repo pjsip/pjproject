@@ -2392,6 +2392,159 @@ static int pjsua_resolver_fallback_case(void)
         PJ_LOG(1,(THIS_FILE, "    error: resolver fallback [%d]", rc));
     return rc;
 }
+
+/* The system resolver of the destroy case: counts the lookups, finds
+ * the name on the loopback address.
+ */
+static volatile int pjsua_sys_count;
+
+static pj_status_t pjsua_sys_lookup(int af, const pj_str_t *name,
+                                    unsigned *count, pj_addrinfo ai[])
+{
+    pj_str_t lo = pj_str("127.0.0.1");
+
+    PJ_UNUSED_ARG(name);
+
+    pjsua_sys_count++;
+    if (af != pj_AF_INET())
+        return PJ_ERESOLVE;
+    pj_bzero(&ai[0], sizeof(ai[0]));
+    pj_sockaddr_init(af, &ai[0].ai_addr, &lo, 0);
+    *count = 1;
+    return PJ_SUCCESS;
+}
+
+/* Destroying PJSUA turns the option off first: the unregistration, which
+ * resolves the registrar again, is not resolved with the system resolver.
+ */
+static int pjsua_destroy_fallback_case(void)
+{
+    pjsua_config ua_cfg;
+    pjsua_logging_config log_cfg;
+    pjsua_transport_config tcfg;
+    pjsua_acc_config acc_cfg;
+    pjsua_acc_info info;
+    pjsua_acc_id acc_id;
+    pj_dns_resolver *res;
+    pj_dns_settings st;
+    char reg_uri[64];
+    unsigned i, waited;
+    int count = 0, rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  resolver fallback stopped by the destroy"));
+
+    /* A registrar answering 200 */
+    pj_bzero(&g, sizeof(g));
+    pjsua_sys_count = 0;
+    g.pool = pj_pool_create(&caching_pool.factory, "srvfo", 1000, 1000,
+                            NULL);
+    if (!g.pool)
+        return -3230;
+    if (pj_mutex_create_simple(g.pool, "srvfo", &g.mutex) != PJ_SUCCESS) {
+        rc = -3231;
+        goto on_return;
+    }
+    for (i = 0; i < SRV_CNT; ++i) {
+        unsigned j;
+
+        g.srv[i].udp = g.srv[i].tcp = PJ_INVALID_SOCKET;
+        for (j = 0; j < MAX_CONN; ++j)
+            g.srv[i].conn[j] = g.srv[i].filler[j] = PJ_INVALID_SOCKET;
+    }
+    pj_ansi_strxcpy(g.srv[0].name, "srv1", sizeof(g.srv[0].name));
+    if (set_mode(&g.srv[0], MODE_OK) != PJ_SUCCESS ||
+        pj_thread_create(g.pool, "srvfo", &server_thread, NULL, 0, 0,
+                         &g.thread) != PJ_SUCCESS)
+    {
+        rc = -3232;
+        goto on_return;
+    }
+
+    /* The nameserver never answers, the registrar is found by the system
+     * resolver, nothing is cached so that the unregistration asks again
+     */
+    if (pjsua_create() != PJ_SUCCESS) {
+        rc = -3233;
+        goto on_return;
+    }
+    pjsua_config_default(&ua_cfg);
+    ua_cfg.thread_cnt = 0;
+    ua_cfg.nameserver_count = 1;
+    ua_cfg.nameserver[0] = pj_str("127.0.0.1:9");
+    ua_cfg.resolver_fallback = PJ_TRUE;
+    pjsua_logging_config_default(&log_cfg);
+    log_cfg.level = 3;
+    log_cfg.console_level = 3;
+    pjsua_transport_config_default(&tcfg);
+    tcfg.port = 0;
+    if (pjsua_init(&ua_cfg, &log_cfg, NULL) != PJ_SUCCESS ||
+        pjsua_transport_create(PJSIP_TRANSPORT_UDP, &tcfg, NULL) !=
+            PJ_SUCCESS ||
+        pjsua_start() != PJ_SUCCESS)
+    {
+        pjsua_destroy();
+        rc = -3234;
+        goto on_return;
+    }
+    res = pjsip_endpt_get_resolver(pjsua_get_pjsip_endpt());
+    pj_dns_resolver_get_settings(res, &st);
+    st.qretr_delay = 100;
+    st.qretr_count = 1;
+    st.cache_max_ttl = 0;
+    st.sys_lookup = &pjsua_sys_lookup;
+    pj_dns_resolver_set_settings(res, &st);
+
+    pjsua_acc_config_default(&acc_cfg);
+    acc_cfg.id = pj_str("sip:test@localhost");
+    pj_ansi_snprintf(reg_uri, sizeof(reg_uri), "sip:localhost:%d",
+                     g.srv[0].udp_port);
+    acc_cfg.reg_uri = pj_str(reg_uri);
+    acc_cfg.unreg_timeout = 1000;
+    if (pjsua_acc_add(&acc_cfg, PJ_TRUE, &acc_id) != PJ_SUCCESS) {
+        pjsua_destroy();
+        rc = -3235;
+        goto on_return;
+    }
+    for (waited = 0; waited < 5000; waited += 20) {
+        if (pjsua_acc_get_info(acc_id, &info) == PJ_SUCCESS &&
+            info.status == PJSIP_SC_OK)
+        {
+            break;
+        }
+        pjsua_handle_events(20);
+    }
+    count = pjsua_sys_count;
+    if (waited >= 5000 || count < 1) {
+        PJ_LOG(1,(THIS_FILE, "    registration: status %d, lookups %d",
+                  info.status, count));
+        rc = -3236;
+    }
+
+    /* The unregistration fails as without the option */
+    pjsua_destroy();
+    if (rc == 0 && pjsua_sys_count != count) {
+        PJ_LOG(1,(THIS_FILE, "    lookups when destroying: %d",
+                  pjsua_sys_count - count));
+        rc = -3237;
+    }
+
+on_return:
+    if (g.thread) {
+        g.quit = PJ_TRUE;
+        pj_thread_join(g.thread);
+        pj_thread_destroy(g.thread);
+    }
+    if (g.mutex)
+        (void)set_mode(&g.srv[0], MODE_CLOSED);
+    if (g.mutex)
+        pj_mutex_destroy(g.mutex);
+    if (g.pool)
+        pj_pool_release(g.pool);
+    pj_bzero(&g, sizeof(g));
+    if (rc)
+        PJ_LOG(1,(THIS_FILE, "    error: fallback stopped [%d]", rc));
+    return rc;
+}
 #endif  /* PJ_HAS_THREADS */
 #endif  /* PJSIP_HAS_RESOLVER */
 
@@ -2426,6 +2579,8 @@ int srv_failover_pjsua_test(void)
 #if PJ_HAS_THREADS
     if (rc == 0)
         rc = pjsua_resolver_fallback_case();
+    if (rc == 0)
+        rc = pjsua_destroy_fallback_case();
 #endif
 #endif
 
