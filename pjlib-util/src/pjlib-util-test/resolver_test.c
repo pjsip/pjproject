@@ -2912,6 +2912,11 @@ on_return:
 
 #define SYS_ADDR    0x0A000001
 
+/* Retransmit delay where a server must answer before the timeout, which
+ * a slow CI runner would otherwise take for a dead server
+ */
+#define SYS_ANSWER_DELAY    500
+
 /* The system resolver of the tests: answers SYS_ADDR, or the status set,
  * after waiting on the semaphore when one is set.
  */
@@ -3407,10 +3412,7 @@ static int dns_sys_fallback_timeout_test(void)
     PJ_LOG(3,(THIS_FILE, "  system resolver fallback, timeout test"));
 
     sys_reset();
-    /* Long enough for the servers not to be marked as bad by the probing
-     * which follows their first query, but by the timeout
-     */
-    res = sys_resolver(PJ_TRUE, 300);
+    res = sys_resolver(PJ_TRUE, SYS_ANSWER_DELAY);
     PJ_TEST_NOT_NULL(res, NULL, SYS_FAIL(-1000));
 
     /* The servers answer: they are known to work */
@@ -4030,7 +4032,7 @@ static int dns_sys_fallback_trusted_test(void)
         sys_drop.drop_type = PJ_DNS_TYPE_AAAA;
         g_server[0].action = ACTION_CB;
         g_server[0].action_cb = &drop_cb;
-        res = sys_resolver_ns(fallback, 100, 1);
+        res = sys_resolver_ns(fallback, SYS_ANSWER_DELAY, 1);
         PJ_TEST_NOT_NULL(res, NULL, SYS_FAIL(-1210));
 
         /* Trusted once it answers; the AAAA queries time out, as many
@@ -4127,7 +4129,7 @@ static int dns_sys_fallback_trusted_test(void)
     g_server[1].resp.ans[0].dnsclass = 1;
     g_server[1].resp.ans[0].name = name;
     g_server[1].resp.ans[0].rdata.a.ip_addr.s_addr = IP_ADDR0;
-    res = sys_resolver(PJ_TRUE, 100);
+    res = sys_resolver(PJ_TRUE, SYS_ANSWER_DELAY);
     PJ_TEST_NOT_NULL(res, NULL, SYS_FAIL(-1235));
     PJ_TEST_EQ(sys_time_out_type(res, "name.trusted.test", PJ_DNS_TYPE_A, 1,
                                  PJ_SUCCESS),
@@ -4315,7 +4317,7 @@ static int dns_sys_fallback_rcode_test(void)
 
     sys_reset();
     g_server[0].action = PJ_DNS_RCODE_REFUSED;
-    res = sys_resolver_ns(PJ_TRUE, 100, 1);
+    res = sys_resolver_ns(PJ_TRUE, SYS_ANSWER_DELAY, 1);
     PJ_TEST_NOT_NULL(res, NULL, SYS_FAIL(-1260));
 
     /* Refused: the system resolver's answer */
@@ -4436,7 +4438,7 @@ static int dns_sys_fallback_rcode_test(void)
     /* Without the option: refused, and cached */
     sys_reset();
     g_server[0].action = PJ_DNS_RCODE_REFUSED;
-    res = sys_resolver_ns(PJ_FALSE, 100, 1);
+    res = sys_resolver_ns(PJ_FALSE, SYS_ANSWER_DELAY, 1);
     PJ_TEST_NOT_NULL(res, NULL, SYS_FAIL(-1303));
     PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name1, PJ_DNS_TYPE_A, 0,
                                                 &dns_callback_sys, (void*)0,
