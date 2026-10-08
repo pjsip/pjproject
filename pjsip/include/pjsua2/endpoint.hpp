@@ -1033,9 +1033,10 @@ struct UaConfig : public PersistentObject
 
     /**
      * Resolve with the system resolver while no nameserver answers. See
-     * also pjsua_config.resolver_fallback. Note that libDestroy() then
-     * waits for a lookup in progress, up to the timeout of the system
-     * resolver.
+     * also pjsua_config.resolver_fallback. Note that libDestroy() turns
+     * it off first, so that unregistering starts no lookup, and then waits
+     * for the lookups already running, up to the timeout of the system
+     * resolver: on a mobile device, call it off the main thread.
      *
      * Default: PJ_DNS_RESOLVER_SYS_FALLBACK (disabled)
      */

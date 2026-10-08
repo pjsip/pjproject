@@ -4059,6 +4059,7 @@ static int dns_sys_fallback_cancel_test(void)
     pj_str_t name2 = pj_str("cancel2");
     pj_str_t name3 = pj_str("cancel3");
     pj_dns_resolver *res;
+    pj_dns_settings lset;
     pj_dns_async_query *q;
 
     PJ_LOG(3,(THIS_FILE, "  system resolver fallback, cancelled queries"));
@@ -4110,6 +4111,30 @@ static int dns_sys_fallback_cancel_test(void)
                PJLIB_UTIL_EDNSNOWORKINGNS, NULL, return -1257);
     PJ_TEST_EQ(q, NULL, NULL, return -1258);
     PJ_TEST_EQ(sys_state.count, 2, NULL, return -1259);
+
+    /* The option turned off while a query waits for the lookup thread,
+     * as PJSUA does when destroying: the error of the nameservers
+     */
+    sys_cb[3].called = 0;
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name2, PJ_DNS_TYPE_AAAA,
+                                                0, &dns_callback_sys,
+                                                (void*)2, NULL),
+                    NULL, return -1380);
+    PJ_TEST_EQ(wait_sys_count(3), 0, NULL, return -1381);
+    sys_cb[2].called = 0;
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name3, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_sys, (void*)3,
+                                                NULL),
+                    NULL, return -1382);
+    pj_dns_resolver_get_settings(res, &lset);
+    lset.sys_fallback = PJ_FALSE;
+    pj_dns_resolver_set_settings(res, &lset);
+    pj_sem_post(sys_state.block);
+    PJ_TEST_EQ(wait_sys_cb(2), 0, NULL, return -1383);
+    PJ_TEST_EQ(wait_sys_cb(3), 0, NULL, return -1384);
+    PJ_TEST_EQ(sys_cb[3].status, PJLIB_UTIL_EDNSNOWORKINGNS, NULL,
+               return -1385);
+    PJ_TEST_EQ(sys_state.count, 3, NULL, return -1386);
 
     pj_dns_resolver_destroy(res, PJ_FALSE);
     pj_sem_destroy(sys_state.block);

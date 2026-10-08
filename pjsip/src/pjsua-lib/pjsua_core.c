@@ -1202,6 +1202,29 @@ static pj_status_t apply_nameservers(const nameserver_list *ns)
     return PJ_SUCCESS;
 }
 
+/* Turn the system resolver fallback off on the resolvers of PJSUA, so that
+ * no lookup starts anymore: destroying them waits for the lookups running.
+ */
+static void stop_resolver_fallback(void)
+{
+    pj_dns_resolver *res[2];
+    unsigned i;
+
+    res[0] = pjsua_var.resolver;
+    res[1] = pjsua_var.resolver_detached;
+    for (i = 0; i < PJ_ARRAY_SIZE(res); ++i) {
+        pj_dns_settings st;
+
+        if (!res[i])
+            continue;
+        pj_dns_resolver_get_settings(res[i], &st);
+        if (st.sys_fallback) {
+            st.sys_fallback = PJ_FALSE;
+            pj_dns_resolver_set_settings(res[i], &st);
+        }
+    }
+}
+
 #endif  /* PJSIP_HAS_RESOLVER */
 
 /*
@@ -2153,7 +2176,12 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 
     /* Signal threads to quit: */
     pjsua_stop_worker_threads();
-    
+
+#if PJSIP_HAS_RESOLVER
+    /* Unregistering starts no lookup with the system resolver */
+    stop_resolver_fallback();
+#endif
+
     if (pjsua_var.endpt) {
         unsigned max_wait;
 
