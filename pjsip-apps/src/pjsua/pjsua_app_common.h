@@ -90,6 +90,7 @@ typedef struct pjsua_app_config
     pj_bool_t               use_tls;
     pj_bool_t               keep_call_on_tsx_fail;
     pj_str_t                instance_id;
+    pj_bool_t               outb_disable;
     pjsua_transport_config  udp_cfg;
     pjsua_transport_config  rtp_cfg;
     pj_bool_t               enable_rtcp_mux;

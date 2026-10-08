@@ -2195,6 +2195,8 @@ static pj_status_t app_init(void)
         {
             app_config.acc_cfg[i].rfc5626_instance_id = app_config.instance_id;
         }
+        if (app_config.outb_disable)
+            app_config.acc_cfg[i].use_rfc5626 = PJ_FALSE;
 
         status = pjsua_acc_add(&app_config.acc_cfg[i], PJ_TRUE, NULL);
         if (status != PJ_SUCCESS)
