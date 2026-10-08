@@ -4186,6 +4186,124 @@ static int dns_sys_fallback_pool_test(void)
     return 0;
 }
 
+/* A pool which can't grow: the timer heap on it can't either, past its
+ * first entries.
+ */
+static void nogrow_cb(pj_pool_t *p, pj_size_t size)
+{
+    PJ_UNUSED_ARG(p);
+    PJ_UNUSED_ARG(size);
+}
+
+static void dummy_timer_cb(pj_timer_heap_t *th, pj_timer_entry *e)
+{
+    PJ_UNUSED_ARG(th);
+    PJ_UNUSED_ARG(e);
+}
+
+/* Poll the timer heap of the test until the callback */
+static int sys_poll_cb(pj_timer_heap_t *th, unsigned i)
+{
+    unsigned n;
+
+    for (n = 0; !sys_cb[i].called && n < 500; ++n) {
+        pj_timer_heap_poll(th, NULL);
+        pj_thread_sleep(10);
+    }
+    return sys_cb[i].called ? 0 : -1;
+}
+
+/* When the report of a query can't be scheduled, out of memory, it is
+ * reported all the same: from the lookup thread, or as a failure before
+ * pj_dns_resolver_start_query() returns.
+ */
+static int dns_sys_fallback_schedule_test(void)
+{
+    static pj_timer_entry dummy[128];
+    pj_str_t name0 = pj_str("sched0");
+    pj_str_t name1 = pj_str("sched1");
+    pj_str_t name2 = pj_str("sched2");
+    pj_str_t nameservers[2];
+    pj_uint16_t ports[2];
+    pj_time_val delay = {60, 0};
+    pj_pool_t *nogrow;
+    pj_timer_heap_t *th;
+    pj_dns_resolver *res;
+    pj_dns_settings lset;
+    pj_dns_async_query *q;
+    unsigned i, filled;
+
+    PJ_LOG(3,(THIS_FILE, "  system resolver fallback, timer heap full test"));
+
+    sys_reset();
+    nogrow = pj_pool_create(mem, "nogrow", 4000, 0, &nogrow_cb);
+    PJ_TEST_NOT_NULL(nogrow, NULL, return -1360);
+    PJ_TEST_SUCCESS(pj_timer_heap_create(nogrow, 4, &th), NULL,
+                    return -1361);
+    PJ_TEST_SUCCESS(pj_dns_resolver_create(mem, NULL, 0, th, ioqueue, &res),
+                    NULL, return -1362);
+    pj_dns_resolver_get_settings(res, &lset);
+    lset.qretr_delay = 100;
+    lset.qretr_count = 2;
+    lset.sys_fallback = PJ_TRUE;
+    lset.sys_lookup = &test_sys_lookup;
+    pj_dns_resolver_set_settings(res, &lset);
+    sys_state.qretr_delay = 100;
+    nameservers[0] = nameservers[1] = pj_str("127.0.0.1");
+    ports[0] = g_server[0].port;
+    ports[1] = g_server[1].port;
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(res, 2, nameservers, ports), NULL,
+                    return -1363);
+
+    /* Timed out on this heap, reported from it */
+    g_server[0].action = g_server[1].action = ACTION_IGNORE;
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name0, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_sys, (void*)0,
+                                                NULL),
+                    NULL, return -1364);
+    PJ_TEST_EQ(sys_poll_cb(th, 0), 0, NULL, return -1365);
+    PJ_TEST_SUCCESS(sys_cb[0].status, NULL, return -1366);
+    sys_wait_probing();
+    PJ_TEST_TRUE(sys_none_works(res), NULL, return -1367);
+
+    /* A lookup in progress, then the heap is filled up */
+    PJ_TEST_SUCCESS(pj_sem_create(pool, NULL, 0, 8, &sys_state.block), NULL,
+                    return -1368);
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name1, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_sys, (void*)1,
+                                                NULL),
+                    NULL, return -1369);
+    PJ_TEST_EQ(wait_sys_count(2), 0, NULL, return -1370);
+    for (filled = 0; filled < PJ_ARRAY_SIZE(dummy); ++filled) {
+        pj_timer_entry_init(&dummy[filled], 0, NULL, &dummy_timer_cb);
+        if (pj_timer_heap_schedule(th, &dummy[filled], &delay) != PJ_SUCCESS)
+            break;
+    }
+    PJ_TEST_TRUE(filled < PJ_ARRAY_SIZE(dummy), NULL, return -1371);
+
+    /* A query to fail later can't be: failed now */
+    PJ_TEST_EQ(pj_dns_resolver_start_query(res, &name2, PJ_DNS_TYPE_SRV, 0,
+                                           &dns_callback_sys, (void*)2, &q),
+               PJLIB_UTIL_EDNSNOWORKINGNS, NULL, return -1372);
+    PJ_TEST_EQ(q, NULL, NULL, return -1373);
+    PJ_TEST_EQ(sys_cb[2].called, 0, NULL, return -1374);
+
+    /* The lookup is reported from its thread, the heap being full */
+    pj_sem_post(sys_state.block);
+    PJ_TEST_EQ(wait_sys_cb(1), 0, NULL, return -1375);
+    PJ_TEST_SUCCESS(sys_cb[1].status, NULL, return -1376);
+    PJ_TEST_EQ(sys_cb[1].addr, SYS_ADDR, NULL, return -1377);
+
+    for (i = 0; i < filled; ++i)
+        pj_timer_heap_cancel(th, &dummy[i]);
+    pj_dns_resolver_destroy(res, PJ_FALSE);
+    pj_sem_destroy(sys_state.block);
+    sys_state.block = NULL;
+    pj_timer_heap_destroy(th);
+    pj_pool_release(nogrow);
+    return 0;
+}
+
 /* The nameservers set or reset after a query was sent are not trusted:
  * its timeout is resolved with the system resolver, and they are probed.
  */
@@ -4504,6 +4622,11 @@ int resolver_test(void)
 
     PJ_LOG(3,(THIS_FILE, "dns_sys_fallback_pool_test"));
     rc = dns_sys_fallback_pool_test();
+    if (rc != 0)
+        goto on_error;
+
+    PJ_LOG(3,(THIS_FILE, "dns_sys_fallback_schedule_test"));
+    rc = dns_sys_fallback_schedule_test();
     if (rc != 0)
         goto on_error;
 

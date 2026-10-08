@@ -227,7 +227,9 @@
  *
  * The system resolver is asked from threads of the resolver, created
  * when needed, up to #PJ_DNS_RESOLVER_SYS_FALLBACK_THREADS, which
- * #pj_dns_resolver_destroy() waits for. Without threads, it is asked from
+ * #pj_dns_resolver_destroy() waits for, and the answer is reported from
+ * the timer of the resolver, or from the thread itself when the timer
+ * can't be scheduled, out of memory. Without threads, it is asked from
  * the timer of the resolver, which blocks its polling for as long as the
  * lookup takes.
  *

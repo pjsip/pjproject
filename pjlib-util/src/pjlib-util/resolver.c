@@ -297,6 +297,8 @@ static void set_nameserver_state(pj_dns_resolver *resolver,
 
 static void sys_collect(pj_dns_resolver *resolver, struct query_head *list);
 
+static void report_sys(pj_dns_resolver *resolver, pj_dns_async_query *q);
+
 static void update_res_cache(pj_dns_resolver *resolver,
                              const struct res_key *key,
                              pj_status_t status,
@@ -1227,7 +1229,8 @@ static pj_bool_t query_has_cb(const pj_dns_async_query *q)
 
 
 /* Queue the query for the done_timer to report it. */
-static void report_later(pj_dns_resolver *resolver, pj_dns_async_query *q)
+static pj_status_t report_later(pj_dns_resolver *resolver,
+                                pj_dns_async_query *q)
 {
     pj_time_val delay = {0, 0};
 
@@ -1245,15 +1248,17 @@ static void report_later(pj_dns_resolver *resolver, pj_dns_async_query *q)
                                                    &resolver->done_timer,
                                                    &delay, 1,
                                                    resolver->grp_lock);
-        if (status == PJ_SUCCESS) {
-            resolver->done_scheduled = PJ_TRUE;
-        } else {
-            /* Reported with the next one, or by destroy */
+        if (status != PJ_SUCCESS) {
+            /* The caller reports it on its own path: not left waiting */
             PJ_PERROR(4,(resolver->name.ptr, status,
                          "Error scheduling the report of DNS %s query for %s",
                          pj_dns_get_type_name(q->key.qtype), q->key.name));
+            pj_list_erase(q);
+            return status;
         }
+        resolver->done_scheduled = PJ_TRUE;
     }
+    return PJ_SUCCESS;
 }
 
 
@@ -1312,19 +1317,23 @@ static int sys_thread_proc(void *arg)
             if (!query_has_cb(q) || !resolver->settings.sys_fallback) {
                 q->sys.lookup = PJ_FALSE;
                 q->sys.pending = PJ_FALSE;
-                report_later(resolver, q);
-                continue;
+            } else {
+                /* Looked up without the lock: the query is this thread's
+                 * until it is given back.
+                 */
+                resolver->sys_busy++;
+                pj_grp_lock_release(resolver->grp_lock);
+                sys_lookup_run(resolver, q);
+                pj_grp_lock_acquire(resolver->grp_lock);
+                resolver->sys_busy--;
             }
 
-            /* Looked up without the lock: the query is this thread's until
-             * it is given back.
-             */
-            resolver->sys_busy++;
-            pj_grp_lock_release(resolver->grp_lock);
-            sys_lookup_run(resolver, q);
-            pj_grp_lock_acquire(resolver->grp_lock);
-            resolver->sys_busy--;
-            report_later(resolver, q);
+            /* Reported from here when the timer can't be scheduled */
+            if (report_later(resolver, q) != PJ_SUCCESS) {
+                pj_grp_lock_release(resolver->grp_lock);
+                report_sys(resolver, q);
+                pj_grp_lock_acquire(resolver->grp_lock);
+            }
         }
         if (resolver->sys_quit) {
             pj_grp_lock_release(resolver->grp_lock);
@@ -1394,8 +1403,9 @@ static pj_status_t sys_thread_start(pj_dns_resolver *resolver)
  * pj_dns_resolver_start_query() nor waits for the lookup. Called with the
  * lock held, with the query on no timer and out of hquerybyid.
  */
-static void start_sys_fallback(pj_dns_resolver *resolver,
-                               pj_dns_async_query *q, pj_status_t dns_status)
+static pj_status_t start_sys_fallback(pj_dns_resolver *resolver,
+                                      pj_dns_async_query *q,
+                                      pj_status_t dns_status)
 {
     pj_bzero(&q->sys, sizeof(q->sys));
     q->sys.dns_status = dns_status;
@@ -1420,7 +1430,7 @@ static void start_sys_fallback(pj_dns_resolver *resolver,
             pj_list_push_back(&resolver->sys_jobs, q);
             resolver->sys_queued++;
             pj_sem_post(resolver->sys_sem);
-            return;
+            return PJ_SUCCESS;
         }
         /* Reported with the error of the nameservers instead */
         q->sys.pending = PJ_FALSE;
@@ -1433,7 +1443,7 @@ static void start_sys_fallback(pj_dns_resolver *resolver,
                   pj_dns_get_type_name(q->key.qtype), q->key.name));
     }
 
-    report_later(resolver, q);
+    return report_later(resolver, q);
 }
 
 
@@ -1793,10 +1803,10 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
     status = transmit_query(resolver, q);
     if (status != PJ_SUCCESS) {
         if (status == PJLIB_UTIL_EDNSNOWORKINGNS &&
-            resolver->settings.sys_fallback && cb)
+            resolver->settings.sys_fallback && cb &&
+            start_sys_fallback(resolver, q, status) == PJ_SUCCESS)
         {
             /* Reported later, or resolved with the system resolver */
-            start_sys_fallback(resolver, q, status);
             p_q = q;
             status = PJ_SUCCESS;
         } else {
@@ -2431,9 +2441,11 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
     if (resolver->settings.sys_fallback && !has_active_ns(resolver)) {
         pj_hash_set(NULL, resolver->hquerybyid, &q->id, sizeof(q->id), 0,
                     NULL);
-        start_sys_fallback(resolver, q, PJ_ETIMEDOUT);
-        pj_grp_lock_release(resolver->grp_lock);
-        return;
+        if (start_sys_fallback(resolver, q, PJ_ETIMEDOUT) == PJ_SUCCESS) {
+            pj_grp_lock_release(resolver->grp_lock);
+            return;
+        }
+        /* Reported here instead */
     }
 
     /* Clear hash table entries */
@@ -2654,9 +2666,9 @@ static void on_read_complete(pj_ioqueue_key_t *key,
         (q->key.qtype == PJ_DNS_TYPE_A || q->key.qtype == PJ_DNS_TYPE_AAAA) &&
         (status == PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_REFUSED) ||
          (status == PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_SERVFAIL) &&
-          q->key.qtype == PJ_DNS_TYPE_A)))
+          q->key.qtype == PJ_DNS_TYPE_A)) &&
+        start_sys_fallback(resolver, q, status) == PJ_SUCCESS)
     {
-        start_sys_fallback(resolver, q, status);
         goto read_next_packet;
     }
 
