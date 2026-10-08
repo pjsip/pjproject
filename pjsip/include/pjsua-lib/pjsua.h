@@ -4842,8 +4842,11 @@ typedef struct pjsua_acc_config
      * without the doublequote.
      *
      * An instance ID set here is sent in every REGISTER, also without SIP
-     * outbound. The generated one is sent only with outbound: it is the same
-     * for all instances on one host, and on iOS ("localhost").
+     * outbound. Registrars such as Kamailio and Flexisip then treat contacts
+     * with the same instance ID as one device and replace the older binding,
+     * so the ID must be unique to the device and persistent (RFC 5626
+     * section 4.1). The generated one is sent only with outbound: it is the
+     * same for all instances on one host, and on iOS ("localhost").
      *
      * Default: empty
      */

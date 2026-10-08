@@ -2282,9 +2282,7 @@ done:
         if (need_outbound) {
             acc->rfc5626_status = OUTBOUND_WANTED;
 
-            /* Need to use outbound, append the contact with
-             * +sip.instance and reg-id parameters.
-             */
+            /* Need to use outbound, append the reg-id parameter */
             pj_strcat(&reg_contact, &acc->rfc5626_regprm);
         } else {
             acc->rfc5626_status = OUTBOUND_NA;
