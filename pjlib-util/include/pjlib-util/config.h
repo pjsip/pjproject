@@ -198,15 +198,27 @@
  * resolver while no nameserver answers (pj_dns_settings.sys_fallback).
  *
  * A DNS A or AAAA query which no nameserver answers, because none can be
- * sent to or because it timed out, is then resolved with pj_getaddrinfo()
- * instead, and the addresses found are reported as its response, without
- * caching them, so the nameservers take over again as soon as one answers.
- * A query of another type, e.g. DNS SRV, fails as it does without the
- * setting, but asynchronously, so that #pj_dns_srv_resolve() falls back to
- * the address of the domain as it does when the nameservers answer that
- * there is no SRV record. The nameservers a query timed out with are
- * marked as bad for #PJ_DNS_RESOLVER_BAD_NS_TTL, so that the next queries
- * don't wait for them.
+ * sent to or because it timed out while none is trusted, is then resolved
+ * with pj_getaddrinfo() instead, and the addresses found are reported as
+ * its response, without caching them, so the nameservers take over again
+ * as soon as one answers. A query of another type, e.g. DNS SRV, fails as
+ * it does without the setting, but asynchronously, so that
+ * #pj_dns_srv_resolve() falls back to the address of the domain as it does
+ * when the nameservers answer that there is no SRV record.
+ *
+ * The setting leaves the state of the nameservers to the resolver: while
+ * one is trusted, i.e. answered within #PJ_DNS_RESOLVER_GOOD_NS_TTL, a
+ * timeout is reported as without the setting. The nameservers are not
+ * trusted right after they are set or reset, e.g. by
+ * #pj_dns_resolver_reset_ns_state() after a network change, and after
+ * they are marked as bad: the query which probes them again then waits
+ * for its retransmissions before the system resolver is asked, i.e. for
+ * (#PJ_DNS_RESOLVER_QUERY_RETRANSMIT_COUNT + 1) times
+ * #PJ_DNS_RESOLVER_QUERY_RETRANSMIT_DELAY, as it would before failing
+ * without the setting, and a request resolved with DNS SRV waits for the
+ * probing to end. The nameservers are probed again by the first query
+ * after #PJ_DNS_RESOLVER_BAD_NS_TTL, so with sparse traffic every request
+ * after a quiet minute pays this wait.
  *
  * The system resolver is asked from a thread of the resolver, created
  * when first needed, which #pj_dns_resolver_destroy() waits for. Without

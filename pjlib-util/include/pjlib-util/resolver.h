@@ -216,7 +216,8 @@ typedef struct pj_dns_settings
                                      keeps it on).
                                      See #PJ_DNS_RESOLVER_DISABLE_RESPONSE_SRC_CHECK */
     pj_bool_t   sys_fallback;   /**< Resolve with the system resolver while
-                                     no nameserver answers.
+                                     no nameserver answers and none is
+                                     trusted.
                                      See #PJ_DNS_RESOLVER_SYS_FALLBACK       */
     pj_dns_sys_lookup *sys_lookup;
                                 /**< The system resolver for \a sys_fallback,

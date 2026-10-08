@@ -156,7 +156,6 @@ struct pj_dns_async_query
     pj_hash_entry_buf    hbufid;        /**< Hash buffer 1                  */
     pj_hash_entry_buf    hbufkey;       /**< Hash buffer 2                  */
     pj_timer_entry       timer_entry;   /**< Timer to manage timeouts       */
-    pj_uint32_t          sent_ns;       /**< Nameservers sent to, as bits.  */
     struct sys_fallback_state sys;      /**< System resolver fallback.      */
     unsigned             options;       /**< Query options.                 */
     void                *user_data;     /**< Application data.              */
@@ -164,7 +163,6 @@ struct pj_dns_async_query
     struct query_head    child_head;    /**< Child queries list head.       */
 };
 
-PJ_STATIC_ASSERT(PJ_DNS_RESOLVER_MAX_NS <= 32, sent_ns_holds_a_bit_per_ns);
 
 
 /* This structure is used to keep cached response entry.
@@ -288,23 +286,6 @@ static void set_nameserver_state(pj_dns_resolver *resolver,
                                  const pj_time_val *now);
 
 static void sys_collect(pj_dns_resolver *resolver, struct query_head *list);
-
-/* The nameservers the pending queries were sent to are not the ones set or
- * reset: their timeout must not mark these as bad.
- */
-static void clear_sent_ns(pj_dns_resolver *resolver)
-{
-    pj_hash_iterator_t it_buf, *it;
-
-    it = pj_hash_first(resolver->hquerybyid, &it_buf);
-    while (it) {
-        pj_dns_async_query *q;
-
-        q = (pj_dns_async_query*) pj_hash_this(resolver->hquerybyid, it);
-        q->sent_ns = 0;
-        it = pj_hash_next(resolver->hquerybyid, it);
-    }
-}
 
 /* Select which nameserver to use */
 static pj_status_t select_nameservers(pj_dns_resolver *resolver,
@@ -766,7 +747,6 @@ PJ_DEF(pj_status_t) pj_dns_resolver_set_ns( pj_dns_resolver *resolver,
     }
     
     resolver->ns_count = count;
-    clear_sent_ns(resolver);
 
     pj_grp_lock_release(resolver->grp_lock);
     return PJ_SUCCESS;
@@ -794,7 +774,6 @@ PJ_DEF(pj_status_t) pj_dns_resolver_reset_ns_state(pj_dns_resolver *resolver)
         resolver->ns[i].state = STATE_ACTIVE;
         resolver->ns[i].state_expiry = now;
     }
-    clear_sent_ns(resolver);
     if (resolver->ns_count)
         PJ_LOG(4,(resolver->name.ptr, "Nameserver state reset"));
 
@@ -1061,9 +1040,6 @@ static pj_status_t transmit_query(pj_dns_resolver *resolver,
             continue;
         }
 
-        if (status == PJ_SUCCESS || status == PJ_EPENDING)
-            q->sent_ns |= (pj_uint32_t)1 << servers[i];
-
         PJ_PERROR(4,(resolver->name.ptr, status,
                   "%s %d bytes to NS %d (%s:%d): DNS %s query for %s",
                   (q->transmit_cnt==0? "Transmitting":"Re-transmitting"),
@@ -1188,21 +1164,42 @@ static pj_bool_t name_is_unknown(pj_dns_resolver *resolver,
 }
 
 
-/* The nameservers the query was sent to didn't answer it */
-static void mark_sent_bad(pj_dns_resolver *resolver,
-                          const pj_dns_async_query *q)
+/* Whether some nameserver is trusted: then a timeout is about the query,
+ * not about the nameservers, and the fallback doesn't apply.
+ */
+static pj_bool_t has_active_ns(pj_dns_resolver *resolver)
 {
     unsigned i;
     pj_time_val now;
 
     pj_gettimeofday(&now);
     for (i = 0; i < resolver->ns_count; ++i) {
-        if ((q->sent_ns & ((pj_uint32_t)1 << i)) &&
-            resolver->ns[i].state != STATE_BAD)
+        if (resolver->ns[i].state == STATE_ACTIVE &&
+            PJ_TIME_VAL_GT(resolver->ns[i].state_expiry, now))
         {
-            set_nameserver_state(resolver, i, STATE_BAD, &now);
+            return PJ_TRUE;
         }
     }
+    return PJ_FALSE;
+}
+
+
+/* Whether the query, or a query which joined it, still waits for it:
+ * a cancelled query keeps its callback cleared.
+ */
+static pj_bool_t query_has_cb(const pj_dns_async_query *q)
+{
+    const pj_dns_async_query *cq;
+
+    if (q->cb)
+        return PJ_TRUE;
+    cq = q->child_head.next;
+    while (cq != (const void*)&q->child_head) {
+        if (cq->cb)
+            return PJ_TRUE;
+        cq = cq->next;
+    }
+    return PJ_FALSE;
 }
 
 
@@ -1283,10 +1280,21 @@ static int sys_thread_proc(void *arg)
         while (!pj_list_empty(&resolver->sys_jobs)) {
             pj_dns_async_query *q = resolver->sys_jobs.next;
 
+            pj_list_erase(q);
+
+            /* Nobody waits for it anymore, or the option went off: the
+             * error of the nameservers instead of a lookup
+             */
+            if (!query_has_cb(q) || !resolver->settings.sys_fallback) {
+                q->sys.lookup = PJ_FALSE;
+                q->sys.pending = PJ_FALSE;
+                report_later(resolver, q);
+                continue;
+            }
+
             /* Looked up without the lock: the query is this thread's until
              * it is given back.
              */
-            pj_list_erase(q);
             pj_grp_lock_release(resolver->grp_lock);
             sys_lookup_run(resolver, q);
             pj_grp_lock_acquire(resolver->grp_lock);
@@ -1489,6 +1497,12 @@ static void on_done_timer( pj_timer_heap_t *timer_heap,
             break;
         q = resolver->done_list.next;
         pj_list_erase(q);
+        if (q->sys.pending &&
+            (!query_has_cb(q) || !resolver->settings.sys_fallback))
+        {
+            q->sys.lookup = PJ_FALSE;
+            q->sys.pending = PJ_FALSE;
+        }
         pj_grp_lock_release(resolver->grp_lock);
 
         /* Without a lookup thread, the lookup runs here */
@@ -1694,7 +1708,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
     status = transmit_query(resolver, q);
     if (status != PJ_SUCCESS) {
         if (status == PJLIB_UTIL_EDNSNOWORKINGNS &&
-            resolver->settings.sys_fallback)
+            resolver->settings.sys_fallback && cb)
         {
             /* Reported later, or resolved with the system resolver */
             start_sys_fallback(resolver, q, status);
@@ -2326,11 +2340,10 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
         }
     }
 
-    if (resolver->settings.sys_fallback) {
-        /* The nameservers sent to didn't answer: not again for the next
-         * queries, while the system resolver may answer this one.
-         */
-        mark_sent_bad(resolver, q);
+    /* No nameserver is trusted, none answered this query: the system
+     * resolver may. The state of the nameservers is left to them.
+     */
+    if (resolver->settings.sys_fallback && !has_active_ns(resolver)) {
         pj_hash_set(NULL, resolver->hquerybyid, &q->id, sizeof(q->id), 0,
                     NULL);
         start_sys_fallback(resolver, q, PJ_ETIMEDOUT);
