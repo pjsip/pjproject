@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -160,7 +160,8 @@ static void usage(void)
     puts  ("                      This can be specified multiple times.");
     puts  ("  --auto-play         Automatically play the file (to incoming calls only)");
     puts  ("  --auto-play-hangup  Automatically hangup the file after file play completes");
-    puts  ("  --exit-on-call-end  Exit after the outgoing call ends");
+    puts  ("  --exit-on-call-end  Exit when the outgoing call to the URI argument ends");
+    puts  ("                      Exit code: 0=ok, 1=failed, 2=busy, 3=unavailable");
     puts  ("  --auto-loop         Automatically loop incoming RTP to outgoing RTP");
     puts  ("  --auto-conf         Automatically put calls in conference with others");
     puts  ("  --rec-file=file     Open file recorder (extension can be .wav or .mp3)");
@@ -411,8 +412,8 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_REG_RETRY_INTERVAL, OPT_REG_USE_PROXY,
            OPT_MWI, OPT_NAMESERVER, OPT_STUN_SRV, OPT_UPNP, OPT_OUTB_RID,
            OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
-           OPT_AUTO_ANSWER, OPT_AUTO_PLAY, OPT_AUTO_PLAY_HANGUP, OPT_EXIT_ON_CALL_END,
-           OPT_AUTO_LOOP,
+           OPT_AUTO_ANSWER, OPT_AUTO_PLAY, OPT_AUTO_PLAY_HANGUP,
+           OPT_EXIT_ON_CALL_END, OPT_AUTO_LOOP,
            OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_SND_CLOCK_RATE, OPT_STEREO,
            OPT_USE_ICE, OPT_ICE_REGULAR, OPT_ICE_TRICKLE,
            OPT_USE_SRTP, OPT_SRTP_SECURE,
@@ -1787,6 +1788,11 @@ static pj_status_t parse_args(int argc, char *argv[],
         }
 
     } else {
+        if (cfg->exit_on_call_end) {
+            PJ_LOG(1,(THIS_FILE,
+                      "--exit-on-call-end requires an outgoing call URI"));
+            return -1;
+        }
         if (uri_to_call)
             uri_to_call->slen = 0;
     }

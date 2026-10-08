@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -124,8 +124,8 @@ typedef struct pjsua_app_config
     pj_bool_t               auto_play;
     pj_bool_t               auto_play_hangup;
     pj_bool_t               exit_on_call_end;
-    pj_bool_t               call_finished;
-    int                     exit_code;
+    volatile pj_bool_t      call_finished;
+    volatile int            exit_code;
     pj_timer_entry          auto_hangup_timer;
     pj_bool_t               auto_loop;
     pj_bool_t               auto_conf;
@@ -289,3 +289,4 @@ void app_config_show_video(int acc_id, const pjsua_acc_config *acc_cfg);
 PJ_END_DECL
     
 #endif  /* __PJSUA_APP_COMMON_H__ */
+

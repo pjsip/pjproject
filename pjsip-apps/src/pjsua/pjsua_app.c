@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -200,12 +200,16 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 
     if (call_info.state == PJSIP_INV_STATE_DISCONNECTED) {
 
-        if (app_config.exit_on_call_end) {
+        if (app_config.exit_on_call_end &&
+            pjsua_call_get_user_data(call_id) == &app_config.exit_on_call_end)
+        {
             if (call_info.last_status >= 200 && call_info.last_status < 300)
                 app_config.exit_code = PJSUA_APP_EXIT_SUCCESS;
-            else if (call_info.last_status == 486)
+            else if (call_info.last_status == 486 ||
+                     call_info.last_status == 600)
                 app_config.exit_code = PJSUA_APP_EXIT_BUSY;
             else if (call_info.last_status == 408 ||
+                     call_info.last_status == 480 ||
                      call_info.last_status == 503)
                 app_config.exit_code = PJSUA_APP_EXIT_UNAVAILABLE;
             else
@@ -2329,20 +2333,13 @@ pj_status_t pjsua_app_run(pj_bool_t wait_telnet_cli)
         }    
     }
 
-    if (app_config.exit_on_call_end && !uri_arg.slen) {
-        PJ_LOG(1, (THIS_FILE,
-                   "--exit-on-call-end requires an outgoing call URI"));
-        app_config.exit_code = PJSUA_APP_EXIT_CALL_FAILED;
-        app_config.call_finished = PJ_TRUE;
-        status = PJ_EINVAL;
-        goto on_return;
-    }
-
     /* If user specifies URI to call, then call the URI */
     if (uri_arg.slen) {
         app_config_init_call_setting(&call_opt);
 
-        status = pjsua_call_make_call(current_acc, &uri_arg, &call_opt, NULL,
+        status = pjsua_call_make_call(current_acc, &uri_arg, &call_opt,
+                                      app_config.exit_on_call_end ?
+                                          &app_config.exit_on_call_end : NULL,
                                       NULL, NULL);
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE, "Unable to make call", status);

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -142,7 +142,9 @@ int main_func(int argc, char *argv[])
                 running = PJ_FALSE;
         } else {
             running = PJ_FALSE;
-            exit_code = PJSUA_APP_EXIT_CALL_FAILED;
+            exit_code = app_config.exit_on_call_end ?
+                        PJSUA_APP_EXIT_CALL_FAILED :
+                        PJSUA_APP_EXIT_SUCCESS;
         }
 
         if (!receive_end_sig) {
