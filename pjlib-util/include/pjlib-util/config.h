@@ -201,10 +201,13 @@
  * sent to or because it timed out while none is trusted, is then resolved
  * with pj_getaddrinfo() instead, and the addresses found are reported as
  * its response, without caching them, so the nameservers take over again
- * as soon as one answers. A query of another type, e.g. DNS SRV, fails as
- * it does without the setting, but asynchronously, so that
- * #pj_dns_srv_resolve() falls back to the address of the domain as it does
- * when the nameservers answer that there is no SRV record.
+ * as soon as one answers. So is a query the nameserver refused, or failed
+ * for a DNS A query, e.g. the nameserver of a captive portal: that is
+ * about the nameserver, not about the name, and the error is cached as
+ * usual only when the system resolver fails too. A query of another type,
+ * e.g. DNS SRV, fails as it does without the setting, but asynchronously,
+ * so that #pj_dns_srv_resolve() falls back to the address of the domain
+ * as it does when the nameservers answer that there is no SRV record.
  *
  * The setting leaves the state of the nameservers to the resolver: while
  * one is trusted, i.e. answered within #PJ_DNS_RESOLVER_GOOD_NS_TTL, a

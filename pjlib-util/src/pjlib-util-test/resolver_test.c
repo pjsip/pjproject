@@ -3846,6 +3846,179 @@ static int dns_sys_fallback_cancel_test(void)
     return 0;
 }
 
+/* Set the server up to answer the A record of the name */
+static void sys_server_answers(unsigned srv, const pj_str_t *name)
+{
+    pj_dns_parsed_packet *r = &g_server[srv].resp;
+
+    pj_bzero(r, sizeof(*r));
+    r->hdr.qdcount = 1;
+    r->hdr.anscount = 1;
+    r->q = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_query);
+    r->q[0].type = PJ_DNS_TYPE_A;
+    r->q[0].dnsclass = 1;
+    r->q[0].name = *name;
+    r->ans = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_rr);
+    r->ans[0].type = PJ_DNS_TYPE_A;
+    r->ans[0].dnsclass = 1;
+    r->ans[0].name = *name;
+    r->ans[0].ttl = 300;
+    r->ans[0].rdata.a.ip_addr.s_addr = IP_ADDR0;
+    g_server[srv].action = ACTION_REPLY;
+}
+
+/* A nameserver which refuses, or fails an address, is not answering about
+ * the name: the system resolver is asked, and the error is cached only when
+ * it fails too; a failed AAAA stands; SRV goes to the domain's address.
+ */
+static int dns_sys_fallback_rcode_test(void)
+{
+    pj_str_t name1 = pj_str("refused1");
+    pj_str_t name2 = pj_str("refused2");
+    pj_str_t name3 = pj_str("servfail1");
+    pj_str_t name4 = pj_str("servfail2");
+    pj_str_t domain = pj_str("rcode.test");
+    pj_str_t res_name = pj_str("_sip._udp.");
+    pj_dns_resolver *res;
+    pj_dns_async_query *q;
+    unsigned sent;
+
+    PJ_LOG(3,(THIS_FILE, "  system resolver fallback, refused test"));
+
+    sys_reset();
+    g_server[0].action = PJ_DNS_RCODE_REFUSED;
+    res = sys_resolver_ns(PJ_TRUE, 100, 1);
+    PJ_TEST_NOT_NULL(res, NULL, return -1260);
+
+    /* Refused: the system resolver's answer */
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name1, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_sys, (void*)0,
+                                                NULL),
+                    NULL, return -1261);
+    PJ_TEST_EQ(wait_sys_cb(0), 0, NULL, return -1262);
+    PJ_TEST_SUCCESS(sys_cb[0].status, NULL, return -1263);
+    PJ_TEST_EQ(sys_cb[0].addr, SYS_ADDR, NULL, return -1264);
+    PJ_TEST_EQ(sys_state.count, 1, NULL, return -1265);
+
+    /* Not cached: once the server answers, its answer */
+    sys_server_answers(0, &name1);
+    PJ_TEST_SUCCESS(pj_dns_resolver_reset_ns_state(res), NULL,
+                    return -1266);
+    sys_cb[0].called = 0;
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name1, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_sys, (void*)0,
+                                                &q),
+                    NULL, return -1267);
+    PJ_TEST_NOT_NULL(q, NULL, return -1268);
+    PJ_TEST_EQ(wait_sys_cb(0), 0, NULL, return -1269);
+    PJ_TEST_EQ(sys_cb[0].addr, IP_ADDR0, NULL, return -1270);
+    PJ_TEST_EQ(sys_state.count, 1, NULL, return -1271);
+
+    /* Refused and the system resolver fails: refused, and cached */
+    g_server[0].action = PJ_DNS_RCODE_REFUSED;
+    sys_state.status = PJ_ERESOLVE;
+    PJ_TEST_SUCCESS(pj_dns_resolver_reset_ns_state(res), NULL,
+                    return -1272);
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name2, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_sys, (void*)1,
+                                                NULL),
+                    NULL, return -1273);
+    PJ_TEST_EQ(wait_sys_cb(1), 0, NULL, return -1274);
+    PJ_TEST_EQ(sys_cb[1].status,
+               PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_REFUSED), NULL,
+               return -1275);
+    PJ_TEST_EQ(sys_state.count, 2, NULL, return -1276);
+    sys_cb[1].called = 0;
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name2, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_sys, (void*)1,
+                                                &q),
+                    NULL, return -1277);
+    PJ_TEST_EQ(q, NULL, NULL, return -1278);
+    PJ_TEST_EQ(sys_cb[1].called, 1, NULL, return -1279);
+    PJ_TEST_EQ(sys_cb[1].status,
+               PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_REFUSED), NULL,
+               return -1280);
+    PJ_TEST_EQ(sys_state.count, 2, NULL, return -1281);
+    sys_state.status = PJ_SUCCESS;
+
+    /* Server failure: an address from the system resolver, the server
+     * trusted all the same; a failed AAAA stands
+     */
+    g_server[0].action = PJ_DNS_RCODE_SERVFAIL;
+    PJ_TEST_SUCCESS(pj_dns_resolver_reset_ns_state(res), NULL,
+                    return -1282);
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name3, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_sys, (void*)2,
+                                                NULL),
+                    NULL, return -1283);
+    PJ_TEST_EQ(wait_sys_cb(2), 0, NULL, return -1284);
+    PJ_TEST_SUCCESS(sys_cb[2].status, NULL, return -1285);
+    PJ_TEST_EQ(sys_cb[2].addr, SYS_ADDR, NULL, return -1286);
+    PJ_TEST_EQ(sys_state.count, 3, NULL, return -1287);
+    sys_cb[2].called = 0;
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name3,
+                                                PJ_DNS_TYPE_AAAA, 0,
+                                                &dns_callback_sys, (void*)2,
+                                                NULL),
+                    NULL, return -1288);
+    PJ_TEST_EQ(wait_sys_cb(2), 0, NULL, return -1289);
+    PJ_TEST_EQ(sys_cb[2].status,
+               PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_SERVFAIL), NULL,
+               return -1290);
+    PJ_TEST_EQ(sys_state.count, 3, NULL, return -1291);
+    sent = g_server[0].pkt_count;
+    sys_cb[2].called = 0;
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name4, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_sys, (void*)2,
+                                                NULL),
+                    NULL, return -1292);
+    PJ_TEST_EQ(wait_sys_cb(2), 0, NULL, return -1293);
+    PJ_TEST_SUCCESS(sys_cb[2].status, NULL, return -1294);
+    PJ_TEST_TRUE(g_server[0].pkt_count > sent, NULL, return -1295);
+    PJ_TEST_EQ(sys_state.count, 4, NULL, return -1296);
+
+    /* SRV failed by the server: the domain's address, from the system
+     * resolver as its A query is failed too
+     */
+    pj_bzero(&sys_srv, sizeof(sys_srv));
+    PJ_TEST_SUCCESS(pj_dns_srv_resolve(&domain, &res_name, 5060, pool, res,
+                                       PJ_DNS_SRV_FALLBACK_A, NULL,
+                                       &srv_cb_sys, NULL),
+                    NULL, return -1297);
+    PJ_TEST_EQ(wait_sys_srv(), 0, NULL, return -1298);
+    PJ_TEST_SUCCESS(sys_srv.status, NULL, return -1299);
+    PJ_TEST_EQ(sys_srv.rec.entry[0].port, 5060, NULL, return -1300);
+    PJ_TEST_EQ(sys_srv.rec.entry[0].server.addr[0].ip.v4.s_addr, SYS_ADDR,
+               NULL, return -1301);
+    PJ_TEST_EQ(sys_state.count, 5, NULL, return -1302);
+    pj_dns_resolver_destroy(res, PJ_FALSE);
+
+    /* Without the option: refused, and cached */
+    sys_reset();
+    g_server[0].action = PJ_DNS_RCODE_REFUSED;
+    res = sys_resolver_ns(PJ_FALSE, 100, 1);
+    PJ_TEST_NOT_NULL(res, NULL, return -1303);
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name1, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_sys, (void*)0,
+                                                NULL),
+                    NULL, return -1304);
+    PJ_TEST_EQ(wait_sys_cb(0), 0, NULL, return -1305);
+    PJ_TEST_EQ(sys_cb[0].status,
+               PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_REFUSED), NULL,
+               return -1306);
+    sys_cb[0].called = 0;
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name1, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_sys, (void*)0,
+                                                &q),
+                    NULL, return -1307);
+    PJ_TEST_EQ(q, NULL, NULL, return -1308);
+    PJ_TEST_EQ(sys_cb[0].called, 1, NULL, return -1309);
+    PJ_TEST_EQ(sys_state.count, 0, NULL, return -1310);
+    pj_dns_resolver_destroy(res, PJ_FALSE);
+
+    return 0;
+}
+
 /* The nameservers set or reset after a query was sent are not trusted:
  * its timeout is resolved with the system resolver, and they are probed.
  */
@@ -4152,6 +4325,11 @@ int resolver_test(void)
 
     PJ_LOG(3,(THIS_FILE, "dns_sys_fallback_cancel_test"));
     rc = dns_sys_fallback_cancel_test();
+    if (rc != 0)
+        goto on_error;
+
+    PJ_LOG(3,(THIS_FILE, "dns_sys_fallback_rcode_test"));
+    rc = dns_sys_fallback_rcode_test();
     if (rc != 0)
         goto on_error;
 

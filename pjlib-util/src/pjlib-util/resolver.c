@@ -287,6 +287,12 @@ static void set_nameserver_state(pj_dns_resolver *resolver,
 
 static void sys_collect(pj_dns_resolver *resolver, struct query_head *list);
 
+static void update_res_cache(pj_dns_resolver *resolver,
+                             const struct res_key *key,
+                             pj_status_t status,
+                             pj_bool_t set_expiry,
+                             const pj_dns_parsed_packet *pkt);
+
 /* Select which nameserver to use */
 static pj_status_t select_nameservers(pj_dns_resolver *resolver,
                                       unsigned *count,
@@ -1432,12 +1438,35 @@ static void report_sys(pj_dns_resolver *resolver, pj_dns_async_query *q)
                   q->sys.count));
     } else if (q->sys.lookup) {
         char errmsg[PJ_ERR_MSG_SIZE];
+        int rcode = 0;
 
         PJ_PERROR(4,(resolver->name.ptr, q->sys.status,
                      "DNS %s query for %s: no nameserver answers (%s) and the "
                      "system resolver failed",
                      pj_dns_get_type_name(q->key.qtype), q->key.name,
                      pj_strerror(status, errmsg, sizeof(errmsg)).ptr));
+
+        /* The nameserver's error stands then, cached as without the
+         * fallback, for PJ_DNS_RESOLVER_INVALID_TTL
+         */
+        if (status == PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_REFUSED))
+            rcode = PJ_DNS_RCODE_REFUSED;
+        else if (status == PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_SERVFAIL))
+            rcode = PJ_DNS_RCODE_SERVFAIL;
+        if (rcode) {
+            pj_bzero(&pkt, sizeof(pkt));
+            pj_bzero(&question, sizeof(question));
+            pkt.hdr.flags = PJ_DNS_SET_QR(1) | PJ_DNS_SET_RCODE(rcode);
+            pkt.hdr.qdcount = 1;
+            pkt.q = &question;
+            question.type = q->key.qtype;
+            question.dnsclass = PJ_DNS_CLASS_IN;
+            question.name = pj_str(q->key.name);
+            pj_grp_lock_acquire(resolver->grp_lock);
+            if (!resolver->shutting_down)
+                update_res_cache(resolver, &q->key, status, PJ_TRUE, &pkt);
+            pj_grp_lock_release(resolver->grp_lock);
+        }
     }
 
     /* Capture and clear the callback under the lock; invoke it unlocked. */
@@ -2560,6 +2589,20 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     /* Clear hash table entries */
     pj_hash_set(NULL, resolver->hquerybyid, &q->id, sizeof(q->id), 0, NULL);
     pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key), 0, NULL);
+
+    /* The nameserver refused, or failed on an address: not an answer
+     * about the name, which the system resolver may know; a failed
+     * AAAA stands, some nameservers fail an address type they lack.
+     */
+    if (resolver->settings.sys_fallback &&
+        (q->key.qtype == PJ_DNS_TYPE_A || q->key.qtype == PJ_DNS_TYPE_AAAA) &&
+        (status == PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_REFUSED) ||
+         (status == PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_SERVFAIL) &&
+          q->key.qtype == PJ_DNS_TYPE_A)))
+    {
+        start_sys_fallback(resolver, q, status);
+        goto read_next_packet;
+    }
 
     /* Notify applications first, to allow application to modify the
      * record before it is saved to the hash table. Capture and clear
