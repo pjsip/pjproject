@@ -218,12 +218,13 @@
  * #pj_dns_resolver_reset_ns_state() after a network change, and after
  * they are marked as bad: the query which probes them again then waits
  * for its retransmissions before the system resolver is asked, i.e. for
- * (#PJ_DNS_RESOLVER_QUERY_RETRANSMIT_COUNT + 1) times
- * #PJ_DNS_RESOLVER_QUERY_RETRANSMIT_DELAY, as it would before failing
- * without the setting, and a request resolved with DNS SRV waits for the
- * probing to end. The nameservers are probed again by the first query
- * after #PJ_DNS_RESOLVER_BAD_NS_TTL, so with sparse traffic every request
- * after a quiet minute pays this wait.
+ * #PJ_DNS_RESOLVER_QUERY_RETRANSMIT_COUNT times
+ * #PJ_DNS_RESOLVER_QUERY_RETRANSMIT_DELAY, 10 s by default, as it would
+ * before failing without the setting, and so do the queries sent while
+ * the probing lasts, two delays more; a request resolved with DNS SRV
+ * waits for the probing to end, 14 s. The nameservers are probed again by
+ * the first query after #PJ_DNS_RESOLVER_BAD_NS_TTL, so with sparse
+ * traffic every request after a quiet minute pays this wait.
  *
  * The system resolver is asked from threads of the resolver, created
  * when needed, up to #PJ_DNS_RESOLVER_SYS_FALLBACK_THREADS, which

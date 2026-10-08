@@ -112,8 +112,9 @@ struct res_key
 };
 
 
-/* Lookup threads of the system resolver fallback at most, and the posts
- * their semaphore holds (Windows refuses the ones above).
+/* Lookup threads of the system resolver fallback at most, and the queries
+ * their semaphore may count waiting for one: Windows refuses a post above
+ * the maximum of a semaphore.
  */
 #define SYS_MAX_THREADS     16
 #define SYS_SEM_MAX         0x7FFF
@@ -1228,7 +1229,6 @@ static pj_bool_t query_has_cb(const pj_dns_async_query *q)
 }
 
 
-/* Queue the query for the done_timer to report it. */
 /* No query joins it anymore */
 static void sys_unjoin(pj_dns_resolver *resolver, const pj_dns_async_query *q)
 {
@@ -1356,7 +1356,6 @@ static int sys_thread_proc(void *arg)
 }
 
 
-/* Start the lookup thread, when first needed. */
 /* Have a thread for the query being queued: a new one while every one is
  * busy or has a query waiting, up to the setting. Fails only when none
  * could be created at all.
