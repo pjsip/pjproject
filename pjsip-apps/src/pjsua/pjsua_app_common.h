@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -123,6 +123,9 @@ typedef struct pjsua_app_config
     pjsua_conf_port_id      wav_port;
     pj_bool_t               auto_play;
     pj_bool_t               auto_play_hangup;
+    pj_bool_t               exit_on_call_end;
+    volatile pj_bool_t      call_finished;
+    volatile int            exit_code;
     pj_timer_entry          auto_hangup_timer;
     pj_bool_t               auto_loop;
     pj_bool_t               auto_conf;
@@ -214,6 +217,12 @@ extern pj_bool_t            stdout_refresh_quit;
 extern pjsua_call_setting   call_opt;
 extern pjsua_msg_data       msg_data;
 extern pj_bool_t            app_running;
+extern int                  pjsua_app_exit_code;
+
+#define PJSUA_APP_EXIT_SUCCESS       0
+#define PJSUA_APP_EXIT_CALL_FAILED   1
+#define PJSUA_APP_EXIT_BUSY          2
+#define PJSUA_APP_EXIT_UNAVAILABLE   3
 
 int my_atoi(const char *cs);
 int my_atoi2(const pj_str_t *s);

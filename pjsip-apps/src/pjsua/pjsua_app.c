@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -59,6 +59,7 @@ static pj_status_t app_destroy(void);
 static pjsua_app_cfg_t app_cfg;
 pj_str_t                    uri_arg;
 pj_bool_t                   app_running = PJ_FALSE;
+int                         pjsua_app_exit_code = PJSUA_APP_EXIT_SUCCESS;
 
 /*****************************************************************************
  * Configuration manipulation
@@ -198,6 +199,23 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
     pjsua_call_get_info(call_id, &call_info);
 
     if (call_info.state == PJSIP_INV_STATE_DISCONNECTED) {
+
+        if (app_config.exit_on_call_end &&
+            pjsua_call_get_user_data(call_id) == &app_config.exit_on_call_end)
+        {
+            if (call_info.last_status >= 200 && call_info.last_status < 300)
+                app_config.exit_code = PJSUA_APP_EXIT_SUCCESS;
+            else if (call_info.last_status == 486 ||
+                     call_info.last_status == 600)
+                app_config.exit_code = PJSUA_APP_EXIT_BUSY;
+            else if (call_info.last_status == 408 ||
+                     call_info.last_status == 480 ||
+                     call_info.last_status == 503)
+                app_config.exit_code = PJSUA_APP_EXIT_UNAVAILABLE;
+            else
+                app_config.exit_code = PJSUA_APP_EXIT_CALL_FAILED;
+            app_config.call_finished = PJ_TRUE;
+        }
 
         /* Stop all ringback for this call */
         ring_stop(call_id);
@@ -2319,15 +2337,25 @@ pj_status_t pjsua_app_run(pj_bool_t wait_telnet_cli)
     if (uri_arg.slen) {
         app_config_init_call_setting(&call_opt);
 
-        status = pjsua_call_make_call(current_acc, &uri_arg, &call_opt, NULL,
+        status = pjsua_call_make_call(current_acc, &uri_arg, &call_opt,
+                                      app_config.exit_on_call_end ?
+                                          &app_config.exit_on_call_end : NULL,
                                       NULL, NULL);
-        if (status != PJ_SUCCESS)
+        if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE, "Unable to make call", status);
+            if (app_config.exit_on_call_end) {
+                app_config.exit_code = PJSUA_APP_EXIT_CALL_FAILED;
+                app_config.call_finished = PJ_TRUE;
+            }
+        }
     }   
 
     app_running = PJ_TRUE;
 
-    if (app_config.use_cli)
+    if (app_config.exit_on_call_end) {
+        while (!app_config.call_finished)
+            pjsua_handle_events(100);
+    } else if (app_config.use_cli)
         cli_main(wait_telnet_cli);      
     else
         legacy_main();
@@ -2341,6 +2369,7 @@ on_return:
         pj_thread_destroy(stdout_refresh_thread);
         stdout_refresh_quit = PJ_FALSE;
     }
+    pjsua_app_exit_code = app_config.exit_code;
     return status;
 }
 
