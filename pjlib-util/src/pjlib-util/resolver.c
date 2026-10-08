@@ -112,6 +112,13 @@ struct res_key
 };
 
 
+/* Lookup threads of the system resolver fallback at most, and the posts
+ * their semaphore holds (Windows refuses the ones above).
+ */
+#define SYS_MAX_THREADS     16
+#define SYS_SEM_MAX         0x7FFF
+
+
 /* The system resolver fallback of a query, see start_sys_fallback(). */
 struct sys_fallback_state
 {
@@ -253,9 +260,12 @@ struct pj_dns_resolver
     pj_timer_entry       done_timer;    /**< Reports the done_list.         */
     pj_bool_t            done_scheduled;/**< The done_timer is scheduled.   */
 #if PJ_HAS_THREADS
-    pj_thread_t         *sys_thread;    /**< The lookup thread.             */
-    pj_sem_t            *sys_sem;       /**< Wakes the lookup thread up.    */
-    pj_bool_t            sys_quit;      /**< The lookup thread must quit.   */
+    pj_thread_t         *sys_threads[SYS_MAX_THREADS]; /**< Lookup threads */
+    unsigned             sys_thread_cnt;/**< Threads created.               */
+    unsigned             sys_busy;      /**< Threads in a lookup.           */
+    unsigned             sys_queued;    /**< Queries on sys_jobs.           */
+    pj_sem_t            *sys_sem;       /**< Wakes the lookup threads up.   */
+    pj_bool_t            sys_quit;      /**< The lookup threads must quit.  */
 #endif
 
     /* Set once pj_dns_resolver_destroy() has started, to reject new queries
@@ -434,6 +444,7 @@ PJ_DEF(void) pj_dns_settings_default(pj_dns_settings *s)
     s->bad_ns_ttl = PJ_DNS_RESOLVER_BAD_NS_TTL;
     s->disable_response_src_check = PJ_DNS_RESOLVER_DISABLE_RESPONSE_SRC_CHECK;
     s->sys_fallback = PJ_DNS_RESOLVER_SYS_FALLBACK;
+    s->sys_threads = PJ_DNS_RESOLVER_SYS_FALLBACK_THREADS;
 }
 
 
@@ -625,18 +636,24 @@ PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
     pj_grp_lock_release(resolver->grp_lock);
 
 #if PJ_HAS_THREADS
-    if (resolver->sys_thread) {
-        /* The lookup in progress can't be interrupted: this waits for it,
-         * up to the timeout of the system resolver.
+    if (resolver->sys_thread_cnt) {
+        unsigned i;
+
+        /* The lookups in progress can't be interrupted: this waits for
+         * them, up to the timeout of the system resolver.
          */
-        pj_sem_post(resolver->sys_sem);
-        pj_thread_join(resolver->sys_thread);
-        pj_thread_destroy(resolver->sys_thread);
-        resolver->sys_thread = NULL;
+        for (i = 0; i < resolver->sys_thread_cnt; ++i)
+            pj_sem_post(resolver->sys_sem);
+        for (i = 0; i < resolver->sys_thread_cnt; ++i) {
+            pj_thread_join(resolver->sys_threads[i]);
+            pj_thread_destroy(resolver->sys_threads[i]);
+            resolver->sys_threads[i] = NULL;
+        }
+        resolver->sys_thread_cnt = 0;
         pj_sem_destroy(resolver->sys_sem);
         resolver->sys_sem = NULL;
 
-        /* The query the thread was looking up */
+        /* The queries the threads were looking up */
         pj_grp_lock_acquire(resolver->grp_lock);
         sys_collect(resolver, &cancel_list);
         pj_grp_lock_release(resolver->grp_lock);
@@ -1287,6 +1304,7 @@ static int sys_thread_proc(void *arg)
             pj_dns_async_query *q = resolver->sys_jobs.next;
 
             pj_list_erase(q);
+            resolver->sys_queued--;
 
             /* Nobody waits for it anymore, or the option went off: the
              * error of the nameservers instead of a lookup
@@ -1301,9 +1319,11 @@ static int sys_thread_proc(void *arg)
             /* Looked up without the lock: the query is this thread's until
              * it is given back.
              */
+            resolver->sys_busy++;
             pj_grp_lock_release(resolver->grp_lock);
             sys_lookup_run(resolver, q);
             pj_grp_lock_acquire(resolver->grp_lock);
+            resolver->sys_busy--;
             report_later(resolver, q);
         }
         if (resolver->sys_quit) {
@@ -1318,26 +1338,50 @@ static int sys_thread_proc(void *arg)
 
 
 /* Start the lookup thread, when first needed. */
+/* Have a thread for the query being queued: a new one while every one is
+ * busy or has a query waiting, up to the setting. Fails only when none
+ * could be created at all.
+ */
 static pj_status_t sys_thread_start(pj_dns_resolver *resolver)
 {
+    unsigned limit = resolver->settings.sys_threads;
     pj_status_t status;
 
-    if (resolver->sys_thread)
+    if (limit == 0)
+        limit = 1;
+    else if (limit > SYS_MAX_THREADS)
+        limit = SYS_MAX_THREADS;
+    if (resolver->sys_thread_cnt >= limit ||
+        resolver->sys_busy + resolver->sys_queued < resolver->sys_thread_cnt)
+    {
         return PJ_SUCCESS;
+    }
 
-    status = pj_sem_create(resolver->pool, NULL, 0, 1, &resolver->sys_sem);
+    status = PJ_SUCCESS;
+    if (!resolver->sys_sem) {
+        status = pj_sem_create(resolver->pool, NULL, 0, SYS_SEM_MAX,
+                               &resolver->sys_sem);
+    }
     if (status == PJ_SUCCESS) {
         status = pj_thread_create(resolver->pool, "dnssys%p",
                                   &sys_thread_proc, resolver, 0, 0,
-                                  &resolver->sys_thread);
-        if (status != PJ_SUCCESS) {
+                                  &resolver->sys_threads[
+                                                resolver->sys_thread_cnt]);
+        if (status == PJ_SUCCESS)
+            resolver->sys_thread_cnt++;
+    }
+    if (status != PJ_SUCCESS) {
+        if (resolver->sys_thread_cnt) {
+            PJ_PERROR(4,(resolver->name.ptr, status,
+                         "Error creating another system resolver thread"));
+            return PJ_SUCCESS;
+        }
+        PJ_PERROR(2,(resolver->name.ptr, status,
+                     "Error creating the system resolver thread"));
+        if (resolver->sys_sem) {
             pj_sem_destroy(resolver->sys_sem);
             resolver->sys_sem = NULL;
         }
-    }
-    if (status != PJ_SUCCESS) {
-        PJ_PERROR(2,(resolver->name.ptr, status,
-                     "Error creating the system resolver thread"));
     }
     return status;
 }
@@ -1374,6 +1418,7 @@ static void start_sys_fallback(pj_dns_resolver *resolver,
         q->sys.status = sys_thread_start(resolver);
         if (q->sys.status == PJ_SUCCESS) {
             pj_list_push_back(&resolver->sys_jobs, q);
+            resolver->sys_queued++;
             pj_sem_post(resolver->sys_sem);
             return;
         }
@@ -1423,6 +1468,7 @@ static void report_sys(pj_dns_resolver *resolver, pj_dns_async_query *q)
             ans[i].name = question.name;
             ans[i].type = q->key.qtype;
             ans[i].dnsclass = PJ_DNS_CLASS_IN;
+            ans[i].ttl = resolver->settings.bad_ns_ttl;
             if (q->key.qtype == PJ_DNS_TYPE_A)
                 ans[i].rdata.a.ip_addr = q->sys.ip[i].v4;
             else
@@ -1495,6 +1541,13 @@ static void report_sys(pj_dns_resolver *resolver, pj_dns_async_query *q)
     }
 
     pj_grp_lock_acquire(resolver->grp_lock);
+
+    /* Cached, after the callbacks as a nameserver's answer is, for the
+     * time a nameserver marked as bad is left alone
+     */
+    if (resp && !resolver->shutting_down)
+        update_res_cache(resolver, &q->key, PJ_SUCCESS, PJ_TRUE, &pkt);
+
     q->user_data = NULL;
     cq = q->child_head.next;
     while (cq != (void*)&q->child_head) {
@@ -1557,6 +1610,9 @@ static void sys_collect(pj_dns_resolver *resolver, struct query_head *list)
                     NULL);
         pj_list_push_back(list, q);
     }
+#if PJ_HAS_THREADS
+    resolver->sys_queued = 0;
+#endif
     while (!pj_list_empty(&resolver->done_list)) {
         pj_dns_async_query *q = resolver->done_list.next;
         pj_list_erase(q);

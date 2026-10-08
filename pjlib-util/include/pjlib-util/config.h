@@ -200,8 +200,10 @@
  * A DNS A or AAAA query which no nameserver answers, because none can be
  * sent to or because it timed out while none is trusted, is then resolved
  * with pj_getaddrinfo() instead, and the addresses found are reported as
- * its response, without caching them, so the nameservers take over again
- * as soon as one answers. So is a query the nameserver refused, or failed
+ * its response. They are cached for #PJ_DNS_RESOLVER_BAD_NS_TTL, the time
+ * a nameserver marked as bad is left alone, so that the requests of
+ * that time don't ask the system resolver again, and an answer of a
+ * nameserver replaces them. So is a query the nameserver refused, or failed
  * for a DNS A query, e.g. the nameserver of a captive portal: that is
  * about the nameserver, not about the name, and the error is cached as
  * usual only when the system resolver fails too. A query of another type,
@@ -223,15 +225,32 @@
  * after #PJ_DNS_RESOLVER_BAD_NS_TTL, so with sparse traffic every request
  * after a quiet minute pays this wait.
  *
- * The system resolver is asked from a thread of the resolver, created
- * when first needed, which #pj_dns_resolver_destroy() waits for. Without
- * threads, it is asked from the timer of the resolver, which blocks its
- * polling for as long as the lookup takes.
+ * The system resolver is asked from threads of the resolver, created
+ * when needed, up to #PJ_DNS_RESOLVER_SYS_FALLBACK_THREADS, which
+ * #pj_dns_resolver_destroy() waits for. Without threads, it is asked from
+ * the timer of the resolver, which blocks its polling for as long as the
+ * lookup takes.
  *
  * Default: PJ_FALSE
  */
 #ifndef PJ_DNS_RESOLVER_SYS_FALLBACK
 #   define PJ_DNS_RESOLVER_SYS_FALLBACK                 PJ_FALSE
+#endif
+
+
+/**
+ * Default value of the resolver's setting for the threads asking the
+ * system resolver at most (pj_dns_settings.sys_threads), see
+ * #PJ_DNS_RESOLVER_SYS_FALLBACK. The lookups of the names of a request,
+ * e.g. the A and AAAA records of a domain, its STUN and TURN servers, run
+ * at the same time rather than one after the other, each taking up to the
+ * timeout of the system resolver when it is slow too. The threads are
+ * created when needed, none with the setting off, and at most 16.
+ *
+ * Default: 4
+ */
+#ifndef PJ_DNS_RESOLVER_SYS_FALLBACK_THREADS
+#   define PJ_DNS_RESOLVER_SYS_FALLBACK_THREADS         4
 #endif
 
 

@@ -222,6 +222,10 @@ typedef struct pj_dns_settings
     pj_dns_sys_lookup *sys_lookup;
                                 /**< The system resolver for \a sys_fallback,
                                      #pj_getaddrinfo() when NULL.            */
+    unsigned    sys_threads;    /**< Threads asking the system resolver at
+                                     most, for \a sys_fallback; 0 counts as
+                                     1. See
+                                     #PJ_DNS_RESOLVER_SYS_FALLBACK_THREADS */
 } pj_dns_settings;
 
 
