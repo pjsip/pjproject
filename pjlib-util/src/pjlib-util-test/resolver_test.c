@@ -4152,6 +4152,8 @@ static int dns_sys_fallback_cancel_test(void)
     pj_str_t name1 = pj_str("cancel1");
     pj_str_t name2 = pj_str("cancel2");
     pj_str_t name3 = pj_str("cancel3");
+    pj_str_t name4 = pj_str("cancel4");
+    pj_str_t name5 = pj_str("cancel5");
     pj_dns_resolver *res = NULL;
     pj_dns_settings lset;
     pj_dns_async_query *q;
@@ -4230,6 +4232,36 @@ static int dns_sys_fallback_cancel_test(void)
     PJ_TEST_EQ(sys_cb[3].status, PJLIB_UTIL_EDNSNOWORKINGNS, NULL,
                SYS_FAIL(-1385));
     PJ_TEST_EQ(sys_state.count, 3, NULL, SYS_FAIL(-1386));
+
+    /* A query cancelled while waiting, one which joined it not: looked up
+     * for the latter
+     */
+    lset.sys_fallback = PJ_TRUE;
+    pj_dns_resolver_set_settings(res, &lset);
+    pj_bzero(sys_cb, sizeof(sys_cb));
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name4, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_sys, (void*)0,
+                                                NULL),
+                    NULL, SYS_FAIL(-1387));
+    PJ_TEST_EQ(wait_sys_count(4), 0, NULL, SYS_FAIL(-1388));
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name5, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_sys, (void*)1,
+                                                &q),
+                    NULL, SYS_FAIL(-1389));
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name5, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_sys, (void*)2,
+                                                NULL),
+                    NULL, SYS_FAIL(-1390));
+    PJ_TEST_SUCCESS(pj_dns_resolver_cancel_query(q, PJ_FALSE), NULL,
+                    SYS_FAIL(-1391));
+    /* For the lookup in progress, and the one of the query which joined */
+    pj_sem_post(sys_state.block);
+    pj_sem_post(sys_state.block);
+    PJ_TEST_EQ(wait_sys_cb(2), 0, NULL, SYS_FAIL(-1392));
+    PJ_TEST_SUCCESS(sys_cb[2].status, NULL, SYS_FAIL(-1393));
+    PJ_TEST_EQ(sys_cb[2].addr, SYS_ADDR, NULL, SYS_FAIL(-1394));
+    PJ_TEST_EQ(sys_cb[1].called, 0, NULL, SYS_FAIL(-1395));
+    PJ_TEST_EQ(sys_state.count, 5, NULL, SYS_FAIL(-1396));
 
     pj_dns_resolver_destroy(res, PJ_FALSE);
     res = NULL;
