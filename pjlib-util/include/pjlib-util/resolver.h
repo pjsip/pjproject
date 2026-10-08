@@ -415,7 +415,10 @@ PJ_DECL(void) pj_dns_resolver_handle_events(pj_dns_resolver *resolver,
 
 /**
  * Destroy DNS resolver instance. With the \a sys_fallback setting, this
- * waits for a lookup in progress, up to the timeout of the system resolver.
+ * waits for the lookups in progress, which can't be interrupted, up to the
+ * timeout of the system resolver; the queries waiting for a lookup are
+ * cancelled without one. Turning the setting off beforehand, with
+ * #pj_dns_resolver_set_settings(), keeps new lookups from starting.
  *
  * @param resolver  The resolver object to be destryed
  * @param notify    If non-zero, all pending asynchronous queries will be
