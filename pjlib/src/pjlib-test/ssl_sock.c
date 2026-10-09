@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -66,7 +66,9 @@ struct test_state
     pj_pool_t      *pool;           /* pool                                 */
     pj_ioqueue_t   *ioqueue;        /* ioqueue                              */
     pj_ssl_sock_t  *accepted_ssock; /* accepted server-side socket          */
+    struct test_state *accepted_st; /* state of the accepted socket         */
     pj_bool_t       is_server;      /* server role flag                     */
+    const char     *cert_der;       /* DER of this end's own certificate    */
     pj_bool_t       is_verbose;     /* verbose flag, e.g: cert info         */
     pj_bool_t       echo;           /* echo received data                   */
     pj_status_t     err;            /* error flag                           */
@@ -117,6 +119,61 @@ static void dump_ssl_info(const pj_ssl_sock_info *si)
     }
 }
 
+/* The local raw chain must hold the local certificate, in storage of its
+ * own rather than the peer chain's. der_name is the DER of the certificate
+ * this end presents, or NULL to compare the storage only. Backends that
+ * don't report the local raw chain, e.g. OpenSSL, leave cnt zero and are
+ * skipped.
+ */
+static pj_status_t check_raw_chain(const pj_ssl_sock_info *si,
+                                   pj_pool_t *pool,
+                                   const char *der_name)
+{
+    const pj_ssl_cert_info *lci = si->local_cert_info;
+    const pj_ssl_cert_info *rci = si->remote_cert_info;
+    pj_str_t der_file;
+    pj_oshandle_t fd = NULL;
+    pj_ssize_t size;
+    pj_str_t der;
+    pj_status_t status;
+
+    if (!lci || lci->raw_chain.cnt == 0)
+        return PJ_SUCCESS;
+
+    if (rci && rci->raw_chain.cnt &&
+        lci->raw_chain.cert_raw == rci->raw_chain.cert_raw)
+    {
+        return PJ_EBUG;
+    }
+
+    if (!der_name)
+        return PJ_SUCCESS;
+
+    der_file = pj_str((char*)der_name);
+    size = (pj_ssize_t)pj_file_size(der_file.ptr);
+    if (size <= 0)
+        return PJ_ENOTFOUND;
+
+    status = pj_file_open(pool, der_file.ptr, PJ_O_RDONLY, &fd);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    der.ptr = (char*)pj_pool_alloc(pool, size);
+    status = pj_file_read(fd, der.ptr, &size);
+    der.slen = size;
+    pj_file_close(fd);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    if (lci->raw_chain.cert_raw[0].slen != der.slen ||
+        pj_memcmp(lci->raw_chain.cert_raw[0].ptr, der.ptr, der.slen))
+    {
+        return PJ_EBUG;
+    }
+
+    return PJ_SUCCESS;
+}
+
 
 static pj_bool_t ssl_on_connect_complete(pj_ssl_sock_t *ssock,
                                          pj_status_t status)
@@ -135,6 +192,12 @@ static pj_bool_t ssl_on_connect_complete(pj_ssl_sock_t *ssock,
     status = pj_ssl_sock_get_info(ssock, &info);
     if (status != PJ_SUCCESS) {
         app_perror("...ERROR pj_ssl_sock_get_info()", status);
+        goto on_return;
+    }
+
+    status = check_raw_chain(&info, st->pool, st->cert_der);
+    if (status != PJ_SUCCESS) {
+        app_perror("...ERROR invalid local raw chain", status);
         goto on_return;
     }
 
@@ -218,11 +281,23 @@ static pj_bool_t ssl_on_accept_complete(pj_ssl_sock_t *ssock,
 
     /* Track accepted socket for cleanup */
     parent_st->accepted_ssock = newsock;
+    parent_st->accepted_st = st;
 
     status = pj_ssl_sock_get_info(newsock, &info);
     if (status != PJ_SUCCESS) {
         app_perror("...ERROR pj_ssl_sock_get_info()", status);
         goto on_return;
+    }
+
+    status = check_raw_chain(&info, st->pool, st->cert_der);
+    if (status != PJ_SUCCESS) {
+        app_perror("...ERROR invalid local raw chain", status);
+        /* Report through the parent and keep echoing: closing from this
+         * callback leaves on_handshake_complete() using a released
+         * ssock->parent, and perf_test() waits for every client to finish.
+         */
+        parent_st->err = status;
+        status = PJ_SUCCESS;
     }
 
     pj_sockaddr_print(src_addr, buf, sizeof(buf), 1);
@@ -691,6 +766,7 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
     pj_sockaddr addr, listen_addr;
     pj_ssl_cipher ciphers[1];
     pj_ssl_cert_t *cert = NULL;
+    pj_ssl_cert_t *cli_cert = NULL;
     pj_status_t status;
 
     pool = pj_pool_create(mem, "ssl_echo", 256, 256, NULL);
@@ -731,6 +807,7 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
     state_serv.echo = PJ_TRUE;
     state_serv.is_server = PJ_TRUE;
     state_serv.is_verbose = PJ_TRUE;
+    state_serv.cert_der = CERT_DER_FILE;
 
     status = pj_ssl_sock_create(pool, &param, &ssock_serv);
     if (status != PJ_SUCCESS) {
@@ -834,6 +911,7 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
     state_cli.pool = pool;
     state_cli.check_echo = PJ_TRUE;
     state_cli.is_verbose = PJ_TRUE;
+    state_cli.cert_der = CERT_DER_FILE;
 
     {
         /* srand() should be done centrally (blp)
@@ -875,6 +953,8 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
     }
 #else
     {
+        cli_cert = cert;
+
         if (!client_provide_cert) {
             pj_str_t ca_file = pj_str(CERT_CA_FILE);
             pj_str_t null_str = pj_str("");
@@ -883,11 +963,12 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
 #if (defined(TEST_LOAD_FROM_FILES) && TEST_LOAD_FROM_FILES==1)
             /* Reset any certificate & private keys previously set */
             status = pj_ssl_cert_load_from_files(pool, &ca_file, &null_str, 
-                                                 &null_str, &null_str, &cert);
+                                                 &null_str, &null_str,
+                                                 &cli_cert);
 
             /* Also reset any direct backend objects */
             pj_bzero(&cert_direct, sizeof(cert_direct));
-            pj_ssl_cert_load_direct(pool, &cert_direct, &cert);
+            pj_ssl_cert_load_direct(pool, &cert_direct, &cli_cert);
 #else
             pj_ssl_cert_buffer null_buf, ca_buf;
 
@@ -899,15 +980,53 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
             }
 
             status = pj_ssl_cert_load_from_buffer(pool, &ca_buf, &null_buf,
-                                                  &null_buf, &null_str, &cert);
+                                                  &null_buf, &null_str,
+                                                  &cli_cert);
 #endif
             if (status != PJ_SUCCESS) {
                 goto on_return;
             }
 
         }
+#if TEST_CLI_OWN_CERT
+        else {
+            /* A credential of its own, so each end's local certificate
+             * chain differs from the peer's in content as well as storage.
+             */
+            pj_str_t ca_file = pj_str(CERT_CA_FILE);
+            pj_str_t cert_file = pj_str(CERT_CLI_FILE);
+            pj_str_t privkey_file = pj_str(CERT_CLI_PRIVKEY_FILE);
+            pj_str_t privkey_pass = pj_str(CERT_PRIVKEY_PASS);
+            pj_ssl_cert_t *own_cert = NULL;
 
-        status = pj_ssl_sock_set_certificate(ssock_cli, pool, cert);
+#if (defined(TEST_LOAD_FROM_FILES) && TEST_LOAD_FROM_FILES==1)
+            status = pj_ssl_cert_load_from_files(pool, &ca_file, &cert_file,
+                                                 &privkey_file, &privkey_pass,
+                                                 &own_cert);
+#else
+            pj_ssl_cert_buffer ca_buf, cert_buf, privkey_buf;
+
+            status = load_cert_to_buf(pool, &ca_file, &ca_buf);
+            if (status == PJ_SUCCESS)
+                status = load_cert_to_buf(pool, &cert_file, &cert_buf);
+            if (status == PJ_SUCCESS)
+                status = load_cert_to_buf(pool, &privkey_file, &privkey_buf);
+            if (status == PJ_SUCCESS) {
+                status = pj_ssl_cert_load_from_buffer(pool, &ca_buf, &cert_buf,
+                                                      &privkey_buf,
+                                                      &privkey_pass, &own_cert);
+            }
+#endif
+            if (status != PJ_SUCCESS) {
+                goto on_return;
+            }
+
+            cli_cert = own_cert;
+            state_cli.cert_der = CERT_CLI_DER_FILE;
+        }
+#endif
+
+        status = pj_ssl_sock_set_certificate(ssock_cli, pool, cli_cert);
         if (status != PJ_SUCCESS) {
             goto on_return;
         }
@@ -978,6 +1097,11 @@ on_return:
 
     if (ssock_serv)
         pj_ssl_sock_close(ssock_serv);
+    if (state_serv.accepted_st && !state_serv.accepted_st->err &&
+        !state_serv.accepted_st->done)
+    {
+        pj_ssl_sock_close(state_serv.accepted_ssock);
+    }
     if (ssock_cli && !state_cli.err && !state_cli.done) 
         pj_ssl_sock_close(ssock_cli);
     if (ioqueue)

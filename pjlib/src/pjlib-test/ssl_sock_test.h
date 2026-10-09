@@ -15,8 +15,28 @@
 #   define CERT_CA_FILE             CERT_DIR "cacert.pem"
 #endif
 #define CERT_FILE                   CERT_DIR "cacert.pem"
+#define CERT_DER_FILE               CERT_DIR "cacert.der"
 #define CERT_PRIVKEY_FILE           CERT_DIR "privkey.pem"
 #define CERT_PRIVKEY_PASS           "privkeypass"
+
+/* A second certificate, issued by the CA above, for the client to present
+ * when the server requires one. Having each end on its own certificate
+ * lets a test tell the local certificate chain from the peer's by content.
+ */
+#define CERT_CLI_FILE               CERT_DIR "clicert.pem"
+#define CERT_CLI_DER_FILE           CERT_DIR "clicert.der"
+#define CERT_CLI_PRIVKEY_FILE       CERT_DIR "cliprivkey.pem"
+
+/* The Apple backends take the private key from the Keychain, where only the
+ * server key is stored, so there the client keeps reusing the server
+ * certificate.
+ */
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_DARWIN) || \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_APPLE)
+#   define TEST_CLI_OWN_CERT        0
+#else
+#   define TEST_CLI_OWN_CERT        1
+#endif
 
 #define TEST_LOAD_FROM_FILES        1
 
