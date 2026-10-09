@@ -222,6 +222,11 @@ struct SdpSession
 
 public:
     /**
+     * Default constructor
+     */
+    SdpSession() : pjSdpSession(nullptr) {}
+
+    /**
      * Convert from pjsip
      */
     void fromPj(const pjmedia_sdp_session &sdp);
@@ -831,6 +836,36 @@ struct OnCallSdpCreatedParam
      * The remote SDP, will be empty if local is SDP offerer.
      */
     SdpSession remSdp;
+};
+
+/**
+ * This structure contains parameters for Call::onCallSendAck() callback.
+ */
+struct OnCallSendAckParam
+{
+    /**
+     * The 2xx response for INVITE that triggered the need to send an ACK
+     * request.
+     */
+    SipRxData rdata;
+
+    /**
+     * Output: application sets this to true if it has sent (or will send) 
+     * the ACK itself, to suppress the automatic ACK sending. Default is false,
+     * i.e. the library sends the ACK after this callback returns.
+     */
+    bool suppressSendAck;
+
+    /**
+     * The CSeq of the 2xx response.
+     */
+    pj_int32_t cseq;
+    
+    /**
+     * Default constructor
+     */
+    OnCallSendAckParam() : suppressSendAck(false), cseq(-1)
+    {}
 };
 
 /**
@@ -1743,6 +1778,24 @@ public:
     void hangup(const CallOpParam &prm) PJSUA2_THROW(Error);
     
     /**
+     * Create and send an ACK request for the 2xx response, optionally with
+     * an SDP answer \a sdp attached to it. Application would normally call
+     * this from within onCallSendAck(), to manually take over the ACK
+     * transmission, e.g. to attach an SDP answer to the ACK for a late
+     * SDP offer received in the 2xx response.
+     *
+     * @param cseq      CSeq of the 2xx response that triggered the need to
+     *                  send an ACK request; normally this is the CSeq of
+     *                  the \a rdata received in the onCallSendAck()
+     *                  callback.
+     * @param sdp       Optional SDP answer to be attached to the ACK
+     *                  request. If its wholeSdp is empty, no SDP body
+     *                  will be attached.
+     */
+    void sendAck(int cseq, const SdpSession &sdp = SdpSession())
+                PJSUA2_THROW(Error);
+
+    /**
      * Put the specified call on hold. This will send re-INVITE with the
      * appropriate SDP to inform remote that the call is being put on hold.
      * The final status of the request itself will be reported on the
@@ -2101,6 +2154,22 @@ public:
      * @param prm       Callback parameter.
      */
     virtual void onCallSdpCreated(OnCallSdpCreatedParam &prm)
+    { PJ_UNUSED_ARG(prm); }
+
+    /**
+     * Notify application when the framework needs to send an ACK request
+     * after it receives an incoming 2xx response for INVITE (e.g. when the
+     * 2xx response carries a late SDP offer). The default implementation
+     * simply do nothing and let's framework send the ACK without any SDP answer.
+     * Application can set prm.suppressSendAck to true and than the application 
+     * is responsible for sending the ACK. 
+     *
+     * This callback is enabled only when
+     * UaConfig::enableCallSendAckCallback is set before Endpoint::libInit().
+     *
+     * @param prm       Callback parameter.
+     */
+    virtual void onCallSendAck(OnCallSendAckParam &prm)
     { PJ_UNUSED_ARG(prm); }
 
     /**

@@ -16,6 +16,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#include <pj/types.h>
+#include <pjmedia/sdp_neg.h>
 #include <pjsua-lib/pjsua.h>
 #include <pjsua-lib/pjsua_internal.h>
 
@@ -43,6 +45,8 @@
 
 /* Max number of hangup retries. */
 #define CALL_HANGUP_MAX_RETRY        4
+
+static long ack_callback_inv_tls = -1;
 
 /*
  * The INFO method.
@@ -123,6 +127,14 @@ static pj_bool_t pjsua_call_on_uac_tsx_terminate_session(
                                             pjsip_inv_session *inv,
                                             pjsip_transaction *tsx,
                                             pjsip_event *e);
+
+/*
+ * This callback is called by the invite session framework when it needs to
+ * send an ACK request for the 2xx response of INVITE, and the application
+ * has asked to handle the ACK transmission manually.
+ */
+static void pjsua_call_on_send_ack(pjsip_inv_session *inv,
+                                   pjsip_rx_data *rdata);
 
 #if PJSUA_HAS_SIPREC
 /*
@@ -236,6 +248,12 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     /* Copy config */
     pjsua_config_dup(pjsua_var.pool, &pjsua_var.ua_cfg, cfg);
 
+    if (pjsua_var.ua_cfg.cb.on_call_send_ack) {
+        status = pj_thread_local_alloc(&ack_callback_inv_tls);
+        if (status != PJ_SUCCESS)
+            return status;
+    }
+
     /* Verify settings */
     if (pjsua_var.ua_cfg.max_calls > PJSUA_MAX_CALLS) 
         pjsua_var.ua_cfg.max_calls = PJSUA_MAX_CALLS;
@@ -269,6 +287,9 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     inv_cb.on_redirected = &pjsua_call_on_redirected;
     if (pjsua_var.ua_cfg.cb.on_call_rx_reinvite) {
         inv_cb.on_rx_reinvite = &pjsua_call_on_rx_reinvite;
+    }
+    if (pjsua_var.ua_cfg.cb.on_call_send_ack) {
+        inv_cb.on_send_ack = &pjsua_call_on_send_ack;
     }
     if (pjsua_var.ua_cfg.cb.on_call_tsx_terminate_session) {
         inv_cb.on_uac_tsx_terminate_session =
@@ -311,6 +332,16 @@ pj_status_t pjsua_call_subsys_start(void)
 {
     /* Nothing to do */
     return PJ_SUCCESS;
+}
+
+
+/* Destroy call subsystem resources. */
+void pjsua_call_subsys_destroy(void)
+{
+    if (ack_callback_inv_tls != -1) {
+        pj_thread_local_free(ack_callback_inv_tls);
+        ack_callback_inv_tls = -1;
+    }
 }
 
 
@@ -3283,6 +3314,98 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
     return pjsua_call_answer2(call_id, opt, code, reason, msg_data);
 }
 
+static pj_status_t call_inv_send_ack(pjsip_inv_session *inv,
+                                     int cseq,
+                                     const pjmedia_sdp_session *sdp)
+{
+    pjsip_tx_data *tdata;
+    pj_status_t status;
+    pjmedia_sdp_neg_state neg_state;
+
+    if (inv == NULL)
+        return PJ_EINVAL;
+
+    if (inv->neg == NULL)
+        return PJMEDIA_SDPNEG_EINSTATE;
+
+    if (sdp) {
+        neg_state = pjmedia_sdp_neg_get_state(inv->neg);
+        if (neg_state != PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER &&
+            neg_state != PJMEDIA_SDP_NEG_STATE_WAIT_NEGO)
+            return PJMEDIA_SDPNEG_EINSTATE;
+
+        status = pjsip_inv_set_sdp_answer(inv, sdp);
+        if (status != PJ_SUCCESS) {
+            pjsua_perror(THIS_FILE, "Unable to set SDP answer for ACK",
+                        status);
+            goto on_return;
+        }
+    }
+
+    status = pjsip_inv_create_ack(inv, cseq, &tdata);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE, "Unable to create ACK", status);
+        goto on_return;
+    }
+
+    status = pjsip_inv_send_msg(inv, tdata);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE, "Unable to send ACK", status);
+    }
+
+on_return:
+    return status;
+}
+
+/*
+ * Create and send an ACK request for the 2xx response, optionally with an
+ * SDP answer \a sdp attached to it.
+ */
+PJ_DEF(pj_status_t) pjsua_call_send_ack(pjsua_call_id call_id,
+                                        int cseq,
+                                        const pjmedia_sdp_session *sdp)
+{
+    pjsua_call *call;
+    pjsip_dialog *dlg = NULL;
+    pjsip_inv_session *callback_inv = NULL;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
+                     PJ_EINVAL);
+
+    PJ_LOG(4,(THIS_FILE, "Sending ACK for call %d", call_id));
+    pj_log_push_indent();
+
+    if (ack_callback_inv_tls != -1)
+        callback_inv = (pjsip_inv_session*) pj_thread_local_get(ack_callback_inv_tls);
+
+    if (callback_inv) {
+        call = (pjsua_call*) callback_inv->dlg->mod_data[pjsua_var.mod.id];
+        if (!call || call->index != call_id) {
+            status = PJ_EINVALIDOP;
+            goto on_return;
+        }
+    }
+    else {
+        status = acquire_call("pjsua_call_send_ack()", call_id, &call, &dlg);
+        if (status != PJ_SUCCESS) {
+            goto on_return;
+        }
+
+        callback_inv = call->inv;
+    }
+
+    status = call_inv_send_ack(callback_inv, cseq, sdp);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE, "Unable to send ACK", status);
+    }
+
+on_return:
+    if (dlg) pjsip_dlg_dec_lock(dlg);
+    pj_log_pop_indent();
+    return status;
+}
+
 
 static pj_status_t call_inv_end_session(pjsua_call *call,
                                         unsigned code,
@@ -6133,10 +6256,91 @@ static pj_status_t pjsua_call_on_rx_reinvite(pjsip_inv_session *inv,
     pjsua_call *call;
     pj_bool_t async;
 
-    PJ_UNUSED_ARG(offer);
-    PJ_UNUSED_ARG(rdata);
-
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+
+    /* An offerless re-INVITE never goes through pjsua_call_on_rx_offer(),
+     * so rx_reinv_async was never set for it. Ask the application's
+     * on_call_rx_reinvite() callback directly here instead. */
+    if (offer == NULL && pjsua_var.ua_cfg.cb.on_call_rx_reinvite) {
+        pjsip_status_code code = PJSIP_SC_OK;
+        pjsua_call_setting opt = call->opt;
+        pj_status_t status;
+
+        async = PJ_FALSE;
+        (*pjsua_var.ua_cfg.cb.on_call_rx_reinvite)(call->index, offer, rdata,
+                                                    NULL, &async, &code,
+                                                    &opt);
+        if (async) {
+            pjsip_tx_data *response;
+
+            status = pjsip_inv_initial_answer(inv, rdata, 100, NULL, NULL,
+                                              &response);
+            if (status != PJ_SUCCESS) {
+                if (response)
+                    pjsip_tx_data_dec_ref(response);
+                PJ_PERROR(3, (THIS_FILE, status,
+                              "Failed to create initial answer"));
+                /* Can't tell the app via SIP; tear the session down
+                 * (notifying via on_call_state) instead of returning an
+                 * error the framework would use to build its own answer
+                 * on top of this now-broken transaction.
+                 */
+                pjsip_inv_terminate(inv, PJSIP_SC_INTERNAL_SERVER_ERROR,
+                                    PJ_TRUE);
+                return PJ_SUCCESS;
+            }
+
+            status = pjsip_inv_send_msg(inv, response);
+            if (status != PJ_SUCCESS) {
+                PJ_PERROR(3, (THIS_FILE, status,
+                              "Failed to send initial answer"));
+                pjsip_inv_terminate(inv, PJSIP_SC_INTERNAL_SERVER_ERROR,
+                                    PJ_TRUE);
+                return PJ_SUCCESS;
+            }
+
+            call->opt = opt;
+            return PJ_SUCCESS;
+        }
+
+        if (code != PJSIP_SC_OK) {
+            /* App wants to reject; send the final response ourselves since
+             * the framework would otherwise always answer 200 for an
+             * offerless re-INVITE regardless of code (no SDP to reject on).
+             */
+            pjsip_tx_data *response;
+
+            PJ_LOG(4,(THIS_FILE, "Rejecting offerless re-INVITE on call %d "
+                                 "with code %d", call->index, code));
+
+            status = pjsip_inv_initial_answer(inv, rdata, code, NULL, NULL,
+                                              &response);
+            if (status != PJ_SUCCESS) {
+                if (response)
+                    pjsip_tx_data_dec_ref(response);
+                PJ_PERROR(3, (THIS_FILE, status,
+                              "Failed to create rejection response"));
+                pjsip_inv_terminate(inv, PJSIP_SC_INTERNAL_SERVER_ERROR,
+                                    PJ_TRUE);
+                return PJ_SUCCESS;
+            }
+
+            status = pjsip_inv_send_msg(inv, response);
+            if (status != PJ_SUCCESS) {
+                PJ_PERROR(3, (THIS_FILE, status,
+                              "Failed to send rejection response"));
+                pjsip_inv_terminate(inv, PJSIP_SC_INTERNAL_SERVER_ERROR,
+                                    PJ_TRUE);
+                return PJ_SUCCESS;
+            }
+
+            return PJ_SUCCESS;
+        }
+
+        call->opt = opt;
+        return !PJ_SUCCESS;
+    }
+
     async = call->rx_reinv_async;
     call->rx_reinv_async = PJ_FALSE;
 
@@ -7363,6 +7567,47 @@ static pj_bool_t pjsua_call_on_uac_tsx_terminate_session(
 
     return (*pjsua_var.ua_cfg.cb.on_call_tsx_terminate_session)(call->index,
                                                                 tsx, e);
+}
+
+/*
+ * This callback is called by the invite session framework when it needs to
+ * send an ACK request for the 2xx response of INVITE, and the application
+ * has asked to handle the ACK transmission manually (by implementing
+ * on_call_send_ack()).
+ */
+static void pjsua_call_on_send_ack(pjsip_inv_session *inv,
+                                   pjsip_rx_data *rdata)
+{
+    pj_bool_t skip_sending_ack = PJ_FALSE;
+    pjsua_call *call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+    pjsip_inv_session *prev_inv = NULL;
+    pj_status_t status;
+
+    if (!call) {
+        call_inv_send_ack(inv, rdata->msg_info.cseq->cseq, NULL);
+        return;
+    }
+
+    pj_log_push_indent();
+
+    if (pjsua_var.ua_cfg.cb.on_call_send_ack) {
+        prev_inv = (pjsip_inv_session*) pj_thread_local_get(ack_callback_inv_tls);
+        status = pj_thread_local_set(ack_callback_inv_tls, inv);
+        if (status == PJ_SUCCESS) {
+            skip_sending_ack = (*pjsua_var.ua_cfg.cb.on_call_send_ack)(
+                                                            call->index,
+                                                            rdata);
+            pj_thread_local_set(ack_callback_inv_tls, prev_inv);
+        } else {
+            pjsua_perror(THIS_FILE, "Unable to set ACK callback context",
+                         status);
+        }
+    }
+    if (!skip_sending_ack) {
+        call_inv_send_ack(inv, rdata->msg_info.cseq->cseq, NULL);
+    }
+
+    pj_log_pop_indent();
 }
 
 #if defined(PJSUA_MEDIA_HAS_PJMEDIA) && PJSUA_MEDIA_HAS_PJMEDIA != 0
