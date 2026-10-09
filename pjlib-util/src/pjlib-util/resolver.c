@@ -299,6 +299,8 @@ static void sys_collect(pj_dns_resolver *resolver, struct query_head *list);
 
 static void report_sys(pj_dns_resolver *resolver, pj_dns_async_query *q);
 
+static void drop_cache(pj_dns_resolver *resolver, pj_bool_t errors_only);
+
 static void update_res_cache(pj_dns_resolver *resolver,
                              const struct res_key *key,
                              pj_status_t status,
@@ -799,6 +801,9 @@ PJ_DEF(pj_status_t) pj_dns_resolver_reset_ns_state(pj_dns_resolver *resolver)
         resolver->ns[i].state = STATE_ACTIVE;
         resolver->ns[i].state_expiry = now;
     }
+
+    /* Their errors may not hold on the new network either */
+    drop_cache(resolver, PJ_TRUE);
     if (resolver->ns_count)
         PJ_LOG(4,(resolver->name.ptr, "Nameserver state reset"));
 
@@ -2820,16 +2825,12 @@ PJ_DEF(unsigned) pj_dns_resolver_get_cached_count(pj_dns_resolver *resolver)
 }
 
 
-/*
- * Clear the response cache.
+/* Remove the cached entries, or only the errors. Entries added by the
+ * application without TTL are kept. Called with the lock held.
  */
-PJ_DEF(pj_status_t) pj_dns_resolver_clear_cache(pj_dns_resolver *resolver)
+static void drop_cache(pj_dns_resolver *resolver, pj_bool_t errors_only)
 {
     pj_hash_iterator_t it_buf, *it;
-
-    PJ_ASSERT_RETURN(resolver, PJ_EINVAL);
-
-    pj_grp_lock_acquire(resolver->grp_lock);
 
     it = pj_hash_first(resolver->hrescache, &it_buf);
     while (it) {
@@ -2838,9 +2839,14 @@ PJ_DEF(pj_status_t) pj_dns_resolver_clear_cache(pj_dns_resolver *resolver)
         cache = (struct cached_res*) pj_hash_this(resolver->hrescache, it);
         it = pj_hash_next(resolver->hrescache, it);
 
-        /* Keep the entries added by the application without TTL */
         if (cache->expiry_time.sec == 0x7FFFFFFFL)
             continue;
+        if (errors_only) {
+            int rcode = PJ_DNS_GET_RCODE(cache->pkt->hdr.flags);
+
+            if (rcode == 0 || rcode == PJ_DNS_RCODE_NXDOMAIN)
+                continue;
+        }
 
         pj_hash_set(NULL, resolver->hrescache, &cache->key,
                     sizeof(cache->key), 0, NULL);
@@ -2849,7 +2855,18 @@ PJ_DEF(pj_status_t) pj_dns_resolver_clear_cache(pj_dns_resolver *resolver)
         if (--cache->ref_cnt <= 0)
             free_entry(resolver, cache);
     }
+}
 
+
+/*
+ * Clear the response cache.
+ */
+PJ_DEF(pj_status_t) pj_dns_resolver_clear_cache(pj_dns_resolver *resolver)
+{
+    PJ_ASSERT_RETURN(resolver, PJ_EINVAL);
+
+    pj_grp_lock_acquire(resolver->grp_lock);
+    drop_cache(resolver, PJ_FALSE);
     pj_grp_lock_release(resolver->grp_lock);
     return PJ_SUCCESS;
 }

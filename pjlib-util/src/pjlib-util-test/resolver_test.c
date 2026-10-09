@@ -2725,15 +2725,27 @@ static int wait_pkt_count(unsigned count)
 #define SYS_FAIL(code)  { rc = (code); goto on_return; }
 
 /* After the reset, a nameserver marked as bad is tried again, while the
- * cache and the pending queries are kept.
+ * cache and the pending queries are kept, but for the cached errors.
  */
 static int dns_reset_ns_state_test(void)
 {
     pj_str_t name1 = pj_str("name_reset1");
     pj_str_t name2 = pj_str("name_reset2");
+    pj_str_t name3 = pj_str("name_reset3");
+    static const int err_rcode[] = {
+        PJ_DNS_RCODE_FORMERR, PJ_DNS_RCODE_SERVFAIL,
+        PJ_DNS_RCODE_NOTIMPL, PJ_DNS_RCODE_NOTAUTH
+    };
+    static const char *err_name[] = {
+        "name_reset_err1", "name_reset_err2",
+        "name_reset_err3", "name_reset_err4"
+    };
+    pj_dns_async_query *err_q[PJ_ARRAY_SIZE(err_rcode) + 1] = { NULL };
+    unsigned i;
     pj_str_t ns_addr = pj_str("127.0.0.1");
     pj_uint16_t port = g_server[0].port;
-    pj_dns_parsed_packet *r;
+    pj_dns_parsed_packet *r, pkt;
+    pj_dns_parsed_query question;
     pj_dns_resolver *res = NULL;
     pj_dns_settings lset;
     pj_dns_async_query *q;
@@ -2819,13 +2831,72 @@ static int dns_reset_ns_state_test(void)
     PJ_TEST_EQ(g_server[0].pkt_count + g_server[1].pkt_count, sent, NULL,
                SYS_FAIL(-918));
 
-    pj_dns_resolver_destroy(res, PJ_FALSE);
-    res = NULL;
+    /* But the cached errors are dropped, while NXDOMAIN stays */
+    pj_bzero(&pkt, sizeof(pkt));
+    pj_bzero(&question, sizeof(question));
+    pkt.hdr.qdcount = 1;
+    pkt.q = &question;
+    question.type = PJ_DNS_TYPE_A;
+    question.dnsclass = 1;
+    for (i = 0; i < PJ_ARRAY_SIZE(err_rcode); ++i) {
+        pkt.hdr.flags = PJ_DNS_SET_QR(1) | PJ_DNS_SET_RCODE(err_rcode[i]);
+        question.name = pj_str((char*)err_name[i]);
+        PJ_TEST_SUCCESS(pj_dns_resolver_add_entry(res, &pkt, PJ_TRUE), NULL,
+                        SYS_FAIL(-919));
+        reset_ns_cb_called = PJ_FALSE;
+        PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &question.name,
+                                                    PJ_DNS_TYPE_A, 0,
+                                                    &dns_callback_reset_ns,
+                                                    NULL, &q),
+                        NULL, SYS_FAIL(-920));
+        PJ_TEST_TRUE(q == NULL && reset_ns_cb_called, NULL, SYS_FAIL(-921));
+        PJ_TEST_EQ(reset_ns_cb_status, PJ_STATUS_FROM_DNS_RCODE(err_rcode[i]),
+                   NULL, SYS_FAIL(-922));
+    }
+    pkt.hdr.flags = PJ_DNS_SET_QR(1) | PJ_DNS_SET_RCODE(PJ_DNS_RCODE_NXDOMAIN);
+    question.name = name3;
+    PJ_TEST_SUCCESS(pj_dns_resolver_add_entry(res, &pkt, PJ_TRUE), NULL,
+                    SYS_FAIL(-923));
 
+    PJ_TEST_SUCCESS(pj_dns_resolver_reset_ns_state(res), NULL, SYS_FAIL(-924));
+
+    /* Left unanswered until cancelled at the end */
+    g_server[0].action = ACTION_IGNORE;
+    lset.qretr_delay = 10000;
+    pj_dns_resolver_set_settings(res, &lset);
+    sent = g_server[0].pkt_count + g_server[1].pkt_count;
+    for (i = 0; i < PJ_ARRAY_SIZE(err_q); ++i) {
+        pj_str_t name = i < PJ_ARRAY_SIZE(err_rcode) ?
+                        pj_str((char*)err_name[i]) : name1;
+
+        PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name,
+                                                    PJ_DNS_TYPE_A, 0,
+                                                    &dns_callback_reset_ns,
+                                                    NULL, &err_q[i]),
+                        NULL, SYS_FAIL(-925));
+        PJ_TEST_NOT_NULL(err_q[i], NULL, SYS_FAIL(-926));
+    }
+    PJ_TEST_EQ(wait_pkt_count(sent + PJ_ARRAY_SIZE(err_q)), 0, NULL,
+               SYS_FAIL(-927));
+
+    reset_ns_cb_called = PJ_FALSE;
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name3, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_reset_ns, NULL,
+                                                &q),
+                    NULL, SYS_FAIL(-928));
+    PJ_TEST_TRUE(q == NULL && reset_ns_cb_called, NULL, SYS_FAIL(-929));
+    PJ_TEST_EQ(reset_ns_cb_status,
+               PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_NXDOMAIN), NULL,
+               SYS_FAIL(-930));
 
 on_return:
-    if (res)
+    if (res) {
+        for (i = 0; i < PJ_ARRAY_SIZE(err_q); ++i) {
+            if (err_q[i])
+                pj_dns_resolver_cancel_query(err_q[i], PJ_FALSE);
+        }
         pj_dns_resolver_destroy(res, PJ_FALSE);
+    }
     return rc;
 }
 
