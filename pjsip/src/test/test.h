@@ -132,6 +132,7 @@ int regc_test(void);
 int auth_async_test(void);
 int pjsua_auth_test(void);
 int pjsua_call_test(void);
+int pjsua_late_sdp_offer_test(void);
 int pjsua_acc_test(void);
 int srv_failover_pjsua_test(void);
 int pjsua_dns_test(void);

@@ -1,5 +1,5 @@
 #
-# Test driver for alt-pjsua-uac-late-offer.xml
+# Test driver for alt-pjsua-uac-late-offer-dummy-codecs.xml
 #
 # alt_pjsua acts as UAC and sends an SDP-less INVITE to SIPp (UAS). SIPp
 # returns an SDP offer in its 200 OK, which alt_pjsua answers in the ACK. SIPp

@@ -297,6 +297,7 @@ struct pjsua_call
                                     /**< Allocated size of siprec_metadata */
 
     pjmedia_av_sync     *av_sync;       /**< Media stream synchronizer      */
+    pjmedia_sdp_session *answer_sdp;/**< Application SDP pending media init.*/
 };
 
 PJ_INLINE(pj_bool_t) pjsua_call_media_is_app_managed(

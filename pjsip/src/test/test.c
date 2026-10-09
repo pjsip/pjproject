@@ -488,6 +488,8 @@ int test_main(int argc, char *argv[])
 #if INCLUDE_PJSUA_CALL_TEST
     UT_ADD_TEST(&test_app.ut_app, pjsua_call_test,
                 PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
+    UT_ADD_TEST(&test_app.ut_app, pjsua_late_sdp_offer_test,
+                PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
 #endif
 
 #if INCLUDE_PJSUA_ACC_TEST

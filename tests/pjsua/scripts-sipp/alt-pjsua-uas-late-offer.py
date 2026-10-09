@@ -6,10 +6,6 @@
 # in the 200 OK; SIPp answers it in the ACK. The call should reach
 # STATE_CONFIRMED.
 #
-# Run with standard pjsua:
-#   cd tests/pjsua && python3 run.py mod_sipp.py \
-#       scripts-sipp/alt-pjsua-uas-late-offer.xml
-#
 # Run with alt_pjsua:
 #   cd tests/pjsua && python3 run.py \
 #       --exe ../../pjsip-apps/src/3rdparty_media_sample/alt_pjsua \

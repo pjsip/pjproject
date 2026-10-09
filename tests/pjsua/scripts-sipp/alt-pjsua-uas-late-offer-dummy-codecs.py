@@ -1,15 +1,11 @@
 #
-# Test driver for alt-pjsua-uas-late-offer.xml
+# Test driver for alt-pjsua-uas-late-offer-dummy-codecs.xml
 #
 # alt_pjsua acts as UAS and auto-answers an SDP-less INVITE from SIPp
 # (UAC). alt_pjsua has no offer to answer, so it puts its own SDP offer
 # in the 200 OK; SIPp answers it in the ACK. The call should reach
 # STATE_CONFIRMED.
 # This scenario tests the handling of late SDP offers with dummy codecs.
-#
-# Run with standard pjsua:
-#   cd tests/pjsua && python3 run.py mod_sipp.py \
-#       scripts-sipp/alt-pjsua-uas-late-offer.xml
 #
 # Run with alt_pjsua:
 #   cd tests/pjsua && python3 run.py \
