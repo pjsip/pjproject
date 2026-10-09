@@ -22,9 +22,13 @@
 
 using namespace pj;
 
+void audioMediaPortTest();
+
 int main(int argc, char *argv[])
 {
     try {
+        audioMediaPortTest();
+
         {
             InstantMessagingTests instantMessagingTests;
 
