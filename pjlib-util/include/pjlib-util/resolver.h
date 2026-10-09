@@ -362,8 +362,9 @@ PJ_DECL(pj_status_t) pj_dns_resolver_set_ns(pj_dns_resolver *resolver,
  * Reset the state of the name servers, so that they are all tried again
  * as when they were set with #pj_dns_resolver_set_ns(), e.g. after a
  * network change: a name server marked as bad while the previous network
- * was going down may answer on the new one. Unlike setting them again,
- * this keeps the cache and the pending queries untouched.
+ * was going down may answer on the new one. Their cached errors, e.g. a
+ * refusal, are dropped too. The rest of the cache and the pending queries
+ * are kept.
  *
  * @param resolver  The resolver instance.
  *
