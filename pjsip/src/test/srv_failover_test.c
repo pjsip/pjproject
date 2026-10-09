@@ -2182,6 +2182,372 @@ static int pjsua_contact_probe_case(void)
 }
 #endif
 
+#if PJSIP_HAS_RESOLVER
+static struct {
+    volatile pj_bool_t  done;
+    pj_status_t         status;
+} pjsua_resolved;
+
+static void pjsua_resolve_cb(pj_status_t status, void *token,
+                             const struct pjsip_server_addresses *addr)
+{
+    PJ_UNUSED_ARG(token);
+    PJ_UNUSED_ARG(addr);
+    pjsua_resolved.status = status;
+    pjsua_resolved.done = PJ_TRUE;
+}
+
+/* Resolve a name through PJSUA's endpoint, polling its events. A query
+ * that can't be sent fails before pjsip_endpt_resolve() returns, a sent
+ * one is answered later, here by its timeout.
+ */
+#define PJSUA_RESOLVE_NO_ANSWER    (-1)
+
+static pj_status_t pjsua_resolve(pj_pool_t *pool, const char *host,
+                                 pj_bool_t *at_once)
+{
+    pjsip_host_info target;
+    unsigned waited;
+
+    pj_bzero(&target, sizeof(target));
+    target.type = PJSIP_TRANSPORT_UDP;
+    target.flag = pjsip_transport_get_flag_from_type(target.type);
+    target.addr.host = pj_str((char*)host);
+    pj_bzero(&pjsua_resolved, sizeof(pjsua_resolved));
+    pjsip_endpt_resolve(pjsua_get_pjsip_endpt(), pool, &target, NULL,
+                        &pjsua_resolve_cb);
+    *at_once = pjsua_resolved.done;
+    for (waited = 0; !pjsua_resolved.done && waited < 5000; waited += 20)
+        pjsua_handle_events(20);
+    return pjsua_resolved.done ? pjsua_resolved.status :
+                                 PJSUA_RESOLVE_NO_ANSWER;
+}
+
+/* An IP change makes PJSUA try the nameservers marked as bad again: the
+ * query is sent, instead of failing at once.
+ */
+static int pjsua_ip_change_nameservers_case(void)
+{
+    pjsua_config ua_cfg;
+    pjsua_logging_config log_cfg;
+    pjsua_ip_change_param param;
+    pj_dns_resolver *res;
+    pj_dns_settings st;
+    pj_pool_t *pool;
+    pj_bool_t keep_inv = pjsip_cfg()->endpt.keep_inv_after_tsx_timeout;
+    pj_bool_t at_once, unanswered = PJ_FALSE;
+    pj_status_t status;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  IP change, nameserver marked as bad"));
+
+    if (pjsua_create() != PJ_SUCCESS)
+        return -3210;
+    pjsua_config_default(&ua_cfg);
+    ua_cfg.thread_cnt = 0;
+    ua_cfg.nameserver_count = 1;
+    ua_cfg.nameserver[0] = pj_str("127.0.0.1:9");
+    pjsua_logging_config_default(&log_cfg);
+    log_cfg.level = 3;
+    log_cfg.console_level = 3;
+    if (pjsua_init(&ua_cfg, &log_cfg, NULL) != PJ_SUCCESS ||
+        pjsua_start() != PJ_SUCCESS)
+    {
+        pjsua_destroy();
+        return -3211;
+    }
+    res = pjsip_endpt_get_resolver(pjsua_get_pjsip_endpt());
+    pj_dns_resolver_get_settings(res, &st);
+    /* The probing of the nameserver, (count + 2) * delay, expires at once:
+     * it is marked as bad after the first query times out
+     */
+    st.qretr_delay = 100;
+    st.qretr_count = 1;
+    pj_dns_resolver_set_settings(res, &st);
+    pool = pjsua_pool_create("res", 512, 512);
+    if (!pool) {
+        pjsua_destroy();
+        return -3216;
+    }
+
+    /* The nameserver never answers: marked after the first query, the
+     * next one fails at once
+     */
+    status = pjsua_resolve(pool, "localhost", &at_once);
+    unanswered |= status == PJSUA_RESOLVE_NO_ANSWER;
+    if (status == PJ_SUCCESS || at_once) {
+        PJ_LOG(1,(THIS_FILE, "    first query: status %d, at once %d",
+                  status, at_once));
+        rc = -3212;
+    } else {
+        status = pjsua_resolve(pool, "localhost", &at_once);
+        unanswered |= status == PJSUA_RESOLVE_NO_ANSWER;
+        if (status != PJLIB_UTIL_EDNSNOWORKINGNS || !at_once) {
+            PJ_LOG(1,(THIS_FILE, "    next query: status %d, at once %d",
+                      status, at_once));
+            rc = -3213;
+        }
+    }
+
+    /* Sent again after the IP change */
+    if (rc == 0) {
+        pjsua_ip_change_param_default(&param);
+        param.restart_listener = PJ_FALSE;
+        param.shutdown_transport = PJ_FALSE;
+        if (pjsua_handle_ip_change(&param) != PJ_SUCCESS) {
+            rc = -3214;
+        } else {
+            status = pjsua_resolve(pool, "localhost", &at_once);
+            unanswered |= status == PJSUA_RESOLVE_NO_ANSWER;
+            if (status == PJ_SUCCESS || at_once) {
+                PJ_LOG(1,(THIS_FILE, "    after the change: status %d, "
+                          "at once %d", status, at_once));
+                rc = -3215;
+            }
+        }
+    }
+
+    /* A query without an answer may still refer to the pool */
+    if (!unanswered)
+        pj_pool_release(pool);
+    pjsua_destroy();
+    /* The IP change sets this, and its timer died with PJSUA */
+    pjsip_cfg()->endpt.keep_inv_after_tsx_timeout = keep_inv;
+    if (rc)
+        PJ_LOG(1,(THIS_FILE, "    error: IP change nameservers [%d]", rc));
+    return rc;
+}
+
+#if PJ_HAS_THREADS
+/* PJSUA applies its resolver fallback setting to its resolver: a name is
+ * resolved with the system resolver once the nameserver times out.
+ */
+static int pjsua_resolver_fallback_case(void)
+{
+    pjsua_config ua_cfg;
+    pjsua_logging_config log_cfg;
+    pj_dns_resolver *res;
+    pj_dns_settings st;
+    pj_pool_t *pool;
+    pj_bool_t at_once, unanswered;
+    pj_status_t status;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  resolver fallback option"));
+
+    if (pjsua_create() != PJ_SUCCESS)
+        return -3220;
+    pjsua_config_default(&ua_cfg);
+    ua_cfg.thread_cnt = 0;
+    ua_cfg.nameserver_count = 1;
+    ua_cfg.nameserver[0] = pj_str("127.0.0.1:9");
+    ua_cfg.resolver_fallback = PJ_TRUE;
+    pjsua_logging_config_default(&log_cfg);
+    log_cfg.level = 3;
+    log_cfg.console_level = 3;
+    if (pjsua_init(&ua_cfg, &log_cfg, NULL) != PJ_SUCCESS ||
+        pjsua_start() != PJ_SUCCESS)
+    {
+        pjsua_destroy();
+        return -3221;
+    }
+    res = pjsip_endpt_get_resolver(pjsua_get_pjsip_endpt());
+    pj_dns_resolver_get_settings(res, &st);
+    if (!st.sys_fallback) {
+        pjsua_destroy();
+        return -3222;
+    }
+    st.qretr_delay = 100;
+    st.qretr_count = 1;
+    pj_dns_resolver_set_settings(res, &st);
+    pool = pjsua_pool_create("res", 512, 512);
+    if (!pool) {
+        pjsua_destroy();
+        return -3223;
+    }
+
+    /* The nameserver never answers: resolved by the system resolver after
+     * the timeout, then at once
+     */
+    status = pjsua_resolve(pool, "localhost", &at_once);
+    unanswered = status == PJSUA_RESOLVE_NO_ANSWER;
+    if (status != PJ_SUCCESS || at_once) {
+        PJ_LOG(1,(THIS_FILE, "    first query: status %d, at once %d",
+                  status, at_once));
+        rc = -3224;
+    } else {
+        status = pjsua_resolve(pool, "localhost", &at_once);
+        unanswered |= status == PJSUA_RESOLVE_NO_ANSWER;
+        if (status != PJ_SUCCESS || at_once) {
+            PJ_LOG(1,(THIS_FILE, "    next query: status %d, at once %d",
+                      status, at_once));
+            rc = -3225;
+        }
+    }
+
+    if (!unanswered)
+        pj_pool_release(pool);
+    pjsua_destroy();
+    if (rc)
+        PJ_LOG(1,(THIS_FILE, "    error: resolver fallback [%d]", rc));
+    return rc;
+}
+
+/* The system resolver of the destroy case: counts the lookups, finds
+ * the name on the loopback address.
+ */
+static volatile int pjsua_sys_count;
+
+static pj_status_t pjsua_sys_lookup(int af, const pj_str_t *name,
+                                    unsigned *count, pj_addrinfo ai[])
+{
+    pj_str_t lo = pj_str("127.0.0.1");
+
+    PJ_UNUSED_ARG(name);
+
+    pjsua_sys_count++;
+    if (af != pj_AF_INET())
+        return PJ_ERESOLVE;
+    pj_bzero(&ai[0], sizeof(ai[0]));
+    pj_sockaddr_init(af, &ai[0].ai_addr, &lo, 0);
+    *count = 1;
+    return PJ_SUCCESS;
+}
+
+/* Destroying PJSUA turns the option off first: the unregistration, which
+ * resolves the registrar again, is not resolved with the system resolver.
+ */
+static int pjsua_destroy_fallback_case(void)
+{
+    pjsua_config ua_cfg;
+    pjsua_logging_config log_cfg;
+    pjsua_transport_config tcfg;
+    pjsua_acc_config acc_cfg;
+    pjsua_acc_info info;
+    pjsua_acc_id acc_id;
+    pj_dns_resolver *res;
+    pj_dns_settings st;
+    char reg_uri[64];
+    unsigned i, waited;
+    int count = 0, rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  resolver fallback stopped by the destroy"));
+
+    /* A registrar answering 200 */
+    pj_bzero(&g, sizeof(g));
+    pjsua_sys_count = 0;
+    g.pool = pj_pool_create(&caching_pool.factory, "srvfo", 1000, 1000,
+                            NULL);
+    if (!g.pool)
+        return -3230;
+    if (pj_mutex_create_simple(g.pool, "srvfo", &g.mutex) != PJ_SUCCESS) {
+        rc = -3231;
+        goto on_return;
+    }
+    for (i = 0; i < SRV_CNT; ++i) {
+        unsigned j;
+
+        g.srv[i].udp = g.srv[i].tcp = PJ_INVALID_SOCKET;
+        for (j = 0; j < MAX_CONN; ++j)
+            g.srv[i].conn[j] = g.srv[i].filler[j] = PJ_INVALID_SOCKET;
+    }
+    pj_ansi_strxcpy(g.srv[0].name, "srv1", sizeof(g.srv[0].name));
+    if (set_mode(&g.srv[0], MODE_OK) != PJ_SUCCESS ||
+        pj_thread_create(g.pool, "srvfo", &server_thread, NULL, 0, 0,
+                         &g.thread) != PJ_SUCCESS)
+    {
+        rc = -3232;
+        goto on_return;
+    }
+
+    /* The nameserver never answers, the registrar is found by the system
+     * resolver, nothing is cached so that the unregistration asks again
+     */
+    if (pjsua_create() != PJ_SUCCESS) {
+        rc = -3233;
+        goto on_return;
+    }
+    pjsua_config_default(&ua_cfg);
+    ua_cfg.thread_cnt = 0;
+    ua_cfg.nameserver_count = 1;
+    ua_cfg.nameserver[0] = pj_str("127.0.0.1:9");
+    ua_cfg.resolver_fallback = PJ_TRUE;
+    pjsua_logging_config_default(&log_cfg);
+    log_cfg.level = 3;
+    log_cfg.console_level = 3;
+    pjsua_transport_config_default(&tcfg);
+    tcfg.port = 0;
+    if (pjsua_init(&ua_cfg, &log_cfg, NULL) != PJ_SUCCESS ||
+        pjsua_transport_create(PJSIP_TRANSPORT_UDP, &tcfg, NULL) !=
+            PJ_SUCCESS ||
+        pjsua_start() != PJ_SUCCESS)
+    {
+        pjsua_destroy();
+        rc = -3234;
+        goto on_return;
+    }
+    res = pjsip_endpt_get_resolver(pjsua_get_pjsip_endpt());
+    pj_dns_resolver_get_settings(res, &st);
+    st.qretr_delay = 100;
+    st.qretr_count = 1;
+    st.cache_max_ttl = 0;
+    st.sys_lookup = &pjsua_sys_lookup;
+    pj_dns_resolver_set_settings(res, &st);
+
+    pjsua_acc_config_default(&acc_cfg);
+    acc_cfg.id = pj_str("sip:test@localhost");
+    pj_ansi_snprintf(reg_uri, sizeof(reg_uri), "sip:localhost:%d",
+                     g.srv[0].udp_port);
+    acc_cfg.reg_uri = pj_str(reg_uri);
+    acc_cfg.unreg_timeout = 1000;
+    if (pjsua_acc_add(&acc_cfg, PJ_TRUE, &acc_id) != PJ_SUCCESS) {
+        pjsua_destroy();
+        rc = -3235;
+        goto on_return;
+    }
+    for (waited = 0; waited < 5000; waited += 20) {
+        if (pjsua_acc_get_info(acc_id, &info) == PJ_SUCCESS &&
+            info.status == PJSIP_SC_OK)
+        {
+            break;
+        }
+        pjsua_handle_events(20);
+    }
+    count = pjsua_sys_count;
+    if (waited >= 5000 || count < 1) {
+        PJ_LOG(1,(THIS_FILE, "    registration: status %d, lookups %d",
+                  info.status, count));
+        rc = -3236;
+    }
+
+    /* The unregistration fails as without the option */
+    pjsua_destroy();
+    if (rc == 0 && pjsua_sys_count != count) {
+        PJ_LOG(1,(THIS_FILE, "    lookups when destroying: %d",
+                  pjsua_sys_count - count));
+        rc = -3237;
+    }
+
+on_return:
+    if (g.thread) {
+        g.quit = PJ_TRUE;
+        pj_thread_join(g.thread);
+        pj_thread_destroy(g.thread);
+    }
+    if (g.mutex)
+        (void)set_mode(&g.srv[0], MODE_CLOSED);
+    if (g.mutex)
+        pj_mutex_destroy(g.mutex);
+    if (g.pool)
+        pj_pool_release(g.pool);
+    pj_bzero(&g, sizeof(g));
+    if (rc)
+        PJ_LOG(1,(THIS_FILE, "    error: fallback stopped [%d]", rc));
+    return rc;
+}
+#endif  /* PJ_HAS_THREADS */
+#endif  /* PJSIP_HAS_RESOLVER */
+
 int srv_failover_pjsua_test(void)
 {
     int rc;
@@ -2206,6 +2572,16 @@ int srv_failover_pjsua_test(void)
 #if PJ_HAS_TCP
     if (rc == 0)
         rc = pjsua_contact_probe_case();
+#endif
+#if PJSIP_HAS_RESOLVER
+    if (rc == 0)
+        rc = pjsua_ip_change_nameservers_case();
+#if PJ_HAS_THREADS
+    if (rc == 0)
+        rc = pjsua_resolver_fallback_case();
+    if (rc == 0)
+        rc = pjsua_destroy_fallback_case();
+#endif
 #endif
 
     restore_test_endpt();

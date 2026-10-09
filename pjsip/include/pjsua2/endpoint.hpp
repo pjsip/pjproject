@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2013-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1030,6 +1030,17 @@ struct UaConfig : public PersistentObject
      * Default: PJSIP_SERVER_FAILOVER (disabled)
      */
     bool                serverFailover;
+
+    /**
+     * Resolve with the system resolver while no nameserver answers. See
+     * also pjsua_config.resolver_fallback. Note that libDestroy() turns
+     * it off first, so that unregistering starts no lookup, and then waits
+     * for the lookups already running, up to the timeout of the system
+     * resolver: on a mobile device, call it off the main thread.
+     *
+     * Default: PJ_DNS_RESOLVER_SYS_FALLBACK (disabled)
+     */
+    bool                resolverFallback;
 
 public:
     /**

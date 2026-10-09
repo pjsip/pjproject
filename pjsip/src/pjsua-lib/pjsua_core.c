@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -131,6 +131,7 @@ PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
     cfg->no_refer_sub = PJ_TRUE;
     cfg->acc_server_affinity_default = PJSUA_ACC_SERVER_AFFINITY_DEFAULT;
     cfg->server_failover = PJSIP_SERVER_FAILOVER;
+    cfg->resolver_fallback = PJ_DNS_RESOLVER_SYS_FALLBACK;
 }
 
 PJ_DEF(void) pjsua_config_dup(pj_pool_t *pool,
@@ -1159,10 +1160,16 @@ static pj_status_t apply_nameservers(const nameserver_list *ns)
     if (!res)
         res = pjsua_var.resolver_detached;
     if (!res) {
+        pj_dns_settings st;
+
         status = pjsip_endpt_create_resolver(pjsua_var.endpt, &res);
         if (status != PJ_SUCCESS)
             return status;
         created = PJ_TRUE;
+
+        pj_dns_resolver_get_settings(res, &st);
+        st.sys_fallback = pjsua_var.ua_cfg.resolver_fallback;
+        pj_dns_resolver_set_settings(res, &st);
     }
 
     status = pj_dns_resolver_set_ns(res, ns->count, ns->addr, ns->port);
@@ -1193,6 +1200,27 @@ static pj_status_t apply_nameservers(const nameserver_list *ns)
     pjsua_var.ua_cfg.nameserver_count = ns->count;
 
     return PJ_SUCCESS;
+}
+
+/* No new lookups with the system resolver once destroying starts */
+static void stop_resolver_fallback(void)
+{
+    pj_dns_resolver *res[2];
+    unsigned i;
+
+    res[0] = pjsua_var.resolver;
+    res[1] = pjsua_var.resolver_detached;
+    for (i = 0; i < PJ_ARRAY_SIZE(res); ++i) {
+        pj_dns_settings st;
+
+        if (!res[i])
+            continue;
+        pj_dns_resolver_get_settings(res[i], &st);
+        if (st.sys_fallback) {
+            st.sys_fallback = PJ_FALSE;
+            pj_dns_resolver_set_settings(res[i], &st);
+        }
+    }
 }
 
 #endif  /* PJSIP_HAS_RESOLVER */
@@ -2146,7 +2174,12 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 
     /* Signal threads to quit: */
     pjsua_stop_worker_threads();
-    
+
+#if PJSIP_HAS_RESOLVER
+    /* Unregistering starts no lookup with the system resolver */
+    stop_resolver_fallback();
+#endif
+
     if (pjsua_var.endpt) {
         unsigned max_wait;
 
@@ -4370,6 +4403,15 @@ PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
 
     /* The failed servers may work on the new network */
     pjsip_endpt_clear_failed_servers(pjsua_var.endpt);
+
+#if PJSIP_HAS_RESOLVER
+    /* So may the nameservers marked as bad */
+    {
+        pj_dns_resolver *res = pjsip_endpt_get_resolver(pjsua_var.endpt);
+        if (res)
+            pj_dns_resolver_reset_ns_state(res);
+    }
+#endif
 
     /* Avoid call disconnection due to request timeout. Some requests may
      * be in progress when network is changing, they may eventually get

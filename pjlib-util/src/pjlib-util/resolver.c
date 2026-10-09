@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -20,6 +20,7 @@
 #include <pjlib-util/errno.h>
 #include <pjlib-util/hmac_sha1.h>
 #include <pj/compat/socket.h>
+#include <pj/addr_resolv.h>
 #include <pj/assert.h>
 #include <pj/ctype.h>
 #include <pj/except.h>
@@ -111,6 +112,28 @@ struct res_key
 };
 
 
+/* Lookup threads at most, and the maximum count of their semaphore:
+ * Windows refuses a post above it.
+ */
+#define SYS_MAX_THREADS     16
+#define SYS_SEM_MAX         0x7FFF
+
+
+/* The system resolver fallback of a query, see start_sys_fallback(). */
+struct sys_fallback_state
+{
+    pj_status_t              dns_status;    /**< Why no nameserver answered */
+    pj_bool_t                lookup;        /**< The system resolver applies*/
+    pj_bool_t                pending;       /**< The lookup is still to do  */
+    pj_status_t              status;        /**< The lookup status.         */
+    unsigned                 count;         /**< Addresses found.           */
+    union {
+        pj_in_addr           v4;            /**< For a DNS A query.         */
+        pj_in6_addr          v6;            /**< For a DNS AAAA query.      */
+    }                        ip[PJ_DNS_MAX_IP_IN_A_REC]; /**< The addresses */
+};
+
+
 /* 
  * This represents each asynchronous query entry.
  * This entry will be put in two hash tables, the first one keyed on the DNS 
@@ -140,11 +163,13 @@ struct pj_dns_async_query
     pj_hash_entry_buf    hbufid;        /**< Hash buffer 1                  */
     pj_hash_entry_buf    hbufkey;       /**< Hash buffer 2                  */
     pj_timer_entry       timer_entry;   /**< Timer to manage timeouts       */
+    struct sys_fallback_state sys;      /**< System resolver fallback.      */
     unsigned             options;       /**< Query options.                 */
     void                *user_data;     /**< Application data.              */
     pj_dns_callback     *cb;            /**< Callback to be called.         */
     struct query_head    child_head;    /**< Child queries list head.       */
 };
+
 
 
 /* This structure is used to keep cached response entry.
@@ -229,6 +254,20 @@ struct pj_dns_resolver
     /* Query entries free list */
     struct query_head    query_free_nodes;
 
+    /* System resolver fallback, see start_sys_fallback() */
+    struct query_head    sys_jobs;      /**< Queries waiting for a lookup.  */
+    struct query_head    done_list;     /**< Queries waiting to be reported.*/
+    pj_timer_entry       done_timer;    /**< Reports the done_list.         */
+    pj_bool_t            done_scheduled;/**< The done_timer is scheduled.   */
+#if PJ_HAS_THREADS
+    pj_thread_t         *sys_threads[SYS_MAX_THREADS]; /**< Lookup threads */
+    unsigned             sys_thread_cnt;/**< Threads created.               */
+    unsigned             sys_busy;      /**< Threads in a lookup.           */
+    unsigned             sys_queued;    /**< Queries on sys_jobs.           */
+    pj_sem_t            *sys_sem;       /**< Wakes the lookup threads up.   */
+    pj_bool_t            sys_quit;      /**< The lookup threads must quit.  */
+#endif
+
     /* Set once pj_dns_resolver_destroy() has started, to reject new queries
      * and cache updates that would otherwise miss the teardown.
      */
@@ -244,6 +283,27 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 /* Callback to be called when query has timed out */
 static void on_timeout( pj_timer_heap_t *timer_heap,
                         struct pj_timer_entry *entry);
+
+/* Callback to be called when there are queries of the system resolver
+ * fallback to report
+ */
+static void on_done_timer( pj_timer_heap_t *timer_heap,
+                           struct pj_timer_entry *entry);
+
+static void set_nameserver_state(pj_dns_resolver *resolver,
+                                 unsigned index,
+                                 enum ns_state state,
+                                 const pj_time_val *now);
+
+static void sys_collect(pj_dns_resolver *resolver, struct query_head *list);
+
+static void report_sys(pj_dns_resolver *resolver, pj_dns_async_query *q);
+
+static void update_res_cache(pj_dns_resolver *resolver,
+                             const struct res_key *key,
+                             pj_status_t status,
+                             pj_bool_t set_expiry,
+                             const pj_dns_parsed_packet *pkt);
 
 /* Select which nameserver to use */
 static pj_status_t select_nameservers(pj_dns_resolver *resolver,
@@ -385,6 +445,8 @@ PJ_DEF(void) pj_dns_settings_default(pj_dns_settings *s)
     s->good_ns_ttl = PJ_DNS_RESOLVER_GOOD_NS_TTL;
     s->bad_ns_ttl = PJ_DNS_RESOLVER_BAD_NS_TTL;
     s->disable_response_src_check = PJ_DNS_RESOLVER_DISABLE_RESPONSE_SRC_CHECK;
+    s->sys_fallback = PJ_DNS_RESOLVER_SYS_FALLBACK;
+    s->sys_threads = PJ_DNS_RESOLVER_SYS_FALLBACK_THREADS;
 }
 
 
@@ -418,6 +480,10 @@ PJ_DEF(pj_status_t) pj_dns_resolver_create( pj_pool_factory *pf,
     resv->pool = pool;
     resv->udp_sock = PJ_INVALID_SOCKET;
     pj_strdup2_with_null(pool, &resv->name, name);
+    pj_list_init(&resv->query_free_nodes);
+    pj_list_init(&resv->sys_jobs);
+    pj_list_init(&resv->done_list);
+    pj_timer_entry_init(&resv->done_timer, 0, resv, &on_done_timer);
     
     /* Create group lock */
     status = pj_grp_lock_create_w_handler(pool, NULL, resv,
@@ -486,7 +552,6 @@ PJ_DEF(pj_status_t) pj_dns_resolver_create( pj_pool_factory *pf,
     /* Query hash table and free list. */
     resv->hquerybyid = pj_hash_create(pool, Q_HASH_TABLE_SIZE);
     resv->hquerybyres = pj_hash_create(pool, Q_HASH_TABLE_SIZE);
-    pj_list_init(&resv->query_free_nodes);
 
     /* Initialize the UDP socket */
     status = init_sock(resv);
@@ -559,7 +624,43 @@ PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
 
         it = pj_hash_first(resolver->hquerybyid, &it_buf);
     }
+
+    /* The queries of the system resolver fallback, which are on no timer */
+    sys_collect(resolver, &cancel_list);
+    if (resolver->done_scheduled) {
+        pj_timer_heap_cancel_if_active(resolver->timer, &resolver->done_timer,
+                                       0);
+        resolver->done_scheduled = PJ_FALSE;
+    }
+#if PJ_HAS_THREADS
+    resolver->sys_quit = PJ_TRUE;
+#endif
     pj_grp_lock_release(resolver->grp_lock);
+
+#if PJ_HAS_THREADS
+    if (resolver->sys_thread_cnt) {
+        unsigned i;
+
+        /* The lookups in progress can't be interrupted: this waits for
+         * them, up to the timeout of the system resolver.
+         */
+        for (i = 0; i < resolver->sys_thread_cnt; ++i)
+            pj_sem_post(resolver->sys_sem);
+        for (i = 0; i < resolver->sys_thread_cnt; ++i) {
+            pj_thread_join(resolver->sys_threads[i]);
+            pj_thread_destroy(resolver->sys_threads[i]);
+            resolver->sys_threads[i] = NULL;
+        }
+        resolver->sys_thread_cnt = 0;
+        pj_sem_destroy(resolver->sys_sem);
+        resolver->sys_sem = NULL;
+
+        /* The queries the threads were looking up */
+        pj_grp_lock_acquire(resolver->grp_lock);
+        sys_collect(resolver, &cancel_list);
+        pj_grp_lock_release(resolver->grp_lock);
+    }
+#endif
 
     /* Capture and clear each callback under the lock, but invoke it after
      * releasing, so it neither runs under the lock nor races a concurrent
@@ -676,6 +777,34 @@ PJ_DEF(pj_status_t) pj_dns_resolver_set_ns( pj_dns_resolver *resolver,
     return PJ_SUCCESS;
 }
 
+
+
+/*
+ * Reset the state of the name servers.
+ */
+PJ_DEF(pj_status_t) pj_dns_resolver_reset_ns_state(pj_dns_resolver *resolver)
+{
+    unsigned i;
+    pj_time_val now;
+
+    PJ_ASSERT_RETURN(resolver, PJ_EINVAL);
+
+    pj_grp_lock_acquire(resolver->grp_lock);
+
+    /* As pj_dns_resolver_set_ns() does, keeping what the pending queries
+     * use: the response time and the query measuring it.
+     */
+    pj_gettimeofday(&now);
+    for (i = 0; i < resolver->ns_count; ++i) {
+        resolver->ns[i].state = STATE_ACTIVE;
+        resolver->ns[i].state_expiry = now;
+    }
+    if (resolver->ns_count)
+        PJ_LOG(4,(resolver->name.ptr, "Nameserver state reset"));
+
+    pj_grp_lock_release(resolver->grp_lock);
+    return PJ_SUCCESS;
+}
 
 
 /*
@@ -1018,6 +1147,493 @@ static void reset_entry(struct cached_res **p_cached)
     *p_cached = cache;
 }
 
+/*
+ * System resolver fallback, see PJ_DNS_RESOLVER_SYS_FALLBACK.
+ *
+ * A query which no nameserver answers is given to start_sys_fallback(). A DNS A
+ * or AAAA query then waits on sys_jobs for the lookup thread, which looks
+ * it up without the lock and gives it back on done_list, and stays in
+ * hquerybyres meanwhile, so that the queries started for the name join it.
+ * Another query goes to done_list at once, with the error of the
+ * nameservers. The done_timer reports the queries of done_list as
+ * on_timeout() does, without the lock, and recycles them. Without threads,
+ * the lookup runs from the done_timer.
+ */
+
+/* Whether the cache says the name doesn't exist: an NXDOMAIN answer for
+ * its other address type applies to it as a whole (RFC 8020).
+ */
+static pj_bool_t name_is_unknown(pj_dns_resolver *resolver,
+                                 const pj_dns_async_query *q,
+                                 pj_status_t *status)
+{
+    struct res_key key;
+    struct cached_res *cache;
+    pj_str_t name = pj_str((char*)q->key.name);
+    pj_time_val now;
+
+    init_res_key(&key, (q->key.qtype == PJ_DNS_TYPE_A ? PJ_DNS_TYPE_AAAA :
+                                                        PJ_DNS_TYPE_A), &name);
+    cache = (struct cached_res *) pj_hash_get(resolver->hrescache, &key,
+                                              sizeof(key), NULL);
+    if (!cache)
+        return PJ_FALSE;
+    pj_gettimeofday(&now);
+    if (!PJ_TIME_VAL_GT(cache->expiry_time, now) ||
+        PJ_DNS_GET_RCODE(cache->pkt->hdr.flags) != PJ_DNS_RCODE_NXDOMAIN)
+    {
+        return PJ_FALSE;
+    }
+    *status = PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_NXDOMAIN);
+    return PJ_TRUE;
+}
+
+
+/* Whether some nameserver is still trusted */
+static pj_bool_t has_active_ns(pj_dns_resolver *resolver)
+{
+    unsigned i;
+    pj_time_val now;
+
+    pj_gettimeofday(&now);
+    for (i = 0; i < resolver->ns_count; ++i) {
+        if (resolver->ns[i].state == STATE_ACTIVE &&
+            PJ_TIME_VAL_GT(resolver->ns[i].state_expiry, now))
+        {
+            return PJ_TRUE;
+        }
+    }
+    return PJ_FALSE;
+}
+
+
+/* Whether the query, or a query which joined it, is still waited for */
+static pj_bool_t query_has_cb(const pj_dns_async_query *q)
+{
+    const pj_dns_async_query *cq;
+
+    if (q->cb)
+        return PJ_TRUE;
+    cq = q->child_head.next;
+    while (cq != (const void*)&q->child_head) {
+        if (cq->cb)
+            return PJ_TRUE;
+        cq = cq->next;
+    }
+    return PJ_FALSE;
+}
+
+
+/* No query joins it anymore */
+static void sys_unjoin(pj_dns_resolver *resolver, const pj_dns_async_query *q)
+{
+    if (pj_hash_get(resolver->hquerybyres, &q->key, sizeof(q->key), NULL) == q)
+        pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key), 0,
+                    NULL);
+}
+
+
+/* Queue the query for the done_timer to report it. */
+static pj_status_t report_later(pj_dns_resolver *resolver,
+                                pj_dns_async_query *q)
+{
+    pj_time_val delay = {0, 0};
+
+    /* Without threads, joined until looked up from the done_timer */
+    if (!q->sys.pending)
+        sys_unjoin(resolver, q);
+    pj_list_push_back(&resolver->done_list, q);
+
+    /* Once destroy has started, it reports the queries itself */
+    if (!resolver->done_scheduled && !resolver->shutting_down) {
+        pj_status_t status;
+
+        status = pj_timer_heap_schedule_w_grp_lock(resolver->timer,
+                                                   &resolver->done_timer,
+                                                   &delay, 1,
+                                                   resolver->grp_lock);
+        if (status != PJ_SUCCESS) {
+            /* The caller reports it on its own path: not left waiting */
+            PJ_PERROR(4,(resolver->name.ptr, status,
+                         "Error scheduling the report of DNS %s query for %s",
+                         pj_dns_get_type_name(q->key.qtype), q->key.name));
+            pj_list_erase(q);
+            sys_unjoin(resolver, q);
+            return status;
+        }
+        resolver->done_scheduled = PJ_TRUE;
+    }
+    return PJ_SUCCESS;
+}
+
+
+/* Ask the system resolver for the addresses of the query's name. */
+static void sys_lookup_run(pj_dns_resolver *resolver, pj_dns_async_query *q)
+{
+    pj_addrinfo ai[PJ_DNS_MAX_IP_IN_A_REC];
+    unsigned i, count = PJ_ARRAY_SIZE(ai);
+    int af = (q->key.qtype == PJ_DNS_TYPE_A ? pj_AF_INET() : pj_AF_INET6());
+    pj_str_t name = pj_str(q->key.name);
+    pj_dns_sys_lookup *lookup;
+
+    pj_grp_lock_acquire(resolver->grp_lock);
+    lookup = resolver->settings.sys_lookup;
+    pj_grp_lock_release(resolver->grp_lock);
+    if (!lookup)
+        lookup = &pj_getaddrinfo;
+
+    q->sys.count = 0;
+    q->sys.status = (*lookup)(af, &name, &count, ai);
+    if (q->sys.status == PJ_SUCCESS) {
+        for (i = 0; i < count; ++i) {
+            if (ai[i].ai_addr.addr.sa_family != af)
+                continue;
+            if (af == pj_AF_INET())
+                q->sys.ip[q->sys.count].v4 = ai[i].ai_addr.ipv4.sin_addr;
+            else
+                q->sys.ip[q->sys.count].v6 = ai[i].ai_addr.ipv6.sin6_addr;
+            ++q->sys.count;
+        }
+        if (q->sys.count == 0)
+            q->sys.status = PJ_ERESOLVE;
+    }
+    q->sys.pending = PJ_FALSE;
+}
+
+
+#if PJ_HAS_THREADS
+static int sys_thread_proc(void *arg)
+{
+    pj_dns_resolver *resolver = (pj_dns_resolver*)arg;
+
+    for (;;) {
+        pj_sem_wait(resolver->sys_sem);
+
+        pj_grp_lock_acquire(resolver->grp_lock);
+        while (!pj_list_empty(&resolver->sys_jobs)) {
+            pj_dns_async_query *q = resolver->sys_jobs.next;
+
+            pj_list_erase(q);
+            resolver->sys_queued--;
+
+            /* Nobody waits for it, or the option is off: no lookup */
+            if (!query_has_cb(q) || !resolver->settings.sys_fallback) {
+                q->sys.lookup = PJ_FALSE;
+                q->sys.pending = PJ_FALSE;
+            } else {
+                /* Looked up without the lock: the query is this thread's
+                 * until it is given back.
+                 */
+                resolver->sys_busy++;
+                pj_grp_lock_release(resolver->grp_lock);
+                sys_lookup_run(resolver, q);
+                pj_grp_lock_acquire(resolver->grp_lock);
+                resolver->sys_busy--;
+            }
+
+            /* Reported from here when the timer can't be scheduled */
+            if (report_later(resolver, q) != PJ_SUCCESS) {
+                pj_grp_lock_release(resolver->grp_lock);
+                report_sys(resolver, q);
+                pj_grp_lock_acquire(resolver->grp_lock);
+            }
+        }
+        if (resolver->sys_quit) {
+            pj_grp_lock_release(resolver->grp_lock);
+            break;
+        }
+        pj_grp_lock_release(resolver->grp_lock);
+    }
+
+    return 0;
+}
+
+
+/* A new lookup thread while all are busy, up to the setting. Fails only
+ * when there is none at all.
+ */
+static pj_status_t sys_thread_start(pj_dns_resolver *resolver)
+{
+    unsigned limit = resolver->settings.sys_threads;
+    pj_status_t status;
+
+    if (limit == 0)
+        limit = 1;
+    else if (limit > SYS_MAX_THREADS)
+        limit = SYS_MAX_THREADS;
+    if (resolver->sys_thread_cnt >= limit ||
+        resolver->sys_busy + resolver->sys_queued < resolver->sys_thread_cnt)
+    {
+        return PJ_SUCCESS;
+    }
+
+    status = PJ_SUCCESS;
+    if (!resolver->sys_sem) {
+        status = pj_sem_create(resolver->pool, NULL, 0, SYS_SEM_MAX,
+                               &resolver->sys_sem);
+    }
+    if (status == PJ_SUCCESS) {
+        status = pj_thread_create(resolver->pool, "dnssys%p",
+                                  &sys_thread_proc, resolver, 0, 0,
+                                  &resolver->sys_threads[
+                                                resolver->sys_thread_cnt]);
+        if (status == PJ_SUCCESS)
+            resolver->sys_thread_cnt++;
+    }
+    if (status != PJ_SUCCESS) {
+        if (resolver->sys_thread_cnt) {
+            PJ_PERROR(4,(resolver->name.ptr, status,
+                         "Error creating another system resolver thread"));
+            return PJ_SUCCESS;
+        }
+        PJ_PERROR(2,(resolver->name.ptr, status,
+                     "Error creating the system resolver thread"));
+        if (resolver->sys_sem) {
+            pj_sem_destroy(resolver->sys_sem);
+            resolver->sys_sem = NULL;
+        }
+    }
+    return status;
+}
+#endif
+
+
+/* No nameserver answers the query: resolve it with the system resolver
+ * when it is for an address, otherwise report the failure. Both later, so
+ * that the caller neither gets the callback from within
+ * pj_dns_resolver_start_query() nor waits for the lookup. Called with the
+ * lock held, with the query on no timer and out of hquerybyid.
+ */
+static pj_status_t start_sys_fallback(pj_dns_resolver *resolver,
+                                      pj_dns_async_query *q,
+                                      pj_status_t dns_status)
+{
+    pj_bzero(&q->sys, sizeof(q->sys));
+    q->sys.dns_status = dns_status;
+    q->timer_entry.id = 0;
+
+    if ((q->key.qtype == PJ_DNS_TYPE_A || q->key.qtype == PJ_DNS_TYPE_AAAA) &&
+        !name_is_unknown(resolver, q, &q->sys.dns_status))
+    {
+        PJ_LOG(5,(resolver->name.ptr,
+                  "No nameserver answers DNS %s query for %s, resolving with "
+                  "the system resolver",
+                  pj_dns_get_type_name(q->key.qtype), q->key.name));
+        q->sys.lookup = PJ_TRUE;
+        q->sys.pending = PJ_TRUE;
+
+        /* The queries started for the name join it meanwhile */
+        pj_hash_set_np(resolver->hquerybyres, &q->key, sizeof(q->key), 0,
+                       q->hbufkey, q);
+#if PJ_HAS_THREADS
+        q->sys.status = sys_thread_start(resolver);
+        if (q->sys.status == PJ_SUCCESS) {
+            pj_list_push_back(&resolver->sys_jobs, q);
+            resolver->sys_queued++;
+            pj_sem_post(resolver->sys_sem);
+            return PJ_SUCCESS;
+        }
+        /* Reported with the error of the nameservers instead */
+        q->sys.pending = PJ_FALSE;
+#else
+        /* Looked up when reported */
+#endif
+    } else {
+        PJ_LOG(5,(resolver->name.ptr,
+                  "No nameserver answers DNS %s query for %s",
+                  pj_dns_get_type_name(q->key.qtype), q->key.name));
+    }
+
+    return report_later(resolver, q);
+}
+
+
+/* Report the query: the addresses found as its response, or the error of
+ * the nameservers. Then recycle it, as on_timeout() does.
+ */
+static void report_sys(pj_dns_resolver *resolver, pj_dns_async_query *q)
+{
+    pj_dns_parsed_packet pkt;
+    pj_dns_parsed_query question;
+    pj_dns_parsed_rr ans[PJ_DNS_MAX_IP_IN_A_REC];
+    pj_dns_parsed_packet *resp = NULL;
+    pj_dns_async_query *cq;
+    pj_dns_callback *cb;
+    pj_status_t status = q->sys.dns_status;
+
+    if (q->sys.lookup && q->sys.status == PJ_SUCCESS) {
+        unsigned i;
+
+        pj_bzero(&pkt, sizeof(pkt));
+        pj_bzero(&question, sizeof(question));
+        pj_bzero(ans, sizeof(ans));
+        pkt.hdr.flags = PJ_DNS_SET_QR(1);
+        pkt.hdr.qdcount = 1;
+        pkt.hdr.anscount = (pj_uint16_t)q->sys.count;
+        pkt.q = &question;
+        pkt.ans = ans;
+        question.type = q->key.qtype;
+        question.dnsclass = PJ_DNS_CLASS_IN;
+        question.name = pj_str(q->key.name);
+        for (i = 0; i < q->sys.count; ++i) {
+            ans[i].name = question.name;
+            ans[i].type = q->key.qtype;
+            ans[i].dnsclass = PJ_DNS_CLASS_IN;
+            ans[i].ttl = resolver->settings.bad_ns_ttl;
+            if (q->key.qtype == PJ_DNS_TYPE_A)
+                ans[i].rdata.a.ip_addr = q->sys.ip[i].v4;
+            else
+                ans[i].rdata.aaaa.ip_addr = q->sys.ip[i].v6;
+        }
+        resp = &pkt;
+        status = PJ_SUCCESS;
+
+        PJ_LOG(5,(resolver->name.ptr,
+                  "DNS %s query for %s resolved with the system resolver, "
+                  "%u address(es)",
+                  pj_dns_get_type_name(q->key.qtype), q->key.name,
+                  q->sys.count));
+    } else if (q->sys.lookup) {
+        char errmsg[PJ_ERR_MSG_SIZE];
+        int rcode = 0;
+
+        PJ_PERROR(4,(resolver->name.ptr, q->sys.status,
+                     "DNS %s query for %s: no nameserver answers (%s) and the "
+                     "system resolver failed",
+                     pj_dns_get_type_name(q->key.qtype), q->key.name,
+                     pj_strerror(status, errmsg, sizeof(errmsg)).ptr));
+
+        /* Both failed: the nameserver's error is cached, as without the
+         * fallback
+         */
+        if (status == PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_REFUSED))
+            rcode = PJ_DNS_RCODE_REFUSED;
+        else if (status == PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_SERVFAIL))
+            rcode = PJ_DNS_RCODE_SERVFAIL;
+        if (rcode) {
+            pj_bzero(&pkt, sizeof(pkt));
+            pj_bzero(&question, sizeof(question));
+            pkt.hdr.flags = PJ_DNS_SET_QR(1) | PJ_DNS_SET_RCODE(rcode);
+            pkt.hdr.qdcount = 1;
+            pkt.q = &question;
+            question.type = q->key.qtype;
+            question.dnsclass = PJ_DNS_CLASS_IN;
+            question.name = pj_str(q->key.name);
+            pj_grp_lock_acquire(resolver->grp_lock);
+            if (!resolver->shutting_down)
+                update_res_cache(resolver, &q->key, status, PJ_TRUE, &pkt);
+            pj_grp_lock_release(resolver->grp_lock);
+        }
+    }
+
+    /* Capture and clear the callback under the lock; invoke it unlocked. */
+    pj_grp_lock_acquire(resolver->grp_lock);
+    cb = q->cb;
+    q->cb = NULL;
+    pj_grp_lock_release(resolver->grp_lock);
+
+    if (cb)
+        (*cb)(q->user_data, status, resp);
+
+    cq = q->child_head.next;
+    while (cq != (void*)&q->child_head) {
+        pj_dns_async_query *next = cq->next;
+        pj_dns_callback *ccb;
+
+        pj_grp_lock_acquire(resolver->grp_lock);
+        ccb = cq->cb;
+        cq->cb = NULL;
+        pj_grp_lock_release(resolver->grp_lock);
+
+        if (ccb)
+            (*ccb)(cq->user_data, status, resp);
+
+        cq = next;
+    }
+
+    pj_grp_lock_acquire(resolver->grp_lock);
+
+    /* Cached as a nameserver's answer is, for bad_ns_ttl */
+    if (resp && !resolver->shutting_down)
+        update_res_cache(resolver, &q->key, PJ_SUCCESS, PJ_TRUE, &pkt);
+
+    q->user_data = NULL;
+    cq = q->child_head.next;
+    while (cq != (void*)&q->child_head) {
+        pj_dns_async_query *next = cq->next;
+        pj_list_push_back(&resolver->query_free_nodes, cq);
+        cq = next;
+    }
+    pj_list_push_back(&resolver->query_free_nodes, q);
+    pj_grp_lock_release(resolver->grp_lock);
+}
+
+
+static void on_done_timer( pj_timer_heap_t *timer_heap,
+                           struct pj_timer_entry *entry)
+{
+    pj_dns_resolver *resolver = (pj_dns_resolver*)entry->user_data;
+
+    PJ_UNUSED_ARG(timer_heap);
+
+    pj_grp_lock_acquire(resolver->grp_lock);
+    resolver->done_scheduled = PJ_FALSE;
+    for (;;) {
+        pj_dns_async_query *q;
+
+        /* One at a time: once destroy has started, it reports the ones
+         * left itself, as cancelled
+         */
+        if (resolver->shutting_down || pj_list_empty(&resolver->done_list))
+            break;
+        q = resolver->done_list.next;
+        pj_list_erase(q);
+        if (q->sys.pending &&
+            (!query_has_cb(q) || !resolver->settings.sys_fallback))
+        {
+            q->sys.lookup = PJ_FALSE;
+            q->sys.pending = PJ_FALSE;
+        }
+        pj_grp_lock_release(resolver->grp_lock);
+
+        /* Without threads, the lookup runs here */
+        if (q->sys.pending) {
+            sys_lookup_run(resolver, q);
+            pj_grp_lock_acquire(resolver->grp_lock);
+            sys_unjoin(resolver, q);
+            pj_grp_lock_release(resolver->grp_lock);
+        }
+        report_sys(resolver, q);
+
+        pj_grp_lock_acquire(resolver->grp_lock);
+    }
+    pj_grp_lock_release(resolver->grp_lock);
+}
+
+
+/* Move the queries of the system resolver fallback to the list, for
+ * pj_dns_resolver_destroy() to report them. Called with the lock held.
+ */
+static void sys_collect(pj_dns_resolver *resolver, struct query_head *list)
+{
+    while (!pj_list_empty(&resolver->sys_jobs)) {
+        pj_dns_async_query *q = resolver->sys_jobs.next;
+        pj_list_erase(q);
+        sys_unjoin(resolver, q);
+        pj_list_push_back(list, q);
+    }
+#if PJ_HAS_THREADS
+    resolver->sys_queued = 0;
+#endif
+    while (!pj_list_empty(&resolver->done_list)) {
+        pj_dns_async_query *q = resolver->done_list.next;
+        pj_list_erase(q);
+        sys_unjoin(resolver, q);
+        pj_list_push_back(list, q);
+    }
+}
+
+
 /* Put unused/expired cached entry to the free list */
 static void free_entry(pj_dns_resolver *resolver, struct cached_res *cache)
 {
@@ -1189,7 +1805,16 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
     /* Send the query */
     status = transmit_query(resolver, q);
     if (status != PJ_SUCCESS) {
-        pj_list_push_back(&resolver->query_free_nodes, q);
+        if (status == PJLIB_UTIL_EDNSNOWORKINGNS &&
+            resolver->settings.sys_fallback && cb &&
+            start_sys_fallback(resolver, q, status) == PJ_SUCCESS)
+        {
+            /* Reported later, or resolved with the system resolver */
+            p_q = q;
+            status = PJ_SUCCESS;
+        } else {
+            pj_list_push_back(&resolver->query_free_nodes, q);
+        }
         goto on_return;
     }
 
@@ -1225,15 +1850,11 @@ PJ_DEF(pj_status_t) pj_dns_resolver_cancel_query(pj_dns_async_query *query,
     grp_lock = query->resolver->grp_lock;
     pj_grp_lock_acquire(grp_lock);
 
-    if (query->timer_entry.id == 1) {
-        pj_timer_heap_cancel_if_active(query->resolver->timer,
-                                       &query->timer_entry, 0);
-    }
-
     /* Capture the callback and its user data under the lock. Unlike the
      * other delivery sites, this one does not remove the query from the
      * hash tables, so it may be completed and recycled once the lock is
-     * released.
+     * released. The query goes on, for the queries which joined it or
+     * will: were its timer cancelled, it would stay pending for good.
      */
     cb = query->cb;
     user_data = query->user_data;
@@ -1817,6 +2438,17 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
         }
     }
 
+    /* No trusted nameserver answered: ask the system resolver */
+    if (resolver->settings.sys_fallback && !has_active_ns(resolver)) {
+        pj_hash_set(NULL, resolver->hquerybyid, &q->id, sizeof(q->id), 0,
+                    NULL);
+        if (start_sys_fallback(resolver, q, PJ_ETIMEDOUT) == PJ_SUCCESS) {
+            pj_grp_lock_release(resolver->grp_lock);
+            return;
+        }
+        /* Reported here instead */
+    }
+
     /* Clear hash table entries */
     pj_hash_set(NULL, resolver->hquerybyid, &q->id, sizeof(q->id), 0, NULL);
     pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key), 0, NULL);
@@ -2026,6 +2658,19 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     /* Clear hash table entries */
     pj_hash_set(NULL, resolver->hquerybyid, &q->id, sizeof(q->id), 0, NULL);
     pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key), 0, NULL);
+
+    /* A refusal, or a failed A query, says nothing about the name. A
+     * failed AAAA query stands: some nameservers fail a missing AAAA.
+     */
+    if (resolver->settings.sys_fallback &&
+        (q->key.qtype == PJ_DNS_TYPE_A || q->key.qtype == PJ_DNS_TYPE_AAAA) &&
+        (status == PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_REFUSED) ||
+         (status == PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_SERVFAIL) &&
+          q->key.qtype == PJ_DNS_TYPE_A)) &&
+        start_sys_fallback(resolver, q, status) == PJ_SUCCESS)
+    {
+        goto read_next_packet;
+    }
 
     /* Notify applications first, to allow application to modify the
      * record before it is saved to the hash table. Capture and clear

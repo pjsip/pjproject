@@ -125,6 +125,8 @@ static void usage(void)
     puts  ("  --nameserver=NS     Add the specified nameserver to enable SRV resolution");
     puts  ("                      This option can be specified multiple times.");
     puts  ("  --server-failover   Remember failed servers, try the others first");
+    puts  ("  --resolver-fallback Resolve with the system resolver while no");
+    puts  ("                      nameserver answers");
     puts  ("  --outbound=url      Set the URL of global outbound proxy server");
     puts  ("                      May be specified multiple times");
     puts  ("  --stun-srv=FORMAT   Set STUN server host or domain. This option may be");
@@ -449,7 +451,7 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_VCAPTURE_DEV, OPT_VRENDER_DEV, OPT_PLAY_AVI, OPT_AUTO_PLAY_AVI,
            OPT_REC_AVI, OPT_REC_AVI_SIZE, OPT_REC_AVI_AUDIO, OPT_AUTO_REC_AVI,
            OPT_USE_CLI, OPT_CLI_TELNET_PORT, OPT_DISABLE_CLI_CONSOLE,
-           OPT_SERVER_AFFINITY, OPT_SERVER_FAILOVER
+           OPT_SERVER_AFFINITY, OPT_SERVER_FAILOVER, OPT_RESOLVER_FALLBACK
 #if !PJSUA_MEDIA_HAS_PJMEDIA
            , OPT_CUSTOM_SDP
 #endif
@@ -508,6 +510,7 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "reg-use-proxy", 1, 0, OPT_REG_USE_PROXY},
         { "nameserver", 1, 0, OPT_NAMESERVER},
         { "server-failover", 0, 0, OPT_SERVER_FAILOVER},
+        { "resolver-fallback", 0, 0, OPT_RESOLVER_FALLBACK},
         { "stun-srv",   1, 0, OPT_STUN_SRV},
         { "upnp",       2, 0, OPT_UPNP},
         { "add-buddy",  1, 0, OPT_ADD_BUDDY},
@@ -1087,6 +1090,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 
         case OPT_SERVER_FAILOVER:
             cfg->cfg.server_failover = PJ_TRUE;
+            break;
+
+        case OPT_RESOLVER_FALLBACK:
+            cfg->cfg.resolver_fallback = PJ_TRUE;
             break;
 
         case OPT_STUN_SRV:   /* STUN server */
@@ -2412,6 +2419,8 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
 
     if (config->cfg.server_failover)
         cfg_add(&cfg, max, "--server-failover\n");
+    if (config->cfg.resolver_fallback)
+        cfg_add(&cfg, max, "--resolver-fallback\n");
 
     if (config->instance_id.slen) {
         cfg_addf(&cfg, max, "--instance-id %.*s\n",
