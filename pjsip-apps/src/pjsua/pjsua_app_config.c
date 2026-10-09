@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -97,6 +97,9 @@ static void usage(void)
             PJSIP_SESS_TIMER_DEF_SE);
     puts  ("  --timer-min-se=N    Session timers minimum expiration period, in secs (def:90)");
     puts  ("  --outb-rid=string   Set SIP outbound reg-id (default:1)");
+    puts  ("  --instance-id=URN   Set the SIP instance ID of all accounts, e.g.");
+    puts  ("                      \"<urn:uuid:00000000-0000-1000-8000-AABBCCDDEEFF>\"");
+    puts  ("  --outb-disable      Disable SIP outbound (RFC 5626) for all accounts");
     puts  ("  --auto-update-nat=N Enable/disable SIP traversal behind symmetric NAT (def: 1)");
     puts  ("                      0: disabled, 1:enabled with exception, 2: fully enabled");
     puts  ("  --disable-stun      Disable STUN for this account");
@@ -409,6 +412,7 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD, OPT_AKA_OP, OPT_AKA_AMF,
            OPT_REG_RETRY_INTERVAL, OPT_REG_USE_PROXY,
            OPT_MWI, OPT_NAMESERVER, OPT_STUN_SRV, OPT_UPNP, OPT_OUTB_RID,
+           OPT_INSTANCE_ID, OPT_OUTB_DISABLE,
            OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
            OPT_AUTO_ANSWER, OPT_AUTO_PLAY, OPT_AUTO_PLAY_HANGUP, OPT_AUTO_LOOP,
            OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_SND_CLOCK_RATE, OPT_STEREO,
@@ -596,6 +600,8 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "timer-se",   1, 0, OPT_TIMER_SE},
         { "timer-min-se", 1, 0, OPT_TIMER_MIN_SE},
         { "outb-rid",   1, 0, OPT_OUTB_RID},
+        { "instance-id", 1, 0, OPT_INSTANCE_ID},
+        { "outb-disable", 0, 0, OPT_OUTB_DISABLE},
         { "video",      0, 0, OPT_VIDEO},
         { "text",       0, 0, OPT_TEXT},
         { "text-red",   1, 0, OPT_TEXT_RED},
@@ -909,6 +915,14 @@ static pj_status_t parse_args(int argc, char *argv[],
 
         case OPT_OUTB_RID: /* Outbound reg-id */
             cur_acc->rfc5626_reg_id = pj_str(pj_optarg);
+            break;
+
+        case OPT_INSTANCE_ID:
+            cfg->instance_id = pj_str(pj_optarg);
+            break;
+
+        case OPT_OUTB_DISABLE:
+            cfg->outb_disable = PJ_TRUE;
             break;
 
         case OPT_USE_IMS: /* Activate IMS settings */
@@ -2398,6 +2412,13 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
 
     if (config->cfg.server_failover)
         cfg_add(&cfg, max, "--server-failover\n");
+
+    if (config->instance_id.slen) {
+        cfg_addf(&cfg, max, "--instance-id %.*s\n",
+                 (int)config->instance_id.slen, config->instance_id.ptr);
+    }
+    if (config->outb_disable)
+        cfg_add(&cfg, max, "--outb-disable\n");
 
     /* Outbound proxy */
     for (i=0; i<config->cfg.outbound_proxy_cnt; ++i) {

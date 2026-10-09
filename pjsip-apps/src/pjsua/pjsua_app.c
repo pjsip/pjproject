@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -2190,6 +2190,13 @@ static pj_status_t app_init(void)
 
         app_config_init_video(&app_config.acc_cfg[i]);
         app_config.acc_cfg[i].txt_red_level = app_config.txt_red_level;
+        if (app_config.instance_id.slen &&
+            !app_config.acc_cfg[i].rfc5626_instance_id.slen)
+        {
+            app_config.acc_cfg[i].rfc5626_instance_id = app_config.instance_id;
+        }
+        if (app_config.outb_disable)
+            app_config.acc_cfg[i].use_rfc5626 = PJ_FALSE;
 
         status = pjsua_acc_add(&app_config.acc_cfg[i], PJ_TRUE, NULL);
         if (status != PJ_SUCCESS)

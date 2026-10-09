@@ -4841,6 +4841,13 @@ typedef struct pjsua_acc_config
      * value will look like "<urn:uuid:00000000-0000-1000-8000-AABBCCDDEEFF>"
      * without the doublequote.
      *
+     * An instance ID set here is sent in every REGISTER, also without SIP
+     * outbound. Registrars such as Kamailio and Flexisip then treat contacts
+     * with the same instance ID as one device and replace the older binding,
+     * so the ID must be unique to the device and persistent (RFC 5626
+     * section 4.1). The generated one is sent only with outbound: it is the
+     * same for all instances on one host, and on iOS ("localhost").
+     *
      * Default: empty
      */
     pj_str_t         rfc5626_instance_id;

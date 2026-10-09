@@ -261,6 +261,10 @@ static void init_outbound_setting(pjsua_acc *acc)
                          (int)acc_cfg->rfc5626_instance_id.slen,
                          acc_cfg->rfc5626_instance_id.ptr);
         acc->rfc5626_instprm.slen = len;
+        PJ_LOG(4,(THIS_FILE, "Acc %d: instance ID %.*s is sent in every "
+                             "REGISTER", acc->index,
+                             (int)acc_cfg->rfc5626_instance_id.slen,
+                             acc_cfg->rfc5626_instance_id.ptr));
     }
 
     if (acc_cfg->rfc5626_reg_id.slen == 0) {
@@ -279,7 +283,8 @@ static void init_outbound_setting(pjsua_acc *acc)
         acc->rfc5626_regprm.slen = len;
     }
 
-    acc->rfc5626_status = OUTBOUND_WANTED;
+    if (acc_cfg->use_rfc5626)
+        acc->rfc5626_status = OUTBOUND_WANTED;
 }
 
 /* Forget a 439 recorded against a first hop we may no longer be talking to,
@@ -532,7 +537,7 @@ static pj_status_t initialize_acc(unsigned acc_id)
     /* If SIP outbound is enabled, generate instance and reg ID if they are
      * not specified
      */
-    if (acc_cfg->use_rfc5626) {
+    if (acc_cfg->use_rfc5626 || acc_cfg->rfc5626_instance_id.slen) {
         init_outbound_setting(acc);
     }
 
@@ -2163,6 +2168,7 @@ static pj_bool_t update_regc_contact(pjsua_acc *acc,
     pjsua_acc_config *acc_cfg = &acc->cfg;
     const pj_str_t *contact = new_contact ? new_contact : &acc->contact;
     pj_bool_t need_outbound = PJ_FALSE;
+    pj_bool_t need_instance;
     pj_str_t prev_reg_contact = acc->reg_contact;
     unsigned prev_status = acc->rfc5626_status;
     const pj_str_t tcp_param = pj_str(";transport=tcp");
@@ -2192,6 +2198,10 @@ static pj_bool_t update_regc_contact(pjsua_acc *acc,
     need_outbound = PJ_TRUE;
 
 done:
+    /* A configured instance ID is sent without reg-id too, which RFC 5626
+     * section 6 allows. The generated one only goes with outbound.
+     */
+    need_instance = need_outbound || acc_cfg->rfc5626_instance_id.slen;
     {
         pj_ssize_t len;
         pj_str_t reg_contact;
@@ -2200,8 +2210,8 @@ done:
               acc->cfg.contact_params.slen +
               acc->cfg.reg_contact_params.slen +
               acc->cfg.reg_contact_uri_params.slen +
-              (need_outbound?
-               (acc->rfc5626_instprm.slen + acc->rfc5626_regprm.slen): 0) +
+              (need_outbound? acc->rfc5626_regprm.slen: 0) +
+              (need_instance? acc->rfc5626_instprm.slen: 0) +
               5; /* allowance */
         reg_contact.ptr = (char*) pj_pool_alloc(acc->pool, len);
 
@@ -2272,14 +2282,13 @@ done:
         if (need_outbound) {
             acc->rfc5626_status = OUTBOUND_WANTED;
 
-            /* Need to use outbound, append the contact with
-             * +sip.instance and reg-id parameters.
-             */
+            /* Need to use outbound, append the reg-id parameter */
             pj_strcat(&reg_contact, &acc->rfc5626_regprm);
-            pj_strcat(&reg_contact, &acc->rfc5626_instprm);
         } else {
             acc->rfc5626_status = OUTBOUND_NA;
         }
+        if (need_instance)
+            pj_strcat(&reg_contact, &acc->rfc5626_instprm);
 
         /* Contact params */
         pj_strcat(&reg_contact, &acc->cfg.reg_contact_params);
