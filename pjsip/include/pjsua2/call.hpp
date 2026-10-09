@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2012-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1153,6 +1153,15 @@ struct OnCallRxOfferParam
      * The new offer received.
      */
     SdpSession          offer;
+
+    /**
+     * SDP answer for application-managed calls only
+     * (PJSUA_CALL_MEDIA_APP_MANAGED). Set #SdpSession::wholeSdp to answer
+     * the offer synchronously. Leave empty for ordinary calls, which use
+     * pjsua's generated answer. On ordinary calls this field is ignored
+     * with a warning.
+     */
+    SdpSession          answer;
     
     /**
      * Status code to be returned for answering the offer. On input,
@@ -1174,7 +1183,9 @@ struct OnCallRxOfferParam
 struct OnCallRxReinviteParam
 {
     /**
-     * The new offer received.
+     * The new offer received. For an application-managed call receiving
+     * a re-INVITE without SDP,
+     * #SdpSession::wholeSdp is empty.
      */
     SdpSession          offer;
 
@@ -1340,9 +1351,9 @@ struct OnCreateMediaTransportSrtpParam
  */
 
 /**
- * This structure contains parameters for Call::answer(), Call::hangup(),
- * Call::reinvite(), Call::update(), Call::xfer(), Call::xferReplaces(),
- * Call::setHold().
+ * This structure contains parameters for Call::makeCall(), Call::answer(),
+ * Call::hangup(), Call::reinvite(), Call::update(), Call::xfer(),
+ * Call::xferReplaces(), Call::setHold().
  */
 struct CallOpParam
 {
@@ -1374,7 +1385,17 @@ struct CallOpParam
     SipTxOption         txOption;
 
     /**
-     * SDP answer. Currently only used for Call::answer().
+     * Local SDP offer or answer to use verbatim instead of pjsua2's own
+     * generated SDP, bypassing the onCallSdpCreated() callback for this
+     * operation. Used by Call::makeCall() and Call::reinvite()/update() as
+     * the SDP offer, and by Call::answer() as the SDP answer or, for an
+     * application-managed call answering an offerless INVITE or re-INVITE,
+     * as the local SDP offer.
+     * Supplying an offer requires mediaAppManaged to be enabled for the
+     * account or call.
+     * For ordinary calls, leave empty to let pjsua2 generate the SDP as
+     * usual. Application-managed initial outgoing calls require an SDP
+     * offer unless PJSUA_CALL_NO_SDP_OFFER is set.
      */
     SdpSession          sdp;
     
@@ -2265,9 +2286,9 @@ public:
      * (i.e. re-INVITE/UPDATE with SDP is received). Application can
      * decide to accept/reject the offer by setting the code (default
      * is PJSIP_SC_OK (200)). If the offer is accepted, application can update
-     * the call setting to be applied in the answer. When this callback is
-     * not implemented, the default behavior is to accept the offer using
-     * current call setting.
+     * the call setting and supply the SDP answer to be applied. When this
+     * callback is not implemented, the default behavior is to accept the
+     * offer using current call setting.
      *
      * @param prm       Callback parameter.
      */
@@ -2275,16 +2296,20 @@ public:
     { PJ_UNUSED_ARG(prm); }
     
     /**
-     * Notify application when call has received a re-INVITE offer from
-     * the peer. It allows more fine-grained control over the response to
-     * a re-INVITE. If application sets prm.isAsync to true, it can send
+     * Notify application when call has received a re-INVITE from the peer.
+     * It allows more fine-grained control over the response to a re-INVITE.
+     * If application sets prm.isAsync to true, it can send
      * the reply manually using the function #pj::Call::answer() and setting
      * the SDP answer. Otherwise, by default the re-INVITE will be
      * answered automatically after the callback returns.
      *
-     * Currently, this callback is only called for re-INVITE with
-     * SDP, but app should be prepared to handle the case of re-INVITE
-     * without SDP.
+     * For an application-managed call receiving a re-INVITE without SDP,
+     * this callback is also called with an empty prm.offer. By default,
+     * the active local SDP is re-offered. Application may set prm.isAsync
+     * to true and later call #pj::Call::answer() with its own local SDP offer.
+     * On the asynchronous path, a successful final response requires an
+     * application-supplied offer; the active local SDP is not automatically
+     * re-offered.
      *
      * Remarks: If manually answering at a later timing, application may
      * need to monitor onCallTsxState() callback to check whether
@@ -2292,8 +2317,8 @@ public:
      * PJSIP_SC_REQUEST_TERMINATED (487) due to being cancelled.
      *
      * Note: onCallRxOffer() will still be called after this callback,
-     * but only if prm.isAsync is false and prm.statusCode is PJSIP_SC_OK
-     * (200).
+     * but only if the re-INVITE contains SDP, prm.isAsync is false and
+     * prm.statusCode is PJSIP_SC_OK (200).
      *
      * Answering manually also allows application to accept media that
      * the library does not manage (e.g. T.38 image/udptl), by answering
@@ -2474,4 +2499,3 @@ private:
 } // namespace pj
 
 #endif  /* __PJSUA2_CALL_HPP__ */
-

@@ -435,6 +435,12 @@ struct AccountCallConfig : public PersistentObject
      */
     unsigned            timerSessExpiresSec;
 
+    /**
+     * Make new calls on this account application-managed from creation.
+     * Default: false.
+     */
+    bool                mediaAppManaged;
+
 public:
     /**
      * Default constructor
@@ -446,7 +452,8 @@ public:
                           siprecRequireLabel(false),
                           siprecRequireMetadata(false),
                           timerMinSESec(90),
-                          timerSessExpiresSec(PJSIP_SESS_TIMER_DEF_SE)
+                          timerSessExpiresSec(PJSIP_SESS_TIMER_DEF_SE),
+                          mediaAppManaged(false)
     {}
 
     /**
@@ -2715,4 +2722,3 @@ private:
 } // namespace pj
 
 #endif  /* __PJSUA2_ACCOUNT_HPP__ */
-

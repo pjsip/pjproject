@@ -194,6 +194,12 @@ static void usage(void)
 #if !PJSUA_MEDIA_HAS_PJMEDIA
     puts  ("  --custom-sdp=STR    Replace generated SDP with this string.");
     puts  ("                      Use \\r\\n or \\n as line separators. The full SDP is replaced as-is.");
+    puts  ("  --sdp-passthrough  Keep and forward the local/remote SDP as-is during");
+    puts  ("                     negotiation for outgoing and incoming calls.");
+    puts  ("  --acc-media-app-managed  Treat all media on incoming and outgoing calls");
+    puts  ("                     for this account as application-managed from the start,");
+    puts  ("                     so pjsua never creates a media transport for them (even");
+    puts  ("                     the initial incoming offer). See pjsua_acc_config.");
 #endif
 
 #if PJSUA_HAS_VIDEO
@@ -453,7 +459,7 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_USE_CLI, OPT_CLI_TELNET_PORT, OPT_DISABLE_CLI_CONSOLE,
            OPT_SERVER_AFFINITY, OPT_SERVER_FAILOVER, OPT_RESOLVER_FALLBACK
 #if !PJSUA_MEDIA_HAS_PJMEDIA
-           , OPT_CUSTOM_SDP
+           , OPT_CUSTOM_SDP, OPT_SDP_PASSTHROUGH, OPT_ACC_MEDIA_APP_MANAGED
 #endif
     };
     struct pj_getopt_option long_options[] = {
@@ -622,7 +628,9 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "no-cli-console", 0, 0, OPT_DISABLE_CLI_CONSOLE},
         { "server-affinity", 2, 0, OPT_SERVER_AFFINITY},
 #if !PJSUA_MEDIA_HAS_PJMEDIA
+        { "acc-media-app-managed", 0, 0, OPT_ACC_MEDIA_APP_MANAGED},
         { "custom-sdp",     1, 0, OPT_CUSTOM_SDP},
+        { "sdp-passthrough", 0, 0, OPT_SDP_PASSTHROUGH},
 #endif
         { NULL, 0, 0, 0}
     };
@@ -1740,6 +1748,14 @@ static pj_status_t parse_args(int argc, char *argv[],
             break;
 
 #if !PJSUA_MEDIA_HAS_PJMEDIA
+        case OPT_ACC_MEDIA_APP_MANAGED:
+            cur_acc->media_app_managed = PJ_TRUE;
+            break;
+
+        case OPT_SDP_PASSTHROUGH:
+            cfg->sdp_passthrough = PJ_TRUE;
+            break;
+
         case OPT_CUSTOM_SDP:
         {
             /* Unescape \r\n and \n in the option value so the user can
@@ -2248,6 +2264,11 @@ static void write_account_settings(int acc_index, pj_str_t *result,
     }
 
     /* Media Transport*/
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+    if (acc_cfg->media_app_managed)
+        cfg_add(result, max, "--acc-media-app-managed\n");
+#endif
+
     if (acc_cfg->ice_cfg.enable_ice)
         cfg_add(result, max, "--use-ice\n");
 
@@ -2828,6 +2849,9 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
     }
 
 #if !PJSUA_MEDIA_HAS_PJMEDIA
+    if (config->sdp_passthrough)
+        cfg_add(&cfg, max, "--sdp-passthrough\n");
+
     if (config->custom_sdp.slen) {
         /* Escape actual CRLF/LF back to \r\n/\n when saving */
         const char *src = config->custom_sdp.ptr;

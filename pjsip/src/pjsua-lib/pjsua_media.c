@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -2476,10 +2476,15 @@ static pj_bool_t sdp_has_active_media(const pjmedia_sdp_session *sdp)
  * build without video keeps reporting an offered video line as unsupported
  * media instead of silently treating it as media the application owns.
  */
-static pj_bool_t is_stream_media(const pjmedia_sdp_media *m)
+static pj_bool_t is_stream_media(const pjsua_call *call,
+                                 const pjmedia_sdp_media *m)
 {
-    pjmedia_type type = pjmedia_get_type(&m->desc.media);
+    pjmedia_type type;
 
+    if (pjsua_call_media_is_app_managed(call))
+        return PJ_FALSE;
+
+    type = pjmedia_get_type(&m->desc.media);
     return (type == PJMEDIA_TYPE_AUDIO || type == PJMEDIA_TYPE_VIDEO ||
             type == PJMEDIA_TYPE_TEXT);
 }
@@ -2597,11 +2602,14 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
                    mtxtidx, &mtxtcnt, &mtottxtcnt);
 
         if (maudcnt + mvidcnt + mtxtcnt == 0 &&
+            !(call->opt.flag & PJSUA_CALL_MEDIA_APP_MANAGED) &&
             !(call->offer_app_managed && sdp_has_active_media(rem_sdp)))
         {
-            /* Expecting media in the offer, unless the app is answering the
-             * offer itself and may accept active media that pjsua does not
-             * manage (e.g. T.38), see pjsua_media_channel_update().
+            /* Expecting media in the offer, unless the call is fully
+             * app-managed (the application owns all media unconditionally),
+             * or this is an async re-offer the app is answering itself and
+             * the offer carries active media that pjsua does not manage
+             * (e.g. T.38), see pjsua_media_channel_update().
              */
             if (sip_err_code)
                 *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
@@ -2621,6 +2629,9 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
         call->rem_aud_cnt = maudcnt;
         call->rem_vid_cnt = mvidcnt;
         call->rem_txt_cnt = mtxtcnt;
+
+    } else if (pjsua_call_media_is_app_managed(call)) {
+        call->rem_offerer = PJ_FALSE;
 
     } else {
 
@@ -2796,7 +2807,7 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
         call->rem_offerer = PJ_FALSE;
     }
 
-    if (call->med_prov_cnt == 0) {
+    if (call->med_prov_cnt == 0 && !pjsua_call_media_is_app_managed(call)) {
         /* Expecting at least one media */
         if (sip_err_code)
             *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
@@ -2844,6 +2855,11 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
             {
                 enabled = PJ_TRUE;
             }
+        }
+
+        if (call->opt.flag & PJSUA_CALL_MEDIA_APP_MANAGED) {
+            /* The application owns all media transports. */
+            enabled = PJ_FALSE;
         }
 
         if (call->opt.flag & PJSUA_CALL_SET_MEDIA_DIR) {
@@ -4659,6 +4675,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     unsigned mtxtcnt = PJ_ARRAY_SIZE(mtxtidx);
     unsigned mtottxtcnt = PJ_ARRAY_SIZE(mtxtidx);
     pj_bool_t need_renego_sdp = PJ_FALSE;
+    pj_bool_t app_managed;
 
     if (pjsua_get_state() != PJSUA_STATE_RUNNING)
         return PJ_EBUSY;
@@ -4669,6 +4686,25 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     /* Destroy existing media session, if any. */
     //stop_media_session(call->index);
 
+    app_managed = pjsua_call_media_is_app_managed(call);
+    got_media = app_managed;
+
+    if (local_sdp->media_count > PJSUA_MAX_CALL_MEDIA) {
+        PJ_LOG(1,(THIS_FILE, "Call %d: SDP media count %u exceeds maximum "
+                  "%u", call_id, local_sdp->media_count,
+                  PJSUA_MAX_CALL_MEDIA));
+        status = PJ_ETOOMANY;
+        goto on_error;
+    }
+
+    if (app_managed && call->med_prov_cnt < local_sdp->media_count) {
+        mi = call->med_prov_cnt;
+        pj_memcpy(&call->media_prov[mi], &call->media[mi],
+                  sizeof(call->media[0]) *
+                  (local_sdp->media_count - call->med_prov_cnt));
+        call->med_prov_cnt = local_sdp->media_count;
+    }
+
     /* Call media count must be at least equal to SDP media. Note that
      * it may not be equal when remote removed any SDP media line.
      */
@@ -4676,6 +4712,13 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 
     /* Reset audio_idx first */
     call->audio_idx = -1;
+
+    if (app_managed) {
+        maudcnt = mtotaudcnt = 0;
+        mvidcnt = mtotvidcnt = 0;
+        mtxtcnt = mtottxtcnt = 0;
+        goto media_sorted;
+    }
 
     /* Sort audio/video based on "quality" */
     sort_media(local_sdp, &STR_AUDIO, acc->cfg.use_srtp,
@@ -4743,13 +4786,14 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
                 {
                     continue;
                 }
-            
+
                 /* Deactivate this excess media */
                 pjmedia_sdp_media_deactivate(tmp_pool, m);
             }
         }
     }
 
+media_sorted:
     /* Update call media from provisional media */
     call->med_cnt = call->med_prov_cnt;
     pj_memcpy(call->media, call->media_prov,
@@ -4822,7 +4866,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
          * (app-supplied) answer keeps the line active, count it as media so the
          * call is not dropped for having no media.
          */
-        if (!is_stream_media(remote_sdp->media[mi])) {
+        if (!is_stream_media(call, remote_sdp->media[mi])) {
             stop_media_stream(call, mi, PJ_FALSE);
             close_call_med_tp(call_med);
             call_med->type = PJMEDIA_TYPE_UNKNOWN;
@@ -5076,4 +5120,3 @@ pj_status_t pjsua_media_apply_xml_control(pjsua_call_id call_id,
 
     return PJ_ENOTSUP;
 }
-

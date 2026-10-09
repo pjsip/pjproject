@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -18,6 +18,9 @@
  */
 
 #include "pjsua_app_common.h"
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+#include <pjsua-lib/pjsua_internal.h>
+#endif
 
 #define THIS_FILE       "pjsua_app_common.c"
 
@@ -228,6 +231,131 @@ void app_config_init_video(pjsua_acc_config *acc_cfg)
 }
 #endif
 
+void app_config_apply_acc_setting(pjsua_acc_config *acc_cfg)
+{
+    if (app_config.sdp_passthrough)
+        acc_cfg->media_app_managed = PJ_TRUE;
+}
+
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+pj_status_t app_parse_custom_sdp(pj_pool_t *pool, pjmedia_sdp_session **sdp)
+{
+    pj_str_t sdp_str;
+
+    PJ_ASSERT_RETURN(app_config.custom_sdp.slen != 0, PJ_ENOTFOUND);
+
+    sdp_str.ptr = (char*)pj_pool_alloc(pool,
+                                       (pj_size_t)(app_config.custom_sdp.slen + 1));
+    pj_memcpy(sdp_str.ptr, app_config.custom_sdp.ptr,
+              (pj_size_t)app_config.custom_sdp.slen);
+    sdp_str.ptr[app_config.custom_sdp.slen] = '\0';
+    sdp_str.slen = app_config.custom_sdp.slen;
+
+    return pjmedia_sdp_parse(pool, sdp_str.ptr, (pj_size_t)sdp_str.slen, sdp);
+}
+#endif
+
+pj_status_t app_make_call(pjsua_acc_id acc_id, const pj_str_t *uri,
+                         const pjsua_call_setting *opt,
+                         const pjsua_msg_data *msg_data,
+                         pjsua_call_id *call_id)
+{
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+    if (app_config.custom_sdp.slen &&
+        !(opt->flag & PJSUA_CALL_NO_SDP_OFFER))
+    {
+        pj_pool_t *pool;
+        pjsua_acc_config acc_cfg;
+        pjmedia_sdp_session *sdp;
+        pjsua_call_op_param param;
+        pj_status_t status;
+
+        pool = pjsua_pool_create("custom sdp", 1024, 1024);
+        if (!pool)
+            return PJ_ENOMEM;
+
+        status = pjsua_acc_get_config(acc_id, pool, &acc_cfg);
+        if (status == PJ_SUCCESS &&
+            (acc_cfg.media_app_managed ||
+             (opt->flag & PJSUA_CALL_MEDIA_APP_MANAGED)))
+        {
+            status = app_parse_custom_sdp(pool, &sdp);
+            if (status == PJ_SUCCESS) {
+                pjsua_call_op_param_default(&param);
+                param.opt = opt;
+                param.sdp = sdp;
+                param.msg_data = msg_data;
+                status = pjsua_call_make_call2(acc_id, uri, &param, call_id);
+            }
+            pj_pool_release(pool);
+            return status;
+        }
+        pj_pool_release(pool);
+        if (status != PJ_SUCCESS)
+            return status;
+    }
+#endif
+    return pjsua_call_make_call(acc_id, uri, opt, NULL, msg_data, call_id);
+}
+
+pj_status_t app_answer_call(pjsua_call_id call_id,
+                           const pjsua_call_setting *opt,
+                           unsigned code, const pjsua_msg_data *msg_data)
+{
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+    if ((code == PJSIP_SC_PROGRESS || code/100 == 2) &&
+        app_config.custom_sdp.slen)
+    {
+        pjsua_call_info info;
+        pj_status_t status;
+
+        status = pjsua_call_get_info(call_id, &info);
+        if (status != PJ_SUCCESS)
+            return status;
+
+        if ((info.setting.flag | (opt ? opt->flag : 0)) &
+            PJSUA_CALL_MEDIA_APP_MANAGED)
+        {
+            pj_pool_t *pool;
+            pjmedia_sdp_session *sdp;
+            pjsip_inv_session *inv;
+            pj_bool_t needs_sdp;
+
+            PJSUA_LOCK();
+            inv = pjsua_var.calls[call_id].inv;
+            if (!inv) {
+                PJSUA_UNLOCK();
+                return PJ_EINVALIDOP;
+            }
+            pjsip_dlg_inc_lock(inv->dlg);
+            needs_sdp = !inv->neg ||
+                pjmedia_sdp_neg_get_state(inv->neg) ==
+                    PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER ||
+                (pjmedia_sdp_neg_get_state(inv->neg) ==
+                    PJMEDIA_SDP_NEG_STATE_DONE &&
+                 pjsip_inv_has_pending_offerless_invite(inv));
+            pjsip_dlg_dec_lock(inv->dlg);
+            PJSUA_UNLOCK();
+            if (!needs_sdp)
+                return pjsua_call_answer2(call_id, opt, code, NULL, msg_data);
+
+            pool = pjsua_pool_create("custom sdp", 1024, 1024);
+            if (!pool)
+                return PJ_ENOMEM;
+
+            status = app_parse_custom_sdp(pool, &sdp);
+            if (status == PJ_SUCCESS) {
+                status = pjsua_call_answer_with_sdp(call_id, sdp, opt, code,
+                                                    NULL, msg_data);
+            }
+            pj_pool_release(pool);
+            return status;
+        }
+    }
+#endif
+    return pjsua_call_answer2(call_id, opt, code, NULL, msg_data);
+}
+
 /* Indexed by pjmedia_dir */
 static const char *media_dir_names[] = { "inactive", "sendonly",
                                          "recvonly", "sendrecv" };
@@ -258,6 +386,8 @@ void app_config_init_call_setting(pjsua_call_setting *opt)
     opt->aud_cnt = app_config.aud_cnt;
     opt->vid_cnt = app_config.vid.vid_cnt;
     opt->txt_cnt = app_config.txt_cnt;
+    if (app_config.sdp_passthrough)
+        opt->flag |= PJSUA_CALL_MEDIA_APP_MANAGED;
 
     if (app_config.media_dir_cnt) {
         opt->flag |= PJSUA_CALL_SET_MEDIA_DIR;

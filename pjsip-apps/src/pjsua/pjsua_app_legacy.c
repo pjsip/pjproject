@@ -741,7 +741,7 @@ static void ui_make_new_call()
         if (app_config.enable_loam) {
             call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
         }
-        status = pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL,
+        status = app_make_call(current_acc, &tmp, &call_opt,
                                       &msg_data_, &current_call);
         if (status != PJ_SUCCESS)
             pjsua_perror(THIS_FILE, "Unable to make call", status);
@@ -789,10 +789,12 @@ static void ui_make_multi_call()
     for (i=0; i<my_atoi(menuin); ++i) {
         pj_status_t status;
 
-        status = pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL,
-            NULL, NULL);
-        if (status != PJ_SUCCESS)
+        status = app_make_call(current_acc, &tmp, &call_opt,
+                               NULL, NULL);
+        if (status != PJ_SUCCESS) {
+            pjsua_perror(THIS_FILE, "Unable to make call", status);
             break;
+        }
     }
 }
 
@@ -902,6 +904,7 @@ static void ui_answer_call()
         pj_str_t hname = { "Contact", 7 };
         pj_str_t hvalue;
         pjsip_generic_string_hdr hcontact;
+        pj_status_t status;
 
         if (!simple_input("Answer with code (100-699)", buf, sizeof(buf)))
             return;
@@ -933,7 +936,9 @@ static void ui_answer_call()
             return;
         }
 
-        pjsua_call_answer2(current_call, &call_opt, st_code, NULL, &msg_data_);
+        status = app_answer_call(current_call, &call_opt, st_code, &msg_data_);
+        if (status != PJ_SUCCESS)
+            pjsua_perror(THIS_FILE, "Unable to answer call", status);
     }
 }
 
