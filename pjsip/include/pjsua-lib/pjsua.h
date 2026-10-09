@@ -6381,7 +6381,7 @@ typedef enum pjsua_call_flag
 
     /**
      * Let the application manage all SDP media on this call. Set before
-     * creating the call; it cannot be enabled later.
+     * creating the call; it cannot be enabled or disabled later.
      * An SDP with no media lines or all media ports set to zero does not
      * cause the call to be rejected for lack of active media.
      */

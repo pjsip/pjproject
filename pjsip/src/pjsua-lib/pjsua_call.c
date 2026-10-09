@@ -3523,6 +3523,10 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
             return status;
         }
         if (!old_neg) {
+            /* pjsip_inv_set_local_sdp() created this negotiator for our
+             * offer. It never completed a round, so cancel_offer() would
+             * leave it DONE with no active SDP; drop it instead.
+             */
             inv->neg = NULL;
         } else if (has_pending_local_answer(call->inv)) {
             cancel_pending_local_answer(call->inv);
