@@ -164,6 +164,8 @@ static pj_status_t check_raw_chain(const pj_ssl_sock_info *si,
     pj_file_close(fd);
     if (status != PJ_SUCCESS)
         return status;
+    if (der.slen <= 0)
+        return PJ_EEOF;
 
     if (lci->raw_chain.cert_raw[0].slen != der.slen ||
         pj_memcmp(lci->raw_chain.cert_raw[0].ptr, der.ptr, der.slen))
@@ -297,7 +299,6 @@ static pj_bool_t ssl_on_accept_complete(pj_ssl_sock_t *ssock,
          * ssock->parent, and perf_test() waits for every client to finish.
          */
         parent_st->err = status;
-        status = PJ_SUCCESS;
     }
 
     pj_sockaddr_print(src_addr, buf, sizeof(buf), 1);

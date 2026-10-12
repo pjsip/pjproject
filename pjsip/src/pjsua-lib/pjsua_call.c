@@ -1639,9 +1639,10 @@ static pj_status_t verify_request(const pjsua_call *call,
     pj_status_t status;
     
     /* Get remote SDP offer (if any). */
-    if (call->inv->neg)
+    if (call->inv->neg &&
+        pjmedia_sdp_neg_get_neg_remote(call->inv->neg, &offer) != PJ_SUCCESS)
     {
-        pjmedia_sdp_neg_get_neg_remote(call->inv->neg, &offer);
+        offer = NULL;
     }
 
     if (pjsua_call_media_is_app_managed(call)) {

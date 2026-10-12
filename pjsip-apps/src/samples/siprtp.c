@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1420,8 +1420,13 @@ static void call_on_media_update( pjsip_inv_session *inv,
 
     
     /* Capture stream definition from the SDP */
-    pjmedia_sdp_neg_get_active_local(inv->neg, &local_sdp);
-    pjmedia_sdp_neg_get_active_remote(inv->neg, &remote_sdp);
+    status = pjmedia_sdp_neg_get_active_local(inv->neg, &local_sdp);
+    if (status == PJ_SUCCESS)
+        status = pjmedia_sdp_neg_get_active_remote(inv->neg, &remote_sdp);
+    if (status != PJ_SUCCESS) {
+        app_perror(THIS_FILE, "Unable to get active SDP", status);
+        return;
+    }
 
     if (local_sdp->media[0]->desc.port == 0) {
         PJ_LOG(3, (THIS_FILE, "Audio media inactive"));

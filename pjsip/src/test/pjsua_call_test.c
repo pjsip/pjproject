@@ -543,7 +543,8 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
             g_ctx.offerless_rollback_status =
                 pjsua_call_answer_with_sdp(call_id, sdp, &opt,
                                            PJSIP_SC_OK, NULL, NULL);
-            g_ctx.offerless_rollback_neg_null = (call->inv->neg == NULL);
+            g_ctx.offerless_rollback_neg_null =
+                (call->inv && call->inv->neg == NULL);
             g_ctx.offerless_retry_plain_status =
                 pjsua_call_answer(call_id, PJSIP_SC_OK, NULL, NULL);
             opt = call->opt;

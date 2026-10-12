@@ -2144,7 +2144,7 @@ static pj_status_t cmd_call_reinvite()
          * re-INVITE
          */
         call_opt.flag |= PJSUA_CALL_UNHOLD;
-        pjsua_call_reinvite2(current_call, &call_opt, NULL);
+        (void)pjsua_call_reinvite2(current_call, &call_opt, NULL);
 
     } else {
         PJ_LOG(3,(THIS_FILE, "No current call"));
