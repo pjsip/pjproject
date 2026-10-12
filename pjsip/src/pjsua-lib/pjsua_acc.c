@@ -3199,16 +3199,21 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
             update_rfc5626_status(acc, param->rdata);
 
             /* Check NAT bound address if it hasn't been done before */
-            if (!acc->contact_rewritten &&
-                acc_check_nat_addr(acc, (acc->cfg.contact_rewrite_method & 3),
-                                   param))
-            {
-                /* Avoid another check of NAT bound address */
+            if (!acc->contact_rewritten) {
+                /* Avoid another check of NAT bound address. Set before the
+                 * check sends the new REGISTER, so that a send failing at
+                 * once can clear it.
+                 */
                 acc->contact_rewritten = PJ_TRUE;
-
-                PJSUA_UNLOCK();
-                pj_log_pop_indent();
-                return;
+                if (acc_check_nat_addr(acc,
+                                       (acc->cfg.contact_rewrite_method & 3),
+                                       param))
+                {
+                    PJSUA_UNLOCK();
+                    pj_log_pop_indent();
+                    return;
+                }
+                acc->contact_rewritten = PJ_FALSE;
             }
 
             /* Check and update Service-Route header */
