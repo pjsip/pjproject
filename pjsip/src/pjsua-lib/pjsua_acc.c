@@ -3203,11 +3203,11 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
                 acc_check_nat_addr(acc, (acc->cfg.contact_rewrite_method & 3),
                                    param))
             {
-                PJSUA_UNLOCK();
-                pj_log_pop_indent();
-
                 /* Avoid another check of NAT bound address */
                 acc->contact_rewritten = PJ_TRUE;
+
+                PJSUA_UNLOCK();
+                pj_log_pop_indent();
                 return;
             }
 
