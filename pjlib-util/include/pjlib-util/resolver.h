@@ -362,9 +362,16 @@ PJ_DECL(pj_status_t) pj_dns_resolver_set_ns(pj_dns_resolver *resolver,
  * Reset the state of the name servers, so that they are all tried again
  * as when they were set with #pj_dns_resolver_set_ns(), e.g. after a
  * network change: a name server marked as bad while the previous network
- * was going down may answer on the new one. Their cached errors, e.g. a
- * refusal, are dropped too. The rest of the cache and the pending queries
- * are kept.
+ * was going down may answer on the new one.
+ *
+ * The cached responses whose TTL the resolver chose itself are dropped
+ * too: errors, NXDOMAIN and empty answers, cached for
+ * #PJ_DNS_RESOLVER_INVALID_TTL, and the answers of the system resolver,
+ * see #PJ_DNS_RESOLVER_SYS_FALLBACK. The answers of the nameservers with
+ * records and the entries added with #pj_dns_resolver_add_entry() without
+ * TTL are kept. An entry added with TTL is dropped or kept by the same
+ * rule. The pending queries complete as usual, but their responses are
+ * not cached.
  *
  * @param resolver  The resolver instance.
  *
@@ -554,7 +561,7 @@ PJ_DECL(unsigned) pj_dns_resolver_get_cached_count(pj_dns_resolver *resolver);
 /**
  * Clear the response cache, e.g: after the nameservers have changed.
  * Entries added with #pj_dns_resolver_add_entry() without
- * TTL are kept.
+ * TTL are kept. The responses of the pending queries are not cached.
  *
  * @param resolver  The resolver instance.
  *

@@ -168,6 +168,8 @@ struct pj_dns_async_query
     void                *user_data;     /**< Application data.              */
     pj_dns_callback     *cb;            /**< Callback to be called.         */
     struct query_head    child_head;    /**< Child queries list head.       */
+    unsigned             cache_gen;     /**< cache_gen of the resolver when
+                                             the query started.             */
 };
 
 
@@ -185,6 +187,8 @@ struct cached_res
     pj_time_val              expiry_time;   /**< Expiration time.           */
     pj_dns_parsed_packet    *pkt;           /**< The response packet.       */
     unsigned                 ref_cnt;       /**< Reference counter.         */
+    pj_bool_t                from_sys;      /**< Answer of the system
+                                                 resolver.                  */
 };
 
 
@@ -244,6 +248,8 @@ struct pj_dns_resolver
 
     /* Hash table for cached response */
     pj_hash_table_t     *hrescache;     /**< Cached response in hash table  */
+    unsigned             cache_gen;     /**< Incremented when the cache is
+                                             dropped, see drop_cache().     */
 
     /* Pending asynchronous query, hashed by transaction ID. */
     pj_hash_table_t     *hquerybyid;
@@ -299,13 +305,14 @@ static void sys_collect(pj_dns_resolver *resolver, struct query_head *list);
 
 static void report_sys(pj_dns_resolver *resolver, pj_dns_async_query *q);
 
-static void drop_cache(pj_dns_resolver *resolver, pj_bool_t errors_only);
+static void drop_cache(pj_dns_resolver *resolver, pj_bool_t keep_answers);
 
 static void update_res_cache(pj_dns_resolver *resolver,
                              const struct res_key *key,
                              pj_status_t status,
                              pj_bool_t set_expiry,
-                             const pj_dns_parsed_packet *pkt);
+                             const pj_dns_parsed_packet *pkt,
+                             pj_bool_t from_sys);
 
 /* Select which nameserver to use */
 static pj_status_t select_nameservers(pj_dns_resolver *resolver,
@@ -802,7 +809,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_reset_ns_state(pj_dns_resolver *resolver)
         resolver->ns[i].state_expiry = now;
     }
 
-    /* Their errors may not hold on the new network either */
+    /* What the resolver timed itself may not hold on the new network */
     drop_cache(resolver, PJ_TRUE);
     if (resolver->ns_count)
         PJ_LOG(4,(resolver->name.ptr, "Nameserver state reset"));
@@ -884,6 +891,7 @@ static pj_dns_async_query *alloc_qnode(pj_dns_resolver *resolver,
     q->options = options;
     q->user_data = user_data;
     q->cb = cb;
+    q->cache_gen = resolver->cache_gen;
     pj_list_init(&q->child_head);
 
     return q;
@@ -1525,8 +1533,12 @@ static void report_sys(pj_dns_resolver *resolver, pj_dns_async_query *q)
             question.dnsclass = PJ_DNS_CLASS_IN;
             question.name = pj_str(q->key.name);
             pj_grp_lock_acquire(resolver->grp_lock);
-            if (!resolver->shutting_down)
-                update_res_cache(resolver, &q->key, status, PJ_TRUE, &pkt);
+            if (!resolver->shutting_down &&
+                q->cache_gen == resolver->cache_gen)
+            {
+                update_res_cache(resolver, &q->key, status, PJ_TRUE, &pkt,
+                                 PJ_FALSE);
+            }
             pj_grp_lock_release(resolver->grp_lock);
         }
     }
@@ -1559,8 +1571,12 @@ static void report_sys(pj_dns_resolver *resolver, pj_dns_async_query *q)
     pj_grp_lock_acquire(resolver->grp_lock);
 
     /* Cached as a nameserver's answer is, for bad_ns_ttl */
-    if (resp && !resolver->shutting_down)
-        update_res_cache(resolver, &q->key, PJ_SUCCESS, PJ_TRUE, &pkt);
+    if (resp && !resolver->shutting_down &&
+        q->cache_gen == resolver->cache_gen)
+    {
+        update_res_cache(resolver, &q->key, PJ_SUCCESS, PJ_TRUE, &pkt,
+                         PJ_TRUE);
+    }
 
     q->user_data = NULL;
     cq = q->child_head.next;
@@ -2292,7 +2308,8 @@ static void update_res_cache(pj_dns_resolver *resolver,
                              const struct res_key *key,
                              pj_status_t status,
                              pj_bool_t set_expiry,
-                             const pj_dns_parsed_packet *pkt)
+                             const pj_dns_parsed_packet *pkt,
+                             pj_bool_t from_sys)
 {
     struct cached_res *cache;
     pj_uint32_t hval=0, ttl;
@@ -2391,6 +2408,7 @@ static void update_res_cache(pj_dns_resolver *resolver,
 
     /* Copy key to the cached response */
     pj_memcpy(&cache->key, key, sizeof(*key));
+    cache->from_sys = from_sys;
 
     /* Update the hash table */
     pj_hash_set_np(resolver->hrescache, &cache->key, sizeof(*key), hval,
@@ -2716,11 +2734,15 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
     /* Truncated responses MUST NOT be saved (cached). Skip caching as well
      * once destroy has started: destroy sweeps the cache, so a late entry
-     * would never be freed.
+     * would never be freed. Nor if the cache was dropped since the query
+     * started: the response may be of the previous network.
      */
-    if (PJ_DNS_GET_TC(dns_pkt->hdr.flags) == 0 && !resolver->shutting_down) {
+    if (PJ_DNS_GET_TC(dns_pkt->hdr.flags) == 0 && !resolver->shutting_down &&
+        q->cache_gen == resolver->cache_gen)
+    {
         /* Save/update response cache. */
-        update_res_cache(resolver, &q->key, status, PJ_TRUE, dns_pkt);
+        update_res_cache(resolver, &q->key, status, PJ_TRUE, dns_pkt,
+                         PJ_FALSE);
     }
 
     /* Recycle query objects, starting with the child queries */
@@ -2800,7 +2822,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_add_entry( pj_dns_resolver *resolver,
     }
 
     /* Insert entry. */
-    update_res_cache(resolver, &key, PJ_SUCCESS, set_ttl, pkt);
+    update_res_cache(resolver, &key, PJ_SUCCESS, set_ttl, pkt, PJ_FALSE);
 
     pj_grp_lock_release(resolver->grp_lock);
 
@@ -2825,12 +2847,16 @@ PJ_DEF(unsigned) pj_dns_resolver_get_cached_count(pj_dns_resolver *resolver)
 }
 
 
-/* Remove the cached entries, or only the errors. Entries added by the
- * application without TTL are kept. Called with the lock held.
+/* Remove the cached entries, but for those added by the application
+ * without TTL and, with keep_answers, the nameservers' answers with
+ * records. The responses of the pending queries won't be cached. Called
+ * with the lock held.
  */
-static void drop_cache(pj_dns_resolver *resolver, pj_bool_t errors_only)
+static void drop_cache(pj_dns_resolver *resolver, pj_bool_t keep_answers)
 {
     pj_hash_iterator_t it_buf, *it;
+
+    ++resolver->cache_gen;
 
     it = pj_hash_first(resolver->hrescache, &it_buf);
     while (it) {
@@ -2841,11 +2867,10 @@ static void drop_cache(pj_dns_resolver *resolver, pj_bool_t errors_only)
 
         if (cache->expiry_time.sec == 0x7FFFFFFFL)
             continue;
-        if (errors_only) {
-            int rcode = PJ_DNS_GET_RCODE(cache->pkt->hdr.flags);
-
-            if (rcode == 0 || rcode == PJ_DNS_RCODE_NXDOMAIN)
-                continue;
+        if (keep_answers && !cache->from_sys && cache->pkt->hdr.anscount &&
+            PJ_DNS_GET_RCODE(cache->pkt->hdr.flags) == 0)
+        {
+            continue;
         }
 
         pj_hash_set(NULL, resolver->hrescache, &cache->key,
