@@ -1115,7 +1115,7 @@ static void ui_call_hold()
 static void ui_call_reinvite()
 {
     call_opt.flag |= PJSUA_CALL_UNHOLD;
-    pjsua_call_reinvite2(current_call, &call_opt, NULL);
+    (void)pjsua_call_reinvite2(current_call, &call_opt, NULL);
 }
 
 static void ui_send_update()

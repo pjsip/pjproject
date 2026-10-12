@@ -4409,7 +4409,7 @@ PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
     {
         pj_dns_resolver *res = pjsip_endpt_get_resolver(pjsua_var.endpt);
         if (res)
-            pj_dns_resolver_reset_ns_state(res);
+            (void)pj_dns_resolver_reset_ns_state(res);
     }
 #endif
 

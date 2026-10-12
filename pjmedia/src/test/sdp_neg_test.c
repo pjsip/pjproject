@@ -1701,10 +1701,10 @@ static int offer_answer_test(pj_pool_t *pool, pjmedia_sdp_neg **p_neg,
         status = pjmedia_sdp_session_cmp(active, sdp3, 0);
         if (status != PJ_SUCCESS) {
             app_perror(status, "   error: active local comparison mismatch");
-            compare_sdp_string("Logical cmp after negotiatin remote answer",
-                               "Active local sdp from negotiator", active,
-                               "The correct active local sdp", sdp3,
-                               status);
+            (void)compare_sdp_string(
+                "Logical cmp after negotiatin remote answer",
+                "Active local sdp from negotiator", active,
+                "The correct active local sdp", sdp3, status);
             return -110;
         }
 
@@ -1807,10 +1807,10 @@ static int offer_answer_test(pj_pool_t *pool, pjmedia_sdp_neg **p_neg,
         /* Compare answer from negotiator and the correct answer */
         status = pjmedia_sdp_session_cmp(sdp3, answer, 0);
         if (status != PJ_SUCCESS) {
-            compare_sdp_string("Logical cmp after negotiating remote offer",
-                               "Local answer from negotiator", answer,
-                               "The correct local answer", sdp3,
-                               status);
+            (void)compare_sdp_string(
+                "Logical cmp after negotiating remote offer",
+                "Local answer from negotiator", answer,
+                "The correct local answer", sdp3, status);
 
             return -280;
         }
