@@ -1702,7 +1702,7 @@ static int offer_answer_test(pj_pool_t *pool, pjmedia_sdp_neg **p_neg,
         if (status != PJ_SUCCESS) {
             app_perror(status, "   error: active local comparison mismatch");
             (void)compare_sdp_string(
-                "Logical cmp after negotiatin remote answer",
+                "Logical cmp after negotiating remote answer",
                 "Active local sdp from negotiator", active,
                 "The correct active local sdp", sdp3, status);
             return -110;
