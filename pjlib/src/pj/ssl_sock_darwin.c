@@ -358,8 +358,7 @@ static pj_status_t get_proto_bounds(pj_ssl_sock_proto *p_proto,
     pj_ssl_sock_proto proto = *p_proto;
 
     if (proto == PJ_SSL_SOCK_PROTO_DEFAULT) {
-        /* SSL 2.0 is deprecated. */
-        proto = PJ_SSL_SOCK_PROTO_ALL & ~PJ_SSL_SOCK_PROTO_SSL2;
+        proto = PJ_SSL_SOCK_PROTO_TLS1_2 | PJ_SSL_SOCK_PROTO_TLS1_3;
     }
 
     if (proto & PJ_SSL_SOCK_PROTO_TLS1_3) {
