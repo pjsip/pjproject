@@ -2692,7 +2692,17 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 
     /* Perform new registration */
     if (contact_rewrite_method < PJSUA_CONTACT_REWRITE_ALWAYS_UPDATE) {
-        pjsua_acc_set_registration(acc->index, PJ_TRUE);
+        /* Avoid another check of NAT bound address. Set before sending, so
+         * that a send failing at once can clear it.
+         */
+        acc->contact_rewritten = PJ_TRUE;
+        if (pjsua_acc_set_registration(acc->index, PJ_TRUE) != PJ_SUCCESS &&
+            acc->contact_rewritten)
+        {
+            /* Not reported back, e.g. failed before sending */
+            acc->contact_rewritten = PJ_FALSE;
+            schedule_reregistration(acc);
+        }
     }
 
     pj_pool_release(pool);
@@ -3199,21 +3209,13 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
             update_rfc5626_status(acc, param->rdata);
 
             /* Check NAT bound address if it hasn't been done before */
-            if (!acc->contact_rewritten) {
-                /* Avoid another check of NAT bound address. Set before the
-                 * check sends the new REGISTER, so that a send failing at
-                 * once can clear it.
-                 */
-                acc->contact_rewritten = PJ_TRUE;
-                if (acc_check_nat_addr(acc,
-                                       (acc->cfg.contact_rewrite_method & 3),
-                                       param))
-                {
-                    PJSUA_UNLOCK();
-                    pj_log_pop_indent();
-                    return;
-                }
-                acc->contact_rewritten = PJ_FALSE;
+            if (!acc->contact_rewritten &&
+                acc_check_nat_addr(acc, (acc->cfg.contact_rewrite_method & 3),
+                                   param))
+            {
+                PJSUA_UNLOCK();
+                pj_log_pop_indent();
+                return;
             }
 
             /* Check and update Service-Route header */
