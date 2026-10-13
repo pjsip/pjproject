@@ -3110,7 +3110,14 @@ static pj_status_t test_sys_lookup(int af, const pj_str_t *name,
     /* Read once: the cleanup of a test clears it */
     pj_sem_t *block = sys_state.block;
 
+#if PJ_HAS_THREADS
+    /* The lookup threads may run at once */
+    lock();
     sys_state.count++;
+    unlock();
+#else
+    sys_state.count++;
+#endif
     sys_state.af = af;
     pj_ansi_strxcpy2(sys_state.name, name, sizeof(sys_state.name));
     if (block) {
