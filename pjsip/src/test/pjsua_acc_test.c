@@ -170,7 +170,6 @@ static struct {
 static pj_status_t fail_tx_on_tx_request(pjsip_tx_data *tdata)
 {
     pjsip_contact_hdr *hc;
-    pjsip_sip_uri *uri;
 
     if (!g_fail_tx.host ||
         tdata->msg->line.req.method.id != PJSIP_REGISTER_METHOD)
@@ -180,15 +179,22 @@ static pj_status_t fail_tx_on_tx_request(pjsip_tx_data *tdata)
 
     hc = (pjsip_contact_hdr*) pjsip_msg_find_hdr(tdata->msg,
                                                  PJSIP_H_CONTACT, NULL);
-    if (!hc || !hc->uri || !PJSIP_URI_SCHEME_IS_SIP(hc->uri))
-        return PJ_SUCCESS;
+    while (hc) {
+        if (hc->uri && PJSIP_URI_SCHEME_IS_SIP(hc->uri)) {
+            pjsip_sip_uri *uri = (pjsip_sip_uri*)
+                                 pjsip_uri_get_uri(hc->uri);
 
-    uri = (pjsip_sip_uri*) pjsip_uri_get_uri(hc->uri);
-    if (pj_strcmp2(&uri->host, g_fail_tx.host) != 0)
-        return PJ_SUCCESS;
+            if (pj_strcmp2(&uri->host, g_fail_tx.host) == 0) {
+                g_fail_tx.host = NULL;
+                return PJ_ECANCELLED;
+            }
+        }
+        hc = (pjsip_contact_hdr*) pjsip_msg_find_hdr(tdata->msg,
+                                                     PJSIP_H_CONTACT,
+                                                     hc->next);
+    }
 
-    g_fail_tx.host = NULL;
-    return PJ_ECANCELLED;
+    return PJ_SUCCESS;
 }
 
 
@@ -542,7 +548,6 @@ static int rewrite_send_fail_test(pjsua_transport_id tp_id, int port)
 
     pj_bzero(&g_ctx, sizeof(g_ctx));
     g_mock_reg.received  = public_host;
-    g_mock_reg.req_count = 0;
     g_fail_tx.host       = public_host;
 
     pj_ansi_snprintf(reg_uri, sizeof(reg_uri), "sip:127.0.0.1:%d", port);
