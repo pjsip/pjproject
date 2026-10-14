@@ -625,6 +625,12 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev, int playback_dev)
     return PJ_SUCCESS;
 }
 
+/* Internal opening uses the same no-op as explicit device selection. */
+pj_status_t pjsua_set_snd_dev_internal(int capture_dev, int playback_dev)
+{
+    return pjsua_set_snd_dev(capture_dev, playback_dev);
+}
+
 /* Get currently active sound devices. */
 PJ_DEF(pj_status_t) pjsua_get_snd_dev(int *capture_dev, int *playback_dev)
 {

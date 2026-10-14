@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -39,6 +39,13 @@ static void close_snd_dev(pj_bool_t close_null_snd);
 static void close_snd_port(pjmedia_snd_port *old_snd);
 /* Sound device auto-close timer callback */
 static void close_snd_timer_cb(pj_timer_heap_t *th, pj_timer_entry *entry);
+/* check_idle applies idle policy after opening for public API requests.
+ * Internal setup passes PJ_FALSE because call/bridge counts may lag its use.
+ */
+static pj_status_t set_snd_dev2(const pjsua_snd_dev_param *param,
+                                pj_bool_t check_idle);
+static pj_status_t set_null_snd_dev2(const pjsua_null_snd_dev_param *param,
+                                     pj_bool_t check_idle);
 /* Create audio device param */
 static pj_status_t create_aud_param(pjmedia_aud_param *param,
                                     pjmedia_aud_dev_index capture_dev,
@@ -383,11 +390,9 @@ pj_status_t pjsua_aud_subsys_init()
     }
 
     /* Initialize the sound device auto-close timer here rather than in
-     * pjsua_aud_subsys_start(), so that its callback is already set if
-     * the application is destroyed after a failure somewhere between
-     * pjsua_init() and pjsua_start(): the teardown path calls
-     * pjsua_check_snd_dev_idle(), which would otherwise schedule a timer
-     * entry with a NULL callback.
+     * pjsua_aud_subsys_start(). Device selection and teardown after a failure
+     * may call pjsua_check_snd_dev_idle() before pjsua_start(), which would
+     * otherwise schedule a timer entry with a NULL callback.
      */
     pj_timer_entry_init(&pjsua_var.snd_idle_timer, PJ_FALSE, NULL,
                         &close_snd_timer_cb);
@@ -398,23 +403,12 @@ on_error:
     return status;
 }
 
-/* Check if sound device is idle. */
-void pjsua_check_snd_dev_idle()
+/* Ignore the last disconnected call still counted during media teardown.
+ * Use the same check when scheduling and executing idle close.
+ */
+static pj_bool_t has_active_calls(void)
 {
-    unsigned call_cnt;
-
-    /* Check if the sound device auto-close feature is disabled. */
-    if (pjsua_var.media_cfg.snd_auto_close_time < 0)
-        return;
-
-    /* Check if the sound device is currently closed. */
-    if (!pjsua_var.snd_is_on)
-        return;
-
-    /* Get the call count, we shouldn't close the sound device when there is
-     * any calls active.
-     */
-    call_cnt = pjsua_call_get_count();
+    unsigned call_cnt = pjsua_call_get_count();
 
     /* When this function is called from pjsua_media_channel_deinit() upon
      * disconnecting call, actually the call count hasn't been updated/
@@ -434,14 +428,25 @@ void pjsua_check_snd_dev_idle()
         }
     }
 
-    /* Activate sound device auto-close timer if sound device is idle.
-     * It is idle when there is no port connection in the bridge and
-     * there is no active call.
-     * Update: as bridge conn/disconn is now async, the check is moved to
-     *         the timer callback.
+    return call_cnt != 0;
+}
+
+/* Check if sound device is idle. */
+void pjsua_check_snd_dev_idle()
+{
+    /* Check if the sound device auto-close feature is disabled. */
+    if (pjsua_var.media_cfg.snd_auto_close_time < 0)
+        return;
+
+    /* Check if the sound device is currently closed. */
+    if (!pjsua_var.snd_is_on)
+        return;
+
+    /* Arm idle closure when there are no active calls. Bridge connection
+     * changes are asynchronous, so check connections when the timer fires.
      */
     if (pjsua_var.snd_idle_timer.id == PJ_FALSE &&
-        call_cnt == 0)
+        !has_active_calls())
     {
         pj_time_val delay;
 
@@ -461,7 +466,12 @@ static void close_snd_timer_cb( pj_timer_heap_t *th,
     PJ_UNUSED_ARG(th);
 
     PJSUA_LOCK();
-    if (entry->id && pjmedia_conf_get_connect_count(pjsua_var.mconf) == 0) {
+    /* An idle device may be reused by a new call before this timer fires.
+     * Recheck calls now, so setup and ringing do not lose their sound device.
+     */
+    if (entry->id && !has_active_calls() &&
+        pjmedia_conf_get_connect_count(pjsua_var.mconf) == 0)
+    {
         PJ_LOG(4,(THIS_FILE,"Closing sound device after idle for %d second(s)",
                   pjsua_var.media_cfg.snd_auto_close_time));
 
@@ -1073,7 +1083,9 @@ PJ_DEF(pj_status_t) pjsua_conf_connect2( pjsua_conf_port_id source,
 
     PJSUA_LOCK();
 
-    /* If sound device idle timer is active, cancel it first. */
+    /* Cancel idle closure before preparing a connection. Internal device
+     * opening does not arm it again while the connection is being queued.
+     */
     if (pjsua_var.snd_idle_timer.id) {
         pjsip_endpt_cancel_timer(pjsua_var.endpt, &pjsua_var.snd_idle_timer);
         pjsua_var.snd_idle_timer.id = PJ_FALSE;
@@ -1154,8 +1166,8 @@ PJ_DEF(pj_status_t) pjsua_conf_connect2( pjsua_conf_port_id source,
                 }
             } else {
                 /* Null-audio */
-                status = pjsua_set_snd_dev(pjsua_var.cap_dev,
-                                           pjsua_var.play_dev);
+                status = pjsua_set_snd_dev_internal(pjsua_var.cap_dev,
+                                                    pjsua_var.play_dev);
                 if (status != PJ_SUCCESS) {
                     pjsua_perror(THIS_FILE, "Error opening sound device",
                                  status);
@@ -1179,7 +1191,8 @@ PJ_DEF(pj_status_t) pjsua_conf_connect2( pjsua_conf_port_id source,
         if (pjsua_var.snd_port==NULL && pjsua_var.null_snd==NULL &&
             !pjsua_var.no_snd)
         {
-            status = pjsua_set_snd_dev(pjsua_var.cap_dev, pjsua_var.play_dev);
+            status = pjsua_set_snd_dev_internal(pjsua_var.cap_dev,
+                                                pjsua_var.play_dev);
             if (status != PJ_SUCCESS) {
                 pjsua_perror(THIS_FILE, "Error opening sound device", status);
                 goto on_return;
@@ -2170,7 +2183,11 @@ static pj_status_t open_snd_dev(pjmedia_snd_port_param *param)
     if (PJSUA_SND_NULL_DEV==param->base.rec_id ||
         PJSUA_SND_NULL_DEV==param->base.play_id)
     {
-        return pjsua_set_null_snd_dev();
+        pjsua_null_snd_dev_param null_param;
+
+        pjsua_null_snd_dev_param_default(&null_param);
+        null_param.avoid_clock_gap = pjsua_var.snd_avoid_clock_gap;
+        return set_null_snd_dev2(&null_param, PJ_FALSE);
     }
 
     /* Avoid timer race while reopening/changing sound device. */
@@ -2462,6 +2479,26 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev(int capture_dev,
 }
 
 
+/*
+ * Open the selected devices for internal use, without scheduling idle close.
+ */
+pj_status_t pjsua_set_snd_dev_internal(int capture_dev,
+                                       int playback_dev)
+{
+    pjsua_snd_dev_param param;
+
+    pjsua_snd_dev_param_default(&param);
+    pjsua_get_snd_dev2(&param);
+    param.capture_dev = capture_dev;
+    param.playback_dev = playback_dev;
+
+    /* Always open the sound device. */
+    param.mode &= ~PJSUA_SND_DEV_NO_IMMEDIATE_OPEN;
+
+    return set_snd_dev2(&param, PJ_FALSE);
+}
+
+
 PJ_DEF(pj_status_t) pjsua_get_snd_dev2(pjsua_snd_dev_param *snd_param)
 {
     PJ_ASSERT_RETURN(snd_param, PJ_EINVAL);
@@ -2481,6 +2518,12 @@ PJ_DEF(pj_status_t) pjsua_get_snd_dev2(pjsua_snd_dev_param *snd_param)
  * any time to replace current sound device.
  */
 PJ_DEF(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param)
+{
+    return set_snd_dev2(snd_param, PJ_TRUE);
+}
+
+static pj_status_t set_snd_dev2(const pjsua_snd_dev_param *snd_param,
+                                pj_bool_t check_idle)
 {
     unsigned alt_cr_cnt = 1;
     unsigned alt_cr[] = {0, 44100, 48000, 32000, 16000, 8000};
@@ -2534,9 +2577,13 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param)
     if (snd_param->capture_dev == PJSUA_SND_NULL_DEV && 
         snd_param->playback_dev == PJSUA_SND_NULL_DEV) 
     {
+        pjsua_null_snd_dev_param null_param;
+
         PJSUA_UNLOCK();
         PJ_LOG(4, (THIS_FILE, "Null sound device, mode setting is ignored"));
-        status = pjsua_set_null_snd_dev();
+        pjsua_null_snd_dev_param_default(&null_param);
+        null_param.avoid_clock_gap = pjsua_var.snd_avoid_clock_gap;
+        status = set_null_snd_dev2(&null_param, check_idle);
         pj_log_pop_indent();
         return status;
     }
@@ -2606,6 +2653,10 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param)
 
     pjsua_var.no_snd = PJ_FALSE;
     pjsua_var.snd_is_on = PJ_TRUE;
+
+    /* Apply idle auto-close policy for public API requests. */
+    if (check_idle)
+        pjsua_check_snd_dev_idle();
 
     PJSUA_UNLOCK();
     pj_log_pop_indent();
@@ -2683,6 +2734,13 @@ static pj_status_t create_null_snd(pj_pool_t *pool,
 PJ_DEF(pj_status_t) pjsua_set_null_snd_dev2(
                             const pjsua_null_snd_dev_param *snd_param)
 {
+    return set_null_snd_dev2(snd_param, PJ_TRUE);
+}
+
+static pj_status_t set_null_snd_dev2(
+                            const pjsua_null_snd_dev_param *snd_param,
+                            pj_bool_t check_idle)
+{
     pj_pool_t *new_pool = NULL;
     pj_pool_t *old_pool;
     pjmedia_master_port *new_null = NULL;
@@ -2740,6 +2798,10 @@ PJ_DEF(pj_status_t) pjsua_set_null_snd_dev2(
 
         pjsua_var.no_snd = PJ_FALSE;
         pjsua_var.snd_is_on = PJ_TRUE;
+
+        /* Apply idle auto-close policy for public API requests. */
+        if (check_idle)
+            pjsua_check_snd_dev_idle();
 
         PJSUA_UNLOCK();
         pj_log_pop_indent();
@@ -2809,6 +2871,10 @@ PJ_DEF(pj_status_t) pjsua_set_null_snd_dev2(
     if (pjsua_var.ua_cfg.cb.on_snd_dev_operation) {
         (*pjsua_var.ua_cfg.cb.on_snd_dev_operation)(1);
     }
+
+    /* Apply idle auto-close policy for public API requests. */
+    if (check_idle)
+        pjsua_check_snd_dev_idle();
 
     PJSUA_UNLOCK();
     pj_log_pop_indent();
@@ -2952,7 +3018,7 @@ PJ_DEF(pj_status_t) pjsua_snd_get_setting( pjmedia_aud_dev_cap cap,
      */
     if (pjsua_var.aud_open_cnt==0) {
         PJ_LOG(4,(THIS_FILE, "Opening sound device to get initial settings"));
-        pjsua_set_snd_dev(pjsua_var.cap_dev, pjsua_var.play_dev);
+        pjsua_set_snd_dev_internal(pjsua_var.cap_dev, pjsua_var.play_dev);
         close_snd_dev(PJ_TRUE);
     }
 

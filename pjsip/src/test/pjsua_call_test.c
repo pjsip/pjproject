@@ -196,6 +196,8 @@ static struct
      * so the main flow can detect the callback actually ran. */
     pj_status_t   answer2_overlimit_status;
     pj_bool_t     incoming_seen;
+    pj_bool_t     idle_sound_ringing;
+    pj_atomic_t  *idle_sound_frames;
     /* Incoming (callee) leg of the most recent self-call. */
     pjsua_call_id incoming_call_id;
     pj_bool_t     initial_app_managed_armed;
@@ -513,6 +515,12 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
     PJ_UNUSED_ARG(rdata);
 
     g_ctx.incoming_call_id = call_id;
+
+    if (g_ctx.idle_sound_ringing) {
+        g_ctx.incoming_seen = PJ_TRUE;
+        pjsua_call_answer(call_id, PJSIP_SC_RINGING, NULL, NULL);
+        return;
+    }
 
     if (g_ctx.uas_offer_armed) {
         g_ctx.incoming_seen = PJ_TRUE;
@@ -1412,6 +1420,268 @@ static void siprec_test_mark_siprec_sessions(void)
 /*****************************************************************************
  * Sub-tests
  *****************************************************************************/
+
+static pj_bool_t idle_sound_is_closed(pjsua_call_id call_id)
+{
+    PJ_UNUSED_ARG(call_id);
+    return !pjsua_var.snd_is_on && pjsua_var.null_snd == NULL;
+}
+
+/* Both public null-device transition modes must honor idle auto-close. */
+static int test_idle_sound_close(void)
+{
+    const pj_bool_t avoid_clock_gap[] = {PJ_FALSE, PJ_TRUE};
+    int saved_delay = pjsua_var.media_cfg.snd_auto_close_time;
+    int rc = -18007;
+    unsigned i;
+
+    PJ_LOG(3, (THIS_FILE, "  unused sound device closes"));
+    pjsua_var.media_cfg.snd_auto_close_time = 0;
+    for (i = 0; i < PJ_ARRAY_SIZE(avoid_clock_gap); ++i) {
+        pjsua_null_snd_dev_param param;
+
+        pjsua_null_snd_dev_param_default(&param);
+        param.avoid_clock_gap = avoid_clock_gap[i];
+        if (pjsua_set_null_snd_dev2(&param) != PJ_SUCCESS)
+            goto on_return;
+        if (!wait_until(&idle_sound_is_closed, PJSUA_INVALID_ID,
+                        TEST_TIMEOUT_MSEC))
+        {
+            PJ_LOG(1, (THIS_FILE, "    idle device stayed open (%s transition)",
+                       avoid_clock_gap[i] ? "gapless" : "legacy"));
+            rc = -18008;
+            goto on_return;
+        }
+    }
+    rc = 0;
+
+on_return:
+    pjsua_var.media_cfg.snd_auto_close_time = saved_delay;
+    return rc;
+}
+
+static pj_status_t idle_sound_get_frame(pjmedia_port *port, pjmedia_frame *frame)
+{
+    pj_atomic_inc((pj_atomic_t*)port->port_data.pdata);
+    frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
+    pj_bzero(frame->buf, frame->size);
+    return PJ_SUCCESS;
+}
+
+static pj_bool_t idle_sound_has_frames(pjsua_call_id call_id)
+{
+    PJ_UNUSED_ARG(call_id);
+    return pj_atomic_get(g_ctx.idle_sound_frames) > 0;
+}
+
+static pj_bool_t idle_sound_is_disconnected(pjsua_call_id call_id)
+{
+    PJ_UNUSED_ARG(call_id);
+    return pjmedia_conf_get_connect_count(pjsua_var.mconf) == 0;
+}
+
+/* A zero-delay timer must not stop a clock before its queued conference
+ * connection is applied, whether it is reopened internally or already open.
+ * Count frames to detect a silent port.
+ */
+static int test_idle_sound_connect(void)
+{
+    const pj_bool_t already_open[] = {PJ_FALSE, PJ_TRUE};
+    pj_pool_t *pool = pjsua_pool_create("idle-sound-test", 4096, 4096);
+    pjmedia_port *port = NULL;
+    pj_atomic_t *frames = NULL;
+    pjsua_conf_port_id slot = PJSUA_INVALID_ID;
+    int saved_delay = pjsua_var.media_cfg.snd_auto_close_time;
+    int rc = -18001;
+    unsigned i;
+
+    PJ_LOG(3, (THIS_FILE, "  idle sound close during queued connect"));
+    if (!pool)
+        return rc;
+    if (pj_atomic_create(pool, 0, &frames) != PJ_SUCCESS ||
+        pjmedia_null_port_create(pool, pjsua_var.media_cfg.clock_rate,
+                                pjsua_var.mconf_cfg.channel_count,
+                                pjsua_var.mconf_cfg.samples_per_frame,
+                                pjsua_var.mconf_cfg.bits_per_sample,
+                                &port) != PJ_SUCCESS)
+    {
+        goto on_return;
+    }
+    g_ctx.idle_sound_frames = frames;
+    port->port_data.pdata = frames;
+    port->get_frame = &idle_sound_get_frame;
+    if (pjsua_conf_add_port(pool, port, &slot) != PJ_SUCCESS)
+        goto on_return;
+
+    pjsua_var.media_cfg.snd_auto_close_time = 0;
+    for (i = 0; i < PJ_ARRAY_SIZE(already_open); ++i) {
+        pjsua_null_snd_dev_param param;
+
+        PJ_LOG(3, (THIS_FILE, "    connect with %s device",
+                   already_open[i] ? "already open" : "closed"));
+        pjsua_null_snd_dev_param_default(&param);
+        /* Verify that internal reopening preserves this option. */
+        param.avoid_clock_gap = PJ_TRUE;
+        if (pjsua_set_null_snd_dev2(&param) != PJ_SUCCESS)
+            goto on_return;
+        if (!wait_until(&idle_sound_is_closed, PJSUA_INVALID_ID,
+                        TEST_TIMEOUT_MSEC))
+        {
+            rc = -18002;
+            goto on_return;
+        }
+
+        /* Reuse an open device with an idle timer pending in the second case.
+         * Do not poll the timer before connecting.
+         */
+        if (already_open[i] && pjsua_set_null_snd_dev2(&param) != PJ_SUCCESS)
+            goto on_return;
+
+        if (pjsua_conf_connect(slot, 0) != PJ_SUCCESS)
+            goto on_return;
+        pjsua_handle_events(0);
+
+        /* Require fresh frames after processing the due idle timer. */
+        pj_atomic_set(frames, 0);
+        if (!wait_until(&idle_sound_has_frames, PJSUA_INVALID_ID,
+                        TEST_TIMEOUT_MSEC) || !pjsua_var.snd_is_on)
+        {
+            PJ_LOG(1, (THIS_FILE, "    clock stopped (%s device)",
+                       already_open[i] ? "already open" : "reopened"));
+            rc = -18003;
+            goto on_return;
+        }
+        if (!pjsua_var.snd_avoid_clock_gap) {
+            PJ_LOG(1, (THIS_FILE, "    avoid_clock_gap=1 was not preserved"));
+            rc = -18011;
+            goto on_return;
+        }
+        if (pjsua_conf_disconnect(slot, 0) != PJ_SUCCESS)
+            goto on_return;
+        if (!wait_until(&idle_sound_is_disconnected, PJSUA_INVALID_ID,
+                        TEST_TIMEOUT_MSEC))
+        {
+            rc = -18009;
+            goto on_return;
+        }
+    }
+    rc = 0;
+
+on_return:
+    /* Keep a clock running until asynchronous port removal is applied,
+     * including when testing a broken build that closed the clock early.
+     */
+    pjsua_var.media_cfg.snd_auto_close_time = -1;
+    pjsua_set_null_snd_dev();
+    if (slot != PJSUA_INVALID_ID)
+        pjsua_conf_remove_port(slot);
+    wait_until(NULL, PJSUA_INVALID_ID, MEDIA_SETTLE_MSEC);
+    if (port)
+        pjmedia_port_destroy(port);
+    if (frames)
+        pj_atomic_destroy(frames);
+    g_ctx.idle_sound_frames = NULL;
+    pj_pool_release(pool);
+    pjsua_var.media_cfg.snd_auto_close_time = saved_delay;
+    pjsua_check_snd_dev_idle();
+    return rc;
+}
+
+static pj_bool_t idle_sound_call_is_ringing(pjsua_call_id call_id)
+{
+    pjsua_call_info ci;
+
+    return pjsua_call_get_info(call_id, &ci) == PJ_SUCCESS &&
+           ci.state == PJSIP_INV_STATE_EARLY &&
+           ci.last_status == PJSIP_SC_RINGING;
+}
+
+static pj_bool_t idle_sound_timer_is_done(pjsua_call_id call_id)
+{
+    PJ_UNUSED_ARG(call_id);
+    return !pjsua_var.snd_idle_timer.id;
+}
+
+/* Call setup must keep sound open while ringing, both when it opens the
+ * device internally and when it reuses a device with an idle timer armed.
+ * After hangup, sound must still close when idle.
+ */
+static int test_idle_sound_call_setup(void)
+{
+    pj_str_t uri = pj_str(g_ctx.self_uri);
+    pjsua_call_id caller = PJSUA_INVALID_ID;
+    int saved_delay = pjsua_var.media_cfg.snd_auto_close_time;
+    int rc = -18004;
+    unsigned i;
+
+    PJ_LOG(3, (THIS_FILE, "  idle sound close during call setup"));
+    g_ctx.idle_sound_ringing = PJ_TRUE;
+    for (i = 0; i < 2; ++i) {
+        PJ_LOG(3, (THIS_FILE, "    call with %s device",
+                   i ? "already open" : "closed"));
+        pjsua_var.media_cfg.snd_auto_close_time = 0;
+        if (pjsua_set_null_snd_dev() != PJ_SUCCESS)
+            goto on_return;
+        if (!wait_until(&idle_sound_is_closed, PJSUA_INVALID_ID,
+                        TEST_TIMEOUT_MSEC))
+        {
+            goto on_return;
+        }
+
+        pjsua_var.media_cfg.snd_auto_close_time = 1;
+        if (i != 0 &&
+            pjsua_set_snd_dev(PJSUA_SND_NULL_DEV, PJSUA_SND_NULL_DEV) !=
+                PJ_SUCCESS)
+        {
+            goto on_return;
+        }
+
+        caller = PJSUA_INVALID_ID;
+        if (pjsua_call_make_call(g_ctx.acc_id, &uri, NULL, NULL, NULL,
+                                 &caller) != PJ_SUCCESS)
+        {
+            goto on_return;
+        }
+        if (!wait_until(&idle_sound_call_is_ringing, caller, TEST_TIMEOUT_MSEC))
+            goto on_return;
+
+        /* Wait for any pending idle timer to finish, so a slow runner cannot
+         * pass before the active-call check runs. No bridge connection should
+         * keep the device open on its own.
+         */
+        if (!wait_until(&idle_sound_timer_is_done, PJSUA_INVALID_ID,
+                        TEST_TIMEOUT_MSEC))
+        {
+            PJ_LOG(1, (THIS_FILE, "    idle timer did not finish while ringing"));
+            rc = -18010;
+            goto on_return;
+        }
+        if (!pjsua_var.snd_is_on ||
+            !idle_sound_call_is_ringing(caller) ||
+            pjmedia_conf_get_connect_count(pjsua_var.mconf) != 0)
+        {
+            PJ_LOG(1, (THIS_FILE, "    sound closed while ringing (%s device)",
+                       i ? "already open" : "reopened"));
+            rc = -18005;
+            goto on_return;
+        }
+
+        drain_all_calls();
+        if (!wait_until(&idle_sound_is_closed, PJSUA_INVALID_ID,
+                        TEST_TIMEOUT_MSEC))
+        {
+            rc = -18006;
+            goto on_return;
+        }
+    }
+    rc = 0;
+
+on_return:
+    drain_all_calls();
+    g_ctx.idle_sound_ringing = PJ_FALSE;
+    pjsua_var.media_cfg.snd_auto_close_time = saved_delay;
+    return rc;
+}
 
 /* Outgoing make_call() bounds. The rejected settings return before any
  * dialog/media is created, so no call slot leaks (make_call cleans up on
@@ -6136,6 +6406,15 @@ int pjsua_call_test(void)
     minimize_msg_size(&lib_settings);
 
     /* ---- Run sub-tests ---- */
+    rc = test_idle_sound_close();
+    if (rc != 0) goto on_return;
+
+    rc = test_idle_sound_connect();
+    if (rc != 0) goto on_return;
+
+    rc = test_idle_sound_call_setup();
+    if (rc != 0) goto on_return;
+
     rc = test_make_call_bounds();
     if (rc != 0) goto on_return;
 

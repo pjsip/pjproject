@@ -1151,6 +1151,10 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
                                      const pjmedia_sdp_session *local_sdp,
                                      const pjmedia_sdp_session *remote_sdp);
 void pjsua_check_snd_dev_idle(void);
+/* Internal device opening does not arm idle closure during call or
+ * conference setup. Application requests use the public device setters.
+ */
+pj_status_t pjsua_set_snd_dev_internal(int capture_dev, int playback_dev);
 
 /*
  * Video
