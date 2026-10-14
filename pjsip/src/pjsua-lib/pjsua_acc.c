@@ -2692,7 +2692,17 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 
     /* Perform new registration */
     if (contact_rewrite_method < PJSUA_CONTACT_REWRITE_ALWAYS_UPDATE) {
-        pjsua_acc_set_registration(acc->index, PJ_TRUE);
+        /* Avoid another check of NAT bound address. Set before sending, so
+         * that a send failing at once can clear it.
+         */
+        acc->contact_rewritten = PJ_TRUE;
+        if (pjsua_acc_set_registration(acc->index, PJ_TRUE) != PJ_SUCCESS &&
+            acc->contact_rewritten)
+        {
+            /* Not reported back, e.g. failed before sending */
+            acc->contact_rewritten = PJ_FALSE;
+            schedule_reregistration(acc);
+        }
     }
 
     pj_pool_release(pool);
@@ -3205,9 +3215,6 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
             {
                 PJSUA_UNLOCK();
                 pj_log_pop_indent();
-
-                /* Avoid another check of NAT bound address */
-                acc->contact_rewritten = PJ_TRUE;
                 return;
             }
 
@@ -3788,14 +3795,17 @@ pj_bool_t pjsua_media_acc_is_using_upnp(pjsua_acc_id acc_id)
 }
 
 /*
- * Update registration or perform unregistration. 
+ * Update registration or perform unregistration. PJSUA_LOCK is released
+ * while sending; with release_all, also the levels the caller holds, as
+ * the new transaction's group lock must not be taken under it.
  */
-PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id, 
-                                                pj_bool_t renew)
+static pj_status_t acc_set_registration(pjsua_acc_id acc_id, pj_bool_t renew,
+                                        pj_bool_t release_all)
 {
     pjsua_acc *acc;
     pj_status_t status = 0;
     pjsip_tx_data *tdata = 0;
+    unsigned num_locks;
 
     PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
                      PJ_EINVAL);
@@ -3899,12 +3909,17 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
          * deadlock while making sure that regc won't be destroyed.
          */
         pjsip_regc_add_ref(regc);
-        PJSUA_UNLOCK();
+        if (release_all) {
+            num_locks = PJSUA_RELEASE_LOCK();
+        } else {
+            PJSUA_UNLOCK();
+            num_locks = 1;
+        }
         
         //pjsua_process_msg_data(tdata, NULL);
         status = pjsip_regc_send( regc, tdata );
         
-        PJSUA_LOCK();
+        PJSUA_RELOCK(num_locks);
         if (pjsip_regc_dec_ref(regc) == PJ_EGONE) {
             /* regc has been deleted. */
             goto on_return;
@@ -3948,6 +3963,16 @@ on_return:
     PJSUA_UNLOCK();
     pj_log_pop_indent();
     return status;
+}
+
+
+/*
+ * Update registration or perform unregistration.
+ */
+PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
+                                                pj_bool_t renew)
+{
+    return acc_set_registration(acc_id, renew, PJ_FALSE);
 }
 
 
@@ -5460,7 +5485,7 @@ static void auto_rereg_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
         clear_sa_pin(acc);
     }
 
-    status = pjsua_acc_set_registration(acc->index, PJ_TRUE);
+    status = acc_set_registration(acc->index, PJ_TRUE, PJ_TRUE);
     if (status != PJ_SUCCESS)
         schedule_reregistration(acc);
 

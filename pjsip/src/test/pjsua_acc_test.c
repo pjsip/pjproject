@@ -46,6 +46,9 @@
  *      update_regc_contact() regeneration path see a non-SIP URI.
  *   9. A Contact that pjsip_regc refuses must leave the existing
  *      registration binding alone rather than queue it for removal.
+ *  10. The REGISTER sent by an accepted rewrite fails inside the send:
+ *      the nested failure report must leave contact_rewritten clear, so
+ *      that the retry's 2xx rewrites the Contact again.
  */
 
 #include "test.h"
@@ -135,6 +138,63 @@ static pj_bool_t mock_registrar_rx_request(pjsip_rx_data *rdata)
     pjsip_endpt_respond_stateless(pjsua_get_pjsip_endpt(), rdata,
                                   200, NULL, &hdr_list, NULL);
     return PJ_TRUE;
+}
+
+
+/*****************************************************************************
+ * Send failure
+ *
+ * Fails the next REGISTER whose Contact has the given host before it is
+ * sent, as an unreachable network would, so that its transaction ends
+ * inside the send.
+ *****************************************************************************/
+
+static pj_status_t fail_tx_on_tx_request(pjsip_tx_data *tdata);
+
+static struct {
+    pjsip_module  mod;
+    const char   *host;         /* Contact host to fail, or NULL */
+} g_fail_tx = {
+    {
+        NULL, NULL,
+        { "mod-pjsua-acc-fail-tx", 21 },
+        -1,
+        PJSIP_MOD_PRIORITY_APPLICATION,
+        NULL, NULL, NULL, NULL,
+        NULL, NULL,
+        &fail_tx_on_tx_request,
+        NULL, NULL,
+    }
+};
+
+static pj_status_t fail_tx_on_tx_request(pjsip_tx_data *tdata)
+{
+    pjsip_contact_hdr *hc;
+
+    if (!g_fail_tx.host ||
+        tdata->msg->line.req.method.id != PJSIP_REGISTER_METHOD)
+    {
+        return PJ_SUCCESS;
+    }
+
+    hc = (pjsip_contact_hdr*) pjsip_msg_find_hdr(tdata->msg,
+                                                 PJSIP_H_CONTACT, NULL);
+    while (hc) {
+        if (hc->uri && PJSIP_URI_SCHEME_IS_SIP(hc->uri)) {
+            pjsip_sip_uri *uri = (pjsip_sip_uri*)
+                                 pjsip_uri_get_uri(hc->uri);
+
+            if (pj_strcmp2(&uri->host, g_fail_tx.host) == 0) {
+                g_fail_tx.host = NULL;
+                return PJ_ECANCELLED;
+            }
+        }
+        hc = (pjsip_contact_hdr*) pjsip_msg_find_hdr(tdata->msg,
+                                                     PJSIP_H_CONTACT,
+                                                     hc->next);
+    }
+
+    return PJ_SUCCESS;
 }
 
 
@@ -467,6 +527,106 @@ on_return:
 }
 
 
+/* The REGISTER that acc_check_nat_addr() sends fails inside the send, so
+ * regc_cb() runs again, nested, for the failure. contact_rewritten must
+ * come out of it clear, or the retry's 2xx skips the NAT check and the
+ * account stays registered with the Contact the registrar did not see.
+ */
+static int rewrite_send_fail_test(pjsua_transport_id tp_id, int port)
+{
+    const char      *public_host = "1.2.3.4";
+    pjsua_acc_config acc_cfg;
+    pjsua_acc_id     acc_id;
+    char             reg_uri[64];
+    char             host[PJ_INET6_ADDRSTRLEN + 16];
+    unsigned         elapsed;
+    pj_status_t      status;
+    int              rc = 0;
+
+    PJ_LOG(3, (THIS_FILE, "  pjsua acc: rewrite whose REGISTER fails at "
+               "once"));
+
+    pj_bzero(&g_ctx, sizeof(g_ctx));
+    g_mock_reg.received  = public_host;
+    g_fail_tx.host       = public_host;
+
+    pj_ansi_snprintf(reg_uri, sizeof(reg_uri), "sip:127.0.0.1:%d", port);
+
+    pjsua_acc_config_default(&acc_cfg);
+    acc_cfg.id       = pj_str("sip:" TEST_USER "@pjsip.org");
+    acc_cfg.reg_uri  = pj_str(reg_uri);
+    acc_cfg.transport_id = tp_id;
+    acc_cfg.register_on_acc_add = PJ_FALSE;
+    acc_cfg.allow_contact_rewrite = 2;
+    acc_cfg.allow_via_rewrite = PJ_FALSE;
+    /* Retry the failed REGISTER after exactly one second */
+    acc_cfg.reg_first_retry_interval = 1;
+    acc_cfg.reg_retry_interval = 1;
+    acc_cfg.reg_retry_random_interval = 0;
+
+    status = pjsua_acc_add(&acc_cfg, PJ_FALSE, &acc_id);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(3, (THIS_FILE, "    error: pjsua_acc_add failed (%d)", status));
+        g_mock_reg.received = NULL;
+        g_fail_tx.host = NULL;
+        return -2540;
+    }
+
+    status = pjsua_acc_set_registration(acc_id, PJ_TRUE);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(3, (THIS_FILE, "    error: set_registration failed (%d)",
+                   status));
+        rc = -2541;
+        goto on_return;
+    }
+
+    /* The 2xx that triggers the rewrite is not reported, so the first
+     * code seen is the failure of the rewrite's REGISTER.
+     */
+    for (elapsed = 0; elapsed < 5000 && g_ctx.reg_code < 300; elapsed += 50)
+        pjsua_handle_events(50);
+    if (g_ctx.reg_code < 300 || g_fail_tx.host != NULL) {
+        PJ_LOG(3, (THIS_FILE, "    error: the rewrite's REGISTER did not "
+                   "fail, last code %d", g_ctx.reg_code));
+        rc = -2542;
+        goto on_return;
+    }
+
+    if (pjsua_var.acc[acc_id].contact_rewritten) {
+        PJ_LOG(3, (THIS_FILE, "    error: contact_rewritten is still set "
+                   "after the rewrite's REGISTER failed"));
+        rc = -2543;
+        goto on_return;
+    }
+
+    /* The retry registers a fresh Contact, which its 2xx must rewrite */
+    if (wait_reg(10000) != 0) {
+        PJ_LOG(3, (THIS_FILE, "    error: retry did not register, last "
+                   "code %d", g_ctx.reg_code));
+        rc = -2544;
+        goto on_return;
+    }
+
+    if (get_acc_contact_host(acc_id, host, sizeof(host)) != 0 ||
+        pj_ansi_strcmp(host, public_host) != 0)
+    {
+        PJ_LOG(3, (THIS_FILE, "    error: expected Contact host '%s' after "
+                   "the retry, got '%.*s'", public_host,
+                   (int)pjsua_var.acc[acc_id].contact.slen,
+                   pjsua_var.acc[acc_id].contact.ptr));
+        rc = -2545;
+        goto on_return;
+    }
+
+on_return:
+    g_mock_reg.received = NULL;
+    g_fail_tx.host = NULL;
+    pjsua_acc_del(acc_id);
+    pjsua_handle_events(500);
+    return rc;
+}
+
+
 /*****************************************************************************
  * Main entry point
  *****************************************************************************/
@@ -551,6 +711,15 @@ int pjsua_acc_test(void)
         return -2405;
     }
 
+    status = pjsip_endpt_register_module(pjsua_get_pjsip_endpt(),
+                                         &g_fail_tx.mod);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "  register send failure module failed (%d)",
+                   status));
+        rc = -2406;
+        goto on_return;
+    }
+
     /* ---- Run sub-tests ---- */
     {
         static const rewrite_case cases[] = {
@@ -620,7 +789,12 @@ int pjsua_acc_test(void)
         }
     }
 
+    rc = rewrite_send_fail_test(tp_id, (int)port);
+
 on_return:
+    if (g_fail_tx.mod.id != -1)
+        pjsip_endpt_unregister_module(pjsua_get_pjsip_endpt(),
+                                      &g_fail_tx.mod);
     if (g_mock_reg.mod.id != -1)
         pjsip_endpt_unregister_module(pjsua_get_pjsip_endpt(),
                                       &g_mock_reg.mod);
