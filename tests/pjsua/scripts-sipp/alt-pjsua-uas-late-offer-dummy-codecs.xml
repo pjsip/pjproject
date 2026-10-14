@@ -5,7 +5,7 @@
      offer to answer, so it inserts its own SDP offer (PCMU audio and
      H263-1998 video) in the 200 OK. SIPp verifies both codecs are present,
      then sends the SDP answer in the ACK before alt_pjsua hangs up with
-     BYE. 
+     BYE.
      This scenario tests the handling of late SDP offers with dummy codecs. -->
 
 <scenario name="alt_pjsua UAS late SDP: SIPp as UAC">

@@ -936,6 +936,11 @@ pj_status_t pjsua_acc_get_uac_dlg_addr(pjsua_acc_id acc_id,
  */
 pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata);
 
+pj_status_t pjsua_call_validate_initial_local_offer(
+                                      const pjsua_call *call,
+                                      const pjsua_call_setting *opt,
+                                      const pjmedia_sdp_session *sdp);
+
 /*
  * Media channel.
  */

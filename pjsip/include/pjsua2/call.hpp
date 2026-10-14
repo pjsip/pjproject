@@ -850,7 +850,7 @@ struct OnCallSendAckParam
     SipRxData rdata;
 
     /**
-     * Output: application sets this to true if it has sent (or will send) 
+     * Output: application sets this to true if it has sent (or will send)
      * the ACK itself, to suppress the automatic ACK sending. Default is false,
      * i.e. the library sends the ACK after this callback returns.
      */
@@ -860,7 +860,7 @@ struct OnCallSendAckParam
      * The CSeq of the 2xx response.
      */
     pj_int32_t cseq;
-    
+
     /**
      * Default constructor
      */
@@ -2181,9 +2181,9 @@ public:
      * Notify application when the framework needs to send an ACK request
      * after it receives an incoming 2xx response for INVITE (e.g. when the
      * 2xx response carries a late SDP offer). The default implementation
-     * simply do nothing and let's framework send the ACK without any SDP answer.
-     * Application can set prm.suppressSendAck to true and than the application 
-     * is responsible for sending the ACK. 
+     * does nothing and lets the framework send the ACK. Application can
+     * set prm.suppressSendAck to true and then the application is responsible
+     * for sending the ACK.
      *
      * This callback is enabled only when
      * UaConfig::enableCallSendAckCallback is set before Endpoint::libInit().
