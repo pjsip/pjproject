@@ -531,9 +531,14 @@ Call::Call(Account& account, int call_id)
 
 Call::~Call()
 {
+    /* The call slot may have been reused by another call after this call
+     * was disconnected.
+     */
+    if (id == PJSUA_INVALID_ID || pjsua_call_get_user_data(id) != this)
+        return;
+
     /* Remove reference to this instance from PJSUA library */
-    if (id != PJSUA_INVALID_ID)
-        pjsua_call_set_user_data(id, NULL);
+    pjsua_call_set_user_data(id, NULL);
 
     /*
      * If this instance is deleted, also hangup the corresponding call in

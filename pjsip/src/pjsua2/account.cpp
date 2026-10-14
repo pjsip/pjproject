@@ -1186,7 +1186,12 @@ void Account::shutdown()
 
 void Account::shutdown2(const AccountShutdownParam &prm) PJSUA2_THROW(Error)
 {
-    if (isValid() && pjsua_get_state() < PJSUA_STATE_CLOSING) {
+    /* The account slot may have been reused by another account after this
+     * account was deleted.
+     */
+    if (isValid() && pjsua_acc_get_user_data(id) == this &&
+        pjsua_get_state() < PJSUA_STATE_CLOSING)
+    {
 #if !DEPRECATED_FOR_TICKET_2232
         // Cleanup buddies in the buddy list
         while(buddyList.size() > 0) {
