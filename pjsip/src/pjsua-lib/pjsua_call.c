@@ -841,6 +841,53 @@ static pj_status_t validate_managed_sdp(pj_bool_t media_app_managed,
     return validate_app_sdp(sdp, inv);
 }
 
+pj_status_t pjsua_call_validate_initial_local_offer(
+                                      const pjsua_call *call,
+                                      const pjsua_call_setting *opt,
+                                      const pjmedia_sdp_session *sdp)
+{
+    const pjsua_call_setting *effective_opt =
+        (opt && !call->opt_inited) ? opt : &call->opt;
+    unsigned media_count = 0;
+    pj_bool_t prepared = call->med_ch_cb || call->med_prov_cnt != 0;
+    pj_status_t status = validate_app_sdp(sdp, NULL);
+
+    if (status != PJ_SUCCESS)
+        return status;
+
+    if (prepared) {
+        media_count = call->med_prov_cnt;
+    } else {
+        if (effective_opt->flag & PJSUA_CALL_MEDIA_APP_MANAGED)
+            return PJ_EINVALIDOP;
+        if (effective_opt->aud_cnt > PJSUA_MAX_CALL_MEDIA ||
+            effective_opt->vid_cnt > PJSUA_MAX_CALL_MEDIA ||
+            effective_opt->txt_cnt > PJSUA_MAX_CALL_MEDIA ||
+            effective_opt->aud_cnt + effective_opt->vid_cnt +
+                effective_opt->txt_cnt > PJSUA_MAX_CALL_MEDIA)
+        {
+            return PJ_ETOOMANY;
+        }
+
+        media_count = effective_opt->aud_cnt + effective_opt->vid_cnt +
+                      effective_opt->txt_cnt;
+
+        if (effective_opt->flag & PJSUA_CALL_INCLUDE_DISABLED_MEDIA) {
+            if (!effective_opt->aud_cnt && media_count < PJSUA_MAX_CALL_MEDIA)
+                ++media_count;
+#if PJMEDIA_HAS_VIDEO
+            if (!effective_opt->vid_cnt && media_count < PJSUA_MAX_CALL_MEDIA)
+                ++media_count;
+#endif
+            if (!effective_opt->txt_cnt && media_count < PJSUA_MAX_CALL_MEDIA)
+                ++media_count;
+        }
+    }
+
+    return sdp->media_count > media_count ? PJMEDIA_SDPNEG_EMISMEDIA :
+                                            PJ_SUCCESS;
+}
+
 static pj_status_t apply_call_setting(pjsua_call *call,
                                       const pjsua_call_setting *opt,
                                       const pjmedia_sdp_session *rem_sdp)
@@ -3556,7 +3603,7 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
         /* For an initial offerless INVITE, let answer2() initialize media before
         * setting the supplied SDP offer.
         */
-        if (code < 300 && sdp &&
+        if (code < 300 && sdp && !call->med_ch_cb &&
             (call->opt_inited || code == 183 || code / 100 == 2) &&
             (!call->inv->neg ||
             pjmedia_sdp_neg_get_state(call->inv->neg) ==
@@ -3565,6 +3612,14 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
             if (call->answer_sdp) {
                 pjsip_dlg_dec_lock(dlg);
                 return PJ_EBUSY;
+            }
+
+            status = pjsua_call_validate_initial_local_offer(call, opt, sdp);
+            if (status != PJ_SUCCESS) {
+                pjsua_perror(THIS_FILE, "SDP offer does not match call media",
+                             status);
+                pjsip_dlg_dec_lock(dlg);
+                return status;
             }
 
             pending_sdp = pjmedia_sdp_session_clone(call->inv->pool, sdp);
@@ -3647,7 +3702,7 @@ static pj_status_t call_inv_send_ack(pjsip_inv_session *inv,
     if (sdp) {
         if (inv->neg == NULL)
             return PJMEDIA_SDPNEG_EINSTATE;
-    
+
         neg_state = pjmedia_sdp_neg_get_state(inv->neg);
         if (neg_state != PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER &&
             neg_state != PJMEDIA_SDP_NEG_STATE_WAIT_NEGO)
@@ -3702,11 +3757,11 @@ PJ_DEF(pj_status_t) pjsua_call_send_ack(pjsua_call_id call_id,
     if (callback_inv) {
         call = (pjsua_call*) callback_inv->dlg->mod_data[pjsua_var.mod.id];
         if (!call || call->index != call_id) {
-            status = PJ_EINVALIDOP;
-            goto on_return;
+            callback_inv = NULL;
         }
     }
-    else {
+
+    if (!callback_inv) {
         status = acquire_call("pjsua_call_send_ack()", call_id, &call, &dlg);
         if (status != PJ_SUCCESS) {
             goto on_return;
@@ -6932,6 +6987,7 @@ static pj_status_t pjsua_call_on_rx_reinvite(pjsip_inv_session *inv,
                    pjsua_var.ua_cfg.cb.on_call_rx_reinvite))
     {
         pjsua_call_setting opt;
+        pjsua_call_setting callback_opt;
         pjsip_status_code code = PJSIP_SC_OK;
         pjsip_tx_data *response = NULL;
         pj_status_t status;
@@ -6943,6 +6999,7 @@ static pj_status_t pjsua_call_on_rx_reinvite(pjsip_inv_session *inv,
          */
         opt = call->opt;
         pjsua_call_cleanup_flag(&opt);
+        callback_opt = opt;
         async = PJ_FALSE;
 
         if (pjsua_var.ua_cfg.cb.on_call_rx_reinvite) {
@@ -6961,8 +7018,13 @@ static pj_status_t pjsua_call_on_rx_reinvite(pjsip_inv_session *inv,
         if (code != PJSIP_SC_OK)
             async = PJ_FALSE;
 
-        /* Apply callback settings only when accepting the re-INVITE. */
-        if (code == PJSIP_SC_OK) {
+        /* Apply callback settings only when accepting the re-INVITE and the
+         * settings have changed or are app-managed.
+         */
+        if (code == PJSIP_SC_OK &&
+            (pjsua_call_media_is_app_managed(call) ||
+             pj_memcmp(&opt, &callback_opt, sizeof(opt)) != 0))
+        {
             status = apply_call_setting(call, &opt, NULL);
             if (status != PJ_SUCCESS) {
                 PJ_PERROR(3,(THIS_FILE, status,

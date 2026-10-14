@@ -1587,7 +1587,12 @@ pj_bool_t Endpoint::on_call_send_ack(pjsua_call_id call_id,
     prm.rdata.fromPj(*rdata);
     prm.cseq = rdata->msg_info.cseq->cseq;
 
-    call->onCallSendAck(prm);
+    try {
+        call->onCallSendAck(prm);
+    } catch (Error &err) {
+        PJ_LOG(1,(THIS_FILE, "onCallSendAck() error: %s", err.info().c_str()));
+        return PJ_FALSE;
+    }
     return prm.suppressSendAck ? PJ_TRUE : PJ_FALSE;
 }
 

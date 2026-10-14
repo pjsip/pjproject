@@ -51,6 +51,8 @@
  *   8. An offerless re-INVITE can receive a late SDP offer in the 2xx response
  *      and complete negotiation with the SDP answer in ACK, synchronously or
  *      deferred.
+ *   9. An application-supplied initial local offer must match the prepared
+ *      media slots and must not mutate call state when rejected.
  *
  * Scenarios 5 and 6 are two symptoms of one defect: apply_med_update() derives
  * the stream info from the negotiated SDP, then adjusts it (RTCP mux off when
@@ -404,6 +406,213 @@ static pj_status_t parse_sdp_text(pj_pool_t *pool, const char *text,
 
     pj_memcpy(buf, text, len + 1);
     return pjmedia_sdp_parse(pool, buf, len, sdp);
+}
+
+static pj_status_t initial_offer_media_tp_pending(pjsua_call_id call_id,
+                                                   const pjsua_med_tp_state_info *info)
+{
+    PJ_UNUSED_ARG(call_id);
+    PJ_UNUSED_ARG(info);
+    return PJ_SUCCESS;
+}
+
+static int check_initial_local_offer(pjsua_call *call,
+                                     const pjsua_call_setting *opt,
+                                     const pjmedia_sdp_session *sdp,
+                                     pj_status_t expected,
+                                     int test_id)
+{
+    pjsua_call_setting saved_opt = call->opt;
+    unsigned saved_med_prov_cnt = call->med_prov_cnt;
+    pjsua_med_tp_state_cb saved_med_ch_cb = call->med_ch_cb;
+    pjmedia_sdp_session *saved_answer_sdp = call->answer_sdp;
+    pjsua_call_media saved_media[PJSUA_MAX_CALL_MEDIA];
+    pj_status_t status;
+
+    pj_memcpy(saved_media, call->media_prov, sizeof(saved_media));
+    status = pjsua_call_validate_initial_local_offer(call, opt, sdp);
+    if (status != expected ||
+        pj_memcmp(&call->opt, &saved_opt, sizeof(saved_opt)) != 0 ||
+        call->med_prov_cnt != saved_med_prov_cnt ||
+        call->med_ch_cb != saved_med_ch_cb ||
+        call->answer_sdp != saved_answer_sdp ||
+        pj_memcmp(call->media_prov, saved_media, sizeof(saved_media)) != 0)
+    {
+        PJ_LOG(1, (THIS_FILE,
+                   "Initial local SDP validation case %d: expected %d, got %d "
+                   "or mutated call media state",
+                   test_id, expected, status));
+        return -test_id;
+    }
+
+    return 0;
+}
+
+static int test_initial_local_offer_validation(void)
+{
+    static const char offer_text[] =
+        "v=0\r\n"
+        "o=- 1 1 IN IP4 127.0.0.1\r\n"
+        "s=offer-test\r\n"
+        "c=IN IP4 127.0.0.1\r\n"
+        "t=0 0\r\n"
+        "m=audio 4000 RTP/AVP 0\r\n"
+        "a=rtpmap:0 PCMU/8000\r\n"
+        "m=video 4002 RTP/AVP 96\r\n"
+        "a=rtpmap:96 H264/90000\r\n"
+        "m=text 4004 RTP/AVP 98\r\n"
+        "a=rtpmap:98 t140/1000\r\n";
+    pj_pool_t *pool;
+    pjmedia_sdp_session *sdp;
+    pjsua_call call;
+    pjsua_call_setting opt;
+    pjmedia_transport *fake_tp = (pjmedia_transport*)&call;
+    int rc;
+
+    pool = pjsua_pool_create("sdp-media-test", 2048, 2048);
+    if (!pool)
+        return -2010;
+    rc = parse_sdp_text(pool, offer_text, &sdp);
+    if (rc != PJ_SUCCESS) {
+        pj_pool_release(pool);
+        return -2011;
+    }
+
+    pj_bzero(&call, sizeof(call));
+    pjsua_call_setting_default(&call.opt);
+    call.opt.aud_cnt = 1;
+    call.opt.vid_cnt = 0;
+    call.opt.txt_cnt = 0;
+    sdp->media_count = 1;
+
+    rc = check_initial_local_offer(&call, NULL, sdp, PJ_SUCCESS, 2012);
+    if (rc != 0)
+        goto on_return;
+
+    sdp->media_count = 2;
+    rc = check_initial_local_offer(&call, NULL, sdp,
+                                   PJMEDIA_SDPNEG_EMISMEDIA, 2013);
+    if (rc != 0)
+        goto on_return;
+
+    opt = call.opt;
+    opt.aud_cnt = 2;
+    rc = check_initial_local_offer(&call, &opt,
+                                   sdp, PJ_SUCCESS, 2014);
+    if (rc != 0)
+        goto on_return;
+
+    opt = call.opt;
+    opt.aud_cnt = PJSUA_MAX_CALL_MEDIA + 1;
+    rc = check_initial_local_offer(&call, &opt, sdp, PJ_ETOOMANY, 2026);
+    if (rc != 0)
+        goto on_return;
+    call.opt_inited = PJ_TRUE;
+    opt = call.opt;
+    opt.aud_cnt = 2;
+    rc = check_initial_local_offer(&call, &opt, sdp,
+                                   PJMEDIA_SDPNEG_EMISMEDIA, 2027);
+    call.opt_inited = PJ_FALSE;
+    if (rc != 0)
+        goto on_return;
+
+#if PJMEDIA_HAS_VIDEO
+    opt = call.opt;
+    opt.vid_cnt = 1;
+    rc = check_initial_local_offer(&call, &opt, sdp, PJ_SUCCESS, 2015);
+    if (rc != 0)
+        goto on_return;
+    opt.vid_cnt = 0;
+#else
+    {
+        pjmedia_sdp_media *tmp = sdp->media[1];
+        sdp->media[1] = sdp->media[2];
+        sdp->media[2] = tmp;
+    }
+#endif
+
+    call.opt.flag = PJSUA_CALL_INCLUDE_DISABLED_MEDIA;
+    rc = check_initial_local_offer(&call, NULL, sdp, PJ_SUCCESS, 2016);
+    if (rc != 0)
+        goto on_return;
+    sdp->media[1]->desc.port = 0;
+    rc = check_initial_local_offer(&call, NULL, sdp, PJ_SUCCESS, 2017);
+    if (rc != 0)
+        goto on_return;
+    sdp->media[1]->desc.port = 4002;
+    call.opt.flag = 0;
+
+#if !PJMEDIA_HAS_VIDEO
+    {
+        pjmedia_sdp_media *tmp = sdp->media[1];
+        sdp->media[1] = sdp->media[2];
+        sdp->media[2] = tmp;
+    }
+#endif
+
+    call.med_prov_cnt = 1;
+    call.media_prov[0].type = PJMEDIA_TYPE_AUDIO;
+    call.media_prov[0].tp = fake_tp;
+    call.media_prov[0].tp_st = PJSUA_MED_TP_INIT;
+    rc = check_initial_local_offer(&call, NULL, sdp,
+                                   PJMEDIA_SDPNEG_EMISMEDIA, 2018);
+    if (rc != 0)
+        goto on_return;
+    sdp->media_count = 1;
+    rc = check_initial_local_offer(&call, NULL, sdp, PJ_SUCCESS, 2019);
+    if (rc != 0)
+        goto on_return;
+
+    if (PJSUA_MAX_CALL_MEDIA + 1 <= PJMEDIA_MAX_SDP_MEDIA) {
+        sdp->media_count = PJSUA_MAX_CALL_MEDIA + 1;
+        rc = check_initial_local_offer(&call, NULL, sdp, PJ_ETOOMANY,
+                                       2028);
+        sdp->media_count = 1;
+        if (rc != 0)
+            goto on_return;
+    }
+
+    {
+        pjmedia_sdp_media *audio = sdp->media[0];
+        sdp->media[0] = sdp->media[1];
+        sdp->media[1] = audio;
+    }
+    rc = check_initial_local_offer(&call, NULL, sdp, PJ_SUCCESS, 2020);
+    {
+        pjmedia_sdp_media *video = sdp->media[0];
+        sdp->media[0] = sdp->media[1];
+        sdp->media[1] = video;
+    }
+    if (rc != 0)
+        goto on_return;
+
+    call.media_prov[0].tp_st = PJSUA_MED_TP_DISABLED;
+    rc = check_initial_local_offer(&call, NULL, sdp, PJ_SUCCESS, 2021);
+    if (rc != 0)
+        goto on_return;
+    sdp->media[0]->desc.port = 0;
+    rc = check_initial_local_offer(&call, NULL, sdp, PJ_SUCCESS, 2022);
+    sdp->media[0]->desc.port = 4000;
+    if (rc != 0)
+        goto on_return;
+
+    call.media_prov[0].tp_st = PJSUA_MED_TP_INIT;
+    call.media_prov[0].tp = NULL;
+    rc = check_initial_local_offer(&call, NULL, sdp, PJ_SUCCESS, 2023);
+    if (rc != 0)
+        goto on_return;
+    call.med_ch_cb = &initial_offer_media_tp_pending;
+    rc = check_initial_local_offer(&call, NULL, sdp, PJ_SUCCESS, 2024);
+    if (rc != 0)
+        goto on_return;
+
+    sdp->media_count = 2;
+    rc = check_initial_local_offer(&call, NULL, sdp,
+                                   PJMEDIA_SDPNEG_EMISMEDIA, 2025);
+
+on_return:
+    pj_pool_release(pool);
+    return rc;
 }
 
 static pjmedia_sdp_session *create_oversized_sdp(
@@ -6573,6 +6782,8 @@ static int test_late_sdp_reinvite(pj_bool_t async_answer,
     pjsua_call_id callee = PJSUA_INVALID_ID;
     pjsua_call_setting opt;
     const pjmedia_sdp_session *active;
+    unsigned callee_streams_created;
+    unsigned callee_streams_destroyed;
     pj_status_t status;
     int rc;
 
@@ -6585,6 +6796,9 @@ static int test_late_sdp_reinvite(pj_bool_t async_answer,
     g_ctx.skip_answer2_overlimit_probe = PJ_FALSE;
     if (rc != 0)
         goto on_return;
+
+    callee_streams_created = g_ctx.strm_created[callee];
+    callee_streams_destroyed = g_ctx.strm_destroyed[callee];
 
     g_ctx.late_offer_armed = PJ_TRUE;
     g_ctx.late_offer_caller = caller;
@@ -6655,6 +6869,17 @@ static int test_late_sdp_reinvite(pj_bool_t async_answer,
                    g_ctx.late_offer_ack_status,
                    call_is_confirmed(caller), call_is_confirmed(callee)));
         rc = -1967;
+    }
+
+    if (rc == 0 &&
+        (g_ctx.strm_created[callee] != callee_streams_created ||
+         g_ctx.strm_destroyed[callee] != callee_streams_destroyed))
+    {
+        PJ_LOG(1, (THIS_FILE, "    unchanged offerless re-INVITE restarted "
+                   "callee media streams (created=%u/%u destroyed=%u/%u)",
+                   g_ctx.strm_created[callee], callee_streams_created,
+                   g_ctx.strm_destroyed[callee], callee_streams_destroyed));
+        rc = -1970;
     }
 
 on_return:
@@ -6810,6 +7035,9 @@ int pjsua_call_test(void)
     if (rc != 0) goto on_return;
 
     rc = test_idle_sound_call_setup();
+    if (rc != 0) goto on_return;
+
+    rc = test_initial_local_offer_validation();
     if (rc != 0) goto on_return;
 
     rc = test_make_call_bounds();
