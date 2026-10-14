@@ -898,6 +898,14 @@ static pj_dns_async_query *alloc_qnode(pj_dns_resolver *resolver,
 }
 
 
+/* Whether the query started after the cache was last dropped */
+static pj_bool_t query_is_current(const pj_dns_resolver *resolver,
+                                  const pj_dns_async_query *q)
+{
+    return q->cache_gen == resolver->cache_gen;
+}
+
+
 /* Generate an unpredictable transaction ID that is not currently in use. */
 /* Returns a free transaction ID, or 0 if none could be found (ID space
  * exhausted), in which case the caller should fail the query.
@@ -1166,7 +1174,8 @@ static void reset_entry(struct cached_res **p_cached)
  * A query which no nameserver answers is given to start_sys_fallback(). A DNS A
  * or AAAA query then waits on sys_jobs for the lookup thread, which looks
  * it up without the lock and gives it back on done_list, and stays in
- * hquerybyres meanwhile, so that the queries started for the name join it.
+ * hquerybyres meanwhile, so that the queries started for the name join it,
+ * until the cache is dropped.
  * Another query goes to done_list at once, with the error of the
  * nameservers. The done_timer reports the queries of done_list as
  * on_timeout() does, without the lock, and recycles them. Without threads,
@@ -1237,8 +1246,10 @@ static pj_bool_t query_has_cb(const pj_dns_async_query *q)
 }
 
 
-/* No query joins it anymore */
-static void sys_unjoin(pj_dns_resolver *resolver, const pj_dns_async_query *q)
+/* No query joins it anymore. By identity: after the cache is dropped, a
+ * newer query for the name may hold the key.
+ */
+static void unjoin(pj_dns_resolver *resolver, const pj_dns_async_query *q)
 {
     if (pj_hash_get(resolver->hquerybyres, &q->key, sizeof(q->key), NULL) == q)
         pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key), 0,
@@ -1254,7 +1265,7 @@ static pj_status_t report_later(pj_dns_resolver *resolver,
 
     /* Without threads, joined until looked up from the done_timer */
     if (!q->sys.pending)
-        sys_unjoin(resolver, q);
+        unjoin(resolver, q);
     pj_list_push_back(&resolver->done_list, q);
 
     /* Once destroy has started, it reports the queries itself */
@@ -1271,7 +1282,7 @@ static pj_status_t report_later(pj_dns_resolver *resolver,
                          "Error scheduling the report of DNS %s query for %s",
                          pj_dns_get_type_name(q->key.qtype), q->key.name));
             pj_list_erase(q);
-            sys_unjoin(resolver, q);
+            unjoin(resolver, q);
             return status;
         }
         resolver->done_scheduled = PJ_TRUE;
@@ -1435,9 +1446,13 @@ static pj_status_t start_sys_fallback(pj_dns_resolver *resolver,
         q->sys.lookup = PJ_TRUE;
         q->sys.pending = PJ_TRUE;
 
-        /* The queries started for the name join it meanwhile */
-        pj_hash_set_np(resolver->hquerybyres, &q->key, sizeof(q->key), 0,
-                       q->hbufkey, q);
+        /* The queries started for the name join it meanwhile, unless the
+         * cache was dropped since it started: a newer query may hold the key
+         */
+        if (query_is_current(resolver, q)) {
+            pj_hash_set_np(resolver->hquerybyres, &q->key, sizeof(q->key), 0,
+                           q->hbufkey, q);
+        }
 #if PJ_HAS_THREADS
         q->sys.status = sys_thread_start(resolver);
         if (q->sys.status == PJ_SUCCESS) {
@@ -1534,7 +1549,7 @@ static void report_sys(pj_dns_resolver *resolver, pj_dns_async_query *q)
             question.name = pj_str(q->key.name);
             pj_grp_lock_acquire(resolver->grp_lock);
             if (!resolver->shutting_down &&
-                q->cache_gen == resolver->cache_gen)
+                query_is_current(resolver, q))
             {
                 update_res_cache(resolver, &q->key, status, PJ_TRUE, &pkt,
                                  PJ_FALSE);
@@ -1572,7 +1587,7 @@ static void report_sys(pj_dns_resolver *resolver, pj_dns_async_query *q)
 
     /* Cached as a nameserver's answer is, for bad_ns_ttl */
     if (resp && !resolver->shutting_down &&
-        q->cache_gen == resolver->cache_gen)
+        query_is_current(resolver, q))
     {
         update_res_cache(resolver, &q->key, PJ_SUCCESS, PJ_TRUE, &pkt,
                          PJ_TRUE);
@@ -1614,6 +1629,7 @@ static void on_done_timer( pj_timer_heap_t *timer_heap,
         {
             q->sys.lookup = PJ_FALSE;
             q->sys.pending = PJ_FALSE;
+            unjoin(resolver, q);
         }
         pj_grp_lock_release(resolver->grp_lock);
 
@@ -1621,7 +1637,7 @@ static void on_done_timer( pj_timer_heap_t *timer_heap,
         if (q->sys.pending) {
             sys_lookup_run(resolver, q);
             pj_grp_lock_acquire(resolver->grp_lock);
-            sys_unjoin(resolver, q);
+            unjoin(resolver, q);
             pj_grp_lock_release(resolver->grp_lock);
         }
         report_sys(resolver, q);
@@ -1640,7 +1656,7 @@ static void sys_collect(pj_dns_resolver *resolver, struct query_head *list)
     while (!pj_list_empty(&resolver->sys_jobs)) {
         pj_dns_async_query *q = resolver->sys_jobs.next;
         pj_list_erase(q);
-        sys_unjoin(resolver, q);
+        unjoin(resolver, q);
         pj_list_push_back(list, q);
     }
 #if PJ_HAS_THREADS
@@ -1649,7 +1665,7 @@ static void sys_collect(pj_dns_resolver *resolver, struct query_head *list)
     while (!pj_list_empty(&resolver->done_list)) {
         pj_dns_async_query *q = resolver->done_list.next;
         pj_list_erase(q);
-        sys_unjoin(resolver, q);
+        unjoin(resolver, q);
         pj_list_push_back(list, q);
     }
 }
@@ -2474,7 +2490,7 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
 
     /* Clear hash table entries */
     pj_hash_set(NULL, resolver->hquerybyid, &q->id, sizeof(q->id), 0, NULL);
-    pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key), 0, NULL);
+    unjoin(resolver, q);
 
     /* Capture and clear the callback under the lock; invoke it unlocked. */
     cb = q->cb;
@@ -2669,9 +2685,11 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
     /* The response is now validated (matched an outstanding query). Only such a
      * response may mark the nameserver bad or bring it back from bad, so
-     * re-report it now that the match is confirmed.
+     * re-report it now that the match is confirmed. Not for a query started
+     * before the cache was dropped, e.g. on the previous network.
      */
-    report_nameserver_status(resolver, src_addr, dns_pkt, PJ_TRUE);
+    report_nameserver_status(resolver, src_addr, dns_pkt,
+                             query_is_current(resolver, q));
 
     /* Cancel query timeout timer. */
     pj_assert(q->timer_entry.id != 0);
@@ -2680,7 +2698,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
     /* Clear hash table entries */
     pj_hash_set(NULL, resolver->hquerybyid, &q->id, sizeof(q->id), 0, NULL);
-    pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key), 0, NULL);
+    unjoin(resolver, q);
 
     /* A refusal, or a failed A query, says nothing about the name. A
      * failed AAAA query stands: some nameservers fail a missing AAAA.
@@ -2738,7 +2756,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
      * started: the response may be of the previous network.
      */
     if (PJ_DNS_GET_TC(dns_pkt->hdr.flags) == 0 && !resolver->shutting_down &&
-        q->cache_gen == resolver->cache_gen)
+        query_is_current(resolver, q))
     {
         /* Save/update response cache. */
         update_res_cache(resolver, &q->key, status, PJ_TRUE, dns_pkt,
@@ -2848,15 +2866,26 @@ PJ_DEF(unsigned) pj_dns_resolver_get_cached_count(pj_dns_resolver *resolver)
 
 
 /* Remove the cached entries, but for those added by the application
- * without TTL and, with keep_answers, the nameservers' answers with
- * records. The responses of the pending queries won't be cached. Called
- * with the lock held.
+ * without TTL and, with keep_answers, the answers with records not from
+ * the system resolver. The responses of the pending queries won't be
+ * cached nor mark a nameserver bad, and the queries started from now on
+ * don't join them. Called with the lock held.
  */
 static void drop_cache(pj_dns_resolver *resolver, pj_bool_t keep_answers)
 {
     pj_hash_iterator_t it_buf, *it;
 
     ++resolver->cache_gen;
+
+    it = pj_hash_first(resolver->hquerybyres, &it_buf);
+    while (it) {
+        pj_dns_async_query *q;
+
+        q = (pj_dns_async_query*) pj_hash_this(resolver->hquerybyres, it);
+        it = pj_hash_next(resolver->hquerybyres, it);
+        pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key), 0,
+                    NULL);
+    }
 
     it = pj_hash_first(resolver->hrescache, &it_buf);
     while (it) {

@@ -371,7 +371,8 @@ PJ_DECL(pj_status_t) pj_dns_resolver_set_ns(pj_dns_resolver *resolver,
  * records and the entries added with #pj_dns_resolver_add_entry() without
  * TTL are kept. An entry added with TTL is dropped or kept by the same
  * rule. The pending queries complete as usual, but their responses are
- * not cached.
+ * not cached and don't mark a name server bad or bring it back, and a query
+ * started afterwards doesn't join them.
  *
  * @param resolver  The resolver instance.
  *
@@ -561,7 +562,9 @@ PJ_DECL(unsigned) pj_dns_resolver_get_cached_count(pj_dns_resolver *resolver);
 /**
  * Clear the response cache, e.g: after the nameservers have changed.
  * Entries added with #pj_dns_resolver_add_entry() without
- * TTL are kept. The responses of the pending queries are not cached.
+ * TTL are kept. The responses of the pending queries are not cached and
+ * don't mark a name server bad or bring it back, and a query started
+ * afterwards doesn't join them.
  *
  * @param resolver  The resolver instance.
  *
