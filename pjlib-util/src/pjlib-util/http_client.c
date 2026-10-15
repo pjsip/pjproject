@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -131,6 +131,8 @@ struct pj_http_req
     pj_bool_t               resolved;   /* Whether URL's host is resolved */
     pj_http_resp            response;   /* HTTP response */
     pj_ioqueue_op_key_t     op_key;
+    unsigned                busy;       /* Socket callbacks in progress */
+    pj_bool_t               destroy_pending; /* Destroyed while busy */
     struct tcp_state
     {
         /* Total data sent so far if the data is sent in segments (i.e.
@@ -161,7 +163,7 @@ static pj_status_t http_response_parse(pj_pool_t *pool,
                                        void *data, pj_size_t size,
                                        pj_size_t *remainder);
 /* Restart the request with authentication */
-static void restart_req_with_auth(pj_http_req *hreq);
+static pj_bool_t restart_req_with_auth(pj_http_req *hreq);
 /* Parse authentication challenge */
 static pj_status_t parse_auth_chal(pj_pool_t *pool, pj_str_t *input,
                                    pj_http_auth_chal *chal);
@@ -201,12 +203,25 @@ static void on_syntax_error(pj_scanner *scanner)
     PJ_THROW(PJ_EINVAL);  // syntax error
 }
 
-/* Callback when connection is established to the server */
-static pj_bool_t http_on_connect(pj_activesock_t *asock,
-                                 pj_status_t status)
+/* Start of a socket callback, during which destroy is deferred */
+static void http_req_enter(pj_http_req *hreq)
 {
-    pj_http_req *hreq = (pj_http_req*) pj_activesock_get_user_data(asock);
+    ++hreq->busy;
+}
 
+/* End of a socket callback. Returns PJ_FALSE if destroyed. */
+static pj_bool_t http_req_leave(pj_http_req *hreq)
+{
+    if (--hreq->busy == 0 && hreq->destroy_pending) {
+        pj_pool_release(hreq->pool);
+        return PJ_FALSE;
+    }
+    return PJ_TRUE;
+}
+
+/* Callback when connection is established to the server */
+static pj_bool_t handle_connect(pj_http_req *hreq, pj_status_t status)
+{
     if (hreq->state == ABORTING || hreq->state == IDLE)
         return PJ_FALSE;
 
@@ -222,14 +237,21 @@ static pj_bool_t http_on_connect(pj_activesock_t *asock,
     return PJ_TRUE;
 }
 
-static pj_bool_t http_on_data_sent(pj_activesock_t *asock,
-                                   pj_ioqueue_op_key_t *op_key,
-                                   pj_ssize_t sent)
+static pj_bool_t http_on_connect(pj_activesock_t *asock,
+                                 pj_status_t status)
 {
     pj_http_req *hreq = (pj_http_req*) pj_activesock_get_user_data(asock);
+    pj_bool_t ret;
 
-    PJ_UNUSED_ARG(op_key);
+    http_req_enter(hreq);
+    ret = handle_connect(hreq, status);
+    if (!http_req_leave(hreq))
+        return PJ_FALSE;
+    return ret && hreq->asock == asock;
+}
 
+static pj_bool_t handle_data_sent(pj_http_req *hreq, pj_ssize_t sent)
+{
     if (hreq->state == ABORTING || hreq->state == IDLE)
         return PJ_FALSE;
 
@@ -277,6 +299,8 @@ static pj_bool_t http_on_data_sent(pj_activesock_t *asock,
                  */
                 (*hreq->cb.on_send_data)(hreq, &hreq->param.reqdata.data, 
                                          &hreq->param.reqdata.size);
+                if (hreq->state != SENDING_REQUEST_BODY)
+                    return PJ_FALSE;
                 /* Make sure the total data size given by the user does not
                  * exceed what the user originally said.
                  */
@@ -294,14 +318,28 @@ static pj_bool_t http_on_data_sent(pj_activesock_t *asock,
     return PJ_TRUE;
 }
 
-static pj_bool_t http_on_data_read(pj_activesock_t *asock,
+static pj_bool_t http_on_data_sent(pj_activesock_t *asock,
+                                   pj_ioqueue_op_key_t *op_key,
+                                   pj_ssize_t sent)
+{
+    pj_http_req *hreq = (pj_http_req*) pj_activesock_get_user_data(asock);
+    pj_bool_t ret;
+
+    PJ_UNUSED_ARG(op_key);
+
+    http_req_enter(hreq);
+    ret = handle_data_sent(hreq, sent);
+    if (!http_req_leave(hreq))
+        return PJ_FALSE;
+    return ret && hreq->asock == asock;
+}
+
+static pj_bool_t handle_data_read(pj_http_req *hreq,
                                   void *data,
                                   pj_size_t size,
                                   pj_status_t status,
                                   pj_size_t *remainder)
 {
-    pj_http_req *hreq = (pj_http_req*) pj_activesock_get_user_data(asock);
-
     TRACE_((THIS_FILE, "\nData received: %d bytes", size));
 
     if (data == NULL)
@@ -384,10 +422,9 @@ static pj_bool_t http_on_data_read(pj_activesock_t *asock,
                     /* Yes, authentication is required and we have been
                      * configured with credential.
                      */
-                    restart_req_with_auth(hreq);
-                    if (hreq->auth_state == AUTH_RETRYING) {
-                        /* We'll be resending the request with auth. This
-                         * connection has been closed.
+                    if (restart_req_with_auth(hreq)) {
+                        /* The request has been resent with auth (or has
+                         * failed). This connection has been closed.
                          */
                         return PJ_FALSE;
                     }
@@ -397,15 +434,18 @@ static pj_bool_t http_on_data_read(pj_activesock_t *asock,
             /* We already received the response header, call the 
              * appropriate callback.
              */
-            if (hreq->cb.on_response)
+            if (hreq->cb.on_response) {
                 (*hreq->cb.on_response)(hreq, &hreq->response);
+                if (hreq->state != READING_DATA)
+                    return PJ_FALSE;
+            }
             hreq->response.data = NULL;
             hreq->response.size = 0;
 
             if (rem > 0 || hreq->response.content_length == 0)
-                return http_on_data_read(asock, (rem == 0 ? NULL:
-                                         (char *)data + size - rem),
-                                         rem, PJ_SUCCESS, NULL);
+                return handle_data_read(hreq, (rem == 0 ? NULL:
+                                        (char *)data + size - rem),
+                                        rem, PJ_SUCCESS, NULL);
         }
 
         return PJ_TRUE;
@@ -417,8 +457,11 @@ static pj_bool_t http_on_data_read(pj_activesock_t *asock,
         /* If application wishes to receive the data once available, call
          * its callback.
          */
-        if (size > 0)
+        if (size > 0) {
             (*hreq->cb.on_data_read)(hreq, data, size);
+            if (hreq->state != READING_DATA)
+                return PJ_FALSE;
+        }
     } else {
 #if PJ_HTTP_MAX_CONTENT_LENGTH
         /* Bound the amount of response body buffered internally. Reject a
@@ -512,6 +555,22 @@ static pj_bool_t http_on_data_read(pj_activesock_t *asock,
     }
     
     return PJ_TRUE;
+}
+
+static pj_bool_t http_on_data_read(pj_activesock_t *asock,
+                                  void *data,
+                                  pj_size_t size,
+                                  pj_status_t status,
+                                  pj_size_t *remainder)
+{
+    pj_http_req *hreq = (pj_http_req*) pj_activesock_get_user_data(asock);
+    pj_bool_t ret;
+
+    http_req_enter(hreq);
+    ret = handle_data_read(hreq, data, size, status, remainder);
+    if (!http_req_leave(hreq))
+        return PJ_FALSE;
+    return ret && hreq->asock == asock;
 }
 
 /* Callback to be called when query has timed out */
@@ -1530,7 +1589,8 @@ static pj_status_t auth_respond_digest(pj_http_req *hreq)
 }
 
 
-static void restart_req_with_auth(pj_http_req *hreq)
+/* Returns PJ_TRUE if the request has been restarted or has ended. */
+static pj_bool_t restart_req_with_auth(pj_http_req *hreq)
 {
     pj_http_auth_chal *chal = &hreq->response.auth_chal;
     pj_http_auth_cred *cred = &hreq->param.auth_cred;
@@ -1539,7 +1599,7 @@ static void restart_req_with_auth(pj_http_req *hreq)
     if (hreq->param.headers.count >= PJ_HTTP_HEADER_SIZE) {
         TRACE_((THIS_FILE, "Error: no place to put Authorization header"));
         hreq->auth_state = AUTH_DONE;
-        return;
+        return PJ_FALSE;
     }
 
     /* If credential specifies specific scheme, make sure they match */
@@ -1568,15 +1628,14 @@ static void restart_req_with_auth(pj_http_req *hreq)
 
     http_req_end_request(hreq);
 
-    status = start_http_req(hreq, PJ_TRUE);
-    if (status != PJ_SUCCESS)
-        goto on_error;
-
     hreq->auth_state = AUTH_RETRYING;
-    return;
+    /* On failure, the application is notified with on_complete() */
+    (void)start_http_req(hreq, PJ_TRUE);
+    return PJ_TRUE;
 
 on_error:
     hreq->auth_state = AUTH_DONE;
+    return PJ_FALSE;
 }
 
 
@@ -1742,6 +1801,12 @@ PJ_DEF(pj_status_t) pj_http_req_destroy(pj_http_req *http_req)
     /* If there is any pending request, cancel it */
     if (http_req->state != IDLE) {
         pj_http_req_cancel(http_req, PJ_FALSE);
+    }
+
+    /* Inside a socket callback, the pool is released once it returns */
+    if (http_req->busy) {
+        http_req->destroy_pending = PJ_TRUE;
+        return PJ_SUCCESS;
     }
 
     pj_pool_release(http_req->pool);
