@@ -51,6 +51,8 @@ int main(int argc, char *argv[])
             ObjectLifetimeTests objectLifetimeTests;
 
             objectLifetimeTests.deleteActiveCall();
+            objectLifetimeTests.deleteCallCreatingMedia();
+            objectLifetimeTests.deleteCallWithLibraryBusy();
             objectLifetimeTests.deleteCallAfterSlotReuse();
             objectLifetimeTests.deleteAccountAfterSlotReuse();
             objectLifetimeTests.deleteAccountDeletedUnderneath();

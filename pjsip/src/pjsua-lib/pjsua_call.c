@@ -3711,7 +3711,7 @@ static pj_status_t call_hangup(pjsua_call_id call_id,
         if (call->user_data != owner)
             goto on_return;
         call->user_data = NULL;
-        if (!call->inv || call->inv->state == PJSIP_INV_STATE_DISCONNECTED)
+        if (call->inv && call->inv->state == PJSIP_INV_STATE_DISCONNECTED)
             goto on_return;
         PJ_LOG(4,(THIS_FILE, "Call %d hanging up: code=%d..", call_id, code));
     }
@@ -3826,19 +3826,21 @@ pj_status_t pjsua_call_release_owner(pjsua_call_id call_id, void *owner)
         return PJ_SUCCESS;
 
     status = call_hangup(call_id, 0, NULL, NULL, owner);
-    if (status == PJSIP_ESESSIONTERMINATED) {
-        /* No call in the slot, a new one can't take it under the lock */
-        PJSUA_LOCK();
+    if (status != PJ_SUCCESS) {
+        /* No dialog, or its lock timed out. A slot is given to a new call
+         * only under the PJSUA lock, so clear the owner under it. Only try
+         * it, as the caller may hold another call's dialog lock, and clear
+         * it anyway: the owner is about to be freed.
+         */
+        pj_bool_t locked = (PJSUA_TRY_LOCK() == PJ_SUCCESS);
+
         if (pjsua_var.calls[call_id].user_data == owner)
             pjsua_var.calls[call_id].user_data = NULL;
-        PJSUA_UNLOCK();
-    } else if (status != PJ_SUCCESS &&
-               pjsua_var.calls[call_id].user_data == owner)
-    {
-        /* Only after the "possibly deadlocked" timeout: clear it unlocked,
-         * as a dangling owner is worse.
-         */
-        pjsua_var.calls[call_id].user_data = NULL;
+        if (locked)
+            PJSUA_UNLOCK();
+        else
+            PJ_LOG(2,(THIS_FILE, "Call %d: owner released without lock",
+                      call_id));
     }
     return status;
 }

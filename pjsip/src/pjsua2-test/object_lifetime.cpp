@@ -22,7 +22,9 @@
  * The endpoint calls itself: "caller" account makes the call and
  * "callee" account receives it, so each call takes two call slots.
  *
- *   1. Deleting a Call object of an active call hangs up the call.
+ *   1. Deleting a Call object of an active call hangs up the call, also
+ *      while the call is still creating its media. When the library is too
+ *      busy for that, the call must not keep pointing to the deleted object.
  *   2. Deleting a Call object after its call has been disconnected and
  *      its slot reused by a new call must not touch the new call.
  *   3. Deleting an Account object after its account has been shut down
@@ -35,6 +37,7 @@
 #include <memory>
 
 #include "object_lifetime.hpp"
+#include <pjsua-lib/pjsua_internal.h>
 
 #define THIS_FILE "object_lifetime.cpp"
 
@@ -198,6 +201,7 @@ ObjectLifetimeTests::ObjectLifetimeTests()
 
 ObjectLifetimeTests::~ObjectLifetimeTests()
 {
+    g_incoming.reset();
     calleeAcc.reset();
     callerAcc.reset();
 
@@ -229,6 +233,127 @@ void ObjectLifetimeTests::deleteActiveCall()
     TEST_ASSERT(wait_no_calls());
 
     std::cout << "  deleteActiveCall: PASSED\n";
+}
+
+
+/*****************************************************************************
+ * Test 1b: deleteCallCreatingMedia
+ *
+ * The caller's media is created asynchronously, waiting for a TURN server
+ * that doesn't answer. Deleting the Call object meanwhile must end the call
+ * before its INVITE is sent.
+ *****************************************************************************/
+void ObjectLifetimeTests::deleteCallCreatingMedia()
+{
+    std::unique_ptr<Account> acc(new TestAccount);
+    AccountConfig cfg;
+    TestCallPtr out;
+    CallOpParam prm(true);
+    pjsua_call_info ci;
+    unsigned elapsed = 0;
+    int id;
+
+    std::cout << "\n=== CALL TEST: deleteCallCreatingMedia ===" << std::endl;
+
+    cfg.idUri = "sip:turn@127.0.0.1";
+    cfg.natConfig.iceEnabled = true;
+    cfg.natConfig.turnEnabled = true;
+    cfg.natConfig.turnServer = "127.0.0.1:3";
+    cfg.natConfig.turnConnType = PJ_TURN_TP_UDP;
+    cfg.natConfig.turnUserName = "user";
+    cfg.natConfig.turnPasswordType = PJ_STUN_PASSWD_PLAIN;
+    cfg.natConfig.turnPassword = "pass";
+    acc->create(cfg);
+
+    prm.opt.videoCount = 0;
+    g_incoming.reset();
+    out.reset(new TestCall(*acc));
+    out->makeCall("sip:callee@127.0.0.1:" + std::to_string(port), prm);
+    id = out->getId();
+    TEST_ASSERT(pjsua_call_get_info(id, &ci) == PJ_SUCCESS);
+    TEST_ASSERT(ci.state == PJSIP_INV_STATE_NULL);
+
+    out.reset();
+
+    /* The slot is freed when the TURN allocation times out, after about
+     * 8 s. The call doesn't count as a call before its INVITE is created.
+     */
+    while (elapsed < 3 * WAIT_MS && pjsua_call_get_info(id, &ci) == PJ_SUCCESS)
+    {
+        pjsua_handle_events(50);
+        elapsed += 50;
+    }
+    TEST_ASSERT(pjsua_call_get_info(id, &ci) != PJ_SUCCESS);
+    TEST_ASSERT(!g_incoming);
+
+    std::cout << "  deleteCallCreatingMedia: PASSED\n";
+}
+
+
+/*****************************************************************************
+ * Test 1c: deleteCallWithLibraryBusy
+ *
+ * Another thread holds the PJSUA lock for longer than a call API waits for
+ * it. Deleting the Call object of a live call then can't hang it up, but
+ * the call must not keep the deleted object as its owner.
+ *****************************************************************************/
+#if PJ_HAS_THREADS
+static pj_sem_t *g_locked, *g_done;
+
+static int hold_pjsua_lock(void *arg)
+{
+    PJ_UNUSED_ARG(arg);
+    PJSUA_LOCK();
+    pj_sem_post(g_locked);
+    pj_sem_wait(g_done);
+    PJSUA_UNLOCK();
+    return 0;
+}
+#endif
+
+void ObjectLifetimeTests::deleteCallWithLibraryBusy()
+{
+#if PJ_HAS_THREADS
+    TestCallPtr out, in;
+    pj_pool_t *pool;
+    pj_thread_t *thread = NULL;
+    bool released = false;
+    bool ok;
+    int id;
+
+    std::cout << "\n=== CALL TEST: deleteCallWithLibraryBusy ===" << std::endl;
+
+    make_ringing_call(*callerAcc, port, out, in);
+    id = out->getId();
+
+    pool = pjsua_pool_create("busy", 512, 512);
+    TEST_ASSERT(pool);
+    ok = pj_sem_create(pool, "locked", 0, 1, &g_locked) == PJ_SUCCESS &&
+         pj_sem_create(pool, "done", 0, 1, &g_done) == PJ_SUCCESS &&
+         pj_thread_create(pool, "busy", &hold_pjsua_lock, NULL, 0, 0,
+                          &thread) == PJ_SUCCESS;
+
+    if (ok) {
+        /* The call's hangup gives up on the lock after its timeout */
+        pj_sem_wait(g_locked);
+        out.reset();
+        released = (pjsua_call_get_user_data(id) == NULL);
+        pj_sem_post(g_done);
+        pj_thread_join(thread);
+        pj_thread_destroy(thread);
+    }
+    pj_pool_release(pool);
+
+    /* Don't let the call's events reach the deleted object */
+    if (!released && !out)
+        pjsua_call_set_user_data(id, NULL);
+    pjsua_call_hangup_all();
+    TEST_ASSERT(wait_no_calls());
+    TEST_ASSERT(ok);
+    TEST_ASSERT(released);
+
+    std::cout << "  deleteCallWithLibraryBusy: PASSED\n";
+#endif
 }
 
 

@@ -33,6 +33,8 @@ public:
     ~ObjectLifetimeTests();
 
     void deleteActiveCall();
+    void deleteCallCreatingMedia();
+    void deleteCallWithLibraryBusy();
     void deleteCallAfterSlotReuse();
     void deleteAccountAfterSlotReuse();
     void deleteAccountDeletedUnderneath();
