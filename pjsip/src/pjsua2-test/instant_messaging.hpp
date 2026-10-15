@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2025-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,6 +71,7 @@ struct TestState {
     bool responseReceived = false;
     int responseStatusCode = 0;
     std::string receivedMessage{};
+    std::string receivedContentType{};
     std::string responseReason{};
 };
 
@@ -93,6 +94,7 @@ public:
 
     void immediateResponse();
     void deferredResponse();
+    void longContentType();
 private:
     Endpoint ep;
     std::unique_ptr<ReceiverAccount> receiverAcc;

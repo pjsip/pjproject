@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -207,6 +207,8 @@ void pjsua_im_process_pager(int call_id, const pj_str_t *from,
         contact.slen = pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR,
                                        contact_hdr->uri, contact.ptr,
                                        PJSIP_MAX_URL_SIZE);
+        if (contact.slen < 0)
+            contact.slen = 0;
     } else {
         contact.slen = 0;
     }
@@ -247,19 +249,22 @@ void pjsua_im_process_pager(int call_id, const pj_str_t *from,
 
     } else {
         pj_str_t mime_type;
-        char buf[256];
         pjsip_media_type *m;
         pj_str_t text_body;
 
         /* Save text body */
         if (body) {
+            pj_size_t buf_size;
+
             text_body.ptr = (char*)rdata->msg_info.msg->body->data;
             text_body.slen = rdata->msg_info.msg->body->len;
 
             /* Get mime type */
             m = &rdata->msg_info.msg->body->content_type;
-            mime_type.ptr = buf;
-            mime_type.slen = pj_ansi_snprintf(buf, sizeof(buf),
+            buf_size = m->type.slen + m->subtype.slen + 2;
+            mime_type.ptr = (char*) pj_pool_alloc(rdata->tp_info.pool,
+                                                  buf_size);
+            mime_type.slen = pj_ansi_snprintf(mime_type.ptr, buf_size,
                                               "%.*s/%.*s",
                                               (int)m->type.slen,
                                               m->type.ptr,

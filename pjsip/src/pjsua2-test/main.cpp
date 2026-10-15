@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2012-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,6 +34,7 @@ int main(int argc, char *argv[])
 
             instantMessagingTests.immediateResponse();
             instantMessagingTests.deferredResponse();
+            instantMessagingTests.longContentType();
         }
 
         {
