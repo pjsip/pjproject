@@ -28,6 +28,7 @@
  *   3. Deleting an Account object after its account has been shut down
  *      and its slot reused by a new account must not touch the new
  *      account, while deleting the new one still deletes its account.
+ *   4. The same when the account was deleted without the object.
  */
 
 #include <iostream>
@@ -67,28 +68,34 @@ public:
     : Call(acc, call_id), state(PJSIP_INV_STATE_NULL)
     {}
 
+    /* No exceptions here: this runs from a pjsua callback */
     virtual void onCallState(OnCallStateParam &prm) override
     {
+        pjsua_call_info ci;
+
         PJ_UNUSED_ARG(prm);
-        state = getInfo().state;
+        if (pjsua_call_get_info(getId(), &ci) == PJ_SUCCESS)
+            state = ci.state;
     }
 };
 
 typedef std::unique_ptr<TestCall> TestCallPtr;
 
-static TestCall *g_incoming;
+static TestCallPtr g_incoming;
+static pj_status_t g_ringing_status;
 
 class TestAccount : public Account
 {
 public:
     virtual void onIncomingCall(OnIncomingCallParam &iprm) override
     {
-        CallOpParam prm(true);
+        pjsua_call_setting opt;
 
-        prm.opt.videoCount = 0;
-        g_incoming = new TestCall(*this, iprm.callId);
-        prm.statusCode = PJSIP_SC_RINGING;
-        g_incoming->answer(prm);
+        pjsua_call_setting_default(&opt);
+        opt.vid_cnt = 0;
+        g_incoming.reset(new TestCall(*this, iprm.callId));
+        g_ringing_status = pjsua_call_answer2(iprm.callId, &opt,
+                                              PJSIP_SC_RINGING, NULL, NULL);
     }
 };
 
@@ -129,7 +136,7 @@ static void make_ringing_call(Account &caller, pj_uint16_t port,
     unsigned elapsed = 0;
 
     prm.opt.videoCount = 0;
-    g_incoming = NULL;
+    g_incoming.reset();
     out.reset(new TestCall(caller));
     out->makeCall("sip:callee@127.0.0.1:" + std::to_string(port), prm);
 
@@ -137,8 +144,9 @@ static void make_ringing_call(Account &caller, pj_uint16_t port,
         pjsua_handle_events(50);
         elapsed += 50;
     }
-    in.reset(g_incoming);
+    in = std::move(g_incoming);
     TEST_ASSERT(in);
+    TEST_ASSERT(g_ringing_status == PJ_SUCCESS);
     TEST_ASSERT(wait_state(out.get(), PJSIP_INV_STATE_EARLY));
 }
 
@@ -282,27 +290,32 @@ void ObjectLifetimeTests::deleteCallAfterSlotReuse()
  * Test 3: deleteAccountAfterSlotReuse
  *
  * An Account object is kept alive after shutdown() while a new account
- * takes its slot, then deleted. The new account must stay.
+ * takes its id, then deleted. The new account must stay, and deleting it
+ * must still delete its account.
  *****************************************************************************/
 void ObjectLifetimeTests::deleteAccountAfterSlotReuse()
 {
     std::unique_ptr<Account> acc1(new TestAccount);
     std::unique_ptr<Account> acc2(new TestAccount);
     AccountConfig cfg;
-    int id;
+    int id, old_id;
 
     std::cout << "\n=== ACCOUNT TEST: deleteAccountAfterSlotReuse ==="
               << std::endl;
 
     cfg.idUri = "sip:old@127.0.0.1";
     acc1->create(cfg);
+    old_id = acc1->getId();
     acc1->shutdown();
-    TEST_ASSERT(!acc1->isValid());
+    TEST_ASSERT(!pjsua_acc_is_valid(old_id));
 
     cfg.idUri = "sip:new@127.0.0.1";
     acc2->create(cfg);
     id = acc2->getId();
-    TEST_ASSERT(id == acc1->getId());
+    TEST_ASSERT(id == old_id);
+
+    /* The old object no longer refers to the id */
+    TEST_ASSERT(!acc1->isValid());
 
     acc1.reset();
 
@@ -313,4 +326,43 @@ void ObjectLifetimeTests::deleteAccountAfterSlotReuse()
     TEST_ASSERT(!pjsua_acc_is_valid(id));
 
     std::cout << "  deleteAccountAfterSlotReuse: PASSED\n";
+}
+
+
+/*****************************************************************************
+ * Test 4: deleteAccountDeletedUnderneath
+ *
+ * The account of an Account object is deleted without the object, e.g. by
+ * a library restart, and a new account takes its id. Deleting the old
+ * object must not touch the new account.
+ *****************************************************************************/
+void ObjectLifetimeTests::deleteAccountDeletedUnderneath()
+{
+    std::unique_ptr<Account> acc1(new TestAccount);
+    std::unique_ptr<Account> acc2(new TestAccount);
+    AccountConfig cfg;
+    int id, old_id;
+
+    std::cout << "\n=== ACCOUNT TEST: deleteAccountDeletedUnderneath ==="
+              << std::endl;
+
+    cfg.idUri = "sip:old@127.0.0.1";
+    acc1->create(cfg);
+    old_id = acc1->getId();
+    TEST_ASSERT(pjsua_acc_del(old_id) == PJ_SUCCESS);
+
+    cfg.idUri = "sip:new@127.0.0.1";
+    acc2->create(cfg);
+    id = acc2->getId();
+    TEST_ASSERT(id == old_id);
+
+    acc1.reset();
+
+    TEST_ASSERT(pjsua_acc_is_valid(id));
+
+    acc2.reset();
+
+    TEST_ASSERT(!pjsua_acc_is_valid(id));
+
+    std::cout << "  deleteAccountDeletedUnderneath: PASSED\n";
 }

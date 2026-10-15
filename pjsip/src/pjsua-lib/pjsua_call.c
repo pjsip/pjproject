@@ -3677,12 +3677,14 @@ static void hangup_timer_cb(pj_timer_heap_t *th, pj_timer_entry *entry)
 
 /*
  * Hangup call by using method that is appropriate according to the
- * call state.
+ * call state. With owner set, only if the call's user data is owner:
+ * the user data is cleared, and an active call is hung up.
  */
-PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
-                                      unsigned code,
-                                      const pj_str_t *reason,
-                                      const pjsua_msg_data *msg_data)
+static pj_status_t call_hangup(pjsua_call_id call_id,
+                               unsigned code,
+                               const pj_str_t *reason,
+                               const pjsua_msg_data *msg_data,
+                               const void *owner)
 {
     pjsua_call *call;
     pjsip_dialog *dlg = NULL;
@@ -3696,12 +3698,23 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
                      PJ_EINVAL);
 
-    PJ_LOG(4,(THIS_FILE, "Call %d hanging up: code=%d..", call_id, code));
+    if (!owner)
+        PJ_LOG(4,(THIS_FILE, "Call %d hanging up: code=%d..", call_id, code));
     pj_log_push_indent();
 
     status = acquire_call("pjsua_call_hangup()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
         goto on_return;
+
+    /* The slot can't be given to another call while the dialog is held */
+    if (owner) {
+        if (call->user_data != owner)
+            goto on_return;
+        call->user_data = NULL;
+        if (!call->inv || call->inv->state == PJSIP_INV_STATE_DISCONNECTED)
+            goto on_return;
+        PJ_LOG(4,(THIS_FILE, "Call %d hanging up: code=%d..", call_id, code));
+    }
 
     if (!call->hanging_up) {
         pj_bool_t delay_hangup = PJ_FALSE;
@@ -3782,6 +3795,51 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 on_return:
     if (dlg) pjsip_dlg_dec_lock(dlg);
     pj_log_pop_indent();
+    return status;
+}
+
+
+/*
+ * Hangup call.
+ */
+PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
+                                      unsigned code,
+                                      const pj_str_t *reason,
+                                      const pjsua_msg_data *msg_data)
+{
+    return call_hangup(call_id, code, reason, msg_data, NULL);
+}
+
+
+pj_status_t pjsua_call_release_owner(pjsua_call_id call_id, void *owner)
+{
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(owner, PJ_EINVAL);
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
+                     PJ_EINVAL);
+
+    /* Nothing to do if the owner is already detached, e.g. on disconnect.
+     * The user data can't become the owner again.
+     */
+    if (pjsua_var.calls[call_id].user_data != owner)
+        return PJ_SUCCESS;
+
+    status = call_hangup(call_id, 0, NULL, NULL, owner);
+    if (status == PJSIP_ESESSIONTERMINATED) {
+        /* No call in the slot, a new one can't take it under the lock */
+        PJSUA_LOCK();
+        if (pjsua_var.calls[call_id].user_data == owner)
+            pjsua_var.calls[call_id].user_data = NULL;
+        PJSUA_UNLOCK();
+    } else if (status != PJ_SUCCESS &&
+               pjsua_var.calls[call_id].user_data == owner)
+    {
+        /* Only after the "possibly deadlocked" timeout: clear it unlocked,
+         * as a dangling owner is worse.
+         */
+        pjsua_var.calls[call_id].user_data = NULL;
+    }
     return status;
 }
 

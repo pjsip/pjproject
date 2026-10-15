@@ -531,28 +531,17 @@ Call::Call(Account& account, int call_id)
 
 Call::~Call()
 {
-    /* The call slot may have been reused by another call after this call
-     * was disconnected.
-     */
-    if (id == PJSUA_INVALID_ID || pjsua_call_get_user_data(id) != this)
+    if (id == PJSUA_INVALID_ID)
         return;
 
-    /* Remove reference to this instance from PJSUA library */
-    pjsua_call_set_user_data(id, NULL);
-
-    /*
-     * If this instance is deleted, also hangup the corresponding call in
-     * PJSUA library.
+    /* Remove reference to this instance from PJSUA library, and hangup the
+     * call if it is still active. A call that has reused the slot is left
+     * alone.
      */
-    if (pjsua_get_state() < PJSUA_STATE_CLOSING && isActive()) {
-        try {
-            CallOpParam prm;
-            hangup(prm);
-        } catch (Error &err) {
-            // Ignore
-            PJ_UNUSED_ARG(err);
-        }
-    }
+    if (pjsua_get_state() < PJSUA_STATE_CLOSING)
+        pjsua_call_release_owner(id, this);
+    else if (pjsua_call_get_user_data(id) == this)
+        pjsua_call_set_user_data(id, NULL);
 }
 
 CallInfo Call::getInfo() const PJSUA2_THROW(Error)

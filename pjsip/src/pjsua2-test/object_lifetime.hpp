@@ -35,6 +35,7 @@ public:
     void deleteActiveCall();
     void deleteCallAfterSlotReuse();
     void deleteAccountAfterSlotReuse();
+    void deleteAccountDeletedUnderneath();
 
 private:
     Endpoint ep;

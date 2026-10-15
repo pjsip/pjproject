@@ -2387,7 +2387,9 @@ public:
     /**
      * Get PJSUA-LIB account ID or index associated with this account.
      *
-     * @return                  Integer greater than or equal to zero.
+     * @return                  Integer greater than or equal to zero, or
+     *                          PJSUA_INVALID_ID if the account has not been
+     *                          created or has been shut down.
      */
     int getId() const;
 

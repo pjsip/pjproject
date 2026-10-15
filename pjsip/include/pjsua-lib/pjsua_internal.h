@@ -1121,6 +1121,12 @@ pj_status_t acquire_call(const char *title,
                          pjsua_call_id call_id,
                          pjsua_call **p_call,
                          pjsip_dialog **p_dlg);
+
+/* Clear the call's user data and hang up the call if it is active, only
+ * if the user data is still owner. Used by pjsua2 when a Call is deleted.
+ */
+pj_status_t pjsua_call_release_owner(pjsua_call_id call_id, void *owner);
+
 const char *good_number(char *buf, unsigned buf_size, pj_int32_t val);
 void print_call(const char *title,
                 int call_id,

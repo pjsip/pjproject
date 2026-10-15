@@ -1186,12 +1186,7 @@ void Account::shutdown()
 
 void Account::shutdown2(const AccountShutdownParam &prm) PJSUA2_THROW(Error)
 {
-    /* The account slot may have been reused by another account after this
-     * account was deleted.
-     */
-    if (isValid() && pjsua_acc_get_user_data(id) == this &&
-        pjsua_get_state() < PJSUA_STATE_CLOSING)
-    {
+    if (isValid() && pjsua_get_state() < PJSUA_STATE_CLOSING) {
 #if !DEPRECATED_FOR_TICKET_2232
         // Cleanup buddies in the buddy list
         while(buddyList.size() > 0) {
@@ -1200,11 +1195,19 @@ void Account::shutdown2(const AccountShutdownParam &prm) PJSUA2_THROW(Error)
         }
 #endif
 
-        pjsua_acc_del_param del_prm;
-        pjsua_acc_del_param_default(&del_prm);
-        del_prm.force = prm.force? PJ_TRUE : PJ_FALSE;
-        PJSUA2_CHECK_EXPR(pjsua_acc_del2(id, &del_prm));
+        /* The account may have been deleted underneath, e.g. by a library
+         * restart, and its id given to a new account.
+         */
+        if (Account::lookup(id) == this) {
+            pjsua_acc_del_param del_prm;
+            pjsua_acc_del_param_default(&del_prm);
+            del_prm.force = prm.force? PJ_TRUE : PJ_FALSE;
+            PJSUA2_CHECK_EXPR(pjsua_acc_del2(id, &del_prm));
+        }
     }
+
+    /* The id may be given to a new account */
+    id = PJSUA_INVALID_ID;
 }
 
 void Account::modify(const AccountConfig &acc_cfg) PJSUA2_THROW(Error)

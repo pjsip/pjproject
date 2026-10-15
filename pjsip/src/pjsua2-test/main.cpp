@@ -53,6 +53,7 @@ int main(int argc, char *argv[])
             objectLifetimeTests.deleteActiveCall();
             objectLifetimeTests.deleteCallAfterSlotReuse();
             objectLifetimeTests.deleteAccountAfterSlotReuse();
+            objectLifetimeTests.deleteAccountDeletedUnderneath();
         }
     } catch (...) {
         return 1;
