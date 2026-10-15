@@ -849,7 +849,9 @@ pj_status_t pjsua_call_validate_initial_local_offer(
     const pjsua_call_setting *effective_opt =
         (opt && !call->opt_inited) ? opt : &call->opt;
     unsigned media_count = 0;
-    pj_bool_t prepared = call->med_ch_cb || call->med_prov_cnt != 0;
+    pj_bool_t prepared = call->med_ch_cb || call->med_prov_cnt != 0 ||
+                         (call->inv &&
+                          call->inv->state == PJSIP_INV_STATE_CONFIRMED);
     pj_status_t status = validate_app_sdp(sdp, NULL);
 
     if (status != PJ_SUCCESS)
@@ -3372,15 +3374,18 @@ PJ_DEF(pj_status_t) pjsua_call_answer( pjsua_call_id call_id,
 /*
  * Send response to incoming INVITE request.
  */
-PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
+static pj_status_t call_answer_with_pending_sdp(pjsua_call_id call_id,
                                        const pjsua_call_setting *opt,
                                        unsigned code,
                                        const pj_str_t *reason,
-                                       const pjsua_msg_data *msg_data)
+                                       const pjsua_msg_data *msg_data,
+                                       pjsip_inv_session *sdp_inv,
+                                       pjmedia_sdp_session *pending_sdp)
 {
     pjsua_call *call;
     pjsip_dialog *dlg = NULL;
     pjsip_tx_data *tdata;
+    pj_bool_t answer_sdp_handed_off = PJ_FALSE;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
@@ -3392,6 +3397,11 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
     status = acquire_call("pjsua_call_answer()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
         goto on_return;
+
+    if (pending_sdp && call->inv != sdp_inv) {
+        status = PJ_EINVALIDOP;
+        goto on_return;
+    }
 
     if (!call->inv->invite_tsx ||
         call->inv->invite_tsx->role != PJSIP_ROLE_UAS ||
@@ -3448,16 +3458,26 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
      * the following conditions are met:
      * - no pending media channel init
      * - local SDP has not been generated
-     * - call setting has just been set, or SDP offer needs to be sent, i.e:
-     *   answer code 183 or 2xx is issued
+     * - call setting has just been set
+     * - an SDP offer was supplied or needs to be created
+     * - answer code 183 or 2xx is issued
      */
     if (!(call->opt.flag & PJSUA_CALL_MEDIA_APP_MANAGED) &&
         !call->med_ch_cb &&
-        (call->opt_inited || (code==183 || code/100==2)) &&
+        (pending_sdp || call->opt_inited || (code==183 || code/100==2)) &&
         (!call->inv->neg ||
          pjmedia_sdp_neg_get_state(call->inv->neg) ==
                 PJMEDIA_SDP_NEG_STATE_NULL))
     {
+        if (pending_sdp) {
+            if (call->answer_sdp) {
+                PJSUA_UNLOCK();
+                status = PJ_EBUSY;
+                goto on_return;
+            }
+            call->answer_sdp = pending_sdp;
+        }
+
         /* Mark call setting as initialized as it is just about to be used
          * for initializing the media channel.
          */
@@ -3474,7 +3494,9 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
                 PJSUA_UNLOCK();
                 goto on_return;
             }
-        } else if (status != PJ_EPENDING) {
+        } else if (status == PJ_EPENDING) {
+            answer_sdp_handed_off = PJ_TRUE;
+        } else {
             PJSUA_UNLOCK();
             pjsua_perror(THIS_FILE, "Error initializing media channel", status);
             goto on_return;
@@ -3511,9 +3533,7 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
             answer);
        
         PJSUA_UNLOCK();
-        if (dlg) pjsip_dlg_dec_lock(dlg);
-        pj_log_pop_indent();
-        return status;
+        goto on_return;
     }
 
     PJSUA_UNLOCK();
@@ -3548,9 +3568,28 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
                      status);
 
 on_return:
+    if (dlg && pending_sdp && !answer_sdp_handed_off &&
+        call->inv == sdp_inv && call->answer_sdp == pending_sdp)
+    {
+        call->answer_sdp = NULL;
+    }
     if (dlg) pjsip_dlg_dec_lock(dlg);
     pj_log_pop_indent();
     return status;
+}
+
+
+/*
+ * Send response to incoming INVITE request.
+ */
+PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
+                                       const pjsua_call_setting *opt,
+                                       unsigned code,
+                                       const pj_str_t *reason,
+                                       const pjsua_msg_data *msg_data)
+{
+    return call_answer_with_pending_sdp(call_id, opt, code, reason, msg_data,
+                                        NULL, NULL);
 }
 
 
@@ -3569,7 +3608,9 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
     pjsip_dialog *dlg = NULL;
     pjsip_inv_session *inv;
     pjmedia_sdp_neg *old_neg;
+    pjmedia_sdp_neg_state neg_state;
     pj_bool_t app_managed;
+    pj_bool_t local_offer;
     pj_status_t status, cancel_status;
     pjmedia_sdp_session *pending_sdp = NULL;
 
@@ -3584,6 +3625,7 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
     inv = call->inv;
     old_neg = inv->neg;
     app_managed = (call->opt.flag & PJSUA_CALL_MEDIA_APP_MANAGED) != 0;
+
     if (app_managed) {
         if (inv->neg &&
             pjmedia_sdp_neg_get_state(inv->neg) ==
@@ -3600,20 +3642,24 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
         if (status == PJ_SUCCESS)
             status = pjsip_inv_set_local_sdp(inv, sdp);
     } else {
-        /* For an initial offerless INVITE, let answer2() initialize media before
-        * setting the supplied SDP offer.
-        */
-        if (code < 300 && sdp && !call->med_ch_cb &&
-            (call->opt_inited || code == 183 || code / 100 == 2) &&
-            (!call->inv->neg ||
-            pjmedia_sdp_neg_get_state(call->inv->neg) ==
-                    PJMEDIA_SDP_NEG_STATE_NULL))
-        {
-            if (call->answer_sdp) {
-                pjsip_dlg_dec_lock(dlg);
-                return PJ_EBUSY;
-            }
+        neg_state = inv->neg ? pjmedia_sdp_neg_get_state(inv->neg) :
+                            PJMEDIA_SDP_NEG_STATE_NULL;
+        local_offer = !inv->neg ||
+                    neg_state == PJMEDIA_SDP_NEG_STATE_NULL ||
+                    neg_state == PJMEDIA_SDP_NEG_STATE_DONE;
 
+        if (sdp && local_offer && code >= 100 && code < 200 &&
+            (code == 100 || code == 180 || code == 181 ||
+            !(inv->options & PJSIP_INV_REQUIRE_100REL)))
+        {
+            PJ_LOG(3,(THIS_FILE, "Cannot send an SDP offer in unreliable "
+                                "provisional response %u", code));
+            pjsip_dlg_dec_lock(dlg);
+            return PJ_EINVALIDOP;
+        }
+
+        if (code < 300 && sdp && local_offer)
+        {
             status = pjsua_call_validate_initial_local_offer(call, opt, sdp);
             if (status != PJ_SUCCESS) {
                 pjsua_perror(THIS_FILE, "SDP offer does not match call media",
@@ -3622,27 +3668,25 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
                 return status;
             }
 
-            pending_sdp = pjmedia_sdp_session_clone(call->inv->pool, sdp);
-            if (!pending_sdp) {
-                pjsip_dlg_dec_lock(dlg);
-                return PJ_ENOMEM;
-            }
-            call->answer_sdp = pending_sdp;
-
-            pjsip_dlg_dec_lock(dlg);
-            status = pjsua_call_answer2(call_id, opt, code, reason, msg_data);
-            if (status != PJ_SUCCESS && status != PJ_EPENDING) {
-                pj_status_t lock_status;
-
-                lock_status = acquire_call("pjsua_call_answer_with_sdp()",
-                                            call_id, &call, &dlg);
-                if (lock_status == PJ_SUCCESS) {
-                    if (call->answer_sdp == pending_sdp)
-                        call->answer_sdp = NULL;
+            /* For an initial offerless INVITE, let call_answer_with_pending_sdp()
+             * initialize media before setting the supplied SDP offer.
+             */
+            if (neg_state == PJMEDIA_SDP_NEG_STATE_NULL && !call->med_ch_cb)
+            {
+                if (call->answer_sdp) {
                     pjsip_dlg_dec_lock(dlg);
+                    return PJ_EBUSY;
                 }
+
+                pending_sdp = pjmedia_sdp_session_clone(call->inv->pool, sdp);
+                if (!pending_sdp) {
+                    pjsip_dlg_dec_lock(dlg);
+                    return PJ_ENOMEM;
+                }
+                pjsip_dlg_dec_lock(dlg);
+                return call_answer_with_pending_sdp(call_id, opt, code, reason,
+                                                    msg_data, inv, pending_sdp);
             }
-            return status;
         }
 
         status = pjsip_inv_set_local_sdp(call->inv, sdp);
@@ -3757,11 +3801,10 @@ PJ_DEF(pj_status_t) pjsua_call_send_ack(pjsua_call_id call_id,
     if (callback_inv) {
         call = (pjsua_call*) callback_inv->dlg->mod_data[pjsua_var.mod.id];
         if (!call || call->index != call_id) {
-            callback_inv = NULL;
+            status = PJ_EINVALIDOP;
+            goto on_return;
         }
-    }
-
-    if (!callback_inv) {
+    } else {
         status = acquire_call("pjsua_call_send_ack()", call_id, &call, &dlg);
         if (status != PJ_SUCCESS) {
             goto on_return;

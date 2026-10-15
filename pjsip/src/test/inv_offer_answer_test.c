@@ -164,6 +164,8 @@ static unsigned     job_cnt;
 static pj_bool_t    reject_null_offer;
 static pj_bool_t    answer_reinvite_manually;
 static pj_bool_t    expect_null_offer_response;
+static pj_str_t     null_offer_call_id;
+static pj_int32_t   null_offer_cseq;
 static unsigned     null_offer_response_code;
 static unsigned     null_offer_response_media_count;
 static pj_bool_t    null_offer_response_has_sdp;
@@ -553,7 +555,7 @@ static int perform_test(inv_test_param_t *param)
         } else {
             reject_null_offer = PJ_TRUE;
             answer_reinvite_manually = PJ_TRUE;
-            expect_null_offer_response = PJ_TRUE;
+            expect_null_offer_response = PJ_FALSE;
             null_offer_response_code = 0;
             null_offer_response_media_count = 0;
             null_offer_response_has_sdp = PJ_FALSE;
@@ -572,8 +574,20 @@ static int perform_test(inv_test_param_t *param)
                 tdata->msg->body = pjsip_msg_body_create(tdata->pool, &type,
                                                          &subtype, &data);
             }
-            if (status == PJ_SUCCESS)
+            if (status == PJ_SUCCESS) {
+                pjsip_cid_hdr *cid;
+                pjsip_cseq_hdr *cseq;
+
+                cid = (pjsip_cid_hdr*)
+                      pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CALL_ID, NULL);
+                cseq = (pjsip_cseq_hdr*)
+                       pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL);
+                pj_strdup(inv_test.uac->dlg->pool, &null_offer_call_id,
+                          &cid->id);
+                null_offer_cseq = cseq->cseq;
+                expect_null_offer_response = PJ_TRUE;
                 status = pjsip_inv_send_msg(inv_test.uac, tdata);
+            }
             if (status != PJ_SUCCESS) {
                 PJ_LOG(1, (THIS_FILE,
                            "    failed to send offerless re-INVITE (%d)",
@@ -653,24 +667,26 @@ static pj_bool_t log_on_rx_msg(pjsip_rx_data *rdata)
     pjsip_msg *msg = rdata->msg_info.msg;
     char info[80];
 
+    if (!is_user_equal(rdata->msg_info.from, "inv_offer_answer_test"))
+        return PJ_FALSE;
+
     if (expect_null_offer_response && msg->type == PJSIP_RESPONSE_MSG &&
+        rdata->msg_info.cid &&
         rdata->msg_info.cseq &&
         rdata->msg_info.cseq->method.id == PJSIP_INVITE_METHOD &&
+        rdata->msg_info.cseq->cseq == null_offer_cseq &&
+        pj_strcmp(&rdata->msg_info.cid->id, &null_offer_call_id) == 0 &&
         msg->line.status.code >= 200)
     {
         pjsip_rdata_sdp_info *sdp_info;
 
-        null_offer_response_code = msg->line.status.code;
         sdp_info = pjsip_rdata_get_sdp_info(rdata);
-        if (sdp_info && sdp_info->sdp) {
-            null_offer_response_has_sdp = PJ_TRUE;
-            null_offer_response_media_count = sdp_info->sdp->media_count;
-        }
+        null_offer_response_has_sdp = sdp_info && sdp_info->sdp;
+        null_offer_response_media_count = null_offer_response_has_sdp ?
+                                         sdp_info->sdp->media_count : 0;
+        null_offer_response_code = msg->line.status.code;
     }
 
-    if (!is_user_equal(rdata->msg_info.from, "inv_offer_answer_test"))
-        return PJ_FALSE;
-        
     if (msg->type == PJSIP_REQUEST_MSG)
         pj_ansi_snprintf(info, sizeof(info), "%.*s", 
             (int)msg->line.req.method.name.slen,
@@ -1044,4 +1060,3 @@ int inv_offer_answer_test(void)
 on_return:
     return rc;
 }
-

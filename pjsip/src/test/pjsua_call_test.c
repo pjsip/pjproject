@@ -48,6 +48,7 @@
  *      reported by pjsua_call_get_info() agree.
  *   7. An initial offerless INVITE can be answered with an application SDP
  *      offer, followed by the SDP answer in ACK, synchronously or deferred.
+ *      An offer in an unreliable 183 is rejected without changing call state.
  *   8. An offerless re-INVITE can receive a late SDP offer in the 2xx response
  *      and complete negotiation with the SDP answer in ACK, synchronously or
  *      deferred.
@@ -246,6 +247,7 @@ static struct
     pj_status_t   late_offer_answer_status;
     pj_status_t   late_offer_ack_status;
     pj_bool_t     late_offer_ack_seen;
+    pj_status_t   late_offer_cross_call_ack_status;
     pj_bool_t     late_offer_async_answer;
     pj_bool_t     late_offer_async_ack;
     pjmedia_sdp_session *late_offer_ack_sdp;
@@ -465,6 +467,7 @@ static int test_initial_local_offer_validation(void)
     pj_pool_t *pool;
     pjmedia_sdp_session *sdp;
     pjsua_call call;
+    pjsip_inv_session inv;
     pjsua_call_setting opt;
     pjmedia_transport *fake_tp = (pjmedia_transport*)&call;
     int rc;
@@ -609,6 +612,26 @@ static int test_initial_local_offer_validation(void)
     sdp->media_count = 2;
     rc = check_initial_local_offer(&call, NULL, sdp,
                                    PJMEDIA_SDPNEG_EMISMEDIA, 2025);
+    if (rc != 0)
+        goto on_return;
+
+    pj_bzero(&inv, sizeof(inv));
+    inv.state = PJSIP_INV_STATE_CONFIRMED;
+    call.inv = &inv;
+    call.med_ch_cb = NULL;
+    call.med_prov_cnt = 0;
+    sdp->media_count = 1;
+    rc = check_initial_local_offer(&call, NULL, sdp,
+                                   PJMEDIA_SDPNEG_EMISMEDIA, 2029);
+    if (rc != 0)
+        goto on_return;
+
+    call.med_prov_cnt = 1;
+    opt = call.opt;
+    opt.aud_cnt = 2;
+    sdp->media_count = 2;
+    rc = check_initial_local_offer(&call, &opt, sdp,
+                                   PJMEDIA_SDPNEG_EMISMEDIA, 2030);
 
 on_return:
     pj_pool_release(pool);
@@ -759,6 +782,11 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
             g_ctx.late_offer_answer_status =
                 pjsua_call_answer_with_sdp(call_id, g_ctx.late_offer_sdp,
                                            NULL, 200, NULL, NULL);
+            if (!pjsua_var.calls[call_id].med_ch_cb &&
+                pjsua_var.calls[call_id].answer_sdp)
+            {
+                g_ctx.late_offer_answer_status = PJ_EBUG;
+            }
         }
         g_ctx.incoming_seen = PJ_TRUE;
         return;
@@ -905,6 +933,9 @@ static pj_bool_t on_call_send_ack(pjsua_call_id call_id,
         return PJ_FALSE;
 
     g_ctx.late_offer_ack_seen = PJ_TRUE;
+    g_ctx.late_offer_cross_call_ack_status = pjsua_call_send_ack(
+        g_ctx.incoming_call_id, rdata->msg_info.cseq->cseq,
+        g_ctx.late_offer_sdp);
     call = &pjsua_var.calls[call_id];
     status = pjmedia_sdp_neg_get_neg_remote(call->inv->neg, &remote_sdp);
     if (status == PJ_SUCCESS) {
@@ -6675,6 +6706,7 @@ static int test_initial_late_sdp_offer(pj_bool_t async_answer,
     g_ctx.late_offer_initial_med_cnt = 1;
     g_ctx.late_offer_answer_status = PJ_EUNKNOWN;
     g_ctx.late_offer_ack_status = PJ_EUNKNOWN;
+    g_ctx.late_offer_cross_call_ack_status = PJ_EUNKNOWN;
     g_ctx.late_offer_ack_seen = PJ_FALSE;
     g_ctx.late_offer_async_answer = async_answer;
     g_ctx.late_offer_async_ack = async_ack;
@@ -6700,9 +6732,52 @@ static int test_initial_late_sdp_offer(pj_bool_t async_answer,
             goto on_return;
         }
         callee = g_ctx.incoming_call_id;
+        {
+            pjsip_tx_data *last_tx;
+            pjsip_tx_data *last_answer;
+            pj_bool_t opt_inited;
+            unsigned med_prov_cnt;
+
+            inv = pjsua_var.calls[callee].inv;
+            last_tx = inv->invite_tsx->last_tx;
+            last_answer = inv->last_answer;
+            opt_inited = pjsua_var.calls[callee].opt_inited;
+            med_prov_cnt = pjsua_var.calls[callee].med_prov_cnt;
+            if ((pjsua_var.calls[callee].opt.flag &
+                 PJSUA_CALL_MEDIA_APP_MANAGED) ||
+                (inv->options & PJSIP_INV_REQUIRE_100REL) || inv->neg)
+            {
+                PJ_LOG(1, (THIS_FILE,
+                           "  Invalid unreliable SDP offer test setup"));
+                rc = -2032;
+                goto on_return;
+            }
+            status = pjsua_call_answer_with_sdp(callee, g_ctx.late_offer_sdp,
+                                               NULL, PJSIP_SC_PROGRESS,
+                                               NULL, NULL);
+            if (status != PJ_EINVALIDOP || inv->neg ||
+                inv->invite_tsx->last_tx != last_tx ||
+                inv->last_answer != last_answer ||
+                pjsua_var.calls[callee].answer_sdp ||
+                pjsua_var.calls[callee].med_ch_cb ||
+                pjsua_var.calls[callee].opt_inited != opt_inited ||
+                pjsua_var.calls[callee].med_prov_cnt != med_prov_cnt)
+            {
+                PJ_LOG(1, (THIS_FILE,
+                           "  Unreliable SDP offer: expected %d, got %d "
+                           "or mutated call state", PJ_EINVALIDOP, status));
+                rc = -2033;
+                goto on_return;
+            }
+        }
         g_ctx.late_offer_answer_status =
             pjsua_call_answer_with_sdp(callee, g_ctx.late_offer_sdp,
                                        NULL, PJSIP_SC_OK, NULL, NULL);
+        if (!pjsua_var.calls[callee].med_ch_cb &&
+            pjsua_var.calls[callee].answer_sdp)
+        {
+            g_ctx.late_offer_answer_status = PJ_EBUG;
+        }
         if (g_ctx.late_offer_answer_status != PJ_SUCCESS &&
             g_ctx.late_offer_answer_status != PJ_EPENDING)
         {
@@ -6746,6 +6821,8 @@ static int test_initial_late_sdp_offer(pj_bool_t async_answer,
          g_ctx.late_offer_answer_status != PJ_EPENDING) ||
         !g_ctx.late_offer_ack_seen ||
         g_ctx.late_offer_ack_status != PJ_SUCCESS ||
+        g_ctx.late_offer_cross_call_ack_status != PJ_EINVALIDOP ||
+        pjsua_var.calls[callee].answer_sdp != NULL ||
         pjsua_var.calls[callee].med_cnt == 0 ||
         pjsua_var.calls[caller].med_cnt == 0 ||
         !pjsua_var.calls[callee].med_update_success ||
@@ -6833,9 +6910,33 @@ static int test_late_sdp_reinvite(pj_bool_t async_answer,
         status = pjmedia_sdp_neg_get_active_local(
                                     pjsua_var.calls[callee].inv->neg,
                                     &active);
-        if (status == PJ_SUCCESS)
+        if (status == PJ_SUCCESS) {
+            pjsua_call *call = &pjsua_var.calls[callee];
+            pjmedia_sdp_neg *neg = call->inv->neg;
+            pjsip_transaction *tsx = call->inv->invite_tsx;
+            unsigned med_prov_cnt = call->med_prov_cnt;
+            int status_code = tsx->status_code;
+            pjmedia_sdp_session *extra =
+                pjmedia_sdp_session_clone(call->inv->pool_prov, active);
+
+            extra->media[extra->media_count] =
+                pjmedia_sdp_media_clone(call->inv->pool_prov,
+                                        extra->media[0]);
+            ++extra->media_count;
+            status = pjsua_call_answer_with_sdp(callee, extra, NULL,
+                                               PJSIP_SC_OK, NULL, NULL);
+            if (status != PJMEDIA_SDPNEG_EMISMEDIA ||
+                call->inv->neg != neg ||
+                pjmedia_sdp_neg_get_state(neg) != PJMEDIA_SDP_NEG_STATE_DONE ||
+                call->med_prov_cnt != med_prov_cnt ||
+                call->inv->invite_tsx != tsx || tsx->status_code != status_code)
+            {
+                rc = -2031;
+                goto on_return;
+            }
             status = pjsua_call_answer_with_sdp(callee, active, NULL,
                                                 PJSIP_SC_OK, NULL, NULL);
+        }
         if (status != PJ_SUCCESS && status != PJ_EPENDING) {
             rc = -1968;
             goto on_return;

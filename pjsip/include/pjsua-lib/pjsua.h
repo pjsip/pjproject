@@ -6969,6 +6969,12 @@ PJ_DECL(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
  * An application-managed answer must have the same media-line count as the
  * remote offer; otherwise PJMEDIA_SDPNEG_EMISMEDIA is returned.
  *
+ * For calls whose media is not application-managed, supplying a local SDP
+ * offer in a provisional (1xx) response requires 100rel to be active
+ * (#PJSIP_INV_REQUIRE_100REL). Otherwise PJ_EINVALIDOP is returned.
+ * Codes 100, 180, and 181 are rejected for such offers even with 100rel active.
+ * These restrictions apply to SDP offers, not answers to remote offers.
+ *
  * @param call_id       Incoming call identification.
  * @param sdp           Local SDP answer, or a local SDP offer when answering
  *                      an offerless INVITE or re-INVITE.
@@ -6999,7 +7005,10 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
  * to manually take over the ACK transmission, e.g. to attach an SDP answer
  * to the ACK for a late SDP offer received in the 2xx response.
  * This function is safe to call synchronously from the
- * #pjsua_callback.on_call_send_ack() callback.
+ * #pjsua_callback.on_call_send_ack() callback when \a call_id identifies the
+ * call whose ACK triggered the callback. A different call ID is rejected with
+ * PJ_EINVALIDOP to avoid acquiring the PJSUA lock while holding the callback
+ * call's dialog lock.
  *
  * @param call_id       Call identification.
  * @param cseq          CSeq of the 2xx response that triggered the need to

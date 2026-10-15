@@ -1592,6 +1592,9 @@ pj_bool_t Endpoint::on_call_send_ack(pjsua_call_id call_id,
     } catch (Error &err) {
         PJ_LOG(1,(THIS_FILE, "onCallSendAck() error: %s", err.info().c_str()));
         return PJ_FALSE;
+    } catch (...) {
+        PJ_LOG(1,(THIS_FILE, "onCallSendAck() threw an unknown exception"));
+        return PJ_FALSE;
     }
     return prm.suppressSendAck ? PJ_TRUE : PJ_FALSE;
 }
