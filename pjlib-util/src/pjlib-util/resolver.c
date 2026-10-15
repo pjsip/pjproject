@@ -204,12 +204,12 @@ struct pj_dns_resolver
     pj_timer_heap_t     *timer;         /**< Timer instance.                */
     pj_bool_t            own_ioqueue;   /**< Do we own ioqueue?             */
     pj_ioqueue_t        *ioqueue;       /**< Ioqueue instance.              */
-    char                 tmp_pool[TMP_SZ];/**< Temporary pool buffer.       */
 
     /* Socket */
     pj_sock_t            udp_sock;      /**< UDP socket.                    */
     pj_ioqueue_key_t    *udp_key;       /**< UDP socket ioqueue key.        */
     unsigned char        udp_rx_pkt[UDPSZ];/**< UDP receive buffer.         */
+    char                 udp_tmp_pool[TMP_SZ];/**< Parse pool buffer.       */
     unsigned char        udp_tx_pkt[UDPSZ];/**< UDP transmit buffer.        */
     pj_ioqueue_op_key_t  udp_op_rx_key; /**< UDP read operation key.        */
     pj_ioqueue_op_key_t  udp_op_tx_key; /**< UDP write operation key.       */
@@ -221,6 +221,7 @@ struct pj_dns_resolver
     pj_sock_t            udp6_sock;     /**< UDP socket.                    */
     pj_ioqueue_key_t    *udp6_key;      /**< UDP socket ioqueue key.        */
     unsigned char        udp6_rx_pkt[UDPSZ];/**< UDP receive buffer.        */
+    char                 udp6_tmp_pool[TMP_SZ];/**< Parse pool buffer.      */
     //unsigned char      udp6_tx_pkt[UDPSZ];/**< UDP transmit buffer.       */
     pj_ioqueue_op_key_t  udp6_op_rx_key;/**< UDP read operation key.        */
     pj_ioqueue_op_key_t  udp6_op_tx_key;/**< UDP write operation key.       */
@@ -2556,6 +2557,8 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     int *src_addr_len;
     unsigned char *rx_pkt;
     pj_ssize_t rx_pkt_size;
+    char *tmp_pool;
+    pj_size_t tmp_pool_size;
     pj_status_t status;
     PJ_USE_EXCEPTION;
 
@@ -2569,6 +2572,8 @@ static void on_read_complete(pj_ioqueue_key_t *key,
         src_addr_len = &resolver->udp6_addr_len;
         rx_pkt = resolver->udp6_rx_pkt;
         rx_pkt_size = sizeof(resolver->udp6_rx_pkt);
+        tmp_pool = resolver->udp6_tmp_pool;
+        tmp_pool_size = sizeof(resolver->udp6_tmp_pool);
     } else 
 #endif
     {
@@ -2576,6 +2581,8 @@ static void on_read_complete(pj_ioqueue_key_t *key,
         src_addr_len = &resolver->udp_addr_len;
         rx_pkt = resolver->udp_rx_pkt;
         rx_pkt_size = sizeof(resolver->udp_rx_pkt);
+        tmp_pool = resolver->udp_tmp_pool;
+        tmp_pool_size = sizeof(resolver->udp_tmp_pool);
     }
 
     pj_grp_lock_acquire(resolver->grp_lock);
@@ -2611,9 +2618,11 @@ static void on_read_complete(pj_ioqueue_key_t *key,
         goto read_next_packet;
     }
 
-    /* Create temporary pool from a fixed buffer */
-    pool = pj_pool_create_on_buf("restmp", resolver->tmp_pool, 
-                                 sizeof(resolver->tmp_pool));
+    /* Create temporary pool from this socket's own buffer. The packet is
+     * used after the lock is released for the callbacks, while the other
+     * socket may already be parsing its next packet.
+     */
+    pool = pj_pool_create_on_buf("restmp", tmp_pool, tmp_pool_size);
 
     /* Parse DNS response */
     dns_pkt = NULL;

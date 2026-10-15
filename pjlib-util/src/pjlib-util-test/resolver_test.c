@@ -5858,6 +5858,177 @@ on_return:
 #endif  /* PJ_HAS_THREADS */
 
 
+#if PJ_HAS_IPV6 && PJ_HAS_THREADS
+////////////////////////////////////////////////////////////////////////////
+/* Responses arriving on the IPv4 and IPv6 sockets at once, polled by two
+ * threads: the packet given to the callback must stay intact.
+ */
+#define DUAL_ADDR0      0x01020304
+#define DUAL_ADDR1      0x0A0B0C0D
+
+static pj_thread_t *dual_poll_thread;
+static volatile pj_bool_t dual_late_rx;
+static volatile pj_bool_t dual_changed;
+static volatile pj_bool_t dual_cb_called;
+
+static void dual_make_resp(const pj_dns_parsed_packet *pkt,
+                           pj_dns_parsed_packet **p_res,
+                           pj_uint32_t addr, unsigned anscount)
+{
+    pj_dns_parsed_packet *res;
+    unsigned i;
+
+    lock();
+    res = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_packet);
+    res->q = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_query);
+    res->ans = (pj_dns_parsed_rr*)
+               pj_pool_calloc(pool, anscount, sizeof(pj_dns_parsed_rr));
+    unlock();
+
+    res->hdr.flags = PJ_DNS_SET_QR(1);
+    res->hdr.qdcount = 1;
+    res->q[0] = pkt->q[0];
+    res->hdr.anscount = (pj_uint16_t)anscount;
+    for (i = 0; i < anscount; ++i) {
+        res->ans[i].type = PJ_DNS_TYPE_A;
+        res->ans[i].dnsclass = 1;
+        res->ans[i].name = pkt->q[0].name;
+        res->ans[i].ttl = 60;
+        res->ans[i].rdata.a.ip_addr.s_addr = addr + i;
+    }
+    *p_res = res;
+}
+
+static void dual_action0(const pj_dns_parsed_packet *pkt,
+                         pj_dns_parsed_packet **p_res)
+{
+    dual_make_resp(pkt, p_res, DUAL_ADDR0, 1);
+}
+
+static void dual_action1(const pj_dns_parsed_packet *pkt,
+                         pj_dns_parsed_packet **p_res)
+{
+    /* Reply while the first response is being delivered */
+    pj_thread_sleep(200);
+    dual_make_resp(pkt, p_res, DUAL_ADDR1, 4);
+    dual_late_rx = PJ_TRUE;
+}
+
+static void dual_callback(void *user_data,
+                          pj_status_t status,
+                          pj_dns_parsed_packet *resp)
+{
+    unsigned anscount;
+    pj_uint32_t addr;
+    int i;
+
+    PJ_UNUSED_ARG(user_data);
+
+    if (status == PJ_SUCCESS && resp && resp->hdr.anscount) {
+        anscount = resp->hdr.anscount;
+        addr = resp->ans[0].rdata.a.ip_addr.s_addr;
+
+        /* Let the other poll thread read the late response */
+        for (i = 0; i < 500 && !dual_late_rx; ++i)
+            pj_thread_sleep(10);
+        pj_thread_sleep(300);
+
+        PJ_LOG(4,(THIS_FILE, "  dual cb: before %u/%08x after %u/%08x",
+                  anscount, addr, resp->hdr.anscount,
+                  resp->ans[0].rdata.a.ip_addr.s_addr));
+        if (resp->hdr.anscount != anscount ||
+            resp->ans[0].rdata.a.ip_addr.s_addr != addr)
+        {
+            dual_changed = PJ_TRUE;
+        }
+    }
+
+    dual_cb_called = PJ_TRUE;
+    pj_sem_post(sem);
+}
+
+static int dns_dual_stack_rx_test(void)
+{
+    pj_str_t nameservers[2];
+    pj_uint16_t ports[2];
+    pj_str_t name = pj_str("dualstack");
+    int i, rc = 0;
+
+    nameservers[0] = pj_str("127.0.0.1");
+    nameservers[1] = pj_str("::1");
+
+    pool = pj_pool_create(mem, NULL, 2000, 2000, NULL);
+    PJ_TEST_SUCCESS(pj_mutex_create_simple(pool, "resolver_test", &mutex),
+                    NULL, return -1000);
+    PJ_TEST_SUCCESS(pj_sem_create(pool, NULL, 0, 2, &sem), NULL,
+                    return -1001);
+    thread_quit = PJ_FALSE;
+    dual_late_rx = dual_changed = dual_cb_called = PJ_FALSE;
+
+    for (i=0; i<2; ++i) {
+        int af = (i == 0)? pj_AF_INET() : pj_AF_INET6();
+        pj_sockaddr addr;
+        int namelen;
+
+        PJ_TEST_SUCCESS(pj_sock_socket(af, pj_SOCK_DGRAM(), 0,
+                                       &g_server[i].sock),
+                        NULL, return -1010);
+        pj_sockaddr_init(af, &addr, NULL, 0);
+        PJ_TEST_SUCCESS(pj_sock_bind(g_server[i].sock, &addr,
+                                     pj_sockaddr_get_len(&addr)),
+                        NULL, return -1011);
+        namelen = sizeof(addr);
+        PJ_TEST_SUCCESS(pj_sock_getsockname(g_server[i].sock, &addr,
+                                            &namelen),
+                        NULL, return -1012);
+        g_server[i].port = ports[i] = pj_sockaddr_get_port(&addr);
+        g_server[i].action = ACTION_CB;
+        g_server[i].action_cb = (i == 0)? &dual_action0 : &dual_action1;
+        PJ_TEST_SUCCESS(pj_thread_create(pool, NULL, &server_thread,
+                                         &g_server[i], 0, 0,
+                                         &g_server[i].thread),
+                        NULL, return -1013);
+    }
+
+    PJ_TEST_SUCCESS(pj_timer_heap_create(pool, 16, &timer_heap), NULL,
+                    return -1020);
+    PJ_TEST_SUCCESS(pj_ioqueue_create(pool, 16, &ioqueue), NULL,
+                    return -1021);
+    PJ_TEST_SUCCESS(pj_dns_resolver_create(mem, NULL, 0, timer_heap, ioqueue,
+                                           &resolver),
+                    NULL, return -1022);
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(resolver, 2, nameservers, ports),
+                    NULL, return -1023);
+    PJ_TEST_SUCCESS(pj_thread_create(pool, NULL, &poll_worker_thread, NULL,
+                                     0, 0, &poll_thread),
+                    NULL, return -1024);
+    PJ_TEST_SUCCESS(pj_thread_create(pool, NULL, &poll_worker_thread, NULL,
+                                     0, 0, &dual_poll_thread),
+                    NULL, return -1025);
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(resolver, &name,
+                                                PJ_DNS_TYPE_A, 0,
+                                                &dual_callback, NULL, NULL),
+                    NULL, { rc = -1030; goto on_return; });
+
+    pj_sem_wait(sem);
+
+    PJ_TEST_EQ(g_server[1].pkt_count, 1, NULL, { rc = -1040; goto on_return; });
+    PJ_TEST_TRUE(dual_late_rx, NULL, { rc = -1041; goto on_return; });
+    PJ_TEST_TRUE(dual_cb_called, NULL, { rc = -1042; goto on_return; });
+    PJ_TEST_TRUE(!dual_changed, "response changed during callback",
+                 { rc = -1043; goto on_return; });
+
+on_return:
+    thread_quit = PJ_TRUE;
+    pj_thread_join(dual_poll_thread);
+    dual_poll_thread = NULL;
+    destroy();
+    return rc;
+}
+#endif  /* PJ_HAS_IPV6 && PJ_HAS_THREADS */
+
+
 int resolver_test(void)
 {
     int rc;
@@ -6066,6 +6237,13 @@ int resolver_test(void)
         goto on_error;
 
     destroy();
+
+#if PJ_HAS_THREADS
+    PJ_LOG(3,(THIS_FILE, "dns_dual_stack_rx_test"));
+    rc = dns_dual_stack_rx_test();
+    if (rc != 0)
+        return rc;
+#endif
 #endif
 
     return 0;
