@@ -298,7 +298,7 @@ static pj_status_t set_contact( pjsip_regc *regc,
 {
     const pj_str_t CONTACT = { "Contact", 7 };
     pjsip_contact_hdr new_list;
-    pjsip_contact_hdr *h, *hdr;
+    pjsip_contact_hdr *h, *hdr, *old;
     int i;
 
     /* Parse and validate every new Contact up front. Nothing below this
@@ -353,6 +353,7 @@ static pj_status_t set_contact( pjsip_regc *regc,
         /* Find the new contact in old contact list. If found, remove
          * the old header from the old header list.
          */
+        old = NULL;
         h = regc->removed_contact_hdr_list.next;
         while (h != &regc->removed_contact_hdr_list) {
             int rc;
@@ -362,6 +363,7 @@ static pj_status_t set_contact( pjsip_regc *regc,
             if (rc == 0) {
                 /* Match */
                 pj_list_erase(h);
+                old = h;
                 break;
             }
 
@@ -376,11 +378,25 @@ static pj_status_t set_contact( pjsip_regc *regc,
                                      PJSIP_URI_SCHEME_IS_SIPS(hdr->uri))) 
         {
             pjsip_param *xuid_param;
+            const pjsip_param *old_xuid = NULL;
             pjsip_sip_uri *sip_uri;
+
+            /* Keep the x-uid of the binding this Contact refreshes: the
+             * match above ignores it, and a new value would leave the old
+             * binding registered alongside.
+             */
+            if (old) {
+                sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(old->uri);
+                old_xuid = pjsip_param_cfind(&sip_uri->other_param,
+                                             &XUID_PARAM_NAME);
+            }
 
             xuid_param = PJ_POOL_ZALLOC_T(regc->pool, pjsip_param);
             xuid_param->name = XUID_PARAM_NAME;
-            pj_create_unique_string(regc->pool, &xuid_param->value);
+            if (old_xuid)
+                xuid_param->value = old_xuid->value;
+            else
+                pj_create_unique_string(regc->pool, &xuid_param->value);
 
             sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(hdr->uri);
             pj_list_push_back(&sip_uri->other_param, xuid_param);
