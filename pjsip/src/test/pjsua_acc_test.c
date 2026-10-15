@@ -49,6 +49,8 @@
  *  10. The REGISTER sent by an accepted rewrite fails inside the send:
  *      the nested failure report must leave contact_rewritten clear, so
  *      that the retry's 2xx rewrites the Contact again.
+ *  11. PJSUA_CONTACT_REWRITE_ALWAYS_UPDATE alone, which names no 2xx
+ *      method: the rewrite must still reach the registrar.
  */
 
 #include "test.h"
@@ -481,6 +483,15 @@ static int rewrite_test(pjsua_transport_id tp_id, int port,
             rc = err_base - 6;
             goto on_return;
         }
+
+        /* The regc must register it too, not only the account hold it */
+        if (!pj_ansi_strstr(g_mock_reg.last_contact, c->expect_host)) {
+            PJ_LOG(3, (THIS_FILE, "    error: registered Contact '%s' "
+                       "lacks host '%s'", g_mock_reg.last_contact,
+                       c->expect_host));
+            rc = err_base - 14;
+            goto on_return;
+        }
     } else {
         /* Rewrite must have been declined, leaving the original intact */
         if (pj_strcmp2(&pjsua_var.acc[acc_id].contact, orig_contact) != 0) {
@@ -780,6 +791,13 @@ int pjsua_acc_test(void)
             { "rejected update_contact keeps the binding",
               "1.2.3.4", "1.2.3.4", NULL, NULL, 0, -2490,
               PJ_FALSE, PJ_TRUE },
+
+            /* ALWAYS_UPDATE names no 2xx method; the 2xx rewrite must
+             * still reach the registrar, not only the account.
+             */
+            { "accepted rewrite with ALWAYS_UPDATE alone",
+              "1.2.3.4", "1.2.3.4", NULL, NULL,
+              PJSUA_CONTACT_REWRITE_ALWAYS_UPDATE, -2550 },
         };
         unsigned i;
 

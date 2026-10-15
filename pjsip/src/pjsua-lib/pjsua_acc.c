@@ -3208,9 +3208,16 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
              */
             update_rfc5626_status(acc, param->rdata);
 
-            /* Check NAT bound address if it hasn't been done before */
+            /* Check NAT bound address if it hasn't been done before.
+             * Without the UNREGISTER bit, e.g. ALWAYS_UPDATE alone, update
+             * in place as auto_rereg_timer_cb() does.
+             */
             if (!acc->contact_rewritten &&
-                acc_check_nat_addr(acc, (acc->cfg.contact_rewrite_method & 3),
+                acc_check_nat_addr(acc,
+                                   (acc->cfg.contact_rewrite_method &
+                                    PJSUA_CONTACT_REWRITE_UNREGISTER) ?
+                                   PJSUA_CONTACT_REWRITE_UNREGISTER :
+                                   PJSUA_CONTACT_REWRITE_NO_UNREG,
                                    param))
             {
                 PJSUA_UNLOCK();
