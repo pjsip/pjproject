@@ -53,6 +53,11 @@ int main(int argc, char *argv[])
             objectLifetimeTests.deleteActiveCall();
             objectLifetimeTests.deleteCallCreatingMedia();
             objectLifetimeTests.deleteCallWithLibraryBusy();
+            objectLifetimeTests.deleteCallWithDialogBusy();
+            objectLifetimeTests.deleteCallWithLibraryBriefBusy();
+            objectLifetimeTests.hangupRetryAfterSlotReuse();
+            objectLifetimeTests.deleteCallInOwnCallback();
+            objectLifetimeTests.deleteCallWhileClosing();
             objectLifetimeTests.deleteCallAfterSlotReuse();
             objectLifetimeTests.deleteAccountAfterSlotReuse();
             objectLifetimeTests.deleteAccountDeletedUnderneath();

@@ -124,6 +124,8 @@ PJ_DEF(pj_bool_t) pjsua_acc_is_valid(pjsua_acc_id acc_id)
  */
 PJ_DEF(pj_status_t) pjsua_acc_set_default(pjsua_acc_id acc_id)
 {
+    if (!pjsua_acc_is_valid(acc_id))
+        return PJ_EINVAL;
     pjsua_var.default_acc = acc_id;
     return PJ_SUCCESS;
 }

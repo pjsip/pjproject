@@ -3677,14 +3677,13 @@ static void hangup_timer_cb(pj_timer_heap_t *th, pj_timer_entry *entry)
 
 /*
  * Hangup call by using method that is appropriate according to the
- * call state. With owner set, only if the call's user data is owner:
- * the user data is cleared, and an active call is hung up.
+ * call state. With released set, only a call whose owner has released it.
  */
 static pj_status_t call_hangup(pjsua_call_id call_id,
                                unsigned code,
                                const pj_str_t *reason,
                                const pjsua_msg_data *msg_data,
-                               const void *owner)
+                               pj_bool_t released)
 {
     pjsua_call *call;
     pjsip_dialog *dlg = NULL;
@@ -3698,7 +3697,7 @@ static pj_status_t call_hangup(pjsua_call_id call_id,
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
                      PJ_EINVAL);
 
-    if (!owner)
+    if (!released)
         PJ_LOG(4,(THIS_FILE, "Call %d hanging up: code=%d..", call_id, code));
     pj_log_push_indent();
 
@@ -3706,11 +3705,12 @@ static pj_status_t call_hangup(pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
         goto on_return;
 
-    /* The slot can't be given to another call while the dialog is held */
-    if (owner) {
-        if (call->user_data != owner)
+    /* The slot can't be given to another call while the dialog is held,
+     * and a new call doesn't have the flag.
+     */
+    if (released) {
+        if (!call->owner_released)
             goto on_return;
-        call->user_data = NULL;
         if (call->inv && call->inv->state == PJSIP_INV_STATE_DISCONNECTED)
             goto on_return;
         PJ_LOG(4,(THIS_FILE, "Call %d hanging up: code=%d..", call_id, code));
@@ -3807,42 +3807,103 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
                                       const pj_str_t *reason,
                                       const pjsua_msg_data *msg_data)
 {
-    return call_hangup(call_id, code, reason, msg_data, NULL);
+    return call_hangup(call_id, code, reason, msg_data, PJ_FALSE);
+}
+
+
+static void hangup_released(void *user_data);
+
+static void retry_hangup_released(pjsua_call_id call_id)
+{
+    pj_status_t status;
+
+    status = pjsua_schedule_timer2(&hangup_released,
+                                   (void*)(pj_ssize_t)call_id,
+                                   CALL_HANGUP_RETRY_INTERVAL);
+    if (status == PJ_SUCCESS) {
+        PJ_LOG(4,(THIS_FILE, "Will retry call %d hangup in %d msec",
+                             call_id, CALL_HANGUP_RETRY_INTERVAL));
+    } else {
+        PJ_PERROR(1,(THIS_FILE, status, "Call %d: failed to schedule hangup",
+                     call_id));
+    }
+}
+
+/* Hang up a call whose owner has released it, retry later if it is busy */
+static pj_status_t hangup_released_call(pjsua_call_id call_id)
+{
+    pj_status_t status;
+
+    status = call_hangup(call_id, 0, NULL, NULL, PJ_TRUE);
+    if (status == PJ_ETIMEDOUT)
+        retry_hangup_released(call_id);
+    return status;
+}
+
+static void hangup_released(void *user_data)
+{
+    hangup_released_call((pjsua_call_id)(pj_ssize_t)user_data);
 }
 
 
 pj_status_t pjsua_call_release_owner(pjsua_call_id call_id, void *owner)
 {
-    pj_status_t status;
+    pjsua_call *call;
+    pj_time_val time_start, dtime, timeout;
+    unsigned retry;
+    pj_bool_t locked = PJ_FALSE;
 
     PJ_ASSERT_RETURN(owner, PJ_EINVAL);
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
                      PJ_EINVAL);
 
+    call = &pjsua_var.calls[call_id];
+
     /* Nothing to do if the owner is already detached, e.g. on disconnect.
      * The user data can't become the owner again.
      */
-    if (pjsua_var.calls[call_id].user_data != owner)
+    if (call->user_data != owner)
         return PJ_SUCCESS;
 
-    status = call_hangup(call_id, 0, NULL, NULL, owner);
-    if (status != PJ_SUCCESS) {
-        /* No dialog, or its lock timed out. A slot is given to a new call
-         * only under the PJSUA lock, so clear the owner under it. Only try
-         * it, as the caller may hold another call's dialog lock, and clear
-         * it anyway: the owner is about to be freed.
-         */
-        pj_bool_t locked = (PJSUA_TRY_LOCK() == PJ_SUCCESS);
+    /* A slot is given to a new call only under the PJSUA lock. Don't block
+     * on it, as the caller may hold another call's dialog lock.
+     */
+    pj_gettimeofday(&time_start);
+    timeout.sec = 0;
+    timeout.msec = PJSUA_ACQUIRE_CALL_TIMEOUT;
+    pj_time_val_normalize(&timeout);
+    for (retry=0; ; ++retry) {
+        if (PJSUA_TRY_LOCK() == PJ_SUCCESS) {
+            locked = PJ_TRUE;
+            break;
+        }
+        pj_gettimeofday(&dtime);
+        PJ_TIME_VAL_SUB(dtime, time_start);
+        if (!PJ_TIME_VAL_LT(dtime, timeout))
+            break;
+        pj_thread_sleep(retry/10);
+    }
 
-        if (pjsua_var.calls[call_id].user_data == owner)
-            pjsua_var.calls[call_id].user_data = NULL;
+    if (call->user_data != owner) {
         if (locked)
             PJSUA_UNLOCK();
-        else
-            PJ_LOG(2,(THIS_FILE, "Call %d: owner released without lock",
-                      call_id));
+        return PJ_SUCCESS;
     }
-    return status;
+
+    /* Without the lock do it anyway: the owner is about to be freed */
+    call->user_data = NULL;
+    call->owner_released = PJ_TRUE;
+    if (!locked) {
+        PJ_LOG(1,(THIS_FILE, "Timed-out trying to acquire PJSUA mutex, "
+                             "call %d is released without it", call_id));
+        retry_hangup_released(call_id);
+        return PJ_ETIMEDOUT;
+    }
+    PJSUA_UNLOCK();
+
+    if (hangup_released_call(call_id) == PJ_ETIMEDOUT)
+        return PJ_ETIMEDOUT;
+    return PJ_SUCCESS;
 }
 
 

@@ -292,6 +292,7 @@ struct pjsua_call
     unsigned             hangup_code;   /**< Hangup code.                   */
     pj_str_t             hangup_reason; /**< Hangup reason.                 */
     pjsua_msg_data      *hangup_msg_data;/**< Hangup message data.          */
+    pj_bool_t            owner_released;/**< Owner is gone, hang up.       */
     pj_str_t             siprec_metadata;/** siprec metadata in body        */
     unsigned             siprec_metadata_cap;
                                     /**< Allocated size of siprec_metadata */
@@ -1122,8 +1123,9 @@ pj_status_t acquire_call(const char *title,
                          pjsua_call **p_call,
                          pjsip_dialog **p_dlg);
 
-/* Clear the call's user data and hang up the call if it is active, only
- * if the user data is still owner. Used by pjsua2 when a Call is deleted.
+/* If the call's user data is still owner, clear it and hang up the call.
+ * Used by pjsua2 when a Call is deleted. Returns PJ_ETIMEDOUT if a lock
+ * could not be taken in time, the hangup is then retried later.
  */
 pj_status_t pjsua_call_release_owner(pjsua_call_id call_id, void *owner);
 

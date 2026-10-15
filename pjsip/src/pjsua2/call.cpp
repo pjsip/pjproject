@@ -538,10 +538,22 @@ Call::~Call()
      * call if it is still active. A call that has reused the slot is left
      * alone.
      */
-    if (pjsua_get_state() < PJSUA_STATE_CLOSING)
-        pjsua_call_release_owner(id, this);
-    else if (pjsua_call_get_user_data(id) == this)
+    if (pjsua_get_state() < PJSUA_STATE_CLOSING) {
+        /* The call's disconnection won't reach this object to clear its
+         * medias. If the call's lock timed out, a callback may still use
+         * them, so they are left.
+         */
+        if (pjsua_call_release_owner(id, this) != PJ_ETIMEDOUT) {
+            try {
+                clearMedias();
+            } catch (Error &err) {
+                // Ignore
+                PJ_UNUSED_ARG(err);
+            }
+        }
+    } else if (pjsua_call_get_user_data(id) == this) {
         pjsua_call_set_user_data(id, NULL);
+    }
 }
 
 CallInfo Call::getInfo() const PJSUA2_THROW(Error)
@@ -1029,22 +1041,26 @@ MediaTransportInfo Call::getMedTransportInfo(unsigned med_idx) const
     return mti;
 }
 
+void Call::clearMedias()
+{
+    unsigned mi;
+
+    for (mi = 0; mi < medias.size(); mi++) {
+        if (medias[mi]) {
+            Endpoint::instance().mediaRemove((AudioMedia &)*medias[mi]);
+            delete medias[mi];
+        }
+    }
+    medias.clear();
+}
+
 void Call::processMediaUpdate(OnCallMediaStateParam &prm)
 {
     pjsua_call_info pj_ci;
     unsigned mi;
     
     if (pjsua_call_get_info(id, &pj_ci) == PJ_SUCCESS) {
-        if (medias.size()) {
-            /* Clear medias. */
-            for (mi = 0; mi < medias.size(); mi++) {
-                if (medias[mi]) {
-                    Endpoint::instance().mediaRemove((AudioMedia&)*medias[mi]);
-                    delete medias[mi];
-                }
-            }
-            medias.clear();     
-        }
+        clearMedias();
 
         for (mi = 0; mi < pj_ci.media_cnt; mi++) {
             if (mi >= medias.size()) {
@@ -1100,14 +1116,7 @@ void Call::processStateChange(OnCallStateParam &prm)
             }
         }
 
-        /* Clear medias. */
-        for (mi = 0; mi < medias.size(); mi++) {
-            if (medias[mi]) {
-                Endpoint::instance().mediaRemove((AudioMedia &)*medias[mi]);
-                delete medias[mi];
-            }
-        }
-        medias.clear();
+        clearMedias();
 
         /* Remove this Call object association */
         pjsua_call_set_user_data(id, NULL);

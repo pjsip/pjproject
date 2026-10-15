@@ -2490,6 +2490,8 @@ private:
     Token                userData;
     std::vector<Media *> medias;
     Call                *child;     /* New outgoing call in call transfer.  */
+
+    void clearMedias();
 };
 
 /**

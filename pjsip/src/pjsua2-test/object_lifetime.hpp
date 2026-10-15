@@ -35,6 +35,11 @@ public:
     void deleteActiveCall();
     void deleteCallCreatingMedia();
     void deleteCallWithLibraryBusy();
+    void deleteCallWithDialogBusy();
+    void deleteCallWithLibraryBriefBusy();
+    void hangupRetryAfterSlotReuse();
+    void deleteCallInOwnCallback();
+    void deleteCallWhileClosing();
     void deleteCallAfterSlotReuse();
     void deleteAccountAfterSlotReuse();
     void deleteAccountDeletedUnderneath();
