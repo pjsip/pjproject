@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -70,6 +70,7 @@ int ice_test(void*);
 int ice_conc_test(void);
 int trickle_ice_test(void);
 int ice_wait_valid_pair_test(void);
+int ice_rx_data_stop_test(void);
 int concur_test(void);
 int test_main(int argc, char *argv[]);
 

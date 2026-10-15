@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -3741,6 +3741,8 @@ PJ_DEF(pj_status_t) pj_ice_sess_send_data(pj_ice_sess *ice,
     pj_ice_sess_cand *cand;
     pj_uint8_t transport_id;
     pj_sockaddr addr;
+    pj_grp_lock_t *grp_lock;
+    pj_ice_sess_cb cb;
 
     PJ_ASSERT_RETURN(ice && comp_id, PJ_EINVAL);
     
@@ -3777,18 +3779,21 @@ PJ_DEF(pj_status_t) pj_ice_sess_send_data(pj_ice_sess *ice,
 
     /* Release the mutex now to avoid deadlock (see ticket #1451),
      * but add ref first to avoid premature destruction in the cb.
+     * The session may be gone after the cb, use only local copies.
      */
-    pj_grp_lock_add_ref(ice->grp_lock);
-    pj_grp_lock_release(ice->grp_lock);
+    grp_lock = ice->grp_lock;
+    cb = ice->cb;
+    pj_grp_lock_add_ref(grp_lock);
+    pj_grp_lock_release(grp_lock);
 
     PJ_RACE_ME(5);
 
-    status = (*ice->cb.on_tx_pkt)(ice, comp_id, transport_id, 
-                                  data, data_len, 
-                                  &addr, 
-                                  pj_sockaddr_get_len(&addr));
+    status = (*cb.on_tx_pkt)(ice, comp_id, transport_id,
+                             data, data_len,
+                             &addr,
+                             pj_sockaddr_get_len(&addr));
 
-    pj_grp_lock_dec_ref(ice->grp_lock);
+    pj_grp_lock_dec_ref(grp_lock);
 
 on_return:
     return status;
@@ -3806,6 +3811,8 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
     pj_status_t status = PJ_SUCCESS;
     pj_ice_sess_comp *comp;
     pj_ice_msg_data *msg_data = NULL;
+    pj_grp_lock_t *grp_lock;
+    pj_ice_sess_cb cb;
     unsigned i;
 
     PJ_ASSERT_RETURN(ice, PJ_EINVAL);
@@ -3854,15 +3861,9 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
         }
         pj_grp_lock_release(ice->grp_lock);
     } else {
-        /* Not a STUN packet. Call application's callback instead, but release
-         * the mutex now or otherwise we may get deadlock.
-         * Add ref first to avoid race with session destruction.
+        /* Not a STUN packet. Check the source address while the session
+         * is still locked, then call application's callback.
          */
-        pj_grp_lock_add_ref(ice->grp_lock);
-        pj_grp_lock_release(ice->grp_lock);
-
-        PJ_RACE_ME(5);
-
         if (ice->opt.check_src_addr) {
             pj_bool_t check_addr = PJ_TRUE;
             pj_sockaddr *raddr = &comp->rcand_check_addr;
@@ -3916,17 +3917,28 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
                          "or unchecked",
                          comp_id, paddr));
 
-                pj_grp_lock_dec_ref(ice->grp_lock);
+                pj_grp_lock_release(ice->grp_lock);
 
                 return PJ_SUCCESS;
             }
         } 
 
-        (*ice->cb.on_rx_data)(ice, comp_id, transport_id, pkt, pkt_size, 
-                              src_addr, src_addr_len);
+        /* Release the mutex now or otherwise we may get deadlock, but add
+         * ref first to avoid race with session destruction. The session
+         * may be gone after the cb, use only local copies.
+         */
+        grp_lock = ice->grp_lock;
+        cb = ice->cb;
+        pj_grp_lock_add_ref(grp_lock);
+        pj_grp_lock_release(grp_lock);
+
+        PJ_RACE_ME(5);
+
+        (*cb.on_rx_data)(ice, comp_id, transport_id, pkt, pkt_size,
+                         src_addr, src_addr_len);
         status = PJ_SUCCESS;
 
-        pj_grp_lock_dec_ref(ice->grp_lock);
+        pj_grp_lock_dec_ref(grp_lock);
     }
 
     return status;
