@@ -549,6 +549,7 @@ didDeactivateAudioSession:(AVAudioSession *) audioSession
         nib = @"ipjsuaViewController_iPad";
     self.viewController = [[ipjsuaViewController alloc] initWithNibName:nib
                                                                  bundle:nil];
+    [self.viewController loadViewIfNeeded];
 
 #if USE_PUSH_NOTIFICATION
     call_map = [NSMutableDictionary dictionary];
