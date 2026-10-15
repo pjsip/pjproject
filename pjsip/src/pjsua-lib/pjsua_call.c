@@ -849,6 +849,8 @@ static pj_status_t apply_call_setting(pjsua_call *call,
         pjsua_call_cleanup_flag(&call->opt);
     } else {
         call->opt = *opt;
+        /* Only used by pjsua_call_make_call(), the call must not keep it */
+        pj_bzero(&call->opt.custom_call_id, sizeof(call->opt.custom_call_id));
     }
     if (media_app_managed)
         call->opt.flag |= PJSUA_CALL_MEDIA_APP_MANAGED;
@@ -1212,8 +1214,6 @@ PJ_DEF(pj_status_t) pjsua_call_make_call2(
         PJ_LOG(4,(THIS_FILE, "Set user defined "
                              "Call-ID (%.*s)",
                   (int)dlg->call_id->id.slen, dlg->call_id->id.ptr  ));
-        pj_bzero(&call->opt.custom_call_id,
-                  sizeof(call->opt.custom_call_id));
     }
 
     /* Increment the dialog's lock otherwise when invite session creation

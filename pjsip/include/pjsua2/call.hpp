@@ -2490,6 +2490,10 @@ private:
     Token                userData;
     std::vector<Media *> medias;
     Call                *child;     /* New outgoing call in call transfer.  */
+    /* Values returned to pjsua from callbacks, kept valid after them. */
+    string               tmpReason;
+    CallSetting          tmpOpt;
+    SrtpCryptoVector     tmpCryptos;
 };
 
 /**
