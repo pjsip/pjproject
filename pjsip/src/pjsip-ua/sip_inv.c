@@ -216,6 +216,7 @@ struct tsx_inv_data
     pj_bool_t            done_early;/* Negotiation was done for early med?  */
     pj_bool_t            done_early_rel;/* Early med was realiable?         */
     pj_bool_t            has_sdp;   /* Message with SDP?                    */
+    pj_bool_t            has_body;  /* Message has a body, even if not SDP  */
 };
 
 
@@ -2693,6 +2694,17 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
         return PJ_SUCCESS;
     }
 
+    /* Track body presence separately from SDP. Unknown bodies may be
+     * accepted, but must not be treated as an offerless request.
+     */
+    tsx_inv_data = (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
+    if (tsx_inv_data == NULL) {
+        tsx_inv_data = PJ_POOL_ZALLOC_T(tsx->pool, struct tsx_inv_data);
+        tsx_inv_data->inv = inv;
+        tsx->mod_data[mod_inv.mod.id] = tsx_inv_data;
+    }
+    tsx_inv_data->has_body = PJ_TRUE;
+
     sdp_info = pjsip_rdata_get_sdp_info(rdata);
     if (sdp_info->body.ptr == NULL) {
         /* Message body is not "application/sdp" */
@@ -2711,14 +2723,11 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
         goto on_return;
     }
 
-    /* Get/attach invite session's transaction data */
-    tsx_inv_data = (struct tsx_inv_data*) tsx->mod_data[mod_inv.mod.id];
-    if (tsx_inv_data == NULL) {
-        tsx_inv_data = PJ_POOL_ZALLOC_T(tsx->pool, struct tsx_inv_data);
-        tsx_inv_data->inv = inv;
-        tsx_inv_data->has_sdp = (sdp_info->sdp!=NULL);
-        tsx->mod_data[mod_inv.mod.id] = tsx_inv_data;
-    }
+    /* Record whether this message carries SDP as well as whether it has any
+     * body at all. The latter distinguishes an offerless request from an
+     * accepted request with an unknown content type.
+     */
+    tsx_inv_data->has_sdp = (sdp_info->sdp != NULL);
 
     /* Initialize info that we are following forked media */
     inv->following_fork = PJ_FALSE;
@@ -3178,6 +3187,61 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(   pjsip_inv_session *inv,
     /* For non-2xx final response, strip message body */
     if (st_code >= 300) {
         last_res->msg->body = NULL;
+    }
+
+    /* An asynchronous confirmed UAS re-INVITE without an SDP offer is
+     * answered with a new local offer in the 2xx response. */
+    if (st_code/100 == 2 && inv->state == PJSIP_INV_STATE_CONFIRMED &&
+        inv->invite_tsx && inv->neg &&
+        pjmedia_sdp_neg_get_state(inv->neg) == PJMEDIA_SDP_NEG_STATE_DONE)
+    {
+        struct tsx_inv_data *tsx_inv_data;
+        const pjmedia_sdp_session *offer = local_sdp;
+        pjmedia_sdp_session *new_offer = NULL;
+        const pjmedia_sdp_session *local_offer = NULL;
+
+        tsx_inv_data = (struct tsx_inv_data*)
+                       inv->invite_tsx->mod_data[mod_inv.mod.id];
+        if (!tsx_inv_data) {
+            tsx_inv_data = PJ_POOL_ZALLOC_T(inv->invite_tsx->pool,
+                                            struct tsx_inv_data);
+            tsx_inv_data->inv = inv;
+            tsx_inv_data->has_sdp = PJ_FALSE;
+            inv->invite_tsx->mod_data[mod_inv.mod.id] = tsx_inv_data;
+        }
+        if (tsx_inv_data && !tsx_inv_data->has_sdp &&
+            !tsx_inv_data->has_body)
+        {
+            if (!offer && mod_inv.cb.on_create_offer) {
+                (*mod_inv.cb.on_create_offer)(inv, &new_offer);
+                if (new_offer)
+                    offer = new_offer;
+            }
+
+            if (offer) {
+                status = pjmedia_sdp_neg_modify_local_offer2(
+                            inv->pool_prov, inv->neg,
+                            inv->sdp_neg_flags, offer);
+            } else {
+                /* Match the synchronous offerless re-INVITE path: if the
+                 * application does not provide a new offer, keep the call
+                 * established by re-offering the active local SDP.
+                 */
+                status = pjmedia_sdp_neg_send_local_offer(
+                            inv->pool_prov, inv->neg, &local_offer);
+                if (status == PJ_SUCCESS)
+                    offer = local_offer;
+            }
+
+            if (status != PJ_SUCCESS) {
+                pjsip_tx_data_dec_ref(last_res);
+                pjsip_tx_data_dec_ref(last_res);
+                goto on_return;
+            }
+
+            /* local_sdp has already been installed as the offer above. */
+            local_sdp = NULL;
+        }
     }
 
     /* Process SDP in answer */

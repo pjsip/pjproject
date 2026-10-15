@@ -53,6 +53,10 @@ excluded_tests = [
     "alt-pjsua-uas-multiple-amr",
     "alt-pjsua-uas-media-app-managed",
     "alt-pjsua-uas-early-update-app-managed",
+    "alt-pjsua-uac-late-offer",
+    "alt-pjsua-uas-late-offer",
+    "alt-pjsua-uac-late-offer-dummy-codecs",
+    "alt-pjsua-uas-late-offer-dummy-codecs",
 ]
 
 # Exclude scripts-sipp/uac-reinvite-bad-via-branch on MacOS due to unreliable result
