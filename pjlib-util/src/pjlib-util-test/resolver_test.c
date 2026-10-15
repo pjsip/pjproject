@@ -2693,19 +2693,58 @@ static void dns_callback_reset_ns(void *user_data,
 {
     PJ_UNUSED_ARG(user_data);
 
+    lock();
     reset_ns_cb_status = status;
     if (status == PJ_SUCCESS && resp && resp->hdr.anscount)
         reset_ns_cb_addr = resp->ans[0].rdata.a.ip_addr.s_addr;
     reset_ns_cb_called = PJ_TRUE;
+    unlock();
+}
+
+static void reset_ns_cb_clear(void)
+{
+    lock();
+    reset_ns_cb_called = PJ_FALSE;
+    unlock();
+}
+
+static pj_bool_t reset_ns_called(void)
+{
+    pj_bool_t called;
+
+    lock();
+    called = reset_ns_cb_called;
+    unlock();
+    return called;
+}
+
+static pj_status_t reset_ns_status(void)
+{
+    pj_status_t status;
+
+    lock();
+    status = reset_ns_cb_status;
+    unlock();
+    return status;
+}
+
+static pj_uint32_t reset_ns_addr(void)
+{
+    pj_uint32_t addr;
+
+    lock();
+    addr = reset_ns_cb_addr;
+    unlock();
+    return addr;
 }
 
 static int wait_reset_ns_cb(void)
 {
     unsigned i;
 
-    for (i = 0; !reset_ns_cb_called && i < 500; ++i)
+    for (i = 0; !reset_ns_called() && i < 500; ++i)
         pj_thread_sleep(10);
-    return reset_ns_cb_called ? 0 : -1;
+    return reset_ns_called() ? 0 : -1;
 }
 
 /* Wait for the servers to have counted the packets sent to them */
@@ -2724,20 +2763,98 @@ static int wait_pkt_count(unsigned count)
 /* Fail the test, cleaning up at its end */
 #define SYS_FAIL(code)  { rc = (code); goto on_return; }
 
-/* After the reset, a nameserver marked as bad is tried again, while the
- * cache and the pending queries are kept.
+/* Add an A entry: an answer, or an error with no answer */
+static pj_status_t reset_add_entry(pj_dns_resolver *res, const char *name,
+                                   int rcode, pj_bool_t with_ans,
+                                   pj_bool_t set_ttl)
+{
+    pj_dns_parsed_packet pkt;
+    pj_dns_parsed_query question;
+    pj_dns_parsed_rr ans;
+
+    pj_bzero(&pkt, sizeof(pkt));
+    pj_bzero(&question, sizeof(question));
+    pj_bzero(&ans, sizeof(ans));
+    pkt.hdr.flags = PJ_DNS_SET_QR(1) | PJ_DNS_SET_RCODE(rcode);
+    pkt.hdr.qdcount = 1;
+    pkt.q = &question;
+    question.name = pj_str((char*)name);
+    question.type = PJ_DNS_TYPE_A;
+    question.dnsclass = 1;
+    if (with_ans) {
+        pkt.hdr.anscount = 1;
+        pkt.ans = &ans;
+        ans.name = question.name;
+        ans.type = PJ_DNS_TYPE_A;
+        ans.dnsclass = 1;
+        ans.ttl = 300;
+        ans.rdata.a.ip_addr.s_addr = IP_ADDR0;
+    }
+    return pj_dns_resolver_add_entry(res, &pkt, set_ttl);
+}
+
+/* Whether the query is answered from the cache, with the status */
+static pj_bool_t reset_is_cached(pj_dns_resolver *res, const char *name,
+                                 pj_status_t status)
+{
+    pj_str_t n = pj_str((char*)name);
+    pj_dns_async_query *q = NULL;
+
+    reset_ns_cb_clear();
+    if (pj_dns_resolver_start_query(res, &n, PJ_DNS_TYPE_A, 0,
+                                    &dns_callback_reset_ns, NULL, &q) !=
+        PJ_SUCCESS)
+    {
+        return PJ_FALSE;
+    }
+    return q == NULL && reset_ns_called() && reset_ns_status() == status;
+}
+
+/* Wait for the response of a query to be in the cache: it is added after
+ * the callback
+ */
+static int wait_cached_count(pj_dns_resolver *res, unsigned count)
+{
+    unsigned i;
+
+    for (i = 0; pj_dns_resolver_get_cached_count(res) < count && i < 500;
+         ++i)
+    {
+        pj_thread_sleep(10);
+    }
+    return pj_dns_resolver_get_cached_count(res) >= count ? 0 : -1;
+}
+
+/* After the reset, a nameserver marked as bad is tried again, the pending
+ * queries go on but their responses are not cached, and the cached
+ * responses whose TTL the resolver chose are dropped.
  */
 static int dns_reset_ns_state_test(void)
 {
     pj_str_t name1 = pj_str("name_reset1");
     pj_str_t name2 = pj_str("name_reset2");
+    pj_str_t name3 = pj_str("name_reset3");
+    static const int drop_rcode[] = {
+        PJ_DNS_RCODE_FORMERR, PJ_DNS_RCODE_SERVFAIL,
+        PJ_DNS_RCODE_NOTIMPL, PJ_DNS_RCODE_NXDOMAIN,
+        PJ_DNS_RCODE_NOTAUTH
+    };
+    /* The last two need PJ_DNS_RESOLVER_INVALID_TTL to be cached */
+    static const char *drop_name[] = {
+        "name_reset_err1", "name_reset_err2", "name_reset_err3",
+        "name_reset_err4", "name_reset_err5", "name_reset1",
+        "name_reset_nodata"
+    };
+    pj_dns_async_query *drop_q[PJ_ARRAY_SIZE(drop_name)] = { NULL };
+    unsigned drop_cnt = PJ_ARRAY_SIZE(drop_name);
+    unsigned i;
     pj_str_t ns_addr = pj_str("127.0.0.1");
     pj_uint16_t port = g_server[0].port;
     pj_dns_parsed_packet *r;
     pj_dns_resolver *res = NULL;
     pj_dns_settings lset;
     pj_dns_async_query *q;
-    unsigned sent;
+    unsigned sent, cached;
     int rc = 0;
 
     PJ_LOG(3,(THIS_FILE, "  reset nameserver state test"));
@@ -2747,7 +2864,7 @@ static int dns_reset_ns_state_test(void)
                                            &res),
                     NULL, SYS_FAIL(-900));
     pj_dns_resolver_get_settings(res, &lset);
-    lset.qretr_delay = 200;
+    lset.qretr_delay = 1000;
     lset.qretr_count = 3;
     pj_dns_resolver_set_settings(res, &lset);
     PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(res, 1, &ns_addr, &port),
@@ -2756,13 +2873,13 @@ static int dns_reset_ns_state_test(void)
     /* A refusal marks the nameserver as bad */
     g_server[0].action = PJ_DNS_RCODE_REFUSED;
     g_server[0].pkt_count = 0;
-    reset_ns_cb_called = PJ_FALSE;
+    reset_ns_cb_clear();
     PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name1, PJ_DNS_TYPE_A, 0,
                                                 &dns_callback_reset_ns, NULL,
                                                 NULL),
                     NULL, SYS_FAIL(-902));
     PJ_TEST_EQ(wait_reset_ns_cb(), 0, NULL, SYS_FAIL(-903));
-    PJ_TEST_EQ(reset_ns_cb_status,
+    PJ_TEST_EQ(reset_ns_status(),
                PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_REFUSED),
                NULL, SYS_FAIL(-904));
 
@@ -2776,7 +2893,7 @@ static int dns_reset_ns_state_test(void)
     /* Tried again after the reset */
     PJ_TEST_SUCCESS(pj_dns_resolver_reset_ns_state(res), NULL, SYS_FAIL(-906));
     g_server[0].action = ACTION_IGNORE;
-    reset_ns_cb_called = PJ_FALSE;
+    reset_ns_cb_clear();
     PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name2, PJ_DNS_TYPE_A, 0,
                                                 &dns_callback_reset_ns, NULL,
                                                 &q),
@@ -2785,7 +2902,7 @@ static int dns_reset_ns_state_test(void)
     PJ_TEST_EQ(wait_pkt_count(sent + 1), 0, NULL, SYS_FAIL(-909));
 
     /* The pending query goes on after another reset, and gets the answer
-     * to its retransmission
+     * to its retransmission, which is not cached
      */
     PJ_TEST_SUCCESS(pj_dns_resolver_reset_ns_state(res), NULL, SYS_FAIL(-910));
     r = &g_server[0].resp;
@@ -2803,29 +2920,447 @@ static int dns_reset_ns_state_test(void)
     r->ans[0].rdata.a.ip_addr.s_addr = IP_ADDR0;
     g_server[0].action = ACTION_REPLY;
     PJ_TEST_EQ(wait_reset_ns_cb(), 0, NULL, SYS_FAIL(-911));
-    PJ_TEST_SUCCESS(reset_ns_cb_status, NULL, SYS_FAIL(-912));
-    PJ_TEST_EQ(reset_ns_cb_addr, IP_ADDR0, NULL, SYS_FAIL(-913));
+    PJ_TEST_SUCCESS(reset_ns_status(), NULL, SYS_FAIL(-912));
+    PJ_TEST_EQ(reset_ns_addr(), IP_ADDR0, NULL, SYS_FAIL(-913));
 
-    /* The cache is kept: answered from it, nothing sent */
-    sent = g_server[0].pkt_count + g_server[1].pkt_count;
-    PJ_TEST_SUCCESS(pj_dns_resolver_reset_ns_state(res), NULL, SYS_FAIL(-914));
-    reset_ns_cb_called = PJ_FALSE;
+    cached = pj_dns_resolver_get_cached_count(res);
+    reset_ns_cb_clear();
     PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name2, PJ_DNS_TYPE_A, 0,
                                                 &dns_callback_reset_ns, NULL,
                                                 &q),
-                    NULL, SYS_FAIL(-915));
-    PJ_TEST_TRUE(q == NULL, NULL, SYS_FAIL(-916));
-    PJ_TEST_TRUE(reset_ns_cb_called, NULL, SYS_FAIL(-917));
+                    NULL, SYS_FAIL(-914));
+    PJ_TEST_NOT_NULL(q, NULL, SYS_FAIL(-915));
+    PJ_TEST_EQ(wait_reset_ns_cb(), 0, NULL, SYS_FAIL(-916));
+    PJ_TEST_SUCCESS(reset_ns_status(), NULL, SYS_FAIL(-917));
+
+    /* The answer of a query started after the reset is cached */
+    PJ_TEST_EQ(wait_cached_count(res, cached + 1), 0, NULL, SYS_FAIL(-918));
+
+#if PJ_DNS_RESOLVER_INVALID_TTL
+    /* A refusal from a reply is cached */
+    g_server[0].action = PJ_DNS_RCODE_REFUSED;
+    reset_ns_cb_clear();
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name1, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_reset_ns, NULL,
+                                                NULL),
+                    NULL, SYS_FAIL(-919));
+    PJ_TEST_EQ(wait_reset_ns_cb(), 0, NULL, SYS_FAIL(-920));
+    PJ_TEST_EQ(wait_cached_count(res, cached + 2), 0, NULL, SYS_FAIL(-921));
+    PJ_TEST_TRUE(reset_is_cached(res, "name_reset1",
+                     PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_REFUSED)),
+                 NULL, SYS_FAIL(-922));
+
+    /* An empty answer */
+    PJ_TEST_SUCCESS(reset_add_entry(res, "name_reset_nodata", 0, PJ_FALSE,
+                                    PJ_TRUE),
+                    NULL, SYS_FAIL(-923));
+    PJ_TEST_TRUE(reset_is_cached(res, "name_reset_nodata", PJ_SUCCESS), NULL,
+                 SYS_FAIL(-924));
+#else
+    drop_cnt -= 2;
+#endif
+
+    /* Errors and NXDOMAIN added with TTL, with an answer so that they are
+     * cached even if PJ_DNS_RESOLVER_INVALID_TTL is 0
+     */
+    for (i = 0; i < PJ_ARRAY_SIZE(drop_rcode); ++i) {
+        PJ_TEST_SUCCESS(reset_add_entry(res, drop_name[i], drop_rcode[i],
+                                        PJ_TRUE, PJ_TRUE),
+                        NULL, SYS_FAIL(-925));
+        PJ_TEST_TRUE(reset_is_cached(res, drop_name[i],
+                         PJ_STATUS_FROM_DNS_RCODE(drop_rcode[i])),
+                     NULL, SYS_FAIL(-926));
+    }
+
+    /* An error added without TTL, which is kept */
+    PJ_TEST_SUCCESS(reset_add_entry(res, "name_reset_nottl",
+                                    PJ_DNS_RCODE_SERVFAIL, PJ_FALSE,
+                                    PJ_FALSE),
+                    NULL, SYS_FAIL(-927));
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_reset_ns_state(res), NULL, SYS_FAIL(-928));
+
+    /* The answer with records and the entry without TTL are kept */
+    sent = g_server[0].pkt_count + g_server[1].pkt_count;
+    PJ_TEST_TRUE(reset_is_cached(res, "name_reset2", PJ_SUCCESS), NULL,
+                 SYS_FAIL(-929));
+    PJ_TEST_EQ(reset_ns_addr(), IP_ADDR0, NULL, SYS_FAIL(-930));
+    PJ_TEST_TRUE(reset_is_cached(res, "name_reset_nottl",
+                     PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_SERVFAIL)),
+                 NULL, SYS_FAIL(-931));
     PJ_TEST_EQ(g_server[0].pkt_count + g_server[1].pkt_count, sent, NULL,
-               SYS_FAIL(-918));
+               SYS_FAIL(-932));
 
-    pj_dns_resolver_destroy(res, PJ_FALSE);
-    res = NULL;
+    /* The others are sent, left unanswered until cancelled at the end */
+    g_server[0].action = ACTION_IGNORE;
+    lset.qretr_delay = 10000;
+    pj_dns_resolver_set_settings(res, &lset);
+    sent = g_server[0].pkt_count + g_server[1].pkt_count;
+    for (i = 0; i < drop_cnt; ++i) {
+        pj_str_t name = pj_str((char*)drop_name[i]);
 
+        PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name,
+                                                    PJ_DNS_TYPE_A, 0,
+                                                    &dns_callback_reset_ns,
+                                                    NULL, &drop_q[i]),
+                        NULL, SYS_FAIL(-933));
+        PJ_TEST_NOT_NULL(drop_q[i], NULL, SYS_FAIL(-934));
+    }
+    PJ_TEST_EQ(wait_pkt_count(sent + drop_cnt), 0, NULL, SYS_FAIL(-935));
+
+    /* Nor is the answer of a query pending across
+     * pj_dns_resolver_clear_cache(): the server replies after its delay
+     */
+    lset.qretr_delay = 1000;
+    pj_dns_resolver_set_settings(res, &lset);
+    r->q[0].name = name3;
+    r->ans[0].name = name3;
+    g_server[0].action = ACTION_IGNORE;
+    reset_ns_cb_clear();
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name3, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_reset_ns, NULL,
+                                                &q),
+                    NULL, SYS_FAIL(-936));
+    PJ_TEST_NOT_NULL(q, NULL, SYS_FAIL(-937));
+    PJ_TEST_SUCCESS(pj_dns_resolver_clear_cache(res), NULL, SYS_FAIL(-938));
+    g_server[0].action = ACTION_REPLY;
+    PJ_TEST_EQ(wait_reset_ns_cb(), 0, NULL, SYS_FAIL(-939));
+    PJ_TEST_SUCCESS(reset_ns_status(), NULL, SYS_FAIL(-940));
+    reset_ns_cb_clear();
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name3, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_reset_ns, NULL,
+                                                &q),
+                    NULL, SYS_FAIL(-941));
+    PJ_TEST_NOT_NULL(q, NULL, SYS_FAIL(-942));
+    PJ_TEST_EQ(wait_reset_ns_cb(), 0, NULL, SYS_FAIL(-943));
 
 on_return:
-    if (res)
+    if (res) {
+        for (i = 0; i < PJ_ARRAY_SIZE(drop_q); ++i) {
+            if (drop_q[i])
+                pj_dns_resolver_cancel_query(drop_q[i], PJ_FALSE);
+        }
         pj_dns_resolver_destroy(res, PJ_FALSE);
+    }
+    return rc;
+}
+
+
+/* A server which counts the queries of a name by id, and answers the
+ * first one (the old query) and the others (the new ones) as set:
+ * ACTION_IGNORE, ACTION_REPLY with its own address, or an rcode.
+ */
+#define JOIN_ADDR_OLD   0x0A000001
+#define JOIN_ADDR_NEW   0x0A000002
+
+static struct {
+    const char  *name;
+    pj_uint16_t  ids[8];
+    unsigned     id_cnt;
+    int          old_act;
+    int          new_act;
+} join_srv;
+
+static void join_action(const pj_dns_parsed_packet *pkt,
+                        pj_dns_parsed_packet **p_res)
+{
+    pj_dns_parsed_packet *res = NULL;
+    int act = ACTION_IGNORE;
+    unsigned i;
+
+    lock();
+    if (join_srv.name && pj_strcmp2(&pkt->q[0].name, join_srv.name) == 0) {
+        for (i = 0; i < join_srv.id_cnt; ++i) {
+            if (join_srv.ids[i] == pkt->hdr.id)
+                break;
+        }
+        if (i == join_srv.id_cnt && i < PJ_ARRAY_SIZE(join_srv.ids))
+            join_srv.ids[join_srv.id_cnt++] = pkt->hdr.id;
+        act = (i == 0 ? join_srv.old_act : join_srv.new_act);
+    }
+    if (act != ACTION_IGNORE) {
+        res = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_packet);
+        res->q = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_query);
+        res->hdr.flags = PJ_DNS_SET_QR(1);
+        res->hdr.qdcount = 1;
+        res->q[0] = pkt->q[0];
+        if (act == ACTION_REPLY) {
+            res->ans = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_rr);
+            res->hdr.anscount = 1;
+            res->ans[0].name = pkt->q[0].name;
+            res->ans[0].type = PJ_DNS_TYPE_A;
+            res->ans[0].dnsclass = 1;
+            res->ans[0].ttl = 300;
+            res->ans[0].rdata.a.ip_addr.s_addr = (i == 0 ? JOIN_ADDR_OLD :
+                                                  JOIN_ADDR_NEW);
+        } else {
+            res->hdr.flags |= PJ_DNS_SET_RCODE(act);
+        }
+    }
+    unlock();
+    *p_res = res;
+}
+
+static void join_srv_set(const char *name, int old_act, int new_act)
+{
+    lock();
+    if (name) {
+        pj_bzero(&join_srv, sizeof(join_srv));
+        join_srv.name = name;
+    }
+    join_srv.old_act = old_act;
+    join_srv.new_act = new_act;
+    unlock();
+}
+
+static unsigned join_id_count(void)
+{
+    unsigned n;
+
+    lock();
+    n = join_srv.id_cnt;
+    unlock();
+    return n;
+}
+
+/* Wait for the server to have seen count queries of the name */
+static int wait_join_ids(unsigned count)
+{
+    unsigned i;
+
+    for (i = 0; join_id_count() < count && i < 500; ++i)
+        pj_thread_sleep(10);
+    return join_id_count() >= count ? 0 : -1;
+}
+
+static struct {
+    volatile pj_bool_t  called;
+    pj_status_t         status;
+    pj_uint32_t         addr;
+} join_cb[4];
+static pj_dns_resolver *join_res;
+static pj_status_t join_start_status;
+
+static void dns_callback_join(void *user_data,
+                              pj_status_t status,
+                              pj_dns_parsed_packet *resp)
+{
+    unsigned i = (unsigned)(pj_ssize_t)user_data;
+
+    lock();
+    join_cb[i].status = status;
+    if (status == PJ_SUCCESS && resp && resp->hdr.anscount)
+        join_cb[i].addr = resp->ans[0].rdata.a.ip_addr.s_addr;
+    join_cb[i].called = PJ_TRUE;
+    unlock();
+}
+
+static pj_bool_t join_called(unsigned i)
+{
+    pj_bool_t called;
+
+    lock();
+    called = join_cb[i].called;
+    unlock();
+    return called;
+}
+
+static pj_status_t join_status(unsigned i)
+{
+    pj_status_t status;
+
+    lock();
+    status = join_cb[i].status;
+    unlock();
+    return status;
+}
+
+static pj_uint32_t join_addr(unsigned i)
+{
+    pj_uint32_t addr;
+
+    lock();
+    addr = join_cb[i].addr;
+    unlock();
+    return addr;
+}
+
+static pj_status_t join_started(void)
+{
+    pj_status_t status;
+
+    lock();
+    status = join_start_status;
+    unlock();
+    return status;
+}
+
+/* The old query's callback: the query started here finds the old one done
+ * and the new one pending
+ */
+static void dns_callback_join_again(void *user_data,
+                                    pj_status_t status,
+                                    pj_dns_parsed_packet *resp)
+{
+    pj_str_t name;
+    pj_status_t st;
+
+    lock();
+    name = pj_str((char*)join_srv.name);
+    unlock();
+    st = pj_dns_resolver_start_query(join_res, &name, PJ_DNS_TYPE_A, 0,
+                                     &dns_callback_join, (void*)2, NULL);
+    lock();
+    join_start_status = st;
+    unlock();
+    dns_callback_join(user_data, status, resp);
+}
+
+static int wait_join_cb(unsigned i)
+{
+    unsigned n;
+
+    for (n = 0; !join_called(i) && n < 1000; ++n)
+        pj_thread_sleep(10);
+    return join_called(i) ? 0 : -1;
+}
+
+/* The old query, pending at the reset, and a new one for its name */
+static int join_start_old_new(const char *name, pj_dns_callback *old_cb,
+                              pj_bool_t clear, pj_dns_async_query **p_new)
+{
+    pj_str_t n = pj_str((char*)name);
+    pj_status_t status;
+
+    lock();
+    pj_bzero(join_cb, sizeof(join_cb));
+    join_start_status = PJ_EUNKNOWN;
+    unlock();
+    if (pj_dns_resolver_start_query(join_res, &n, PJ_DNS_TYPE_A, 0, old_cb,
+                                    (void*)0, NULL) != PJ_SUCCESS)
+    {
+        return -1;
+    }
+    if (wait_join_ids(1) != 0)
+        return -2;
+    if (clear)
+        status = pj_dns_resolver_clear_cache(join_res);
+    else
+        status = pj_dns_resolver_reset_ns_state(join_res);
+    if (status != PJ_SUCCESS)
+        return -3;
+    if (pj_dns_resolver_start_query(join_res, &n, PJ_DNS_TYPE_A, 0,
+                                    &dns_callback_join, (void*)1,
+                                    p_new) != PJ_SUCCESS)
+    {
+        return -4;
+    }
+    /* Sent on its own, not joined to the old one: before the old one
+     * completes, which may start another query
+     */
+    if (wait_join_ids(2) != 0 || join_called(0))
+        return -5;
+    return 0;
+}
+
+/* A query started after the reset doesn't join one pending from before:
+ * it is sent on its own, and the queries started after the old one
+ * completes, by a response or a timeout, join the new one. The old one's
+ * refusal doesn't mark the nameserver as bad.
+ */
+static int dns_reset_join_test(void)
+{
+    pj_str_t ns_addr = pj_str("127.0.0.1");
+    pj_uint16_t port = g_server[0].port;
+    pj_str_t name = pj_str("name_join_c2");
+    pj_dns_settings lset;
+    pj_dns_async_query *q = NULL;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  reset nameserver state, pending queries test"));
+
+    join_res = NULL;
+    PJ_TEST_SUCCESS(pj_dns_resolver_create(mem, NULL, 0, timer_heap, ioqueue,
+                                           &join_res),
+                    NULL, SYS_FAIL(-950));
+    pj_dns_resolver_get_settings(join_res, &lset);
+    lset.qretr_delay = 1000;
+    lset.qretr_count = 3;
+    pj_dns_resolver_set_settings(join_res, &lset);
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(join_res, 1, &ns_addr, &port),
+                    NULL, SYS_FAIL(-951));
+    join_srv_set("name_join_a", ACTION_IGNORE, ACTION_IGNORE);
+    g_server[0].action_cb = &join_action;
+    g_server[0].action = ACTION_CB;
+
+    /* The old one answered: its address to its own callback only */
+    PJ_TEST_EQ(join_start_old_new("name_join_a", &dns_callback_join_again,
+                                  PJ_FALSE, NULL),
+               0, NULL, SYS_FAIL(-952));
+    join_srv_set(NULL, ACTION_REPLY, ACTION_IGNORE);
+    PJ_TEST_EQ(wait_join_cb(0), 0, NULL, SYS_FAIL(-953));
+    PJ_TEST_EQ(join_addr(0), JOIN_ADDR_OLD, NULL, SYS_FAIL(-954));
+    PJ_TEST_SUCCESS(join_started(), NULL, SYS_FAIL(-955));
+    join_srv_set(NULL, ACTION_REPLY, ACTION_REPLY);
+    PJ_TEST_EQ(wait_join_cb(2), 0, NULL, SYS_FAIL(-956));
+    PJ_TEST_EQ(join_addr(2), JOIN_ADDR_NEW, NULL, SYS_FAIL(-957));
+    PJ_TEST_EQ(join_id_count(), 2, NULL, SYS_FAIL(-958));
+    PJ_TEST_EQ(wait_join_cb(1), 0, NULL, SYS_FAIL(-959));
+    PJ_TEST_EQ(join_addr(1), JOIN_ADDR_NEW, NULL, SYS_FAIL(-960));
+
+    /* The old one timed out: the one started then joins the new one */
+    join_srv_set("name_join_b", ACTION_IGNORE, ACTION_IGNORE);
+    PJ_TEST_EQ(join_start_old_new("name_join_b", &dns_callback_join_again,
+                                  PJ_FALSE, NULL),
+               0, NULL, SYS_FAIL(-961));
+    PJ_TEST_EQ(wait_join_cb(0), 0, NULL, SYS_FAIL(-962));
+    PJ_TEST_EQ(join_status(0), PJ_ETIMEDOUT, NULL, SYS_FAIL(-963));
+    PJ_TEST_SUCCESS(join_started(), NULL, SYS_FAIL(-964));
+    PJ_TEST_EQ(wait_join_cb(2), 0, NULL, SYS_FAIL(-965));
+    PJ_TEST_EQ(join_status(2), PJ_ETIMEDOUT, NULL, SYS_FAIL(-966));
+    PJ_TEST_EQ(join_id_count(), 2, NULL, SYS_FAIL(-967));
+    PJ_TEST_EQ(wait_join_cb(1), 0, NULL, SYS_FAIL(-968));
+
+    /* The old one refused: the nameserver is not marked as bad */
+    join_srv_set("name_join_c", ACTION_IGNORE, ACTION_IGNORE);
+    PJ_TEST_EQ(join_start_old_new("name_join_c", &dns_callback_join,
+                                  PJ_FALSE, &q),
+               0, NULL, SYS_FAIL(-969));
+    join_srv_set(NULL, PJ_DNS_RCODE_REFUSED, ACTION_IGNORE);
+    PJ_TEST_EQ(wait_join_cb(0), 0, NULL, SYS_FAIL(-970));
+    PJ_TEST_EQ(join_status(0),
+               PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_REFUSED),
+               NULL, SYS_FAIL(-971));
+    PJ_TEST_SUCCESS(pj_dns_resolver_cancel_query(q, PJ_FALSE), NULL,
+                    SYS_FAIL(-972));
+    q = NULL;
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(join_res, &name,
+                                                PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_join,
+                                                (void*)3, &q),
+                    NULL, SYS_FAIL(-973));
+    PJ_TEST_SUCCESS(pj_dns_resolver_cancel_query(q, PJ_FALSE), NULL,
+                    SYS_FAIL(-974));
+    q = NULL;
+
+    /* The same after the cache is cleared */
+    join_srv_set("name_join_d", ACTION_IGNORE, ACTION_IGNORE);
+    PJ_TEST_EQ(join_start_old_new("name_join_d", &dns_callback_join,
+                                  PJ_TRUE, &q),
+               0, NULL, SYS_FAIL(-975));
+
+on_return:
+    if (q)
+        pj_dns_resolver_cancel_query(q, PJ_FALSE);
+    if (join_res) {
+        pj_dns_resolver_destroy(join_res, PJ_FALSE);
+        join_res = NULL;
+    }
+    join_srv_set(NULL, ACTION_IGNORE, ACTION_IGNORE);
+    lock();
+    join_srv.name = NULL;
+    unlock();
+    g_server[0].action = ACTION_IGNORE;
     return rc;
 }
 
@@ -2930,18 +3465,34 @@ static struct {
     unsigned      qretr_delay;      /* of the resolver of the test */
 } sys_state;
 
+/* The lookups so far */
+static int sys_count(void)
+{
+    int count;
+
+    lock();
+    count = sys_state.count;
+    unlock();
+    return count;
+}
+
 static pj_status_t test_sys_lookup(int af, const pj_str_t *name,
                                    unsigned *count, pj_addrinfo ai[])
 {
     /* Read once: the cleanup of a test clears it */
     pj_sem_t *block = sys_state.block;
 
+    /* The lookup threads may run at once */
+    lock();
     sys_state.count++;
     sys_state.af = af;
     pj_ansi_strxcpy2(sys_state.name, name, sizeof(sys_state.name));
+    unlock();
     if (block) {
         pj_sem_wait(block);
+        lock();
         sys_state.unblocked = PJ_TRUE;
+        unlock();
     }
     if (sys_state.status != PJ_SUCCESS)
         return sys_state.status;
@@ -2970,6 +3521,7 @@ static void dns_callback_sys(void *user_data,
 {
     unsigned i = (unsigned)(pj_ssize_t)user_data;
 
+    lock();
     sys_cb[i].called++;
     sys_cb[i].status = status;
     sys_cb[i].type = 0;
@@ -2982,6 +3534,27 @@ static void dns_callback_sys(void *user_data,
         else if (resp->ans[0].type == PJ_DNS_TYPE_AAAA)
             sys_cb[i].addr6_last = resp->ans[0].rdata.aaaa.ip_addr.s6_addr[15];
     }
+    unlock();
+}
+
+static int sys_cb_called(unsigned i)
+{
+    int called;
+
+    lock();
+    called = sys_cb[i].called;
+    unlock();
+    return called;
+}
+
+static pj_status_t sys_cb_status(unsigned i)
+{
+    pj_status_t status;
+
+    lock();
+    status = sys_cb[i].status;
+    unlock();
+    return status;
 }
 
 static void sys_reset(void)
@@ -3047,9 +3620,9 @@ static int nt_wait_cb(unsigned i)
 {
     unsigned n;
 
-    for (n = 0; !sys_cb[i].called && n < 500; ++n)
+    for (n = 0; !sys_cb_called(i) && n < 500; ++n)
         nt_poll(10);
-    return sys_cb[i].called ? 0 : -1;
+    return sys_cb_called(i) ? 0 : -1;
 }
 
 static void dns_callback_nt(void *user_data,
@@ -3084,6 +3657,35 @@ static void dns_callback_nt_destroy(void *user_data,
     nt.res = NULL;
 }
 
+/* The number of queries sent to the nameserver since the last call,
+ * waiting for the first one if asked: a packet sent may take a while to be
+ * readable, e.g. on macOS
+ */
+static unsigned nt_drain(pj_bool_t wait_first)
+{
+    char buf[512];
+    unsigned n = 0;
+
+    for (;;) {
+        pj_fd_set_t rset;
+        pj_time_val timeout = {0, 50};
+        pj_ssize_t len = sizeof(buf);
+
+        if (n == 0 && wait_first)
+            timeout.sec = 2;
+        PJ_FD_ZERO(&rset);
+        PJ_FD_SET(nt.sock, &rset);
+        if (pj_sock_select((int)nt.sock + 1, &rset, NULL, NULL,
+                           &timeout) <= 0 ||
+            pj_sock_recv(nt.sock, buf, &len, 0) != PJ_SUCCESS)
+        {
+            break;
+        }
+        ++n;
+    }
+    return n;
+}
+
 static int nt_start(pj_dns_callback *cb, const char *name, int type,
                     unsigned i, pj_dns_async_query **p_q)
 {
@@ -3105,8 +3707,11 @@ static int nt_setup(void)
     pj_bzero(&nt, sizeof(nt));
     nt.sock = PJ_INVALID_SOCKET;
     nt.pool = pj_pool_create(mem, "nothreads", 4000, 4000, NULL);
-    if (!nt.pool)
+    if (!nt.pool ||
+        pj_mutex_create_simple(nt.pool, "nothreads", &mutex) != PJ_SUCCESS)
+    {
         return -1;
+    }
     if (pj_timer_heap_create(nt.pool, 32, &nt.th) != PJ_SUCCESS ||
         pj_ioqueue_create(nt.pool, 8, &nt.ioq) != PJ_SUCCESS)
     {
@@ -3149,6 +3754,10 @@ static void nt_teardown(void)
         pj_ioqueue_destroy(nt.ioq);
     if (nt.th)
         pj_timer_heap_destroy(nt.th);
+    if (mutex) {
+        pj_mutex_destroy(mutex);
+        mutex = NULL;
+    }
     if (nt.pool)
         pj_pool_release(nt.pool);
     pj_bzero(&nt, sizeof(nt));
@@ -3175,14 +3784,14 @@ int resolver_nothreads_test(void)
     PJ_TEST_SUCCESS(nt_start(&dns_callback_nt, "nt_a", PJ_DNS_TYPE_A, 1,
                              NULL),
                     NULL, SYS_FAIL(-1402));
-    PJ_TEST_EQ(sys_state.count, 0, NULL, SYS_FAIL(-1403));
+    PJ_TEST_EQ(sys_count(), 0, NULL, SYS_FAIL(-1403));
     PJ_TEST_EQ(nt_wait_cb(0), 0, NULL, SYS_FAIL(-1404));
     PJ_TEST_EQ(nt_wait_cb(1), 0, NULL, SYS_FAIL(-1405));
     PJ_TEST_SUCCESS(sys_cb[0].status, NULL, SYS_FAIL(-1406));
     PJ_TEST_SUCCESS(sys_cb[1].status, NULL, SYS_FAIL(-1407));
     PJ_TEST_EQ(sys_cb[0].addr, SYS_ADDR, NULL,
                SYS_FAIL(-1408));
-    PJ_TEST_EQ(sys_state.count, 1, NULL, SYS_FAIL(-1409));
+    PJ_TEST_EQ(sys_count(), 1, NULL, SYS_FAIL(-1409));
 
     /* The nameserver bad once its probing is over: the queries of a name
      * join the one being looked up, from the timer
@@ -3206,7 +3815,7 @@ int resolver_nothreads_test(void)
                     NULL, SYS_FAIL(-1414));
     PJ_TEST_SUCCESS(pj_dns_resolver_cancel_query(q, PJ_FALSE), NULL,
                     SYS_FAIL(-1415));
-    PJ_TEST_EQ(sys_state.count, 0, NULL, SYS_FAIL(-1416));
+    PJ_TEST_EQ(sys_count(), 0, NULL, SYS_FAIL(-1416));
     PJ_TEST_EQ(nt_wait_cb(0), 0, NULL, SYS_FAIL(-1417));
     PJ_TEST_EQ(nt_wait_cb(1), 0, NULL, SYS_FAIL(-1418));
     PJ_TEST_EQ(nt_wait_cb(2), 0, NULL, SYS_FAIL(-1419));
@@ -3217,7 +3826,7 @@ int resolver_nothreads_test(void)
     PJ_TEST_EQ(sys_cb[2].type, PJ_DNS_TYPE_AAAA, NULL,
                SYS_FAIL(-1422));
     /* One lookup per type, the first query reported before the joined */
-    PJ_TEST_EQ(sys_state.count, 2, NULL, SYS_FAIL(-1423));
+    PJ_TEST_EQ(sys_count(), 2, NULL, SYS_FAIL(-1423));
     PJ_TEST_TRUE(nt.seq_of[0] < nt.seq_of[1], NULL,
                  SYS_FAIL(-1424));
 
@@ -3234,7 +3843,75 @@ int resolver_nothreads_test(void)
     PJ_TEST_EQ(nt_wait_cb(3), 0, NULL, SYS_FAIL(-1427));
     PJ_TEST_SUCCESS(sys_cb[3].status, NULL, SYS_FAIL(-1428));
     PJ_TEST_EQ(sys_cb[3].called, 1, NULL, SYS_FAIL(-1429));
-    PJ_TEST_EQ(sys_state.count, 2, NULL, SYS_FAIL(-1430));
+    PJ_TEST_EQ(sys_count(), 2, NULL, SYS_FAIL(-1430));
+
+    /* Not cached when the nameservers' state is reset meanwhile */
+    nt_poll(3 * 50);
+    PJ_TEST_TRUE(sys_none_works(nt.res), NULL, SYS_FAIL(-1442));
+    sys_reset();
+    sys_state.qretr_delay = 50;
+    PJ_TEST_SUCCESS(nt_start(&dns_callback_nt, "nt_f", PJ_DNS_TYPE_A, 0,
+                             NULL),
+                    NULL, SYS_FAIL(-1443));
+    PJ_TEST_SUCCESS(pj_dns_resolver_reset_ns_state(nt.res), NULL,
+                    SYS_FAIL(-1444));
+    PJ_TEST_EQ(nt_wait_cb(0), 0, NULL, SYS_FAIL(-1445));
+    PJ_TEST_SUCCESS(sys_cb_status(0), NULL, SYS_FAIL(-1446));
+    PJ_TEST_SUCCESS(nt_start(&dns_callback_nt, "nt_f", PJ_DNS_TYPE_A, 1, &q),
+                    NULL, SYS_FAIL(-1447));
+    PJ_TEST_NOT_NULL(q, NULL, SYS_FAIL(-1448));
+    PJ_TEST_SUCCESS(pj_dns_resolver_cancel_query(q, PJ_FALSE), NULL,
+                    SYS_FAIL(-1449));
+
+    /* The nameserver bad again */
+    PJ_TEST_SUCCESS(nt_start(&dns_callback_nt, "nt_g", PJ_DNS_TYPE_A, 2,
+                             NULL),
+                    NULL, SYS_FAIL(-1478));
+    PJ_TEST_EQ(nt_wait_cb(2), 0, NULL, SYS_FAIL(-1479));
+    nt_poll(3 * 50);
+    PJ_TEST_TRUE(sys_none_works(nt.res), NULL, SYS_FAIL(-1480));
+
+    /* After the reset, a query doesn't join one waiting for the lookup:
+     * it is sent
+     */
+    sys_reset();
+    sys_state.qretr_delay = 50;
+    nt_drain(PJ_FALSE);
+    PJ_TEST_SUCCESS(nt_start(&dns_callback_nt, "nt_h", PJ_DNS_TYPE_A, 0,
+                             NULL),
+                    NULL, SYS_FAIL(-1482));
+    PJ_TEST_SUCCESS(pj_dns_resolver_reset_ns_state(nt.res), NULL,
+                    SYS_FAIL(-1483));
+    PJ_TEST_SUCCESS(nt_start(&dns_callback_nt, "nt_h", PJ_DNS_TYPE_A, 1, &q),
+                    NULL, SYS_FAIL(-1484));
+    PJ_TEST_EQ(nt_drain(PJ_TRUE), 1, NULL, SYS_FAIL(-1485));
+    PJ_TEST_SUCCESS(pj_dns_resolver_cancel_query(q, PJ_FALSE), NULL,
+                    SYS_FAIL(-1486));
+    PJ_TEST_EQ(nt_wait_cb(0), 0, NULL, SYS_FAIL(-1487));
+    PJ_TEST_SUCCESS(nt_start(&dns_callback_nt, "nt_h2", PJ_DNS_TYPE_A, 2,
+                             NULL),
+                    NULL, SYS_FAIL(-1488));
+    PJ_TEST_EQ(nt_wait_cb(2), 0, NULL, SYS_FAIL(-1489));
+    nt_poll(3 * 50);
+    PJ_TEST_TRUE(sys_none_works(nt.res), NULL, SYS_FAIL(-1512));
+
+    /* Cancelled while waiting for the lookup: not looked up, and the next
+     * query for the name doesn't join it
+     */
+    sys_reset();
+    sys_state.qretr_delay = 50;
+    PJ_TEST_SUCCESS(nt_start(&dns_callback_nt, "nt_i", PJ_DNS_TYPE_A, 0, &q),
+                    NULL, SYS_FAIL(-1513));
+    PJ_TEST_SUCCESS(pj_dns_resolver_cancel_query(q, PJ_FALSE), NULL,
+                    SYS_FAIL(-1514));
+    nt_poll(100);
+    PJ_TEST_SUCCESS(nt_start(&dns_callback_nt, "nt_i", PJ_DNS_TYPE_A, 1,
+                             NULL),
+                    NULL, SYS_FAIL(-1515));
+    PJ_TEST_EQ(nt_wait_cb(1), 0, NULL, SYS_FAIL(-1516));
+    PJ_TEST_SUCCESS(sys_cb_status(1), NULL, SYS_FAIL(-1517));
+    PJ_TEST_EQ(sys_cb_called(0), 0, NULL, SYS_FAIL(-1518));
+    PJ_TEST_EQ(sys_count(), 1, NULL, SYS_FAIL(-1519));
 
     /* Destroyed from a callback: the query waiting is reported as
      * cancelled, once, the joined one with the answer, nothing is left
@@ -3258,7 +3935,7 @@ int resolver_nothreads_test(void)
     PJ_TEST_EQ(sys_cb[2].called, 1, NULL, SYS_FAIL(-1438));
     PJ_TEST_EQ(sys_cb[2].status, PJ_ECANCELLED, NULL,
                SYS_FAIL(-1439));
-    PJ_TEST_EQ(sys_state.count, 1, NULL, SYS_FAIL(-1440));
+    PJ_TEST_EQ(sys_count(), 1, NULL, SYS_FAIL(-1440));
     PJ_TEST_EQ(pj_timer_heap_count(nt.th), 0, NULL,
                SYS_FAIL(-1441));
 
@@ -3271,13 +3948,55 @@ on_return:
 #endif  /* !PJ_HAS_THREADS */
 
 #if PJ_HAS_THREADS
+/* The address family and the name of the last lookup */
+static int sys_af(void)
+{
+    int af;
+
+    lock();
+    af = sys_state.af;
+    unlock();
+    return af;
+}
+
+static int sys_name_cmp(const char *name)
+{
+    int cmp;
+
+    lock();
+    cmp = pj_ansi_strcmp(sys_state.name, name);
+    unlock();
+    return cmp;
+}
+
+static pj_uint32_t sys_cb_addr(unsigned i)
+{
+    pj_uint32_t addr;
+
+    lock();
+    addr = sys_cb[i].addr;
+    unlock();
+    return addr;
+}
+
+/* Clears the callback state of query i, or of all with a negative i */
+static void sys_cb_clear(int i)
+{
+    lock();
+    if (i < 0)
+        pj_bzero(sys_cb, sizeof(sys_cb));
+    else
+        pj_bzero(&sys_cb[i], sizeof(sys_cb[i]));
+    unlock();
+}
+
 static int wait_sys_cb(unsigned i)
 {
     unsigned n;
 
-    for (n = 0; !sys_cb[i].called && n < 300; ++n)
+    for (n = 0; !sys_cb_called(i) && n < 300; ++n)
         pj_thread_sleep(10);
-    return sys_cb[i].called ? 0 : -1;
+    return sys_cb_called(i) ? 0 : -1;
 }
 
 /* After a test, passed or not: the lookups waiting on the semaphore go
@@ -3365,9 +4084,9 @@ static int wait_sys_count(int count)
 {
     unsigned i;
 
-    for (i = 0; sys_state.count < count && i < 500; ++i)
+    for (i = 0; sys_count() < count && i < 500; ++i)
         pj_thread_sleep(10);
-    return sys_state.count >= count ? 0 : -1;
+    return sys_count() >= count ? 0 : -1;
 }
 
 /* Time a query out on the servers, not trusted yet, and get the answer of
@@ -3436,7 +4155,7 @@ static int dns_sys_fallback_timeout_test(void)
                     NULL, SYS_FAIL(-1008));
     PJ_TEST_EQ(wait_sys_cb(3), 0, NULL, SYS_FAIL(-1009));
     PJ_TEST_EQ(sys_cb[3].addr, IP_ADDR0, NULL, SYS_FAIL(-1018));
-    PJ_TEST_EQ(sys_state.count, 0, NULL, SYS_FAIL(-1019));
+    PJ_TEST_EQ(sys_count(), 0, NULL, SYS_FAIL(-1019));
     PJ_TEST_EQ(wait_pkt_count(2), 0, NULL, SYS_FAIL(-1027));
     sent = g_server[0].pkt_count + g_server[1].pkt_count;
 
@@ -3445,7 +4164,7 @@ static int dns_sys_fallback_timeout_test(void)
      */
     PJ_TEST_EQ(sys_time_out(res, "sysname1", 0), 0, NULL, SYS_FAIL(-1001));
     PJ_TEST_EQ(sys_cb[0].status, PJ_ETIMEDOUT, NULL, SYS_FAIL(-1002));
-    PJ_TEST_EQ(sys_state.count, 0, NULL, SYS_FAIL(-1004));
+    PJ_TEST_EQ(sys_count(), 0, NULL, SYS_FAIL(-1004));
     PJ_TEST_EQ(wait_pkt_count(sent + 2), 0, NULL, SYS_FAIL(-1025));
     sent = g_server[0].pkt_count + g_server[1].pkt_count;
 
@@ -3457,9 +4176,9 @@ static int dns_sys_fallback_timeout_test(void)
     PJ_TEST_EQ(sys_time_out(res, "sysname1b", 1), 0, NULL, SYS_FAIL(-1007));
     PJ_TEST_SUCCESS(sys_cb[1].status, NULL, SYS_FAIL(-1003));
     PJ_TEST_EQ(sys_cb[1].addr, SYS_ADDR, NULL, SYS_FAIL(-1005));
-    PJ_TEST_EQ(sys_state.count, 1, NULL, SYS_FAIL(-1024));
-    PJ_TEST_EQ(sys_state.af, pj_AF_INET(), NULL, SYS_FAIL(-1202));
-    PJ_TEST_EQ(pj_ansi_strcmp(sys_state.name, "sysname1b"), 0, NULL,
+    PJ_TEST_EQ(sys_count(), 1, NULL, SYS_FAIL(-1024));
+    PJ_TEST_EQ(sys_af(), pj_AF_INET(), NULL, SYS_FAIL(-1202));
+    PJ_TEST_EQ(sys_name_cmp("sysname1b"), 0, NULL,
                SYS_FAIL(-1006));
     PJ_TEST_TRUE(g_server[0].pkt_count + g_server[1].pkt_count > sent,
                  NULL, SYS_FAIL(-1203));
@@ -3475,7 +4194,7 @@ static int dns_sys_fallback_timeout_test(void)
     PJ_TEST_EQ(wait_sys_cb(2), 0, NULL, SYS_FAIL(-1013));
     PJ_TEST_SUCCESS(sys_cb[2].status, NULL, SYS_FAIL(-1014));
     PJ_TEST_EQ(sys_cb[2].addr, SYS_ADDR, NULL, SYS_FAIL(-1015));
-    PJ_TEST_EQ(sys_state.count, 2, NULL, SYS_FAIL(-1016));
+    PJ_TEST_EQ(sys_count(), 2, NULL, SYS_FAIL(-1016));
     PJ_TEST_TRUE(sys_none_works(res), NULL, SYS_FAIL(-1017));
 
     /* As is a DNS AAAA query */
@@ -3488,8 +4207,8 @@ static int dns_sys_fallback_timeout_test(void)
     PJ_TEST_SUCCESS(sys_cb[1].status, NULL, SYS_FAIL(-1056));
     PJ_TEST_EQ(sys_cb[1].type, PJ_DNS_TYPE_AAAA, NULL, SYS_FAIL(-1057));
     PJ_TEST_EQ(sys_cb[1].addr6_last, 1, NULL, SYS_FAIL(-1058));
-    PJ_TEST_EQ(sys_state.af, pj_AF_INET6(), NULL, SYS_FAIL(-1059));
-    PJ_TEST_EQ(sys_state.count, 3, NULL, SYS_FAIL(-1074));
+    PJ_TEST_EQ(sys_af(), pj_AF_INET6(), NULL, SYS_FAIL(-1059));
+    PJ_TEST_EQ(sys_count(), 3, NULL, SYS_FAIL(-1074));
 
     /* The name which timed out is answered now, the query was recycled;
      * the one answered by the system resolver is cached meanwhile
@@ -3509,7 +4228,7 @@ static int dns_sys_fallback_timeout_test(void)
     PJ_TEST_EQ(q, NULL, NULL, SYS_FAIL(-1079));
     PJ_TEST_EQ(sys_cb[2].called, 1, NULL, SYS_FAIL(-1204));
     PJ_TEST_EQ(sys_cb[2].addr, SYS_ADDR, NULL, SYS_FAIL(-1099));
-    PJ_TEST_EQ(sys_state.count, 4, NULL, SYS_FAIL(-1152));
+    PJ_TEST_EQ(sys_count(), 4, NULL, SYS_FAIL(-1152));
 
     pj_dns_resolver_destroy(res, PJ_FALSE);
     res = NULL;
@@ -3519,7 +4238,7 @@ static int dns_sys_fallback_timeout_test(void)
     PJ_TEST_NOT_NULL(res, NULL, SYS_FAIL(-1020));
     PJ_TEST_EQ(sys_time_out(res, "sysname3", 0), 0, NULL, SYS_FAIL(-1021));
     PJ_TEST_EQ(sys_cb[0].status, PJ_ETIMEDOUT, NULL, SYS_FAIL(-1022));
-    PJ_TEST_EQ(sys_state.count, 4, NULL, SYS_FAIL(-1023));
+    PJ_TEST_EQ(sys_count(), 4, NULL, SYS_FAIL(-1023));
     pj_dns_resolver_destroy(res, PJ_FALSE);
     res = NULL;
 
@@ -3599,9 +4318,9 @@ static int dns_sys_fallback_srv_test(void)
                SYS_FAIL(-1038));
     PJ_TEST_EQ(sys_srv.rec.entry[0].server.addr[0].ip.v4.s_addr, SYS_ADDR,
                NULL, SYS_FAIL(-1039));
-    PJ_TEST_EQ(pj_ansi_strcmp(sys_state.name, "example.test"), 0, NULL,
+    PJ_TEST_EQ(sys_name_cmp("example.test"), 0, NULL,
                SYS_FAIL(-1040));
-    PJ_TEST_EQ(sys_state.count, 2, NULL, SYS_FAIL(-1041));
+    PJ_TEST_EQ(sys_count(), 2, NULL, SYS_FAIL(-1041));
 
     /* Not asked to fall back: the failure of the nameservers */
     pj_bzero(&sys_srv, sizeof(sys_srv));
@@ -3611,7 +4330,7 @@ static int dns_sys_fallback_srv_test(void)
     PJ_TEST_EQ(wait_sys_srv(), 0, NULL, SYS_FAIL(-1043));
     PJ_TEST_EQ(sys_srv.status, PJLIB_UTIL_EDNSNOWORKINGNS, NULL,
                SYS_FAIL(-1044));
-    PJ_TEST_EQ(sys_state.count, 2, NULL, SYS_FAIL(-1045));
+    PJ_TEST_EQ(sys_count(), 2, NULL, SYS_FAIL(-1045));
 
     /* A cached negative answer, the domain having no SRV record: the
      * domain's address from the system resolver, on the default port
@@ -3637,7 +4356,7 @@ static int dns_sys_fallback_srv_test(void)
     PJ_TEST_EQ(sys_srv.rec.entry[0].port, 5060, NULL, SYS_FAIL(-1186));
     PJ_TEST_EQ(sys_srv.rec.entry[0].server.addr[0].ip.v4.s_addr, SYS_ADDR,
                NULL, SYS_FAIL(-1187));
-    PJ_TEST_EQ(pj_ansi_strcmp(sys_state.name, "none.test"), 0, NULL,
+    PJ_TEST_EQ(sys_name_cmp("none.test"), 0, NULL,
                SYS_FAIL(-1188));
 
     /* A cached SRV record, its target not: the target's address from the
@@ -3669,7 +4388,7 @@ static int dns_sys_fallback_srv_test(void)
     PJ_TEST_EQ(sys_srv.rec.entry[0].port, 5070, NULL, SYS_FAIL(-1051));
     PJ_TEST_EQ(sys_srv.rec.entry[0].server.addr[0].ip.v4.s_addr, SYS_ADDR,
                NULL, SYS_FAIL(-1052));
-    PJ_TEST_EQ(pj_ansi_strcmp(sys_state.name, "host.cached.test"), 0, NULL,
+    PJ_TEST_EQ(sys_name_cmp("host.cached.test"), 0, NULL,
                SYS_FAIL(-1053));
     PJ_TEST_TRUE(sys_none_works(res), NULL, SYS_FAIL(-1054));
 
@@ -3721,17 +4440,23 @@ static int dns_sys_fallback_cache_test(void)
     PJ_TEST_TRUE(q == NULL, NULL, SYS_FAIL(-1064));
     PJ_TEST_EQ(sys_cb[1].called, 1, NULL, SYS_FAIL(-1065));
     PJ_TEST_EQ(sys_cb[1].addr, IP_ADDR0, NULL, SYS_FAIL(-1066));
-    PJ_TEST_EQ(sys_state.count, 1, NULL, SYS_FAIL(-1067));
+    PJ_TEST_EQ(sys_count(), 1, NULL, SYS_FAIL(-1067));
 
-    /* The name doesn't exist: not asked for its other address type */
+    /* The name doesn't exist: not asked for its other address type. With
+     * an answer, so that it is cached even if PJ_DNS_RESOLVER_INVALID_TTL
+     * is 0.
+     */
     pj_bzero(&pkt, sizeof(pkt));
     pj_bzero(&question, sizeof(question));
     pkt.hdr.flags = PJ_DNS_SET_QR(1) | PJ_DNS_SET_RCODE(PJ_DNS_RCODE_NXDOMAIN);
     pkt.hdr.qdcount = 1;
     pkt.q = &question;
+    pkt.hdr.anscount = 1;
+    pkt.ans = &ans;
     question.name = unknown;
     question.type = PJ_DNS_TYPE_A;
     question.dnsclass = 1;
+    ans.name = unknown;
     PJ_TEST_SUCCESS(pj_dns_resolver_add_entry(res, &pkt, PJ_TRUE), NULL,
                     SYS_FAIL(-1068));
     PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &unknown,
@@ -3744,7 +4469,7 @@ static int dns_sys_fallback_cache_test(void)
     PJ_TEST_EQ(sys_cb[2].status,
                PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_NXDOMAIN), NULL,
                SYS_FAIL(-1072));
-    PJ_TEST_EQ(sys_state.count, 1, NULL, SYS_FAIL(-1073));
+    PJ_TEST_EQ(sys_count(), 1, NULL, SYS_FAIL(-1073));
 
     pj_dns_resolver_destroy(res, PJ_FALSE);
     res = NULL;
@@ -3787,7 +4512,7 @@ static int dns_sys_fallback_join_test(void)
                                                 &q2),
                     NULL, SYS_FAIL(-1085));
     PJ_TEST_TRUE(q0 && q1 && q2, NULL, SYS_FAIL(-1086));
-    PJ_TEST_EQ(sys_state.count, 2, NULL, SYS_FAIL(-1087));
+    PJ_TEST_EQ(sys_count(), 2, NULL, SYS_FAIL(-1087));
 
     /* The first one silently, the last one with the notification */
     PJ_TEST_SUCCESS(pj_dns_resolver_cancel_query(q0, PJ_FALSE), NULL,
@@ -3804,7 +4529,7 @@ static int dns_sys_fallback_join_test(void)
     /* The query is reported before the queries which joined it */
     PJ_TEST_EQ(sys_cb[0].called, 0, NULL, SYS_FAIL(-1095));
     PJ_TEST_EQ(sys_cb[2].called, 1, NULL, SYS_FAIL(-1096));
-    PJ_TEST_EQ(sys_state.count, 2, NULL, SYS_FAIL(-1097));
+    PJ_TEST_EQ(sys_count(), 2, NULL, SYS_FAIL(-1097));
 
     pj_dns_resolver_destroy(res, PJ_FALSE);
     res = NULL;
@@ -3815,6 +4540,203 @@ on_return:
     sys_cleanup(&res);
     return rc;
 }
+
+/* The reset drops the answers of the system resolver, and the response
+ * of a lookup going on meanwhile is not cached, be it an answer or the
+ * error of the nameservers.
+ */
+static int dns_sys_fallback_reset_test(void)
+{
+    pj_str_t name1 = pj_str("sysreset1");
+    pj_str_t name2 = pj_str("sysreset2");
+    pj_str_t name3 = pj_str("sysreset3");
+    pj_dns_resolver *res = NULL;
+    pj_dns_settings lset;
+    pj_dns_async_query *q;
+    unsigned cached;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  system resolver fallback, reset test"));
+
+    sys_reset();
+    res = sys_resolver(PJ_TRUE, 100);
+    PJ_TEST_NOT_NULL(res, NULL, SYS_FAIL(-1450));
+    PJ_TEST_EQ(sys_time_out(res, "sysreset0", 0), 0, NULL, SYS_FAIL(-1451));
+
+    /* Answered by the system resolver and cached, dropped by the reset */
+    cached = pj_dns_resolver_get_cached_count(res);
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name1, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_sys, (void*)1,
+                                                NULL),
+                    NULL, SYS_FAIL(-1452));
+    PJ_TEST_EQ(wait_sys_cb(1), 0, NULL, SYS_FAIL(-1453));
+    PJ_TEST_EQ(sys_cb_addr(1), SYS_ADDR, NULL, SYS_FAIL(-1454));
+    PJ_TEST_EQ(wait_cached_count(res, cached + 1), 0, NULL,
+               SYS_FAIL(-1455));
+    PJ_TEST_SUCCESS(pj_dns_resolver_reset_ns_state(res), NULL,
+                    SYS_FAIL(-1456));
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name1, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_sys, (void*)2,
+                                                &q),
+                    NULL, SYS_FAIL(-1457));
+    PJ_TEST_NOT_NULL(q, NULL, SYS_FAIL(-1458));
+    PJ_TEST_SUCCESS(pj_dns_resolver_cancel_query(q, PJ_FALSE), NULL,
+                    SYS_FAIL(-1459));
+
+    /* An answer of a lookup going on at the reset */
+    PJ_TEST_EQ(sys_time_out(res, "sysreset4", 0), 0, NULL, SYS_FAIL(-1460));
+    PJ_TEST_SUCCESS(pj_sem_create(pool, NULL, 0, 1, &sys_state.block), NULL,
+                    SYS_FAIL(-1461));
+    sys_cb_clear(1);
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name2, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_sys, (void*)1,
+                                                NULL),
+                    NULL, SYS_FAIL(-1462));
+    PJ_TEST_EQ(wait_sys_count(4), 0, NULL, SYS_FAIL(-1463));
+    PJ_TEST_SUCCESS(pj_dns_resolver_reset_ns_state(res), NULL,
+                    SYS_FAIL(-1464));
+    pj_sem_post(sys_state.block);
+    PJ_TEST_EQ(wait_sys_cb(1), 0, NULL, SYS_FAIL(-1465));
+    PJ_TEST_SUCCESS(sys_cb_status(1), NULL, SYS_FAIL(-1466));
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name2, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_sys, (void*)2,
+                                                &q),
+                    NULL, SYS_FAIL(-1467));
+    PJ_TEST_NOT_NULL(q, NULL, SYS_FAIL(-1468));
+    PJ_TEST_SUCCESS(pj_dns_resolver_cancel_query(q, PJ_FALSE), NULL,
+                    SYS_FAIL(-1469));
+
+    /* The refusal of the nameservers, when the lookup going on at the
+     * reset fails. The reset first, for them to be sent to again, and a
+     * long retransmit delay, for the refusal to come before the timeout
+     * even after the packets the servers are still handling.
+     */
+    PJ_TEST_SUCCESS(pj_dns_resolver_reset_ns_state(res), NULL,
+                    SYS_FAIL(-1481));
+    pj_dns_resolver_get_settings(res, &lset);
+    lset.qretr_delay = 5000;
+    pj_dns_resolver_set_settings(res, &lset);
+    g_server[0].action = g_server[1].action = PJ_DNS_RCODE_REFUSED;
+    sys_state.status = PJ_ERESOLVE;
+    sys_cb_clear(1);
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name3, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_sys, (void*)1,
+                                                NULL),
+                    NULL, SYS_FAIL(-1470));
+    PJ_TEST_EQ(wait_sys_count(5), 0, NULL, SYS_FAIL(-1471));
+    PJ_TEST_SUCCESS(pj_dns_resolver_reset_ns_state(res), NULL,
+                    SYS_FAIL(-1472));
+    g_server[0].action = g_server[1].action = ACTION_IGNORE;
+    pj_sem_post(sys_state.block);
+    PJ_TEST_EQ(wait_sys_cb(1), 0, NULL, SYS_FAIL(-1473));
+    PJ_TEST_EQ(sys_cb_status(1),
+               PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_REFUSED), NULL,
+               SYS_FAIL(-1474));
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name3, PJ_DNS_TYPE_A, 0,
+                                                &dns_callback_sys, (void*)2,
+                                                &q),
+                    NULL, SYS_FAIL(-1475));
+    PJ_TEST_NOT_NULL(q, NULL, SYS_FAIL(-1476));
+    PJ_TEST_SUCCESS(pj_dns_resolver_cancel_query(q, PJ_FALSE), NULL,
+                    SYS_FAIL(-1477));
+
+on_return:
+    sys_cleanup(&res);
+    return rc;
+}
+
+/* After the reset, a query doesn't join one being looked up with the
+ * system resolver, nor one which goes to it only after the reset.
+ */
+static int dns_sys_fallback_reset_join_test(void)
+{
+    pj_str_t name_a = pj_str("sysjoin_a");
+    pj_str_t name_b = pj_str("sysjoin_b");
+    pj_dns_resolver *res = NULL;
+    pj_dns_settings lset;
+    pj_dns_async_query *q = NULL;
+    int count;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  system resolver fallback, reset and pending "
+                         "queries test"));
+
+    sys_reset();
+    res = sys_resolver_ns(PJ_TRUE, 1000, 1);
+    PJ_TEST_NOT_NULL(res, NULL, SYS_FAIL(-1490));
+    pj_dns_resolver_get_settings(res, &lset);
+    lset.qretr_count = 4;
+    pj_dns_resolver_set_settings(res, &lset);
+    PJ_TEST_SUCCESS(pj_sem_create(pool, NULL, 0, 4, &sys_state.block), NULL,
+                    SYS_FAIL(-1491));
+    join_srv_set("sysjoin_a", PJ_DNS_RCODE_REFUSED, ACTION_IGNORE);
+    g_server[0].action_cb = &join_action;
+    g_server[0].action = ACTION_CB;
+
+    /* Refused, being looked up at the reset: the new query is sent */
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name_a, PJ_DNS_TYPE_A,
+                                                0, &dns_callback_sys,
+                                                (void*)0, NULL),
+                    NULL, SYS_FAIL(-1492));
+    PJ_TEST_EQ(wait_sys_count(1), 0, NULL, SYS_FAIL(-1493));
+    PJ_TEST_SUCCESS(pj_dns_resolver_reset_ns_state(res), NULL,
+                    SYS_FAIL(-1494));
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name_a, PJ_DNS_TYPE_A,
+                                                0, &dns_callback_sys,
+                                                (void*)1, &q),
+                    NULL, SYS_FAIL(-1495));
+    PJ_TEST_EQ(wait_join_ids(2), 0, NULL, SYS_FAIL(-1496));
+    pj_sem_post(sys_state.block);
+    PJ_TEST_EQ(wait_sys_cb(0), 0, NULL, SYS_FAIL(-1497));
+    PJ_TEST_EQ(sys_cb_addr(0), SYS_ADDR, NULL, SYS_FAIL(-1498));
+    PJ_TEST_SUCCESS(pj_dns_resolver_cancel_query(q, PJ_FALSE), NULL,
+                    SYS_FAIL(-1499));
+    q = NULL;
+
+    /* Refused after the reset, while a new query is pending: the query
+     * started then joins the new one, not the lookup
+     */
+    sys_cb_clear(-1);
+    count = sys_count();
+    join_srv_set("sysjoin_b", ACTION_IGNORE, ACTION_IGNORE);
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name_b, PJ_DNS_TYPE_A,
+                                                0, &dns_callback_sys,
+                                                (void*)0, NULL),
+                    NULL, SYS_FAIL(-1500));
+    PJ_TEST_EQ(wait_join_ids(1), 0, NULL, SYS_FAIL(-1501));
+    PJ_TEST_SUCCESS(pj_dns_resolver_reset_ns_state(res), NULL,
+                    SYS_FAIL(-1502));
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name_b, PJ_DNS_TYPE_A,
+                                                0, &dns_callback_sys,
+                                                (void*)1, NULL),
+                    NULL, SYS_FAIL(-1503));
+    PJ_TEST_EQ(wait_join_ids(2), 0, NULL, SYS_FAIL(-1504));
+    join_srv_set(NULL, PJ_DNS_RCODE_REFUSED, ACTION_IGNORE);
+    PJ_TEST_EQ(wait_sys_count(count + 1), 0, NULL, SYS_FAIL(-1505));
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name_b, PJ_DNS_TYPE_A,
+                                                0, &dns_callback_sys,
+                                                (void*)2, NULL),
+                    NULL, SYS_FAIL(-1506));
+    join_srv_set(NULL, PJ_DNS_RCODE_REFUSED, ACTION_REPLY);
+    PJ_TEST_EQ(wait_sys_cb(2), 0, NULL, SYS_FAIL(-1507));
+    PJ_TEST_EQ(sys_cb_addr(2), JOIN_ADDR_NEW, NULL, SYS_FAIL(-1508));
+    PJ_TEST_EQ(join_id_count(), 2, NULL, SYS_FAIL(-1509));
+    pj_sem_post(sys_state.block);
+    PJ_TEST_EQ(wait_sys_cb(0), 0, NULL, SYS_FAIL(-1510));
+    PJ_TEST_EQ(sys_cb_addr(0), SYS_ADDR, NULL, SYS_FAIL(-1511));
+
+on_return:
+    if (q)
+        pj_dns_resolver_cancel_query(q, PJ_FALSE);
+    sys_cleanup(&res);
+    join_srv_set(NULL, ACTION_IGNORE, ACTION_IGNORE);
+    lock();
+    join_srv.name = NULL;
+    unlock();
+    g_server[0].action = ACTION_IGNORE;
+    return rc;
+}
+
 
 /* Lets the lookup go on once the destroy of the resolver has started and
  * waits for it: a query is refused from then on.
@@ -4045,7 +4967,7 @@ static int dns_sys_fallback_trusted_test(void)
         PJ_TEST_EQ(sys_time_out_type(res, "name.trusted.test",
                                      PJ_DNS_TYPE_AAAA, 3, PJ_ETIMEDOUT),
                    0, NULL, SYS_FAIL(-1213));
-        PJ_TEST_EQ(sys_state.count, 0, NULL, SYS_FAIL(-1214));
+        PJ_TEST_EQ(sys_count(), 0, NULL, SYS_FAIL(-1214));
 
         /* SRV still answered by DNS, with its port and target */
         pj_bzero(&sys_srv, sizeof(sys_srv));
@@ -4058,7 +4980,7 @@ static int dns_sys_fallback_trusted_test(void)
         PJ_TEST_EQ(sys_srv.rec.entry[0].port, 5070, NULL, SYS_FAIL(-1218));
         PJ_TEST_EQ(sys_srv.rec.entry[0].server.addr[0].ip.v4.s_addr,
                    IP_ADDR0, NULL, SYS_FAIL(-1219));
-        PJ_TEST_EQ(sys_state.count, 0, NULL, SYS_FAIL(-1220));
+        PJ_TEST_EQ(sys_count(), 0, NULL, SYS_FAIL(-1220));
 
         /* One name dropped, trusted all the same; the answer which
          * follows is trusted for a second only, for what comes next
@@ -4073,7 +4995,7 @@ static int dns_sys_fallback_trusted_test(void)
         PJ_TEST_EQ(sys_time_out_type(res, "name2.trusted.test",
                                      PJ_DNS_TYPE_A, 1, PJ_SUCCESS),
                    0, NULL, SYS_FAIL(-1222));
-        PJ_TEST_EQ(sys_state.count, 0, NULL, SYS_FAIL(-1223));
+        PJ_TEST_EQ(sys_count(), 0, NULL, SYS_FAIL(-1223));
         sys_drop.drop_name = NULL;
 
         /* The resolver's own probing happens to be an AAAA query: the
@@ -4101,11 +5023,11 @@ static int dns_sys_fallback_trusted_test(void)
             PJ_TEST_EQ(sys_srv.rec.entry[0].port, 5060, NULL, SYS_FAIL(-1230));
             PJ_TEST_EQ(sys_srv.rec.entry[0].server.addr[0].ip.v4.s_addr,
                        SYS_ADDR, NULL, SYS_FAIL(-1231));
-            PJ_TEST_EQ(sys_state.count, 2, NULL, SYS_FAIL(-1232));
+            PJ_TEST_EQ(sys_count(), 2, NULL, SYS_FAIL(-1232));
         } else {
             PJ_TEST_EQ(status, PJLIB_UTIL_EDNSNOWORKINGNS, NULL,
                        SYS_FAIL(-1233));
-            PJ_TEST_EQ(sys_state.count, 0, NULL, SYS_FAIL(-1234));
+            PJ_TEST_EQ(sys_count(), 0, NULL, SYS_FAIL(-1234));
         }
         pj_dns_resolver_destroy(res, PJ_FALSE);
         res = NULL;
@@ -4135,7 +5057,7 @@ static int dns_sys_fallback_trusted_test(void)
                                  PJ_SUCCESS),
                0, NULL, SYS_FAIL(-1236));
     PJ_TEST_EQ(sys_cb[0].addr, IP_ADDR0, NULL, SYS_FAIL(-1237));
-    PJ_TEST_EQ(sys_state.count, 0, NULL, SYS_FAIL(-1238));
+    PJ_TEST_EQ(sys_count(), 0, NULL, SYS_FAIL(-1238));
     pj_dns_resolver_destroy(res, PJ_FALSE);
     res = NULL;
 
@@ -4178,8 +5100,8 @@ static int dns_sys_fallback_cancel_test(void)
     PJ_TEST_EQ(sys_time_out(res, "cancel1b", 1), 0, NULL, SYS_FAIL(-1243));
     PJ_TEST_SUCCESS(sys_cb[1].status, NULL, SYS_FAIL(-1244));
     PJ_TEST_EQ(sys_cb[0].called, 0, NULL, SYS_FAIL(-1245));
-    PJ_TEST_EQ(sys_state.count, 1, NULL, SYS_FAIL(-1246));
-    PJ_TEST_EQ(pj_ansi_strcmp(sys_state.name, "cancel1b"), 0, NULL,
+    PJ_TEST_EQ(sys_count(), 1, NULL, SYS_FAIL(-1246));
+    PJ_TEST_EQ(sys_name_cmp("cancel1b"), 0, NULL,
                SYS_FAIL(-1247));
 
     /* Cancelled while waiting for the one lookup thread: skipped */
@@ -4202,14 +5124,14 @@ static int dns_sys_fallback_cancel_test(void)
     PJ_TEST_SUCCESS(sys_cb[2].status, NULL, SYS_FAIL(-1254));
     pj_thread_sleep(200);
     PJ_TEST_EQ(sys_cb[3].called, 0, NULL, SYS_FAIL(-1255));
-    PJ_TEST_EQ(sys_state.count, 2, NULL, SYS_FAIL(-1256));
+    PJ_TEST_EQ(sys_count(), 2, NULL, SYS_FAIL(-1256));
 
     /* Started without a callback: the error of the nameservers */
     PJ_TEST_EQ(pj_dns_resolver_start_query(res, &name3, PJ_DNS_TYPE_A, 0,
                                            NULL, NULL, &q),
                PJLIB_UTIL_EDNSNOWORKINGNS, NULL, SYS_FAIL(-1257));
     PJ_TEST_EQ(q, NULL, NULL, SYS_FAIL(-1258));
-    PJ_TEST_EQ(sys_state.count, 2, NULL, SYS_FAIL(-1259));
+    PJ_TEST_EQ(sys_count(), 2, NULL, SYS_FAIL(-1259));
 
     /* The option turned off while a query waits for the lookup thread,
      * as PJSUA does when destroying: the error of the nameservers
@@ -4233,7 +5155,7 @@ static int dns_sys_fallback_cancel_test(void)
     PJ_TEST_EQ(wait_sys_cb(3), 0, NULL, SYS_FAIL(-1384));
     PJ_TEST_EQ(sys_cb[3].status, PJLIB_UTIL_EDNSNOWORKINGNS, NULL,
                SYS_FAIL(-1385));
-    PJ_TEST_EQ(sys_state.count, 3, NULL, SYS_FAIL(-1386));
+    PJ_TEST_EQ(sys_count(), 3, NULL, SYS_FAIL(-1386));
 
     /* A query cancelled while waiting, one which joined it not: looked up
      * for the latter
@@ -4263,7 +5185,7 @@ static int dns_sys_fallback_cancel_test(void)
     PJ_TEST_SUCCESS(sys_cb[2].status, NULL, SYS_FAIL(-1393));
     PJ_TEST_EQ(sys_cb[2].addr, SYS_ADDR, NULL, SYS_FAIL(-1394));
     PJ_TEST_EQ(sys_cb[1].called, 0, NULL, SYS_FAIL(-1395));
-    PJ_TEST_EQ(sys_state.count, 5, NULL, SYS_FAIL(-1396));
+    PJ_TEST_EQ(sys_count(), 5, NULL, SYS_FAIL(-1396));
 
     pj_dns_resolver_destroy(res, PJ_FALSE);
     res = NULL;
@@ -4328,7 +5250,7 @@ static int dns_sys_fallback_rcode_test(void)
     PJ_TEST_EQ(wait_sys_cb(0), 0, NULL, SYS_FAIL(-1262));
     PJ_TEST_SUCCESS(sys_cb[0].status, NULL, SYS_FAIL(-1263));
     PJ_TEST_EQ(sys_cb[0].addr, SYS_ADDR, NULL, SYS_FAIL(-1264));
-    PJ_TEST_EQ(sys_state.count, 1, NULL, SYS_FAIL(-1265));
+    PJ_TEST_EQ(sys_count(), 1, NULL, SYS_FAIL(-1265));
 
     /* What is cached is that answer, not the refusal; once the server
      * answers, its answer
@@ -4353,7 +5275,7 @@ static int dns_sys_fallback_rcode_test(void)
     PJ_TEST_NOT_NULL(q, NULL, SYS_FAIL(-1268));
     PJ_TEST_EQ(wait_sys_cb(0), 0, NULL, SYS_FAIL(-1269));
     PJ_TEST_EQ(sys_cb[0].addr, IP_ADDR0, NULL, SYS_FAIL(-1270));
-    PJ_TEST_EQ(sys_state.count, 1, NULL, SYS_FAIL(-1271));
+    PJ_TEST_EQ(sys_count(), 1, NULL, SYS_FAIL(-1271));
 
     /* Refused and the system resolver fails: refused, and cached */
     g_server[0].action = PJ_DNS_RCODE_REFUSED;
@@ -4368,7 +5290,8 @@ static int dns_sys_fallback_rcode_test(void)
     PJ_TEST_EQ(sys_cb[1].status,
                PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_REFUSED), NULL,
                SYS_FAIL(-1275));
-    PJ_TEST_EQ(sys_state.count, 2, NULL, SYS_FAIL(-1276));
+    PJ_TEST_EQ(sys_count(), 2, NULL, SYS_FAIL(-1276));
+#if PJ_DNS_RESOLVER_INVALID_TTL
     sys_cb[1].called = 0;
     PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name2, PJ_DNS_TYPE_A, 0,
                                                 &dns_callback_sys, (void*)1,
@@ -4379,7 +5302,8 @@ static int dns_sys_fallback_rcode_test(void)
     PJ_TEST_EQ(sys_cb[1].status,
                PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_REFUSED), NULL,
                SYS_FAIL(-1280));
-    PJ_TEST_EQ(sys_state.count, 2, NULL, SYS_FAIL(-1281));
+    PJ_TEST_EQ(sys_count(), 2, NULL, SYS_FAIL(-1281));
+#endif
     sys_state.status = PJ_SUCCESS;
 
     /* Server failure: an address from the system resolver, the server
@@ -4395,7 +5319,7 @@ static int dns_sys_fallback_rcode_test(void)
     PJ_TEST_EQ(wait_sys_cb(2), 0, NULL, SYS_FAIL(-1284));
     PJ_TEST_SUCCESS(sys_cb[2].status, NULL, SYS_FAIL(-1285));
     PJ_TEST_EQ(sys_cb[2].addr, SYS_ADDR, NULL, SYS_FAIL(-1286));
-    PJ_TEST_EQ(sys_state.count, 3, NULL, SYS_FAIL(-1287));
+    PJ_TEST_EQ(sys_count(), 3, NULL, SYS_FAIL(-1287));
     sys_cb[2].called = 0;
     PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name3,
                                                 PJ_DNS_TYPE_AAAA, 0,
@@ -4406,7 +5330,7 @@ static int dns_sys_fallback_rcode_test(void)
     PJ_TEST_EQ(sys_cb[2].status,
                PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_SERVFAIL), NULL,
                SYS_FAIL(-1290));
-    PJ_TEST_EQ(sys_state.count, 3, NULL, SYS_FAIL(-1291));
+    PJ_TEST_EQ(sys_count(), 3, NULL, SYS_FAIL(-1291));
     sent = g_server[0].pkt_count;
     sys_cb[2].called = 0;
     PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name4, PJ_DNS_TYPE_A, 0,
@@ -4416,7 +5340,7 @@ static int dns_sys_fallback_rcode_test(void)
     PJ_TEST_EQ(wait_sys_cb(2), 0, NULL, SYS_FAIL(-1293));
     PJ_TEST_SUCCESS(sys_cb[2].status, NULL, SYS_FAIL(-1294));
     PJ_TEST_TRUE(g_server[0].pkt_count > sent, NULL, SYS_FAIL(-1295));
-    PJ_TEST_EQ(sys_state.count, 4, NULL, SYS_FAIL(-1296));
+    PJ_TEST_EQ(sys_count(), 4, NULL, SYS_FAIL(-1296));
 
     /* SRV failed by the server: the domain's address, from the system
      * resolver as its A query is failed too
@@ -4431,7 +5355,7 @@ static int dns_sys_fallback_rcode_test(void)
     PJ_TEST_EQ(sys_srv.rec.entry[0].port, 5060, NULL, SYS_FAIL(-1300));
     PJ_TEST_EQ(sys_srv.rec.entry[0].server.addr[0].ip.v4.s_addr, SYS_ADDR,
                NULL, SYS_FAIL(-1301));
-    PJ_TEST_EQ(sys_state.count, 5, NULL, SYS_FAIL(-1302));
+    PJ_TEST_EQ(sys_count(), 5, NULL, SYS_FAIL(-1302));
     pj_dns_resolver_destroy(res, PJ_FALSE);
     res = NULL;
 
@@ -4448,6 +5372,7 @@ static int dns_sys_fallback_rcode_test(void)
     PJ_TEST_EQ(sys_cb[0].status,
                PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_REFUSED), NULL,
                SYS_FAIL(-1306));
+#if PJ_DNS_RESOLVER_INVALID_TTL
     sys_cb[0].called = 0;
     PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name1, PJ_DNS_TYPE_A, 0,
                                                 &dns_callback_sys, (void*)0,
@@ -4455,7 +5380,8 @@ static int dns_sys_fallback_rcode_test(void)
                     NULL, SYS_FAIL(-1307));
     PJ_TEST_EQ(q, NULL, NULL, SYS_FAIL(-1308));
     PJ_TEST_EQ(sys_cb[0].called, 1, NULL, SYS_FAIL(-1309));
-    PJ_TEST_EQ(sys_state.count, 0, NULL, SYS_FAIL(-1310));
+    PJ_TEST_EQ(sys_count(), 0, NULL, SYS_FAIL(-1310));
+#endif
     pj_dns_resolver_destroy(res, PJ_FALSE);
     res = NULL;
 
@@ -4516,7 +5442,7 @@ static int dns_sys_fallback_pool_test(void)
     }
     PJ_TEST_EQ(sys_cb[0].addr, SYS_ADDR, NULL, SYS_FAIL(-1329));
     PJ_TEST_EQ(sys_cb[1].addr6_last, 1, NULL, SYS_FAIL(-1330));
-    PJ_TEST_EQ(sys_state.count, 4, NULL, SYS_FAIL(-1331));
+    PJ_TEST_EQ(sys_count(), 4, NULL, SYS_FAIL(-1331));
 
     /* Cached meanwhile: answered at once, no lookup */
     sys_cb[0].called = 0;
@@ -4527,7 +5453,7 @@ static int dns_sys_fallback_pool_test(void)
     PJ_TEST_EQ(q, NULL, NULL, SYS_FAIL(-1333));
     PJ_TEST_EQ(sys_cb[0].called, 1, NULL, SYS_FAIL(-1334));
     PJ_TEST_EQ(sys_cb[0].addr, SYS_ADDR, NULL, SYS_FAIL(-1335));
-    PJ_TEST_EQ(sys_state.count, 4, NULL, SYS_FAIL(-1336));
+    PJ_TEST_EQ(sys_count(), 4, NULL, SYS_FAIL(-1336));
     pj_dns_resolver_destroy(res, PJ_FALSE);
     res = NULL;
     pj_sem_destroy(sys_state.block);
@@ -4555,7 +5481,7 @@ static int dns_sys_fallback_pool_test(void)
                     NULL, SYS_FAIL(-1342));
     PJ_TEST_EQ(wait_sys_count(3), 0, NULL, SYS_FAIL(-1343));
     pj_thread_sleep(200);
-    PJ_TEST_EQ(sys_state.count, 3, NULL, SYS_FAIL(-1344));
+    PJ_TEST_EQ(sys_count(), 3, NULL, SYS_FAIL(-1344));
     pj_sem_post(sys_state.block);
     PJ_TEST_EQ(wait_sys_count(4), 0, NULL, SYS_FAIL(-1345));
     pj_sem_post(sys_state.block);
@@ -4589,7 +5515,7 @@ static int dns_sys_fallback_pool_test(void)
         PJ_TEST_EQ(wait_sys_cb(0), 0, NULL, SYS_FAIL(-1351));
         PJ_TEST_SUCCESS(sys_cb[0].status, NULL, SYS_FAIL(-1352));
     }
-    PJ_TEST_EQ(sys_state.count, 3, NULL, SYS_FAIL(-1353));
+    PJ_TEST_EQ(sys_count(), 3, NULL, SYS_FAIL(-1353));
     lset.cache_max_ttl = PJ_DNS_RESOLVER_MAX_TTL;
     pj_dns_resolver_set_settings(res, &lset);
     sys_state.status = PJ_ERESOLVE;
@@ -4604,7 +5530,7 @@ static int dns_sys_fallback_pool_test(void)
         PJ_TEST_EQ(sys_cb[0].status, PJLIB_UTIL_EDNSNOWORKINGNS, NULL,
                    SYS_FAIL(-1356));
     }
-    PJ_TEST_EQ(sys_state.count, 5, NULL, SYS_FAIL(-1357));
+    PJ_TEST_EQ(sys_count(), 5, NULL, SYS_FAIL(-1357));
     pj_dns_resolver_destroy(res, PJ_FALSE);
     res = NULL;
 
@@ -5021,6 +5947,11 @@ int resolver_test(void)
     if (rc != 0)
         goto on_error;
 
+    PJ_LOG(3,(THIS_FILE, "dns_reset_join_test"));
+    rc = dns_reset_join_test();
+    if (rc != 0)
+        goto on_error;
+
     PJ_LOG(3,(THIS_FILE, "dns_cancel_pending_test"));
     rc = dns_cancel_pending_test();
     if (rc != 0)
@@ -5044,6 +5975,16 @@ int resolver_test(void)
 
     PJ_LOG(3,(THIS_FILE, "dns_sys_fallback_join_test"));
     rc = dns_sys_fallback_join_test();
+    if (rc != 0)
+        goto on_error;
+
+    PJ_LOG(3,(THIS_FILE, "dns_sys_fallback_reset_test"));
+    rc = dns_sys_fallback_reset_test();
+    if (rc != 0)
+        goto on_error;
+
+    PJ_LOG(3,(THIS_FILE, "dns_sys_fallback_reset_join_test"));
+    rc = dns_sys_fallback_reset_join_test();
     if (rc != 0)
         goto on_error;
 
