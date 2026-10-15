@@ -538,6 +538,18 @@ didDeactivateAudioSession:(AVAudioSession *) audioSession
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
+    NSString *nib;
+
+    /* Not in the scene delegate: the scene may connect late (e.g. VoIP
+     * push background launch) or reconnect, while pjsua uses the view.
+     */
+    if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone)
+        nib = @"ipjsuaViewController_iPhone";
+    else
+        nib = @"ipjsuaViewController_iPad";
+    self.viewController = [[ipjsuaViewController alloc] initWithNibName:nib
+                                                                 bundle:nil];
+
 #if USE_PUSH_NOTIFICATION
     call_map = [NSMutableDictionary dictionary];
 
@@ -703,15 +715,9 @@ void displayWindow(pjsua_vid_win_id wid)
 - (void)scene:(UIScene *)scene willConnectToSession:(UISceneSession *)session
       options:(UISceneConnectionOptions *)connectionOptions
 {
-    NSString *nib;
+    if (![scene isKindOfClass:[UIWindowScene class]])
+        return;
 
-    if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone)
-        nib = @"ipjsuaViewController_iPhone";
-    else
-        nib = @"ipjsuaViewController_iPad";
-
-    app.viewController = [[ipjsuaViewController alloc] initWithNibName:nib
-                                                                bundle:nil];
     self.window = [[UIWindow alloc] initWithWindowScene:(UIWindowScene *)scene];
     self.window.rootViewController = app.viewController;
     [self.window makeKeyAndVisible];
@@ -719,6 +725,10 @@ void displayWindow(pjsua_vid_win_id wid)
 
 - (void)sceneDidEnterBackground:(UIScene *)scene
 {
+    /* In push mode, pjsua may not be started yet. */
+    if (pjsua_get_state() != PJSUA_STATE_RUNNING)
+        return;
+
     SCHEDULE_TIMER(REREGISTER);
     /* Allow the re-registration to complete. */
     [NSThread sleepForTimeInterval:0.3];
