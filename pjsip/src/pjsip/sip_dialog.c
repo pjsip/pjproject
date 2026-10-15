@@ -1268,14 +1268,12 @@ static pj_status_t dlg_create_request_throw( pjsip_dialog *dlg,
     /* Just copy dialog route-set to Route header.
      * The transaction will do the processing as specified in Section 12.2.1
      * of RFC 3261 in function tsx_process_route() in sip_transaction.c.
-     * Clone, not shallow clone: an ACK has no transaction and may still be
-     * resolving its destination after the dialog is destroyed.
      */
     route = dlg->route_set.next;
     end_list = &dlg->route_set;
     for (; route != end_list; route = route->next ) {
         pjsip_route_hdr *r;
-        r = (pjsip_route_hdr*) pjsip_hdr_clone( tdata->pool, route );
+        r = (pjsip_route_hdr*) pjsip_hdr_shallow_clone( tdata->pool, route );
         pjsip_routing_hdr_set_route(r);
         pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)r);
     }
@@ -1357,19 +1355,24 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_request( pjsip_dialog *dlg,
 static void send_ack_callback( pjsip_send_state *send_state,
                                pj_ssize_t sent, pj_bool_t *cont )
 {
-    if (sent > 0)
-        return;
+    pjsip_dialog *dlg = (pjsip_dialog*) send_state->token;
 
-    if (*cont) {
+    if (sent <= 0 && *cont) {
         PJ_PERROR(3,(THIS_FILE, (pj_status_t)-sent,
                      "Temporary failure in sending %s, "
                      "will try next server",
                      pjsip_tx_data_get_info(send_state->tdata)));
-    } else {
+        return;
+    }
+
+    if (sent <= 0) {
         PJ_PERROR(3,(THIS_FILE, (pj_status_t)-sent,
                      "Failed to send %s!",
                      pjsip_tx_data_get_info(send_state->tdata)));
     }
+
+    /* Done with the ACK, it no longer needs the dialog */
+    pj_grp_lock_dec_ref(dlg->grp_lock_);
 }
 
 /*
@@ -1399,12 +1402,9 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
     /* Put this dialog in tdata's mod_data */
     tdata->mod_data[dlg->ua->id] = dlg;
 
-    /* If via_addr is set, use this address for the Via header. The host is
-     * copied, as an ACK may be sent after the dialog is destroyed.
-     */
+    /* If via_addr is set, use this address for the Via header. */
     if (dlg->via_addr.host.slen > 0) {
-        pj_strdup(tdata->pool, &tdata->via_addr.host, &dlg->via_addr.host);
-        tdata->via_addr.port = dlg->via_addr.port;
+        tdata->via_addr = dlg->via_addr;
         tdata->via_tp = dlg->via_tp;
     }
 
@@ -1473,11 +1473,18 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
         /* Set transport selector */
         pjsip_tx_data_set_transport(tdata, &dlg->tp_sel);
 
+        /* Without a transaction nothing else keeps the dialog, whose
+         * memory the ACK uses, until the ACK is sent or fails.
+         */
+        pj_grp_lock_add_ref(dlg->grp_lock_);
+
         /* Send request */
         status = pjsip_endpt_send_request_stateless(dlg->endpt, tdata,
-                                                    NULL, &send_ack_callback);
-        if (status != PJ_SUCCESS)
+                                                    dlg, &send_ack_callback);
+        if (status != PJ_SUCCESS) {
+            pj_grp_lock_dec_ref(dlg->grp_lock_);
             goto on_error;
+        }
 
     }
 
