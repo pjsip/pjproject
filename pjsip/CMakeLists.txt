@@ -347,6 +347,7 @@ if(BUILD_TESTING)
     src/test/pjsua_auth_test.c
     src/test/pjsua_call_test.c
     src/test/pjsua_acc_test.c
+    src/test/pjsua_pres_test.c
     src/test/pjsua_dns_test.c
     src/test/srv_failover_test.c
     src/test/${PJ_TEST_MAIN}
@@ -393,6 +394,7 @@ if(BUILD_TESTING)
     src/pjsua2-test/instant_messaging.cpp
     src/pjsua2-test/auth_challenge.cpp
     src/pjsua2-test/audio_media_port.cpp
+    src/pjsua2-test/call_replace.cpp
     src/pjsua2-test/object_lifetime.cpp
   )
 

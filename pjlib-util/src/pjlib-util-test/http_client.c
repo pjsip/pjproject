@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@
 
 #define ACTION_REPLY    0
 #define ACTION_IGNORE   -1
+#define ACTION_AUTH     1
 
 static struct server_t
 {
@@ -114,6 +115,17 @@ static int server_thread(void *p)
 
         if (srv->action == ACTION_IGNORE) {
             continue;
+        } else if (srv->action == ACTION_AUTH) {
+            static const char resp401[] =
+                "HTTP/1.0 401 Unauthorized\r\n"
+                "WWW-Authenticate: Basic realm=\"test\"\r\n"
+                "Content-Length: 4\r\n\r\n"
+                "deny";
+            pkt_len = sizeof(resp401) - 1;
+            pj_sock_send(newsock, resp401, &pkt_len, 0);
+            /* Let the client close first */
+            pj_thread_sleep(500);
+            pj_sock_close(newsock);
         } else if (srv->action == ACTION_REPLY) {
             pj_size_t send_len = 0;
             unsigned ctr = 0;
@@ -1030,6 +1042,240 @@ int http_client_test_maxlen()
     return PJ_SUCCESS;
 }
 
+/*
+ * A 401 response whose authenticated retry fails to start: the request
+ * must complete exactly once and report no response after completion,
+ * since the application may destroy the request in on_complete().
+ */
+static int auth_complete_cnt;
+static pj_bool_t auth_resp_after_complete;
+
+static void auth_on_complete(pj_http_req *hreq, pj_status_t status,
+                             const pj_http_resp *resp)
+{
+    PJ_UNUSED_ARG(resp);
+    g_comp_status = status;
+    ++auth_complete_cnt;
+    pj_http_req_destroy(hreq);
+    http_req = NULL;
+}
+
+static void auth_on_response(pj_http_req *hreq, const pj_http_resp *resp)
+{
+    PJ_UNUSED_ARG(hreq);
+    PJ_UNUSED_ARG(resp);
+    if (auth_complete_cnt)
+        auth_resp_after_complete = PJ_TRUE;
+}
+
+int http_client_test_auth_restart_fail()
+{
+    pj_str_t url;
+    pj_http_req_callback hcb;
+    pj_http_req_param param;
+    pj_sock_t psock;
+    pj_sockaddr_in paddr;
+    int paddr_len = sizeof(paddr);
+    pj_uint16_t src_port;
+    char urlbuf[80];
+    int i;
+
+    pj_bzero(&hcb, sizeof(hcb));
+    hcb.on_complete = &auth_on_complete;
+    hcb.on_response = &auth_on_response;
+
+    pool = pj_pool_create(mem, NULL, 8192, 4096, NULL);
+    if (pj_timer_heap_create(pool, 16, &timer_heap))
+        return -81;
+    if (pj_ioqueue_create(pool, 16, &ioqueue))
+        return -82;
+
+    /* Pick a free local port to use as the only client source port */
+    if (pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, &psock))
+        return -83;
+    pj_sockaddr_in_init(&paddr, NULL, 0);
+    if (pj_sock_bind(psock, &paddr, sizeof(paddr)) ||
+        pj_sock_getsockname(psock, &paddr, &paddr_len))
+    {
+        pj_sock_close(psock);
+        return -84;
+    }
+    src_port = pj_sockaddr_in_get_port(&paddr);
+    pj_sock_close(psock);
+
+    thread_quit = PJ_FALSE;
+    g_server.action = ACTION_AUTH;
+    g_server.buf_size = 1024;
+
+    if (pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, &g_server.sock))
+        return -85;
+    pj_sockaddr_in_init(&addr, NULL, 0);
+    if (pj_sock_bind(g_server.sock, &addr, sizeof(addr)))
+        return -86;
+    {
+        pj_sockaddr_in addr2;
+        int addr_len = sizeof(addr2);
+        if (pj_sock_getsockname(g_server.sock, &addr2, &addr_len))
+            return -87;
+        g_server.port = pj_sockaddr_in_get_port(&addr2);
+        pj_ansi_snprintf(urlbuf, sizeof(urlbuf), "http://127.0.0.1:%d/auth",
+                         g_server.port);
+        url = pj_str(urlbuf);
+    }
+    if (pj_sock_listen(g_server.sock, 8))
+        return -88;
+    if (pj_thread_create(pool, NULL, &server_thread, &g_server,
+                         0, 0, &g_server.thread))
+        return -89;
+
+    auth_complete_cnt = 0;
+    auth_resp_after_complete = PJ_FALSE;
+    g_comp_status = PJ_SUCCESS;
+
+    pj_http_req_param_default(&param);
+    param.source_port_range_start = src_port;
+    param.source_port_range_size = 1;
+    param.max_retries = 0;
+    pj_cstr(&param.auth_cred.username, "user");
+    pj_cstr(&param.auth_cred.data, "pass");
+
+    if (pj_http_req_create(pool, &url, timer_heap, ioqueue,
+                           &param, &hcb, &http_req))
+        return -90;
+    if (pj_http_req_start(http_req))
+        return -91;
+
+    /* The request holds the only source port, so the retry cannot bind */
+    for (i = 0; i < 100 && http_req && pj_http_req_is_running(http_req); ++i) {
+        pj_time_val delay = {0, 50};
+        pj_ioqueue_poll(ioqueue, &delay);
+        pj_timer_heap_poll(timer_heap, NULL);
+    }
+
+    thread_quit = PJ_TRUE;
+    pj_thread_join(g_server.thread);
+    pj_sock_close(g_server.sock);
+
+    if (http_req)
+        pj_http_req_destroy(http_req);
+    http_req = NULL;
+    pj_ioqueue_destroy(ioqueue);
+    pj_timer_heap_destroy(timer_heap);
+    pj_pool_release(pool);
+
+    if (auth_complete_cnt != 1 || auth_resp_after_complete) {
+        PJ_LOG(3, (THIS_FILE, "  on_complete called %d time(s), response "
+                   "after completion: %d", auth_complete_cnt,
+                   auth_resp_after_complete));
+        return -92;
+    }
+    /* Make sure the retry did fail to start */
+    if (g_comp_status == PJ_SUCCESS) {
+        PJ_LOG(3, (THIS_FILE, "  authentication retry did not fail"));
+        return -93;
+    }
+
+    return PJ_SUCCESS;
+}
+
+/*
+ * The application may end the request from its callbacks: cancel it with
+ * notification from on_response() and destroy it in on_complete(), or
+ * destroy it directly from on_data_read().
+ */
+static void cancel_on_response(pj_http_req *hreq, const pj_http_resp *resp)
+{
+    PJ_UNUSED_ARG(resp);
+    pj_http_req_cancel(hreq, PJ_TRUE);
+}
+
+static void destroy_on_data_read(pj_http_req *hreq, void *data,
+                                 pj_size_t size)
+{
+    PJ_UNUSED_ARG(data);
+    PJ_UNUSED_ARG(size);
+    pj_http_req_destroy(hreq);
+    http_req = NULL;
+}
+
+int http_client_test_cancel_destroy(pj_bool_t destroy_in_data_read)
+{
+    pj_str_t url;
+    pj_http_req_callback hcb;
+    pj_http_req_param param;
+    char urlbuf[80];
+    int i;
+
+    pj_bzero(&hcb, sizeof(hcb));
+    hcb.on_complete = &auth_on_complete;
+    if (destroy_in_data_read)
+        hcb.on_data_read = &destroy_on_data_read;
+    else
+        hcb.on_response = &cancel_on_response;
+
+    pool = pj_pool_create(mem, NULL, 8192, 4096, NULL);
+    if (pj_timer_heap_create(pool, 16, &timer_heap))
+        return -101;
+    if (pj_ioqueue_create(pool, 16, &ioqueue))
+        return -102;
+
+    thread_quit = PJ_FALSE;
+    g_server.action = ACTION_REPLY;
+    g_server.send_content_length = PJ_TRUE;
+    g_server.data_size = 100;
+    g_server.buf_size = 1024;
+
+    if (pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, &g_server.sock))
+        return -103;
+    pj_sockaddr_in_init(&addr, NULL, 0);
+    if (pj_sock_bind(g_server.sock, &addr, sizeof(addr)))
+        return -104;
+    {
+        pj_sockaddr_in addr2;
+        int addr_len = sizeof(addr2);
+        if (pj_sock_getsockname(g_server.sock, &addr2, &addr_len))
+            return -105;
+        g_server.port = pj_sockaddr_in_get_port(&addr2);
+        pj_ansi_snprintf(urlbuf, sizeof(urlbuf), "http://127.0.0.1:%d/c",
+                         g_server.port);
+        url = pj_str(urlbuf);
+    }
+    if (pj_sock_listen(g_server.sock, 8))
+        return -106;
+    if (pj_thread_create(pool, NULL, &server_thread, &g_server,
+                         0, 0, &g_server.thread))
+        return -107;
+
+    auth_complete_cnt = 0;
+    pj_http_req_param_default(&param);
+    if (pj_http_req_create(pool, &url, timer_heap, ioqueue,
+                           &param, &hcb, &http_req))
+        return -108;
+    if (pj_http_req_start(http_req))
+        return -109;
+
+    for (i = 0; i < 100 && http_req && pj_http_req_is_running(http_req); ++i) {
+        pj_time_val delay = {0, 50};
+        pj_ioqueue_poll(ioqueue, &delay);
+        pj_timer_heap_poll(timer_heap, NULL);
+    }
+
+    thread_quit = PJ_TRUE;
+    pj_thread_join(g_server.thread);
+    pj_sock_close(g_server.sock);
+
+    if (http_req)
+        pj_http_req_destroy(http_req);
+    http_req = NULL;
+    pj_ioqueue_destroy(ioqueue);
+    pj_timer_heap_destroy(timer_heap);
+    pj_pool_release(pool);
+
+    if (destroy_in_data_read)
+        return (auth_complete_cnt == 0) ? PJ_SUCCESS : -110;
+    return (auth_complete_cnt == 1) ? PJ_SUCCESS : -111;
+}
+
 int http_client_test()
 {
     int rc;
@@ -1066,6 +1312,21 @@ int http_client_test()
 
     PJ_LOG(3, (THIS_FILE, "..Testing oversized Content-Length rejection"));
     rc = http_client_test_maxlen();
+    if (rc)
+        return rc;
+
+    PJ_LOG(3, (THIS_FILE, "..Testing destroy in on_data_read"));
+    rc = http_client_test_cancel_destroy(PJ_TRUE);
+    if (rc)
+        return rc;
+
+    PJ_LOG(3, (THIS_FILE, "..Testing destroy after cancel in on_response"));
+    rc = http_client_test_cancel_destroy(PJ_FALSE);
+    if (rc)
+        return rc;
+
+    PJ_LOG(3, (THIS_FILE, "..Testing failed authentication retry"));
+    rc = http_client_test_auth_restart_fail();
     if (rc)
         return rc;
 

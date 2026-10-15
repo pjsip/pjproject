@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -455,7 +455,8 @@ PJ_DECL(pj_status_t) pj_http_req_cancel(pj_http_req *http_req,
                                         pj_bool_t notify);
 
 /**
- * Destroy the http request.
+ * Destroy the http request. This may also be called from any of the
+ * request's callbacks.
  *
  * @param http_req      The http request to be destroyed.
  *

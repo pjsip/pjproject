@@ -202,9 +202,10 @@
  * trusted, or when the nameserver refuses it or fails a DNS A query, e.g.
  * on a captive portal. The addresses are reported as its response and
  * cached for #PJ_DNS_RESOLVER_BAD_NS_TTL; an answer of a nameserver
- * replaces them. A query of another type, e.g. DNS SRV, fails as without
- * the setting, but asynchronously, so that #pj_dns_srv_resolve() falls
- * back to the address of the domain as on a negative answer.
+ * replaces them, and #pj_dns_resolver_reset_ns_state() drops them. A
+ * query of another type, e.g. DNS SRV, fails as without the setting, but
+ * asynchronously, so that #pj_dns_srv_resolve() falls back to the address
+ * of the domain as on a negative answer.
  *
  * The setting doesn't change the state of the nameservers: while one is
  * trusted, i.e. answered within #PJ_DNS_RESOLVER_GOOD_NS_TTL, a timeout is

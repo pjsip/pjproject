@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -895,11 +895,12 @@ static void pres_on_evsub_rx_notify( pjsip_evsub *sub,
 
     
     /* If application responded NOTIFY with 2xx, copy temporary status
-     * to main status, and mark the temporary status as invalid.
+     * to main status, and mark the temporary status as invalid. A NOTIFY
+     * without body leaves the temporary status invalid: keep main status.
      */
     pj_mutex_lock(pres->mutex);
 
-    if ((*p_st_code)/100 == 2) {
+    if ((*p_st_code)/100 == 2 && pres->is_ts_valid) {
         pj_pool_t *tmp;
 
         pj_memcpy(&pres->status, &pres->tmp_status, sizeof(pjsip_pres_status));

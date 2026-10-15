@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -107,6 +107,7 @@ extern pj_caching_pool caching_pool;
 #define INCLUDE_PJSUA_AUTH_TEST INCLUDE_REGC_GROUP
 #define INCLUDE_PJSUA_CALL_TEST INCLUDE_REGC_GROUP
 #define INCLUDE_PJSUA_ACC_TEST  INCLUDE_REGC_GROUP
+#define INCLUDE_PJSUA_PRES_TEST INCLUDE_REGC_GROUP
 #define INCLUDE_PJSUA_DNS_TEST  INCLUDE_TRANSPORT_GROUP
 #define INCLUDE_DLG_CORE_TEST   INCLUDE_MESSAGING_GROUP
 
@@ -133,6 +134,7 @@ int auth_async_test(void);
 int pjsua_auth_test(void);
 int pjsua_call_test(void);
 int pjsua_acc_test(void);
+int pjsua_pres_test(void);
 int srv_failover_pjsua_test(void);
 int pjsua_dns_test(void);
 int inv_offer_answer_test(void);

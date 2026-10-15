@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2025-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,6 +49,7 @@ void ReceiverAccount::onInstantMessage(OnInstantMessageParam &prm)
 
     InstantMessagingTests::testState.messageReceived = true;
     InstantMessagingTests::testState.receivedMessage = prm.msgBody;
+    InstantMessagingTests::testState.receivedContentType = prm.contentType;
 
     std::cout << "*** ReceiverAccount: Message deferred, will respond later\n";
 }
@@ -230,4 +231,50 @@ void InstantMessagingTests::deferredResponse()
     std::cout << "✓ Deferred response successfully sent and received\n";
     std::cout << "✓ Response code: " << testState.responseStatusCode << "\n";
     std::cout << "✓ Response reason: " << testState.responseReason << "\n";
+}
+
+void InstantMessagingTests::longContentType()
+{
+    testState = TestState{};
+
+    AccountConfig receiverCfg;
+    receiverCfg.idUri = "sip:receiver@localhost:5060";
+    receiverCfg.sipConfig.autoRespondSipMessage = PJ_TRUE;
+
+    receiverAcc = std::unique_ptr<ReceiverAccount>(new ReceiverAccount());
+    receiverAcc->create(receiverCfg);
+
+    AccountConfig senderCfg;
+    senderCfg.idUri = "sip:sender@localhost:5060";
+    senderCfg.sipConfig.autoRespondSipMessage = PJ_TRUE;
+
+    senderAcc = std::unique_ptr<SenderAccount>(new SenderAccount());
+    senderAcc->create(senderCfg);
+
+    std::cout << "\n=== TEST: SIP MESSAGE with long Content-Type ===\n";
+
+    BuddyConfig buddyCfg;
+    buddyCfg.uri = "sip:receiver@localhost:5060";
+    buddyCfg.subscribe = false;
+    buddyCfg.subscribe_dlg_event = false;
+
+    senderBuddy = std::unique_ptr<Buddy>(new Buddy());
+    senderBuddy->create(*senderAcc, buddyCfg);
+
+    const std::string testMessage = "Hello world!";
+    const std::string contentType = "text/" + std::string(300, 'x');
+
+    SendInstantMessageParam msgParam;
+    msgParam.content = testMessage;
+    msgParam.contentType = contentType;
+
+    senderBuddy->sendInstantMessage(msgParam);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    assert(testState.messageReceived == true);
+    assert(testState.receivedMessage == testMessage);
+    assert(testState.receivedContentType == contentType);
+
+    std::cout << "✓ Long content type successfully received\n";
 }

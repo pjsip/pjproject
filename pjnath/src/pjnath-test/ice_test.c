@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -2032,6 +2032,137 @@ int ice_wait_valid_pair_test(void)
     }
 
 on_return:
+    destroy_stun_config(&app_sess);
+    pj_log_pop_indent();
+
+    return rc;
+}
+
+
+/*****************************************************************************
+ * The application may stop the ICE session while pj_ice_sess_on_rx_pkt() is
+ * delivering application data without the lock held, as ICE stream transport
+ * does in pj_ice_strans_stop_ice() followed by pj_ice_strans_init_ice(),
+ * which releases the detached session's pool. pj_ice_sess_on_rx_pkt() must
+ * not touch the session once the callback returns.
+ */
+struct rxstop_sess
+{
+    pj_ice_sess         *ice;
+    pj_grp_lock_handler  handler;
+    unsigned             rx_cnt;
+};
+
+static pj_status_t rxstop_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id,
+                                    unsigned transport_id,
+                                    const void *pkt, pj_size_t size,
+                                    const pj_sockaddr_t *dst_addr,
+                                    unsigned dst_addr_len)
+{
+    PJ_UNUSED_ARG(ice); PJ_UNUSED_ARG(comp_id); PJ_UNUSED_ARG(transport_id);
+    PJ_UNUSED_ARG(pkt); PJ_UNUSED_ARG(size);
+    PJ_UNUSED_ARG(dst_addr); PJ_UNUSED_ARG(dst_addr_len);
+    return PJ_SUCCESS;
+}
+
+static void rxstop_on_ice_complete(pj_ice_sess *ice, pj_status_t status)
+{
+    PJ_UNUSED_ARG(ice); PJ_UNUSED_ARG(status);
+}
+
+static void rxstop_on_rx_data(pj_ice_sess *ice, unsigned comp_id,
+                              unsigned transport_id, void *pkt,
+                              pj_size_t size, const pj_sockaddr_t *src_addr,
+                              unsigned src_addr_len)
+{
+    struct rxstop_sess *s = (struct rxstop_sess*) ice->user_data;
+
+    PJ_UNUSED_ARG(comp_id); PJ_UNUSED_ARG(transport_id);
+    PJ_UNUSED_ARG(pkt); PJ_UNUSED_ARG(size);
+    PJ_UNUSED_ARG(src_addr); PJ_UNUSED_ARG(src_addr_len);
+
+    ++s->rx_cnt;
+
+    /* Same steps as pj_ice_strans_stop_ice() + pj_ice_strans_init_ice() */
+    pj_ice_sess_detach_grp_lock(ice, &s->handler);
+    pj_ice_sess_destroy(ice);
+    (*s->handler)(ice);
+    s->ice = NULL;
+}
+
+int ice_rx_data_stop_test(void)
+{
+    app_sess_t app_sess;
+    pj_pool_t *pool = NULL;
+    pj_grp_lock_t *grp_lock = NULL;
+    struct rxstop_sess s;
+    pj_ice_sess_cb cb;
+    pj_ice_sess_options opt;
+    pj_str_t ufrag, pass, loopback, fnd;
+    pj_sockaddr addr, src;
+    unsigned cand_id;
+    char pkt[] = "not a STUN message";
+    pj_status_t status;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "ICE session stopped in on_rx_data callback"));
+    pj_log_push_indent();
+
+    status = create_stun_config(&app_sess);
+    if (status != PJ_SUCCESS) {
+        pj_log_pop_indent();
+        return -10;
+    }
+
+    pj_bzero(&s, sizeof(s));
+    pj_bzero(&cb, sizeof(cb));
+    cb.on_tx_pkt = &rxstop_on_tx_pkt;
+    cb.on_ice_complete = &rxstop_on_ice_complete;
+    cb.on_rx_data = &rxstop_on_rx_data;
+
+    /* The group lock outlives the session, as in ICE stream transport */
+    pool = pj_pool_create(app_sess.stun_cfg.pf, "rxstop", 512, 512, NULL);
+    if (!pool) { rc = -20; goto on_return; }
+    if (pj_grp_lock_create(pool, NULL, &grp_lock) != PJ_SUCCESS) {
+        rc = -21; goto on_return;
+    }
+    pj_grp_lock_add_ref(grp_lock);
+
+    ufrag = pj_str((char*)"Lrxstop0");
+    pass  = pj_str((char*)"0123456789012345678901");
+    loopback = pj_str((char*)"127.0.0.1");
+    pj_sockaddr_init(pj_AF_INET(), &addr, &loopback, 34111);
+    pj_sockaddr_init(pj_AF_INET(), &src, &loopback, 34112);
+
+    status = pj_ice_sess_create(&app_sess.stun_cfg, "rxstop",
+                                PJ_ICE_SESS_ROLE_CONTROLLED, 1, &cb,
+                                &ufrag, &pass, grp_lock, &s.ice);
+    if (status != PJ_SUCCESS) { rc = -22; goto on_return; }
+    s.ice->user_data = &s;
+
+    /* No connectivity checks are done here, accept data from any source */
+    pj_ice_sess_get_options(s.ice, &opt);
+    opt.check_src_addr = PJ_FALSE;
+    pj_ice_sess_set_options(s.ice, &opt);
+
+    fnd = pj_str((char*)"Hhost");
+    status = pj_ice_sess_add_cand(s.ice, 1, WVP_TP_ID, PJ_ICE_CAND_TYPE_HOST,
+                                  65535, &fnd, &addr, &addr, &addr,
+                                  pj_sockaddr_get_len(&addr), &cand_id);
+    if (status != PJ_SUCCESS) { rc = -23; goto on_return; }
+
+    status = pj_ice_sess_on_rx_pkt(s.ice, 1, WVP_TP_ID, pkt, sizeof(pkt),
+                                   &src, pj_sockaddr_get_len(&src));
+    if (status != PJ_SUCCESS) { rc = -24; goto on_return; }
+    if (s.rx_cnt != 1) { rc = -25; goto on_return; }
+
+on_return:
+    if (s.ice)
+        pj_ice_sess_destroy(s.ice);
+    if (grp_lock)
+        pj_grp_lock_dec_ref(grp_lock);
+    if (pool)
+        pj_pool_release(pool);
     destroy_stun_config(&app_sess);
     pj_log_pop_indent();
 

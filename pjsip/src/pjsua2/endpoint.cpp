@@ -1049,7 +1049,8 @@ void Endpoint::on_incoming_subscribe(pjsua_acc_id acc_id,
     *code = prm.code;
     acc->tmpReason = prm.reason;
     *reason = str2Pj(acc->tmpReason);
-    prm.txOption.toPj(*msg_data);
+    acc->tmpTxOption = prm.txOption;
+    acc->tmpTxOption.toPj(*msg_data);
 }
 
 void Endpoint::on_pager2(pjsua_call_id call_id,
@@ -1814,7 +1815,8 @@ void Endpoint::on_call_transfer_request2(pjsua_call_id call_id,
     call->onCallTransferRequest(prm);
     
     *code = prm.statusCode;
-    *opt = prm.opt.toPj();
+    call->tmpOpt = prm.opt;
+    *opt = call->tmpOpt.toPj();
     if (*code/100 <= 2) {
         if (prm.newCall) {
             /* Sanity checks */
@@ -1882,8 +1884,10 @@ void Endpoint::on_call_replace_request2(pjsua_call_id call_id,
     call->onCallReplaceRequest(prm);
     
     *st_code = prm.statusCode;
-    *st_text = str2Pj(prm.reason);
-    *opt = prm.opt.toPj();
+    call->tmpReason = prm.reason;
+    *st_text = str2Pj(call->tmpReason);
+    call->tmpOpt = prm.opt;
+    *opt = call->tmpOpt.toPj();
     if (prm.newCall && prm.newCall != call) {
         /* Sanity checks */
         pj_assert(prm.newCall->id == PJSUA_INVALID_ID);
@@ -2002,7 +2006,8 @@ void Endpoint::on_call_rx_offer(pjsua_call_id call_id,
     }
     
     *code = prm.statusCode;
-    *opt = prm.opt.toPj();
+    call->tmpOpt = prm.opt;
+    *opt = call->tmpOpt.toPj();
 }
 
 void Endpoint::on_call_rx_reinvite(pjsua_call_id call_id,
@@ -2032,7 +2037,8 @@ void Endpoint::on_call_rx_reinvite(pjsua_call_id call_id,
     
     *async = prm.isAsync;
     *code = prm.statusCode;
-    *opt = prm.opt.toPj();
+    call->tmpOpt = prm.opt;
+    *opt = call->tmpOpt.toPj();
 }
 
 void Endpoint::on_call_tx_offer(pjsua_call_id call_id,
@@ -2051,7 +2057,8 @@ void Endpoint::on_call_tx_offer(pjsua_call_id call_id,
 
     call->onCallTxOffer(prm);
 
-    *opt = prm.opt.toPj();
+    call->tmpOpt = prm.opt;
+    *opt = call->tmpOpt.toPj();
 }
 
 pjsip_redirect_op Endpoint::on_call_redirected(pjsua_call_id call_id,
@@ -2251,11 +2258,14 @@ void Endpoint::on_create_media_transport_srtp(pjsua_call_id call_id,
     call->onCreateMediaTransportSrtp(prm);
     
     srtp_opt->use = prm.srtpUse;
-    srtp_opt->crypto_count = (unsigned)prm.cryptos.size();
+    call->tmpCryptos = prm.cryptos;
+    srtp_opt->crypto_count = (unsigned)call->tmpCryptos.size();
+    if (srtp_opt->crypto_count > PJ_ARRAY_SIZE(srtp_opt->crypto))
+        srtp_opt->crypto_count = PJ_ARRAY_SIZE(srtp_opt->crypto);
     for (unsigned i = 0; i < srtp_opt->crypto_count; i++) {
-        srtp_opt->crypto[i].key   = str2Pj(prm.cryptos[i].key);
-        srtp_opt->crypto[i].name  = str2Pj(prm.cryptos[i].name);
-        srtp_opt->crypto[i].flags = prm.cryptos[i].flags;
+        srtp_opt->crypto[i].key   = str2Pj(call->tmpCryptos[i].key);
+        srtp_opt->crypto[i].name  = str2Pj(call->tmpCryptos[i].name);
+        srtp_opt->crypto[i].flags = call->tmpCryptos[i].flags;
     }
 }
 

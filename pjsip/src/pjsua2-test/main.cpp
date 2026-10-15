@@ -24,17 +24,22 @@
 using namespace pj;
 
 void audioMediaPortTest();
+void callReplaceRejectReasonTest();
+void callTransferCustomCallIdTest();
 
 int main(int argc, char *argv[])
 {
     try {
         audioMediaPortTest();
+        callReplaceRejectReasonTest();
+        callTransferCustomCallIdTest();
 
         {
             InstantMessagingTests instantMessagingTests;
 
             instantMessagingTests.immediateResponse();
             instantMessagingTests.deferredResponse();
+            instantMessagingTests.longContentType();
         }
 
         {

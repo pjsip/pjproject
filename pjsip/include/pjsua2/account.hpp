@@ -2713,6 +2713,7 @@ private:
 private:
     pjsua_acc_id         id;
     string               tmpReason;     // for saving response's reason
+    SipTxOption          tmpTxOption;   // for saving response's tx option
 #if !DEPRECATED_FOR_TICKET_2232
     BuddyVector          buddyList;
 #endif

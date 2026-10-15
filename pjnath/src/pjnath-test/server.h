@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -116,6 +116,12 @@ struct test_server
     pj_bool_t            turn_split_data_on_chbind;
     pj_ioqueue_op_key_t  send_key2;
     pj_uint8_t           extra_data[8];
+
+    /* RFC 6062 Connect/ConnectionBind, see conn_bind_test() */
+    pj_bool_t            turn_respond_connect;
+    pj_bool_t            turn_accept_conn_bind;
+    pj_activesock_t     *data_conn_sock;
+    pj_ioqueue_op_key_t  data_conn_send_key;
 
     struct turn_stat {
         unsigned         rx_allocate_cnt;

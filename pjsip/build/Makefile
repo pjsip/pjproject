@@ -186,7 +186,7 @@ endif
 export PJSUA2_TEST_SRCDIR = ../src/pjsua2-test
 export PJSUA2_TEST_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			   main.o instant_messaging.o auth_challenge.o audio_media_port.o \
-			   object_lifetime.o
+			   call_replace.o object_lifetime.o
 export PJSUA2_TEST_CFLAGS += $(_CFLAGS) $(PJ_VIDEO_CFLAGS)
 export PJSUA2_TEST_CXXFLAGS = $(_CXXFLAGS) $(PJSUA2_LIB_CFLAGS) $(PJ_VIDEO_CFLAGS)
 export PJSUA2_TEST_LDFLAGS += $(PJ_LDXXFLAGS) $(PJ_LDXXLIBS) $(LDFLAGS)
@@ -208,7 +208,7 @@ export TEST_OBJS += dlg_core_test.o dlg_target_refresh_test.o dns_test.o \
 		    tsx_uas_test.o txdata_test.o uri_test.o \
 		    inv_offer_answer_test.o auth_async_test.o \
 		    pjsua_auth_test.o pjsua_call_test.o \
-		    pjsua_acc_test.o pjsua_dns_test.o \
+		    pjsua_acc_test.o pjsua_dns_test.o pjsua_pres_test.o \
 		    srv_failover_test.o
 export TEST_CFLAGS += $(_CFLAGS) $(PJ_VIDEO_CFLAGS)
 export TEST_CXXFLAGS += $(_CXXFLAGS)

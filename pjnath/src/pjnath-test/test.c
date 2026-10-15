@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -249,6 +249,7 @@ static int test_inner(int argc, char *argv[])
 
 #if INCLUDE_ICE_TEST
     UT_ADD_TEST(&test_app.ut_app, ice_wait_valid_pair_test, 0);
+    UT_ADD_TEST(&test_app.ut_app, ice_rx_data_stop_test, 0);
 #endif
 
 #if INCLUDE_TURN_SOCK_TEST
