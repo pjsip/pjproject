@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -398,6 +398,8 @@ int test_main(int argc, char *argv[])
 
 #if INCLUDE_DLG_CORE_TEST
     UT_ADD_TEST(&test_app.ut_app, dlg_core_test, 0);
+    /* Exclusive, as it changes the resolver */
+    UT_ADD_TEST(&test_app.ut_app, dlg_ack_resolve_test, PJ_TEST_EXCLUSIVE);
 #endif
 
 #if INCLUDE_TSX_BENCH

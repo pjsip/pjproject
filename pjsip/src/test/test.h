@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -137,6 +137,7 @@ int srv_failover_pjsua_test(void);
 int pjsua_dns_test(void);
 int inv_offer_answer_test(void);
 int dlg_core_test(void);
+int dlg_ack_resolve_test(void);
 int dlg_target_refresh_test(void);
 
 #define MAX_TSX_TESTS   10

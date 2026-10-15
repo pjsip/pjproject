@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1268,12 +1268,14 @@ static pj_status_t dlg_create_request_throw( pjsip_dialog *dlg,
     /* Just copy dialog route-set to Route header.
      * The transaction will do the processing as specified in Section 12.2.1
      * of RFC 3261 in function tsx_process_route() in sip_transaction.c.
+     * Clone, not shallow clone: an ACK has no transaction and may still be
+     * resolving its destination after the dialog is destroyed.
      */
     route = dlg->route_set.next;
     end_list = &dlg->route_set;
     for (; route != end_list; route = route->next ) {
         pjsip_route_hdr *r;
-        r = (pjsip_route_hdr*) pjsip_hdr_shallow_clone( tdata->pool, route );
+        r = (pjsip_route_hdr*) pjsip_hdr_clone( tdata->pool, route );
         pjsip_routing_hdr_set_route(r);
         pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)r);
     }
@@ -1397,9 +1399,12 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
     /* Put this dialog in tdata's mod_data */
     tdata->mod_data[dlg->ua->id] = dlg;
 
-    /* If via_addr is set, use this address for the Via header. */
+    /* If via_addr is set, use this address for the Via header. The host is
+     * copied, as an ACK may be sent after the dialog is destroyed.
+     */
     if (dlg->via_addr.host.slen > 0) {
-        tdata->via_addr = dlg->via_addr;
+        pj_strdup(tdata->pool, &tdata->via_addr.host, &dlg->via_addr.host);
+        tdata->via_addr.port = dlg->via_addr.port;
         tdata->via_tp = dlg->via_tp;
     }
 
