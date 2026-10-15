@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -63,6 +63,7 @@ typedef struct tcp_data_conn_t
     pj_ioqueue_op_key_t  send_key;
 
     pj_turn_sock        *turn_sock;     /* TURN socket parent.          */
+    unsigned             gen;           /* Bumped by dataconn_cleanup() */
 } tcp_data_conn_t;
 
 
@@ -1674,12 +1675,15 @@ static void turn_on_state(pj_turn_session *sess,
 
 static void dataconn_cleanup(tcp_data_conn_t *conn)
 {
+    unsigned gen = conn->gen + 1;
+
     if (conn->asock)
         pj_activesock_close(conn->asock);
 
     pj_pool_safe_release(&conn->pool);
 
     pj_bzero(conn, sizeof(*conn));
+    conn->gen = gen;
 }
 
 static pj_bool_t dataconn_on_data_read(pj_activesock_t *asock,
@@ -1691,6 +1695,7 @@ static pj_bool_t dataconn_on_data_read(pj_activesock_t *asock,
     tcp_data_conn_t *conn = (tcp_data_conn_t*)
                             pj_activesock_get_user_data(asock);
     pj_turn_sock *turn_sock = conn->turn_sock;
+    unsigned gen;
 
     pj_grp_lock_acquire(turn_sock->grp_lock);
 
@@ -1701,6 +1706,9 @@ static pj_bool_t dataconn_on_data_read(pj_activesock_t *asock,
         pj_grp_lock_release(turn_sock->grp_lock);
         return PJ_FALSE;
     }
+
+    /* The callbacks below may release this connection */
+    gen = conn->gen;
 
     *remainder = size;
     while (*remainder > 0) {
@@ -1798,6 +1806,11 @@ static pj_bool_t dataconn_on_data_read(pj_activesock_t *asock,
             }
         } else
             goto on_return;
+
+        if (conn->gen != gen) {
+            pj_grp_lock_release(turn_sock->grp_lock);
+            return PJ_FALSE;
+        }
     }
 
 on_return:
@@ -1915,7 +1928,6 @@ static void turn_on_connection_attempt(pj_turn_session *sess,
 
     /* Init new data connection */
     new_conn = &turn_sock->data_conn[i];
-    pj_bzero(new_conn, sizeof(*new_conn));
     pool = pj_pool_create(turn_sock->cfg.pf, "dataconn", 128, 128, NULL);
     new_conn->pool = pool;
     new_conn->id = conn_id;
@@ -2149,7 +2161,6 @@ static void turn_on_connect_complete(pj_turn_session *sess,
 
     /* Init new data connection */
     new_conn = &turn_sock->data_conn[i];
-    pj_bzero(new_conn, sizeof(*new_conn));
     pool = pj_pool_create(turn_sock->cfg.pf, "dataconn", 128, 128, NULL);
     new_conn->pool = pool;
     new_conn->id = conn_id;

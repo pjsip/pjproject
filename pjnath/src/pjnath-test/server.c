@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -428,6 +428,11 @@ void destroy_test_server(test_server *test_srv)
         test_srv->cl_turn_sock = NULL;
     }
 
+    if (test_srv->data_conn_sock) {
+        pj_activesock_close(test_srv->data_conn_sock);
+        test_srv->data_conn_sock = NULL;
+    }
+
 #if USE_TLS
     if (test_srv->ssl_srv_sock) {
         pj_ssl_sock_close(test_srv->ssl_srv_sock);
@@ -556,6 +561,66 @@ static pj_bool_t turn_tcp_on_data_read(pj_activesock_t *asock,
     PJ_UNUSED_ARG(remainder);
     return turn_on_data_read(test_srv, data, size, &test_srv->remote_addr, 
                             sizeof(test_srv->remote_addr), status);
+}
+
+/* Answer ConnectionBind on the data connection: accept it when
+ * turn_accept_conn_bind is set, reject it with 400 otherwise.
+ */
+static pj_bool_t turn_dataconn_on_data_read(pj_activesock_t *asock,
+                                            void *data,
+                                            pj_size_t size,
+                                            pj_status_t status,
+                                            pj_size_t *remainder)
+{
+    test_server *test_srv = (test_server *)pj_activesock_get_user_data(asock);
+    pj_pool_t *pool;
+    pj_stun_msg *req, *resp = NULL;
+    pj_str_t auth_key, *key = NULL;
+    pj_ssize_t len;
+
+    PJ_UNUSED_ARG(remainder);
+
+    if (status != PJ_SUCCESS) {
+        pj_activesock_close(asock);
+        test_srv->data_conn_sock = NULL;
+        return PJ_FALSE;
+    }
+
+    pool = pj_pool_create(test_srv->stun_cfg->pf, NULL, 512, 512, NULL);
+
+    status = pj_stun_msg_decode(pool, (pj_uint8_t*)data, size,
+                                PJ_STUN_CHECK_PACKET |
+                                    PJ_STUN_NO_FINGERPRINT_CHECK,
+                                &req, NULL, NULL);
+    if (status == PJ_SUCCESS && PJ_STUN_IS_REQUEST(req->hdr.type)) {
+        if (test_srv->turn_accept_conn_bind) {
+            pj_str_t tmp;
+
+            pj_stun_msg_create_response(pool, req, 0, NULL, &resp);
+            pj_stun_msg_add_string_attr(pool, resp, PJ_STUN_ATTR_NONCE,
+                                        pj_cstr(&tmp, TURN_NONCE));
+            pj_stun_msg_add_msgint_attr(pool, resp);
+            pj_stun_create_key(pool, &auth_key, &test_srv->domain,
+                               &test_srv->username, PJ_STUN_PASSWD_PLAIN,
+                               &test_srv->passwd);
+            key = &auth_key;
+        } else {
+            pj_stun_msg_create_response(pool, req, PJ_STUN_SC_BAD_REQUEST,
+                                        NULL, &resp);
+        }
+    }
+
+    if (resp &&
+        pj_stun_msg_encode(resp, (pj_uint8_t*)data, MAX_STUN_PKT, 0,
+                           key, &size) == PJ_SUCCESS)
+    {
+        len = size;
+        pj_activesock_send(asock, &test_srv->data_conn_send_key, data,
+                           &len, 0);
+    }
+
+    pj_pool_release(pool);
+    return PJ_TRUE;
 }
 #endif
 
@@ -937,6 +1002,21 @@ static pj_bool_t turn_on_data_read(test_server *test_srv,
 
             resp = create_success_response(test_srv, alloc, req, pool, 0, &auth_key);
 
+        } else if (req->hdr.type == PJ_STUN_CONNECT_REQUEST &&
+                   test_srv->turn_respond_connect)
+        {
+            pj_str_t tmp;
+
+            pj_stun_msg_create_response(pool, req, 0, NULL, &resp);
+            pj_stun_msg_add_string_attr(pool, resp, PJ_STUN_ATTR_NONCE,
+                                        pj_cstr(&tmp, TURN_NONCE));
+            pj_stun_msg_add_uint_attr(pool, resp, PJ_STUN_ATTR_CONNECTION_ID,
+                                      1);
+            pj_stun_msg_add_msgint_attr(pool, resp);
+            pj_stun_create_key(pool, &auth_key, &test_srv->domain,
+                               &test_srv->username, PJ_STUN_PASSWD_PLAIN,
+                               &test_srv->passwd);
+
         } else if (PJ_STUN_IS_REQUEST(req->hdr.type)) {
             pj_stun_msg_create_response(pool, req, PJ_STUN_SC_BAD_REQUEST, NULL, &resp);
         }
@@ -1062,6 +1142,30 @@ static pj_bool_t turn_tcp_on_accept_complete(pj_activesock_t *asock,
         return PJ_FALSE;
     }
 
+    /* A second connection is the client's data connection (RFC 6062) */
+    if (test_srv->cl_turn_sock && test_srv->turn_respond_connect &&
+        !test_srv->data_conn_sock)
+    {
+        pj_bzero(&asock_cb, sizeof(asock_cb));
+        asock_cb.on_data_read = &turn_dataconn_on_data_read;
+
+        sstatus = pj_activesock_create(test_srv->pool, newsock,
+                                       pj_SOCK_STREAM(), NULL,
+                                       test_srv->stun_cfg->ioqueue,
+                                       &asock_cb, test_srv,
+                                       &test_srv->data_conn_sock);
+        if (sstatus != PJ_SUCCESS) {
+            pj_sock_close(newsock);
+            return PJ_TRUE;
+        }
+
+        pj_ioqueue_op_key_init(&test_srv->data_conn_send_key,
+                               sizeof(test_srv->data_conn_send_key));
+        pj_activesock_start_read(test_srv->data_conn_sock, test_srv->pool,
+                                 MAX_STUN_PKT, 0);
+        return PJ_TRUE;
+    }
+
     pj_sockaddr_cp(&test_srv->remote_addr, src_addr);
     pj_bzero(&asock_cb, sizeof(asock_cb));
     asock_cb.on_data_read = &turn_tcp_on_data_read;
@@ -1085,10 +1189,12 @@ static pj_bool_t turn_tcp_on_accept_complete(pj_activesock_t *asock,
     return PJ_TRUE;
 
 on_exit:
-    if (test_srv->cl_turn_sock)
-        pj_activesock_close(test_srv->turn_sock);
-    else    
+    if (test_srv->cl_turn_sock) {
+        pj_activesock_close(test_srv->cl_turn_sock);
+        test_srv->cl_turn_sock = NULL;
+    } else {
         pj_sock_close(newsock);
+    }
 
     return PJ_FALSE;
 
