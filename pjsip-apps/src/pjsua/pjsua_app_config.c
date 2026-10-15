@@ -988,13 +988,13 @@ static pj_status_t parse_args(int argc, char *argv[],
             break;
 
         case OPT_CONTACT_REWRITE_METHOD:
-            cur_acc->contact_rewrite_method =
-                    (int)pj_strtoul(pj_cstr(&tmp, pj_optarg));
-            if (cur_acc->contact_rewrite_method > 7) {
+            /* One digit: a bitmask of pjsua_contact_rewrite_method */
+            if (pj_optarg[0] < '0' || pj_optarg[0] > '7' || pj_optarg[1]) {
                 PJ_LOG(1,(THIS_FILE, "Error: invalid --contact-rewrite-method "
                           "value '%s'", pj_optarg));
                 return PJ_EINVAL;
             }
+            cur_acc->contact_rewrite_method = pj_optarg[0] - '0';
             break;
 
         case OPT_DISABLE_STUN:
