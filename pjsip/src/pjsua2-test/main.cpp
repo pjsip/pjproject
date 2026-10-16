@@ -50,6 +50,8 @@ int main(int argc, char *argv[])
             authChallengeTests.deferredRespondWithCreds();
             authChallengeTests.deferredAbandon();
             authChallengeTests.accountDeleteWithPending();
+            authChallengeTests.digestToPj();
+            authChallengeTests.credAuthOtherParam();
         }
     } catch (...) {
         return 1;

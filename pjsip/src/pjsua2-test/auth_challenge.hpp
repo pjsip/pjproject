@@ -24,6 +24,12 @@
 
 using namespace pj;
 
+class AuthTestEndpoint : public Endpoint
+{
+public:
+    virtual pj_status_t onCredAuth(OnCredAuthParam &prm) override;
+};
+
 class AuthChallengeTests
 {
 public:
@@ -37,9 +43,11 @@ public:
     void deferredRespondWithCreds();
     void deferredAbandon();
     void accountDeleteWithPending();
+    void digestToPj();
+    void credAuthOtherParam();
 
 private:
-    Endpoint ep;
+    AuthTestEndpoint ep;
     pj_uint16_t port;
 };
 

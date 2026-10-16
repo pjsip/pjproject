@@ -27,9 +27,12 @@
  *      calls respond(creds).
  *   4. Deferred abandon: event loop calls abandon().
  *   5. Account deletion with outstanding deferred challenge.
+ *   6. DigestChallenge/DigestCredential::toPj() into a pool.
+ *   7. AKA credential: parameters added in onCredAuth are sent.
  */
 
 #include <iostream>
+#include <string>
 #include <memory>
 
 #include "auth_challenge.hpp"
@@ -60,6 +63,8 @@ using namespace pj;
 
 static unsigned g_mock_req_count;
 static unsigned g_mock_auth_count;
+static const char *g_mock_chal;
+static std::string g_mock_auth_param;
 
 static pj_bool_t g_mock_enabled;
 
@@ -67,6 +72,7 @@ static pj_bool_t mock_registrar_on_rx_request(pjsip_rx_data *rdata)
 {
     pjsip_msg *msg = rdata->msg_info.msg;
     pjsip_hdr  hdr_list;
+    pjsip_authorization_hdr *hauth;
     int        code;
 
     if (!g_mock_enabled)
@@ -87,16 +93,24 @@ static pj_bool_t mock_registrar_on_rx_request(pjsip_rx_data *rdata)
     g_mock_req_count++;
     pj_list_init(&hdr_list);
 
-    if (pjsip_msg_find_hdr(msg, PJSIP_H_AUTHORIZATION, NULL) == NULL) {
+    hauth = (pjsip_authorization_hdr*)
+            pjsip_msg_find_hdr(msg, PJSIP_H_AUTHORIZATION, NULL);
+    if (hauth == NULL) {
         const pj_str_t hname  = pj_str((char*)"WWW-Authenticate");
-        const pj_str_t hvalue =
-            pj_str((char*)"Digest realm=\"test\", nonce=\"testnonce\"");
+        const pj_str_t hvalue = pj_str((char*)g_mock_chal);
         pjsip_generic_string_hdr *hwww =
             pjsip_generic_string_hdr_create(rdata->tp_info.pool,
                                             &hname, &hvalue);
         pj_list_push_back(&hdr_list, hwww);
         code = 401;
     } else {
+        const pj_str_t pname = pj_str((char*)"x-test");
+        pjsip_param *param;
+
+        param = pjsip_param_find(&hauth->credential.digest.other_param,
+                                 &pname);
+        if (param)
+            g_mock_auth_param.assign(param->value.ptr, param->value.slen);
         g_mock_auth_count++;
         code = 200;
     }
@@ -112,6 +126,8 @@ static void reset_mock_registrar()
 {
     g_mock_req_count  = 0;
     g_mock_auth_count = 0;
+    g_mock_chal       = "Digest realm=\"test\", nonce=\"testnonce\"";
+    g_mock_auth_param.clear();
     g_mock_enabled    = PJ_TRUE;
 }
 
@@ -182,6 +198,18 @@ public:
         }
     }
 };
+
+
+/*****************************************************************************
+ * AuthTestEndpoint — answers AKA challenges with an extra parameter
+ *****************************************************************************/
+
+pj_status_t AuthTestEndpoint::onCredAuth(OnCredAuthParam &prm)
+{
+    prm.digestCredential.response = "00000000000000000000000000000000";
+    prm.digestCredential.otherParam["x-test"] = "value1";
+    return PJ_SUCCESS;
+}
 
 
 /*****************************************************************************
@@ -536,4 +564,109 @@ void AuthChallengeTests::accountDeleteWithPending()
     pjsua_handle_events(500);
 
     std::cout << "  accountDeleteWithPending: PASSED\n";
+}
+
+
+/*****************************************************************************
+ * Test 6: digestToPj
+ *
+ * toPj() copies every field and parameter into the pool, so the result
+ * stays valid after the pjsua2 object is gone.
+ *****************************************************************************/
+void AuthChallengeTests::digestToPj()
+{
+    std::cout << "\n=== AUTH TEST: digestToPj ===\n";
+
+    pj_pool_t *pool = pjsua_pool_create("digest-topj", 512, 512);
+    pjsip_digest_challenge chal;
+    pjsip_digest_credential cred;
+    const pj_str_t name_a = pj_str((char*)"x-a");
+    const pj_str_t name_b = pj_str((char*)"x-b");
+    pjsip_param *param;
+
+    TEST_ASSERT(pool != NULL);
+    {
+        DigestChallenge dc;
+        dc.realm = "test";
+        dc.nonce = "testnonce";
+        dc.stale = 1;
+        dc.otherParam["x-a"] = "1";
+        dc.otherParam["x-b"] = "2";
+        dc.toPj(pool, chal);
+
+        DigestCredential dcred;
+        dcred.realm = "test";
+        dcred.username = TEST_USER;
+        dcred.otherParam["x-a"] = "3";
+        dcred.otherParam["x-b"] = "4";
+        dcred.toPj(pool, cred);
+    }
+
+    TEST_ASSERT(pj_strcmp2(&chal.realm, "test") == 0);
+    TEST_ASSERT(pj_strcmp2(&chal.nonce, "testnonce") == 0);
+    TEST_ASSERT(chal.stale == 1);
+    TEST_ASSERT(pj_list_size(&chal.other_param) == 2);
+    param = pjsip_param_find(&chal.other_param, &name_a);
+    TEST_ASSERT(param && pj_strcmp2(&param->value, "1") == 0);
+    param = pjsip_param_find(&chal.other_param, &name_b);
+    TEST_ASSERT(param && pj_strcmp2(&param->value, "2") == 0);
+
+    TEST_ASSERT(chal.domain.ptr == NULL && chal.domain.slen == 0);
+
+    TEST_ASSERT(pj_strcmp2(&cred.realm, "test") == 0);
+    TEST_ASSERT(pj_strcmp2(&cred.username, TEST_USER) == 0);
+    TEST_ASSERT(cred.cnonce.ptr == NULL && cred.cnonce.slen == 0);
+    TEST_ASSERT(pj_list_size(&cred.other_param) == 2);
+    param = pjsip_param_find(&cred.other_param, &name_a);
+    TEST_ASSERT(param && pj_strcmp2(&param->value, "3") == 0);
+    param = pjsip_param_find(&cred.other_param, &name_b);
+    TEST_ASSERT(param && pj_strcmp2(&param->value, "4") == 0);
+
+    pj_pool_release(pool);
+
+    std::cout << "  digestToPj: PASSED\n";
+}
+
+
+/*****************************************************************************
+ * Test 7: credAuthOtherParam
+ *
+ * Account has an AKA credential. 401 with AKAv1-MD5 -> onCredAuth adds
+ * a parameter to the credential. Expect it in the Authorization header.
+ *****************************************************************************/
+void AuthChallengeTests::credAuthOtherParam()
+{
+    std::cout << "\n=== AUTH TEST: credAuthOtherParam ===\n";
+#if PJSIP_HAS_DIGEST_AKA_AUTH && defined(PJ_HAS_SSL_SOCK) && \
+    PJ_HAS_SSL_SOCK != 0 && PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL
+    init_state(ACTION_SYNC_RESPOND);
+    g_mock_chal = "Digest realm=\"test\", nonce=\"testnonce\", "
+                  "algorithm=AKAv1-MD5";
+
+    AccountConfig cfg = make_acc_config(port, false);
+    AuthCredInfo cred("digest", "*", TEST_USER, PJSIP_CRED_DATA_EXT_AKA,
+                      "secret");
+    cred.akaK = "secret";
+    cfg.sipConfig.authCreds.push_back(PJSUA2_MOVE(cred));
+
+    std::unique_ptr<TestAccount> acc(new TestAccount);
+    acc->create(cfg);
+    acc->setRegistration(true);
+
+    poll_events(30000);
+
+    TEST_ASSERT(g_state.regDone == true);
+    TEST_ASSERT(g_state.regCode == 200);
+    TEST_ASSERT(g_mock_auth_count >= 1);
+    TEST_ASSERT(g_mock_auth_param == "value1");
+
+    g_mock_enabled = PJ_FALSE;
+    g_state.deferEnabled = false;
+    acc.reset();
+    pjsua_handle_events(500);
+
+    std::cout << "  credAuthOtherParam: PASSED\n";
+#else
+    std::cout << "  credAuthOtherParam: SKIPPED (needs AKA and OpenSSL)\n";
+#endif
 }

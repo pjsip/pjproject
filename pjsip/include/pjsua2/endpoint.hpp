@@ -738,9 +738,9 @@ struct DigestChallenge
     void fromPj(const pjsip_digest_challenge &prm);
 
     /**
-     * Convert to pjsip
+     * Convert to pjsip. Strings and parameters are allocated from the pool.
      */
-    pjsip_digest_challenge toPj() const;
+    void toPj(pj_pool_t *pool, pjsip_digest_challenge &chal) const;
 };
 
 /**
@@ -810,9 +810,9 @@ struct DigestCredential
     void fromPj(const pjsip_digest_credential &prm);
 
     /**
-     * Convert to pjsip
+     * Convert to pjsip. Strings and parameters are allocated from the pool.
      */
-    pjsip_digest_credential toPj() const;
+    void toPj(pj_pool_t *pool, pjsip_digest_credential &cred) const;
 };
 
 

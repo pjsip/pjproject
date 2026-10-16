@@ -152,28 +152,27 @@ void DigestCredential::fromPj(const pjsip_digest_credential &prm)
     nc = pj2Str(prm.nc);
 }
 
-pjsip_digest_credential DigestCredential::toPj() const
+void DigestCredential::toPj(pj_pool_t *pool,
+                            pjsip_digest_credential &cred) const
 {
-    pjsip_digest_credential credentials;
-    pj_list_init(&credentials.other_param);
-    credentials.realm = str2Pj(realm);
-    credentials.username = str2Pj(username);
+    cred.realm = str2PjDup(pool, realm);
+    cred.username = str2PjDup(pool, username);
+    pj_list_init(&cred.other_param);
     for (std::map<std::string, std::string>::const_iterator it = otherParam.begin(); 
            it != otherParam.end(); ++it) {
-        pjsip_param other_param;
-        other_param.name = str2Pj(it->first);
-        other_param.value = str2Pj(it->second);
-        pj_list_push_back(&credentials.other_param, &other_param);
+        pjsip_param *p = PJ_POOL_ALLOC_T(pool, pjsip_param);
+        p->name = str2PjDup(pool, it->first);
+        p->value = str2PjDup(pool, it->second);
+        pj_list_push_back(&cred.other_param, p);
     }
-    credentials.nonce = str2Pj(nonce);
-    credentials.uri = str2Pj(uri);
-    credentials.response = str2Pj(response);
-    credentials.algorithm = str2Pj(algorithm);
-    credentials.cnonce = str2Pj(cnonce);
-    credentials.opaque = str2Pj(opaque);
-    credentials.qop = str2Pj(qop);
-    credentials.nc = str2Pj(nc);
-    return credentials;
+    cred.nonce = str2PjDup(pool, nonce);
+    cred.uri = str2PjDup(pool, uri);
+    cred.response = str2PjDup(pool, response);
+    cred.algorithm = str2PjDup(pool, algorithm);
+    cred.cnonce = str2PjDup(pool, cnonce);
+    cred.opaque = str2PjDup(pool, opaque);
+    cred.qop = str2PjDup(pool, qop);
+    cred.nc = str2PjDup(pool, nc);
 }
 
 void DigestChallenge::fromPj(const pjsip_digest_challenge &prm)
@@ -192,25 +191,24 @@ void DigestChallenge::fromPj(const pjsip_digest_challenge &prm)
     qop = pj2Str(prm.qop);
 }
 
-pjsip_digest_challenge DigestChallenge::toPj() const
+void DigestChallenge::toPj(pj_pool_t *pool,
+                           pjsip_digest_challenge &chal) const
 {
-    pjsip_digest_challenge challenge;
-    pj_list_init(&challenge.other_param);
-    challenge.realm = str2Pj(realm);
-    challenge.domain = str2Pj(domain);
+    chal.realm = str2PjDup(pool, realm);
+    chal.domain = str2PjDup(pool, domain);
+    pj_list_init(&chal.other_param);
     for (std::map<std::string, std::string>::const_iterator it = otherParam.begin(); 
            it != otherParam.end(); ++it) {
-        pjsip_param other_param;
-        other_param.name = str2Pj(it->first);
-        other_param.value = str2Pj(it->second);
-        pj_list_push_back(&challenge.other_param, &other_param);
+        pjsip_param *p = PJ_POOL_ALLOC_T(pool, pjsip_param);
+        p->name = str2PjDup(pool, it->first);
+        p->value = str2PjDup(pool, it->second);
+        pj_list_push_back(&chal.other_param, p);
     }
-    challenge.nonce = str2Pj(nonce);
-    challenge.opaque = str2Pj(opaque);
-    challenge.stale = stale;
-    challenge.algorithm = str2Pj(algorithm);
-    challenge.qop = str2Pj(qop);
-    return challenge;
+    chal.nonce = str2PjDup(pool, nonce);
+    chal.opaque = str2PjDup(pool, opaque);
+    chal.stale = stale;
+    chal.algorithm = str2PjDup(pool, algorithm);
+    chal.qop = str2PjDup(pool, qop);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3169,21 +3167,7 @@ pj_status_t Endpoint::on_auth_create_aka_response_callback(pj_pool_t *pool,
     pj_status_t status = Endpoint::instance().onCredAuth(prm);
 
    if (status == PJ_SUCCESS) {
-        pjsip_digest_credential auth_new = prm.digestCredential.toPj();
-
-        // Duplicate in the pool, so that digestCredential
-        // is allowed to be destructed at the end of the method.
-        pj_strdup(pool, &auth->realm, &auth_new.realm);
-        pj_strdup(pool, &auth->username, &auth_new.username);
-        pj_strdup(pool, &auth->nonce, &auth_new.nonce);
-        pj_strdup(pool, &auth->uri, &auth_new.uri);
-        pj_strdup(pool, &auth->response, &auth_new.response);
-        pj_strdup(pool, &auth->algorithm, &auth_new.algorithm);
-        pj_strdup(pool, &auth->cnonce, &auth_new.cnonce);
-        pj_strdup(pool, &auth->opaque, &auth_new.opaque);
-        pj_strdup(pool, &auth->qop, &auth_new.qop);
-        pj_strdup(pool, &auth->nc, &auth_new.nc);
-        pjsip_param_clone(pool, &auth->other_param, &auth_new.other_param);
+        prm.digestCredential.toPj(pool, *auth);
     }
 #if PJSIP_HAS_DIGEST_AKA_AUTH
     else if (status == PJ_ENOTSUP) {

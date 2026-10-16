@@ -34,6 +34,15 @@ inline pj_str_t str2Pj(const string &input_str)
     return output_str;
 }
 
+inline pj_str_t str2PjDup(pj_pool_t *pool, const string &input_str)
+{
+    pj_str_t src = str2Pj(input_str);
+    pj_str_t output_str = {NULL, 0};
+
+    pj_strdup(pool, &output_str, &src);
+    return output_str;
+}
+
 inline string pj2Str(const pj_str_t &input_str)
 {
     if (input_str.ptr && input_str.slen>0)
