@@ -19,6 +19,7 @@
 #include <pjsua2/endpoint.hpp>
 #include "instant_messaging.hpp"
 #include "auth_challenge.hpp"
+#include "object_lifetime.hpp"
 
 using namespace pj;
 
@@ -52,6 +53,23 @@ int main(int argc, char *argv[])
             authChallengeTests.accountDeleteWithPending();
             authChallengeTests.digestToPj();
             authChallengeTests.credAuthOtherParam();
+        }
+
+        {
+            ObjectLifetimeTests objectLifetimeTests;
+
+            objectLifetimeTests.deleteActiveCall();
+            objectLifetimeTests.deleteCallCreatingMedia();
+            objectLifetimeTests.deleteCallWithLibraryBusy();
+            objectLifetimeTests.deleteCallWithDialogBusy();
+            objectLifetimeTests.deleteCallWithLibraryBriefBusy();
+            objectLifetimeTests.hangupRetryAfterSlotReuse();
+            objectLifetimeTests.hangupRetryWhileBusy();
+            objectLifetimeTests.deleteCallInOwnCallback();
+            objectLifetimeTests.deleteCallWhileClosing();
+            objectLifetimeTests.deleteCallAfterSlotReuse();
+            objectLifetimeTests.deleteAccountAfterSlotReuse();
+            objectLifetimeTests.deleteAccountDeletedUnderneath();
         }
     } catch (...) {
         return 1;

@@ -5567,7 +5567,8 @@ PJ_DECL(pj_bool_t) pjsua_acc_is_valid(pjsua_acc_id acc_id);
  *
  * @param acc_id        The account ID to be used as default.
  *
- * @return              PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success, or PJ_EINVAL if the account
+ *                      is not valid.
  */
 PJ_DECL(pj_status_t) pjsua_acc_set_default(pjsua_acc_id acc_id);
 
