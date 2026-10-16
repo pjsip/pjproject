@@ -800,6 +800,27 @@ static void clear_sa_pin(pjsua_acc *acc)
 }
 
 
+/* pjsua.h requires exactly one of UNREGISTER and NO_UNREG. With neither or
+ * both, use NO_UNREG, so that every path reads the same method.
+ */
+static void normalize_contact_rewrite_method(pjsua_acc_config *cfg)
+{
+    const int both = PJSUA_CONTACT_REWRITE_UNREGISTER |
+                     PJSUA_CONTACT_REWRITE_NO_UNREG;
+    int method = cfg->contact_rewrite_method;
+
+    if ((method & both) != 0 && (method & both) != both)
+        return;
+
+    cfg->contact_rewrite_method = (method & ~both) |
+                                  PJSUA_CONTACT_REWRITE_NO_UNREG;
+    PJ_LOG(2,(THIS_FILE, "Account %.*s: contact_rewrite_method %d sets %s "
+              "of UNREGISTER and NO_UNREG, using %d",
+              (int)cfg->id.slen, cfg->id.ptr, method,
+              ((method & both) ? "both" : "neither"),
+              cfg->contact_rewrite_method));
+}
+
 /*
  * Add a new account to pjsua.
  */
@@ -864,6 +885,7 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
                 PJSIP_REGISTER_CLIENT_DELAY_BEFORE_REFRESH;
         }
     }
+    normalize_contact_rewrite_method(&pjsua_var.acc[id].cfg);
 
     /* Check the route URI's and force loose route if required */
     for (i=0; i<acc->cfg.proxy_cnt; ++i) {
