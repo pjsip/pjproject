@@ -1,3 +1,5 @@
+list(APPEND CMAKE_MESSAGE_CONTEXT "pjmedia")
+
 # ##############################################################################
 # Module options
 
