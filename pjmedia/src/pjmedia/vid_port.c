@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -197,6 +197,19 @@ static pj_status_t create_converter(pjmedia_vid_port *vp)
         return status;
     }
     vp->src_size = vafp.framebytes;
+
+    /* Grow the frame buffer when the source format gets bigger */
+    if (vp->frm_buf && vp->src_size > vp->frm_buf_size) {
+        void *buf = pj_pool_zalloc(vp->pool, vp->src_size);
+
+        pjmedia_video_format_fill_black(&vp->conv.conv_param.src, buf,
+                                        vp->src_size);
+        pj_mutex_lock(vp->frm_mutex);
+        vp->frm_buf->buf = buf;
+        vp->frm_buf->size = vp->src_size;
+        vp->frm_buf_size = vp->src_size;
+        pj_mutex_unlock(vp->frm_mutex);
+    }
 
     if (vp->conv.conv) {
         pjmedia_converter_destroy(vp->conv.conv);
@@ -1081,12 +1094,7 @@ static pj_status_t handle_format_change(pjmedia_vid_port *vp)
         
         if (vp->role == ROLE_ACTIVE && vp->stream_role == ROLE_PASSIVE) {
             pjmedia_clock_param clock_param;
-            
-            /**
-             * Initially, frm_buf was allocated the biggest
-             * supported size, so we do not need to re-allocate
-             * the buffer here.
-             */
+
             /* Adjust the clock */
             clock_param.usec_interval = PJMEDIA_PTIME(&vfd->fps);
             clock_param.clock_rate = vid_param.clock_rate;
@@ -1134,6 +1142,7 @@ static void copy_frame_to_buffer(pjmedia_vid_port *vp,
                                  pjmedia_frame *frame)
 {
     pj_mutex_lock(vp->frm_mutex);
+    vp->frm_buf->size = vp->frm_buf_size;
     pjmedia_frame_copy(vp->frm_buf, frame);
     pj_mutex_unlock(vp->frm_mutex);
 }

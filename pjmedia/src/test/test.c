@@ -92,7 +92,8 @@ int test_main(int argc, char *argv[])
 #endif
 
 #if HAS_VID_PORT_TEST
-    UT_ADD_TEST(&test_app.ut_app, vid_port_test, 0);
+    /* Exclusive: it registers a test video device factory */
+    UT_ADD_TEST(&test_app.ut_app, vid_port_test, PJ_TEST_EXCLUSIVE);
 #endif
 
 #if HAS_VID_CONF_TEST
