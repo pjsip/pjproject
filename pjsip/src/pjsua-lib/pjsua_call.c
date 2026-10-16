@@ -1115,7 +1115,8 @@ PJ_DEF(pj_status_t) pjsua_call_make_call2(
         !pjsua_var.is_mswitch && pjsua_var.snd_port==NULL &&
         pjsua_var.null_snd==NULL && !pjsua_var.no_snd && call->opt.aud_cnt > 0)
     {
-        status = pjsua_set_snd_dev(pjsua_var.cap_dev, pjsua_var.play_dev);
+        status = pjsua_set_snd_dev_internal(pjsua_var.cap_dev,
+                                            pjsua_var.play_dev);
         if (status != PJ_SUCCESS)
             goto on_error;
     }

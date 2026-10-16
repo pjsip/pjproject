@@ -8670,8 +8670,11 @@ struct pjsua_media_config
 
     /**
      * Specify idle time of sound device before it is automatically closed,
-     * in seconds. Use value -1 to disable the auto-close feature of sound
-     * device
+     * in seconds. The sound device is idle when there is no active call and
+     * no connection in the conference bridge. This also applies to a sound
+     * device opened by the application, e.g. via pjsua_set_snd_dev() or
+     * pjsua_set_null_snd_dev(). Use value -1 to disable the auto-close
+     * feature of sound device.
      *
      * Default : 1
      */
