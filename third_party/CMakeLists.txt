@@ -1,3 +1,5 @@
+list(APPEND CMAKE_MESSAGE_CONTEXT "third_party")
+
 set(DEPS)
 
 # G7221

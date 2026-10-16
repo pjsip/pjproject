@@ -1,3 +1,5 @@
+list(APPEND CMAKE_MESSAGE_CONTEXT "pjsip-apps")
+
 include(CMakeDependentOption)
 
 # ##############################################################################
