@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1355,19 +1355,24 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_request( pjsip_dialog *dlg,
 static void send_ack_callback( pjsip_send_state *send_state,
                                pj_ssize_t sent, pj_bool_t *cont )
 {
-    if (sent > 0)
-        return;
+    pjsip_dialog *dlg = (pjsip_dialog*) send_state->token;
 
-    if (*cont) {
+    if (sent <= 0 && *cont) {
         PJ_PERROR(3,(THIS_FILE, (pj_status_t)-sent,
                      "Temporary failure in sending %s, "
                      "will try next server",
                      pjsip_tx_data_get_info(send_state->tdata)));
-    } else {
+        return;
+    }
+
+    if (sent <= 0) {
         PJ_PERROR(3,(THIS_FILE, (pj_status_t)-sent,
                      "Failed to send %s!",
                      pjsip_tx_data_get_info(send_state->tdata)));
     }
+
+    /* Done with the ACK, it no longer needs the dialog */
+    pj_grp_lock_dec_ref(dlg->grp_lock_);
 }
 
 /*
@@ -1468,11 +1473,18 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
         /* Set transport selector */
         pjsip_tx_data_set_transport(tdata, &dlg->tp_sel);
 
+        /* Without a transaction nothing else keeps the dialog, whose
+         * memory the ACK uses, until the ACK is sent or fails.
+         */
+        pj_grp_lock_add_ref(dlg->grp_lock_);
+
         /* Send request */
         status = pjsip_endpt_send_request_stateless(dlg->endpt, tdata,
-                                                    NULL, &send_ack_callback);
-        if (status != PJ_SUCCESS)
+                                                    dlg, &send_ack_callback);
+        if (status != PJ_SUCCESS) {
+            pj_grp_lock_dec_ref(dlg->grp_lock_);
             goto on_error;
+        }
 
     }
 
