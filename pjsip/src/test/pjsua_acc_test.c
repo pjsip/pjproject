@@ -51,6 +51,7 @@
  *      that the retry's 2xx rewrites the Contact again.
  *  11. PJSUA_CONTACT_REWRITE_ALWAYS_UPDATE alone, which names no 2xx
  *      method: the rewrite must still reach the registrar.
+ *  12. UNREGISTER and NO_UNREG together, likewise.
  */
 
 #include "test.h"
@@ -84,6 +85,8 @@ static struct {
     const char   *received;     /* forced Via received param, or NULL */
     unsigned      req_count;
     char          last_contact[PJSIP_MAX_URL_SIZE];  /* as seen on the wire */
+    /* host of the first Contact not sent with expires=0 */
+    char          live_host[PJ_INET6_ADDRSTRLEN + 16];
 } g_mock_reg = {
     {
         NULL, NULL,
@@ -124,6 +127,31 @@ static pj_bool_t mock_registrar_rx_request(pjsip_rx_data *rdata)
             int len = pjsip_hdr_print_on(hc, g_mock_reg.last_contact,
                                          sizeof(g_mock_reg.last_contact)-1);
             g_mock_reg.last_contact[len > 0? len : 0] = '\0';
+        }
+    }
+
+    /* And the host of the first Contact it registers rather than removes */
+    {
+        pjsip_contact_hdr *hc = NULL;
+
+        g_mock_reg.live_host[0] = '\0';
+        while ((hc = (pjsip_contact_hdr*)
+                     pjsip_msg_find_hdr(msg, PJSIP_H_CONTACT,
+                                        hc ? hc->next : NULL)) != NULL)
+        {
+            pjsip_sip_uri *uri;
+
+            if (hc->expires == 0 || hc->uri == NULL ||
+                !(PJSIP_URI_SCHEME_IS_SIP(hc->uri) ||
+                  PJSIP_URI_SCHEME_IS_SIPS(hc->uri)))
+            {
+                continue;
+            }
+            uri = (pjsip_sip_uri*) pjsip_uri_get_uri(hc->uri);
+            pj_ansi_snprintf(g_mock_reg.live_host,
+                             sizeof(g_mock_reg.live_host), "%.*s",
+                             (int)uri->host.slen, uri->host.ptr);
+            break;
         }
     }
 
@@ -485,9 +513,9 @@ static int rewrite_test(pjsua_transport_id tp_id, int port,
         }
 
         /* The regc must register it too, not only the account hold it */
-        if (!pj_ansi_strstr(g_mock_reg.last_contact, c->expect_host)) {
-            PJ_LOG(3, (THIS_FILE, "    error: registered Contact '%s' "
-                       "lacks host '%s'", g_mock_reg.last_contact,
+        if (pj_ansi_strcmp(g_mock_reg.live_host, c->expect_host) != 0) {
+            PJ_LOG(3, (THIS_FILE, "    error: registrar received host '%s', "
+                       "expected '%s'", g_mock_reg.live_host,
                        c->expect_host));
             rc = err_base - 14;
             goto on_return;
@@ -740,36 +768,36 @@ int pjsua_acc_test(void)
              * <sip:user@2001:db8::1:PORT> and no longer parses.
              */
             { "IPv6 received over IPv4 transport",
-              "2001:db8::1", "2001:db8::1", NULL, NULL, 0, -2410 },
+              "2001:db8::1", "2001:db8::1", NULL, NULL, 0, -2600 },
 
             /* Plain IPv4: the ordinary rewrite must still happen. */
             { "IPv4 received",
-              "1.2.3.4", "1.2.3.4", NULL, NULL, 0, -2420 },
+              "1.2.3.4", "1.2.3.4", NULL, NULL, 0, -2700 },
 
             /* '!' is accepted by the Via param scanner but not by the URI
              * host scanner, so the rebuilt Contact would not parse back.
              */
             { "received with invalid host char",
-              "1.2.3.4!", NULL, NULL, NULL, 0, -2430 },
+              "1.2.3.4!", NULL, NULL, NULL, 0, -2800 },
 
             /* Colon bearing token that is not an IPv6 address: must not
              * be bracketed into a Contact that parses but means nothing.
              */
             { "received with non-address colon",
-              "foo:bar", NULL, NULL, NULL, 0, -2440 },
+              "foo:bar", NULL, NULL, NULL, 0, -2900 },
 
             /* Same rejection, but with PJSUA_CONTACT_REWRITE_UNREGISTER:
              * the declined rewrite must leave the registration alone.
              */
             { "declined rewrite with UNREGISTER method",
               "1.2.3.4!", NULL, NULL, NULL,
-              PJSUA_CONTACT_REWRITE_UNREGISTER, -2450 },
+              PJSUA_CONTACT_REWRITE_UNREGISTER, -3000 },
 
             /* reg_contact_uri_params sends update_regc_contact() through
              * its parse-and-regenerate path on the rewritten Contact.
              */
             { "accepted rewrite with reg_contact_uri_params",
-              "1.2.3.4", "1.2.3.4", NULL, ";acc-test=1", 0, -2460 },
+              "1.2.3.4", "1.2.3.4", NULL, ";acc-test=1", 0, -3100 },
 
             /* "Contact: *" parses to a header with a NULL uri. Building
              * the registration Contact from it must fall back instead of
@@ -777,19 +805,19 @@ int pjsua_acc_test(void)
              * than register a Contact it will later dereference.
              */
             { "force_contact star",
-              "1.2.3.4", NULL, "*", ";acc-test=1", 0, -2470, PJ_TRUE },
+              "1.2.3.4", NULL, "*", ";acc-test=1", 0, -3200, PJ_TRUE },
 
             /* A non-SIP URI parses fine but must not be cast to
              * pjsip_sip_uri* and read as one.
              */
             { "force_contact non-SIP URI",
-              "1.2.3.4", NULL, "<tel:+15551234>", ";acc-test=1", 0, -2480 },
+              "1.2.3.4", NULL, "<tel:+15551234>", ";acc-test=1", 0, -3300 },
 
             /* A Contact that pjsip_regc refuses must leave the existing
              * registration binding untouched, not queued for removal.
              */
             { "rejected update_contact keeps the binding",
-              "1.2.3.4", "1.2.3.4", NULL, NULL, 0, -2490,
+              "1.2.3.4", "1.2.3.4", NULL, NULL, 0, -3400,
               PJ_FALSE, PJ_TRUE },
 
             /* ALWAYS_UPDATE names no 2xx method; the 2xx rewrite must
@@ -797,7 +825,13 @@ int pjsua_acc_test(void)
              */
             { "accepted rewrite with ALWAYS_UPDATE alone",
               "1.2.3.4", "1.2.3.4", NULL, NULL,
-              PJSUA_CONTACT_REWRITE_ALWAYS_UPDATE, -2550 },
+              PJSUA_CONTACT_REWRITE_ALWAYS_UPDATE, -3500 },
+
+            /* Both 2xx methods: UNREGISTER would lose the new Contact */
+            { "accepted rewrite with UNREGISTER and NO_UNREG",
+              "1.2.3.4", "1.2.3.4", NULL, NULL,
+              PJSUA_CONTACT_REWRITE_UNREGISTER |
+              PJSUA_CONTACT_REWRITE_NO_UNREG, -3600 },
         };
         unsigned i;
 
