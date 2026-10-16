@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -273,6 +273,61 @@ on_return:
     return ret;
 }
 
+/*
+ * A transport created by a listener keeps the listener's published address
+ * after the listener is destroyed, and no longer refers to the listener.
+ */
+static int listener_destroy_local_name_test(void)
+{
+    pjsip_tpfactory *tpfactory = NULL;
+    pjsip_transport *tcp = NULL;
+    pjsip_host_port a_name;
+    pj_sockaddr_in rem_addr;
+    pj_str_t localhost = pj_str("127.0.0.1");
+    pjsip_tpselector tp_sel;
+    pj_status_t status;
+    int ret = 0;
+
+    pj_bzero(&a_name, sizeof(a_name));
+    a_name.host = localhost;
+
+    status = pjsip_tcp_transport_start2(endpt, NULL, &a_name, 1, &tpfactory);
+    if (status != PJ_SUCCESS) {
+        app_perror("   Error: unable to start TCP transport", status);
+        return -120;
+    }
+
+    pj_bzero(&tp_sel, sizeof(tp_sel));
+    tp_sel.type = PJSIP_TPSELECTOR_LISTENER;
+    tp_sel.u.listener = tpfactory;
+    pj_sockaddr_in_init(&rem_addr, &localhost,
+                        (pj_uint16_t)tpfactory->addr_name.port);
+    status = pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_TCP,
+                                           &rem_addr, sizeof(rem_addr),
+                                           &tp_sel, &tcp);
+    if (status != PJ_SUCCESS || tcp == NULL) {
+        app_perror("   Error: unable to acquire TCP transport", status);
+        (*tpfactory->destroy)(tpfactory);
+        return -121;
+    }
+
+    if (tcp->local_name.host.ptr == tpfactory->addr_name.host.ptr)
+        ret = -122;
+
+    (*tpfactory->destroy)(tpfactory);
+    flush_events(500);
+
+    if (ret == 0 && pj_strcmp(&tcp->local_name.host, &localhost) != 0)
+        ret = -123;
+    if (ret == 0 && tcp->factory != NULL)
+        ret = -124;
+
+    pjsip_transport_dec_ref(tcp);
+    pjsip_transport_destroy(tcp);
+    flush_events(500);
+    return ret;
+}
+
 int transport_tcp_test(void)
 {
     enum { SEND_RECV_LOOP = 8 };
@@ -291,6 +346,10 @@ int transport_tcp_test(void)
     unsigned num_tp = NUM_TP;
 
     status = restart_failure_test();
+    if (status != 0)
+        return status;
+
+    status = listener_destroy_local_name_test();
     if (status != 0)
         return status;
 

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2009-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2009-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1117,7 +1117,10 @@ static pj_status_t tls_create( struct tls_listener *listener,
     /* Use listener's published address, if any. */
     tls->base.has_addr_name = listener->factory.has_addr_name;
     if (listener->factory.has_addr_name) {
-        tls->base.local_name = listener->factory.addr_name;
+        /* Copy the host, the listener may be destroyed before us */
+        pj_strdup(pool, &tls->base.local_name.host,
+                  &listener->factory.addr_name.host);
+        tls->base.local_name.port = listener->factory.addr_name.port;
     } else {
         sockaddr_to_host_port(pool, &tls->base.local_name,
                               &tls->base.local_addr);

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -711,7 +711,10 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     /* Use listener's published address, if any. */
     tcp->base.has_addr_name = listener->factory.has_addr_name;
     if (listener->factory.has_addr_name) {
-        tcp->base.local_name = listener->factory.addr_name;
+        /* Copy the host, the listener may be destroyed before us */
+        pj_strdup(pool, &tcp->base.local_name.host,
+                  &listener->factory.addr_name.host);
+        tcp->base.local_name.port = listener->factory.addr_name.port;
     } else {
         sockaddr_to_host_port(pool, &tcp->base.local_name,
                               &tcp->base.local_addr);
