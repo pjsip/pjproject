@@ -214,8 +214,8 @@ void callReplaceRejectReasonTest()
         CallOpParam opB(true);
         SipHeader hdr;
         hdr.hName = "Replaces";
-        hdr.hValue = replaces;
-        opB.txOption.headers.push_back(hdr);
+        hdr.hValue = PJSUA2_MOVE(replaces);
+        opB.txOption.headers.push_back(PJSUA2_MOVE(hdr));
         callB.makeCall("sip:callee" + host, opB);
 
         TEST_ASSERT(waitFor(ep, st.callerBDisconnected));
