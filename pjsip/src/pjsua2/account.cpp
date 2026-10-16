@@ -60,6 +60,7 @@ DeferredResponse& DeferredResponse::operator=(const DeferredResponse& deferredRe
         transaction = deferredResponse.transaction;
         if(data) {
             pjsip_rx_data_free_cloned(data);
+            data = nullptr;
         }
         auto status = pjsip_rx_data_clone(deferredResponse.data, 0, &data);
         if (status != PJ_SUCCESS) {
@@ -81,6 +82,9 @@ DeferredResponse& DeferredResponse::operator=(DeferredResponse&& deferredRespons
     noexcept
 {
     if (this != &deferredResponse) {
+        if (data) {
+            pjsip_rx_data_free_cloned(data);
+        }
         transaction = deferredResponse.transaction;
         data = deferredResponse.data;
         deferredResponse.data = nullptr;

@@ -5771,7 +5771,11 @@ PJ_DECL(pj_status_t) pjsua_acc_modify(pjsua_acc_id acc_id,
  * @param acc_id        The account that will send the response.
  * @param rdata         The received request data.
  * @param tsx           The UAS transaction that was created for the incoming
- *                      request.
+ *                      request. The transaction may have ended since then,
+ *                      e.g. when its transport was disconnected; it is
+ *                      looked up again from \a rdata, and PJ_ENOTFOUND is
+ *                      returned when it no longer exists (PJ_EINVALIDOP
+ *                      when it has already sent a final response).
  * @param st_code       Status code to be sent (e.g., 200 for OK, 400 for 
  *                      Bad Request, etc.).
  * @param st_text       Optional status text. If NULL, default status text for

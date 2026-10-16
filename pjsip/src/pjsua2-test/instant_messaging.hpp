@@ -33,6 +33,8 @@ private:
     DeferredResponse deferredResponse;
 
 public:
+    pjsip_transaction *lastTsx = nullptr;
+
     ReceiverAccount();
     virtual ~ReceiverAccount();
 
@@ -69,6 +71,7 @@ struct TestState {
     bool messageReceived = false;
     bool responseSent = false;
     bool responseReceived = false;
+    pj_status_t responseError = PJ_SUCCESS;
     int responseStatusCode = 0;
     std::string receivedMessage{};
     std::string receivedContentType{};
@@ -95,6 +98,7 @@ public:
     void immediateResponse();
     void deferredResponse();
     void longContentType();
+    void deferredResponseAfterTsxEnded();
 private:
     Endpoint ep;
     std::unique_ptr<ReceiverAccount> receiverAcc;

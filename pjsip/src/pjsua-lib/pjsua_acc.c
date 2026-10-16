@@ -5998,25 +5998,39 @@ PJ_DEF(pj_status_t) pjsua_acc_send_response(pjsua_acc_id acc_id,
                                             const pjsua_msg_data *msg_data)
 {
     pjsip_tx_data *tdata = NULL;
+    pj_str_t key;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(rdata != NULL, PJ_EINVAL);
     PJ_ASSERT_RETURN(st_code >= 200 && st_code < 700, PJ_EINVAL);
+    PJ_ASSERT_RETURN(rdata->msg_info.msg->type == PJSIP_REQUEST_MSG, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pjsip_method_cmp(&rdata->msg_info.msg->line.req.method,
+                                      &pjsip_message_method) == 0, PJ_EINVAL);
     PJ_UNUSED_ARG(acc_id);
+
+    /* The transaction may have been destroyed since the application got
+     * it (e.g. on transport disconnection), so look it up again.
+     */
+    if (tsx) {
+        status = pjsip_tsx_create_key(rdata->tp_info.pool, &key,
+                                      PJSIP_ROLE_UAS, &pjsip_message_method,
+                                      rdata);
+        if (status != PJ_SUCCESS)
+            return status;
+
+        tsx = pjsip_tsx_layer_find_tsx2(&key, PJ_TRUE);
+    }
 
     if (!tsx) {
         PJ_LOG(1,(THIS_FILE, "UAS transaction not found for MESSAGE response"));
         return PJ_ENOTFOUND;
     }
 
-    PJ_ASSERT_RETURN(tsx->role == PJSIP_ROLE_UAS, PJ_EINVAL);
-    PJ_ASSERT_RETURN(pjsip_method_cmp(&tsx->method, &pjsip_message_method) == 0,
-                     PJ_EINVAL);
-
     status = pjsip_endpt_create_response(pjsua_var.endpt, rdata,
                                         st_code, st_text, &tdata);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Unable to create response", status);
+        pj_grp_lock_dec_ref(tsx->grp_lock);
         return status;
     }
 
@@ -6029,7 +6043,14 @@ PJ_DEF(pj_status_t) pjsua_acc_send_response(pjsua_acc_id acc_id,
         }
     }
 
-    status = pjsip_tsx_send_msg(tsx, tdata);
+    pj_grp_lock_acquire(tsx->grp_lock);
+    if (tsx->state >= PJSIP_TSX_STATE_COMPLETED)
+        status = PJ_EINVALIDOP;
+    else
+        status = pjsip_tsx_send_msg(tsx, tdata);
+    pj_grp_lock_release(tsx->grp_lock);
+    pj_grp_lock_dec_ref(tsx->grp_lock);
+
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Unable to send response", status);
         pjsip_tx_data_dec_ref(tdata);

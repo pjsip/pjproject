@@ -39,6 +39,7 @@ int main(int argc, char *argv[])
             instantMessagingTests.immediateResponse();
             instantMessagingTests.deferredResponse();
             instantMessagingTests.longContentType();
+            instantMessagingTests.deferredResponseAfterTsxEnded();
         }
 
         {
