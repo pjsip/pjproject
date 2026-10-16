@@ -357,6 +357,7 @@ static int rewrite_test(pjsua_transport_id tp_id, int port,
     char             reg_uri[64];
     char             orig_contact[PJSIP_MAX_URL_SIZE];
     char             host[PJ_INET6_ADDRSTRLEN + 16];
+    char             rewrite_host[PJ_INET6_ADDRSTRLEN + 16];
     const int        err_base = c->err_base;
     pj_status_t      status;
     unsigned         round;
@@ -440,6 +441,11 @@ static int rewrite_test(pjsua_transport_id tp_id, int port,
             rc = err_base - 3;
             goto on_return;
         }
+        /* The first success answers the REGISTER a rewrite sends */
+        if (round == 0) {
+            pj_ansi_strxcpy(rewrite_host, g_mock_reg.live_host,
+                            sizeof(rewrite_host));
+        }
     }
 
     if (g_mock_reg.req_count < 3) {
@@ -512,11 +518,15 @@ static int rewrite_test(pjsua_transport_id tp_id, int port,
             goto on_return;
         }
 
-        /* The regc must register it too, not only the account hold it */
-        if (pj_ansi_strcmp(g_mock_reg.live_host, c->expect_host) != 0) {
-            PJ_LOG(3, (THIS_FILE, "    error: registrar received host '%s', "
-                       "expected '%s'", g_mock_reg.live_host,
-                       c->expect_host));
+        /* The regc must register it too, not only the account hold it:
+         * in the REGISTER the rewrite sent, and still in the last one.
+         */
+        if (pj_ansi_strcmp(rewrite_host, c->expect_host) != 0 ||
+            pj_ansi_strcmp(g_mock_reg.live_host, c->expect_host) != 0)
+        {
+            PJ_LOG(3, (THIS_FILE, "    error: registrar received host '%s' "
+                       "from the rewrite and '%s' last, expected '%s'",
+                       rewrite_host, g_mock_reg.live_host, c->expect_host));
             rc = err_base - 14;
             goto on_return;
         }
