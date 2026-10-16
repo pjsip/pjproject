@@ -2,7 +2,7 @@
 //  ipjsuaAppDelegate.h
 //  ipjsua
 /*
- * Copyright (C) 2013-2014 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2013-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,12 +29,16 @@
     <UIApplicationDelegate, PKPushRegistryDelegate,
      UNUserNotificationCenterDelegate, CXProviderDelegate>
 
-@property (strong, nonatomic) UIWindow *window;
-
 @property (strong, nonatomic) PKPushRegistry *voipRegistry;
 @property (strong, nonatomic) NSMutableString *token;
 @property (strong, nonatomic) CXProvider *provider;
 
 @property (strong, nonatomic) ipjsuaViewController *viewController;
+
+@end
+
+@interface ipjsuaSceneDelegate : UIResponder <UIWindowSceneDelegate>
+
+@property (strong, nonatomic) UIWindow *window;
 
 @end

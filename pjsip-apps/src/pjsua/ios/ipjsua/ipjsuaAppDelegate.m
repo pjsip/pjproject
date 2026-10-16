@@ -2,7 +2,7 @@
 //  ipjsuaAppDelegate.m
 //  ipjsua
 /*
- * Copyright (C) 2013-2014 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2013-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -538,15 +538,18 @@ didDeactivateAudioSession:(AVAudioSession *) audioSession
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
-    self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
-    // Override point for customization after application launch.
-    if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone) {
-        self.viewController = [[ipjsuaViewController alloc] initWithNibName:@"ipjsuaViewController_iPhone" bundle:nil];
-    } else {
-        self.viewController = [[ipjsuaViewController alloc] initWithNibName:@"ipjsuaViewController_iPad" bundle:nil];
-    }
-    self.window.rootViewController = self.viewController;
-    [self.window makeKeyAndVisible];
+    NSString *nib;
+
+    /* Not in the scene delegate: the scene may connect late (e.g. VoIP
+     * push background launch) or reconnect, while pjsua uses the view.
+     */
+    if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone)
+        nib = @"ipjsuaViewController_iPhone";
+    else
+        nib = @"ipjsuaViewController_iPad";
+    self.viewController = [[ipjsuaViewController alloc] initWithNibName:nib
+                                                                 bundle:nil];
+    [self.viewController loadViewIfNeeded];
 
 #if USE_PUSH_NOTIFICATION
     call_map = [NSMutableDictionary dictionary];
@@ -619,39 +622,10 @@ didDeactivateAudioSession:(AVAudioSession *) audioSession
     return YES;
 }
 
-- (void)applicationWillResignActive:(UIApplication *)application
-{
-    // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
-    // Use this method to pause ongoing tasks, disable timers, and throttle down OpenGL ES frame rates. Games should use this method to pause the game.
-}
-
 - (void)orientationChanged:(NSNotification *)note
 {
     SCHEDULE_TIMER(HANDLE_ORI_CHANGE);
 }
-
-- (void)applicationDidEnterBackground:(UIApplication *)application
-{
-    SCHEDULE_TIMER(REREGISTER);
-    /* Allow the re-registration to complete. */
-    [NSThread sleepForTimeInterval:0.3];
-}
-
-- (void)applicationWillEnterForeground:(UIApplication *)application
-{
-    // Called as part of the transition from the background to the inactive state; here you can undo many of the changes made on entering the background.
-}
-
-- (void)applicationDidBecomeActive:(UIApplication *)application
-{
-    // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
-}
-
-- (void)applicationWillTerminate:(UIApplication *)application
-{
-    // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
-}
-
 
 pj_bool_t reportCallState(pjsua_call_id call_id)
 {
@@ -733,6 +707,32 @@ void displayWindow(pjsua_vid_win_id wid)
         }
     }
 #endif
+}
+
+@end
+
+@implementation ipjsuaSceneDelegate
+
+- (void)scene:(UIScene *)scene willConnectToSession:(UISceneSession *)session
+      options:(UISceneConnectionOptions *)connectionOptions
+{
+    if (![scene isKindOfClass:[UIWindowScene class]])
+        return;
+
+    self.window = [[UIWindow alloc] initWithWindowScene:(UIWindowScene *)scene];
+    self.window.rootViewController = app.viewController;
+    [self.window makeKeyAndVisible];
+}
+
+- (void)sceneDidEnterBackground:(UIScene *)scene
+{
+    /* In push mode, pjsua may not be started yet. */
+    if (pjsua_get_state() != PJSUA_STATE_RUNNING)
+        return;
+
+    SCHEDULE_TIMER(REREGISTER);
+    /* Allow the re-registration to complete. */
+    [NSThread sleepForTimeInterval:0.3];
 }
 
 @end
