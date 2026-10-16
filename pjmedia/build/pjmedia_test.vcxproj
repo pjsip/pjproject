@@ -611,6 +611,7 @@
     </ClCompile>
     <ClCompile Include="..\src\test\test.c" />
     <ClCompile Include="..\src\test\vid_codec_test.c" />
+    <ClCompile Include="..\src\test\vid_conf_test.c" />
     <ClCompile Include="..\src\test\vid_dev_test.c" />
     <ClCompile Include="..\src\test\vid_port_test.c" />
     <ClCompile Include="..\src\test\wince_main.c">

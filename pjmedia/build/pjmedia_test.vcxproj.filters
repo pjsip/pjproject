@@ -51,6 +51,9 @@
     <ClCompile Include="..\src\test\vid_codec_test.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\test\vid_conf_test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\test\vid_dev_test.c">
       <Filter>Source Files</Filter>
     </ClCompile>

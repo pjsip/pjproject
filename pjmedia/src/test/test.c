@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -93,6 +93,10 @@ int test_main(int argc, char *argv[])
 
 #if HAS_VID_PORT_TEST
     UT_ADD_TEST(&test_app.ut_app, vid_port_test, 0);
+#endif
+
+#if HAS_VID_CONF_TEST
+    UT_ADD_TEST(&test_app.ut_app, vid_conf_test, 0);
 #endif
 
 #if HAS_VID_DEV_TEST

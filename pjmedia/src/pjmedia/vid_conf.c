@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2019 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2019-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1410,6 +1410,8 @@ static void cleanup_render_state(vconf_port *cp,
 }
 
 
+#define MAX_RENDER_CNT  4   /* The layout places at most four sources */
+
 /* This function will do:
  * - Recalculate layout setting, i.e: get video pos and size
  *   for each transmitter
@@ -1419,9 +1421,9 @@ static void cleanup_render_state(vconf_port *cp,
  */
 static void update_render_state(pjmedia_vid_conf *vid_conf, vconf_port *cp)
 {
-    pjmedia_format_id fmt_id, tr_fmt_id[4];
-    pjmedia_rect_size size, tr_size[4];
-    unsigned i;
+    pjmedia_format_id fmt_id, tr_fmt_id[MAX_RENDER_CNT];
+    pjmedia_rect_size size, tr_size[MAX_RENDER_CNT];
+    unsigned i, rend_cnt;
     pj_status_t status;
 
     fmt_id = cp->port->info.fmt.id;
@@ -1434,15 +1436,19 @@ static void update_render_state(pjmedia_vid_conf *vid_conf, vconf_port *cp)
     TRACE_((THIS_FILE, "Updating render state for port id %d (%d sources)..",
             cp->idx, cp->transmitter_cnt));
 
+    rend_cnt = PJ_MIN(cp->transmitter_cnt, MAX_RENDER_CNT);
+
     for (i = 0; i < cp->transmitter_cnt; ++i) {
         vconf_port *tr = vid_conf->ports[cp->transmitter_slots[i]];
 
         /* Cleanup render states & pool */
         cleanup_render_state(cp, i);
 
-        /* Gather format ID, size of each transmitter */
-        tr_fmt_id[i] = tr->port->info.fmt.id;
-        tr_size[i]   = tr->port->info.fmt.det.vid.size;
+        /* Gather format ID, size of each rendered transmitter */
+        if (i < rend_cnt) {
+            tr_fmt_id[i] = tr->port->info.fmt.id;
+            tr_size[i]   = tr->port->info.fmt.det.vid.size;
+        }
     }
 
     /* If only one transmitter and it has matched format & size, just use
@@ -1457,7 +1463,7 @@ static void update_render_state(pjmedia_vid_conf *vid_conf, vconf_port *cp)
         return;
     }
 
-    for (i = 0; i < cp->transmitter_cnt && i < 4; ++i) {
+    for (i = 0; i < rend_cnt; ++i) {
         pj_pool_t *pool;
         render_state *rs;
         pjmedia_conversion_param cparam;
@@ -1484,10 +1490,10 @@ static void update_render_state(pjmedia_vid_conf *vid_conf, vconf_port *cp)
         rs->src_rect.size = tr_size[i];
 
         /* Setup layout */
-        if (cp->transmitter_cnt == 1) {
+        if (rend_cnt == 1) {
             rs->dst_rect.coord.x = rs->dst_rect.coord.y = 0;
             rs->dst_rect.size = size;
-        } else if (cp->transmitter_cnt == 2) {
+        } else if (rend_cnt == 2) {
             if (is_landscape(&size)) {
                 /*
                  *          |
@@ -1509,7 +1515,7 @@ static void update_render_state(pjmedia_vid_conf *vid_conf, vconf_port *cp)
                 rs->dst_rect.size.w = size.w;
                 rs->dst_rect.size.h = size.h / 2;
             }
-        } else if (cp->transmitter_cnt == 3) {
+        } else if (rend_cnt == 3) {
             if (is_landscape(&size)) {
                 /*
                  *          | Source 1
@@ -1533,7 +1539,7 @@ static void update_render_state(pjmedia_vid_conf *vid_conf, vconf_port *cp)
                 rs->dst_rect.size.w = size.w;
                 rs->dst_rect.size.h = size.h/3;
             }
-        } else if (cp->transmitter_cnt == 4) {
+        } else if (rend_cnt == 4) {
             if (is_landscape(&size)) {
                 /*
                  * Source 0 | Source 1

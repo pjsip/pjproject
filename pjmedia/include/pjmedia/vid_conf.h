@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2019 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2019-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -174,7 +174,8 @@ typedef enum pjmedia_vid_conf_layout
 {
     /**
      * In mixing video from multiple sources, each source will occupy about
-     * the same size in the mixing result frame at all time.
+     * the same size in the mixing result frame at all time. Currently at
+     * most the first four sources connected to a sink are rendered.
      */
     PJMEDIA_VID_CONF_LAYOUT_DEFAULT,
 

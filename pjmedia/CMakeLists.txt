@@ -1104,6 +1104,7 @@ if(BUILD_TESTING)
     src/test/main.c
     src/test/mips_test.c
     src/test/vid_codec_test.c
+    src/test/vid_conf_test.c
     src/test/vid_dev_test.c
     src/test/vid_port_test.c
     src/test/rtp_test.c
