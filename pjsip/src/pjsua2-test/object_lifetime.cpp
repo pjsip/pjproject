@@ -408,12 +408,14 @@ void ObjectLifetimeTests::deleteCallWithLibraryBusy()
  *
  * Another thread holds the call's dialog lock for longer than a call API
  * waits for it. Deleting the Call object must detach it from the call at
- * once and still end the call, later.
+ * once and still end the call, later. Its media objects must not leak
+ * (checked by LeakSanitizer).
  *****************************************************************************/
 void ObjectLifetimeTests::deleteCallWithDialogBusy()
 {
 #if PJ_HAS_THREADS
     TestCallPtr out, in;
+    CallOpParam prm(true);
     bool ok;
     int id;
 
@@ -421,6 +423,10 @@ void ObjectLifetimeTests::deleteCallWithDialogBusy()
 
     make_ringing_call(*callerAcc, port, out, in);
     id = out->getId();
+    prm.statusCode = PJSIP_SC_OK;
+    in->answer(prm);
+    TEST_ASSERT(wait_state(out.get(), PJSIP_INV_STATE_CONFIRMED));
+    TEST_ASSERT(out->getMedia(0) != NULL);
 
     g_check_id = id;
     g_owner_while_deleting = out.get();
@@ -446,7 +452,7 @@ void ObjectLifetimeTests::deleteCallWithDialogBusy()
  * Test 1e: deleteCallWithLibraryBriefBusy
  *
  * Another thread holds the PJSUA lock for a while, shorter than a call API
- * waits for it. Releasing the call waits for the lock, then hangs up.
+ * waits for it. The hangup waits for the lock, it isn't put off.
  *****************************************************************************/
 void ObjectLifetimeTests::deleteCallWithLibraryBriefBusy()
 {
@@ -527,7 +533,82 @@ void ObjectLifetimeTests::hangupRetryAfterSlotReuse()
 
 
 /*****************************************************************************
- * Test 1g: deleteCallInOwnCallback
+ * Test 1g: hangupRetryLimit
+ *
+ * The call's dialog lock stays busy for longer than the hangup retries of a
+ * deleted Call object last. The retries must stop, so the call is still up
+ * after the lock is free.
+ *****************************************************************************/
+void ObjectLifetimeTests::hangupRetryLimit()
+{
+#if PJ_HAS_THREADS
+    /* CALL_HANGUP_MAX_RETRY (4) retries, CALL_HANGUP_RETRY_INTERVAL (5 s)
+     * apart, each waiting for the lock, then a margin before the next one
+     */
+    const long hold_ms = 4 * (5000 + PJSUA_ACQUIRE_CALL_TIMEOUT) + 3000;
+    TestCallPtr out, in;
+    CallOpParam prm(true);
+    pj_pool_t *pool;
+    pj_thread_t *thread = NULL;
+    pj_time_val start, now;
+    unsigned elapsed = 0;
+    bool ok;
+    int id;
+
+    std::cout << "\n=== CALL TEST: hangupRetryLimit ===" << std::endl;
+
+    make_ringing_call(*callerAcc, port, out, in);
+    id = out->getId();
+
+    pool = pjsua_pool_create("stuck", 512, 512);
+    g_locked = g_done = NULL;
+    g_hold_ms = 0;
+    ok = pool &&
+         pj_sem_create(pool, "locked", 0, 1, &g_locked) == PJ_SUCCESS &&
+         pj_sem_create(pool, "done", 0, 1, &g_done) == PJ_SUCCESS &&
+         pj_thread_create(pool, "stuck", &hold_lock,
+                          pjsua_var.calls[id].inv->dlg, 0, 0,
+                          &thread) == PJ_SUCCESS;
+    if (ok) {
+        pj_sem_wait(g_locked);
+        pj_gettimeofday(&start);
+        out.reset();
+        do {
+            pjsua_handle_events(50);
+            pj_gettimeofday(&now);
+            PJ_TIME_VAL_SUB(now, start);
+        } while (PJ_TIME_VAL_MSEC(now) < hold_ms);
+        pj_sem_post(g_done);
+        pj_thread_join(thread);
+        pj_thread_destroy(thread);
+    }
+    if (g_locked)
+        pj_sem_destroy(g_locked);
+    if (g_done)
+        pj_sem_destroy(g_done);
+    if (pool)
+        pj_pool_release(pool);
+    if (!ok)
+        out.reset();
+    TEST_ASSERT(ok);
+
+    /* Long enough for another retry */
+    while (elapsed < WAIT_MS) {
+        pjsua_handle_events(50);
+        elapsed += 50;
+    }
+    TEST_ASSERT(in->isActive());
+
+    in->hangup(prm);
+    TEST_ASSERT(wait_no_calls());
+
+    std::cout << "  hangupRetryLimit: PASSED\n";
+#endif
+}
+
+
+/*****************************************************************************
+ * Test 1h: deleteCallInOwnCallback
  *
  * A Call object deletes itself from its own call state callback, as pjsua2
  * applications commonly do: when the call is disconnected, and while it is
@@ -587,7 +668,7 @@ void ObjectLifetimeTests::deleteCallInOwnCallback()
 
 
 /*****************************************************************************
- * Test 1h: deleteCallWhileClosing
+ * Test 1i: deleteCallWhileClosing
  *
  * While the library is being destroyed, deleting a Call object only
  * detaches it from its call, and only if the call is still its own.
@@ -596,6 +677,7 @@ void ObjectLifetimeTests::deleteCallWhileClosing()
 {
     TestCallPtr out, in, second;
     bool detached, kept;
+    unsigned elapsed = 0;
     int id;
 
     std::cout << "\n=== CALL TEST: deleteCallWhileClosing ===" << std::endl;
@@ -615,6 +697,14 @@ void ObjectLifetimeTests::deleteCallWhileClosing()
 
     pjsua_call_set_user_data(id, NULL);
     second.reset();
+
+    /* The library hangs up the calls itself, the Calls don't */
+    while (elapsed < 1000) {
+        pjsua_handle_events(50);
+        elapsed += 50;
+    }
+    TEST_ASSERT(in->isActive());
+
     pjsua_call_hangup_all();
     TEST_ASSERT(wait_no_calls());
     TEST_ASSERT(detached);

@@ -538,21 +538,16 @@ Call::~Call()
      * call if it is still active. A call that has reused the slot is left
      * alone.
      */
+    pjsua_call_release_owner(id, this);
+
+    /* The call's disconnection won't reach this object to clear them */
     if (pjsua_get_state() < PJSUA_STATE_CLOSING) {
-        /* The call's disconnection won't reach this object to clear its
-         * medias. If the call's lock timed out, a callback may still use
-         * them, so they are left.
-         */
-        if (pjsua_call_release_owner(id, this) != PJ_ETIMEDOUT) {
-            try {
-                clearMedias();
-            } catch (Error &err) {
-                // Ignore
-                PJ_UNUSED_ARG(err);
-            }
+        try {
+            clearMedias();
+        } catch (Error &err) {
+            // Ignore
+            PJ_UNUSED_ARG(err);
         }
-    } else if (pjsua_call_get_user_data(id) == this) {
-        pjsua_call_set_user_data(id, NULL);
     }
 }
 

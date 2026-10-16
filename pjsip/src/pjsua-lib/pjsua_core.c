@@ -1066,6 +1066,15 @@ PJ_DEF(pj_status_t) pjsua_create(void)
         return status;
     }
 
+    status = pj_mutex_create_simple(pjsua_var.pool, "pjsua_call_owner",
+                                    &pjsua_var.call_owner_mutex);
+    if (status != PJ_SUCCESS) {
+        pj_log_pop_indent();
+        pjsua_perror(THIS_FILE, "Unable to create mutex", status);
+        pjsua_destroy();
+        return status;
+    }
+
     pjsua_set_state(PJSUA_STATE_CREATED);
     pj_log_pop_indent();
     return PJ_SUCCESS;
@@ -2390,6 +2399,11 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
     if (pjsua_var.timer_mutex) {
         pj_mutex_destroy(pjsua_var.timer_mutex);
         pjsua_var.timer_mutex = NULL;
+    }
+
+    if (pjsua_var.call_owner_mutex) {
+        pj_mutex_destroy(pjsua_var.call_owner_mutex);
+        pjsua_var.call_owner_mutex = NULL;
     }
 
     /* Destroy pools and pool factory. */

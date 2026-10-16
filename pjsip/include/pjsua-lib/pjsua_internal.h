@@ -292,7 +292,8 @@ struct pjsua_call
     unsigned             hangup_code;   /**< Hangup code.                   */
     pj_str_t             hangup_reason; /**< Hangup reason.                 */
     pjsua_msg_data      *hangup_msg_data;/**< Hangup message data.          */
-    pj_bool_t            owner_released;/**< Owner is gone, hang up.       */
+    pj_bool_t            owner_released;/**< Owner is gone, hang up.        */
+    unsigned             owner_release_retry;/**< Released hangup retries.  */
     pj_str_t             siprec_metadata;/** siprec metadata in body        */
     unsigned             siprec_metadata_cap;
                                     /**< Allocated size of siprec_metadata */
@@ -760,6 +761,11 @@ struct pjsua_data
     pjsua_timer_list     timer_list;
     pjsua_event_list     event_list;
     pj_mutex_t          *timer_mutex;
+
+    /* Guards the calls' user_data, owner_released and owner_release_retry,
+     * no other lock is taken while holding it.
+     */
+    pj_mutex_t          *call_owner_mutex;
 };
 
 
@@ -1123,9 +1129,10 @@ pj_status_t acquire_call(const char *title,
                          pjsua_call **p_call,
                          pjsip_dialog **p_dlg);
 
-/* If the call's user data is still owner, clear it and hang up the call.
- * Used by pjsua2 when a Call is deleted. Returns PJ_ETIMEDOUT if a lock
- * could not be taken in time, the hangup is then retried later.
+/* If the call's user data is still owner, clear it and hang up the call,
+ * unless the library is being destroyed. Used by pjsua2 when a Call is
+ * deleted. Returns PJ_ETIMEDOUT if the call or the library is busy, the
+ * hangup is then retried later.
  */
 pj_status_t pjsua_call_release_owner(pjsua_call_id call_id, void *owner);
 

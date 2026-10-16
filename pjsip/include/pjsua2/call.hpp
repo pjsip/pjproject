@@ -1557,7 +1557,12 @@ public:
     Call(Account& acc, int call_id = PJSUA_INVALID_ID);
 
     /**
-     * Destructor.
+     * Destructor. If this object still owns its call, the call stops
+     * reporting to it and is hung up, later if the call is busy at the
+     * moment. If the call stays busy for several retries, it is left up.
+     * A call it no longer owns, e.g. a new call that has taken its call ID,
+     * is left alone. Unless the library is being destroyed, the media
+     * objects returned by getMedia() are freed.
      */
     virtual ~Call();
 
@@ -1607,7 +1612,10 @@ public:
      *
      * @param med_idx       Media index.
      *
-     * @return              The media or NULL if invalid or inactive.
+     * @return              The media or NULL if invalid or inactive. It is
+     *                      no longer valid after the media is updated,
+     *                      the call is disconnected, or the Call object
+     *                      is deleted.
      */
     Media *getMedia(unsigned med_idx) const;
 

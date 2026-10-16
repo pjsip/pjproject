@@ -185,6 +185,9 @@ static void reset_call(pjsua_call_id id)
         pjsip_rx_data_free_cloned(call->incoming_data);
         call->incoming_data = NULL;
     }
+
+    /* A deleted owner may be releasing the call at the same time */
+    pj_mutex_lock(pjsua_var.call_owner_mutex);
     pj_bzero(call, sizeof(*call));
     call->index = id;
     call->last_text.ptr = call->last_text_buf_;
@@ -209,6 +212,7 @@ static void reset_call(pjsua_call_id id)
     pj_bzero(&call->trickle_ice, sizeof(call->trickle_ice));
     pj_timer_entry_init(&call->trickle_ice.timer, 0, call,
                         &trickle_ice_send_sip_info);
+    pj_mutex_unlock(pjsua_var.call_owner_mutex);
 }
 
 /* Get DTMF method type name */
@@ -1237,7 +1241,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call2(
     call->secure_level = get_secure_level(acc_id, dest_uri);
 
     /* Attach user data */
-    call->user_data = user_data;
+    pjsua_call_set_user_data(call_id, user_data);
 
     /* Store variables required for the callback after the async
      * media transport creation is completed.
@@ -2058,7 +2062,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
          * it is needed by PJSUA2 to update its states. While PJSUA app can
          * always override it anytime.
          */
-        pjsua_call_set_user_data(call_id, replaced_call->user_data);
+        pjsua_call_set_user_data(
+            call_id, pjsua_call_get_user_data(replaced_call->index));
     }
 
     if (!replaced_dlg) {
@@ -3096,7 +3101,9 @@ PJ_DEF(pj_status_t) pjsua_call_set_user_data( pjsua_call_id call_id,
 {
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
                      PJ_EINVAL);
+    pj_mutex_lock(pjsua_var.call_owner_mutex);
     pjsua_var.calls[call_id].user_data = user_data;
+    pj_mutex_unlock(pjsua_var.call_owner_mutex);
 
     return PJ_SUCCESS;
 }
@@ -3107,9 +3114,14 @@ PJ_DEF(pj_status_t) pjsua_call_set_user_data( pjsua_call_id call_id,
  */
 PJ_DEF(void*) pjsua_call_get_user_data(pjsua_call_id call_id)
 {
+    void *user_data;
+
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
                      NULL);
-    return pjsua_var.calls[call_id].user_data;
+    pj_mutex_lock(pjsua_var.call_owner_mutex);
+    user_data = pjsua_var.calls[call_id].user_data;
+    pj_mutex_unlock(pjsua_var.call_owner_mutex);
+    return user_data;
 }
 
 
@@ -3709,7 +3721,12 @@ static pj_status_t call_hangup(pjsua_call_id call_id,
      * and a new call doesn't have the flag.
      */
     if (released) {
-        if (!call->owner_released)
+        pj_bool_t owner_released;
+
+        pj_mutex_lock(pjsua_var.call_owner_mutex);
+        owner_released = call->owner_released;
+        pj_mutex_unlock(pjsua_var.call_owner_mutex);
+        if (!owner_released)
             goto on_return;
         if (call->inv && call->inv->state == PJSIP_INV_STATE_DISCONNECTED)
             goto on_return;
@@ -3832,11 +3849,25 @@ static void retry_hangup_released(pjsua_call_id call_id)
 /* Hang up a call whose owner has released it, retry later if it is busy */
 static pj_status_t hangup_released_call(pjsua_call_id call_id)
 {
+    pjsua_call *call = &pjsua_var.calls[call_id];
+    unsigned retry = 0;
     pj_status_t status;
 
     status = call_hangup(call_id, 0, NULL, NULL, PJ_TRUE);
-    if (status == PJ_ETIMEDOUT)
+    if (status != PJ_ETIMEDOUT)
+        return status;
+
+    pj_mutex_lock(pjsua_var.call_owner_mutex);
+    if (call->owner_released)
+        retry = ++call->owner_release_retry;
+    pj_mutex_unlock(pjsua_var.call_owner_mutex);
+
+    if (retry > CALL_HANGUP_MAX_RETRY) {
+        PJ_LOG(1,(THIS_FILE, "Call %d: failed to hangup after %d retries, "
+                             "giving up", call_id, CALL_HANGUP_MAX_RETRY));
+    } else if (retry) {
         retry_hangup_released(call_id);
+    }
     return status;
 }
 
@@ -3849,9 +3880,8 @@ static void hangup_released(void *user_data)
 pj_status_t pjsua_call_release_owner(pjsua_call_id call_id, void *owner)
 {
     pjsua_call *call;
-    pj_time_val time_start, dtime, timeout;
-    unsigned retry;
-    pj_bool_t locked = PJ_FALSE;
+    pj_bool_t hangup;
+    pj_bool_t released = PJ_FALSE;
 
     PJ_ASSERT_RETURN(owner, PJ_EINVAL);
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
@@ -3859,49 +3889,22 @@ pj_status_t pjsua_call_release_owner(pjsua_call_id call_id, void *owner)
 
     call = &pjsua_var.calls[call_id];
 
-    /* Nothing to do if the owner is already detached, e.g. on disconnect.
-     * The user data can't become the owner again.
+    /* While the library is being destroyed, it hangs up the calls itself */
+    hangup = (pjsua_get_state() < PJSUA_STATE_CLOSING);
+
+    /* The slot is reset under the same mutex, so the flag can't be left
+     * on a new call. Nothing to do if the owner is already detached, e.g.
+     * on disconnect.
      */
-    if (call->user_data != owner)
-        return PJ_SUCCESS;
-
-    /* A slot is given to a new call only under the PJSUA lock. Don't block
-     * on it, as the caller may hold another call's dialog lock.
-     */
-    pj_gettimeofday(&time_start);
-    timeout.sec = 0;
-    timeout.msec = PJSUA_ACQUIRE_CALL_TIMEOUT;
-    pj_time_val_normalize(&timeout);
-    for (retry=0; ; ++retry) {
-        if (PJSUA_TRY_LOCK() == PJ_SUCCESS) {
-            locked = PJ_TRUE;
-            break;
-        }
-        pj_gettimeofday(&dtime);
-        PJ_TIME_VAL_SUB(dtime, time_start);
-        if (!PJ_TIME_VAL_LT(dtime, timeout))
-            break;
-        pj_thread_sleep(retry/10);
+    pj_mutex_lock(pjsua_var.call_owner_mutex);
+    if (call->user_data == owner) {
+        call->user_data = NULL;
+        call->owner_released = hangup;
+        released = hangup;
     }
+    pj_mutex_unlock(pjsua_var.call_owner_mutex);
 
-    if (call->user_data != owner) {
-        if (locked)
-            PJSUA_UNLOCK();
-        return PJ_SUCCESS;
-    }
-
-    /* Without the lock do it anyway: the owner is about to be freed */
-    call->user_data = NULL;
-    call->owner_released = PJ_TRUE;
-    if (!locked) {
-        PJ_LOG(1,(THIS_FILE, "Timed-out trying to acquire PJSUA mutex, "
-                             "call %d is released without it", call_id));
-        retry_hangup_released(call_id);
-        return PJ_ETIMEDOUT;
-    }
-    PJSUA_UNLOCK();
-
-    if (hangup_released_call(call_id) == PJ_ETIMEDOUT)
+    if (released && hangup_released_call(call_id) == PJ_ETIMEDOUT)
         return PJ_ETIMEDOUT;
     return PJ_SUCCESS;
 }
@@ -7250,6 +7253,7 @@ static void on_call_transferred( pjsip_inv_session *inv,
     pj_status_t status;
     pjsip_tx_data *tdata;
     pjsua_call *existing_call;
+    void *user_data;
     int new_call;
     const pj_str_t str_refer_to = { "Refer-To", 8};
     const pj_str_t str_refer_sub = { "Refer-Sub", 9 };
@@ -7461,8 +7465,9 @@ static void on_call_transferred( pjsip_inv_session *inv,
      * While PJSUA app can always override it anytime.
      */
     tmp = pj_str(uri);
+    user_data = pjsua_call_get_user_data(existing_call->index);
     status = pjsua_call_make_call(existing_call->acc_id, &tmp, &call_opt,
-                                  existing_call->user_data, &msg_data,
+                                  user_data, &msg_data,
                                   &new_call);
     if (status != PJ_SUCCESS) {
 
