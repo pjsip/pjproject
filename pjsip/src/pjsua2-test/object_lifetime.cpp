@@ -152,7 +152,7 @@ static void make_ringing_call(Account &caller, pj_uint16_t port,
         pjsua_handle_events(50);
         elapsed += 50;
     }
-    in = std::move(g_incoming);
+    in = PJSUA2_MOVE(g_incoming);
     TEST_ASSERT(in);
     TEST_ASSERT(g_ringing_status == PJ_SUCCESS);
     TEST_ASSERT(wait_state(out.get(), PJSIP_INV_STATE_EARLY));
@@ -317,7 +317,9 @@ static int hold_lock(void *arg)
     if (g_check_id != PJSUA_INVALID_ID) {
         /* Well within the deletion's wait for this lock */
         pj_thread_sleep(PJSUA_ACQUIRE_CALL_TIMEOUT / 2);
-        g_owner_while_deleting = pjsua_call_get_user_data(g_check_id);
+        pj_mutex_lock(pjsua_var.call_owner_mutex);
+        g_owner_while_deleting = pjsua_var.calls[g_check_id].user_data;
+        pj_mutex_unlock(pjsua_var.call_owner_mutex);
     }
     if (g_hold_ms)
         pj_thread_sleep(g_hold_ms);
@@ -533,29 +535,26 @@ void ObjectLifetimeTests::hangupRetryAfterSlotReuse()
 
 
 /*****************************************************************************
- * Test 1g: hangupRetryLimit
+ * Test 1g: hangupRetryWhileBusy
  *
- * The call's dialog lock stays busy for longer than the hangup retries of a
- * deleted Call object last. The retries must stop, so the call is still up
- * after the lock is free.
+ * The call's dialog lock stays busy for many hangup retries of a deleted
+ * Call object. The retries must not hold up event polling, and must go on
+ * until the lock is free, so the call is still hung up.
  *****************************************************************************/
-void ObjectLifetimeTests::hangupRetryLimit()
+void ObjectLifetimeTests::hangupRetryWhileBusy()
 {
 #if PJ_HAS_THREADS
-    /* CALL_HANGUP_MAX_RETRY (4) retries, CALL_HANGUP_RETRY_INTERVAL (5 s)
-     * apart, each waiting for the lock, then a margin before the next one
-     */
-    const long hold_ms = 4 * (5000 + PJSUA_ACQUIRE_CALL_TIMEOUT) + 3000;
+    /* Long enough for several retries */
+    const long hold_ms = 25000;
     TestCallPtr out, in;
-    CallOpParam prm(true);
     pj_pool_t *pool;
     pj_thread_t *thread = NULL;
-    pj_time_val start, now;
-    unsigned elapsed = 0;
+    pj_time_val start, now, poll_start;
+    long longest_poll = 0;
     bool ok;
     int id;
 
-    std::cout << "\n=== CALL TEST: hangupRetryLimit ===" << std::endl;
+    std::cout << "\n=== CALL TEST: hangupRetryWhileBusy ===" << std::endl;
 
     make_ringing_call(*callerAcc, port, out, in);
     id = out->getId();
@@ -571,10 +570,15 @@ void ObjectLifetimeTests::hangupRetryLimit()
                           &thread) == PJ_SUCCESS;
     if (ok) {
         pj_sem_wait(g_locked);
-        pj_gettimeofday(&start);
         out.reset();
+        pj_gettimeofday(&start);
         do {
+            pj_gettimeofday(&poll_start);
             pjsua_handle_events(50);
+            pj_gettimeofday(&now);
+            PJ_TIME_VAL_SUB(now, poll_start);
+            if (PJ_TIME_VAL_MSEC(now) > longest_poll)
+                longest_poll = PJ_TIME_VAL_MSEC(now);
             pj_gettimeofday(&now);
             PJ_TIME_VAL_SUB(now, start);
         } while (PJ_TIME_VAL_MSEC(now) < hold_ms);
@@ -592,17 +596,12 @@ void ObjectLifetimeTests::hangupRetryLimit()
         out.reset();
     TEST_ASSERT(ok);
 
-    /* Long enough for another retry */
-    while (elapsed < WAIT_MS) {
-        pjsua_handle_events(50);
-        elapsed += 50;
-    }
-    TEST_ASSERT(in->isActive());
-
-    in->hangup(prm);
+    /* A retry doesn't wait for the lock */
+    TEST_ASSERT(longest_poll < PJSUA_ACQUIRE_CALL_TIMEOUT);
+    TEST_ASSERT(wait_state(in.get(), PJSIP_INV_STATE_DISCONNECTED));
     TEST_ASSERT(wait_no_calls());
 
-    std::cout << "  hangupRetryLimit: PASSED\n";
+    std::cout << "  hangupRetryWhileBusy: PASSED\n";
 #endif
 }
 
@@ -648,7 +647,7 @@ void ObjectLifetimeTests::deleteCallInOwnCallback()
         pjsua_handle_events(50);
         elapsed += 50;
     }
-    in = std::move(g_incoming);
+    in = PJSUA2_MOVE(g_incoming);
     TEST_ASSERT(in);
     TEST_ASSERT(wait_state(in.get(), PJSIP_INV_STATE_DISCONNECTED));
     TEST_ASSERT(wait_no_calls());

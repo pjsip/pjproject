@@ -293,7 +293,6 @@ struct pjsua_call
     pj_str_t             hangup_reason; /**< Hangup reason.                 */
     pjsua_msg_data      *hangup_msg_data;/**< Hangup message data.          */
     pj_bool_t            owner_released;/**< Owner is gone, hang up.        */
-    unsigned             owner_release_retry;/**< Released hangup retries.  */
     pj_str_t             siprec_metadata;/** siprec metadata in body        */
     unsigned             siprec_metadata_cap;
                                     /**< Allocated size of siprec_metadata */
@@ -762,7 +761,7 @@ struct pjsua_data
     pjsua_event_list     event_list;
     pj_mutex_t          *timer_mutex;
 
-    /* Guards the calls' user_data, owner_released and owner_release_retry,
+    /* Guards the calls' owner_released and the changes of their user_data,
      * no other lock is taken while holding it.
      */
     pj_mutex_t          *call_owner_mutex;

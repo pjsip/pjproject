@@ -38,7 +38,7 @@ public:
     void deleteCallWithDialogBusy();
     void deleteCallWithLibraryBriefBusy();
     void hangupRetryAfterSlotReuse();
-    void hangupRetryLimit();
+    void hangupRetryWhileBusy();
     void deleteCallInOwnCallback();
     void deleteCallWhileClosing();
     void deleteCallAfterSlotReuse();
