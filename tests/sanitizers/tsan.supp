@@ -142,6 +142,30 @@ deadlock:acc_check_nat_addr
 #=============================================================================
 
 #=============================================================================
+# Lock-order-inversion between PJSUA_LOCK and a server presence
+# subscription's dialog grp_lock, exposed by pjsua_pres_test.
+#
+# Two orderings appear on the same thread:
+#   M0 -> M1: pres_on_rx_request() holds PJSUA_LOCK and creates the UAS
+#     dialog (pjsip_dlg_create_uas_and_inc_lock), taking its grp_lock.
+#     pjsua_pres_notify(), pjsua_pres_update_acc() and
+#     pjsua_pres_delete_acc() likewise send on the dialog under
+#     PJSUA_LOCK.
+#   M1 -> M0: pres_evsub_on_srv_state() is invoked from
+#     pjsip_dlg_on_tsx_state() with the dialog grp_lock held (e.g. on an
+#     unsubscribe), and takes PJSUA_LOCK to look up the subscription and
+#     erase it from the account's pres_srv_list.
+#
+# PJSUA_LOCK guards pres_srv_list in all of the above, so the callback
+# cannot drop it without a PJSUA lock topology change, as with the call
+# and registration cycles above.
+#
+# Suppressed on pres_evsub_on_srv_state because that frame is unique to
+# this cycle.
+deadlock:pres_evsub_on_srv_state
+#=============================================================================
+
+#=============================================================================
 # Lock-order-inversion inside pjmedia event manager when an event
 # subscriber callback publishes another event (nested publish).
 #
