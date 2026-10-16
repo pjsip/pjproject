@@ -990,11 +990,13 @@ static pj_status_t parse_args(int argc, char *argv[],
 
         case OPT_CONTACT_REWRITE_METHOD:
             {
-                pj_str_t rest;
                 unsigned long method;
 
-                method = pj_strtoul2(pj_cstr(&tmp, pj_optarg), &rest, 10);
-                if (tmp.slen == 0 || rest.slen || method > 7) {
+                pj_cstr(&tmp, pj_optarg);
+                if (pj_strspn2(&tmp, "0123456789") != tmp.slen ||
+                    pj_strtoul3(&tmp, &method, 10) != PJ_SUCCESS ||
+                    method > 7)
+                {
                     PJ_LOG(1,(THIS_FILE, "Error: invalid "
                               "--contact-rewrite-method value '%s'",
                               pj_optarg));
