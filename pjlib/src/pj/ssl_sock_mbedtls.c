@@ -549,6 +549,25 @@ static int cert_verify_cb(void *data, mbedtls_x509_crt *crt,
     return 0;
 }
 
+/* Mbed TLS requires PEM lengths to include NUL, but DER lengths must be exact. */
+static pj_ssl_cert_buffer get_cert_buffer(pj_pool_t *pool,
+                                         const pj_ssl_cert_buffer *src)
+{
+    pj_ssl_cert_buffer buf = *src;
+    pj_str_t pem_header = pj_str("-----BEGIN ");
+
+    /* DER certificates and keys start with an ASN.1 SEQUENCE (0x30). */
+    if (src->slen >= pem_header.slen && src->ptr[0] != 0x30 &&
+        src->ptr[src->slen - 1] != '\0' && pj_strstr(src, &pem_header))
+    {
+        pj_strdup_with_null(pool, &buf, src);
+        ++buf.slen;
+    }
+
+    return buf;
+}
+
+
 static pj_status_t set_cert(pj_ssl_sock_t *ssock)
 {
     mbedtls_sock_t *mssock = (mbedtls_sock_t *)ssock;
@@ -556,14 +575,15 @@ static pj_status_t set_cert(pj_ssl_sock_t *ssock)
     int authmode = MBEDTLS_SSL_VERIFY_NONE;
     int ret = 0;
     pj_ssl_cert_t *cert = ssock->cert;
+    pj_ssl_cert_buffer buf;
 
     if (cert == NULL)
         goto on_config;
 
     if (cert->CA_buf.slen) {
+        buf = get_cert_buffer(ssock->pool, &cert->CA_buf);
         ret = mbedtls_x509_crt_parse(&mssock->cacert,
-                                     (const unsigned char *)cert->CA_buf.ptr,
-                                     cert->CA_buf.slen);
+                                     (const unsigned char *)buf.ptr, buf.slen);
         if (ret != 0) {
             PJ_LOG(1, (THIS_FILE, "Failed to CA mbedtls_x509_crt_parse, "
                                   "ret = -0x%04X", -ret));
@@ -573,24 +593,27 @@ static pj_status_t set_cert(pj_ssl_sock_t *ssock)
     }
 
     if (cert->cert_buf.slen && cert->privkey_buf.slen) {
+        buf = get_cert_buffer(ssock->pool, &cert->cert_buf);
         ret = mbedtls_x509_crt_parse(&mssock->cert,
-                                     (const unsigned char *)cert->cert_buf.ptr,
-                                     cert->cert_buf.slen);
+                                     (const unsigned char *)buf.ptr, buf.slen);
         if (ret != 0) {
             PJ_LOG(1, (THIS_FILE, "Failed to mbedtls_x509_crt_parse, "
                                   "ret = -0x%04X", -ret));
             goto on_error;
         }
 
+        buf = get_cert_buffer(ssock->pool, &cert->privkey_buf);
         ret = mbedtls_pk_parse_key(&mssock->pk_ctx,
-                                   (const unsigned char *)cert->privkey_buf.ptr,
-                                   cert->privkey_buf.slen,
+                                   (const unsigned char *)buf.ptr, buf.slen,
                                    (const unsigned char *)cert->privkey_pass.ptr,
                                    cert->privkey_pass.slen
 #if MBEDTLS_VERSION_MAJOR < 4
                                    , mbedtls_ctr_drbg_random, &mssock->ctr_drbg
 #endif
                                    );
+        /* Wipe only the temporary private-key copy. */
+        if (buf.ptr != cert->privkey_buf.ptr)
+            wipe_buf(&buf);
         if (ret != 0) {
             PJ_LOG(1, (THIS_FILE, "Failed to mbedtls_pk_parse, "
                                   "ret = -0x%04X", -ret));
