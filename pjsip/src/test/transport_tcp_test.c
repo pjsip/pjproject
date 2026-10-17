@@ -219,8 +219,8 @@ static int restart_failure_test(void)
         goto on_return;
     }
 
+    pjsip_transport_shutdown(tcp);
     pjsip_transport_dec_ref(tcp);
-    pjsip_transport_destroy(tcp);
     tcp = NULL;
 
     /* A second restart, with the port still occupied, must fail too.
@@ -322,8 +322,9 @@ static int listener_destroy_local_name_test(void)
     if (ret == 0 && tcp->factory != NULL)
         ret = -124;
 
+    /* Once released, another thread may destroy it */
+    pjsip_transport_shutdown(tcp);
     pjsip_transport_dec_ref(tcp);
-    pjsip_transport_destroy(tcp);
     flush_events(500);
     return ret;
 }
@@ -419,13 +420,9 @@ int transport_tcp_test(void)
     }
 
     for (i = 0; i < num_tp; ++i) {
-        /* Destroy this transport. */
+        /* Once released, another thread may destroy it */
+        pjsip_transport_shutdown(tcp[i]);
         pjsip_transport_dec_ref(tcp[i]);
-
-        /* Force destroy this transport. */
-        status = pjsip_transport_destroy(tcp[i]);
-        if (status != PJ_SUCCESS)
-            return -90;
     }
 
     for (i = 0; i < num_listener; ++i) {
