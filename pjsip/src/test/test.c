@@ -451,6 +451,14 @@ int test_main(int argc, char *argv[])
         UT_ADD_TEST1(&test_app.ut_app, tsx_uac_test, (void*)(uintptr_t)i, 0);
         UT_ADD_TEST1(&test_app.ut_app, tsx_uas_test, (void*)(uintptr_t)i, 0);
     }
+
+#if PJ_HAS_TCP && PJ_HAS_THREADS
+    /* Exclusive, as any thread polling the endpoint may wait for the
+     * transaction's lock that this test holds.
+     */
+    UT_ADD_TEST1(&test_app.ut_app, tsx_send_cb_terminate_test,
+                 (void*)(uintptr_t)(tsx_test_cnt - 1), PJ_TEST_EXCLUSIVE);
+#endif
 #endif
 
 #if INCLUDE_LOOP_TEST

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -520,3 +520,97 @@ int tsx_destroy_test()
     return 0;
 }
 
+
+#if PJ_HAS_TCP && PJ_HAS_THREADS
+static volatile pj_bool_t poller_quit;
+
+static int poller_proc(void *arg)
+{
+    PJ_UNUSED_ARG(arg);
+
+    while (!poller_quit) {
+        pj_time_val timeout = {0, 10};
+        pjsip_endpt_handle_events(endpt, &timeout);
+    }
+    return 0;
+}
+
+/* Terminate a transaction while its send callback waits for its lock. Without
+ * the fix the callback releases the transaction twice, which is caught by the
+ * group lock assertion or by ASan.
+ */
+int tsx_send_cb_terminate_test(unsigned tid)
+{
+    char uri[PJSIP_MAX_URL_SIZE];
+    pj_str_t target;
+    pjsip_tpselector tp_sel;
+    pjsip_tx_data *tdata;
+    pjsip_transaction *tsx;
+    pj_pool_t *pool;
+    pj_thread_t *thread = NULL;
+    int rc = 0;
+
+    pj_ansi_snprintf(uri, sizeof(uri),
+                     "sip:tsx_send_cb_test@127.0.0.1:%d;transport=tcp",
+                     tsx_test[tid].port);
+    target = pj_str(uri);
+
+    PJ_TEST_SUCCESS(pjsip_endpt_create_request(endpt, &pjsip_invite_method,
+                                               &target, &target, &target,
+                                               NULL, NULL, -1, NULL, &tdata),
+                    NULL, return -300);
+    PJ_TEST_SUCCESS(pjsip_tsx_create_uac(NULL, tdata, &tsx), NULL,
+                    { pjsip_tx_data_dec_ref(tdata); return -305; });
+
+    /* A new connection, so that the send waits for the connect */
+    pj_bzero(&tp_sel, sizeof(tp_sel));
+    tp_sel.disable_connection_reuse = PJ_TRUE;
+    PJ_TEST_SUCCESS(pjsip_tsx_set_transport(tsx, &tp_sel), NULL,
+                    { rc = -310; goto on_error; });
+
+    pool = pjsip_endpt_create_pool(endpt, "tsxsendcb", 512, 512);
+    PJ_TEST_NOT_NULL(pool, NULL, { rc = -312; goto on_error; });
+
+    pjsip_tx_data_add_ref(tdata);
+
+    pj_grp_lock_acquire(tsx->grp_lock);
+    PJ_TEST_SUCCESS(pjsip_tsx_send_msg(tsx, NULL), NULL,
+                    { pjsip_tx_data_dec_ref(tdata); rc = -315;
+                      goto on_terminate; });
+    PJ_TEST_TRUE(tdata->is_pending, "the send should wait for the connect",
+                 { rc = -320; goto on_terminate; });
+
+    poller_quit = PJ_FALSE;
+    PJ_TEST_SUCCESS(pj_thread_create(pool, "tsxsendcb", &poller_proc, NULL,
+                                     0, 0, &thread),
+                    NULL, { rc = -325; goto on_terminate; });
+
+    /* Let the poller complete the connect, then its send callback waits for
+     * our lock. If it is slower, the test passes without reaching the race.
+     */
+    pj_thread_sleep(500);
+
+on_terminate:
+    pjsip_tsx_terminate(tsx, PJSIP_SC_REQUEST_TERMINATED);
+    pj_grp_lock_release(tsx->grp_lock);
+
+    if (thread) {
+        flush_events(500);
+        poller_quit = PJ_TRUE;
+        pj_thread_join(thread);
+        pj_thread_destroy(thread);
+    }
+    pj_pool_release(pool);
+
+    flush_events(500);
+    if (pjsip_tx_data_dec_ref(tdata) != PJSIP_EBUFDESTROYED && rc == 0)
+        rc = -330;
+
+    return rc;
+
+on_error:
+    pjsip_tx_data_dec_ref(tdata);
+    pjsip_tsx_terminate(tsx, PJSIP_SC_REQUEST_TERMINATED);
+    return rc;
+}
+#endif
