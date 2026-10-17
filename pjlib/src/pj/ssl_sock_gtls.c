@@ -984,8 +984,11 @@ static void tls_cert_get_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
     pj_bool_t update_needed;
     char buf[512] = { 0 };
     size_t bufsize = sizeof(buf);
-    pj_uint8_t serial_no[64] = { 0 }; /* should be >= sizeof(ci->serial_no) */
-    size_t serialsize = sizeof(serial_no);
+    pj_uint8_t serial_buf[64];
+    const pj_uint8_t *serial = serial_buf;
+    size_t serialsize = sizeof(serial_buf);
+    pj_uint8_t serial_no[sizeof(ci->serial_no)] = { 0 };
+    pj_bool_t serial_truncated = PJ_FALSE;
     size_t len = sizeof(buf);
     int i, ret, seq = 0;
     pj_ssl_cert_name_type type;
@@ -995,12 +998,27 @@ static void tls_cert_get_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
     /* Get issuer */
     gnutls_x509_crt_get_issuer_dn(cert, buf, &bufsize);
 
-    /* Get serial no */
-    gnutls_x509_crt_get_serial(cert, serial_no, &serialsize);
+    /* Get serial no, right-aligned as the OpenSSL backend stores it. GnuTLS
+     * keeps the DER sign octet, dropped only if the serial won't fit. */
+    if (gnutls_x509_crt_get_serial(cert, serial_buf, &serialsize) < 0) {
+        serialsize = 0;
+        serial_truncated = PJ_TRUE;
+    }
+    while (serialsize > sizeof(serial_no) && *serial == 0) {
+        ++serial;
+        --serialsize;
+    }
+    if (serialsize > sizeof(serial_no)) {
+        serialsize = sizeof(serial_no);
+        serial_truncated = PJ_TRUE;
+    }
+    pj_memcpy(serial_no + sizeof(serial_no) - serialsize, serial, serialsize);
 
-    /* Check if the contents need to be updated */
+    /* Check if the contents need to be updated; a truncated serial cannot
+     * be proven equal, so it always refreshes. */
     update_needed = pj_strcmp2(&ci->issuer.info, buf) ||
-                    pj_memcmp(ci->serial_no, serial_no, serialsize);
+                    pj_memcmp(ci->serial_no, serial_no, sizeof(serial_no)) ||
+                    serial_truncated;
     if (!update_needed)
         return;
 

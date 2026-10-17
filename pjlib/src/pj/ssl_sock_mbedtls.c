@@ -406,13 +406,24 @@ static void update_cert_info(const mbedtls_x509_crt *crt,
     int ret;
     char buf[1024];
     size_t bufsize = sizeof(buf);
+    const unsigned char *serial = crt->serial.p;
+    size_t serial_len = crt->serial.len;
 
     pj_bzero(ci, sizeof(pj_ssl_cert_info));
 
     ci->version = crt->version;
 
-    /* Serial number */
-    pj_memcpy(ci->serial_no, crt->serial.p, sizeof(ci->serial_no));
+    /* Serial number, right-aligned as the OpenSSL backend stores it. Mbed TLS
+     * keeps the DER sign octet, dropped only if the serial won't fit.
+     */
+    while (serial_len > sizeof(ci->serial_no) && *serial == 0) {
+        ++serial;
+        --serial_len;
+    }
+    if (serial_len > sizeof(ci->serial_no))
+        serial_len = sizeof(ci->serial_no);
+    pj_memcpy(ci->serial_no + sizeof(ci->serial_no) - serial_len, serial,
+              serial_len);
 
     /* Issuer */
     ret = mbedtls_x509_dn_gets(buf, bufsize, &crt->issuer);
