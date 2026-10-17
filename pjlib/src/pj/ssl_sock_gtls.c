@@ -1000,7 +1000,16 @@ static void tls_cert_get_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
 
     /* Get serial no, right-aligned as the OpenSSL backend stores it. GnuTLS
      * keeps the DER sign octet, dropped only if the serial won't fit. */
-    if (gnutls_x509_crt_get_serial(cert, serial_buf, &serialsize) < 0) {
+    ret = gnutls_x509_crt_get_serial(cert, serial_buf, &serialsize);
+    if (ret == GNUTLS_E_SHORT_MEMORY_BUFFER) {
+        void *p = pj_pool_alloc(pool, serialsize);
+
+        if (p) {
+            serial = (const pj_uint8_t*)p;
+            ret = gnutls_x509_crt_get_serial(cert, p, &serialsize);
+        }
+    }
+    if (ret < 0) {
         serialsize = 0;
         serial_truncated = PJ_TRUE;
     }

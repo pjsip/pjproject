@@ -2693,17 +2693,20 @@ static const struct serial_cert
           0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14 }
     },
     {
-        /* Longer than the field: only the first 20 octets are kept */
-        "23-octet serial",
+        /* Longer than the field, and than GnuTLS's 64-octet buffer: only
+         * the first 20 octets are kept
+         */
+        "65-octet serial",
         "-----BEGIN CERTIFICATE-----\n"
-        "MIIBUzCB+qADAgECAhcBAgMEBQYHCAkKCwwNDg8QERITFBUWFzAKBggqhkjOPQQD\n"
-        "AjAWMRQwEgYDVQQDDAtzZXJpYWwudGVzdDAgFw0yNjA5MjcxNjU3NTVaGA8yMTI2\n"
-        "MDkwMzE2NTc1NVowFjEUMBIGA1UEAwwLc2VyaWFsLnRlc3QwWTATBgcqhkjOPQIB\n"
-        "BggqhkjOPQMBBwNCAASlEaaCDVBdjuUHuBPYM20NrJxld6tT9IchPoUG8ancLepA\n"
-        "Ngl+X3akPDkp22FXuwbdaA+UM/K9wilPQrBgWX17oyEwHzAdBgNVHQ4EFgQUe2FN\n"
-        "KJErdjkiWhPSS5DmAWDvMgUwCgYIKoZIzj0EAwIDSAAwRQIhAOMk25KSkbEuK262\n"
-        "eNiLgHUko+hJQ7P6VESpac3rZkYdAiAGQ/6dsxA/37x1ZBFh8QRd7C99dKx79h6r\n"
-        "dmdTUQZEyA==\n"
+        "MIIBfzCCASSgAwIBAgJBAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyAh\n"
+        "IiMkJSYnKCkqKywtLi8wMTIzNDU2Nzg5Ojs8PT4/QEEwCgYIKoZIzj0EAwIwFjEU\n"
+        "MBIGA1UEAwwLc2VyaWFsLnRlc3QwIBcNMjYxMDE3MjA0MjE2WhgPMjEyNjA5MjMy\n"
+        "MDQyMTZaMBYxFDASBgNVBAMMC3NlcmlhbC50ZXN0MFkwEwYHKoZIzj0CAQYIKoZI\n"
+        "zj0DAQcDQgAEpRGmgg1QXY7lB7gT2DNtDaycZXerU/SHIT6FBvGp3C3qQDYJfl92\n"
+        "pDw5KdthV7sG3WgPlDPyvcIpT0KwYFl9e6MhMB8wHQYDVR0OBBYEFHthTSiRK3Y5\n"
+        "IloT0kuQ5gFg7zIFMAoGCCqGSM49BAMCA0kAMEYCIQC6o1CE3ESGPkSBN/99PfRv\n"
+        "L6q6vBOTTWT5t2UjEY79xAIhAMc0G0mcanwOZ8zaYG1wofdm3ZIngOVXJ60NeCxN\n"
+        "sytA\n"
         "-----END CERTIFICATE-----\n",
         { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A,
           0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14 }
