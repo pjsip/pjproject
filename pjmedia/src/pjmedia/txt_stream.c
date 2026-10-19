@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2024-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,6 +68,11 @@
  * RECOMMENDED the waiting time be limited to 1 second (1000 ms).
  */
 #define MAX_RX_WAITING_TIME 1000
+
+/* Maximum forward sequence gap accepted for a packet that failed the
+ * RTP probation check, larger jumps are treated as stray packets.
+ */
+#define MAX_PROBATION_SEQ_GAP 100
 
 /* Maximum number of text packets that can be kept in the jitter buffer.
  * The value should be roughly our MAX_RX_WAITING_TIME over remote's
@@ -718,6 +723,19 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
     if (seq_st.status.flag.restart) {
         stream->rx_last_seq = -1;
         pjmedia_jbuf_reset(c_strm->jb);
+    }
+
+    /* Packet failed RTP probation, accept it only if it is close to the
+     * last received sequence, otherwise a stray packet would hijack
+     * rx_last_seq and cause all subsequent valid packets to be discarded.
+     */
+    diff = (pj_int16_t) (seq - stream->rx_last_seq);
+    if (seq_st.status.flag.bad && stream->rx_last_seq != -1 &&
+        diff > MAX_PROBATION_SEQ_GAP)
+    {
+        *pkt_discarded = PJ_TRUE;
+        pj_mutex_unlock(c_strm->jb_mutex);
+        return PJ_SUCCESS;
     }
 
     if (hdr->pt == c_strm->si->rx_red_pt) {

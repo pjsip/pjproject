@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2025 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2025-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -572,8 +572,15 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 
     }
 
-    /* Skip bad RTP packet */
-    if (seq_st.status.flag.bad) {
+    /* Skip bad RTP packet.
+     * Exception: text stream accepts packets rejected only by the
+     * probation check, it tracks sequence gaps itself (rx_last_seq)
+     * and would otherwise lose typed characters at stream start.
+     */
+    if (seq_st.status.flag.bad &&
+        !(c_strm->si->type == PJMEDIA_TYPE_TEXT &&
+          seq_st.status.flag.probation))
+    {
         pkt_discarded = PJ_TRUE;
         goto on_return;
     }
