@@ -804,10 +804,18 @@ block(SCOPE_FOR VARIABLES)
   set(PJMEDIA_HAS_BCG729 ${PJMEDIA_WITH_BCG729_CODEC})
   set(PJMEDIA_HAS_LYRA_CODEC ${PJMEDIA_WITH_LYRA_CODEC})
 
-  # Always treat `GSM` as external (even if bundled is used), to
-  # prevent using relative path include.
+  # A system GSM is used via <gsm.h> (FindGSM covers the gsm/ subdir), as
+  # autoconf --with-external-gsm; the bundled one via its relative path.
+  set(PJMEDIA_EXTERNAL_GSM_CODEC 0)
+  if(PJMEDIA_WITH_GSM_CODEC)
+    get_target_property(_pj_gsm_provider Pj::Dep::GSM PJ_DEP_PROVIDER)
+    if(_pj_gsm_provider STREQUAL "system")
+      set(PJMEDIA_EXTERNAL_GSM_CODEC 1)
+    endif()
+    unset(_pj_gsm_provider)
+  endif()
   set(PJMEDIA_EXTERNAL_GSM_GSM_H 0)
-  set(PJMEDIA_EXTERNAL_GSM_H 1)
+  set(PJMEDIA_EXTERNAL_GSM_H ${PJMEDIA_EXTERNAL_GSM_CODEC})
 
   # video codecs
   set(PJMEDIA_HAS_VPX_CODEC ${PJMEDIA_WITH_VPX_CODEC})
