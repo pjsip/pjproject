@@ -47,6 +47,8 @@ set(_pj_system_package_Resample "Resample")
 set(_pj_system_package_Speex    "Speex")
 set(_pj_system_package_SRTP     "SRTP")
 set(_pj_system_package_YUV      "YUV")
+set(_pj_system_package_WebRTC   "WebRTC")
+set(_pj_system_package_WebRTC_AEC3 "WebRTC_AEC3")
 
 foreach(_dep IN LISTS _pj_system_deps)
   if(NOT TARGET Pj::Dep::${_dep} AND DEFINED _pj_system_package_${_dep})
