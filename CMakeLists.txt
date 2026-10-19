@@ -494,6 +494,11 @@ if(_pj_find_modules)
     DESTINATION "${PJ_CMAKE_INSTALL_DIR}"
     COMPONENT PjDevelopment
   )
+  # Helper the Find modules include as Pj/CheckLibraryUsable
+  install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/CheckLibraryUsable.cmake"
+    DESTINATION "${PJ_CMAKE_INSTALL_DIR}/Pj"
+    COMPONENT PjDevelopment
+  )
 endif()
 
 install(FILES

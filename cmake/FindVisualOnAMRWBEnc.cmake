@@ -27,11 +27,27 @@ find_library(VisualOnAMRWBEnc_LIBRARY
 )
 mark_as_advanced(VisualOnAMRWBEnc_LIBRARY)
 
+if(VisualOnAMRWBEnc_INCLUDE_DIR AND VisualOnAMRWBEnc_LIBRARY)
+  set(_voamrwbenc_check_libs "${VisualOnAMRWBEnc_LIBRARY}")
+  if(VisualOnAMRWBEnc_LIBRARY MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$" AND UNIX AND NOT APPLE)
+    # A static libvo-amrwbenc needs libm
+    list(APPEND _voamrwbenc_check_libs m)
+  endif()
+
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(VisualOnAMRWBEnc
+    FUNCTION E_IF_init
+    LIBRARIES ${_voamrwbenc_check_libs}
+  )
+  unset(_voamrwbenc_check_libs)
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(VisualOnAMRWBEnc
   REQUIRED_VARS
     VisualOnAMRWBEnc_INCLUDE_DIR
     VisualOnAMRWBEnc_LIBRARY
+    VisualOnAMRWBEnc_USABLE
   VERSION_VAR
     VisualOnAMRWBEnc_VERSION
 )

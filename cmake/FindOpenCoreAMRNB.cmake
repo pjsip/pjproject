@@ -22,11 +22,27 @@ find_library(OpenCoreAMRNB_LIBRARY
 )
 mark_as_advanced(OpenCoreAMRNB_LIBRARY)
 
+if(OpenCoreAMRNB_INCLUDE_DIR AND OpenCoreAMRNB_LIBRARY)
+  set(_amrnb_check_libs "${OpenCoreAMRNB_LIBRARY}")
+  if(OpenCoreAMRNB_LIBRARY MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$" AND UNIX AND NOT APPLE)
+    # A static libopencore-amrnb needs libm
+    list(APPEND _amrnb_check_libs m)
+  endif()
+
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(OpenCoreAMRNB
+    FUNCTION Encoder_Interface_init
+    LIBRARIES ${_amrnb_check_libs}
+  )
+  unset(_amrnb_check_libs)
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(OpenCoreAMRNB
   REQUIRED_VARS
     OpenCoreAMRNB_LIBRARY
     OpenCoreAMRNB_INCLUDE_DIR
+    OpenCoreAMRNB_USABLE
   VERSION_VAR
     OpenCoreAMRNB_VERSION
 )

@@ -4,12 +4,17 @@ if(PKG_CONFIG_FOUND)
   set(Silk_VERSION ${PC_Silk_VERSION})
 endif()
 
+# The SILK SDK keeps its headers in <sdk>/interface and the library in <sdk>
 find_path(Silk_INCLUDE_DIR
   NAMES
     "SKP_Silk_SDK_API.h"
   HINTS
     ${PC_Silk_INCLUDEDIR}
     ${PC_Silk_INCLUDE_DIRS}
+    ${Silk_ROOT}
+    ${SILK_ROOT}
+  PATH_SUFFIXES
+    interface
 )
 mark_as_advanced(Silk_INCLUDE_DIR)
 
@@ -19,14 +24,32 @@ find_library(Silk_LIBRARY
   HINTS
     ${PC_Silk_LIBDIR}
     ${PC_Silk_LIBRARY_DIRS}
+    ${Silk_ROOT}
+    ${SILK_ROOT}
 )
 mark_as_advanced(Silk_LIBRARY)
+
+if(Silk_INCLUDE_DIR AND Silk_LIBRARY)
+  set(_silk_check_libs "${Silk_LIBRARY}")
+  if(Silk_LIBRARY MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$" AND UNIX AND NOT APPLE)
+    # A static SILK library needs libm
+    list(APPEND _silk_check_libs m)
+  endif()
+
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(Silk
+    FUNCTION SKP_Silk_SDK_get_version
+    LIBRARIES ${_silk_check_libs}
+  )
+  unset(_silk_check_libs)
+endif()
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Silk
   REQUIRED_VARS
     Silk_LIBRARY
     Silk_INCLUDE_DIR
+    Silk_USABLE
   VERSION_VAR
     Silk_VERSION
 )

@@ -22,11 +22,27 @@ find_library(OpenCoreAMRWB_LIBRARY
 )
 mark_as_advanced(OpenCoreAMRWB_LIBRARY)
 
+if(OpenCoreAMRWB_INCLUDE_DIR AND OpenCoreAMRWB_LIBRARY)
+  set(_amrwb_check_libs "${OpenCoreAMRWB_LIBRARY}")
+  if(OpenCoreAMRWB_LIBRARY MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$" AND UNIX AND NOT APPLE)
+    # A static libopencore-amrwb needs libm
+    list(APPEND _amrwb_check_libs m)
+  endif()
+
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(OpenCoreAMRWB
+    FUNCTION D_IF_init
+    LIBRARIES ${_amrwb_check_libs}
+  )
+  unset(_amrwb_check_libs)
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(OpenCoreAMRWB
   REQUIRED_VARS
     OpenCoreAMRWB_LIBRARY
     OpenCoreAMRWB_INCLUDE_DIR
+    OpenCoreAMRWB_USABLE
   VERSION_VAR
     OpenCoreAMRWB_VERSION
 )
