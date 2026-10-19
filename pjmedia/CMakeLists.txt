@@ -697,6 +697,17 @@ target_link_libraries(pjmedia
     $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVDEVICE}>:FFMPEG::avdevice>
 )
 
+# The bundled AEC3 exports all its WebRTC OS/arch definitions, a system one
+# only those its headers require; add the rest, as the make build does.
+if(PJMEDIA_WITH_WEBRTC_AEC3)
+  get_target_property(_pj_aec3_provider Pj::Dep::WebRTC_AEC3 PJ_DEP_PROVIDER)
+  if(_pj_aec3_provider STREQUAL "system")
+    include(DetectWebRTCParameters)
+    target_compile_definitions(pjmedia PRIVATE ${WEBRTC_COMPILE_DEFINITIONS})
+  endif()
+  unset(_pj_aec3_provider)
+endif()
+
 if (NOT (WIN32 OR CYGWIN OR MINGW))
   # pjmedia calls libm functions (sin(), cos(), ...), a separate library on
   # these systems that the final link needs. Linked by name so that a cross
