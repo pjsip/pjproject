@@ -22,11 +22,27 @@ find_library(OPUS_LIBRARY
 )
 mark_as_advanced(OPUS_LIBRARY)
 
+if(OPUS_INCLUDE_DIR AND OPUS_LIBRARY)
+  set(_opus_check_libs "${OPUS_LIBRARY}")
+  if(OPUS_LIBRARY MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$" AND UNIX AND NOT APPLE)
+    # A static libopus needs libm
+    list(APPEND _opus_check_libs m)
+  endif()
+
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(OPUS
+    FUNCTION opus_repacketizer_get_size
+    LIBRARIES ${_opus_check_libs}
+  )
+  unset(_opus_check_libs)
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(OPUS
   REQUIRED_VARS
     OPUS_LIBRARY
     OPUS_INCLUDE_DIR
+    OPUS_USABLE
   VERSION_VAR
     OPUS_VERSION
 )

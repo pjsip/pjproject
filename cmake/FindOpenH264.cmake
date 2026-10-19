@@ -25,11 +25,38 @@ find_library(OpenH264_LIBRARY
 )
 mark_as_advanced(OpenH264_LIBRARY)
 
+if(OpenH264_INCLUDE_DIR AND OpenH264_LIBRARY)
+  set(_openh264_check_libs "${OpenH264_LIBRARY}")
+  if(OpenH264_LIBRARY MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$" AND UNIX AND NOT APPLE)
+    # A static libopenh264 needs libm and pthread
+    find_package(Threads QUIET)
+    list(APPEND _openh264_check_libs m)
+    if(TARGET Threads::Threads)
+      list(APPEND _openh264_check_libs Threads::Threads)
+    endif()
+  endif()
+
+  # C++: a static libopenh264 needs the C++ runtime to link
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(OpenH264
+    LANGUAGE CXX
+    INCLUDE_DIRS "${OpenH264_INCLUDE_DIR}"
+    LIBRARIES ${_openh264_check_libs}
+    DEFINITIONS ${PC_OpenH264_CFLAGS_OTHER}
+    CODE [=[
+      #include <wels/codec_api.h>
+      int main() { ISVCEncoder *enc; return WelsCreateSVCEncoder(&enc); }
+    ]=]
+  )
+  unset(_openh264_check_libs)
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(OpenH264
   REQUIRED_VARS
     OpenH264_INCLUDE_DIR
     OpenH264_LIBRARY
+    OpenH264_USABLE
   VERSION_VAR
     OpenH264_VERSION
 )

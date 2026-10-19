@@ -23,11 +23,32 @@ find_library(BCG729_LIBRARY
 )
 mark_as_advanced(BCG729_LIBRARY)
 
+if(BCG729_INCLUDE_DIR AND BCG729_LIBRARY)
+  set(_bcg729_check_libs "${BCG729_LIBRARY}")
+  if(BCG729_LIBRARY MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$" AND UNIX AND NOT APPLE)
+    # A static libbcg729 needs libm
+    list(APPEND _bcg729_check_libs m)
+  endif()
+
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(BCG729
+    CODE "
+#include <bcg729/encoder.h>
+#include <bcg729/decoder.h>
+int main(void) { initBcg729EncoderChannel(0); return 0; }
+"
+    INCLUDE_DIRS ${BCG729_INCLUDE_DIR}
+    LIBRARIES ${_bcg729_check_libs}
+  )
+  unset(_bcg729_check_libs)
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(BCG729
   REQUIRED_VARS
     BCG729_LIBRARY
     BCG729_INCLUDE_DIR
+    BCG729_USABLE
   VERSION_VAR
     BCG729_VERSION
 )
