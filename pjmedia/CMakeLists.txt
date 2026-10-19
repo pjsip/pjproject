@@ -104,10 +104,16 @@ cmake_dependent_option(PJMEDIA_WITH_WEBRTC_AEC
   "TARGET Pj::Dep::WebRTC" OFF
 )
 
-cmake_dependent_option(PJMEDIA_WITH_WEBRTC_AEC3
-  "Enable WebRTC Acoustic Echo Cancellation 3 (WebRTC AEC3) support" ON
-  "TARGET Pj::Dep::WebRTC_AEC3" OFF
-)
+# PJMEDIA_WITH_WEBRTC_AEC3 is declared in third_party/CMakeLists.txt, which
+# imports the library only when it is ON. Keep the option visible when its
+# provider is none or C++ is off.
+if(NOT TARGET Pj::Dep::WebRTC_AEC3)
+  if(PJMEDIA_WITH_WEBRTC_AEC3)
+    message(STATUS
+      "[!] WebRTC AEC3 needs PJ_WITH_CXX and a provider. leaving it out")
+  endif()
+  set(PJMEDIA_WITH_WEBRTC_AEC3 OFF)
+endif()
 
 #
 # Video support

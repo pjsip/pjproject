@@ -218,10 +218,10 @@ if(IOS AND PJ_IOS_SAMPLE_LIBS)
   )
 
   # The Xcode projects link a fixed list of archives, including ones this
-  # configuration may not build -- WebRTC has no Apple support here, and any
-  # codec can be switched off. The matching feature is compiled out of the
-  # headers too, so nothing references those symbols and an empty archive
-  # satisfies the link. Without it the projects fail with "library not found".
+  # configuration may not build -- any codec or WebRTC can be switched off.
+  # The matching feature is compiled out of the headers too, so nothing
+  # references those symbols and an empty archive satisfies the link. Without
+  # it the projects fail with "library not found".
   set(_pj_ios_placeholder_src "${PROJECT_BINARY_DIR}/pj_ios_placeholder.c")
   file(WRITE "${_pj_ios_placeholder_src}"
     "/* Stands in for a library this configuration does not build.\n"
@@ -396,10 +396,7 @@ write_basic_package_version_file(
 set(PJ_BUNDLED_DEPS "")
 set(PJ_SYSTEM_DEPS "")
 
-set(_pj_all_deps G7221 GSM iLBC Resample Speex SRTP YUV)
-if(NOT (APPLE OR MINGW OR CYGWIN))
-  list(APPEND _pj_all_deps WebRTC WebRTC_AEC3)
-endif()
+set(_pj_all_deps G7221 GSM iLBC Resample Speex SRTP YUV WebRTC WebRTC_AEC3)
 
 # Go by the target rather than the PJ_DEP_<X> cache entry, which outlives a
 # dependency that a later configure (PJ_WITH_CXX=OFF, provider none) left out.
