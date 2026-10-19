@@ -7,6 +7,7 @@ include(Pj/Option)
 include(CMakeDependentOption)
 
 macro(import_if_or_set opt failure_value package)
+  pj_retry_on_new_root(${opt} ${package})
   if(${opt})
     message(CHECK_START "Checking if ${package} is available")
     find_package(${package} ${ARGN})
@@ -188,6 +189,8 @@ import_if_or_set(PJMEDIA_WITH_OPENCORE_AMRNB_CODEC OFF OpenCoreAMRNB)
 
 # OpenCore AMR-WB Codecs
 option(PJMEDIA_WITH_OPENCORE_AMRWB_CODEC "Enable OpenCore AMR-WB codec" ON)
+# Re-enabling the option must also re-import OpenCoreAMRWB
+pj_retry_on_new_root(PJMEDIA_WITH_OPENCORE_AMRWB_CODEC VisualOnAMRWBEnc)
 import_if_or_set(PJMEDIA_WITH_OPENCORE_AMRWB_CODEC OFF OpenCoreAMRWB)
 import_if_or_set(PJMEDIA_WITH_OPENCORE_AMRWB_CODEC OFF VisualOnAMRWBEnc)
 

@@ -48,6 +48,11 @@ function(pj_force_set variable value)
     return()
   endif()
 
+  # remember the value before the first forcing, for pj_retry_on_new_root()
+  if(NOT DEFINED CACHE{_PJ_${variable}_UNFORCED})
+    set(_PJ_${variable}_UNFORCED "${${variable}}" CACHE INTERNAL "")
+  endif()
+
   # update value
   set_property(CACHE ${variable} PROPERTY VALUE "${value}")
 
@@ -60,5 +65,45 @@ function(pj_force_set variable value)
   # show warning
   if(ARGC GREATER 2)
     message(STATUS "[!] ${ARGV2}. setting ${variable} to ${value}")
+  endif()
+endfunction()
+
+# pj_retry_on_new_root(<option> <package>)
+#
+# When <package>_ROOT or <PACKAGE>_ROOT (variable or environment) differs from
+# the previous configure, drop the cached search results of <package> and
+# restore <option> if pj_force_set() turned it off, so find_package() searches
+# the new root, like re-running configure with --with-<package>=DIR.
+function(pj_retry_on_new_root option package)
+  string(TOUPPER "${package}" _upper)
+  set(_root "${${package}_ROOT}|${${_upper}_ROOT}|$ENV{${package}_ROOT}|$ENV{${_upper}_ROOT}")
+
+  if(NOT DEFINED CACHE{_PJ_${package}_ROOT})
+    set(_PJ_${package}_ROOT "${_root}" CACHE INTERNAL "")
+    return()
+  endif()
+  if(_root STREQUAL "$CACHE{_PJ_${package}_ROOT}")
+    return()
+  endif()
+  set(_PJ_${package}_ROOT "${_root}" CACHE INTERNAL "")
+
+  get_cmake_property(_vars CACHE_VARIABLES)
+  foreach(_var IN LISTS _vars)
+    if(_var MATCHES "^(${package}|${_upper})_" AND NOT _var MATCHES "_ROOT$")
+      get_property(_type CACHE ${_var} PROPERTY TYPE)
+      if(_type MATCHES "^(FILE)?PATH$")
+        unset(${_var} CACHE)
+      endif()
+    endif()
+  endforeach()
+  unset(${package}_USABLE CACHE)
+
+  if(DEFINED CACHE{_PJ_${option}_UNFORCED})
+    set_property(CACHE ${option} PROPERTY VALUE "$CACHE{_PJ_${option}_UNFORCED}")
+    get_property(_doc CACHE ${option} PROPERTY HELPSTRING)
+    string(REGEX REPLACE " ?\\(forced\\)$" "" _doc "${_doc}")
+    set_property(CACHE ${option} PROPERTY HELPSTRING "${_doc}")
+    unset(_PJ_${option}_UNFORCED CACHE)
+    message(STATUS "${package} root changed, retrying ${option}")
   endif()
 endfunction()
