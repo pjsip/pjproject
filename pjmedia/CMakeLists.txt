@@ -778,13 +778,12 @@ target_sources(pjmedia-codec
 #
 
 # lyra codec models path
-if(PJMEDIA_WITH_LYRA)
-  get_target_property(lyra_model_path Lyra::Lyra LYRA_PREFIX)
+if(PJMEDIA_WITH_LYRA_CODEC)
+  get_target_property(lyra_model_path Lyra::Lyra LYRA_MODEL_PATH)
   if(lyra_model_path)
-    cmake_path(APPEND lyra_model_path "model_coeffs")
     target_compile_definitions(pjmedia-codec
       PRIVATE
-        "PJMEDIA_CODEC_LYRA_DEFAULT_MODEL_PATH=${lyra_model_path}"
+        "PJMEDIA_CODEC_LYRA_DEFAULT_MODEL_PATH=\"${lyra_model_path}\""
     )
   endif()
 endif()
