@@ -64,6 +64,7 @@ int main(int argc, char *argv[])
             objectLifetimeTests.hangupRetryWhileBusy();
             objectLifetimeTests.deleteCallInOwnCallback();
             objectLifetimeTests.deleteCallWhileClosing();
+            objectLifetimeTests.hangupRetryWhileClosing();
             objectLifetimeTests.deleteCallAfterSlotReuse();
             objectLifetimeTests.deleteAccountAfterSlotReuse();
             objectLifetimeTests.deleteAccountDeletedUnderneath();

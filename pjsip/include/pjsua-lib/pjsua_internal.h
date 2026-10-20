@@ -1131,7 +1131,7 @@ pj_status_t acquire_call(const char *title,
 /* If the call's user data is still owner, clear it and hang up the call,
  * unless the library is being destroyed. Used by pjsua2 when a Call is
  * deleted. Returns PJ_ETIMEDOUT if the call or the library is busy, the
- * hangup is then retried later.
+ * hangup is then retried later, until the library is being destroyed.
  */
 pj_status_t pjsua_call_release_owner(pjsua_call_id call_id, void *owner);
 

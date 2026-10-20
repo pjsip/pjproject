@@ -1560,8 +1560,8 @@ public:
      * Destructor. If this object still owns its call, the call stops
      * reporting to it and is hung up, later if the call is busy at the
      * moment. A call it no longer owns, e.g. a new call that has taken its
-     * call ID, is left alone. Unless the library is being destroyed, the
-     * media objects returned by getMedia() are freed.
+     * call ID, is left alone. Unless the library is being or has been
+     * destroyed, the media objects returned by getMedia() are freed.
      */
     virtual ~Call();
 

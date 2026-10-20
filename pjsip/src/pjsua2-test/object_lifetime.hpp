@@ -41,6 +41,7 @@ public:
     void hangupRetryWhileBusy();
     void deleteCallInOwnCallback();
     void deleteCallWhileClosing();
+    void hangupRetryWhileClosing();
     void deleteCallAfterSlotReuse();
     void deleteAccountAfterSlotReuse();
     void deleteAccountDeletedUnderneath();

@@ -537,15 +537,15 @@ void ObjectLifetimeTests::hangupRetryAfterSlotReuse()
 /*****************************************************************************
  * Test 1g: hangupRetryWhileBusy
  *
- * The call's dialog lock stays busy for many hangup retries of a deleted
- * Call object. The retries must not hold up event polling, and must go on
- * until the lock is free, so the call is still hung up.
+ * The call's dialog lock stays busy for a hangup retry of a deleted
+ * Call object. The retry must not hold up event polling, and the next one
+ * must follow, so the call is still hung up once the lock is free.
  *****************************************************************************/
 void ObjectLifetimeTests::hangupRetryWhileBusy()
 {
 #if PJ_HAS_THREADS
-    /* Long enough for several retries */
-    const long hold_ms = 25000;
+    /* Released between the first and the second retry */
+    const long hold_ms = 7500;
     TestCallPtr out, in;
     pj_pool_t *pool;
     pj_thread_t *thread = NULL;
@@ -710,6 +710,47 @@ void ObjectLifetimeTests::deleteCallWhileClosing()
     TEST_ASSERT(kept);
 
     std::cout << "  deleteCallWhileClosing: PASSED\n";
+}
+
+
+/*****************************************************************************
+ * Test 1j: hangupRetryWhileClosing
+ *
+ * The hangup of a deleted Call object is retried later, but the library
+ * starts being destroyed first. The retry must not hang up the call, the
+ * library ends it itself.
+ *****************************************************************************/
+void ObjectLifetimeTests::hangupRetryWhileClosing()
+{
+#if PJ_HAS_THREADS
+    TestCallPtr out, in;
+    unsigned elapsed = 0;
+    bool ok, active;
+
+    std::cout << "\n=== CALL TEST: hangupRetryWhileClosing ===" << std::endl;
+
+    make_ringing_call(*callerAcc, port, out, in);
+
+    ok = delete_while_locked(out, pjsua_var.calls[out->getId()].inv->dlg);
+    if (!ok)
+        out.reset();
+    TEST_ASSERT(ok);
+
+    /* As during libDestroy(), past CALL_HANGUP_RETRY_INTERVAL (5 s) */
+    pjsua_set_state(PJSUA_STATE_CLOSING);
+    while (elapsed < WAIT_MS) {
+        pjsua_handle_events(50);
+        elapsed += 50;
+    }
+    active = in->isActive();
+    pjsua_set_state(PJSUA_STATE_RUNNING);
+
+    pjsua_call_hangup_all();
+    TEST_ASSERT(wait_no_calls());
+    TEST_ASSERT(active);
+
+    std::cout << "  hangupRetryWhileClosing: PASSED\n";
+#endif
 }
 
 

@@ -531,6 +531,8 @@ Call::Call(Account& account, int call_id)
 
 Call::~Call()
 {
+    pjsua_state state;
+
     if (id == PJSUA_INVALID_ID)
         return;
 
@@ -541,7 +543,8 @@ Call::~Call()
     pjsua_call_release_owner(id, this);
 
     /* The call's disconnection won't reach this object to clear them */
-    if (pjsua_get_state() < PJSUA_STATE_CLOSING) {
+    state = pjsua_get_state();
+    if (state > PJSUA_STATE_NULL && state < PJSUA_STATE_CLOSING) {
         try {
             clearMedias();
         } catch (Error &err) {
