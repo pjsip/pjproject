@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -318,20 +318,16 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess,
                                   unsigned rtp_ts,
                                   unsigned payload,
                                   pj_bool_t discarded)
-{   
+{
     pj_timestamp ts;
     pj_uint32_t arrival;
     pj_int32_t transit;
     pjmedia_rtp_status seq_st;
 
-#if !defined(PJMEDIA_HAS_RTCP_XR) || (PJMEDIA_HAS_RTCP_XR == 0)
-    PJ_UNUSED_ARG(discarded);
-#endif
-
     if (sess->stat.rx.pkt == 0) {
         /* Init sequence for the first time. */
         pjmedia_rtp_seq_init(&sess->seq_ctrl, (pj_uint16_t)seq);
-    } 
+    }
 
     sess->stat.rx.pkt++;
     sess->stat.rx.bytes += payload;
@@ -342,7 +338,7 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess,
     if (seq_st.status.flag.restart) {
         rtcp_init_seq(sess);
     }
-    
+
     if (seq_st.status.flag.dup) {
         sess->stat.rx.dup++;
         TRACE_((sess->name, "Duplicate packet detected"));
@@ -354,7 +350,11 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess,
     }
 
     if (seq_st.status.flag.bad) {
-        sess->stat.rx.discard++;
+        /* A packet failing only the probation check may still be used
+         * by the stream (e.g: text stream).
+         */
+        if (discarded || !seq_st.status.flag.probation)
+            sess->stat.rx.discard++;
 
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
         pjmedia_rtcp_xr_rx_rtp(&sess->xr_session, seq, 

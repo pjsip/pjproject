@@ -572,18 +572,15 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 
     }
 
-    /* Skip bad RTP packet.
-     * Exception: text stream accepts packets rejected only by the
-     * probation check, it tracks sequence gaps itself (rx_last_seq)
-     * and would otherwise lose typed characters at stream start.
-     */
-    if (seq_st.status.flag.bad &&
-        !(c_strm->si->type == PJMEDIA_TYPE_TEXT &&
-          seq_st.status.flag.probation))
-    {
+#ifdef TEXT_STREAM
+    /* Text stream decides on bad RTP packet itself */
+#else
+    /* Skip bad RTP packet */
+    if (seq_st.status.flag.bad) {
         pkt_discarded = PJ_TRUE;
         goto on_return;
     }
+#endif
 
     /* Ignore if payloadlen is zero.
      * Exception: text stream needs to accept empty text block to

@@ -35,6 +35,7 @@
 #include <pjmedia/txt_stream.h>
 
 #define THIS_FILE "txt_stream.c"
+#define TEXT_STREAM
 #define LOGERR_(expr) PJ_PERROR(4, expr)
 #define TRC_(expr) PJ_LOG(5, expr)
 
@@ -69,16 +70,16 @@
  */
 #define MAX_RX_WAITING_TIME 1000
 
-/* Maximum forward sequence gap accepted for a packet that failed the
- * RTP probation check, larger jumps are treated as stray packets.
- */
-#define MAX_PROBATION_SEQ_GAP 100
-
 /* Maximum number of text packets that can be kept in the jitter buffer.
  * The value should be roughly our MAX_RX_WAITING_TIME over remote's
  * buffering time (which unfortunately we don't know).
  */
 #define JBUF_MAX_COUNT 8
+
+/* Maximum sequence gap from the last received packet handled as is.
+ * Larger gaps cannot fit in the jitter buffer anyway.
+ */
+#define MAX_SEQ_GAP JBUF_MAX_COUNT
 
 /* Maximum size of a single text frame in bytes */
 #define MAX_TEXT_FRAME_SIZE PJMEDIA_MAX_MTU
@@ -714,6 +715,7 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
     unsigned consumed = 0;
     pj_uint16_t seq = pj_ntohs(hdr->seq);
     pj_int16_t diff = 0;
+    int prev_last_seq;
     pj_status_t status = PJ_SUCCESS;
 
     /* Initialize to prevent uninitialized memory reads on success paths */
@@ -725,31 +727,50 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
         pjmedia_jbuf_reset(c_strm->jb);
     }
 
-    /* Packet failed RTP probation, accept it only if it is close to the
-     * last received sequence, otherwise a stray packet would hijack
-     * rx_last_seq and cause all subsequent valid packets to be discarded.
-     */
     diff = (pj_int16_t) (seq - stream->rx_last_seq);
-    if (seq_st.status.flag.bad && stream->rx_last_seq != -1 &&
-        diff > MAX_PROBATION_SEQ_GAP)
+
+    if (seq_st.status.flag.bad) {
+        /* Accept packets rejected only by RTP probation, as we track
+         * sequence gaps ourselves, unless far from the last received
+         * sequence (stray packet).
+         */
+        if (!seq_st.status.flag.probation || seq_st.status.flag.badpt ||
+            seq_st.status.flag.badssrc || seq_st.status.flag.dup ||
+            (stream->rx_last_seq != -1 &&
+             (diff > MAX_SEQ_GAP || diff < -MAX_SEQ_GAP)))
+        {
+            *pkt_discarded = PJ_TRUE;
+            pj_mutex_unlock(c_strm->jb_mutex);
+            return PJ_SUCCESS;
+        }
+    } else if (stream->rx_last_seq != -1 && diff > MAX_SEQ_GAP) {
+        /* Long loss, limit the number of lost text markers */
+        stream->rx_last_seq = (pj_uint16_t) (seq - MAX_SEQ_GAP);
+        diff = MAX_SEQ_GAP;
+    } else if (stream->rx_last_seq != -1 && diff < -MAX_SEQ_GAP &&
+               !seq_st.status.flag.outorder)
     {
-        *pkt_discarded = PJ_TRUE;
-        pj_mutex_unlock(c_strm->jb_mutex);
-        return PJ_SUCCESS;
+        /* RTP session considers this packet in sequence, so rx_last_seq
+         * came from a stray packet, resync.
+         */
+        stream->rx_last_seq = -1;
+        pjmedia_jbuf_reset(c_strm->jb);
     }
+    prev_last_seq = stream->rx_last_seq;
 
     if (hdr->pt == c_strm->si->rx_red_pt) {
         status = decode_red(stream, c_strm->si->rx_pt, seq,
                             (const char *) payload, payloadlen, &consumed);
 
-        /* Mark packet as discarded if RED decoding fails */
-        if (status != PJ_SUCCESS) {
+        /* Mark packet as discarded if RED decoding fails or it carries
+         * no new data.
+         */
+        if (status != PJ_SUCCESS || stream->rx_last_seq == prev_last_seq) {
             *pkt_discarded = PJ_TRUE;
         }
 
     } else if (hdr->pt == c_strm->si->rx_pt) {
         /* Fallback: Route T.140 directly to Jitter Buffer */
-        diff = (pj_int16_t) (seq - stream->rx_last_seq);
 
         /* Report missing T.140 packets as lost text. */
         if (stream->rx_last_seq != -1 && diff > 1) {
