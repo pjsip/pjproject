@@ -305,19 +305,15 @@ static void rtcp_init_seq(pjmedia_rtcp_session *sess)
     sess->jitter = 0;
 }
 
-PJ_DEF(void) pjmedia_rtcp_rx_rtp( pjmedia_rtcp_session *sess, 
-                                  unsigned seq, 
-                                  unsigned rtp_ts,
-                                  unsigned payload)
-{
-    pjmedia_rtcp_rx_rtp2(sess, seq, rtp_ts, payload, PJ_FALSE);
-}
-
-PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess, 
-                                  unsigned seq, 
-                                  unsigned rtp_ts,
-                                  unsigned payload,
-                                  pj_bool_t discarded)
+/* If count_all_bad is set, every packet failing the RTP sequence check
+ * is counted as discarded, even if the caller used it.
+ */
+static void rtcp_rx_rtp(pjmedia_rtcp_session *sess,
+                        unsigned seq,
+                        unsigned rtp_ts,
+                        unsigned payload,
+                        pj_bool_t discarded,
+                        pj_bool_t count_all_bad)
 {
     pj_timestamp ts;
     pj_uint32_t arrival;
@@ -353,7 +349,7 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess,
         /* A packet failing only the probation check may still be used
          * by the stream (e.g: text stream).
          */
-        if (discarded || !seq_st.status.flag.probation)
+        if (count_all_bad || discarded || !seq_st.status.flag.probation)
             sess->stat.rx.discard++;
 
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
@@ -530,6 +526,23 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess,
 
     /* Update timestamp of last RX RTP packet */
     sess->rtp_last_ts = rtp_ts;
+}
+
+PJ_DEF(void) pjmedia_rtcp_rx_rtp( pjmedia_rtcp_session *sess, 
+                                  unsigned seq, 
+                                  unsigned rtp_ts,
+                                  unsigned payload)
+{
+    rtcp_rx_rtp(sess, seq, rtp_ts, payload, PJ_FALSE, PJ_TRUE);
+}
+
+PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess, 
+                                  unsigned seq, 
+                                  unsigned rtp_ts,
+                                  unsigned payload,
+                                  pj_bool_t discarded)
+{
+    rtcp_rx_rtp(sess, seq, rtp_ts, payload, discarded, PJ_FALSE);
 }
 
 PJ_DEF(void) pjmedia_rtcp_tx_rtp(pjmedia_rtcp_session *sess, 
