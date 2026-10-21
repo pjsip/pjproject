@@ -4340,6 +4340,15 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite3(
     /* Add additional headers etc */
     pjsua_process_msg_data( tdata, msg_data);
 
+    /* The hold is restored if an unhold of a held call fails */
+    if (call->local_hold && (call->opt.flag & PJSUA_CALL_UNHOLD) &&
+        (call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0)
+    {
+        call->unhold_msg = (void*) tdata;
+    } else {
+        call->unhold_msg = NULL;
+    }
+
     /* Send the request */
     call->med_update_success = PJ_FALSE;
     status = pjsip_inv_send_msg( call->inv, tdata);
@@ -4349,6 +4358,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite3(
     {
         call->local_hold = PJ_FALSE;
     } else if (status != PJ_SUCCESS) {
+        call->unhold_msg = NULL;
         pjsua_perror(THIS_FILE, "Unable to send re-INVITE", status);
         goto on_error;
     }
@@ -7543,6 +7553,20 @@ on_return:
 
 
 /*
+ * A 401/407 to our re-INVITE with an SDP offer is final if the offer is
+ * no longer pending: a retry with credentials, sync or deferred, keeps it.
+ */
+static pj_bool_t is_unretried_auth_failure(pjsua_call *call,
+                                           pjsip_transaction *tsx)
+{
+    return call->inv->state == PJSIP_INV_STATE_CONFIRMED &&
+           tsx->last_tx && tsx->last_tx->msg->body && call->inv->neg &&
+           pjmedia_sdp_neg_get_state(call->inv->neg) !=
+                PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER;
+}
+
+
+/*
  * This callback is called when transaction state has changed in INVITE
  * session. We use this to trap:
  *  - incoming REFER request.
@@ -7708,7 +7732,8 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
                tsx->state >= PJSIP_TSX_STATE_COMPLETED &&
                e->body.tsx_state.prev_state < PJSIP_TSX_STATE_COMPLETED &&
                (!PJSIP_IS_STATUS_IN_CLASS(tsx->status_code, 300) &&
-                tsx->status_code!=401 && tsx->status_code!=407 &&
+                ((tsx->status_code!=401 && tsx->status_code!=407) ||
+                 is_unretried_auth_failure(call, tsx)) &&
                 tsx->status_code!=422))
     {
         if (tsx->status_code/100 == 2) {
@@ -7729,7 +7754,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
                 call->local_hold = PJ_FALSE;
                 PJ_LOG(3,(THIS_FILE, "Error putting call %d on hold "
                           "(reason=%d)", call->index, tsx->status_code));
-            } else if (call->opt.flag & PJSUA_CALL_UNHOLD) {
+            } else if (tsx->last_tx == (pjsip_tx_data*)call->unhold_msg) {
                 /* Call unhold failed */
                 call->local_hold = PJ_TRUE;
                 PJ_LOG(3,(THIS_FILE, "Error releasing hold on call %d "
@@ -7739,6 +7764,9 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
         
         if (tsx->last_tx == (pjsip_tx_data*)call->hold_msg) {
             call->hold_msg = NULL;
+        }
+        if (tsx->last_tx == (pjsip_tx_data*)call->unhold_msg) {
+            call->unhold_msg = NULL;
         }
         
         if (tsx->last_tx->msg->body &&
