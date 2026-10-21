@@ -395,6 +395,7 @@ if(BUILD_TESTING)
     src/pjsua2-test/auth_challenge.cpp
     src/pjsua2-test/audio_media_port.cpp
     src/pjsua2-test/call_replace.cpp
+    src/pjsua2-test/object_lifetime.cpp
   )
 
   target_link_libraries(pjsua2-test
