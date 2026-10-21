@@ -1110,6 +1110,7 @@ if(BUILD_TESTING)
     src/test/rtp_test.c
     src/test/test.c
     src/test/tone_detector_test.c
+    src/test/txt_stream_test.c
     src/test/sdp_neg_test.c
     src/test/sdp_attr_test.c
     src/test/transport_srtp_test.c
