@@ -56,6 +56,9 @@ endif()
 if(@PJMEDIA_WITH_AUDIODEV_WASAPI@)
   find_dependency(WASAPI)
 endif()
+if(@PJMEDIA_WITH_AUDIODEV_PORTAUDIO@)
+  find_dependency(PortAudio)
+endif()
 
 # Video device backends
 if(@PJMEDIA_WITH_VIDEODEV_OPENGL@)
