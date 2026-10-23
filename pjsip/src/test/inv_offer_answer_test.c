@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -138,6 +138,8 @@ typedef struct inv_test_param_t
     unsigned    count;
     oa_t        oa[4];
     pj_bool_t   multipart_body;
+    pj_bool_t   test_null_offer_reinvite;
+    pj_bool_t   test_non_sdp_body_reinvite;
 } inv_test_param_t;
 
 typedef struct inv_test_t
@@ -159,6 +161,16 @@ typedef struct inv_test_t
 /**************** GLOBALS ******************/
 static inv_test_t   inv_test;
 static unsigned     job_cnt;
+static pj_bool_t    reject_null_offer;
+static pj_bool_t    answer_reinvite_manually;
+static pj_bool_t    expect_null_offer_response;
+static pj_str_t     null_offer_call_id;
+static pj_int32_t   null_offer_cseq;
+static unsigned     null_offer_response_code;
+static unsigned     null_offer_response_media_count;
+static pj_bool_t    null_offer_response_has_sdp;
+static unsigned    null_offer_create_offer_count;
+static pj_status_t null_offer_reinvite_answer_status;
 
 typedef enum job_type
 {
@@ -215,9 +227,38 @@ static void on_create_offer(pjsip_inv_session *inv,
                             pjmedia_sdp_session **p_offer)
 {
     PJ_UNUSED_ARG(inv);
-    PJ_UNUSED_ARG(p_offer);
+
+    if (reject_null_offer) {
+        ++null_offer_create_offer_count;
+        *p_offer = NULL;
+        return;
+    }
 
     pj_assert(!"Should not happen");
+}
+
+static pj_status_t on_rx_reinvite(pjsip_inv_session *inv,
+                                  const pjmedia_sdp_session *offer,
+                                  pjsip_rx_data *rdata)
+{
+    pjsip_tx_data *tdata;
+    pj_status_t status;
+
+    PJ_UNUSED_ARG(offer);
+
+    if (!answer_reinvite_manually)
+        return PJ_EINVALIDOP;
+
+    status = pjsip_inv_initial_answer(inv, rdata, 100, NULL, NULL, &tdata);
+    if (status == PJ_SUCCESS)
+        status = pjsip_inv_send_msg(inv, tdata);
+    if (status == PJ_SUCCESS)
+        status = pjsip_inv_answer(inv, 200, NULL, NULL, &tdata);
+    if (status == PJ_SUCCESS)
+        status = pjsip_inv_send_msg(inv, tdata);
+
+    null_offer_reinvite_answer_status = status;
+    return status;
 }
 
 static void on_media_update(pjsip_inv_session *inv_ses, 
@@ -430,6 +471,7 @@ static int perform_test(inv_test_param_t *param)
     pjmedia_sdp_session *sdp;
     pjsip_tx_data *tdata;
     pj_status_t status;
+    int rc = 0;
 
     PJ_LOG(3,(THIS_FILE, "  %s", param->title));
 
@@ -496,6 +538,112 @@ static int perform_test(inv_test_param_t *param)
 
     flush_events(100);
 
+    if (param->test_null_offer_reinvite ||
+        param->test_non_sdp_body_reinvite)
+    {
+        const pjmedia_sdp_session *active_sdp = NULL;
+        const pj_bool_t has_unknown_body =
+            param->test_non_sdp_body_reinvite;
+        unsigned i;
+
+        status = pjmedia_sdp_neg_get_active_local(inv_test.uas->neg,
+                                                   &active_sdp);
+        if (status != PJ_SUCCESS || !active_sdp) {
+            PJ_LOG(1, (THIS_FILE,
+                       "    unable to get active local SDP before re-INVITE"));
+            rc = -60;
+        } else {
+            reject_null_offer = PJ_TRUE;
+            answer_reinvite_manually = PJ_TRUE;
+            expect_null_offer_response = PJ_FALSE;
+            null_offer_response_code = 0;
+            null_offer_response_media_count = 0;
+            null_offer_response_has_sdp = PJ_FALSE;
+            null_offer_create_offer_count = 0;
+            null_offer_reinvite_answer_status = PJ_EUNKNOWN;
+
+            TRACE_((THIS_FILE, "    Sending offerless re-INVITE%s; app "
+                               "declines to create offer",
+                    has_unknown_body ? " with unknown body" : ""));
+            status = pjsip_inv_reinvite(inv_test.uac, NULL, NULL, &tdata);
+            if (status == PJ_SUCCESS && has_unknown_body) {
+                pj_str_t type = pj_str("application");
+                pj_str_t subtype = pj_str("isup");
+                pj_str_t data = pj_str("dummy");
+
+                tdata->msg->body = pjsip_msg_body_create(tdata->pool, &type,
+                                                         &subtype, &data);
+            }
+            if (status == PJ_SUCCESS) {
+                pjsip_cid_hdr *cid;
+                pjsip_cseq_hdr *cseq;
+
+                cid = (pjsip_cid_hdr*)
+                      pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CALL_ID, NULL);
+                cseq = (pjsip_cseq_hdr*)
+                       pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL);
+                pj_strdup(inv_test.uac->dlg->pool, &null_offer_call_id,
+                          &cid->id);
+                null_offer_cseq = cseq->cseq;
+                expect_null_offer_response = PJ_TRUE;
+                status = pjsip_inv_send_msg(inv_test.uac, tdata);
+            }
+            if (status != PJ_SUCCESS) {
+                PJ_LOG(1, (THIS_FILE,
+                           "    failed to send offerless re-INVITE (%d)",
+                           status));
+                rc = -61;
+            } else {
+                for (i = 0; i < 100 && null_offer_response_code == 0; ++i) {
+                    pj_time_val delay = {0, 20};
+                    pjsip_endpt_handle_events(endpt, &delay);
+                }
+
+                if (has_unknown_body) {
+                    if (null_offer_response_code != 200 ||
+                        null_offer_response_has_sdp ||
+                        null_offer_create_offer_count != 0)
+                    {
+                        PJ_LOG(1, (THIS_FILE,
+                                   "    expected bodyless 200 without offer "
+                                   "callback, got %u with SDP=%d callback=%u",
+                                   null_offer_response_code,
+                                   null_offer_response_has_sdp,
+                                   null_offer_create_offer_count));
+                        rc = -62;
+                    }
+                } else if (null_offer_response_code != 200 ||
+                           !null_offer_response_has_sdp ||
+                           null_offer_response_media_count !=
+                               active_sdp->media_count ||
+                           null_offer_create_offer_count != 1)
+                {
+                    PJ_LOG(1, (THIS_FILE,
+                               "    expected 200 with active SDP (%u media), "
+                               "got %u with SDP=%d (%u media), callback=%u",
+                               active_sdp->media_count,
+                               null_offer_response_code,
+                               null_offer_response_has_sdp,
+                               null_offer_response_media_count,
+                               null_offer_create_offer_count));
+                    rc = -63;
+                }
+                if (!has_unknown_body &&
+                    null_offer_reinvite_answer_status != PJ_SUCCESS)
+                {
+                    PJ_LOG(1, (THIS_FILE,
+                               "    asynchronous re-INVITE answer failed (%d)",
+                               null_offer_reinvite_answer_status));
+                    rc = -64;
+                }
+            }
+
+            reject_null_offer = PJ_FALSE;
+            answer_reinvite_manually = PJ_FALSE;
+            expect_null_offer_response = PJ_FALSE;
+        }
+    }
+
     /*
      * Hangup
      */
@@ -510,7 +658,7 @@ static int perform_test(inv_test_param_t *param)
 
     flush_events(500);
 
-    return 0;
+    return rc;
 }
 
 
@@ -521,7 +669,24 @@ static pj_bool_t log_on_rx_msg(pjsip_rx_data *rdata)
 
     if (!is_user_equal(rdata->msg_info.from, "inv_offer_answer_test"))
         return PJ_FALSE;
-        
+
+    if (expect_null_offer_response && msg->type == PJSIP_RESPONSE_MSG &&
+        rdata->msg_info.cid &&
+        rdata->msg_info.cseq &&
+        rdata->msg_info.cseq->method.id == PJSIP_INVITE_METHOD &&
+        rdata->msg_info.cseq->cseq == null_offer_cseq &&
+        pj_strcmp(&rdata->msg_info.cid->id, &null_offer_call_id) == 0 &&
+        msg->line.status.code >= 200)
+    {
+        pjsip_rdata_sdp_info *sdp_info;
+
+        sdp_info = pjsip_rdata_get_sdp_info(rdata);
+        null_offer_response_has_sdp = sdp_info && sdp_info->sdp;
+        null_offer_response_media_count = null_offer_response_has_sdp ?
+                                         sdp_info->sdp->media_count : 0;
+        null_offer_response_code = msg->line.status.code;
+    }
+
     if (msg->type == PJSIP_REQUEST_MSG)
         pj_ansi_snprintf(info, sizeof(info), "%.*s", 
             (int)msg->line.req.method.name.slen,
@@ -575,6 +740,29 @@ static inv_test_param_t test_params[] =
         { OFFERER_UAC },
         PJ_FALSE
     },
+
+    {
+        "Offerless re-INVITE with NULL application offer",
+        0,
+        PJ_TRUE,
+        1,
+        { OFFERER_UAC },
+        PJ_FALSE,
+        PJ_TRUE
+    },
+
+#if PJSIP_INV_ACCEPT_UNKNOWN_BODY
+    {
+        "Re-INVITE with unknown body does not trigger SDP offer",
+        0,
+        PJ_TRUE,
+        1,
+        { OFFERER_UAC },
+        PJ_FALSE,
+        PJ_FALSE,
+        PJ_TRUE
+    },
+#endif
 
     {
         "Standard INVITE with offer, with 100rel",
@@ -827,6 +1015,7 @@ int inv_offer_answer_test(void)
         pj_bzero(&inv_cb, sizeof(inv_cb));
         inv_cb.on_media_update = &on_media_update;
         inv_cb.on_rx_offer = &on_rx_offer;
+        inv_cb.on_rx_reinvite = &on_rx_reinvite;
         inv_cb.on_create_offer = &on_create_offer;
         inv_cb.on_state_changed = &on_state_changed;
         inv_cb.on_new_session = &on_new_session;
@@ -871,4 +1060,3 @@ int inv_offer_answer_test(void)
 on_return:
     return rc;
 }
-
