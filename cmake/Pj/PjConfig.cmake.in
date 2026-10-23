@@ -90,7 +90,7 @@ unset(_pj_resample)
 
 # FFMPEG
 if(@PJMEDIA_WITH_FFMPEG@)
-  find_dependency(FFMPEG)
+  find_dependency(FFMPEG COMPONENTS @PJ_FFMPEG_COMPONENTS@)
 endif()
 
 # Audio/video codecs
