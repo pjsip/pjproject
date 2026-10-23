@@ -20,10 +20,11 @@ pj_option(PJLIB_WITH_IOQUEUE "I/O Queue implementation backend"
   ALLOWED_VALUES select kqueue epoll iocp
 )
 
-# Use `libuuid` for `UUID` handling implementation
+# Use `libuuid` for `UUID` handling implementation where the OS has no
+# native one, as autoconf
 cmake_dependent_option(PJLIB_WITH_LIBUUID
-  "Enable libuuid (Linux only)" ON
-  "LINUX" OFF
+  "Enable libuuid" ON
+  "UNIX;NOT APPLE;NOT ANDROID;NOT BSD;NOT CYGWIN" OFF
 )
 
 # Enable SSL support with the selected implementation backend
