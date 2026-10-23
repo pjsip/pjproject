@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2025 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2025-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -572,11 +572,15 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 
     }
 
+#ifdef TEXT_STREAM
+    /* Text stream decides on bad RTP packet itself */
+#else
     /* Skip bad RTP packet */
     if (seq_st.status.flag.bad) {
         pkt_discarded = PJ_TRUE;
         goto on_return;
     }
+#endif
 
     /* Ignore if payloadlen is zero.
      * Exception: text stream needs to accept empty text block to

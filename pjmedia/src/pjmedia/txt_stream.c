@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2024-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,6 +35,7 @@
 #include <pjmedia/txt_stream.h>
 
 #define THIS_FILE "txt_stream.c"
+#define TEXT_STREAM
 #define LOGERR_(expr) PJ_PERROR(4, expr)
 #define TRC_(expr) PJ_LOG(5, expr)
 
@@ -75,6 +76,17 @@
  */
 #define JBUF_MAX_COUNT 8
 
+/* Maximum sequence gap from the last received packet handled as is.
+ * Larger gaps cannot fit in the jitter buffer anyway.
+ */
+#define MAX_SEQ_GAP JBUF_MAX_COUNT
+
+/* Maximum forward sequence jump accepted for a packet failing the RTP
+ * probation check. Larger jumps are dropped as RTP probation does, so
+ * the packets in between are not discarded as old when they arrive.
+ */
+#define MAX_PROBATION_SKIP 2
+
 /* Maximum size of a single text frame in bytes */
 #define MAX_TEXT_FRAME_SIZE PJMEDIA_MAX_MTU
 
@@ -109,6 +121,8 @@ typedef struct pjmedia_txt_stream {
     int tx_nred;                 /**< Num of redundant data. */
 
     int rx_last_seq; /**< Sequence of last rx.   */
+    int rx_jump_seq; /**< Expected seq to confirm
+                          a sequence jump.       */
 
     /* Incoming text callback. */
     void (*cb)(pjmedia_txt_stream *, void *, const pjmedia_txt_stream_data *);
@@ -291,6 +305,7 @@ pjmedia_txt_stream_create(pjmedia_endpt *endpt, pj_pool_t *pool,
     c_strm->jb_last_frm = PJMEDIA_JB_NORMAL_FRAME;
     c_strm->rtcp_fb_nack.pid = -1;
     stream->rx_last_seq = -1;
+    stream->rx_jump_seq = -1;
     stream->is_idle = PJ_TRUE;
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
@@ -585,24 +600,15 @@ static void call_cb(pjmedia_txt_stream *stream, pj_bool_t now)
     pj_mutex_unlock(c_strm->jb_mutex);
 }
 
-static pj_status_t decode_red(pjmedia_txt_stream *stream, unsigned pt, int seq,
-                              const char *buf, unsigned buflen,
-                              unsigned *red_len)
+static pj_status_t parse_red(unsigned pt, const char *buf, unsigned buflen,
+                             pj_uint32_t hdr[], int *level, unsigned *hdr_len)
 {
-    pj_uint32_t hdr[NUM_BUFFERS];
-    const char *payload_ptr = NULL;
-    const char *data_ptr = NULL;
-    int i, level = 0;
     unsigned consumed = 0;
-    unsigned length = 0;
-    unsigned data_len = 0;
-    unsigned primary_len = 0;
-    pj_uint16_t block_seq = 0;
-    pj_int16_t diff = 0;
-    pj_uint8_t b = 0;
     unsigned total_red_len = 0;
+    pj_uint8_t b = 0;
+    int i;
 
-    /* Parse headers */
+    *level = 0;
     while (1) {
         if (consumed + 1 > buflen)
             return PJ_ETOOBIG;
@@ -613,20 +619,38 @@ static pj_status_t decode_red(pjmedia_txt_stream *stream, unsigned pt, int seq,
             consumed += 1;
             break;
         }
-        if (consumed + 4 > buflen || level >= NUM_BUFFERS)
+        if (consumed + 4 > buflen || *level >= NUM_BUFFERS)
             return PJ_ETOOBIG;
-        pj_memcpy(&hdr[level], &buf[consumed], 4);
-        hdr[level] = pj_ntohl(hdr[level]);
+        pj_memcpy(&hdr[*level], &buf[consumed], 4);
+        hdr[*level] = pj_ntohl(hdr[*level]);
         consumed += 4;
-        level++;
+        (*level)++;
     }
 
-    for (i = 0; i < level; i++) {
+    for (i = 0; i < *level; i++) {
         total_red_len += (hdr[i] & 0x3FF);
     }
     if (consumed + total_red_len > buflen) {
         return PJ_ETOOBIG;
     }
+
+    *hdr_len = consumed;
+    return PJ_SUCCESS;
+}
+
+static void decode_red(pjmedia_txt_stream *stream, int seq,
+                       const char *buf, unsigned buflen,
+                       const pj_uint32_t hdr[], int level, unsigned hdr_len)
+{
+    const char *payload_ptr = NULL;
+    const char *data_ptr = NULL;
+    int i;
+    unsigned consumed = hdr_len;
+    unsigned length = 0;
+    unsigned data_len = 0;
+    unsigned primary_len = 0;
+    pj_uint16_t block_seq = 0;
+    pj_int16_t diff = 0;
 
     /* Parse redundant history blocks */
     payload_ptr = buf + consumed;
@@ -693,10 +717,6 @@ static pj_status_t decode_red(pjmedia_txt_stream *stream, unsigned pt, int seq,
                                (pj_uint16_t) seq);
         stream->rx_last_seq = (pj_uint16_t) seq;
     }
-
-    consumed += primary_len;
-    *red_len = consumed;
-    return PJ_SUCCESS;
 }
 
 static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
@@ -706,33 +726,76 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
                                     pj_bool_t *pkt_discarded)
 {
     pjmedia_txt_stream *stream = (pjmedia_txt_stream *) c_strm;
-    unsigned consumed = 0;
+    pj_uint32_t red_hdr[NUM_BUFFERS];
+    int red_level = 0;
+    unsigned red_hdr_len = 0;
+    pj_bool_t is_red = (hdr->pt == c_strm->si->rx_red_pt);
     pj_uint16_t seq = pj_ntohs(hdr->seq);
     pj_int16_t diff = 0;
+    pj_bool_t far;
+    int prev_last_seq;
     pj_status_t status = PJ_SUCCESS;
 
-    /* Initialize to prevent uninitialized memory reads on success paths */
-    *pkt_discarded = PJ_FALSE;
+    /* Discarded unless it brings new data */
+    *pkt_discarded = PJ_TRUE;
 
-    pj_mutex_lock(c_strm->jb_mutex);
-    if (seq_st.status.flag.restart) {
-        stream->rx_last_seq = -1;
-        pjmedia_jbuf_reset(c_strm->jb);
+    /* Validate payload before changing any state */
+    if (is_red) {
+        status = parse_red(c_strm->si->rx_pt, (const char *) payload,
+                           payloadlen, red_hdr, &red_level, &red_hdr_len);
+        if (status != PJ_SUCCESS)
+            return status;
+    } else if (hdr->pt != c_strm->si->rx_pt) {
+        return PJMEDIA_EINVALIDPT;
     }
 
-    if (hdr->pt == c_strm->si->rx_red_pt) {
-        status = decode_red(stream, c_strm->si->rx_pt, seq,
-                            (const char *) payload, payloadlen, &consumed);
+    pj_mutex_lock(c_strm->jb_mutex);
 
-        /* Mark packet as discarded if RED decoding fails */
-        if (status != PJ_SUCCESS) {
-            *pkt_discarded = PJ_TRUE;
+    /* We track sequence ourselves, so a packet rejected by the RTP
+     * sequence check (e.g: during probation) may still be used.
+     */
+    if (seq_st.status.flag.bad &&
+        (seq_st.status.flag.badpt || seq_st.status.flag.badssrc ||
+         seq_st.status.flag.dup || stream->rx_last_seq == -1))
+    {
+        goto on_return;
+    }
+
+    diff = (pj_int16_t) (seq - stream->rx_last_seq);
+    far = stream->rx_last_seq != -1 &&
+          (diff > MAX_SEQ_GAP || diff < -MAX_SEQ_GAP);
+
+    if (far && (seq_st.status.flag.bad || !seq_st.status.flag.outorder)) {
+        /* Accept a far sequence only if confirmed by the next packet (or
+         * RTP session restart), otherwise it may be a stray packet. Late
+         * packets (good, but out of order) are processed as usual.
+         */
+        if (!seq_st.status.flag.restart && seq != stream->rx_jump_seq) {
+            stream->rx_jump_seq = (pj_uint16_t) (seq + 1);
+            goto on_return;
         }
 
-    } else if (hdr->pt == c_strm->si->rx_pt) {
-        /* Fallback: Route T.140 directly to Jitter Buffer */
+        if (diff > 0 && !seq_st.status.flag.restart) {
+            /* Long loss, limit the number of lost text markers */
+            stream->rx_last_seq = (pj_uint16_t) (seq - MAX_SEQ_GAP);
+        } else {
+            /* Sequence restart, only the previous (unconfirmed) packet
+             * is new, older RED blocks may have been shown.
+             */
+            stream->rx_last_seq = (pj_uint16_t) (seq - 2);
+            pjmedia_jbuf_reset(c_strm->jb);
+        }
         diff = (pj_int16_t) (seq - stream->rx_last_seq);
 
+    } else if (seq_st.status.flag.bad && diff > MAX_PROBATION_SKIP) {
+        goto on_return;
+    }
+    prev_last_seq = stream->rx_last_seq;
+
+    if (is_red) {
+        decode_red(stream, seq, (const char *) payload, payloadlen,
+                   red_hdr, red_level, red_hdr_len);
+    } else {
         /* Report missing T.140 packets as lost text. */
         if (stream->rx_last_seq != -1 && diff > 1) {
             pj_uint16_t missing_seq = stream->rx_last_seq + 1;
@@ -746,15 +809,12 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
         if (stream->rx_last_seq == -1 || diff > 0) {
             pjmedia_jbuf_put_frame(c_strm->jb, payload, payloadlen, seq);
             stream->rx_last_seq = seq;
-        } else {
-            *pkt_discarded = PJ_TRUE;
         }
-    } else {
-        /* Unknown Payload Type */
-        status = PJMEDIA_EINVALIDPT;
-        *pkt_discarded = PJ_TRUE;
     }
 
+    *pkt_discarded = (stream->rx_last_seq == prev_last_seq);
+
+on_return:
     /* Unlock mutex before calling the UI callback to prevent deadlocks */
     pj_mutex_unlock(c_strm->jb_mutex);
 
@@ -762,7 +822,7 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
     if (!(*pkt_discarded))
         call_cb(stream, PJ_FALSE);
 
-    return status;
+    return PJ_SUCCESS;
 }
 
 static pj_status_t encode_red(pjmedia_txt_stream *stream, unsigned pt,
