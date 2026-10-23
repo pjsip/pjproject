@@ -377,6 +377,15 @@ else()
   set(PJ_APPLE 0)
 endif()
 
+# The FFmpeg components pjmedia links, for PjConfig.cmake.in to require
+set(PJ_FFMPEG_COMPONENTS)
+foreach(_lib avutil swscale avcodec avformat avdevice)
+  string(TOUPPER "${_lib}" _lib_upper)
+  if(PJMEDIA_WITH_FFMPEG_${_lib_upper})
+    list(APPEND PJ_FFMPEG_COMPONENTS ${_lib})
+  endif()
+endforeach()
+
 # write package config
 configure_package_config_file(
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/${PJ_CMAKE_CONFIG_FILE}.in"
@@ -493,8 +502,10 @@ if(_pj_find_modules)
     DESTINATION "${PJ_CMAKE_INSTALL_DIR}"
     COMPONENT PjDevelopment
   )
-  # Helper the Find modules include as Pj/CheckLibraryUsable
-  install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/CheckLibraryUsable.cmake"
+  # Helpers the Find modules include as Pj/<name>
+  install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/CheckLibraryUsable.cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/GetMacroValue.cmake"
     DESTINATION "${PJ_CMAKE_INSTALL_DIR}/Pj"
     COMPONENT PjDevelopment
   )
