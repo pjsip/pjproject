@@ -403,6 +403,23 @@ static void inv_initial_invite_auth_abandon_impl(
     inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, &usr_event);
 }
 
+/* A request that has failed for good must not leave its SDP offer pending.
+ * Called with the dialog lock held.
+ */
+static void cancel_failed_offer(pjsip_inv_session *inv,
+                                struct tsx_inv_data *tsx_inv_data)
+{
+    if (tsx_inv_data && tsx_inv_data->has_sdp && !tsx_inv_data->sdp_done &&
+        inv->neg && pjmedia_sdp_neg_get_state(inv->neg) ==
+                        PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER)
+    {
+        pjmedia_sdp_neg_cancel_offer(inv->neg);
+
+        /* Prevent from us cancelling different offer! */
+        tsx_inv_data->sdp_done = PJ_TRUE;
+    }
+}
+
 /*
  * Decrease INVITE session reference, destroy it when the reference count
  * reaches zero.
@@ -4964,16 +4981,8 @@ static pj_bool_t inv_handle_update_response( pjsip_inv_session *inv,
     /* Cancel the negotiation if we don't get successful negotiation by now,
      * unless it's authentication challenge and the request is being retried.
      */
-    if (pjmedia_sdp_neg_get_state(inv->neg) ==
-                PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER &&
-        tsx_inv_data && tsx_inv_data->sdp_done == PJ_FALSE &&
-        !tsx_inv_data->retrying && tsx_inv_data->has_sdp)
-    {
-        pjmedia_sdp_neg_cancel_offer(inv->neg);
-
-        /* Prevent from us cancelling different offer! */
-        tsx_inv_data->sdp_done = PJ_TRUE;
-    }
+    if (tsx_inv_data && !tsx_inv_data->retrying)
+        cancel_failed_offer(inv, tsx_inv_data);
 
     return handled;
 }
@@ -5450,6 +5459,12 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
              * within dialog. And even if we terminate we should
              * send BYE.
              */
+        }
+
+        /* No retry follows */
+        if (status != PJ_SUCCESS) {
+            cancel_failed_offer(
+                inv, (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id]);
         }
 
         return PJ_TRUE; /* Handled */

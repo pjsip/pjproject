@@ -31,6 +31,8 @@
  *   3. Deferred abandon: callback defers, event loop abandons the token.
  *   4. Account deletion with outstanding deferred challenge: callback
  *      defers, account is deleted, deferred state is cleaned up safely.
+ *   5. Hold re-INVITE whose challenge is deferred and then answered: the
+ *      call ends up on hold.
  */
 
 #include "test.h"
@@ -44,6 +46,10 @@
 
 /* SIP user name used to filter requests belonging to this test module */
 #define TEST_USER   "pjsua-auth-test"
+
+/* Users of the call in sub-test 5 */
+#define CALLER_USER "pjsua-auth-caller"
+#define CALLEE_USER "pjsua-auth-callee"
 
 
 /*****************************************************************************
@@ -103,6 +109,58 @@ static pj_bool_t mock_registrar_rx_request(pjsip_rx_data *rdata)
 
     pjsip_endpt_respond_stateless(pjsua_get_pjsip_endpt(), rdata,
                                    code, NULL, &hdr_list, NULL);
+    return PJ_TRUE;
+}
+
+
+/*****************************************************************************
+ * Mock proxy: challenges the caller's next re-INVITE
+ *****************************************************************************/
+
+static pj_bool_t mock_proxy_rx_request(pjsip_rx_data *rdata);
+
+static struct {
+    pjsip_module  mod;
+    pj_bool_t     challenge;
+} g_mock_proxy = {
+    {
+        NULL, NULL,
+        { "mod-pjsua-auth-proxy", 20 },
+        -1,
+        PJSIP_MOD_PRIORITY_UA_PROXY_LAYER - 1,
+        NULL, NULL, NULL, NULL,
+        &mock_proxy_rx_request,
+        NULL, NULL, NULL, NULL,
+    }
+};
+
+static pj_bool_t mock_proxy_rx_request(pjsip_rx_data *rdata)
+{
+    pjsip_msg *msg = rdata->msg_info.msg;
+    const pj_str_t hname  = pj_str("WWW-Authenticate");
+    const pj_str_t hvalue =
+        pj_str("Digest realm=\"test\", nonce=\"testnonce\"");
+    pjsip_hdr  hdr_list;
+    pj_status_t status;
+
+    if (!g_mock_proxy.challenge ||
+        msg->line.req.method.id != PJSIP_INVITE_METHOD ||
+        rdata->msg_info.to->tag.slen == 0 ||
+        !is_user_equal(rdata->msg_info.from, CALLER_USER) ||
+        pjsip_msg_find_hdr(msg, PJSIP_H_AUTHORIZATION, NULL))
+    {
+        return PJ_FALSE;
+    }
+
+    g_mock_proxy.challenge = PJ_FALSE;
+    pj_list_init(&hdr_list);
+    pj_list_push_back(&hdr_list,
+                      pjsip_generic_string_hdr_create(rdata->tp_info.pool,
+                                                      &hname, &hvalue));
+    status = pjsip_endpt_respond(pjsua_get_pjsip_endpt(), NULL, rdata, 401,
+                                 NULL, &hdr_list, NULL, NULL);
+    if (status != PJ_SUCCESS)
+        PJ_PERROR(1, (THIS_FILE, status, "  mock proxy: respond failed"));
     return PJ_TRUE;
 }
 
@@ -181,6 +239,14 @@ static void on_auth_challenge(pjsua_on_auth_challenge_param *param)
     ds->pending      = PJ_TRUE;
 
     param->handled = PJ_TRUE;
+}
+
+static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
+                             pjsip_rx_data *rdata)
+{
+    PJ_UNUSED_ARG(acc_id);
+    PJ_UNUSED_ARG(rdata);
+    pjsua_call_answer(call_id, PJSIP_SC_OK, NULL, NULL);
 }
 
 static void on_reg_state2(pjsua_acc_id acc_id, pjsua_reg_info *info)
@@ -664,6 +730,145 @@ static int acc_delete_deferred_test(pjsua_transport_id tp_id, int port)
 
 
 /*****************************************************************************
+ * Sub-test 5: hold_deferred_respond_test
+ *
+ * The challenge of a hold re-INVITE is deferred, then answered with the
+ * account's credentials, and the retry is accepted. The hold must not be
+ * rolled back before the retry, so the call ends up on hold.
+ *****************************************************************************/
+static pj_bool_t call_has_state(pjsua_call_id call_id, pjsip_inv_state state)
+{
+    pjsua_call_info ci;
+
+    return pjsua_call_get_info(call_id, &ci) == PJ_SUCCESS &&
+           ci.state == state;
+}
+
+static pj_bool_t call_is_held(pjsua_call_id call_id)
+{
+    pjsua_call_info ci;
+
+    return pjsua_call_get_info(call_id, &ci) == PJ_SUCCESS &&
+           ci.media_status == PJSUA_CALL_MEDIA_LOCAL_HOLD;
+}
+
+static int hold_deferred_respond_test(pjsua_transport_id tp_id, int port)
+{
+    pjsua_acc_config acc_cfg;
+    pjsua_acc_id     caller = PJSUA_INVALID_ID;
+    pjsua_acc_id     callee = PJSUA_INVALID_ID;
+    pjsua_call_id    call_id = PJSUA_INVALID_ID;
+    char             uri[64];
+    pj_str_t         dst;
+    unsigned         elapsed;
+    pj_status_t      status;
+    int              rc = 0;
+
+    PJ_LOG(3, (THIS_FILE, "  pjsua auth: hold deferred respond"));
+
+    pj_bzero(&g_ctx, sizeof(g_ctx));
+
+    if (pjsua_set_null_snd_dev() != PJ_SUCCESS)
+        return -2410;
+
+    pjsua_acc_config_default(&acc_cfg);
+    acc_cfg.id = pj_str("sip:" CALLEE_USER "@127.0.0.1");
+    acc_cfg.allow_contact_rewrite = PJ_FALSE;
+    acc_cfg.transport_id = tp_id;
+    if (pjsua_acc_add(&acc_cfg, PJ_FALSE, &callee) != PJ_SUCCESS)
+        return -2411;
+
+    acc_cfg.id = pj_str("sip:" CALLER_USER "@127.0.0.1");
+    acc_cfg.cred_count = 1;
+    pj_bzero(&acc_cfg.cred_info[0], sizeof(pjsip_cred_info));
+    acc_cfg.cred_info[0].realm     = pj_str("*");
+    acc_cfg.cred_info[0].scheme    = pj_str("digest");
+    acc_cfg.cred_info[0].username  = pj_str(CALLER_USER);
+    acc_cfg.cred_info[0].data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
+    acc_cfg.cred_info[0].data      = pj_str("secret");
+    if (pjsua_acc_add(&acc_cfg, PJ_FALSE, &caller) != PJ_SUCCESS) {
+        rc = -2412;
+        goto on_return;
+    }
+
+    pj_ansi_snprintf(uri, sizeof(uri), "sip:" CALLEE_USER "@127.0.0.1:%d",
+                     port);
+    dst = pj_str(uri);
+    if (pjsua_call_make_call(caller, &dst, NULL, NULL, NULL,
+                             &call_id) != PJ_SUCCESS)
+    {
+        rc = -2413;
+        goto on_return;
+    }
+
+    for (elapsed = 0; elapsed < 10000 &&
+         !call_has_state(call_id, PJSIP_INV_STATE_CONFIRMED); elapsed += 50)
+    {
+        pjsua_handle_events(50);
+    }
+    if (!call_has_state(call_id, PJSIP_INV_STATE_CONFIRMED)) {
+        rc = -2414;
+        goto on_return;
+    }
+
+    /* The hold re-INVITE is challenged, and the challenge deferred */
+    g_ctx.defer_enabled = PJ_TRUE;
+    g_mock_proxy.challenge = PJ_TRUE;
+    if (pjsua_call_set_hold(call_id, NULL) != PJ_SUCCESS) {
+        rc = -2415;
+        goto on_return;
+    }
+
+    for (elapsed = 0; elapsed < 10000 && !g_ctx.deferred.pending;
+         elapsed += 50)
+    {
+        pjsua_handle_events(50);
+    }
+    if (!g_ctx.deferred.pending) {
+        rc = -2416;
+        goto on_return;
+    }
+
+    status = do_deferred_respond(&g_ctx.deferred);
+    if (status != PJ_SUCCESS) {
+        rc = -2417;
+        goto on_return;
+    }
+
+    for (elapsed = 0; elapsed < 10000 && !call_is_held(call_id);
+         elapsed += 50)
+    {
+        pjsua_handle_events(50);
+    }
+    if (!call_is_held(call_id)) {
+        PJ_LOG(3, (THIS_FILE, "    error: the call is not on hold"));
+        rc = -2418;
+    }
+
+on_return:
+    g_ctx.defer_enabled = PJ_FALSE;
+    g_mock_proxy.challenge = PJ_FALSE;
+    if (g_ctx.deferred.pending) {
+        pjsip_auth_clt_async_abandon(g_ctx.deferred.auth_sess,
+                                     g_ctx.deferred.token);
+        do_deferred_abandon(&g_ctx.deferred);
+    }
+
+    pjsua_call_hangup_all();
+    for (elapsed = 0; elapsed < 5000 && pjsua_call_get_count() != 0;
+         elapsed += 50)
+    {
+        pjsua_handle_events(50);
+    }
+    if (caller != PJSUA_INVALID_ID)
+        pjsua_acc_del(caller);
+    pjsua_acc_del(callee);
+
+    return rc;
+}
+
+
+/*****************************************************************************
  * Main entry point
  *****************************************************************************/
 int pjsua_auth_test(void)
@@ -700,6 +905,7 @@ int pjsua_auth_test(void)
     pjsua_config_default(&ua_cfg);
     ua_cfg.cb.on_auth_challenge = &on_auth_challenge;
     ua_cfg.cb.on_reg_state2     = &on_reg_state2;
+    ua_cfg.cb.on_incoming_call  = &on_incoming_call;
 
     pjsua_logging_config_default(&log_cfg);
     log_cfg.level        = 3;
@@ -751,6 +957,15 @@ int pjsua_auth_test(void)
         return -2005;
     }
 
+    status = pjsip_endpt_register_module(pjsua_get_pjsip_endpt(),
+                                         &g_mock_proxy.mod);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "  register mock proxy failed (%d)", status));
+        pjsua_destroy();
+        restore_test_endpt();
+        return -2006;
+    }
+
     /* ---- Run sub-tests ---- */
 
     rc = deferred_respond_test(tp_id, (int)port);
@@ -778,10 +993,16 @@ int pjsua_auth_test(void)
     /* rc = acc_delete_deferred_test(tp_id, (int)port);
     if (rc != 0) goto on_return; */
 
+    rc = hold_deferred_respond_test(tp_id, (int)port);
+    if (rc != 0) goto on_return;
+
 on_return:
     if (g_mock_reg.mod.id != -1)
         pjsip_endpt_unregister_module(pjsua_get_pjsip_endpt(),
                                       &g_mock_reg.mod);
+    if (g_mock_proxy.mod.id != -1)
+        pjsip_endpt_unregister_module(pjsua_get_pjsip_endpt(),
+                                      &g_mock_proxy.mod);
 
     pjsua_handle_events(500);
     pjsua_destroy2(PJSUA_DESTROY_NO_RX_MSG);
