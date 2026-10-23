@@ -310,6 +310,13 @@ cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_WASAPI
 )
 import_if_or_set(PJMEDIA_WITH_AUDIODEV_WASAPI OFF WASAPI)
 
+# PortAudio backend, opt-in as autoconf --with-external-pa
+cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_PORTAUDIO
+  "Enable PortAudio audio device backend" OFF
+  "PJMEDIA_WITH_AUDIODEV" OFF
+)
+import_if_or_set(PJMEDIA_WITH_AUDIODEV_PORTAUDIO OFF PortAudio)
+
 #
 # Video device
 #
@@ -738,6 +745,7 @@ add_library(pjmedia-codec
   src/pjmedia-codec/h263_packetizer.c
   src/pjmedia-codec/h264_packetizer.c
   src/pjmedia-codec/ilbc.c
+  src/pjmedia-codec/ipp_codecs.c
   src/pjmedia-codec/l16.c
   $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-codec/lyra.cpp>
   src/pjmedia-codec/opencore_amr.c
@@ -745,6 +753,7 @@ add_library(pjmedia-codec
   $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-codec/openh264.cpp>
   $<$<BOOL:${PJMEDIA_WITH_VID_TOOLBOX_CODEC}>:src/pjmedia-codec/vid_toolbox.m>
   src/pjmedia-codec/opus.c
+  src/pjmedia-codec/passthrough.c
   src/pjmedia-codec/silk.c
   src/pjmedia-codec/vpx_packetizer.c
   src/pjmedia-codec/vpx.c
@@ -920,9 +929,14 @@ add_library(pjmedia-audiodev
   src/pjmedia-audiodev/audiodev.c
   src/pjmedia-audiodev/audiotest.c
   src/pjmedia-audiodev/android_jni_dev.c
+  src/pjmedia-audiodev/bb10_dev.c
+  src/pjmedia-audiodev/bdimad_dev.c
   src/pjmedia-audiodev/errno.c
+  src/pjmedia-audiodev/legacy_dev.c
   src/pjmedia-audiodev/null_dev.c
   $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-audiodev/oboe_dev.cpp>
+  src/pjmedia-audiodev/opensl_dev.c
+  src/pjmedia-audiodev/pa_dev.c
   $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-audiodev/wasapi_dev.cpp>
   $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-audiodev/wasapi_dev_win.cpp>
   src/pjmedia-audiodev/wmme_dev.c
@@ -961,14 +975,7 @@ target_compile_definitions(pjmedia-audiodev
     PJMEDIA_AUDIO_DEV_HAS_ALSA=$<BOOL:${PJMEDIA_WITH_AUDIODEV_ALSA}>
     PJMEDIA_AUDIO_DEV_HAS_WMME=$<BOOL:${PJMEDIA_WITH_AUDIODEV_WMME}>
     PJMEDIA_AUDIO_DEV_HAS_WASAPI=$<BOOL:${PJMEDIA_WITH_AUDIODEV_WASAPI}>
-
-    # unsupported backends
-    PJMEDIA_AUDIO_DEV_HAS_BDIMAD=0
-    PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=0
-    PJMEDIA_AUDIO_DEV_HAS_OPENSL=0
-    PJMEDIA_AUDIO_DEV_HAS_BB10=0
-    PJMEDIA_AUDIO_DEV_HAS_SYMB_APS=0
-    PJMEDIA_AUDIO_DEV_HAS_LEGACY_DEVICE=0
+    PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=$<BOOL:${PJMEDIA_WITH_AUDIODEV_PORTAUDIO}>
 )
 
 #
@@ -987,7 +994,10 @@ target_link_libraries(pjmedia-audiodev
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_COREAUDIO}>:CoreAudio::CoreAudio>
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_OBOE}>:Oboe::Oboe>
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_WASAPI}>:WASAPI::WASAPI>
-    # TODO: add remaining APIs' dependencies
+    $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_PORTAUDIO}>:PortAudio::PortAudio>
+
+    # opensl_dev.c is enabled in config_site.h; autoconf links it on Android
+    $<$<BOOL:${ANDROID}>:OpenSLES>
 )
 
 # ##############################################################################

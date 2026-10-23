@@ -31,6 +31,7 @@ set(_PJ_PC_DEPENDENCIES
   "UUID::UUID|uuid,libuuid|uuid"
   "UPNP::UPNP|libupnp,upnp|upnp,ixml"
   "ALSA::ALSA|alsa|asound"
+  "PortAudio::PortAudio|portaudio-2.0|portaudio"
   "SDL2::SDL2|sdl2|SDL2"
   "OpenGL::GL|gl|GL"
   "OpenGL::GLES2|glesv2|GLESv2"
