@@ -280,10 +280,11 @@ cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_COREAUDIO
 )
 import_if_or_set(PJMEDIA_WITH_AUDIODEV_COREAUDIO OFF CoreAudio)
 
-# Advanced Linux Sound Architecture (ALSA) backend
+# Advanced Linux Sound Architecture (ALSA) backend, looked for on any Unix
+# without a native backend, as autoconf
 cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_ALSA
   "Enable ALSA audio device backend" ON
-  "PJMEDIA_WITH_AUDIODEV;LINUX" OFF
+  "PJMEDIA_WITH_AUDIODEV;UNIX;NOT APPLE;NOT ANDROID;NOT CYGWIN" OFF
 )
 import_if_or_set(PJMEDIA_WITH_AUDIODEV_ALSA OFF ALSA)
 
@@ -400,10 +401,10 @@ cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_QT
   "PJMEDIA_WITH_VIDEODEV;APPLE" OFF
 )
 
-# V4L2 backend
+# V4L2 backend, also available on the BSDs through libv4l2
 cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_V4L2
   "Enable V4L2 video device backend" ON
-  "PJMEDIA_WITH_VIDEODEV;LINUX" OFF
+  "PJMEDIA_WITH_VIDEODEV;UNIX;NOT APPLE;NOT ANDROID" OFF
 )
 import_if_or_set(PJMEDIA_WITH_VIDEODEV_V4L2 OFF V4L2)
 
