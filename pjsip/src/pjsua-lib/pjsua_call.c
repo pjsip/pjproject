@@ -450,6 +450,8 @@ static int call_get_secure_level(pjsua_call *call)
         pjsip_uri *uri = r->name_addr.uri;
         pjsip_sip_uri *sip_uri;
 
+        if (!PJSIP_URI_SCHEME_IS_SIP(uri) && !PJSIP_URI_SCHEME_IS_SIPS(uri))
+            return 0;
         sip_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(uri);
         if (pj_stricmp2(&sip_uri->transport_param, "tls")==0)
             return 1;

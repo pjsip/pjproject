@@ -4989,8 +4989,11 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
 
     /* If Record-Route is present, then URI is the top Record-Route. */
     if (rdata->msg_info.record_route) {
-        sip_uri = (pjsip_sip_uri*) 
-                pjsip_uri_get_uri(rdata->msg_info.record_route->name_addr.uri);
+        pjsip_uri *uri = rdata->msg_info.record_route->name_addr.uri;
+
+        if (!PJSIP_URI_SCHEME_IS_SIP(uri) && !PJSIP_URI_SCHEME_IS_SIPS(uri))
+            return PJSIP_EINVALIDROUTEURI;
+        sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(uri);
     } else {
         pjsip_hdr *pos = NULL;
         pjsip_contact_hdr *h_contact;

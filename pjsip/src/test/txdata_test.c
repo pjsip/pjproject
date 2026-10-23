@@ -770,6 +770,104 @@ on_error:
 }
 
 
+/* Regression test for GHSA-j4c2-253v-jgxw: a non-SIP URI at the head of
+ * the route set must never be read as a SIP URI when the destination of
+ * a request is computed.
+ */
+static int route_uri_scheme_test(void)
+{
+    char tel_buf[] = "tel:+1;isub=AAAAAAAAAAAAAAAA";
+    char sips_buf[] = "sips:bob@example.com";
+    char sip_buf[] = "sip:proxy.example.com;lr";
+    pj_pool_t *pool;
+    pjsip_uri *tel_uri, *sips_uri, *sip_uri;
+    pjsip_host_info dest;
+    pjsip_tx_data *tdata;
+    pjsip_route_hdr *route;
+    pj_str_t target, from, to, contact;
+    pj_status_t status;
+
+    PJ_LOG(3,(THIS_FILE, "   route URI scheme test"));
+
+    pool = pjsip_endpt_create_pool(endpt, "rturi", 1000, 1000);
+    if (!pool)
+        return -200;
+
+    tel_uri = pjsip_parse_uri(pool, tel_buf, strlen(tel_buf), 0);
+    sips_uri = pjsip_parse_uri(pool, sips_buf, strlen(sips_buf), 0);
+    sip_uri = pjsip_parse_uri(pool, sip_buf, strlen(sip_buf), 0);
+    if (!tel_uri || !sips_uri || !sip_uri) {
+        PJ_LOG(3,(THIS_FILE, "   error: unable to parse test URIs"));
+        pjsip_endpt_release_pool(endpt, pool);
+        return -202;
+    }
+
+    /* A tel: target is never resolvable, whatever the Request-URI is. */
+    status = pjsip_get_dest_info(tel_uri, sips_uri, pool, &dest);
+    if (status != PJSIP_ENOROUTESET) {
+        PJ_LOG(3,(THIS_FILE, "   error: tel: target with sips: Request-URI "
+                             "returned %d", status));
+        pjsip_endpt_release_pool(endpt, pool);
+        return -204;
+    }
+    status = pjsip_get_dest_info(tel_uri, NULL, pool, &dest);
+    if (status != PJSIP_ENOROUTESET) {
+        PJ_LOG(3,(THIS_FILE, "   error: tel: target returned %d", status));
+        pjsip_endpt_release_pool(endpt, pool);
+        return -206;
+    }
+
+    /* The secure transport switch still works for a sip: target. */
+    status = pjsip_get_dest_info(sip_uri, sips_uri, pool, &dest);
+    if (status != PJ_SUCCESS ||
+        (pjsip_cfg()->endpt.disable_tls_switch == 0 &&
+         (dest.flag & PJSIP_TRANSPORT_SECURE) == 0))
+    {
+        PJ_LOG(3,(THIS_FILE, "   error: sip: target with sips: Request-URI "
+                             "returned %d, flag %d", status, dest.flag));
+        pjsip_endpt_release_pool(endpt, pool);
+        return -208;
+    }
+
+    /* An in-dialog request whose first Route is a tel: URI. */
+    target = pj_str("sips:bob@example.com");
+    from = pj_str("sip:alice@example.com");
+    to = pj_str("sip:bob@example.com");
+    contact = pj_str("sip:alice@127.0.0.1");
+    status = pjsip_endpt_create_request(endpt, &pjsip_bye_method, &target,
+                                        &from, &to, &contact, NULL, 10, NULL,
+                                        &tdata);
+    if (status != PJ_SUCCESS) {
+        app_perror("   error: unable to create request", status);
+        pjsip_endpt_release_pool(endpt, pool);
+        return -210;
+    }
+    route = pjsip_route_hdr_create(tdata->pool);
+    route->name_addr.uri = (pjsip_uri*)pjsip_uri_clone(tdata->pool, tel_uri);
+    pjsip_msg_insert_first_hdr(tdata->msg, (pjsip_hdr*)route);
+
+    status = pjsip_get_request_dest(tdata, &dest);
+    if (status != PJSIP_EINVALIDROUTEURI) {
+        PJ_LOG(3,(THIS_FILE, "   error: pjsip_get_request_dest() with tel: "
+                             "Route returned %d", status));
+        pjsip_tx_data_dec_ref(tdata);
+        pjsip_endpt_release_pool(endpt, pool);
+        return -212;
+    }
+    status = pjsip_process_route_set(tdata, &dest);
+    if (status != PJSIP_EINVALIDROUTEURI) {
+        PJ_LOG(3,(THIS_FILE, "   error: pjsip_process_route_set() with tel: "
+                             "Route returned %d", status));
+        pjsip_tx_data_dec_ref(tdata);
+        pjsip_endpt_release_pool(endpt, pool);
+        return -214;
+    }
+
+    pjsip_tx_data_dec_ref(tdata);
+    pjsip_endpt_release_pool(endpt, pool);
+    return 0;
+}
+
 int txdata_test(void)
 {
     enum { REPEAT = 4 };
@@ -783,6 +881,10 @@ int txdata_test(void)
 
     status = core_txdata_test();
     if (status  != 0)
+        return status;
+
+    status = route_uri_scheme_test();
+    if (status != 0)
         return status;
 
 #if INCLUDE_GCC_TEST
