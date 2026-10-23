@@ -219,9 +219,10 @@ static int restart_failure_test(void)
         goto on_return;
     }
 
+    pjsip_transport_shutdown(tcp);
     pjsip_transport_dec_ref(tcp);
-    pjsip_transport_destroy(tcp);
     tcp = NULL;
+    flush_events(500);
 
     /* A second restart, with the port still occupied, must fail too.
      *
@@ -322,10 +323,16 @@ static int listener_destroy_local_name_test(void)
     if (ret == 0 && tcp->factory != NULL)
         ret = -124;
 
+    /* Once released, another thread may destroy it */
+    pjsip_transport_shutdown(tcp);
     pjsip_transport_dec_ref(tcp);
-    pjsip_transport_destroy(tcp);
     flush_events(500);
     return ret;
+}
+
+static void tp_destroyed(void *arg)
+{
+    pj_atomic_inc((pj_atomic_t*)arg);
 }
 
 int transport_tcp_test(void)
@@ -344,6 +351,8 @@ int transport_tcp_test(void)
     unsigned i;
     unsigned num_listener = NUM_LISTENER;
     unsigned num_tp = NUM_TP;
+    pj_pool_t *pool;
+    pj_atomic_t *destroyed;
 
     status = restart_failure_test();
     if (status != 0)
@@ -418,14 +427,16 @@ int transport_tcp_test(void)
             return -80;
     }
 
-    for (i = 0; i < num_tp; ++i) {
-        /* Destroy this transport. */
-        pjsip_transport_dec_ref(tcp[i]);
+    pool = pjsip_endpt_create_pool(endpt, "tcptest", 128, 128);
+    if (!pool || pj_atomic_create(pool, 0, &destroyed) != PJ_SUCCESS)
+        return -85;
 
-        /* Force destroy this transport. */
-        status = pjsip_transport_destroy(tcp[i]);
-        if (status != PJ_SUCCESS)
-            return -90;
+    for (i = 0; i < num_tp; ++i) {
+        pj_grp_lock_add_handler(tcp[i]->grp_lock, pool, destroyed,
+                                &tp_destroyed);
+        /* Once released, another thread may destroy it */
+        pjsip_transport_shutdown(tcp[i]);
+        pjsip_transport_dec_ref(tcp[i]);
     }
 
     for (i = 0; i < num_listener; ++i) {
@@ -439,6 +450,19 @@ int transport_tcp_test(void)
     /* Flush events. */
     PJ_LOG(3,(THIS_FILE, "   Flushing events, 1 second..."));
     flush_events(1000);
+
+    /* Every released transport must be destroyed */
+    for (i = 0; i < 50 && pj_atomic_get(destroyed) != (pj_atomic_value_t)num_tp;
+         ++i)
+    {
+        flush_events(100);
+    }
+    /* On failure the pool is kept, a late destroy may still use it */
+    if (pj_atomic_get(destroyed) != (pj_atomic_value_t)num_tp)
+        return -90;
+
+    pj_atomic_destroy(destroyed);
+    pj_pool_release(pool);
 
     /* Done */
     return 0;
