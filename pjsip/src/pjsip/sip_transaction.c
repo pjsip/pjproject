@@ -1317,6 +1317,15 @@ static pj_status_t tsx_shutdown( pjsip_transaction *tsx )
 }
 
 
+/* Client transaction given its final status by pjsip_tsx_terminate_async2()
+ * while still waiting for a final response.
+ */
+static pj_bool_t is_uac_terminating(const pjsip_transaction *tsx)
+{
+    return tsx->role == PJSIP_ROLE_UAC && tsx->status_code >= 200 &&
+           tsx->state < PJSIP_TSX_STATE_COMPLETED;
+}
+
 /*
  * Callback when timer expires. Transport error also piggybacks this event
  * to avoid deadlock (https://github.com/pjsip/pjproject/issues/1646).
@@ -1431,9 +1440,12 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 
         PJSIP_EVENT_INIT_TIMER(event, entry);
 
-        /* Dispatch event to transaction. */
+        /* Dispatch event to transaction, but don't retransmit a request
+         * that is being terminated asynchronously.
+         */
         pj_grp_lock_acquire(tsx->grp_lock);
-        (*tsx->state_handler)(tsx, &event);
+        if (entry != &tsx->retransmit_timer || !is_uac_terminating(tsx))
+            (*tsx->state_handler)(tsx, &event);
         pj_grp_lock_release(tsx->grp_lock);
 
         pj_log_pop_indent();
@@ -1989,6 +2001,10 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate_async2(pjsip_transaction *tsx,
     pj_grp_lock_acquire(tsx->grp_lock);
     if (tsx->status_code < 200)
         tsx_set_status_code(tsx, code, reason);
+
+    /* With a final status, a request is no longer retransmitted */
+    if (tsx->role == PJSIP_ROLE_UAC)
+        tsx->transport_flag &= ~(TSX_HAS_PENDING_RESCHED);
     pj_grp_lock_release(tsx->grp_lock);
 
     /* Schedule the termination */
@@ -2139,9 +2155,16 @@ PJ_DEF(void) pjsip_tsx_recv_msg( pjsip_transaction *tsx,
     /* Init event. */
     PJSIP_EVENT_INIT_RX_MSG(event, rdata);
 
-    /* Dispatch to transaction. */
+    /* Dispatch to transaction. A provisional response must not bring
+     * back a request that is being terminated asynchronously.
+     */
     pj_grp_lock_acquire(tsx->grp_lock);
-    (*tsx->state_handler)(tsx, &event);
+    if (!is_uac_terminating(tsx) ||
+        rdata->msg_info.msg->type != PJSIP_RESPONSE_MSG ||
+        rdata->msg_info.msg->line.status.code >= 200)
+    {
+        (*tsx->state_handler)(tsx, &event);
+    }
     pj_grp_lock_release(tsx->grp_lock);
 
     pj_log_pop_indent();

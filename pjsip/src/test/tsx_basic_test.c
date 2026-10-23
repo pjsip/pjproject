@@ -281,6 +281,153 @@ on_return:
     return rc;
 }
 
+static pj_bool_t answer_1xx_on_rx_request(pjsip_rx_data *rdata);
+
+/* Answers 100 to the requests of terminate_async_test() */
+static pjsip_module answer_1xx_mod =
+{
+    NULL, NULL,                         /* prev and next        */
+    { "Answer-1xx", 10},                /* Name.                */
+    -1,                                 /* Id                   */
+    PJSIP_MOD_PRIORITY_UA_PROXY_LAYER-1,/* Priority             */
+    NULL,                               /* load()               */
+    NULL,                               /* start()              */
+    NULL,                               /* stop()               */
+    NULL,                               /* unload()             */
+    &answer_1xx_on_rx_request,          /* on_rx_request()      */
+    NULL,                               /* on_rx_response()     */
+    NULL,                               /* on_tx_request()      */
+    NULL,                               /* on_tx_response()     */
+    NULL,                               /* on_tsx_state()       */
+};
+
+static pj_bool_t answer_1xx_on_rx_request(pjsip_rx_data *rdata)
+{
+    pjsip_sip_uri *from_uri;
+
+    from_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(rdata->msg_info.from->uri);
+    if (pj_strcmp2(&from_uri->user, "tsx_basic_1xx"))
+        return PJ_FALSE;
+
+    pjsip_endpt_respond_stateless(endpt, rdata, 100, NULL, NULL, NULL);
+    return PJ_TRUE;
+}
+
+enum terminate_async_case
+{
+    TA_RETRANSMIT,      /* the request is retransmitted */
+    TA_1XX,             /* the INVITE is answered with 100 */
+    TA_SENDING          /* still being sent, then answered with 100 */
+};
+
+/* A request being terminated asynchronously must not be retransmitted, nor
+ * brought back by a provisional response.
+ */
+static int terminate_async_test(unsigned tid, enum terminate_async_case tc)
+{
+    static const char *title[] = { "retransmission", "provisional response",
+                                   "pending send" };
+    char from_buf[PJSIP_MAX_URL_SIZE];
+    pj_str_t target, from;
+    pjsip_tx_data *tdata;
+    pjsip_transaction *tsx;
+    pjsip_tpselector tp_sel;
+    pj_bool_t prev_discard;
+    unsigned prev_recv_delay, prev_send_delay;
+    unsigned t1 = pjsip_cfg()->tsx.t1;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  terminate async test: %s", title[tc]));
+
+    target = pj_str(g[tid].TARGET_URI);
+    if (tc != TA_RETRANSMIT) {
+        PJ_TEST_SUCCESS(pjsip_endpt_register_module(endpt, &answer_1xx_mod),
+                        NULL, return -400);
+        pj_ansi_snprintf(from_buf, sizeof(from_buf),
+                         "sip:tsx_basic_1xx@127.0.0.1:%d;transport=%s",
+                         tsx_test[tid].port, tsx_test[tid].tp_type);
+        from = pj_str(from_buf);
+    } else {
+        from = pj_str(g[tid].FROM_URI);
+    }
+
+    /* The answer, and the end of the send, come after we start terminating */
+    pjsip_loop_set_discard(g[tid].tp, tc == TA_RETRANSMIT, &prev_discard);
+    pjsip_loop_set_recv_delay(g[tid].tp, tc != TA_RETRANSMIT ? t1 / 4 : 0,
+                              &prev_recv_delay);
+    pjsip_loop_set_send_callback_delay(g[tid].tp,
+                                       tc == TA_SENDING ? t1 / 8 : 0,
+                                       &prev_send_delay);
+
+    PJ_TEST_SUCCESS(pjsip_endpt_create_request(endpt,
+                                               tc == TA_1XX ?
+                                                   &pjsip_invite_method :
+                                                   &pjsip_options_method,
+                                               &target, &from, &target, NULL,
+                                               NULL, -1, NULL, &tdata),
+                    NULL, { rc = -405; goto on_return; });
+    PJ_TEST_SUCCESS(pjsip_tsx_create_uac(NULL, tdata, &tsx), NULL,
+                    { pjsip_tx_data_dec_ref(tdata); rc = -410;
+                      goto on_return; });
+
+    pj_bzero(&tp_sel, sizeof(tp_sel));
+    tp_sel.type = PJSIP_TPSELECTOR_TRANSPORT;
+    tp_sel.u.transport = g[tid].tp;
+    PJ_TEST_SUCCESS(pjsip_tsx_set_transport(tsx, &tp_sel), NULL,
+                    { pjsip_tx_data_dec_ref(tdata);
+                      pjsip_tsx_terminate(tsx, PJSIP_SC_REQUEST_TERMINATED);
+                      rc = -415; goto on_return; });
+
+    PJ_TEST_SUCCESS(pjsip_tsx_send_msg(tsx, NULL), NULL,
+                    { pjsip_tx_data_dec_ref(tdata);
+                      pjsip_tsx_terminate(tsx, PJSIP_SC_REQUEST_TERMINATED);
+                      rc = -420; goto on_return; });
+
+    /* Keep the transaction to check it afterwards */
+    pj_grp_lock_add_ref(tsx->grp_lock);
+
+    /* Terminate after the first retransmission or the answer is due */
+    PJ_TEST_SUCCESS(pjsip_tsx_terminate_async2(tsx,
+                                               PJSIP_SC_REQUEST_TERMINATED,
+                                               NULL, t1 * 4),
+                    NULL, { pjsip_tsx_terminate(tsx,
+                                                PJSIP_SC_REQUEST_TERMINATED);
+                            rc = -430; });
+
+    /* Once sent, the request is not to be retransmitted */
+    flush_events(t1);
+    pj_grp_lock_acquire(tsx->grp_lock);
+    if (rc == 0 && tc == TA_SENDING &&
+        pj_timer_entry_running(&tsx->retransmit_timer))
+    {
+        rc = -435;
+    }
+    pj_grp_lock_release(tsx->grp_lock);
+
+    flush_events(t1 * 5);
+
+    if (rc == 0 && tsx->retransmit_count != 0)
+        rc = -440;
+    if (rc == 0 && tsx->state < PJSIP_TSX_STATE_TERMINATED)
+        rc = -445;
+    if (rc == 0 && tsx->status_code != PJSIP_SC_REQUEST_TERMINATED)
+        rc = -450;
+    if (rc != 0)
+        pjsip_tsx_terminate(tsx, PJSIP_SC_REQUEST_TERMINATED);
+    pj_grp_lock_dec_ref(tsx->grp_lock);
+
+on_return:
+    pjsip_loop_set_send_callback_delay(g[tid].tp, prev_send_delay, NULL);
+    pjsip_loop_set_recv_delay(g[tid].tp, prev_recv_delay, NULL);
+    pjsip_loop_set_discard(g[tid].tp, prev_discard, NULL);
+    if (tc != TA_RETRANSMIT) {
+        PJ_TEST_SUCCESS(pjsip_endpt_unregister_module(endpt,
+                                                      &answer_1xx_mod),
+                        NULL, if (rc == 0) rc = -455);
+    }
+    return rc;
+}
+
 int tsx_basic_test(unsigned tid)
 {
     struct tsx_test_param *param = &tsx_test[tid];
@@ -309,9 +456,21 @@ int tsx_basic_test(unsigned tid)
     if (status != 0)
         goto on_return;
 
-    /* This test needs the loop transport to blackhole the request. */
+    /* These tests need the loop transport to blackhole the request. */
     if (g[tid].tp) {
         status = send_request2_test(tid);
+        if (status != 0)
+            goto on_return;
+
+        status = terminate_async_test(tid, TA_RETRANSMIT);
+        if (status != 0)
+            goto on_return;
+
+        status = terminate_async_test(tid, TA_1XX);
+        if (status != 0)
+            goto on_return;
+
+        status = terminate_async_test(tid, TA_SENDING);
         if (status != 0)
             goto on_return;
     }
