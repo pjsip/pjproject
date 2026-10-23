@@ -119,6 +119,7 @@ endif()
 # Video support
 #
 
+# The default for PJMEDIA_HAS_VIDEO, which config_site.h can override
 option(PJMEDIA_WITH_VIDEO "Enable video support" ON)
 
 # libyuv
@@ -611,7 +612,6 @@ target_compile_definitions(pjmedia
     PJMEDIA_HAS_WEBRTC_AEC3=$<BOOL:${PJMEDIA_WITH_WEBRTC_AEC3}>
 
     # video
-    PJMEDIA_HAS_VIDEO=$<BOOL:${PJMEDIA_WITH_VIDEO}>
     PJMEDIA_HAS_LIBYUV=$<BOOL:${PJMEDIA_WITH_LIBYUV}>
     PJMEDIA_HAS_FFMPEG=$<BOOL:${PJMEDIA_WITH_FFMPEG}>
     PJMEDIA_HAS_LIBAVUTIL=$<BOOL:${PJMEDIA_WITH_FFMPEG_AVUTIL}>
@@ -642,6 +642,9 @@ endif()
 block(SCOPE_FOR VARIABLES)
   # G711 codec
   set(PJMEDIA_HAS_G711_CODEC ${PJMEDIA_WITH_G711_CODEC})
+
+  # video
+  set(PJMEDIA_HAS_VIDEO ${PJMEDIA_WITH_VIDEO})
 
   # write configured header
   configure_file(
