@@ -6966,6 +6966,8 @@ PJ_DECL(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
  * offer otherwise. For ordinary initial offerless calls, media is initialized
  * before installing the supplied offer. A pending local offer cannot be
  * replaced by this function.
+ * Supplying SDP with a final error response (code >= 300) returns
+ * PJ_EINVALIDOP without changing call state.
  * An application-managed answer must have the same media-line count as the
  * remote offer; otherwise PJMEDIA_SDPNEG_EMISMEDIA is returned.
  *

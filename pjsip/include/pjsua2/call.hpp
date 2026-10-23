@@ -1811,6 +1811,9 @@ public:
      * this from within onCallSendAck(), to manually take over the ACK
      * transmission, e.g. to attach an SDP answer to the ACK for a late
      * SDP offer received in the 2xx response.
+     * When called synchronously from onCallSendAck(), this method may only
+     * be used on the Call whose ACK triggered the callback; another Call
+     * fails with PJ_EINVALIDOP.
      *
      * @param cseq      CSeq of the 2xx response that triggered the need to
      *                  send an ACK request; normally this is the CSeq of

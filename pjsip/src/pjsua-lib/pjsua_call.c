@@ -16,8 +16,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#include <pj/types.h>
-#include <pjmedia/sdp_neg.h>
 #include <pjsua-lib/pjsua.h>
 #include <pjsua-lib/pjsua_internal.h>
 
@@ -3658,6 +3656,13 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
             return PJ_EINVALIDOP;
         }
 
+        if (sdp && code >= 300) {
+            PJ_LOG(3,(THIS_FILE,
+                      "Cannot supply SDP in final error response %u", code));
+            pjsip_dlg_dec_lock(dlg);
+            return PJ_EINVALIDOP;
+        }
+
         if (code < 300 && sdp && local_offer)
         {
             status = pjsua_call_validate_initial_local_offer(call, opt, sdp);
@@ -3683,13 +3688,11 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
                     pjsip_dlg_dec_lock(dlg);
                     return PJ_ENOMEM;
                 }
-                pjsip_dlg_dec_lock(dlg);
-                return call_answer_with_pending_sdp(call_id, opt, code, reason,
-                                                    msg_data, inv, pending_sdp);
             }
         }
-
-        status = pjsip_inv_set_local_sdp(call->inv, sdp);
+        else {
+            status = pjsip_inv_set_local_sdp(call->inv, sdp);
+        }
     }
 
     pjsip_dlg_dec_lock(dlg);
@@ -3697,7 +3700,10 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
         return status;
 
-    status = pjsua_call_answer2(call_id, opt, code, reason, msg_data);
+    status = call_answer_with_pending_sdp(call_id, opt, code,
+                                          reason, msg_data, inv,
+                                          pending_sdp);
+
     if (status == PJ_SUCCESS)
         return status;
 
