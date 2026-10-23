@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1292,7 +1292,7 @@ static pj_status_t strm_destroy(pjmedia_aud_stream *s)
         pj_thread_sleep(1);
     }
 
-    PJ_LOG(5,(THIS_FILE, "Closing %.*s: %lu underflow, %lu overflow",
+    PJ_LOG(5,(THIS_FILE, "Closing %.*s: %u underflow, %u overflow",
                          (int)stream->name.slen,
                          stream->name.ptr,
                          stream->underflow, stream->overflow));
