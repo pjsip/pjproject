@@ -23,6 +23,11 @@
  */
 #define TEST_LOAD_DIRECT            1
 
+#define TEST_CERT_BUFFER            \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL || \
+     PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_GNUTLS || \
+     PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_MBEDTLS)
+
 
 #if INCLUDE_SSLSOCK_TEST
 
@@ -587,7 +592,8 @@ on_return:
     return status;
 }
 
-#if !(defined(TEST_LOAD_FROM_FILES) && TEST_LOAD_FROM_FILES==1) 
+#if !(defined(TEST_LOAD_FROM_FILES) && TEST_LOAD_FROM_FILES==1) || \
+    TEST_CERT_BUFFER
 static pj_status_t load_cert_to_buf(pj_pool_t *pool, const pj_str_t *file_name,
                                     pj_ssl_cert_buffer *buf)
 {
@@ -752,9 +758,16 @@ on_error:
 #   define load_cert_direct(pool,p_cert)
 #endif
 
-static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
-                     pj_ssl_cipher srv_cipher, pj_ssl_cipher cli_cipher,
-                     pj_bool_t req_client_cert, pj_bool_t client_provide_cert)
+/* Supplied credentials are borrowed; NULL selects the default fixtures. */
+static int echo_test_with_certs(pj_ssl_sock_proto srv_proto,
+                               pj_ssl_sock_proto cli_proto,
+                               pj_ssl_cipher srv_cipher,
+                               pj_ssl_cipher cli_cipher,
+                               pj_bool_t req_client_cert,
+                               pj_bool_t client_provide_cert,
+                               pj_bool_t verify_peer,
+                               const pj_ssl_cert_t *server_cert,
+                               const pj_ssl_cert_t *client_cert)
 {
     pj_pool_t *pool = NULL;
     pj_ioqueue_t *ioqueue = NULL;
@@ -769,6 +782,10 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
     pj_ssl_cert_t *cert = NULL;
     pj_ssl_cert_t *cli_cert = NULL;
     pj_status_t status;
+
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_SCHANNEL)
+    PJ_UNUSED_ARG(server_cert);
+#endif
 
     pool = pj_pool_create(mem, "ssl_echo", 256, 256, NULL);
 
@@ -790,6 +807,7 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
     param.ioqueue = ioqueue;
     param.timer_heap = timer;
     param.ciphers = ciphers;
+    param.verify_peer = verify_peer;
 
     /* Init default bind address */
     {
@@ -829,6 +847,11 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
         }
     }
 #else
+    if (server_cert) {
+        status = pj_ssl_sock_set_certificate(ssock_serv, pool, server_cert);
+        if (status != PJ_SUCCESS)
+            goto on_return;
+    } else
     {
         pj_str_t ca_file = pj_str(CERT_CA_FILE);
         pj_str_t cert_file = pj_str(CERT_FILE);
@@ -942,6 +965,12 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
      * Reusing certificate for server above, but if client_provide_cert
      * is not set, override the certificate with CA certificate.
      */
+    if (client_cert) {
+        status = pj_ssl_sock_set_certificate(ssock_cli, pool, client_cert);
+        if (status != PJ_SUCCESS)
+            goto on_return;
+        state_cli.cert_der = CERT_CLI_DER_FILE;
+    } else
 #if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_SCHANNEL)
     if (client_provide_cert) {
         status = load_cert_from_store(pool, &cert);
@@ -1114,6 +1143,72 @@ on_return:
 
     return status;
 }
+
+
+static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
+                     pj_ssl_cipher srv_cipher, pj_ssl_cipher cli_cipher,
+                     pj_bool_t req_client_cert, pj_bool_t client_provide_cert)
+{
+    return echo_test_with_certs(srv_proto, cli_proto, srv_cipher, cli_cipher,
+                               req_client_cert, client_provide_cert,
+                               PJ_FALSE, NULL, NULL);
+}
+
+
+#if TEST_CERT_BUFFER
+static int cert_buffer_test(void)
+{
+    const char *files[] = { CERT_CA_FILE, CERT_FILE, CERT_PRIVKEY_FILE,
+                           CERT_CLI_FILE, CERT_CLI_PRIVKEY_FILE };
+    pj_pool_t *pool;
+    pj_ssl_cert_buffer buf[PJ_ARRAY_SIZE(files)];
+    pj_str_t pass = pj_str(CERT_PRIVKEY_PASS);
+    pj_status_t status = PJ_SUCCESS;
+    unsigned i, j;
+
+    pool = pj_pool_create(mem, "ssl_cert_buf", 4096, 4096, NULL);
+    for (j = 0; j < PJ_ARRAY_SIZE(files); ++j) {
+        pj_str_t file = pj_str((char *)files[j]);
+
+        status = load_cert_to_buf(pool, &file, &buf[j]);
+        if (status != PJ_SUCCESS)
+            goto on_return;
+    }
+
+    for (i = 0; i < 2; ++i) {
+        pj_ssl_cert_t *server_cert = NULL;
+        pj_ssl_cert_t *client_cert = NULL;
+
+        PJ_LOG(3, ("", "..PEM certificate buffers %s NUL",
+                   i ? "including" : "excluding"));
+        if (i) {
+            for (j = 0; j < PJ_ARRAY_SIZE(buf); ++j)
+                ++buf[j].slen;
+        }
+
+        status = pj_ssl_cert_load_from_buffer(pool, &buf[0], &buf[1],
+                                              &buf[2], &pass, &server_cert);
+        if (status == PJ_SUCCESS) {
+            status = pj_ssl_cert_load_from_buffer(pool, &buf[0], &buf[3],
+                                                  &buf[4], &pass, &client_cert);
+        }
+        if (status == PJ_SUCCESS) {
+            status = echo_test_with_certs(PJ_SSL_SOCK_PROTO_TLS1_2,
+                                         PJ_SSL_SOCK_PROTO_TLS1_2,
+                                         -1, -1, PJ_TRUE, PJ_TRUE, PJ_TRUE,
+                                         server_cert, client_cert);
+        }
+        pj_ssl_cert_wipe_keys(server_cert);
+        pj_ssl_cert_wipe_keys(client_cert);
+        if (status != PJ_SUCCESS)
+            goto on_return;
+    }
+
+on_return:
+    pj_pool_release(pool);
+    return status;
+}
+#endif
 
 
 static pj_bool_t asock_on_data_read(pj_activesock_t *asock,
@@ -2641,6 +2736,12 @@ static int cert_verify_name_test(void)
 int ssl_sock_test(void)
 {
     int ret;
+
+#if TEST_CERT_BUFFER
+    ret = cert_buffer_test();
+    if (ret != 0)
+        return ret;
+#endif
 
     PJ_LOG(3,("", "..certificate name verification test"));
     ret = cert_verify_name_test();
