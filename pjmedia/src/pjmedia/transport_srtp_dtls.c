@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2017-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -859,10 +859,39 @@ static pj_status_t udp_member_transport_media_start(dtls_srtp *ds)
 }
 
 
+/* Get the length of as many whole DTLS records at the head of the write BIO
+ * as fit in max_len, so a datagram never carries a partial record.
+ */
+static pj_size_t wbio_datagram_len(BIO *wbio, pj_size_t max_len)
+{
+    enum { REC_HDR_LEN = 13, REC_LEN_OFFSET = 11 };
+    const unsigned char *p = NULL;
+    long pending;
+    pj_size_t len = 0;
+
+    pending = BIO_get_mem_data(wbio, &p);
+    if (pending <= 0 || !p)
+        return max_len;
+
+    while ((pj_size_t)pending - len >= REC_HDR_LEN) {
+        pj_size_t rec_len = REC_HDR_LEN + ((p[len + REC_LEN_OFFSET] << 8) |
+                                           p[len + REC_LEN_OFFSET + 1]);
+        if (len + rec_len > max_len || len + rec_len > (pj_size_t)pending)
+            break;
+        len += rec_len;
+    }
+
+    /* A single record larger than the buffer cannot be sent intact, send
+     * what fits rather than overrun the buffer.
+     */
+    return len ? len : max_len;
+}
+
+
 /* Flush write BIO */
 static pj_status_t ssl_flush_wbio(dtls_srtp *ds, unsigned idx)
 {
-    pj_size_t len;
+    int len;
     pj_status_t status = PJ_SUCCESS;
 
     DTLS_LOCK(ds);
@@ -872,24 +901,29 @@ static pj_status_t ssl_flush_wbio(dtls_srtp *ds, unsigned idx)
         return PJ_EGONE;
     }
 
-    /* Check whether there is data to send */
-    if (BIO_ctrl_pending(ds->ossl_wbio[idx]) > 0) {
-        /* Yes, get and send it */
-        len = BIO_read(ds->ossl_wbio[idx], ds->buf[idx], sizeof(ds->buf));
-        if (len > 0) {
-            DTLS_UNLOCK(ds);
+    /* Send pending data. A handshake flight may be larger than the
+     * per-channel buffer, so send it as a series of datagrams, each
+     * carrying whole records only.
+     */
+    while (ds->ossl_wbio[idx] && BIO_ctrl_pending(ds->ossl_wbio[idx]) > 0) {
+        len = BIO_read(ds->ossl_wbio[idx], ds->buf[idx],
+                       (int)wbio_datagram_len(ds->ossl_wbio[idx],
+                                              sizeof(ds->buf[idx])));
+        if (len <= 0)
+            break;
 
-            status = send_raw(ds, idx, ds->buf[idx], len);
-            if (status != PJ_SUCCESS) {
+        DTLS_UNLOCK(ds);
+
+        status = send_raw(ds, idx, ds->buf[idx], len);
+        if (status != PJ_SUCCESS) {
 #if DTLS_DEBUG
-                pj_perror(2, ds->base.name, status, "Send error");
+            pj_perror(2, ds->base.name, status, "Send error");
 #endif
-                /* This error should be recoverable, remote will retransmit
-                 * its packet when not receiving from us.
-                 */
-            }
-            DTLS_LOCK(ds);
+            /* This error should be recoverable, remote will retransmit
+             * its packet when not receiving from us.
+             */
         }
+        DTLS_LOCK(ds);
     }
 
     if (!ds->ossl_ssl[idx]) {
