@@ -27,10 +27,11 @@ cmake_dependent_option(PJLIB_WITH_LIBUUID
   "UNIX;NOT APPLE;NOT ANDROID;NOT BSD;NOT CYGWIN" OFF
 )
 
-# Enable SSL support with the selected implementation backend
+# Enable SSL support with the selected implementation backend. auto takes the
+# first of OpenSSL, GnuTLS and MbedTLS found, as autoconf; empty disables SSL.
 pj_option(PJLIB_WITH_SSL "Enable SSL support"
-  DEFAULT openssl
-  ALLOWED_VALUES openssl gnutls mbedtls darwin apple schannel
+  DEFAULT auto
+  ALLOWED_VALUES auto openssl gnutls mbedtls darwin apple schannel
 )
 
 # ##############################################################################
@@ -363,7 +364,30 @@ endif()
 # ssl
 add_library(pjlib-ssl INTERFACE) # a target to expose SSL deps
 pj_retry_on_new_root(PJLIB_WITH_SSL OpenSSL)
-if(PJLIB_WITH_SSL STREQUAL "openssl")
+set(_pj_ssl "${PJLIB_WITH_SSL}")
+if(_pj_ssl STREQUAL "auto")
+  find_package(OpenSSL COMPONENTS Crypto SSL MODULE QUIET)
+  if(NOT OPENSSL_FOUND)
+    find_package(OpenSSL COMPONENTS Crypto SSL CONFIG QUIET)
+  endif()
+  if(OPENSSL_FOUND)
+    set(_pj_ssl openssl)
+  else()
+    find_package(GnuTLS QUIET)
+    if(GNUTLS_FOUND)
+      set(_pj_ssl gnutls)
+    else()
+      find_package(MbedTLS CONFIG QUIET)
+      if(MbedTLS_FOUND)
+        set(_pj_ssl mbedtls)
+      else()
+        set(_pj_ssl "")
+        message(STATUS "[!] No OpenSSL, GnuTLS or MbedTLS found. building without SSL")
+      endif()
+    endif()
+  endif()
+endif()
+if(_pj_ssl STREQUAL "openssl")
   find_package(OpenSSL COMPONENTS Crypto SSL MODULE)
   if(NOT OPENSSL_FOUND)
     find_package(OpenSSL COMPONENTS Crypto SSL CONFIG)
@@ -372,11 +396,12 @@ if(PJLIB_WITH_SSL STREQUAL "openssl")
     target_link_libraries(pjlib-ssl INTERFACE OpenSSL::Crypto OpenSSL::SSL)
   else()
     pj_force_set(PJLIB_WITH_SSL "" "OpenSSL not found")
+    set(_pj_ssl "")
   endif()
-elseif(PJLIB_WITH_SSL STREQUAL "gnutls")
+elseif(_pj_ssl STREQUAL "gnutls")
   find_package(GnuTLS REQUIRED)
   target_link_libraries(pjlib-ssl INTERFACE GnuTLS::GnuTLS)
-elseif(PJLIB_WITH_SSL STREQUAL "mbedtls")
+elseif(_pj_ssl STREQUAL "mbedtls")
   find_package(MbedTLS CONFIG REQUIRED)
   # Mbed TLS 4.x moved the crypto library to TF-PSA-Crypto
   if(TARGET MbedTLS::tfpsacrypto)
@@ -390,13 +415,13 @@ elseif(PJLIB_WITH_SSL STREQUAL "mbedtls")
       MbedTLS::mbedx509
       ${_pj_mbedtls_crypto}
   )
-elseif(PJLIB_WITH_SSL STREQUAL "darwin")
+elseif(_pj_ssl STREQUAL "darwin")
   if(NOT APPLE)
     message(FATAL_ERROR "PJLIB_WITH_SSL=darwin requires an Apple platform")
   endif()
   find_library(Security_LIBRARY Security REQUIRED)
   target_link_libraries(pjlib-ssl INTERFACE "${Security_LIBRARY}")
-elseif(PJLIB_WITH_SSL STREQUAL "apple")
+elseif(_pj_ssl STREQUAL "apple")
   if(NOT APPLE)
     message(FATAL_ERROR "PJLIB_WITH_SSL=apple requires an Apple platform")
   endif()
@@ -420,7 +445,7 @@ elseif(PJLIB_WITH_SSL STREQUAL "apple")
       "${Network_LIBRARY}"
       "${Foundation_LIBRARY}"
   )
-elseif(PJLIB_WITH_SSL STREQUAL "schannel")
+elseif(_pj_ssl STREQUAL "schannel")
   # ssl_sock_schannel.c compiles to nothing on other Windows compilers
   if(NOT MSVC)
     message(FATAL_ERROR "PJLIB_WITH_SSL=schannel requires MSVC")
@@ -428,6 +453,15 @@ elseif(PJLIB_WITH_SSL STREQUAL "schannel")
   target_link_libraries(pjlib-ssl INTERFACE secur32 crypt32 bcrypt shlwapi)
 endif()
 target_link_libraries(pjlib PRIVATE pjlib-ssl)
+
+# The backend in use, for the configured header, pjsip and PjConfig.cmake.in
+if(_pj_ssl)
+  message(STATUS "SSL backend: ${_pj_ssl}")
+else()
+  message(STATUS "SSL backend: none")
+endif()
+set(PJ_SSL_BACKEND "${_pj_ssl}" CACHE INTERNAL "SSL backend in use")
+unset(_pj_ssl)
 
 # ##############################################################################
 # Configuration
@@ -839,9 +873,9 @@ block(SCOPE_FOR VARIABLES)
   endif()
 
   # ssl
-  if(NOT PJLIB_WITH_SSL STREQUAL "")
+  if(NOT PJ_SSL_BACKEND STREQUAL "")
     set(PJ_HAS_SSL_SOCK 1)
-    string(TOUPPER "PJ_SSL_SOCK_IMP_${PJLIB_WITH_SSL}" PJ_SSL_SOCK_IMP)
+    string(TOUPPER "PJ_SSL_SOCK_IMP_${PJ_SSL_BACKEND}" PJ_SSL_SOCK_IMP)
   else()
     set(PJ_HAS_SSL_SOCK 0)
     set(PJ_SSL_SOCK_IMP "PJ_SSL_SOCK_IMP_NONE")

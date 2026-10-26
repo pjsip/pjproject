@@ -8,7 +8,7 @@ include(CMakeDependentOption)
 # Include TLS transport support
 cmake_dependent_option(PJSIP_WITH_TLS
   "Enable TLS transport support" ON
-  "PJLIB_WITH_SSL" OFF
+  "PJ_SSL_BACKEND" OFF
 )
 
 # Include Digest AKAv1/AKAv2 authentication, using the bundled milenage

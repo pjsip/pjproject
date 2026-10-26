@@ -18,7 +18,7 @@ endif()
 
 # SSL/TLS backend (mutually exclusive). OpenSSL is also needed by the bundled
 # srtp, for AES-GCM, whichever backend pjlib uses.
-set(_pj_ssl_backend "@PJLIB_WITH_SSL@")
+set(_pj_ssl_backend "@PJ_SSL_BACKEND@")
 if(_pj_ssl_backend STREQUAL "openssl" OR
    ("@PJ_SRTP_WITH_OPENSSL@" AND "@PJ_DEP_SRTP@" STREQUAL "bundled"))
   find_package(OpenSSL COMPONENTS Crypto SSL MODULE QUIET)
