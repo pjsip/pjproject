@@ -57,11 +57,39 @@ elseif(UPNP_INCLUDE_DIR)
   unset(_upnp_config_header)
 endif()
 
+if(UPNP_INCLUDE_DIR AND UPNP_UPNP_LIBRARY)
+  set(_upnp_check_libs "${UPNP_UPNP_LIBRARY}")
+  if(UPNP_IXML_LIBRARY)
+    list(APPEND _upnp_check_libs "${UPNP_IXML_LIBRARY}")
+  endif()
+  if(UPNP_UPNP_LIBRARY MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$" AND UNIX)
+    # A static libupnp needs pthread
+    find_package(Threads QUIET)
+    if(TARGET Threads::Threads)
+      list(APPEND _upnp_check_libs Threads::Threads)
+    endif()
+  endif()
+
+  # As autoconf: rejects a library built for another target
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(UPNP
+    INCLUDE_DIRS "${UPNP_INCLUDE_DIR}"
+    LIBRARIES ${_upnp_check_libs}
+    DEFINITIONS ${PC_UPNP_CFLAGS_OTHER}
+    CODE [=[
+      #include <upnp.h>
+      int main(void) { return UpnpInit2(NULL, 0); }
+    ]=]
+  )
+  unset(_upnp_check_libs)
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(UPNP
   REQUIRED_VARS
     UPNP_UPNP_LIBRARY
     UPNP_INCLUDE_DIR
+    UPNP_USABLE
   VERSION_VAR
     UPNP_VERSION
 )
