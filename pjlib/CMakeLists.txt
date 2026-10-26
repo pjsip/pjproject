@@ -315,6 +315,38 @@ else()
   target_compile_definitions(pjlib PUBLIC PJ_HAS_THREADS=0)
 endif()
 
+# Functions libc may not hold, as autoconf: socket() and gethostbyname() are
+# in libsocket and libnsl on Solaris, clock_gettime() in librt before glibc
+# 2.17. Each library is linked only when the function needs it.
+if(UNIX)
+  include(CheckSymbolExists)
+  include(CheckLibraryExists)
+
+  check_symbol_exists(socket "sys/types.h;sys/socket.h" PJ_LIBC_HAS_SOCKET)
+  if(NOT PJ_LIBC_HAS_SOCKET)
+    check_library_exists(socket socket "" PJ_LIBSOCKET_HAS_SOCKET)
+    if(PJ_LIBSOCKET_HAS_SOCKET)
+      target_link_libraries(pjlib PUBLIC socket)
+    endif()
+  endif()
+
+  check_symbol_exists(gethostbyname "netdb.h" PJ_LIBC_HAS_GETHOSTBYNAME)
+  if(NOT PJ_LIBC_HAS_GETHOSTBYNAME)
+    check_library_exists(nsl gethostbyname "" PJ_LIBNSL_HAS_GETHOSTBYNAME)
+    if(PJ_LIBNSL_HAS_GETHOSTBYNAME)
+      target_link_libraries(pjlib PUBLIC nsl)
+    endif()
+  endif()
+
+  check_symbol_exists(clock_gettime "time.h" PJ_LIBC_HAS_CLOCK_GETTIME)
+  if(NOT PJ_LIBC_HAS_CLOCK_GETTIME)
+    check_library_exists(rt clock_gettime "" PJ_LIBRT_HAS_CLOCK_GETTIME)
+    if(PJ_LIBRT_HAS_CLOCK_GETTIME)
+      target_link_libraries(pjlib PUBLIC rt)
+    endif()
+  endif()
+endif()
+
 # uuid
 pj_retry_on_new_root(PJLIB_WITH_LIBUUID UUID)
 if(PJLIB_WITH_LIBUUID)
