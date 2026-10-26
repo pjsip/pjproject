@@ -482,7 +482,18 @@ static pj_status_t jb_framelist_put_at(jb_framelist_t *framelist,
 
     PJ_ASSERT_RETURN(frame_size <= framelist->frame_size, PJ_EINVAL);
 
+    /* Sequence numbers are non-negative, so the index arithmetic below
+     * stays within int range.
+     */
+    if (index < 0) {
+        PJ_LOG(4, (THIS_FILE, "Warning: frame with negative sequence number "
+                              "%d rejected", index));
+        return PJ_EINVAL;
+    }
+
     /* get distance of this frame to the first frame in the buffer */
+    if (framelist->size == 0 && framelist->origin == INVALID_OFFSET)
+        framelist->origin = index;
     distance = index - framelist->origin;
 
     /* too late or sequence restart or far jump */
@@ -552,7 +563,7 @@ static pj_status_t jb_framelist_put_at(jb_framelist_t *framelist,
     framelist->ts[pos] = ts;
 
     /* update framelist size */
-    if (framelist->origin + (int)framelist->size <= index)
+    if (distance >= (int)framelist->size)
         framelist->size = distance + 1;
 
     if(PJMEDIA_JB_NORMAL_FRAME == frame_type) {
@@ -570,8 +581,8 @@ static pj_status_t jb_framelist_discard(jb_framelist_t *framelist,
 {
     unsigned pos;
 
-    PJ_ASSERT_RETURN(index >= framelist->origin &&
-                     index <  framelist->origin + (int)framelist->size,
+    PJ_ASSERT_RETURN(index - framelist->origin >= 0 &&
+                     index - framelist->origin < (int)framelist->size,
                      PJ_EINVAL);
 
     /* Get the slot position */
@@ -951,7 +962,7 @@ static void jbuf_discard_progressive(pjmedia_jbuf *jb)
     jb->jb_discard_dist = PJ_MAX(jb->jb_min_shrink_gap, (int)discard_dist);
 
     /* Check if we need to discard now */
-    if (last_seq >= (jb->jb_discard_ref + (int)jb->jb_discard_dist)) {
+    if (last_seq - jb->jb_discard_ref >= (int)jb->jb_discard_dist) {
         int discard_seq;
 
         discard_seq = jb->jb_discard_ref + jb->jb_discard_dist;
