@@ -1172,7 +1172,11 @@ if(BUILD_TESTING)
       pjmedia-videodev
   )
 
-  add_test(NAME pjmedia-test COMMAND pjmedia-test)
+  # The test data is found relative to pjmedia/build, where make runs it
+  add_test(NAME pjmedia-test
+    COMMAND pjmedia-test
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build"
+  )
 endif()
 
 # For the pkg-config file: the files of the dependencies found here
