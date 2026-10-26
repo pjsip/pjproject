@@ -162,22 +162,25 @@ if(install_subdirs)
     set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} PARENT_SCOPE)
   endif()
 
-  foreach(subdir IN LISTS install_subdirs)
-    # add installation config
-    install(TARGETS ${subdir}
-      EXPORT PjTargets
-      LIBRARY
-        DESTINATION "${CMAKE_INSTALL_LIBDIR}/pjproject/third_party"
-        COMPONENT PjRuntime
-        OPTIONAL
-      ARCHIVE
-        DESTINATION "${CMAKE_INSTALL_LIBDIR}/pjproject/third_party"
-        COMPONENT PjDevelopment
-        OPTIONAL
-      FILE_SET HEADERS
-        DESTINATION  "${CMAKE_INSTALL_INCLUDEDIR}/pjproject/third_party/${subdir}"
-        COMPONENT PjDevelopment
-        OPTIONAL
-    )
-  endforeach()
 endif()
+
+# Called from the top-level CMakeLists.txt for the libraries pjmedia links:
+# one it does not link is never built (EXCLUDE_FROM_ALL), so exporting it
+# would break find_package(Pj) for consumers.
+function(pj_install_bundled_dep target)
+  install(TARGETS ${target}
+    EXPORT PjTargets
+    LIBRARY
+      DESTINATION "${CMAKE_INSTALL_LIBDIR}/pjproject/third_party"
+      COMPONENT PjRuntime
+      OPTIONAL
+    ARCHIVE
+      DESTINATION "${CMAKE_INSTALL_LIBDIR}/pjproject/third_party"
+      COMPONENT PjDevelopment
+      OPTIONAL
+    FILE_SET HEADERS
+      DESTINATION  "${CMAKE_INSTALL_INCLUDEDIR}/pjproject/third_party/${target}"
+      COMPONENT PjDevelopment
+      OPTIONAL
+  )
+endfunction()
