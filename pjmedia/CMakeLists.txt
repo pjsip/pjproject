@@ -971,6 +971,13 @@ target_sources(pjmedia-audiodev
       include/pjmedia-audiodev/wasapi.h
 )
 
+# Reads pjmedia/config_auto.h too, so it needs the build directory first as
+# well, see pjmedia above
+target_include_directories(pjmedia-audiodev BEFORE
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+)
+
 #
 # pjmedia-audiodev - configuration
 #
@@ -1051,6 +1058,13 @@ target_sources(pjmedia-videodev
         include/pjmedia-videodev/opengl_dev.h
         include/pjmedia-videodev/videodev.h
         include/pjmedia-videodev/videodev_imp.h
+)
+
+# Reads pjmedia/config_auto.h too, so it needs the build directory first as
+# well, see pjmedia above
+target_include_directories(pjmedia-videodev BEFORE
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
 )
 
 #
