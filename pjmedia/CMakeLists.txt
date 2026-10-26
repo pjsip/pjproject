@@ -389,9 +389,9 @@ cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_DARWIN
 )
 import_if_or_set(PJMEDIA_WITH_VIDEODEV_DARWIN OFF AVFoundation)
 
-# Metal backend
+# Metal backend, used whenever the frameworks are found, as autoconf
 cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_METAL
-  "Enable Metal video device backend" OFF
+  "Enable Metal video device backend" ON
   "PJMEDIA_WITH_VIDEODEV;APPLE" OFF
 )
 import_if_or_set(PJMEDIA_WITH_VIDEODEV_METAL OFF Metal)
