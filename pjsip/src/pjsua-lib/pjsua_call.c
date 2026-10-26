@@ -3690,7 +3690,8 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
                 }
             }
         }
-        else {
+
+        if (!pending_sdp) {
             status = pjsip_inv_set_local_sdp(call->inv, sdp);
         }
     }

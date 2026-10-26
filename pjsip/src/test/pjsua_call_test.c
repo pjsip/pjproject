@@ -51,7 +51,8 @@
  *      An offer in an unreliable 183 is rejected without changing call state.
  *   8. An offerless re-INVITE can receive a late SDP offer in the 2xx response
  *      and complete negotiation with the SDP answer in ACK, synchronously or
- *      deferred.
+ *      deferred. A supplied sendonly offer must survive in the callee's local
+ *      and caller's remote SDP instead of falling back to the active offer.
  *   9. An application-supplied initial local offer must match the prepared
  *      media slots and must not mutate call state when rejected.
  *  10. Supplying SDP with a final error response must not change call state
@@ -7036,7 +7037,8 @@ on_return:
 }
 
 static int test_late_sdp_reinvite(pj_bool_t async_answer,
-                                  pj_bool_t async_ack)
+                                  pj_bool_t async_ack,
+                                  pj_bool_t custom_offer)
 {
     pjsua_call_id caller = PJSUA_INVALID_ID;
     pjsua_call_id callee = PJSUA_INVALID_ID;
@@ -7047,9 +7049,10 @@ static int test_late_sdp_reinvite(pj_bool_t async_answer,
     pj_status_t status;
     int rc;
 
-    PJ_LOG(3, (THIS_FILE, "  late SDP re-INVITE (answer=%s ACK=%s)",
+    PJ_LOG(3, (THIS_FILE, "  late SDP re-INVITE (answer=%s ACK=%s offer=%s)",
                async_answer ? "async" : "sync",
-               async_ack ? "async" : "sync"));
+               async_ack ? "async" : "sync",
+               custom_offer ? "sendonly" : "unchanged"));
 
     g_ctx.skip_answer2_overlimit_probe = PJ_TRUE;
     rc = establish_self_call(&caller, &callee, -1960);
@@ -7117,6 +7120,54 @@ static int test_late_sdp_reinvite(pj_bool_t async_answer,
                 rc = -2031;
                 goto on_return;
             }
+            if (custom_offer) {
+                pjmedia_sdp_session *offer;
+                pjmedia_sdp_media *media;
+
+                if (!active->media_count ||
+                    pj_strcmp2(&active->media[0]->desc.media, "audio") != 0 ||
+                    !active->media[0]->desc.port)
+                {
+                    PJ_LOG(1, (THIS_FILE, "    no active audio to modify"));
+                    rc = -2050;
+                    goto on_return;
+                }
+                media = active->media[0];
+                if (pjmedia_sdp_attr_find2(media->attr_count, media->attr,
+                                           "sendonly", NULL) ||
+                    pjmedia_sdp_attr_find2(media->attr_count, media->attr,
+                                           "recvonly", NULL) ||
+                    pjmedia_sdp_attr_find2(media->attr_count, media->attr,
+                                           "inactive", NULL) ||
+                    pjmedia_sdp_attr_find2(active->attr_count, active->attr,
+                                           "sendonly", NULL) ||
+                    pjmedia_sdp_attr_find2(active->attr_count, active->attr,
+                                           "recvonly", NULL) ||
+                    pjmedia_sdp_attr_find2(active->attr_count, active->attr,
+                                           "inactive", NULL))
+                {
+                    PJ_LOG(1, (THIS_FILE, "    expected sendrecv audio"));
+                    rc = -2051;
+                    goto on_return;
+                }
+
+                offer = pjmedia_sdp_session_clone(call->inv->pool_prov,
+                                                  active);
+                media = offer->media[0];
+                pjmedia_sdp_media_remove_all_attr(media, "sendrecv");
+                pjmedia_sdp_media_remove_all_attr(media, "sendonly");
+                pjmedia_sdp_media_remove_all_attr(media, "recvonly");
+                pjmedia_sdp_media_remove_all_attr(media, "inactive");
+                if (media->attr_count >= PJMEDIA_MAX_SDP_ATTR) {
+                    PJ_LOG(1, (THIS_FILE, "    no room for SDP direction"));
+                    rc = -2052;
+                    goto on_return;
+                }
+                media->attr[media->attr_count++] =
+                    pjmedia_sdp_attr_create(call->inv->pool_prov,
+                                            "sendonly", NULL);
+                active = offer;
+            }
             status = pjsua_call_answer_with_sdp(callee, active, NULL,
                                                 PJSIP_SC_OK, NULL, NULL);
         }
@@ -7155,7 +7206,27 @@ static int test_late_sdp_reinvite(pj_bool_t async_answer,
         rc = -1967;
     }
 
-    if (rc == 0 &&
+    if (rc == 0 && custom_offer) {
+        const pjmedia_sdp_session *local, *remote;
+
+        if (pjmedia_sdp_neg_get_active_local(pjsua_var.calls[callee].inv->neg,
+                                             &local) != PJ_SUCCESS ||
+            pjmedia_sdp_neg_get_active_remote(pjsua_var.calls[caller].inv->neg,
+                                              &remote) != PJ_SUCCESS ||
+            !local->media_count || !remote->media_count ||
+            !local->media[0]->desc.port || !remote->media[0]->desc.port ||
+            !pjmedia_sdp_attr_find2(local->media[0]->attr_count,
+                                    local->media[0]->attr, "sendonly", NULL) ||
+            !pjmedia_sdp_attr_find2(remote->media[0]->attr_count,
+                                    remote->media[0]->attr, "sendonly", NULL))
+        {
+            PJ_LOG(1, (THIS_FILE, "    application sendonly offer missing "
+                       "from callee local or caller remote SDP"));
+            rc = -2053;
+        }
+    }
+
+    if (rc == 0 && !custom_offer &&
         (g_ctx.strm_created[callee] != callee_streams_created ||
          g_ctx.strm_destroyed[callee] != callee_streams_destroyed))
     {
@@ -7554,13 +7625,17 @@ int pjsua_late_sdp_offer_test(void)
     if (rc == 0)
         rc = test_initial_late_sdp_offer(PJ_TRUE, PJ_FALSE, PJ_TRUE);
     if (rc == 0)
-        rc = test_late_sdp_reinvite(PJ_FALSE, PJ_FALSE);
+        rc = test_late_sdp_reinvite(PJ_FALSE, PJ_FALSE, PJ_FALSE);
     if (rc == 0)
-        rc = test_late_sdp_reinvite(PJ_TRUE, PJ_FALSE);
+        rc = test_late_sdp_reinvite(PJ_TRUE, PJ_FALSE, PJ_FALSE);
     if (rc == 0)
-        rc = test_late_sdp_reinvite(PJ_FALSE, PJ_TRUE);
+        rc = test_late_sdp_reinvite(PJ_FALSE, PJ_TRUE, PJ_FALSE);
     if (rc == 0)
-        rc = test_late_sdp_reinvite(PJ_TRUE, PJ_TRUE);
+        rc = test_late_sdp_reinvite(PJ_TRUE, PJ_TRUE, PJ_FALSE);
+    if (rc == 0)
+        rc = test_late_sdp_reinvite(PJ_TRUE, PJ_FALSE, PJ_TRUE);
+    if (rc == 0)
+        rc = test_late_sdp_reinvite(PJ_TRUE, PJ_TRUE, PJ_TRUE);
     if (rc == 0)
         rc = test_sdp_error_response();
 
