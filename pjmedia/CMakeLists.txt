@@ -213,6 +213,12 @@ import_if_or_set(PJMEDIA_WITH_OPUS_CODEC OFF OPUS)
 option(PJMEDIA_WITH_BCG729_CODEC "Enable BCG729 codec" ON)
 import_if_or_set(PJMEDIA_WITH_BCG729_CODEC OFF BCG729)
 
+# Intel IPP codecs, as autoconf --enable-ipp: this only links IPP and its
+# speech codec samples, the codecs are enabled with PJMEDIA_HAS_INTEL_IPP in
+# config_site.h. See cmake/FindIPP.cmake for where to point the build.
+option(PJMEDIA_WITH_INTEL_IPP "Link the Intel IPP codec libraries" OFF)
+import_if_or_set(PJMEDIA_WITH_INTEL_IPP OFF IPP)
+
 # Lyra codec
 cmake_dependent_option(PJMEDIA_WITH_LYRA_CODEC
   "Enable Lyra codec" ON
@@ -907,6 +913,7 @@ target_link_libraries(pjmedia-codec
     $<$<BOOL:${PJMEDIA_WITH_SILK_CODEC}>:Silk::Silk>
     $<$<BOOL:${PJMEDIA_WITH_OPUS_CODEC}>:OPUS::OPUS>
     $<$<BOOL:${PJMEDIA_WITH_BCG729_CODEC}>:BCG729::BCG729>
+    $<$<BOOL:${PJMEDIA_WITH_INTEL_IPP}>:IPP::IPP>
     $<$<BOOL:${PJMEDIA_WITH_LYRA_CODEC}>:Lyra::Lyra>
 
     # video codecs
