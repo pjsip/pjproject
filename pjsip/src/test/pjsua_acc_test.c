@@ -52,6 +52,12 @@
  *  11. PJSUA_CONTACT_REWRITE_ALWAYS_UPDATE alone, which names no 2xx
  *      method: the rewrite must still reach the registrar.
  *  12. UNREGISTER and NO_UNREG together, likewise.
+ *  13. An IP change must not register an account that the application
+ *      unregistered. It must still register an account whose registration
+ *      failed, whose regc was dropped by a modify with
+ *      disable_reg_on_modify, or whose unregistration was refused because
+ *      a REGISTER was pending. A registration refused because the
+ *      unregistration was pending changes nothing.
  */
 
 #include "test.h"
@@ -87,6 +93,9 @@ static struct {
     char          last_contact[PJSIP_MAX_URL_SIZE];  /* as seen on the wire */
     /* host of the first Contact not sent with expires=0 */
     char          live_host[PJ_INET6_ADDRSTRLEN + 16];
+    int           code;         /* response code, or 0 for 200 */
+    pj_bool_t     drop;         /* don't answer */
+    int           dropped;      /* set when a request was not answered */
 } g_mock_reg = {
     {
         NULL, NULL,
@@ -111,6 +120,10 @@ static pj_bool_t mock_registrar_rx_request(pjsip_rx_data *rdata)
     }
 
     g_mock_reg.req_count++;
+    if (g_mock_reg.drop) {
+        g_mock_reg.dropped = 1;
+        return PJ_TRUE;
+    }
 
     /* Record the whole Contact header as it arrived, so a test can tell
      * whether a rejected pjsip_regc_update_contact() disturbed the
@@ -161,12 +174,19 @@ static pj_bool_t mock_registrar_rx_request(pjsip_rx_data *rdata)
     }
 
     pj_list_init(&hdr_list);
-    pj_list_push_back(&hdr_list,
-                      pjsip_expires_hdr_create(rdata->tp_info.pool,
-                                               TEST_EXPIRES));
+    {
+        /* An unregistration is answered with Expires: 0 */
+        pjsip_expires_hdr *he = (pjsip_expires_hdr*)
+                                pjsip_msg_find_hdr(msg, PJSIP_H_EXPIRES,
+                                                   NULL);
+        pj_list_push_back(&hdr_list,
+                          pjsip_expires_hdr_create(rdata->tp_info.pool,
+                                (he && he->ivalue == 0)? 0 : TEST_EXPIRES));
+    }
 
     pjsip_endpt_respond_stateless(pjsua_get_pjsip_endpt(), rdata,
-                                  200, NULL, &hdr_list, NULL);
+                                  g_mock_reg.code ? g_mock_reg.code : 200,
+                                  NULL, &hdr_list, NULL);
     return PJ_TRUE;
 }
 
@@ -677,6 +697,200 @@ on_return:
 
 
 /*****************************************************************************
+ * IP change
+ *****************************************************************************/
+
+typedef enum ip_change_action
+{
+    IPC_UNREG,          /* unregister */
+    IPC_REG_FAILED,     /* registration fails with 503 */
+    IPC_MODIFY,         /* modify with disable_reg_on_modify */
+    IPC_UNREG_BUSY,     /* unregister while a REGISTER is pending */
+    IPC_REG_BUSY,       /* register while the unregistration is pending */
+} ip_change_action;
+
+typedef struct ip_change_case
+{
+    const char         *title;
+    ip_change_action    action;
+    pj_bool_t           expect_reg;     /* IP change must register */
+    int                 rc;
+} ip_change_case;
+
+static pj_status_t ip_change(void)
+{
+    pjsua_ip_change_param param;
+
+    pjsua_ip_change_param_default(&param);
+    /* Without a listener restart the accounts are handled at once */
+    param.restart_listener = PJ_FALSE;
+    return pjsua_handle_ip_change(&param);
+}
+
+/* Pump the event loop for the whole period, or until *flag is non-zero */
+static void pump_events(unsigned ms, const int *flag)
+{
+    pj_time_val end, now;
+
+    pj_gettickcount(&end);
+    end.msec += ms;
+    pj_time_val_normalize(&end);
+    do {
+        pjsua_handle_events(50);
+        pj_gettickcount(&now);
+    } while ((!flag || !*flag) && PJ_TIME_VAL_LT(now, end));
+}
+
+/* Send a request that the registrar sees but doesn't answer yet */
+static pj_status_t send_unanswered(pjsua_acc_id acc_id, pj_bool_t renew)
+{
+    pj_status_t status;
+
+    g_mock_reg.drop = PJ_TRUE;
+    g_mock_reg.dropped = 0;
+    status = pjsua_acc_set_registration(acc_id, renew);
+    if (status == PJ_SUCCESS) {
+        pump_events(5000, &g_mock_reg.dropped);
+        if (!g_mock_reg.dropped)
+            status = PJ_ETIMEDOUT;
+    }
+    return status;
+}
+
+/* Run the action. Returns PJ_TRUE if it ended as expected. */
+static pj_bool_t ip_change_do_action(pjsua_acc_id acc_id,
+                                     pjsua_acc_config *acc_cfg,
+                                     ip_change_action action)
+{
+    pjsua_acc *acc = &pjsua_var.acc[acc_id];
+    pj_status_t status;
+
+    g_ctx.reg_done = PJ_FALSE;
+    g_ctx.reg_code = 0;
+
+    switch (action) {
+    case IPC_UNREG:
+        status = pjsua_acc_set_registration(acc_id, PJ_FALSE);
+        return status == PJ_SUCCESS && wait_reg(5000) == 0 &&
+               acc->regc == NULL;
+
+    case IPC_REG_FAILED:
+        g_mock_reg.code = PJSIP_SC_SERVICE_UNAVAILABLE;
+        status = pjsua_acc_set_registration(acc_id, PJ_TRUE);
+        if (status == PJ_SUCCESS)
+            pump_events(5000, &g_ctx.reg_code);
+        g_mock_reg.code = 0;
+        return g_ctx.reg_code == PJSIP_SC_SERVICE_UNAVAILABLE &&
+               acc->regc == NULL;
+
+    case IPC_MODIFY:
+        /* A changed reg_contact_params drops the regc, nothing is sent */
+        acc_cfg->reg_contact_params = pj_str(";test=modify");
+        acc_cfg->disable_reg_on_modify = PJ_TRUE;
+        status = pjsua_acc_modify(acc_id, acc_cfg);
+        return status == PJ_SUCCESS && acc->regc == NULL;
+
+    case IPC_UNREG_BUSY:
+    case IPC_REG_BUSY:
+        /* The pending request is answered on retransmission */
+        status = send_unanswered(acc_id, action == IPC_UNREG_BUSY);
+        if (status == PJ_SUCCESS) {
+            status = pjsua_acc_set_registration(acc_id,
+                                                action == IPC_REG_BUSY);
+        }
+        g_mock_reg.drop = PJ_FALSE;
+        return status == PJSIP_EBUSY && wait_reg(5000) == 0 &&
+               (acc->regc == NULL) == (action == IPC_REG_BUSY);
+    }
+
+    return PJ_FALSE;
+}
+
+static int ip_change_test(pjsua_transport_id tp_id, int port,
+                          const ip_change_case *c)
+{
+    pjsua_acc_config acc_cfg;
+    pjsua_acc_id     acc_id = PJSUA_INVALID_ID;
+    char             reg_uri[80];
+    unsigned         req_count;
+    pj_status_t      status;
+    int              rc = 0;
+
+    PJ_LOG(3, (THIS_FILE, "  pjsua acc: IP change after %s", c->title));
+
+    pj_bzero(&g_ctx, sizeof(g_ctx));
+
+    pj_ansi_snprintf(reg_uri, sizeof(reg_uri), "sip:127.0.0.1:%d", port);
+
+    pjsua_acc_config_default(&acc_cfg);
+    acc_cfg.id       = pj_str("sip:" TEST_USER "@pjsip.org");
+    acc_cfg.reg_uri  = pj_str(reg_uri);
+    acc_cfg.transport_id = tp_id;
+    acc_cfg.register_on_acc_add = PJ_FALSE;
+    acc_cfg.allow_contact_rewrite = PJ_TRUE;
+    acc_cfg.allow_via_rewrite = PJ_FALSE;
+    acc_cfg.reg_retry_interval = 0;
+
+    status = pjsua_acc_add(&acc_cfg, PJ_FALSE, &acc_id);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(3, (THIS_FILE, "    error: pjsua_acc_add failed (%d)", status));
+        rc = c->rc;
+        goto on_return;
+    }
+
+    if (c->action != IPC_REG_FAILED) {
+        /* The first registration also rewrites the Contact */
+        status = pjsua_acc_set_registration(acc_id, PJ_TRUE);
+        if (status != PJ_SUCCESS || wait_reg(5000) != 0) {
+            PJ_LOG(3, (THIS_FILE, "    error: account did not register"));
+            rc = c->rc - 1;
+            goto on_return;
+        }
+    }
+
+    if (!ip_change_do_action(acc_id, &acc_cfg, c->action)) {
+        PJ_LOG(3, (THIS_FILE, "    error: the action did not end as "
+                   "expected (code %d)", g_ctx.reg_code));
+        rc = c->rc - 2;
+        goto on_return;
+    }
+
+    if (c->expect_reg) {
+        g_ctx.reg_done = PJ_FALSE;
+        if (ip_change() != PJ_SUCCESS || wait_reg(5000) != 0) {
+            PJ_LOG(3, (THIS_FILE, "    error: IP change did not register "
+                       "the account"));
+            rc = c->rc - 3;
+        }
+        goto on_return;
+    }
+
+    req_count = g_mock_reg.req_count;
+    if (ip_change() != PJ_SUCCESS) {
+        rc = c->rc - 4;
+        goto on_return;
+    }
+    pump_events(1000, NULL);
+    if (g_mock_reg.req_count != req_count ||
+        pjsua_var.acc[acc_id].regc != NULL ||
+        pjsua_var.acc[acc_id].ip_change_op != PJSUA_IP_CHANGE_OP_COMPLETED)
+    {
+        PJ_LOG(3, (THIS_FILE, "    error: IP change registered the "
+                   "unregistered account"));
+        rc = c->rc - 4;
+        goto on_return;
+    }
+
+on_return:
+    g_mock_reg.drop = PJ_FALSE;
+    if (acc_id != PJSUA_INVALID_ID)
+        pjsua_acc_del(acc_id);
+    pjsua_handle_events(500);
+    return rc;
+}
+
+
+/*****************************************************************************
  * Main entry point
  *****************************************************************************/
 
@@ -852,6 +1066,26 @@ int pjsua_acc_test(void)
     }
 
     rc = rewrite_send_fail_test(tp_id, (int)port);
+    if (rc != 0) goto on_return;
+
+    {
+        static const ip_change_case cases[] = {
+            { "unregistration", IPC_UNREG, PJ_FALSE, -2550 },
+            { "a failed registration", IPC_REG_FAILED, PJ_TRUE, -2555 },
+            { "a modify with disable_reg_on_modify", IPC_MODIFY, PJ_TRUE,
+              -2565 },
+            { "an unregistration refused for a pending REGISTER",
+              IPC_UNREG_BUSY, PJ_TRUE, -2575 },
+            { "a registration refused for a pending unregistration",
+              IPC_REG_BUSY, PJ_FALSE, -2580 },
+        };
+        unsigned i;
+
+        for (i=0; i<PJ_ARRAY_SIZE(cases); ++i) {
+            rc = ip_change_test(tp_id, (int)port, &cases[i]);
+            if (rc != 0) goto on_return;
+        }
+    }
 
 on_return:
     if (g_fail_tx.mod.id != -1)

@@ -341,6 +341,7 @@ typedef struct pjsua_acc
                                          contact if outbound is used    */
     pj_bool_t        contact_rewritten;
                                     /**< Contact rewrite has been done? */
+    pj_bool_t        app_unreg;     /**< Unregistered by application.   */
     pjsip_host_port  via_addr;      /**< Address for Via header         */
     pjsip_transport *via_tp;        /**< Transport associated with
                                          the Via address                */

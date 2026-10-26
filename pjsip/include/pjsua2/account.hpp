@@ -2440,6 +2440,9 @@ public:
      * only needs to call this function if it wants to manually update the
      * registration or to unregister from the server.
      *
+     * After an unregistration, the library doesn't register the account
+     * again on IP change, until the application renews the registration.
+     *
      * @param renew             If False, this will start unregistration
      *                          process.
      */

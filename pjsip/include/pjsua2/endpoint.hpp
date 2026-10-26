@@ -2164,7 +2164,9 @@ public:
      *    configurable via \a AccountConfig.ipChangeConfig.shutdownTp).
      * 3. Update contact URI by sending re-Registration (this step is 
      *    configurable via a\ AccountConfig.natConfig.contactRewriteUse and
-     *    a\ AccountConfig.natConfig.contactRewriteMethod)
+     *    a\ AccountConfig.natConfig.contactRewriteMethod). An account
+     *    unregistered with Account::setRegistration() is not registered
+     *    again.
      * 4. Hangup active calls (this step is configurable via
      *    a\ AccountConfig.ipChangeConfig.hangupCalls) or
      *    continue the call by sending re-INVITE

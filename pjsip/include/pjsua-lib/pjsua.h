@@ -3656,7 +3656,8 @@ PJ_DECL(void) pjsua_dump(pj_bool_t detail);
  *    configurable via \a pjsua_acc_config.ip_change_cfg.shutdown_tp).
  * 3. Update contact URI by sending re-Registration (this step is configurable 
  *    via a\ pjsua_acc_config.allow_contact_rewrite and 
- *    a\ pjsua_acc_config.contact_rewrite_method)
+ *    a\ pjsua_acc_config.contact_rewrite_method). An account unregistered
+ *    with #pjsua_acc_set_registration() is not registered again.
  * 4. Hangup active calls (this step is configurable via 
  *    a\ pjsua_acc_config.ip_change_cfg.hangup_calls) or 
  *    continue the call by sending re-INVITE 
@@ -5860,6 +5861,9 @@ PJ_DECL(pj_status_t) pjsua_acc_set_online_status2(pjsua_acc_id acc_id,
  * when the account is added with #pjsua_acc_add(). Application normally
  * only need to call this function if it wants to manually update the
  * registration or to unregister from the server.
+ *
+ * After an unregistration, pjsua doesn't register the account again on
+ * IP change, until the application renews the registration.
  *
  * @param acc_id        The account ID.
  * @param renew         If renew argument is zero, this will start 
