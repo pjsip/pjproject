@@ -366,7 +366,11 @@ if(BUILD_TESTING)
       pjsua-lib
   )
 
-  add_test(NAME pjsip-test COMMAND pjsip-test)
+  # Run from pjsip/build, as make
+  add_test(NAME pjsip-test
+    COMMAND pjsip-test
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build"
+  )
 
   # pjsua stress test application
   add_executable(pjsua-stress
@@ -412,6 +416,10 @@ if(BUILD_TESTING)
       pjsua2
   )
 
-  add_test(NAME pjsua2-test COMMAND pjsua2-test)
+  # Run from pjsip/build, as pjsip-test
+  add_test(NAME pjsua2-test
+    COMMAND pjsua2-test
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build"
+  )
   endif() # PJ_WITH_CXX
 endif()

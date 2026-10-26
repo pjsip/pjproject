@@ -109,7 +109,11 @@ if(BUILD_TESTING)
 
   target_link_libraries(pjnath-test PRIVATE pjlib pjlib-util pjnath)
 
-  add_test(NAME pjnath-test COMMAND pjnath-test)
+  # Run from pjnath/build, as make
+  add_test(NAME pjnath-test
+    COMMAND pjnath-test
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build"
+  )
 endif()
 
 # For the pkg-config file: the files of the dependencies found here

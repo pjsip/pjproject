@@ -900,7 +900,12 @@ if(BUILD_TESTING)
       "${Security_LIBRARY}" "${CoreFoundation_LIBRARY}")
   endif()
 
-  add_test(NAME pjlib-test COMMAND pjlib-test)
+  # The test certificates are found relative to pjlib/build, where make
+  # runs it
+  add_test(NAME pjlib-test
+    COMMAND pjlib-test
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build"
+  )
 endif()
 
 # ##############################################################################
