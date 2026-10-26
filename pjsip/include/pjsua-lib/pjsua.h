@@ -5862,8 +5862,9 @@ PJ_DECL(pj_status_t) pjsua_acc_set_online_status2(pjsua_acc_id acc_id,
  * only need to call this function if it wants to manually update the
  * registration or to unregister from the server.
  *
- * After an unregistration, pjsua doesn't register the account again on
- * IP change, until the application renews the registration.
+ * After an unregistration, pjsua doesn't register the account again by
+ * itself, e.g: on IP change or with an auto retry, until the application
+ * renews the registration.
  *
  * @param acc_id        The account ID.
  * @param renew         If renew argument is zero, this will start 

@@ -52,12 +52,13 @@
  *  11. PJSUA_CONTACT_REWRITE_ALWAYS_UPDATE alone, which names no 2xx
  *      method: the rewrite must still reach the registrar.
  *  12. UNREGISTER and NO_UNREG together, likewise.
- *  13. An IP change must not register an account that the application
- *      unregistered. It must still register an account whose registration
- *      failed, whose regc was dropped by a modify with
- *      disable_reg_on_modify, or whose unregistration was refused because
- *      a REGISTER was pending. A registration refused because the
- *      unregistration was pending changes nothing.
+ *  13. An IP change, or an auto retry, must not register an account that
+ *      the application unregistered, also when the unregistration failed
+ *      or its TCP connection was lost. An IP change must still register
+ *      an account whose registration failed, whose regc was dropped by a
+ *      modify with disable_reg_on_modify, or whose unregistration was
+ *      refused because a REGISTER was pending. A registration refused
+ *      because the unregistration was pending changes nothing.
  */
 
 #include "test.h"
@@ -704,7 +705,9 @@ typedef enum ip_change_action
 {
     IPC_UNREG,          /* unregister */
     IPC_REG_FAILED,     /* registration fails with 503 */
+    IPC_UNREG_FAILED,   /* unregistration fails with 503 */
     IPC_MODIFY,         /* modify with disable_reg_on_modify */
+    IPC_UNREG_TCP_LOST, /* TCP connection lost during unregistration */
     IPC_UNREG_BUSY,     /* unregister while a REGISTER is pending */
     IPC_REG_BUSY,       /* register while the unregistration is pending */
 } ip_change_action;
@@ -763,6 +766,7 @@ static pj_bool_t ip_change_do_action(pjsua_acc_id acc_id,
                                      ip_change_action action)
 {
     pjsua_acc *acc = &pjsua_var.acc[acc_id];
+    pjsip_regc_info reg_info;
     pj_status_t status;
 
     g_ctx.reg_done = PJ_FALSE;
@@ -775,8 +779,10 @@ static pj_bool_t ip_change_do_action(pjsua_acc_id acc_id,
                acc->regc == NULL;
 
     case IPC_REG_FAILED:
+    case IPC_UNREG_FAILED:
         g_mock_reg.code = PJSIP_SC_SERVICE_UNAVAILABLE;
-        status = pjsua_acc_set_registration(acc_id, PJ_TRUE);
+        status = pjsua_acc_set_registration(acc_id,
+                                            action == IPC_REG_FAILED);
         if (status == PJ_SUCCESS)
             pump_events(5000, &g_ctx.reg_code);
         g_mock_reg.code = 0;
@@ -789,6 +795,18 @@ static pj_bool_t ip_change_do_action(pjsua_acc_id acc_id,
         acc_cfg->disable_reg_on_modify = PJ_TRUE;
         status = pjsua_acc_modify(acc_id, acc_cfg);
         return status == PJ_SUCCESS && acc->regc == NULL;
+
+    case IPC_UNREG_TCP_LOST:
+        status = send_unanswered(acc_id, PJ_FALSE);
+        g_mock_reg.drop = PJ_FALSE;
+        if (status != PJ_SUCCESS || acc->regc == NULL ||
+            pjsip_regc_get_info(acc->regc, &reg_info) != PJ_SUCCESS ||
+            reg_info.transport == NULL)
+        {
+            return PJ_FALSE;
+        }
+        pjsip_transport_shutdown2(reg_info.transport, PJ_TRUE);
+        return PJ_TRUE;
 
     case IPC_UNREG_BUSY:
     case IPC_REG_BUSY:
@@ -820,7 +838,20 @@ static int ip_change_test(pjsua_transport_id tp_id, int port,
 
     pj_bzero(&g_ctx, sizeof(g_ctx));
 
-    pj_ansi_snprintf(reg_uri, sizeof(reg_uri), "sip:127.0.0.1:%d", port);
+    if (c->action == IPC_UNREG_TCP_LOST) {
+        pjsua_transport_config tp_cfg;
+        pjsua_transport_info ti;
+
+        pjsua_transport_config_default(&tp_cfg);
+        status = pjsua_transport_create(PJSIP_TRANSPORT_TCP, &tp_cfg,
+                                        &tp_id);
+        if (status != PJ_SUCCESS)
+            return c->rc;
+        pjsua_transport_get_info(tp_id, &ti);
+        port = pj_sockaddr_get_port(&ti.local_addr);
+    }
+    pj_ansi_snprintf(reg_uri, sizeof(reg_uri), "sip:127.0.0.1:%d%s", port,
+                     c->action == IPC_UNREG_TCP_LOST? ";transport=tcp": "");
 
     pjsua_acc_config_default(&acc_cfg);
     acc_cfg.id       = pj_str("sip:" TEST_USER "@pjsip.org");
@@ -829,7 +860,12 @@ static int ip_change_test(pjsua_transport_id tp_id, int port,
     acc_cfg.register_on_acc_add = PJ_FALSE;
     acc_cfg.allow_contact_rewrite = PJ_TRUE;
     acc_cfg.allow_via_rewrite = PJ_FALSE;
-    acc_cfg.reg_retry_interval = 0;
+    /* An account left unregistered must not be registered by an auto
+     * retry either, which would come within a second.
+     */
+    acc_cfg.reg_retry_interval = c->expect_reg? 0 : 1;
+    acc_cfg.reg_first_retry_interval = acc_cfg.reg_retry_interval;
+    acc_cfg.reg_retry_random_interval = 0;
 
     status = pjsua_acc_add(&acc_cfg, PJ_FALSE, &acc_id);
     if (status != PJ_SUCCESS) {
@@ -866,6 +902,16 @@ static int ip_change_test(pjsua_transport_id tp_id, int port,
     }
 
     req_count = g_mock_reg.req_count;
+    pump_events(2000, NULL);
+    if (g_mock_reg.req_count != req_count ||
+        pjsua_var.acc[acc_id].auto_rereg.timer.id)
+    {
+        PJ_LOG(3, (THIS_FILE, "    error: auto retry registered the "
+                   "unregistered account"));
+        rc = c->rc - 3;
+        goto on_return;
+    }
+
     if (ip_change() != PJ_SUCCESS) {
         rc = c->rc - 4;
         goto on_return;
@@ -886,6 +932,10 @@ on_return:
     if (acc_id != PJSUA_INVALID_ID)
         pjsua_acc_del(acc_id);
     pjsua_handle_events(500);
+    if (c->action == IPC_UNREG_TCP_LOST) {
+        pjsua_transport_close(tp_id, PJ_FALSE);
+        pjsua_handle_events(500);
+    }
     return rc;
 }
 
@@ -1072,8 +1122,14 @@ int pjsua_acc_test(void)
         static const ip_change_case cases[] = {
             { "unregistration", IPC_UNREG, PJ_FALSE, -2550 },
             { "a failed registration", IPC_REG_FAILED, PJ_TRUE, -2555 },
+            { "a failed unregistration", IPC_UNREG_FAILED, PJ_FALSE,
+              -2560 },
             { "a modify with disable_reg_on_modify", IPC_MODIFY, PJ_TRUE,
               -2565 },
+#if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
+            { "an unregistration lost with its TCP connection",
+              IPC_UNREG_TCP_LOST, PJ_FALSE, -2570 },
+#endif
             { "an unregistration refused for a pending REGISTER",
               IPC_UNREG_BUSY, PJ_TRUE, -2575 },
             { "a registration refused for a pending unregistration",

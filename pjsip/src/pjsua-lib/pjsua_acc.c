@@ -4007,7 +4007,7 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
     PJ_ASSERT_RETURN(pjsua_var.acc[acc_id].valid, PJ_EINVALIDOP);
 
     /* Remember that the application took the account offline, so that
-     * pjsua doesn't register it again on IP change.
+     * pjsua doesn't register it again by itself, e.g: on IP change.
      */
     PJSUA_LOCK();
     app_unreg = pjsua_var.acc[acc_id].app_unreg;
@@ -5452,7 +5452,7 @@ static void auto_rereg_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
      * the auto-reregistration.
      */
     if (!acc->valid || !acc->auto_rereg.active || 
-        acc->cfg.reg_retry_interval == 0)
+        acc->cfg.reg_retry_interval == 0 || acc->app_unreg)
     {
         goto on_return;
     }
@@ -5561,7 +5561,7 @@ static void schedule_reregistration(pjsua_acc *acc)
     pj_assert(acc);
 
     /* Validate the account and re-registration feature status */
-    if (!acc->valid || acc->cfg.reg_retry_interval == 0) {
+    if (!acc->valid || acc->cfg.reg_retry_interval == 0 || acc->app_unreg) {
         return;
     }
 
