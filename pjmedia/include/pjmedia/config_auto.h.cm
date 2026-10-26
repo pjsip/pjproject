@@ -35,9 +35,39 @@
 #cmakedefine01 PJMEDIA_HAS_G711_CODEC
 #endif
 
+/* SRTP */
+#ifndef PJMEDIA_HAS_SRTP
+#cmakedefine01 PJMEDIA_HAS_SRTP
+#endif
+
+/* Speex AEC */
+#ifndef PJMEDIA_HAS_SPEEX_AEC
+#cmakedefine01 PJMEDIA_HAS_SPEEX_AEC
+#endif
+
 /* Video */
 #ifndef PJMEDIA_HAS_VIDEO
 #cmakedefine01 PJMEDIA_HAS_VIDEO
+#endif
+
+/* FFmpeg */
+#ifndef PJMEDIA_HAS_FFMPEG
+#cmakedefine01 PJMEDIA_HAS_FFMPEG
+#endif
+#ifndef PJMEDIA_HAS_LIBAVUTIL
+#cmakedefine01 PJMEDIA_HAS_LIBAVUTIL
+#endif
+#ifndef PJMEDIA_HAS_LIBSWSCALE
+#cmakedefine01 PJMEDIA_HAS_LIBSWSCALE
+#endif
+#ifndef PJMEDIA_HAS_LIBAVCODEC
+#cmakedefine01 PJMEDIA_HAS_LIBAVCODEC
+#endif
+#ifndef PJMEDIA_HAS_LIBAVFORMAT
+#cmakedefine01 PJMEDIA_HAS_LIBAVFORMAT
+#endif
+#ifndef PJMEDIA_HAS_LIBAVDEVICE
+#cmakedefine01 PJMEDIA_HAS_LIBAVDEVICE
 #endif
 
 /* Audio device backends */
