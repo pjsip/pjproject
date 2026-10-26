@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -172,6 +172,50 @@ static pj_bool_t process_test_data(char data, pjmedia_jbuf *jb,
     return PJ_TRUE;
 }
 
+/* An empty jitter buffer must zero at most the caller's buffer size, not
+ * its own (possibly larger) frame size.
+ */
+static int jbuf_empty_get_size_test(void)
+{
+    enum { JB_FRAME_SIZE = 1764, BUF_SIZE = 100 };
+    pj_str_t jb_name = {"JBTEST", 6};
+    pj_pool_t *pool;
+    pjmedia_jbuf *jb;
+    char buf[JB_FRAME_SIZE];
+    pj_size_t size = BUF_SIZE;
+    char frm_type;
+    pj_status_t status;
+    unsigned i;
+
+    pool = pj_pool_create(mem, "JBPOOL", 4000, 4000, NULL);
+    status = pjmedia_jbuf_create(pool, &jb_name, JB_FRAME_SIZE, JB_PTIME,
+                                 JB_BUF_SIZE, &jb);
+    PJ_TEST_SUCCESS(status, NULL, { pj_pool_release(pool); return -1; });
+
+    /* No prefetch, so an empty get reaches the frame list */
+    pjmedia_jbuf_set_fixed(jb, 0);
+    pjmedia_jbuf_reset(jb);
+
+    pj_memset(buf, 0x5A, sizeof(buf));
+    pjmedia_jbuf_get_frame2(jb, buf, &size, &frm_type, NULL);
+
+    PJ_TEST_EQ(frm_type, PJMEDIA_JB_ZERO_EMPTY_FRAME, NULL,
+               { pj_pool_release(pool); return -2; });
+    for (i = 0; i < BUF_SIZE; ++i) {
+        PJ_TEST_EQ(buf[i], 0, "empty get did not zero the buffer",
+                   { pj_pool_release(pool); return -3; });
+    }
+    for (i = BUF_SIZE; i < sizeof(buf); ++i) {
+        PJ_TEST_EQ(buf[i], 0x5A, "empty get wrote past the buffer",
+                   { pj_pool_release(pool); return -4; });
+    }
+
+    pjmedia_jbuf_destroy(jb);
+    pj_pool_release(pool);
+    return 0;
+}
+
+
 int jbuf_test(void)
 {
     FILE *input;
@@ -184,6 +228,10 @@ int jbuf_test(void)
         "pjmedia/build",
         "build"
     };
+
+    rc = jbuf_empty_get_size_test();
+    if (rc != 0)
+        return rc;
 
     /* Try to open test data file in the working directory */
     input = fopen(input_filename, "rt");

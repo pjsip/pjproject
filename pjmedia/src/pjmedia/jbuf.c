@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -310,9 +310,11 @@ static pj_bool_t jb_framelist_get(jb_framelist_t *framelist,
 
                 /* Buffer size should not be smaller than frame size. */
                 if (max_size < frm_size) {
-                    pj_assert(!"Buffer too small");
                     PJ_LOG(4, (THIS_FILE, "Warning: buffer too small for the "
-                                          "retrieved frame!"));
+                                          "retrieved frame (%lu < %lu), "
+                                          "frame truncated",
+                                          (unsigned long)max_size,
+                                          (unsigned long)frm_size));
                 }
 
                 pj_memcpy(frame,
@@ -348,7 +350,8 @@ static pj_bool_t jb_framelist_get(jb_framelist_t *framelist,
     }
 
     /* No frame available */
-    pj_bzero(frame, framelist->frame_size);
+    pj_bzero(frame, size? PJ_MIN(*size, framelist->frame_size) :
+                          framelist->frame_size);
 
     return PJ_FALSE;
 }

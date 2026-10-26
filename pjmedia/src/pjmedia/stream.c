@@ -2224,21 +2224,6 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
         jb_init = 0;
     }
 
-    /* Create jitter buffer */
-    status = pjmedia_jbuf_create(pool, &c_strm->port.info.name,
-                                 c_strm->frame_size,
-                                 stream->codec_param.info.frm_ptime,
-                                 jb_max, &c_strm->jb);
-    if (status != PJ_SUCCESS)
-        goto err_cleanup;
-
-
-    /* Set up jitter buffer */
-    pjmedia_jbuf_set_ptime2(c_strm->jb, stream->codec_param.info.frm_ptime,
-                            stream->codec_param.info.frm_ptime_denum);
-    pjmedia_jbuf_set_adaptive( c_strm->jb, jb_init, jb_min_pre, jb_max_pre);
-    pjmedia_jbuf_set_discard(c_strm->jb, info->jb_discard_algo);
-
     /* buf buffer is used for sending and receiving, so lets calculate
      * its size based on both. For receiving, we have c_strm->frame_size,
      * which is used in configuring jitter buffer frame length.
@@ -2255,6 +2240,12 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     if (status != PJ_SUCCESS)
         goto err_cleanup;
 
+    /* Frames are retrieved from the jitter buffer into the decoding channel
+     * buffer, which may be capped by the MTU, so cap the jitter buffer frame
+     * size to it.
+     */
+    if (c_strm->frame_size > c_strm->dec->buf_size)
+        c_strm->frame_size = c_strm->dec->buf_size;
 
     /* Create encoder channel: */
     status = create_channel( pool, c_strm, PJMEDIA_DIR_ENCODING,
@@ -2262,6 +2253,21 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     if (status != PJ_SUCCESS)
         goto err_cleanup;
 
+
+    /* Create jitter buffer */
+    status = pjmedia_jbuf_create(pool, &c_strm->port.info.name,
+                                 c_strm->frame_size,
+                                 stream->codec_param.info.frm_ptime,
+                                 jb_max, &c_strm->jb);
+    if (status != PJ_SUCCESS)
+        goto err_cleanup;
+
+
+    /* Set up jitter buffer */
+    pjmedia_jbuf_set_ptime2(c_strm->jb, stream->codec_param.info.frm_ptime,
+                            stream->codec_param.info.frm_ptime_denum);
+    pjmedia_jbuf_set_adaptive( c_strm->jb, jb_init, jb_min_pre, jb_max_pre);
+    pjmedia_jbuf_set_discard(c_strm->jb, info->jb_discard_algo);
 
     /* Init RTCP session: */
 
