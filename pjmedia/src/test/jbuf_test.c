@@ -252,6 +252,21 @@ static int jbuf_negative_seq_test(void)
     PJ_TEST_EQ(frm_type, PJMEDIA_JB_NORMAL_FRAME, NULL,
                { pj_pool_release(pool); return -5; });
 
+    /* A sequence restart leaves a negative origin, then a far jump */
+    pjmedia_jbuf_put_frame2(jb, buf, sizeof(buf), 0, 500000, &discarded);
+    PJ_TEST_EQ(discarded, PJ_FALSE, NULL,
+               { pj_pool_release(pool); return -6; });
+    pjmedia_jbuf_put_frame2(jb, buf, sizeof(buf), 0, 0, &discarded);
+    PJ_TEST_EQ(discarded, PJ_FALSE, NULL,
+               { pj_pool_release(pool); return -7; });
+    pjmedia_jbuf_put_frame2(jb, buf, sizeof(buf), 0, INT_MAX, &discarded);
+    PJ_TEST_EQ(discarded, PJ_FALSE, NULL,
+               { pj_pool_release(pool); return -8; });
+    size = sizeof(buf);
+    pjmedia_jbuf_get_frame2(jb, buf, &size, &frm_type, NULL);
+    PJ_TEST_EQ(frm_type, PJMEDIA_JB_NORMAL_FRAME, NULL,
+               { pj_pool_release(pool); return -9; });
+
     pjmedia_jbuf_destroy(jb);
     pj_pool_release(pool);
     return 0;
