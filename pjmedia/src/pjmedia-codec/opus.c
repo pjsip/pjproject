@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2015-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2012-2015 Zaark Technology AB
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1262,12 +1262,16 @@ static pj_status_t  codec_recover( pjmedia_codec *codec,
         samples_per_frame = opus_data->cfg.sample_rate * opus_data->dec_ptime/
                             opus_data->dec_ptime_denum / 1000;
         output->type = PJMEDIA_FRAME_TYPE_AUDIO;
-        output->size = samples_per_frame << 1;
+        output->size = samples_per_frame * opus_data->cfg.channel_cnt *
+                       sizeof(opus_int16);
         if (output->size > output_buf_len) {
-            pj_assert(!"Buffer too small");
+            PJ_LOG(5, (THIS_FILE, "Recover buffer too small (%u < %u), "
+                                  "truncating", output_buf_len,
+                                  (unsigned)output->size));
             output->size = output_buf_len;
         }
-        pjmedia_zero_samples((pj_int16_t*)output->buf, samples_per_frame);
+        pjmedia_zero_samples((pj_int16_t*)output->buf,
+                             (unsigned)output->size / sizeof(opus_int16));
         pj_mutex_unlock (opus_data->mutex);
 
         return PJ_SUCCESS;
