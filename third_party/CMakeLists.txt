@@ -37,10 +37,18 @@ set(DEP_SRTP_SUBDIR  "srtp")
 set(DEP_SRTP_PACKAGE "SRTP")
 list(APPEND DEPS SRTP)
 
+# Both WebRTC libraries pick their SIMD sources and flags for a single
+# architecture, so an Apple build for several at once (e.g. arm64;x86_64)
+# cannot build them.
+list(LENGTH CMAKE_OSX_ARCHITECTURES _pj_osx_arch_count)
+
 # WebRTC is C, except its x86 CPU feature detection (cpu_features.cc)
 include(Pj/DetectArch)
 pj_detect_arch(_pj_arch)
-if(PJ_WITH_CXX OR NOT _pj_arch MATCHES "^(i386|x86_64|x64)$")
+if(_pj_osx_arch_count GREATER 1)
+  message(STATUS
+    "[!] WebRTC cannot be built for several architectures at once. leaving it out")
+elseif(PJ_WITH_CXX OR NOT _pj_arch MATCHES "^(i386|x86_64|x64)$")
   set(DEP_WebRTC_HELP  "WebRTC implementation provider")
   set(DEP_WebRTC_SUBDIR "webrtc")
   set(DEP_WebRTC_PACKAGE "WebRTC")
@@ -55,13 +63,18 @@ unset(_pj_arch)
 if(PJ_WITH_CXX)
   option(PJMEDIA_WITH_WEBRTC_AEC3
     "Enable WebRTC Acoustic Echo Cancellation 3 (WebRTC AEC3) support" OFF)
-  if(PJMEDIA_WITH_WEBRTC_AEC3)
+  if(PJMEDIA_WITH_WEBRTC_AEC3 AND _pj_osx_arch_count GREATER 1)
+    message(STATUS "[!] WebRTC AEC3 cannot be built for several "
+      "architectures at once. leaving it out")
+  elseif(PJMEDIA_WITH_WEBRTC_AEC3)
     set(DEP_WebRTC_AEC3_HELP   "WebRTC AEC3 implementation provider")
     set(DEP_WebRTC_AEC3_SUBDIR "webrtc_aec3")
     set(DEP_WebRTC_AEC3_PACKAGE "WebRTC_AEC3")
     list(APPEND DEPS WebRTC_AEC3)
   endif()
 endif()
+
+unset(_pj_osx_arch_count)
 
 # YUV (C++)
 if(PJ_WITH_CXX)

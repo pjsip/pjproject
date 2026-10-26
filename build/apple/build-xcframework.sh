@@ -96,6 +96,9 @@ CMAKE_OPTS=(
     # audio
     -DPJMEDIA_WITH_AUDIODEV_COREAUDIO=ON
     -DPJMEDIA_WITH_SPEEX_AEC=OFF
+    # CoreAudio cancels echo itself; the bundled WebRTC also cannot be built
+    # for both architectures of a slice at once
+    -DPJ_DEP_WEBRTC=none
     -DPJMEDIA_WITH_ILBC_CODEC=ON
     -DPJMEDIA_WITH_L16_CODEC=OFF
 
