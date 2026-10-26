@@ -85,6 +85,24 @@ function(_ffmpeg_find_component component)
     endif()
   endforeach()
 
+  # Link <component>_version(), as autoconf's AC_CHECK_LIB fallback, to reject
+  # a library built for another target, e.g. the host's in a cross build
+  set(_ffmpeg_check_libs "${FFMPEG_${component}_LIBRARY}")
+  foreach(dep IN LISTS arg_NEEDS)
+    list(APPEND _ffmpeg_check_libs "FFMPEG::${dep}")
+  endforeach()
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(FFMPEG_${component}
+    FUNCTION ${component}_version
+    LIBRARIES ${_ffmpeg_check_libs}
+  )
+  if(NOT FFMPEG_${component}_USABLE)
+    _ffmpeg_set_found(${component} FALSE
+      "Found '${FFMPEG_${component}_LIBRARY}' for ${component}, but cannot link it."
+    )
+    return()
+  endif()
+
   _ffmpeg_set_found("${component}" TRUE)
 
   #

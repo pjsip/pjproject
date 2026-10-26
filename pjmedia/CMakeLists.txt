@@ -387,6 +387,22 @@ cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_SDL
   "PJMEDIA_WITH_VIDEODEV" OFF
 )
 import_if_or_set(PJMEDIA_WITH_VIDEODEV_SDL OFF SDL2)
+# SDL's own package does no link test; reject a library built for another
+# target, e.g. the host's in a cross build
+if(PJMEDIA_WITH_VIDEODEV_SDL)
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(SDL2
+    LIBRARIES SDL2::SDL2
+    CODE [=[
+      #define SDL_MAIN_HANDLED
+      #include <SDL.h>
+      int main(void) { return SDL_Init(0); }
+    ]=]
+  )
+  if(NOT SDL2_USABLE)
+    pj_force_set(PJMEDIA_WITH_VIDEODEV_SDL OFF "SDL2 was found but cannot be linked")
+  endif()
+endif()
 
 # Darwin (AVFoundation) capture backend
 cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_DARWIN
