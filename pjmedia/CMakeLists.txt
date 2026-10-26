@@ -605,9 +605,6 @@ target_compile_definitions(pjmedia
     # srtp
     PJMEDIA_HAS_SRTP=$<BOOL:${PJMEDIA_WITH_SRTP}>
 
-    # the null audio device changes what RTCP-XR reports (rtcp_xr.c)
-    PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO=$<BOOL:${PJMEDIA_WITH_AUDIODEV_NULL}>
-
     # resampling backend
     PJMEDIA_RESAMPLE_IMP=PJMEDIA_RESAMPLE_$<UPPER_CASE:${PJMEDIA_WITH_RESAMPLE}>
 
@@ -650,6 +647,15 @@ block(SCOPE_FOR VARIABLES)
 
   # video
   set(PJMEDIA_HAS_VIDEO ${PJMEDIA_WITH_VIDEO})
+
+  # audio device backends, read by pjmedia-audiodev/config.h; the null
+  # device also changes what RTCP-XR reports (rtcp_xr.c)
+  set(PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO ${PJMEDIA_WITH_AUDIODEV_NULL})
+  set(PJMEDIA_AUDIO_DEV_HAS_ANDROID_JNI ${PJMEDIA_WITH_AUDIODEV_JNI})
+  set(PJMEDIA_AUDIO_DEV_HAS_OBOE ${PJMEDIA_WITH_AUDIODEV_OBOE})
+  set(PJMEDIA_AUDIO_DEV_HAS_COREAUDIO ${PJMEDIA_WITH_AUDIODEV_COREAUDIO})
+  set(PJMEDIA_AUDIO_DEV_HAS_ALSA ${PJMEDIA_WITH_AUDIODEV_ALSA})
+  set(PJMEDIA_AUDIO_DEV_HAS_WASAPI ${PJMEDIA_WITH_AUDIODEV_WASAPI})
 
   # video device backends, read by pjmedia-videodev/config.h
   set(PJMEDIA_VIDEO_DEV_HAS_AVI ${PJMEDIA_WITH_VIDEODEV_AVI})
@@ -1004,13 +1010,9 @@ target_include_directories(pjmedia-audiodev BEFORE
 # compile definitions
 target_compile_definitions(pjmedia-audiodev
   PUBLIC
-    PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO=$<BOOL:${PJMEDIA_WITH_AUDIODEV_NULL}>
-    PJMEDIA_AUDIO_DEV_HAS_ANDROID_JNI=$<BOOL:${PJMEDIA_WITH_AUDIODEV_JNI}>
-    PJMEDIA_AUDIO_DEV_HAS_OBOE=$<BOOL:${PJMEDIA_WITH_AUDIODEV_OBOE}>
-    PJMEDIA_AUDIO_DEV_HAS_COREAUDIO=$<BOOL:${PJMEDIA_WITH_AUDIODEV_COREAUDIO}>
-    PJMEDIA_AUDIO_DEV_HAS_ALSA=$<BOOL:${PJMEDIA_WITH_AUDIODEV_ALSA}>
+    # Always passed by autoconf too; the other backends are written into
+    # pjmedia/config_auto.h, see above
     PJMEDIA_AUDIO_DEV_HAS_WMME=$<BOOL:${PJMEDIA_WITH_AUDIODEV_WMME}>
-    PJMEDIA_AUDIO_DEV_HAS_WASAPI=$<BOOL:${PJMEDIA_WITH_AUDIODEV_WASAPI}>
     PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=$<BOOL:${PJMEDIA_WITH_AUDIODEV_PORTAUDIO}>
 )
 
