@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2017-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -536,6 +536,10 @@ static pj_status_t bcg729_codec_encode(pjmedia_codec *codec,
     /* Check frame in size */
     nsamples = input->size >> 1;
     output->size = 0;
+
+    /* Each frame produces up to G729_FRAME_SIZE bytes, make sure they fit */
+    if (nsamples / G729_SAMPLES_PER_FRAME * G729_FRAME_SIZE > output_buf_len)
+        return PJMEDIA_CODEC_EFRMTOOSHORT;
 
     /* Encode */
     while (nsamples >= G729_SAMPLES_PER_FRAME) {

@@ -1979,6 +1979,28 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     if (stream->codec_param.info.frm_ptime_denum < 1)
         stream->codec_param.info.frm_ptime_denum = 1;
 
+    /* The encoding buffer holds PJMEDIA_MAX_FRAME_DURATION_MS of audio, so
+     * cap the packet duration (e.g. requested by remote's ptime) to it.
+     */
+    if (stream->codec_param.info.frm_ptime > 0 &&
+        stream->codec_param.info.frm_ptime *
+        stream->codec_param.setting.frm_per_pkt >
+        PJMEDIA_MAX_FRAME_DURATION_MS * stream->codec_param.info.frm_ptime_denum)
+    {
+        unsigned max_frm_per_pkt;
+
+        max_frm_per_pkt = PJMEDIA_MAX_FRAME_DURATION_MS *
+                          stream->codec_param.info.frm_ptime_denum /
+                          stream->codec_param.info.frm_ptime;
+        if (max_frm_per_pkt < 1)
+            max_frm_per_pkt = 1;
+        PJ_LOG(4,(name.ptr, "Frames per packet %d exceeds %d ms, "
+                            "capped to %u",
+                            stream->codec_param.setting.frm_per_pkt,
+                            PJMEDIA_MAX_FRAME_DURATION_MS, max_frm_per_pkt));
+        stream->codec_param.setting.frm_per_pkt = (pj_uint8_t)max_frm_per_pkt;
+    }
+
     if (stream->codec_param.info.enc_ptime_denum < 1)
         stream->codec_param.info.enc_ptime_denum = 1;
 
