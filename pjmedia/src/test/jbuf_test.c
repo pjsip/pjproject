@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <stdio.h>
+#include <limits.h>
 #include <ctype.h>
 #include <pj/pool.h>
 #include "test.h"
@@ -216,6 +217,61 @@ static int jbuf_empty_get_size_test(void)
 }
 
 
+static int jbuf_negative_seq_test(void)
+{
+    enum { JB_FRAME_SIZE = 100 };
+    pj_str_t jb_name = {"JBTEST", 6};
+    pj_pool_t *pool;
+    pjmedia_jbuf *jb;
+    char buf[JB_FRAME_SIZE];
+    pj_size_t size = sizeof(buf);
+    char frm_type;
+    pj_bool_t discarded;
+    pj_status_t status;
+
+    pool = pj_pool_create(mem, "JBPOOL", 4000, 4000, NULL);
+    status = pjmedia_jbuf_create(pool, &jb_name, JB_FRAME_SIZE, JB_PTIME,
+                                 JB_BUF_SIZE, &jb);
+    PJ_TEST_SUCCESS(status, NULL, { pj_pool_release(pool); return -1; });
+    pjmedia_jbuf_set_fixed(jb, 0);
+    pjmedia_jbuf_reset(jb);
+
+    /* Extreme sequence numbers must not overflow the index arithmetic */
+    pjmedia_jbuf_put_frame2(jb, buf, sizeof(buf), 0, INT_MAX - 100,
+                            &discarded);
+    PJ_TEST_EQ(discarded, PJ_FALSE, NULL,
+               { pj_pool_release(pool); return -2; });
+    pjmedia_jbuf_put_frame2(jb, buf, sizeof(buf), 0, INT_MIN, &discarded);
+    PJ_TEST_EQ(discarded, PJ_TRUE, "negative sequence number accepted",
+               { pj_pool_release(pool); return -3; });
+    pjmedia_jbuf_put_frame2(jb, buf, sizeof(buf), 0, INT_MAX, &discarded);
+    PJ_TEST_EQ(discarded, PJ_FALSE, NULL,
+               { pj_pool_release(pool); return -4; });
+
+    pjmedia_jbuf_get_frame2(jb, buf, &size, &frm_type, NULL);
+    PJ_TEST_EQ(frm_type, PJMEDIA_JB_NORMAL_FRAME, NULL,
+               { pj_pool_release(pool); return -5; });
+
+    /* A sequence restart leaves a negative origin, then a far jump */
+    pjmedia_jbuf_put_frame2(jb, buf, sizeof(buf), 0, 500000, &discarded);
+    PJ_TEST_EQ(discarded, PJ_FALSE, NULL,
+               { pj_pool_release(pool); return -6; });
+    pjmedia_jbuf_put_frame2(jb, buf, sizeof(buf), 0, 0, &discarded);
+    PJ_TEST_EQ(discarded, PJ_FALSE, NULL,
+               { pj_pool_release(pool); return -7; });
+    pjmedia_jbuf_put_frame2(jb, buf, sizeof(buf), 0, INT_MAX, &discarded);
+    PJ_TEST_EQ(discarded, PJ_FALSE, NULL,
+               { pj_pool_release(pool); return -8; });
+    size = sizeof(buf);
+    pjmedia_jbuf_get_frame2(jb, buf, &size, &frm_type, NULL);
+    PJ_TEST_EQ(frm_type, PJMEDIA_JB_NORMAL_FRAME, NULL,
+               { pj_pool_release(pool); return -9; });
+
+    pjmedia_jbuf_destroy(jb);
+    pj_pool_release(pool);
+    return 0;
+}
+
 int jbuf_test(void)
 {
     FILE *input;
@@ -230,6 +286,10 @@ int jbuf_test(void)
     };
 
     rc = jbuf_empty_get_size_test();
+    if (rc != 0)
+        return rc;
+
+    rc = jbuf_negative_seq_test();
     if (rc != 0)
         return rc;
 
