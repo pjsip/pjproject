@@ -655,6 +655,7 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
     pjmedia_channel *channel = c_strm->dec;
     pjmedia_frame_ext *f = (pjmedia_frame_ext*)frame;
     unsigned samples_per_frame, samples_required;
+    pj_size_t capacity, used = 0;
     pj_uint32_t rtp_ts = 0;
     pj_status_t status;
 
@@ -675,13 +676,21 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
                         stream->codec_param.info.frm_ptime_denum /
                         1000;
 
+    /* Capacity of the subframes area, see pjmedia_frame_ext. */
+    capacity = frame->size;
+
     pj_bzero(f, sizeof(pjmedia_frame_ext));
     f->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
 
     while (f->samples_cnt < samples_required) {
         char frame_type;
         pj_size_t frame_size = channel->buf_size;
+        pj_size_t subframe_size;
         pj_uint32_t bit_info;
+
+        /* Stop when not even an empty subframe can fit the capacity. */
+        if (capacity && used + sizeof(pj_uint16_t) > capacity)
+            break;
 
         /* Lock jitter buffer mutex first */
         pj_mutex_lock( c_strm->jb_mutex );
@@ -700,6 +709,15 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
         if (frame_type == PJMEDIA_JB_NORMAL_FRAME) {
             /* Got "NORMAL" frame from jitter buffer */
             pjmedia_frame frame_in;
+
+            subframe_size = sizeof(pj_uint16_t) + frame_size;
+            if (capacity && used + subframe_size > capacity) {
+                PJ_LOG(4,(port->info.name.ptr, "Frame of %lu bytes dropped, "
+                          "no space left in the extended frame",
+                          (unsigned long)frame_size));
+                break;
+            }
+            used += subframe_size;
 
             /* Decode */
             frame_in.buf = channel->buf;
@@ -776,6 +794,7 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
                 pjmedia_frame_ext_append_subframe(f, NULL, 0,
                                             (pj_uint16_t)samples_per_frame);
             }
+            used += sizeof(pj_uint16_t);
 
             if (frame_type == PJMEDIA_JB_MISSING_FRAME) {
                 if (frame_type != c_strm->jb_last_frm) {

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1088,6 +1088,22 @@ PJ_DEF(pj_status_t) pjmedia_conf_adjust_tx_level( pjmedia_conf *conf,
     return PJ_SUCCESS;
 }
 
+/* Get the number of bytes occupied by the subframes of an extended frame. */
+static unsigned frame_ext_len(const pjmedia_frame_ext *f)
+{
+    const pj_uint8_t *p = (const pj_uint8_t*)f + sizeof(pjmedia_frame_ext);
+    unsigned i, len = 0;
+
+    for (i = 0; i < f->subframe_cnt; ++i) {
+        const pjmedia_frame_ext_subframe *sf;
+
+        sf = (const pjmedia_frame_ext_subframe*)(p + len);
+        len += (unsigned)sizeof(sf->bitlen) + ((sf->bitlen + 7) >> 3);
+    }
+
+    return len;
+}
+
 /* Deliver frm_src to a listener port, eventually call  port's put_frame() 
  * when samples count in the frm_dst are equal to port's samples_per_frame.
  */
@@ -1096,8 +1112,6 @@ static pj_status_t write_frame(struct conf_port *cport_dst,
 {
     pjmedia_frame *frm_dst = (pjmedia_frame*)cport_dst->tx_buf;
     
-    PJ_TODO(MAKE_SURE_DEST_FRAME_HAS_ENOUGH_SPACE);
-
     frm_dst->type = frm_src->type;
     frm_dst->timestamp = cport_dst->ts_tx;
 
@@ -1105,16 +1119,35 @@ static pj_status_t write_frame(struct conf_port *cport_dst,
 
         pjmedia_frame_ext *f_src = (pjmedia_frame_ext*)frm_src;
         pjmedia_frame_ext *f_dst = (pjmedia_frame_ext*)frm_dst;
+        const unsigned dst_cap = BUFFER_SIZE - sizeof(pjmedia_frame_ext);
+        unsigned dst_len = frame_ext_len(f_dst);
         unsigned i;
 
         for (i = 0; i < f_src->subframe_cnt; ++i) {
             pjmedia_frame_ext_subframe *sf;
+            unsigned sf_len;
             
-            /* Copy frame to listener's TX buffer. */
+            /* Copy frame to listener's TX buffer. If the TX buffer cannot
+             * hold a whole listener frame, drop the pending subframes and
+             * start over with this one.
+             */
             sf = pjmedia_frame_ext_get_subframe(f_src, i);
+            sf_len = (unsigned)sizeof(sf->bitlen) + ((sf->bitlen + 7) >> 3);
+            if (dst_len + sf_len > dst_cap) {
+                PJ_LOG(4,(THIS_FILE, "TX buffer of %.*s is too small, "
+                                     "dropping pending frames",
+                                     (int)cport_dst->name.slen,
+                                     cport_dst->name.ptr));
+                f_dst->subframe_cnt = 0;
+                f_dst->samples_cnt = 0;
+                dst_len = 0;
+                if (sf_len > dst_cap)
+                    continue;
+            }
             pjmedia_frame_ext_append_subframe(f_dst, sf->data, sf->bitlen, 
                                               f_src->samples_cnt / 
                                               f_src->subframe_cnt);
+            dst_len += sf_len;
 
             /* Check if it's time to deliver the TX buffer to listener, 
              * i.e: samples count in TX buffer equal to listener's
@@ -1129,6 +1162,7 @@ static pj_status_t write_frame(struct conf_port *cport_dst,
                     /* Reset TX buffer. */
                     f_dst->subframe_cnt = 0;
                     f_dst->samples_cnt = 0;
+                    dst_len = 0;
                 }
 
                 /* Update TX timestamp. */
@@ -1329,7 +1363,12 @@ static pj_status_t get_frame(pjmedia_port *this_port,
             pj_add_timestamp32(&cport->ts_rx, cport->samples_per_frame);
             
             f->buf = &conf->buf[sizeof(pjmedia_frame)];
-            f->size = cport->samples_per_frame<<1;
+            if (cport->info->fmt.id == PJMEDIA_FORMAT_PCM) {
+                f->size = cport->samples_per_frame<<1;
+            } else {
+                /* Extended frame: size is the subframes capacity */
+                f->size = BUFFER_SIZE - sizeof(pjmedia_frame_ext);
+            }
 
             /* Get frame from port. */
             status = pjmedia_port_get_frame(cport->port, f);
@@ -1459,7 +1498,9 @@ static pj_status_t get_frame(pjmedia_port *this_port,
             pjmedia_frame_ext *f_src_ = (pjmedia_frame_ext*)f_src;
             pjmedia_frame_ext *f_dst = (pjmedia_frame_ext*)frame;
             pjmedia_frame_ext_subframe *sf;
-            unsigned samples_per_subframe;
+            unsigned samples_per_subframe, samples = 0;
+            pj_size_t dst_cap = frame->size, dst_len = 0;
+            pj_bool_t dropped = PJ_FALSE;
             
             if (f_src_->samples_cnt < this_cport->samples_per_frame) {
                 f_dst->base.type = PJMEDIA_FRAME_TYPE_NONE;
@@ -1473,12 +1514,27 @@ static pj_status_t get_frame(pjmedia_port *this_port,
             i = 0;
             samples_per_subframe = f_src_->samples_cnt / f_src_->subframe_cnt;
 
+            /* Move one frame worth of subframes to the playback frame,
+             * within its capacity (see pjmedia_frame_ext).
+             */
+            while (samples < this_cport->samples_per_frame) {
+                unsigned sf_len;
 
-            while (f_dst->samples_cnt < this_cport->samples_per_frame) {
                 sf = pjmedia_frame_ext_get_subframe(f_src_, i++);
                 pj_assert(sf);
+                samples += samples_per_subframe;
+                sf_len = (unsigned)sizeof(sf->bitlen) + ((sf->bitlen+7) >> 3);
+                if (dst_cap && dst_len + sf_len > dst_cap) {
+                    dropped = PJ_TRUE;
+                    continue;
+                }
                 pjmedia_frame_ext_append_subframe(f_dst, sf->data, sf->bitlen,
                                                   samples_per_subframe);
+                dst_len += sf_len;
+            }
+            if (dropped) {
+                PJ_LOG(4,(THIS_FILE, "Playback frame is too small, "
+                                     "dropping frames"));
             }
 
             /* Shift left TX buffer. */
