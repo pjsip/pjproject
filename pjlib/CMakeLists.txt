@@ -461,8 +461,8 @@ block(SCOPE_FOR VARIABLES)
     set(WIN32_LEAN_AND_MEAN 1)
     set(NOMINMAX 1)
 
-    if(CMAKE_SYSTEM_NAME MATCHES "_64-w64-mingw"
-      OR CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "AMD64")
+    # the target's, not the build machine's: it sizes pj_ssize_t
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
       set(PJ_WIN64 1)
     endif()
   elseif(APPLE)
