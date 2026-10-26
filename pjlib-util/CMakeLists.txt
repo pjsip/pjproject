@@ -92,5 +92,9 @@ if(BUILD_TESTING)
 
   target_link_libraries(pjlib-util-test PRIVATE pjlib pjlib-util)
 
-  add_test(NAME pjlib-util-test COMMAND pjlib-util-test)
+  # Run from pjlib-util/build, as make
+  add_test(NAME pjlib-util-test
+    COMMAND pjlib-util-test
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build"
+  )
 endif()
