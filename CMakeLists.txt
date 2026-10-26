@@ -65,6 +65,10 @@ endif()
 # Testing support
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+  # make builds no executable on Android, the test programs included
+  if(ANDROID)
+    option(BUILD_TESTING "Build the testing tree." OFF)
+  endif()
   include(CTest)
 endif()
 
@@ -120,10 +124,19 @@ add_subdirectory(pjsip)
 # an iOS consumer links into an app of their own anyway.
 # Nor does firmware for a target CMake calls Generic, with no OS or with an
 # RTOS such as Zephyr, so the applications can be left out there.
-option(PJ_BUILD_APPS "Build pjsua and the sample applications" ON)
-if(PJ_BUILD_APPS AND NOT IOS)
-  add_subdirectory(pjsip-apps)
+# On Android they are off by default, as make excludes them there.
+if(ANDROID)
+  set(_pj_build_apps_default OFF)
+else()
+  set(_pj_build_apps_default ON)
 endif()
+option(PJ_BUILD_APPS "Build pjsua and the sample applications"
+  ${_pj_build_apps_default})
+unset(_pj_build_apps_default)
+
+# Always added: besides the applications, it holds the pjsua2 JNI bindings,
+# which make builds in a step of their own regardless of the applications.
+add_subdirectory(pjsip-apps)
 
 # The iOS sample applications are Xcode projects rather than CMake targets,
 # and they link the static libraries from beside their own sources under the
