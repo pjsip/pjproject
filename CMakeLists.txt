@@ -421,18 +421,24 @@ set(PJ_SYSTEM_DEPS "")
 set(_pj_all_deps G7221 GSM iLBC Resample Speex SRTP YUV WebRTC WebRTC_AEC3)
 
 # Go by the target rather than the PJ_DEP_<X> cache entry, which outlives a
-# dependency that a later configure (PJ_WITH_CXX=OFF, provider none) left out.
+# dependency that a later configure (PJ_WITH_CXX=OFF, provider none) left out,
+# and only for what pjmedia links: a bundled library it does not is not built.
+get_property(_pj_used_deps GLOBAL PROPERTY PJ_USED_DEPS)
 foreach(_dep IN LISTS _pj_all_deps)
-  if(TARGET Pj::Dep::${_dep})
+  if(TARGET Pj::Dep::${_dep} AND _dep IN_LIST _pj_used_deps)
     get_target_property(_dep_provider Pj::Dep::${_dep} PJ_DEP_PROVIDER)
     if(_dep_provider STREQUAL "bundled")
       list(APPEND PJ_BUNDLED_DEPS "${_dep}")
+      get_target_property(_dep_target Pj::Dep::${_dep} ALIASED_TARGET)
+      pj_install_bundled_dep(${_dep_target})
     elseif(_dep_provider STREQUAL "system")
       list(APPEND PJ_SYSTEM_DEPS "${_dep}")
     endif()
   endif()
 endforeach()
 unset(_dep_provider)
+unset(_dep_target)
+unset(_pj_used_deps)
 unset(_pj_all_deps)
 
 list(JOIN PJ_BUNDLED_DEPS ";" PJ_BUNDLED_DEPS_STR)
