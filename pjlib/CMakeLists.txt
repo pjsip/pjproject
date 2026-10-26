@@ -316,6 +316,7 @@ else()
 endif()
 
 # uuid
+pj_retry_on_new_root(PJLIB_WITH_LIBUUID UUID)
 if(PJLIB_WITH_LIBUUID)
   find_package(UUID)
   if(UUID_FOUND)
@@ -329,6 +330,7 @@ endif()
 
 # ssl
 add_library(pjlib-ssl INTERFACE) # a target to expose SSL deps
+pj_retry_on_new_root(PJLIB_WITH_SSL OpenSSL)
 if(PJLIB_WITH_SSL STREQUAL "openssl")
   find_package(OpenSSL COMPONENTS Crypto SSL MODULE)
   if(NOT OPENSSL_FOUND)

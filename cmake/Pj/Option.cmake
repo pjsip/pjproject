@@ -70,13 +70,18 @@ endfunction()
 
 # pj_retry_on_new_root(<option> <package>)
 #
-# When <package>_ROOT or <PACKAGE>_ROOT (variable or environment) differs from
-# the previous configure, drop the cached search results of <package> and
-# restore <option> if pj_force_set() turned it off, so find_package() searches
-# the new root, like re-running configure with --with-<package>=DIR.
+# When <package>_ROOT or <PACKAGE>_ROOT (variable or environment), or
+# <PACKAGE>_ROOT_DIR as CMake's FindOpenSSL takes it, differs from the previous
+# configure, drop the cached search results of <package> and restore <option>
+# if pj_force_set() turned it off, so find_package() searches the new root,
+# like re-running configure with --with-<package>=DIR.
 function(pj_retry_on_new_root option package)
   string(TOUPPER "${package}" _upper)
   set(_root "${${package}_ROOT}|${${_upper}_ROOT}|$ENV{${package}_ROOT}|$ENV{${_upper}_ROOT}")
+  # only when set, so the value recorded for other packages does not change
+  if(${_upper}_ROOT_DIR OR DEFINED ENV{${_upper}_ROOT_DIR})
+    string(APPEND _root "|${${_upper}_ROOT_DIR}|$ENV{${_upper}_ROOT_DIR}")
+  endif()
 
   if(NOT DEFINED CACHE{_PJ_${package}_ROOT})
     set(_PJ_${package}_ROOT "${_root}" CACHE INTERNAL "")
@@ -89,7 +94,7 @@ function(pj_retry_on_new_root option package)
 
   get_cmake_property(_vars CACHE_VARIABLES)
   foreach(_var IN LISTS _vars)
-    if(_var MATCHES "^(${package}|${_upper})_" AND NOT _var MATCHES "_ROOT$")
+    if(_var MATCHES "^(${package}|${_upper})_" AND NOT _var MATCHES "_ROOT(_DIR)?$")
       get_property(_type CACHE ${_var} PROPERTY TYPE)
       if(_type MATCHES "^(FILE)?PATH$")
         unset(${_var} CACHE)
