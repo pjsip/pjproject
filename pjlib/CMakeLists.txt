@@ -669,16 +669,26 @@ block(SCOPE_FOR VARIABLES)
     ]=] _has_pthread_rwlock)
 
     # if rwmutex is not detected, check again but this time with
-    # _POSIX_READER_WRITER_LOCKS defined (newlib needs this)
+    # _POSIX_READER_WRITER_LOCKS defined (newlib needs this), and build with
+    # it if that works, as autoconf
     if(NOT _has_pthread_rwlock)
       check_source_compiles(C [=[
+        #define _POSIX_READER_WRITER_LOCKS
         #include <pthread.h>
 
         int main(void) {
             pthread_rwlock_t *x;
             return 0;
         }
-      ]=] _has_pthread_rwlock)
+      ]=] _has_pthread_rwlock_posix)
+      if(_has_pthread_rwlock_posix)
+        set(_has_pthread_rwlock 1)
+        target_compile_definitions(pjlib
+          PUBLIC
+            _POSIX_THREADS
+            _POSIX_READER_WRITER_LOCKS
+        )
+      endif()
     endif()
 
     if(_has_pthread_rwlock)
