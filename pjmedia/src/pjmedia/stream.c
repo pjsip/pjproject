@@ -534,6 +534,15 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
              */
             exp_decoded_samples = PJ_MAX(bit_info, samples_per_frame);
             if (stream->dec_buf &&
+                exp_decoded_samples > stream->dec_buf_size)
+            {
+                PJ_LOG(4,(port->info.name.ptr,
+                          "Codec signalled %u decoded samples, more than "
+                          "the decoding buffer (%u), capping",
+                          exp_decoded_samples, stream->dec_buf_size));
+                exp_decoded_samples = stream->dec_buf_size;
+            }
+            if (stream->dec_buf &&
                 exp_decoded_samples * sizeof(pj_int16_t) > frame_out.size)
             {
                 stream->dec_buf_pos = 0;
