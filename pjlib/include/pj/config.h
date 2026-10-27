@@ -72,7 +72,17 @@
 /********************************************************************
  * Include target OS specific configuration.
  */
-#if defined(PJ_AUTOCONF)
+#if defined(__ZEPHYR__)
+    /*
+     * Zephyr RTOS. CMake always defines PJ_AUTOCONF, but its OS probes
+     * fail under Zephyr, hence a Zephyr specific OS compat layer, checked
+     * first.
+     */
+#   undef PJ_ZEPHYR
+#   define PJ_ZEPHYR        1
+#   include <pj/compat/os_zephyr.h>
+
+#elif defined(PJ_AUTOCONF)
     /*
      * Autoconf
      */
@@ -277,10 +287,24 @@
        defined(_M_ARM) || defined(_M_ARM64) || defined(__aarch64__)
 #   define PJ_HAS_PENTIUM       0
     /*
-     * ARM, bi-endian, so raise error if endianness is not configured
+     * ARM, bi-endian, so raise error if endianness is not configured.
+     * GCC and Clang do say which: __ARMEB__ for big endian, __ARMEL__ for
+     * little endian (and only __ARM_ARCH on the ARM64 big-endian ABI).
      */
 #   if !PJ_IS_LITTLE_ENDIAN && !PJ_IS_BIG_ENDIAN
-#       error Endianness must be declared for this processor
+#       if defined(__ARMEB__) || defined(__AARCH64EB__)
+#           undef PJ_IS_LITTLE_ENDIAN
+#           undef PJ_IS_BIG_ENDIAN
+#           define PJ_IS_LITTLE_ENDIAN  0
+#           define PJ_IS_BIG_ENDIAN     1
+#       elif defined(__ARMEL__) || defined(__AARCH64EL__)
+#           undef PJ_IS_LITTLE_ENDIAN
+#           undef PJ_IS_BIG_ENDIAN
+#           define PJ_IS_LITTLE_ENDIAN  1
+#           define PJ_IS_BIG_ENDIAN     0
+#       else
+#           error Endianness must be declared for this processor
+#       endif
 #   endif
 #   if defined (PJ_M_ARMV7) || defined(ARMV7)
 #       undef PJ_M_ARMV7
@@ -294,6 +318,11 @@
 #       undef PJ_M_ARM64
 #       define PJ_M_ARM64               1
 #       define PJ_M_NAME                "arm64"
+#   elif !defined(PJ_M_NAME)
+        /* Any other ARM the compiler targets, e.g. Cortex-M (ARMv7-M,
+         * ARMv8-M), when the build system has not named it.
+         */
+#       define PJ_M_NAME                "arm"
 #   endif 
 
 #elif defined (PJ_M_POWERPC) || defined(__powerpc) || defined(__powerpc__) || \

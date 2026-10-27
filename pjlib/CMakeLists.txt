@@ -132,6 +132,7 @@ target_sources(pjlib
         include/pj/compat/os_win32_wince.h
         include/pj/compat/os_winphone8.h
         include/pj/compat/os_winuwp.h
+        include/pj/compat/os_zephyr.h
         include/pj/compat/rand.h
         include/pj/compat/setjmp.h
         include/pj/compat/size_t.h
@@ -206,12 +207,17 @@ else()
     PRIVATE
       src/pj/file_access_unistd.c
       src/pj/file_io_ansi.c
-      src/pj/ip_helper_generic.c
       src/pj/os_core_unix.c
       src/pj/os_error_unix.c
       src/pj/os_time_unix.c
       src/pj/os_timestamp_posix.c
   )
+  # Zephyr's sockets cannot enumerate interfaces; its network stack can
+  if(ZEPHYR_BASE)
+    target_sources(pjlib PRIVATE src/pj/ip_helper_zephyr.c)
+  else()
+    target_sources(pjlib PRIVATE src/pj/ip_helper_generic.c)
+  endif()
 endif()
 
 # Apple-specific

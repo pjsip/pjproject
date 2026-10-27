@@ -55,7 +55,7 @@ static void goertzel_state_init(goertzel_state_t *gs, int frequency,
                                 int sampling_frequency)
 {
     gs->coef = (float)2 * (float)cos(2 * M_PI *
-                                     ((float)frequency / (float)sampling_frequency));
+                                     ((double)frequency / sampling_frequency));
 }
 
 static float goertzel_state_run(goertzel_state_t *gs, pj_int16_t *samples,
@@ -243,7 +243,7 @@ static pj_status_t process_frame(pjmedia_port *this_port, pjmedia_frame *frame)
                  * work */
             }
             PJ_LOG(5,(THIS_FILE, "process_frame energy[%f] f=%uHz r=%f",
-                      en, td_port->freqs[i], r));
+                      (double)en, td_port->freqs[i], (double)r));
         }
         PJ_LOG(5,(THIS_FILE, "process_frame hit=%d streak=%u", hit,
                   td_port->consecutive_hits));

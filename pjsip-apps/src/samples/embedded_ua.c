@@ -209,9 +209,44 @@
 #  error EMBUA_USE_MEDIA_THREAD requires PJ_HAS_THREADS
 #endif
 
-/* Register to SIP_SERVER_IP. With 0 the UA is reached at its own address. */
+/* Register to EMBUA_SIP_SERVER_IP. With 0 the UA is reached at its own
+ * address. On Zephyr the sample's Kconfig sets this.
+ */
 #ifndef EMBUA_USE_REGISTRATION
-#  define EMBUA_USE_REGISTRATION    1
+#  if defined(__ZEPHYR__)
+#    if defined(CONFIG_EMBUA_USE_REGISTRATION)
+#      define EMBUA_USE_REGISTRATION  1
+#    else
+#      define EMBUA_USE_REGISTRATION  0
+#    endif
+#  else
+#    define EMBUA_USE_REGISTRATION    1
+#  endif
+#endif
+
+/* The SIP server and the account. On Zephyr the sample's Kconfig sets them,
+ * and its CONFIG_ strings arrive already quoted.
+ */
+#ifndef EMBUA_SIP_SERVER_IP
+#  ifdef CONFIG_EMBUA_SIP_SERVER_IP
+#    define EMBUA_SIP_SERVER_IP     CONFIG_EMBUA_SIP_SERVER_IP
+#  else
+#    define EMBUA_SIP_SERVER_IP     "192.168.0.7"
+#  endif
+#endif
+#ifndef EMBUA_USERNAME
+#  ifdef CONFIG_EMBUA_USERNAME
+#    define EMBUA_USERNAME          CONFIG_EMBUA_USERNAME
+#  else
+#    define EMBUA_USERNAME          "bob"
+#  endif
+#endif
+#ifndef EMBUA_PASSWORD
+#  ifdef CONFIG_EMBUA_PASSWORD
+#    define EMBUA_PASSWORD          CONFIG_EMBUA_PASSWORD
+#  else
+#    define EMBUA_PASSWORD          "secret"
+#  endif
 #endif
 
 #if EMBUA_AUDIO_CODEC
@@ -261,11 +296,11 @@
 /* Gap between overdue frames while the media clock catches up. */
 #define MEDIA_CATCHUP_MSEC  2
 
-#define SIP_SERVER_IP       "192.168.0.7"
+#define SIP_SERVER_IP       EMBUA_SIP_SERVER_IP
 #define SIP_REGISTRAR       "sip:" SIP_SERVER_IP SIP_TRANSPORT_PARAM
 #define SIP_AOR             "sip:" AUTH_USERNAME "@" SIP_SERVER_IP
-#define AUTH_USERNAME       "bob"
-#define AUTH_PASSWD         "secret"
+#define AUTH_USERNAME       EMBUA_USERNAME
+#define AUTH_PASSWD         EMBUA_PASSWORD
 
 
 static struct global_t {

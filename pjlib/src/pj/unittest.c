@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2024 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,6 +39,7 @@ static void unittest_log_callback(int level, const char *data, int len);
 static int get_completion_line( const pj_test_case *tc, const char *end_line,
                                 char *log_buf, unsigned buf_size);
 
+#if PJ_HAS_THREADS
 /* atexit() callback to free TLS */
 static void unittest_shutdown(void)
 {
@@ -47,6 +48,7 @@ static void unittest_shutdown(void)
         tls_id = INVALID_TLS_ID;
     }
 }
+#endif
 
 /* initialize unittest subsystem. can be called many times. */
 static pj_status_t unittest_init(void)
@@ -306,7 +308,8 @@ static const char *get_test_case_info(const pj_test_case *tc,
 
         pj_ansi_snprintf(arg_info, sizeof(arg_info), " (arg: %s)", arg_val);
     }
-    pj_ansi_snprintf(buf, size, "%s%s", tc->obj_name, arg_info);
+    pj_ansi_strxcpy(buf, tc->obj_name, size);
+    pj_ansi_strxcat(buf, arg_info, size);
     return buf;
 }
 

@@ -1,4 +1,21 @@
 /*
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+/*
  * This file contains several sample settings especially for Windows
  * Mobile and Symbian targets. You can include this file in your
  * <pj/config_site.h> file.
@@ -17,6 +34,11 @@
  * #define PJ_CONFIG_WIN32_WMME_DIRECT
  *   Configuration to activate "APS-Direct" media mode on Windows or
  *   Windows Mobile, useful for testing purposes only.
+ *
+ * #define PJ_CONFIG_ZEPHYR
+ *   Settings for a small SIP endpoint on Zephyr RTOS. When pjproject is
+ *   built as a Zephyr module, the generated config_site.h defines this
+ *   automatically.
  */
 
 
@@ -451,6 +473,132 @@
     #define PJMEDIA_AUDIO_DEV_HAS_ALSA                  0    
 #endif
 
+
+/*
+ * Zephyr RTOS: a small SIP endpoint on a Cortex-M class device. A few
+ * calls, G.711 and G.722, SDES-SRTP, optionally SIP over TLS with Zephyr's
+ * Mbed TLS, no video, no echo canceller, no sound device.
+ *
+ * The platform itself (threads, TCP, IPv6, TLS) is described by
+ * pj/compat/os_zephyr.h from Kconfig. Where a CONFIG_PJPROJECT_* symbol
+ * exists, the value follows Kconfig.
+ */
+#if defined(PJ_CONFIG_ZEPHYR) && PJ_CONFIG_ZEPHYR
+
+    /* The PJ_TODO() markers would otherwise show up as unused-label
+     * warnings.
+     */
+    #define PJ_TODO(x)
+
+    /*
+     * PJLIB settings.
+     */
+
+    /* Logging stays on while a port is being brought up; 0 compiles it
+     * out.
+     */
+    #ifdef CONFIG_PJPROJECT_LOG_MAX_LEVEL
+    #   define PJ_LOG_MAX_LEVEL                 CONFIG_PJPROJECT_LOG_MAX_LEVEL
+    #else
+    #   define PJ_LOG_MAX_LEVEL                 4
+    #endif
+
+    /* Zephyr's select() is sized by CONFIG_ZVFS_OPEN_MAX, which must be at
+     * least this (ioqueue_select.c checks at build time).
+     */
+    #ifdef CONFIG_PJPROJECT_IOQUEUE_MAX_HANDLES
+    #   define PJ_IOQUEUE_MAX_HANDLES           CONFIG_PJPROJECT_IOQUEUE_MAX_HANDLES
+    #else
+    #   define PJ_IOQUEUE_MAX_HANDLES           16
+    #endif
+
+    #define PJ_CRC32_HAS_TABLES                 0
+
+    /*
+     * PJSIP settings.
+     */
+
+    /* A handful of calls; these size the hash tables and the timer heap. */
+    #define PJSIP_MAX_TSX_COUNT                 31
+    #define PJSIP_MAX_DIALOG_COUNT              31
+
+    /* Zephyr has no SO_SNDBUF/SO_RCVBUF; its buffers are the net_buf pools
+     * sized in prj.conf. 0 skips setting them.
+     */
+    #define PJSIP_UDP_SO_SNDBUF_SIZE            0
+    #define PJSIP_UDP_SO_RCVBUF_SIZE            0
+
+    /* SIP over TLS follows CONFIG_PJPROJECT_TLS through PJ_HAS_SSL_SOCK in
+     * os_zephyr.h; PJSIP_HAS_TLS_TRANSPORT follows that by default.
+     */
+
+    /*
+     * PJMEDIA settings
+     */
+
+    /* G.711 and G.722 are built in, L16 optionally; the rest need
+     * libraries the Zephyr module does not build.
+     */
+    #if defined(CONFIG_PJPROJECT_CODEC_G711) || !defined(__ZEPHYR__)
+    #   define PJMEDIA_HAS_G711_CODEC           1
+    #else
+    #   define PJMEDIA_HAS_G711_CODEC           0
+    #endif
+    #if defined(CONFIG_PJPROJECT_CODEC_G722) || !defined(__ZEPHYR__)
+    #   define PJMEDIA_HAS_G722_CODEC           1
+    #else
+    #   define PJMEDIA_HAS_G722_CODEC           0
+    #endif
+    #if defined(CONFIG_PJPROJECT_CODEC_L16)
+    #   define PJMEDIA_HAS_L16_CODEC            1
+    #else
+    #   define PJMEDIA_HAS_L16_CODEC            0
+    #endif
+    #define PJMEDIA_HAS_GSM_CODEC               0
+    #define PJMEDIA_HAS_ILBC_CODEC              0
+    #define PJMEDIA_HAS_SPEEX_CODEC             0
+    #define PJMEDIA_HAS_G7221_CODEC             0
+    #define PJMEDIA_HAS_OPUS_CODEC              0
+    #define PJMEDIA_HAS_SILK_CODEC              0
+    #define PJMEDIA_HAS_LYRA_CODEC              0
+    #define PJMEDIA_HAS_BCG729                  0
+    #define PJMEDIA_HAS_OPENCORE_AMRNB_CODEC    0
+    #define PJMEDIA_HAS_OPENCORE_AMRWB_CODEC    0
+    #define PJMEDIA_HAS_PASSTHROUGH_CODECS      0
+    #define PJMEDIA_HAS_INTEL_IPP               0
+
+    /* G.711 computed rather than table driven: saves 16 KB of flash for a
+     * little CPU, which is not the constraint here.
+     */
+    #define PJMEDIA_HAS_ALAW_ULAW_TABLE         0
+
+    /* No video, no echo canceller */
+    #define PJMEDIA_HAS_VIDEO                   0
+    #define PJMEDIA_HAS_SPEEX_AEC               0
+    #define PJMEDIA_HAS_WEBRTC_AEC              0
+    #define PJMEDIA_HAS_WEBRTC_AEC3             0
+    #define PJMEDIA_HAS_RTCP_XR                 0
+    #define PJMEDIA_STREAM_ENABLE_KA            0
+
+    /* No sound device: media is driven by the application, e.g. from a
+     * memory buffer.
+     */
+    #define PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO    1
+    #define PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO     0
+    #define PJMEDIA_AUDIO_DEV_HAS_ALSA          0
+    #define PJMEDIA_AUDIO_DEV_HAS_WMME          0
+    #define PJMEDIA_HAS_LEGACY_SOUND_API        0
+
+    /* SRTP keyed by SDES only. PJMEDIA_HAS_SRTP follows
+     * CONFIG_PJPROJECT_SRTP through the build.
+     */
+    #define PJMEDIA_SRTP_HAS_SDES               1
+    #define PJMEDIA_SRTP_HAS_DTLS               0
+    #define PJMEDIA_SRTP_HAS_AES_CM_256         0
+    #define PJMEDIA_SRTP_HAS_AES_GCM_256        0
+    #define PJMEDIA_SRTP_HAS_AES_GCM_128        0
+
+#endif  /* PJ_CONFIG_ZEPHYR */
 
 /*
  * Minimum size

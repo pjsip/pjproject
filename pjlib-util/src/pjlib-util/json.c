@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2013-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -589,7 +589,7 @@ static pj_status_t elem_write(const pj_json_elem *elem,
                                        (int)elem->value.num);
             else
                 len = pj_ansi_snprintf(num_buf, sizeof(num_buf), "%f",
-                                       elem->value.num);
+                                       (double)elem->value.num);
 
             if (len < 0 || len >= (int)sizeof(num_buf))
                 return PJ_ETOOBIG;

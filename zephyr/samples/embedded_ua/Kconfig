@@ -1,0 +1,37 @@
+# Copyright (C) 2026 Teluu Inc. (http://www.teluu.com)
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+mainmenu "PJSIP embedded_ua sample"
+
+menu "embedded_ua"
+
+config EMBUA_SIP_SERVER_IP
+	string "SIP server (registrar and proxy) IP address"
+	default "192.0.2.2"
+
+config EMBUA_USE_REGISTRATION
+	bool "Register to the SIP server"
+	default y
+	help
+	  Off, the UA is reached at its own address and makes calls to
+	  whatever URI it is told to.
+
+config EMBUA_USERNAME
+	string "SIP user name"
+	default "bob"
+
+config EMBUA_PASSWORD
+	string "SIP password"
+	default "secret"
+
+config EMBUA_HOST_TAP_IFACE
+	string "Host TAP interface for QEMU networking"
+	default "zeth"
+	help
+	  The host side of the emulated Ethernet link, created once with
+	  "ip tuntap add dev zeth mode tap". Used by "west build -t run" on
+	  the QEMU MPS2 boards; native_sim takes it from its devicetree.
+
+endmenu
+
+source "Kconfig.zephyr"

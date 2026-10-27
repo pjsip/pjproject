@@ -1914,6 +1914,7 @@ PJ_DEF(pj_status_t) pj_mutex_destroy(pj_mutex_t *mutex)
         return PJ_RETURN_OS_ERROR(status);
     }
 #else
+    PJ_UNUSED_ARG(retry);
     pj_assert( mutex == (pj_mutex_t*)1 );
     status = PJ_SUCCESS;
     return status;

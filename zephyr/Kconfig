@@ -1,0 +1,94 @@
+# Copyright (C) 2026 Teluu Inc. (http://www.teluu.com)
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+menuconfig PJPROJECT
+	bool "PJSIP (pjproject)"
+	depends on POSIX_API && NETWORKING && NET_SOCKETS && NET_IPV4
+	select REQUIRES_FULL_LIBC
+	help
+	  Build PJSIP for this application: pjlib, pjlib-util, pjnath,
+	  pjmedia, pjmedia-codec, pjsip, pjsip-simple and pjsip-ua. PJLIB
+	  runs on the POSIX layer (sockets, select, clock_gettime, and
+	  pthreads when PJPROJECT_THREADS is set), so the application must
+	  enable POSIX_API and networking. Link the application against the
+	  "pjproject" CMake target.
+
+if PJPROJECT
+
+config PJPROJECT_THREADS
+	bool "Thread support in PJLIB"
+	select POSIX_THREADS
+	help
+	  Build PJLIB with threads, mutexes and semaphores over pthreads.
+	  Off, PJLIB is single threaded: the application drives everything
+	  by polling and no pthread function is linked.
+
+	  Zephyr keeps pthread-specific data only for threads created with
+	  pthread_create(), so with this option the application must call
+	  PJLIB (pj_init() included) from such a thread, not from Zephyr's
+	  main thread.
+
+config PJPROJECT_TLS
+	bool "SIP over TLS with Mbed TLS"
+	depends on MBEDTLS && NET_TCP
+	help
+	  Build PJLIB's Mbed TLS backend and the SIP TLS transport against
+	  the Mbed TLS that Zephyr provides.
+
+config PJPROJECT_SRTP
+	bool "Secure RTP (SDES-SRTP) with the bundled libsrtp"
+	default y
+	help
+	  Build third_party/srtp. It uses its own AES and SHA-1 code.
+
+config PJPROJECT_CODEC_G711
+	bool "G.711 (PCMU and PCMA) codec"
+	default y
+
+config PJPROJECT_CODEC_G722
+	bool "G.722 codec"
+	default y
+
+config PJPROJECT_CODEC_L16
+	bool "L16 (linear PCM) codec"
+
+config PJPROJECT_RESAMPLE
+	bool "Resampling with the bundled libresample"
+	default y
+	help
+	  Needed when codecs of different clock rates, such as G.711 and
+	  G.722, are both enabled and a call may switch between them.
+
+config PJPROJECT_FLOATING_POINT
+	bool "Floating point in PJLIB"
+	default FPU
+	help
+	  Off, PJLIB avoids floating point arithmetic, which saves the
+	  soft-float helpers on a core without an FPU. The G.711 and G.722
+	  codecs use integers only.
+
+config PJPROJECT_LOG_MAX_LEVEL
+	int "Maximum log level compiled in"
+	range 0 6
+	default 5
+	help
+	  PJ_LOG_MAX_LEVEL: 0 compiles all logging out, 3 is info, 4 debug,
+	  5 and 6 trace. Lower values save flash.
+
+config PJPROJECT_IOQUEUE_MAX_HANDLES
+	int "Maximum sockets per I/O queue"
+	default 16
+	help
+	  PJ_IOQUEUE_MAX_HANDLES. PJLIB's select() backend needs
+	  CONFIG_ZVFS_OPEN_MAX to be at least this many; the build checks.
+
+config PJPROJECT_CONFIG_SITE
+	string "Path to a custom config_site.h"
+	help
+	  Empty, the generated pj/config_site.h selects the PJ_CONFIG_ZEPHYR
+	  preset in pj/config_site_sample.h. Otherwise the file at this path
+	  (absolute, or relative to the application) is used as
+	  pj/config_site.h, and should normally start with
+	  #define PJ_CONFIG_ZEPHYR 1 and #include <pj/config_site_sample.h>.
+
+endif # PJPROJECT

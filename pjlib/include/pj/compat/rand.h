@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -24,7 +24,19 @@
  * @brief Provides platform_rand() and platform_srand() functions.
  */
 
-#if defined(PJ_HAS_STDLIB_H) && PJ_HAS_STDLIB_H != 0
+#if defined(PJ_ZEPHYR) && PJ_ZEPHYR != 0
+   /*
+    * Zephyr's generator is fed by the entropy driver, so it needs no seed,
+    * whereas the C library's rand() would repeat the same sequence at
+    * every boot.
+    */
+#  include <zephyr/random/random.h>
+#  define platform_srand(seed)  ((void)(seed))
+   PJ_INLINE(int) platform_rand(void)
+   {
+       return (int)(sys_rand32_get() & 0x7FFFFFFF);
+   }
+#elif defined(PJ_HAS_STDLIB_H) && PJ_HAS_STDLIB_H != 0
    /*
     * Use stdlib based rand() and srand().
     */

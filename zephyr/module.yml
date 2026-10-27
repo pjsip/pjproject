@@ -1,0 +1,7 @@
+# Zephyr module descriptor for pjproject. Add this tree to a Zephyr
+# application with -DZEPHYR_EXTRA_MODULES=<path to pjproject>, or list it as
+# a project in a west manifest. See docs.pjsip.org for the Zephyr guide.
+name: pjproject
+build:
+  cmake: zephyr
+  kconfig: zephyr/Kconfig

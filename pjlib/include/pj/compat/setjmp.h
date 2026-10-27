@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -26,7 +26,21 @@
 
 #if defined(PJ_HAS_SETJMP_H) && PJ_HAS_SETJMP_H != 0
 #  include <setjmp.h>
-   typedef jmp_buf pj_jmp_buf;
+#  if defined(PJ_JMP_BUF_LONGS) && PJ_JMP_BUF_LONGS > 0
+     /* The setjmp() that gets linked may not be the one <setjmp.h>
+      * describes, e.g. a C library's headers over the host's libc. Give
+      * it a buffer sized by the platform header instead.
+      */
+     typedef long pj_jmp_buf[PJ_JMP_BUF_LONGS];
+#    ifndef pj_setjmp
+#      define pj_setjmp(buf)    setjmp(*(jmp_buf*)(buf))
+#    endif
+#    ifndef pj_longjmp
+#      define pj_longjmp(buf,d) longjmp(*(jmp_buf*)(buf),d)
+#    endif
+#  else
+     typedef jmp_buf pj_jmp_buf;
+#  endif
 #  ifndef pj_setjmp
 #    define pj_setjmp(buf)      setjmp(buf)
 #  endif

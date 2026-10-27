@@ -1,0 +1,10 @@
+sample:
+  name: PJSIP embedded_ua
+  description: SIP user agent on pjsip and pjmedia, registering to a PBX
+tests:
+  sample.pjsip.embedded_ua:
+    build_only: true
+    platform_allow:
+      - mps2/an521/cpu0
+      - native_sim/native/64
+    tags: net pjsip
