@@ -1218,9 +1218,9 @@ struct OnCallRxOfferParam
 struct OnCallRxReinviteParam
 {
     /**
-     * The new offer received. For an application-managed call receiving
-     * a re-INVITE without SDP,
-     * #SdpSession::wholeSdp is empty.
+     * The new offer received. For a re-INVITE without SDP on an
+     * application-managed call or when UaConfig::notifyOfferlessReinvite
+     * is enabled, #SdpSession::wholeSdp is empty.
      */
     SdpSession          offer;
 
@@ -1237,8 +1237,11 @@ struct OnCallRxReinviteParam
     
     /**
      * Status code to be returned for answering the offer. On input,
-     * it contains status code PJSIP_SC_OK (200). Currently, valid values are only
-     * PJSIP_SC_OK (200) and PJSIP_SC_NOT_ACCEPTABLE_HERE (488).
+     * it contains status code PJSIP_SC_OK (200). For a re-INVITE containing
+     * SDP, valid values are PJSIP_SC_OK (200) and
+     * PJSIP_SC_NOT_ACCEPTABLE_HERE (488). For a synchronous offerless
+     * re-INVITE, 2xx is treated as 200, 300-699 rejects the request, and
+     * values outside 200-699 are changed to 500.
      */
     pjsip_status_code   statusCode;
     
@@ -2382,10 +2385,13 @@ public:
      * the SDP answer. Otherwise, by default the re-INVITE will be
      * answered automatically after the callback returns.
      *
-     * For an application-managed call receiving a re-INVITE without SDP,
-     * this callback is also called with an empty prm.offer. By default,
-     * the active local SDP is re-offered. Application may set prm.isAsync
-     * to true and later call #pj::Call::answer() with its own local SDP offer.
+     * For a re-INVITE without SDP, this callback is called with an empty
+     * prm.offer only for application-managed calls or when
+     * UaConfig::notifyOfferlessReinvite is enabled. Otherwise, ordinary
+     * calls handle the request automatically without invoking this callback.
+     * By default, the active local SDP is re-offered. Application may set
+     * prm.isAsync to true and later call #pj::Call::answer() with its own
+     * local SDP offer.
      * On the asynchronous path, a successful final response requires an
      * application-supplied offer; the active local SDP is not automatically
      * re-offered.

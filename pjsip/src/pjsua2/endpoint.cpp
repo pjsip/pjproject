@@ -335,6 +335,7 @@ void UaConfig::fromPj(const pjsua_config &ua_cfg)
     this->accServerAffinityDefault = PJ2BOOL(ua_cfg.acc_server_affinity_default);
     this->serverFailover = PJ2BOOL(ua_cfg.server_failover);
     this->resolverFallback = PJ2BOOL(ua_cfg.resolver_fallback);
+    this->notifyOfferlessReinvite = PJ2BOOL(ua_cfg.notify_offerless_reinvite);
 }
 
 pjsua_config UaConfig::toPj() const
@@ -379,6 +380,7 @@ pjsua_config UaConfig::toPj() const
     pua_cfg.acc_server_affinity_default = this->accServerAffinityDefault;
     pua_cfg.server_failover = this->serverFailover;
     pua_cfg.resolver_fallback = this->resolverFallback;
+    pua_cfg.notify_offerless_reinvite = this->notifyOfferlessReinvite;
 
     return pua_cfg;
 }
@@ -404,6 +406,7 @@ void UaConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
     NODE_READ_BOOL_OPT( this_node, serverFailover);
     NODE_READ_BOOL_OPT( this_node, resolverFallback);
     NODE_READ_BOOL_OPT( this_node, enableCallSendAckCallback);
+    NODE_READ_BOOL_OPT( this_node, notifyOfferlessReinvite);
 }
 
 void UaConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
@@ -427,6 +430,7 @@ void UaConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
     NODE_WRITE_BOOL    ( this_node, serverFailover);
     NODE_WRITE_BOOL    ( this_node, resolverFallback);
     NODE_WRITE_BOOL    ( this_node, enableCallSendAckCallback);
+    NODE_WRITE_BOOL    ( this_node, notifyOfferlessReinvite);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

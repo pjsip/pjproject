@@ -1780,9 +1780,11 @@ typedef struct pjsua_callback
      * Otherwise, by default the re-INVITE will be answered automatically
      * after the callback returns.
      *
-     * For a re-INVITE without SDP, this callback is called with a NULL offer.
-     * This also applies to calls that are not application-managed when this
-     * callback is registered. By default, the active local SDP is re-offered.
+     * For a re-INVITE without SDP, this callback is called with a NULL offer
+     * only for application-managed calls or when
+     * pjsua_config.notify_offerless_reinvite is enabled. Otherwise, ordinary
+     * calls handle the request automatically without invoking this callback.
+     * By default, the active local SDP is re-offered.
      * Application may set \a async to PJ_TRUE and
      * later send the response with #pjsua_call_answer_with_sdp(), supplying
      * its own local SDP offer. On the asynchronous path, a successful final
@@ -1811,7 +1813,9 @@ typedef struct pjsua_callback
      * as pjsua deactivates it there, see on_call_sdp_created().
      *
      * @param call_id   The call index.
-     * @param offer     Remote offer, or NULL for a re-INVITE without SDP.
+     * @param offer     Remote offer, or NULL for a re-INVITE without SDP
+     *                  on an application-managed call or when
+     *                  pjsua_config.notify_offerless_reinvite is enabled.
      * @param rdata     The received re-INVITE request.
      * @param reserved  Reserved param, currently not used.
      * @param async     On input, it is PJ_FALSE. Set to PJ_TRUE if
@@ -2991,6 +2995,20 @@ typedef struct pjsua_config
      * Default: PJ_DNS_RESOLVER_SYS_FALLBACK (disabled)
      */
     pj_bool_t        resolver_fallback;
+
+    /**
+     * Invoke #pjsua_callback.on_call_rx_reinvite for re-INVITEs without SDP
+     * on ordinary calls. The callback receives a NULL offer and may accept,
+     * reject, or asynchronously answer the request. Applications enabling
+     * this option must handle a NULL offer in the callback.
+     *
+     * Application-managed calls receive this notification regardless of
+     * this setting. When disabled, ordinary calls handle offerless
+     * re-INVITEs automatically without invoking the callback.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t        notify_offerless_reinvite;
 
 } pjsua_config;
 
@@ -6966,6 +6984,8 @@ PJ_DECL(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
  * offer otherwise. For ordinary initial offerless calls, media is initialized
  * before installing the supplied offer. A pending local offer cannot be
  * replaced by this function.
+ * Supplying a local SDP offer while media initialization is already pending
+ * returns PJ_EBUSY without changing call state.
  * Supplying SDP with a final error response (code >= 300) returns
  * PJ_EINVALIDOP without changing call state.
  * An application-managed answer must have the same media-line count as the

@@ -6822,6 +6822,29 @@ static int test_initial_late_sdp_offer(pj_bool_t async_answer,
                 rc = -2033;
                 goto on_return;
             }
+
+            pjsua_var.calls[callee].med_ch_cb = &initial_offer_media_tp_pending;
+            status = pjsua_call_answer_with_sdp(callee, g_ctx.late_offer_sdp,
+                                               NULL, PJSIP_SC_OK, NULL, NULL);
+            if (pjsua_var.calls[callee].med_ch_cb !=
+                &initial_offer_media_tp_pending)
+            {
+                status = PJ_EBUG;
+            }
+            pjsua_var.calls[callee].med_ch_cb = NULL;
+            if (status != PJ_EBUSY || inv->neg ||
+                inv->invite_tsx->last_tx != last_tx ||
+                inv->last_answer != last_answer ||
+                pjsua_var.calls[callee].answer_sdp ||
+                pjsua_var.calls[callee].opt_inited != opt_inited ||
+                pjsua_var.calls[callee].med_prov_cnt != med_prov_cnt)
+            {
+                PJ_LOG(1, (THIS_FILE,
+                           "  SDP offer during media init: expected %d, got "
+                           "%d or mutated call state", PJ_EBUSY, status));
+                rc = -2054;
+                goto on_return;
+            }
         }
         g_ctx.late_offer_answer_status =
             pjsua_call_answer_with_sdp(callee, g_ctx.late_offer_sdp,
@@ -7538,6 +7561,7 @@ int pjsua_late_sdp_offer_test(void)
     ua_cfg.cb.on_incoming_call = &on_incoming_call;
     ua_cfg.cb.on_call_send_ack = &on_call_send_ack;
     ua_cfg.cb.on_call_rx_reinvite = &on_call_rx_reinvite;
+    ua_cfg.notify_offerless_reinvite = PJ_TRUE;
     ua_cfg.cb.on_stream_created2 = &on_stream_created2;
     ua_cfg.cb.on_stream_destroyed = &on_stream_destroyed;
     ua_cfg.cb.on_call_media_state = &on_call_media_state;

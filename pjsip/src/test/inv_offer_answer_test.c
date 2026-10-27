@@ -244,10 +244,13 @@ static pj_status_t on_rx_reinvite(pjsip_inv_session *inv,
     pjsip_tx_data *tdata;
     pj_status_t status;
 
-    PJ_UNUSED_ARG(offer);
-
     if (!answer_reinvite_manually)
         return PJ_EINVALIDOP;
+
+    if (offer || !pjsip_inv_has_pending_offerless_invite(inv)) {
+        null_offer_reinvite_answer_status = PJ_EINVALIDOP;
+        return PJ_EINVALIDOP;
+    }
 
     status = pjsip_inv_initial_answer(inv, rdata, 100, NULL, NULL, &tdata);
     if (status == PJ_SUCCESS)
@@ -544,6 +547,7 @@ static int perform_test(inv_test_param_t *param)
         const pjmedia_sdp_session *active_sdp = NULL;
         const pj_bool_t has_unknown_body =
             param->test_non_sdp_body_reinvite;
+        unsigned active_media_count;
         unsigned i;
 
         status = pjmedia_sdp_neg_get_active_local(inv_test.uas->neg,
@@ -553,8 +557,9 @@ static int perform_test(inv_test_param_t *param)
                        "    unable to get active local SDP before re-INVITE"));
             rc = -60;
         } else {
+            active_media_count = active_sdp->media_count;
             reject_null_offer = PJ_TRUE;
-            answer_reinvite_manually = PJ_TRUE;
+            answer_reinvite_manually = !has_unknown_body;
             expect_null_offer_response = PJ_FALSE;
             null_offer_response_code = 0;
             null_offer_response_media_count = 0;
@@ -599,36 +604,23 @@ static int perform_test(inv_test_param_t *param)
                     pjsip_endpt_handle_events(endpt, &delay);
                 }
 
-                if (has_unknown_body) {
-                    if (null_offer_response_code != 200 ||
-                        null_offer_response_has_sdp ||
-                        null_offer_create_offer_count != 0)
-                    {
-                        PJ_LOG(1, (THIS_FILE,
-                                   "    expected bodyless 200 without offer "
-                                   "callback, got %u with SDP=%d callback=%u",
-                                   null_offer_response_code,
-                                   null_offer_response_has_sdp,
-                                   null_offer_create_offer_count));
-                        rc = -62;
-                    }
-                } else if (null_offer_response_code != 200 ||
-                           !null_offer_response_has_sdp ||
-                           null_offer_response_media_count !=
-                               active_sdp->media_count ||
-                           null_offer_create_offer_count != 1)
+                if (null_offer_response_code != 200 ||
+                    !null_offer_response_has_sdp ||
+                    null_offer_response_media_count !=
+                        active_media_count ||
+                    null_offer_create_offer_count != 1)
                 {
                     PJ_LOG(1, (THIS_FILE,
                                "    expected 200 with active SDP (%u media), "
                                "got %u with SDP=%d (%u media), callback=%u",
-                               active_sdp->media_count,
+                               active_media_count,
                                null_offer_response_code,
                                null_offer_response_has_sdp,
                                null_offer_response_media_count,
                                null_offer_create_offer_count));
                     rc = -63;
                 }
-                if (!has_unknown_body &&
+                if (answer_reinvite_manually &&
                     null_offer_reinvite_answer_status != PJ_SUCCESS)
                 {
                     PJ_LOG(1, (THIS_FILE,
@@ -753,7 +745,7 @@ static inv_test_param_t test_params[] =
 
 #if PJSIP_INV_ACCEPT_UNKNOWN_BODY
     {
-        "Re-INVITE with unknown body does not trigger SDP offer",
+        "Re-INVITE with unknown body offers active SDP",
         0,
         PJ_TRUE,
         1,

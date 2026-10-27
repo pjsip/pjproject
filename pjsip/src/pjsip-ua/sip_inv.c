@@ -216,7 +216,6 @@ struct tsx_inv_data
     pj_bool_t            done_early;/* Negotiation was done for early med?  */
     pj_bool_t            done_early_rel;/* Early med was realiable?         */
     pj_bool_t            has_sdp;   /* Message with SDP?                    */
-    pj_bool_t            has_body;  /* Message has a body, even if not SDP  */
 };
 
 
@@ -2694,17 +2693,6 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
         return PJ_SUCCESS;
     }
 
-    /* Track body presence separately from SDP. Unknown bodies may be
-     * accepted, but must not be treated as an offerless request.
-     */
-    tsx_inv_data = (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
-    if (tsx_inv_data == NULL) {
-        tsx_inv_data = PJ_POOL_ZALLOC_T(tsx->pool, struct tsx_inv_data);
-        tsx_inv_data->inv = inv;
-        tsx->mod_data[mod_inv.mod.id] = tsx_inv_data;
-    }
-    tsx_inv_data->has_body = PJ_TRUE;
-
     sdp_info = pjsip_rdata_get_sdp_info(rdata);
     if (sdp_info->body.ptr == NULL) {
         /* Message body is not "application/sdp" */
@@ -2723,11 +2711,14 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
         goto on_return;
     }
 
-    /* Record whether this message carries SDP as well as whether it has any
-     * body at all. The latter distinguishes an offerless request from an
-     * accepted request with an unknown content type.
-     */
-    tsx_inv_data->has_sdp = (sdp_info->sdp != NULL);
+    /* Get/attach invite session's transaction data */
+    tsx_inv_data = (struct tsx_inv_data*) tsx->mod_data[mod_inv.mod.id];
+    if (tsx_inv_data == NULL) {
+        tsx_inv_data = PJ_POOL_ZALLOC_T(tsx->pool, struct tsx_inv_data);
+        tsx_inv_data->inv = inv;
+        tsx_inv_data->has_sdp = (sdp_info->sdp!=NULL);
+        tsx->mod_data[mod_inv.mod.id] = tsx_inv_data;
+    }
 
     /* Initialize info that we are following forked media */
     inv->following_fork = PJ_FALSE;
@@ -3206,11 +3197,9 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(   pjsip_inv_session *inv,
             tsx_inv_data = PJ_POOL_ZALLOC_T(inv->invite_tsx->pool,
                                             struct tsx_inv_data);
             tsx_inv_data->inv = inv;
-            tsx_inv_data->has_sdp = PJ_FALSE;
             inv->invite_tsx->mod_data[mod_inv.mod.id] = tsx_inv_data;
         }
-        if (tsx_inv_data && !tsx_inv_data->has_sdp &&
-            !tsx_inv_data->has_body)
+        if (!tsx_inv_data->has_sdp)
         {
             if (!offer && mod_inv.cb.on_create_offer) {
                 (*mod_inv.cb.on_create_offer)(inv, &new_offer);

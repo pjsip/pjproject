@@ -1051,6 +1051,19 @@ struct UaConfig : public PersistentObject
      */
     bool                enableCallSendAckCallback;
 
+    /**
+     * Invoke Call::onCallRxReinvite() for re-INVITEs without SDP on
+     * ordinary calls. The callback receives an empty offer and may accept,
+     * reject, or asynchronously answer the request.
+     *
+     * Application-managed calls receive this notification regardless of
+     * this setting. When disabled, ordinary calls handle offerless
+     * re-INVITEs automatically without invoking the callback.
+     *
+     * Default: false
+     */
+    bool                notifyOfferlessReinvite;
+
 public:
     /**
      * Default constructor to initialize with default values.
@@ -2554,4 +2567,3 @@ private:
 
 
 #endif  /* __PJSUA2_UA_HPP__ */
-

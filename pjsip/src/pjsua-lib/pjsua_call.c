@@ -3665,6 +3665,13 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
 
         if (code < 300 && sdp && local_offer)
         {
+            if (call->med_ch_cb) {
+                PJ_LOG(3,(THIS_FILE, "Cannot set SDP offer while media "
+                                    "initialization is pending"));
+                pjsip_dlg_dec_lock(dlg);
+                return PJ_EBUSY;
+            }
+
             status = pjsua_call_validate_initial_local_offer(call, opt, sdp);
             if (status != PJ_SUCCESS) {
                 pjsua_perror(THIS_FILE, "SDP offer does not match call media",
@@ -3676,7 +3683,7 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
             /* For an initial offerless INVITE, let call_answer_with_pending_sdp()
              * initialize media before setting the supplied SDP offer.
              */
-            if (neg_state == PJMEDIA_SDP_NEG_STATE_NULL && !call->med_ch_cb)
+            if (neg_state == PJMEDIA_SDP_NEG_STATE_NULL)
             {
                 if (call->answer_sdp) {
                     pjsip_dlg_dec_lock(dlg);
@@ -3705,7 +3712,7 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
                                           reason, msg_data, inv,
                                           pending_sdp);
 
-    if (status == PJ_SUCCESS)
+    if (status == PJ_SUCCESS || status == PJ_EPENDING)
         return status;
 
     cancel_status = acquire_call("pjsua_call_answer_with_sdp() rollback",
@@ -7034,7 +7041,8 @@ static pj_status_t pjsua_call_on_rx_reinvite(pjsip_inv_session *inv,
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
     if (!offer && (pjsua_call_media_is_app_managed(call) ||
-                   pjsua_var.ua_cfg.cb.on_call_rx_reinvite))
+                   (pjsua_var.ua_cfg.notify_offerless_reinvite &&
+                    pjsua_var.ua_cfg.cb.on_call_rx_reinvite)))
     {
         pjsua_call_setting opt;
         pjsua_call_setting callback_opt;
