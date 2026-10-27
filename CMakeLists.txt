@@ -65,8 +65,9 @@ endif()
 # Testing support
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-  # make builds no executable on Android, the test programs included
-  if(ANDROID)
+  # make builds no executable on Android, the test programs included. Off on
+  # iOS too, where a command line program cannot run on a device.
+  if(ANDROID OR IOS)
     option(BUILD_TESTING "Build the testing tree." OFF)
   endif()
   include(CTest)
@@ -108,14 +109,12 @@ endif()
 include(Pj/PkgConfig)
 
 # The sample applications are command line executables: pjsip-apps, and the
-# TURN client and server in pjnath. iOS has no place to run one, and CMake
-# would make each a bundle needing a destination and a signing identity, so
-# the iOS build stops at the libraries -- which is what an iOS consumer links
-# into an app of their own anyway.
+# TURN client and server in pjnath. Off by default on Android, as make excludes
+# them there, and on iOS, where they cannot run on a device; an iOS consumer
+# links the libraries into an app of their own.
 # Nor does firmware for a target CMake calls Generic, with no OS or with an
 # RTOS such as Zephyr, so the applications can be left out there.
-# On Android they are off by default, as make excludes them there.
-if(ANDROID)
+if(ANDROID OR IOS)
   set(_pj_build_apps_default OFF)
 else()
   set(_pj_build_apps_default ON)
@@ -123,6 +122,15 @@ endif()
 option(PJ_BUILD_APPS "Build pjsua and the sample applications"
   ${_pj_build_apps_default})
 unset(_pj_build_apps_default)
+
+# On iOS, build the executables (applications and tests, when turned on) as
+# plain command line programs, as make does, runnable in the Simulator with
+# `xcrun simctl spawn`. CMake would otherwise make each an app bundle, which
+# needs an install destination and a signing team.
+if(IOS)
+  set(CMAKE_MACOSX_BUNDLE OFF)
+  set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED NO)
+endif()
 
 # base library
 add_subdirectory(pjlib)
@@ -326,7 +334,7 @@ set(install_targets
   pjsua-lib
 )
 
-# optional targets: pjsua2 needs PJ_WITH_CXX, pjsua PJ_BUILD_APPS and not iOS
+# optional targets: pjsua2 needs PJ_WITH_CXX, pjsua PJ_BUILD_APPS
 foreach(target pjsua2 pjsua)
   if(TARGET ${target})
     list(APPEND install_targets ${target})
