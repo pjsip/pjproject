@@ -72,6 +72,32 @@ if(PJ_WITH_CXX)
   endforeach()
 endif() # PJ_WITH_CXX
 
+# ##############################################################################
+# pjsua-test: the Python tests in tests/pjsua, as make pjsua-test. Not in
+# ctest: they take minutes and some need SIPp.
+
+set(_pj_pjsua_test_dir "${PROJECT_SOURCE_DIR}/tests/pjsua")
+
+# mod_media_playrec.py runs tools/cmp_wav, so it is built there, and only for
+# pjsua-test, as make does
+add_executable(cmp_wav EXCLUDE_FROM_ALL "${_pj_pjsua_test_dir}/tools/cmp_wav.c")
+target_link_libraries(cmp_wav PRIVATE ${_pj_app_libs})
+set_target_properties(cmp_wav PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "$<1:${_pj_pjsua_test_dir}/tools>"
+)
+
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_FOUND)
+  add_custom_target(pjsua-test
+    COMMAND "${Python3_EXECUTABLE}" runall.py -t 2 --exe "$<TARGET_FILE:pjsua>"
+    WORKING_DIRECTORY "${_pj_pjsua_test_dir}"
+    DEPENDS pjsua cmp_wav
+    USES_TERMINAL
+    VERBATIM
+  )
+endif()
+unset(_pj_pjsua_test_dir)
+
 unset(_pj_app_libs)
 
 endif() # PJ_BUILD_APPS
