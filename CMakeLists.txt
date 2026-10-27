@@ -38,6 +38,24 @@ if(PJ_WITH_CXX)
   enable_language(CXX)
 endif()
 
+# As autoconf: -Wall everywhere, and -O2 when neither a build type nor an -O
+# flag is given. Not a CMake build type, as those define NDEBUG, which would
+# turn off pj_assert() and PJ_DEBUG. MSVC is left alone (clang-cl reads -Wall
+# as -Weverything).
+get_property(_pj_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+foreach(_lang C CXX)
+  if(NOT CMAKE_${_lang}_COMPILER_LOADED OR MSVC
+     OR NOT CMAKE_${_lang}_COMPILER_ID MATCHES "GNU|Clang")
+    continue()
+  endif()
+  add_compile_options($<$<COMPILE_LANGUAGE:${_lang}>:-Wall>)
+  if(NOT _pj_multi_config AND NOT CMAKE_BUILD_TYPE
+     AND NOT CMAKE_${_lang}_FLAGS MATCHES "(^| )-O")
+    add_compile_options($<$<COMPILE_LANGUAGE:${_lang}>:-O2>)
+  endif()
+endforeach()
+unset(_pj_multi_config)
+
 # project modules
 list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
