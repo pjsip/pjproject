@@ -732,7 +732,7 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
     pj_bool_t is_red = (hdr->pt == c_strm->si->rx_red_pt);
     pj_uint16_t seq = pj_ntohs(hdr->seq);
     pj_int16_t diff = 0;
-    pj_bool_t far;
+    pj_bool_t big_gap;
     int prev_last_seq;
     pj_status_t status = PJ_SUCCESS;
 
@@ -762,10 +762,10 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
     }
 
     diff = (pj_int16_t) (seq - stream->rx_last_seq);
-    far = stream->rx_last_seq != -1 &&
-          (diff > MAX_SEQ_GAP || diff < -MAX_SEQ_GAP);
+    big_gap = stream->rx_last_seq != -1 &&
+              (diff > MAX_SEQ_GAP || diff < -MAX_SEQ_GAP);
 
-    if (far && (seq_st.status.flag.bad || !seq_st.status.flag.outorder)) {
+    if (big_gap && (seq_st.status.flag.bad || !seq_st.status.flag.outorder)) {
         /* Accept a far sequence only if confirmed by the next packet (or
          * RTP session restart), otherwise it may be a stray packet. Late
          * packets (good, but out of order) are processed as usual.
