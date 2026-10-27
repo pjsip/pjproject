@@ -28,10 +28,11 @@ cmake_dependent_option(PJLIB_WITH_LIBUUID
 )
 
 # Enable SSL support with the selected implementation backend. auto takes the
-# first of OpenSSL, GnuTLS and MbedTLS found, as autoconf; empty disables SSL.
+# first of OpenSSL, GnuTLS and MbedTLS found, as autoconf; none (or empty)
+# disables SSL, as --disable-ssl.
 pj_option(PJLIB_WITH_SSL "Enable SSL support"
   DEFAULT auto
-  ALLOWED_VALUES auto openssl gnutls mbedtls darwin apple schannel
+  ALLOWED_VALUES auto none openssl gnutls mbedtls darwin apple schannel
 )
 
 # ##############################################################################
@@ -365,7 +366,9 @@ endif()
 add_library(pjlib-ssl INTERFACE) # a target to expose SSL deps
 pj_retry_on_new_root(PJLIB_WITH_SSL OpenSSL)
 set(_pj_ssl "${PJLIB_WITH_SSL}")
-if(_pj_ssl STREQUAL "auto")
+if(_pj_ssl STREQUAL "none")
+  set(_pj_ssl "")
+elseif(_pj_ssl STREQUAL "auto")
   find_package(OpenSSL COMPONENTS Crypto SSL MODULE QUIET)
   if(NOT OPENSSL_FOUND)
     find_package(OpenSSL COMPONENTS Crypto SSL CONFIG QUIET)
