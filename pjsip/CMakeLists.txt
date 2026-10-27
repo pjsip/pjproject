@@ -3,14 +3,6 @@ list(APPEND CMAKE_MESSAGE_CONTEXT "pjsip")
 # ##############################################################################
 # Module options
 
-include(CMakeDependentOption)
-
-# Include TLS transport support
-cmake_dependent_option(PJSIP_WITH_TLS
-  "Enable TLS transport support" ON
-  "PJ_SSL_BACKEND" OFF
-)
-
 # Include Digest AKAv1/AKAv2 authentication, using the bundled milenage
 option(PJSIP_WITH_DIGEST_AKA_AUTH "Enable Digest AKA authentication" OFF)
 
@@ -105,17 +97,11 @@ target_compile_definitions(pjsip
     PJSIP_HAS_DIGEST_AKA_AUTH=$<BOOL:${PJSIP_WITH_DIGEST_AKA_AUTH}>
 )
 
-# configuration
-block(SCOPE_FOR VARIABLES)
-  # G711 codec
-  set(PJSIP_HAS_TLS_TRANSPORT ${PJSIP_WITH_TLS})
-
-  # write configured header
-  configure_file(
-    include/pjsip/sip_autoconf.h.cm
-    include/pjsip/sip_autoconf.h
-  )
-endblock()
+# configuration; the TLS transport follows PJ_HAS_SSL_SOCK, as with autoconf
+configure_file(
+  include/pjsip/sip_autoconf.h.cm
+  include/pjsip/sip_autoconf.h
+)
 
 # add generated file to headers file set
 target_sources(pjsip
