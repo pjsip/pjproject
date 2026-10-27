@@ -546,6 +546,28 @@ static int refresh_error(const pj_str_t *registrar_uri,
 }
 
 
+/* Print a Contact's URI into buf, of PJSIP_MAX_URL_SIZE chars, and if prev
+ * is given, require the same URI.
+ */
+static int check_contact_uri(const pjsip_contact_hdr *h, const char *prev,
+                             char *buf)
+{
+    int len;
+
+    len = pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR, h->uri, buf,
+                          PJSIP_MAX_URL_SIZE-1);
+    if (len < 1)
+        return -1;
+    buf[len] = '\0';
+
+    if (prev && pj_ansi_strcmp(prev, buf) != 0) {
+        PJ_LOG(3,(THIS_FILE, "    error: Contact %s went out as %s",
+                  prev, buf));
+        return -1;
+    }
+    return 0;
+}
+
 /* Send error on refresh */
 static int update_test(const pj_str_t *registrar_uri)
 {
@@ -565,15 +587,15 @@ static int update_test(const pj_str_t *registrar_uri)
     pjsip_regc *regc;
     pjsip_contact_hdr *h1, *h2;
     pjsip_sip_uri *u1;
-    char uri[2][PJSIP_MAX_URL_SIZE], tmp[PJSIP_MAX_URL_SIZE];
+    char uri[3][PJSIP_MAX_URL_SIZE], tmp[PJSIP_MAX_URL_SIZE];
     pj_bool_t add_xuid_param;
-    unsigned i, j;
+    unsigned i;
     pj_status_t status;
     pjsip_tx_data *tdata = NULL;
     int ret = 0;
 
     /* initially only has 1 contact. The regc takes add_xuid_param on
-     * creation, and the Contact check below needs it on.
+     * creation, and the Contact checks below need it on.
      */
     add_xuid_param = pjsip_cfg()->regc.add_xuid_param;
     pjsip_cfg()->regc.add_xuid_param = PJ_TRUE;
@@ -583,6 +605,21 @@ static int update_test(const pj_str_t *registrar_uri)
     if (ret != 0) {
         return -600;
     }
+
+    /* The URI <sip:a> is registered with */
+    status = pjsip_regc_register(regc, PJ_TRUE, &tdata);
+    if (status != PJ_SUCCESS) {
+        ret = -602;
+        goto on_return;
+    }
+    h1 = (pjsip_contact_hdr*)
+          pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CONTACT, NULL);
+    if (!h1 || check_contact_uri(h1, NULL, uri[0]) != 0) {
+        ret = -604;
+        goto on_return;
+    }
+    pjsip_tx_data_dec_ref(tdata);
+    tdata = NULL;
 
     /*****
      * replace the contact with new one 
@@ -651,6 +688,14 @@ static int update_test(const pj_str_t *registrar_uri)
         }
     }
 
+    /* <sip:a> is removed with the x-uid it was registered with */
+    if (check_contact_uri(*u1->host.ptr == 'a' ? h1 : h2, uri[0], tmp) != 0 ||
+        check_contact_uri(*u1->host.ptr == 'a' ? h2 : h1, NULL, uri[1]) != 0)
+    {
+        ret = -685;
+        goto on_return;
+    }
+
     /* Destroy tdata */
     pjsip_tx_data_dec_ref(tdata);
     tdata = NULL;
@@ -716,28 +761,16 @@ static int update_test(const pj_str_t *registrar_uri)
             goto on_return;
         }
 
-        /* Same Contacts must go out unchanged, x-uid included, or the
-         * registrar sees new bindings and keeps the old ones.
+        /* A Contact set again goes out unchanged, x-uid included, or the
+         * registrar keeps its old binding: <sip:b> in both passes, <sip:c>
+         * in the second.
          */
-        for (j=0; j<2; ++j) {
-            char *buf = (i==0) ? uri[j] : tmp;
-            int len;
-
-            len = pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR,
-                                  (j==0 ? h1 : h2)->uri, buf,
-                                  PJSIP_MAX_URL_SIZE-1);
-            if (len < 1) {
-                ret = -770;
-                goto on_return;
-            }
-            buf[len] = '\0';
-
-            if (i==1 && pj_ansi_strcmp(uri[j], tmp) != 0) {
-                PJ_LOG(3,(THIS_FILE, "    error: Contact %s sent again as %s",
-                          uri[j], tmp));
-                ret = -780;
-                goto on_return;
-            }
+        if (check_contact_uri(h1, uri[1], tmp) != 0 ||
+            check_contact_uri(h2, (i==0 ? NULL : uri[2]),
+                              (i==0 ? uri[2] : tmp)) != 0)
+        {
+            ret = -770;
+            goto on_return;
         }
 
         /* Destroy tdata */
