@@ -3,10 +3,11 @@
 
 option(SRTP_WITH_OPENSSL "Build SRTP with OpenSSL support" ON)
 if(SRTP_WITH_OPENSSL)
-  # Same search order as pjlib, so that both link the same OpenSSL
-  find_package(OpenSSL COMPONENTS Crypto SSL MODULE)
+  # Same search order as pjlib, so that both link the same OpenSSL. srtp
+  # only needs libcrypto (EVP and HMAC), not libssl.
+  find_package(OpenSSL COMPONENTS Crypto MODULE)
   if(NOT OPENSSL_FOUND)
-    find_package(OpenSSL COMPONENTS Crypto SSL CONFIG)
+    find_package(OpenSSL COMPONENTS Crypto CONFIG)
   endif()
   if(OPENSSL_FOUND)
     # check GCM support. Under its own cache key: an earlier version of this
@@ -132,7 +133,7 @@ target_link_libraries(srtp PRIVATE pjlib)
 
 # OpenSSL
 if(SRTP_WITH_OPENSSL AND OPENSSL_HAS_GCM)
-  target_link_libraries(srtp PRIVATE OpenSSL::Crypto OpenSSL::SSL)
+  target_link_libraries(srtp PRIVATE OpenSSL::Crypto)
   target_compile_definitions(srtp PRIVATE OPENSSL=1 GCM=1)
 endif()
 

@@ -16,16 +16,21 @@ if(@PJ_APPLE@)
   find_dependency(AppleFoundation)
 endif()
 
-# SSL/TLS backend (mutually exclusive). OpenSSL is also needed by the bundled
-# srtp, for AES-GCM, whichever backend pjlib uses.
+# SSL/TLS backend (mutually exclusive). OpenSSL's libcrypto is also needed by
+# the bundled srtp, for AES-GCM, whichever backend pjlib uses.
 set(_pj_ssl_backend "@PJ_SSL_BACKEND@")
-if(_pj_ssl_backend STREQUAL "openssl" OR
-   ("@PJ_SRTP_WITH_OPENSSL@" AND "@PJ_DEP_SRTP@" STREQUAL "bundled"))
-  find_package(OpenSSL COMPONENTS Crypto SSL MODULE QUIET)
+if(_pj_ssl_backend STREQUAL "openssl")
+  set(_pj_openssl_components Crypto SSL)
+elseif("@PJ_SRTP_WITH_OPENSSL@" AND "@PJ_DEP_SRTP@" STREQUAL "bundled")
+  set(_pj_openssl_components Crypto)
+endif()
+if(_pj_openssl_components)
+  find_package(OpenSSL COMPONENTS ${_pj_openssl_components} MODULE QUIET)
   if(NOT OpenSSL_FOUND AND NOT OPENSSL_FOUND)
-    find_dependency(OpenSSL COMPONENTS Crypto SSL)
+    find_dependency(OpenSSL COMPONENTS ${_pj_openssl_components})
   endif()
 endif()
+unset(_pj_openssl_components)
 if(_pj_ssl_backend STREQUAL "gnutls")
   find_dependency(GnuTLS)
 elseif(_pj_ssl_backend STREQUAL "mbedtls")
