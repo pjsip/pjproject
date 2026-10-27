@@ -805,7 +805,10 @@ static pj_bool_t ip_change_do_action(pjsua_acc_id acc_id,
         {
             return PJ_FALSE;
         }
+        /* Under PJSUA_LOCK, as pjsua does on IP change */
+        PJSUA_LOCK();
         pjsip_transport_shutdown2(reg_info.transport, PJ_TRUE);
+        PJSUA_UNLOCK();
         return PJ_TRUE;
 
     case IPC_UNREG_BUSY:
