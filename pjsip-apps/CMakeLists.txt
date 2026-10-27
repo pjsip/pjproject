@@ -17,65 +17,62 @@ add_executable(pjsua
   src/pjsua/pjsua_app_legacy.c
 )
 
-target_link_libraries(pjsua
-  PRIVATE
-    pjlib
-    pjlib-util
-    pjnath
-    pjmedia
-    pjmedia-codec
-    pjmedia-audiodev
-    pjmedia-videodev
-    pjsip
-    pjsip-simple
-    pjsua-lib
+# Every application links all the libraries, as make's APP_LDLIBS
+set(_pj_app_libs
+  pjlib
+  pjlib-util
+  pjnath
+  pjmedia
+  pjmedia-codec
+  pjmedia-audiodev
+  pjmedia-videodev
+  pjsip
+  pjsip-simple
+  pjsip-ua
+  pjsua-lib
 )
+
+target_link_libraries(pjsua PRIVATE ${_pj_app_libs})
 
 # ##############################################################################
-# samples
+# pjsystest
 
-add_executable(aidemo src/samples/aidemo.c)
-target_link_libraries(aidemo
-  PRIVATE
-    pjlib
-    pjlib-util
-    pjnath
-    pjmedia
-    pjmedia-codec
-    pjmedia-audiodev
-    pjmedia-videodev
+add_executable(pjsystest
+  src/pjsystest/systest.c
+  src/pjsystest/main_console.c
 )
+target_link_libraries(pjsystest PRIVATE ${_pj_app_libs})
 
-add_executable(embedded_ua src/samples/embedded_ua.c)
-target_link_libraries(embedded_ua
-  PRIVATE
-    pjlib
-    pjlib-util
-    pjnath
-    pjmedia
-    pjmedia-codec
-    pjmedia-audiodev
-    pjsip
-    pjsip-ua
+# ##############################################################################
+# samples, as build/Samples.mak
+
+set(_pj_samples
+  aidemo auddemo aviplay aectest clidemo confsample embedded_ua encdec
+  httpdemo icedemo jbsim latency level mix pjsip-perf pcaputil playfile
+  playsine recfile resampleplay simpleua simple_pjsua sipecho siprtp
+  sipstateless stateful_proxy stateless_proxy stereotest streamutil strerror
+  tonegen vaddemo vid_codec_test vid_streamutil
 )
+foreach(_sample IN LISTS _pj_samples)
+  add_executable(${_sample} src/samples/${_sample}.c)
+  target_link_libraries(${_sample} PRIVATE ${_pj_app_libs})
+  set_target_properties(${_sample} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/samples"
+  )
+endforeach()
+unset(_pj_samples)
 
 if(PJ_WITH_CXX)
-add_executable(pjsua2_demo src/samples/pjsua2_demo.cpp)
-target_link_libraries(pjsua2_demo
-  PRIVATE
-    pjlib
-    pjlib-util
-    pjnath
-    pjmedia
-    pjmedia-audiodev
-    pjmedia-videodev
-    pjsip
-    pjsip-simple
-    pjsip-ua
-    pjsua-lib
-    pjsua2
-)
+  foreach(_sample pjsua2_demo pjsua2_hello_reg)
+    add_executable(${_sample} src/samples/${_sample}.cpp)
+    target_link_libraries(${_sample} PRIVATE ${_pj_app_libs} pjsua2)
+    set_target_properties(${_sample} PROPERTIES
+      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/samples"
+    )
+  endforeach()
 endif() # PJ_WITH_CXX
+
+unset(_pj_app_libs)
 
 endif() # PJ_BUILD_APPS
 
