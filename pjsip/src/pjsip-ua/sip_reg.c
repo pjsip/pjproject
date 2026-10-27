@@ -298,7 +298,7 @@ static pj_status_t set_contact( pjsip_regc *regc,
 {
     const pj_str_t CONTACT = { "Contact", 7 };
     pjsip_contact_hdr new_list;
-    pjsip_contact_hdr *h, *hdr, *old;
+    pjsip_contact_hdr *h, *hdr;
     int i;
 
     /* Parse and validate every new Contact up front. Nothing below this
@@ -347,13 +347,14 @@ static pj_status_t set_contact( pjsip_regc *regc,
 
     /* Process new contacts */
     while (!pj_list_empty(&new_list)) {
+        const pjsip_param *old_xuid = NULL;
+
         hdr = new_list.next;
         pj_list_erase(hdr);
 
         /* Find the new contact in old contact list. If found, remove
          * the old header from the old header list.
          */
-        old = NULL;
         h = regc->removed_contact_hdr_list.next;
         while (h != &regc->removed_contact_hdr_list) {
             int rc;
@@ -362,8 +363,19 @@ static pj_status_t set_contact( pjsip_regc *regc,
                                h->uri, hdr->uri);
             if (rc == 0) {
                 /* Match */
+                if (PJSIP_URI_SCHEME_IS_SIP(h->uri) ||
+                    PJSIP_URI_SCHEME_IS_SIPS(h->uri))
+                {
+                    pjsip_sip_uri *sip_uri;
+
+                    /* Keep its x-uid: the match ignores it, and a new
+                     * value would leave the old binding registered.
+                     */
+                    sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(h->uri);
+                    old_xuid = pjsip_param_cfind(&sip_uri->other_param,
+                                                 &XUID_PARAM_NAME);
+                }
                 pj_list_erase(h);
-                old = h;
                 break;
             }
 
@@ -378,18 +390,7 @@ static pj_status_t set_contact( pjsip_regc *regc,
                                      PJSIP_URI_SCHEME_IS_SIPS(hdr->uri))) 
         {
             pjsip_param *xuid_param;
-            const pjsip_param *old_xuid = NULL;
             pjsip_sip_uri *sip_uri;
-
-            /* Keep the x-uid of the binding this Contact refreshes: the
-             * match above ignores it, and a new value would leave the old
-             * binding registered alongside.
-             */
-            if (old) {
-                sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(old->uri);
-                old_xuid = pjsip_param_cfind(&sip_uri->other_param,
-                                             &XUID_PARAM_NAME);
-            }
 
             xuid_param = PJ_POOL_ZALLOC_T(regc->pool, pjsip_param);
             xuid_param->name = XUID_PARAM_NAME;
