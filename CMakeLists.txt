@@ -107,21 +107,11 @@ endif()
 # dependencies call for the pkg-config file
 include(Pj/PkgConfig)
 
-# base library
-add_subdirectory(pjlib)
-
-# third-party libraries
-add_subdirectory(third_party)
-
-# remaning libraries
-add_subdirectory(pjlib-util)
-add_subdirectory(pjnath)
-add_subdirectory(pjmedia)
-add_subdirectory(pjsip)
-# The sample applications are command line executables. iOS has no place to
-# run one, and CMake would make each a bundle needing a destination and a
-# signing identity, so the iOS build stops at the libraries -- which is what
-# an iOS consumer links into an app of their own anyway.
+# The sample applications are command line executables: pjsip-apps, and the
+# TURN client and server in pjnath. iOS has no place to run one, and CMake
+# would make each a bundle needing a destination and a signing identity, so
+# the iOS build stops at the libraries -- which is what an iOS consumer links
+# into an app of their own anyway.
 # Nor does firmware for a target CMake calls Generic, with no OS or with an
 # RTOS such as Zephyr, so the applications can be left out there.
 # On Android they are off by default, as make excludes them there.
@@ -133,6 +123,18 @@ endif()
 option(PJ_BUILD_APPS "Build pjsua and the sample applications"
   ${_pj_build_apps_default})
 unset(_pj_build_apps_default)
+
+# base library
+add_subdirectory(pjlib)
+
+# third-party libraries
+add_subdirectory(third_party)
+
+# remaning libraries
+add_subdirectory(pjlib-util)
+add_subdirectory(pjnath)
+add_subdirectory(pjmedia)
+add_subdirectory(pjsip)
 
 # Always added: besides the applications, it holds the pjsua2 JNI bindings,
 # which make builds in a step of their own regardless of the applications.

@@ -78,9 +78,16 @@ if(PJNATH_WITH_UPNP)
 endif()
 
 # ##############################################################################
+# TURN client and server, built with the other applications as make does
+
+if(NOT (PJ_BUILD_APPS AND NOT IOS))
+  set(_pj_turn_exclude EXCLUDE_FROM_ALL)
+endif()
+
+# ##############################################################################
 # Client application
 
-add_executable(pjturn-client EXCLUDE_FROM_ALL
+add_executable(pjturn-client ${_pj_turn_exclude}
   src/pjturn-client/client_main.c
 )
 
@@ -89,7 +96,7 @@ target_link_libraries(pjturn-client PRIVATE pjlib pjlib-util pjnath)
 # ##############################################################################
 # Server application
 
-add_executable(pjturn-srv EXCLUDE_FROM_ALL
+add_executable(pjturn-srv ${_pj_turn_exclude}
   src/pjturn-srv/allocation.c
   src/pjturn-srv/auth.c
   src/pjturn-srv/listener_udp.c
@@ -99,6 +106,7 @@ add_executable(pjturn-srv EXCLUDE_FROM_ALL
 )
 
 target_link_libraries(pjturn-srv PRIVATE pjlib pjlib-util pjnath)
+unset(_pj_turn_exclude)
 
 # ##############################################################################
 # Test application
@@ -113,7 +121,8 @@ if(BUILD_TESTING)
     src/pjnath-test/stun_sock_test.c
     src/pjnath-test/turn_sock_test.c
     src/pjnath-test/test.c
-    src/pjnath-test/${PJ_TEST_MAIN}
+    # main.c for every target, as make: pjnath has no main_rtems.c
+    src/pjnath-test/main.c
   )
 
   target_link_libraries(pjnath-test PRIVATE pjlib pjlib-util pjnath)
