@@ -586,4 +586,18 @@ pj_generate_pkgconfig(
   "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
   ${_pj_pc_libs}
 )
+
+# ##############################################################################
+# Convenience targets, as make's
+
+# lib: the libraries only, without the applications and tests
+add_custom_target(lib DEPENDS ${_pj_pc_libs})
 unset(_pj_pc_libs)
+
+# uninstall: remove what `cmake --install` installed
+add_custom_target(uninstall
+  COMMAND "${CMAKE_COMMAND}"
+    "-DPJ_INSTALL_MANIFEST=${CMAKE_CURRENT_BINARY_DIR}/install_manifest.txt"
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/Uninstall.cmake"
+  VERBATIM
+)
