@@ -226,9 +226,10 @@ static int guard_tests(void)
 }
 #endif
 
-/* Update-detection coverage, observed through pool usage: the no-update
- * path allocates nothing, and the refresh path resets the dedicated
- * pool, so neither may grow it across repeated reads. */
+/* Update-detection coverage, observed through pool usage. A read that
+ * does not reclaim allocates only when it refreshes, so it shows whether
+ * a refresh happened; a reclaiming read resets the pool first, so
+ * repeated refreshes must not grow it. */
 static int refresh_tests(void)
 {
     static const pj_uint8_t longser_first20[20] = {
@@ -247,16 +248,17 @@ static int refresh_tests(void)
     pj_bzero(&ci, sizeof(ci));
     cert = cert_from_hex(CERT_A_DER);
     if (!cert) { rc = -10; goto on_return; }
-    get_cert_info(info_pool, &ci, cert, PJ_TRUE);
+    get_cert_info(info_pool, &ci, cert, PJ_FALSE);
     used0 = pj_pool_get_used_size(info_pool);
     for (i = 0; i < 20; i++)
-        get_cert_info(info_pool, &ci, cert, PJ_TRUE);
+        get_cert_info(info_pool, &ci, cert, PJ_FALSE);
     PJ_TEST_EQ(pj_pool_get_used_size(info_pool), used0,
                "unchanged cert must not refresh", rc = -11; goto on_return);
     CFRelease(cert);
 
     /* Overlong serial: first 20 octets stored, and each read refreshes —
-     * the pool reset must keep usage flat across refreshes. */
+     * a non-reclaiming read grows the pool, and the pool reset must bring
+     * usage back and keep it flat across refreshes. */
     pj_pool_reset(info_pool);
     pj_bzero(&ci, sizeof(ci));
     cert = cert_from_hex(CERT_LONGSER_DER);
@@ -267,6 +269,9 @@ static int refresh_tests(void)
                  "serial_no must hold the first 20 octets",
                  rc = -21; goto on_return);
     used0 = pj_pool_get_used_size(info_pool);
+    get_cert_info(info_pool, &ci, cert, PJ_FALSE);
+    PJ_TEST_GT(pj_pool_get_used_size(info_pool), used0,
+               "truncated serial must refresh", rc = -19; goto on_return);
     for (i = 0; i < 20; i++)
         get_cert_info(info_pool, &ci, cert, PJ_TRUE);
     PJ_TEST_EQ(pj_pool_get_used_size(info_pool), used0,
