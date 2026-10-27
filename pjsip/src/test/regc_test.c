@@ -581,7 +581,8 @@ static int update_test(const pj_str_t *registrar_uri)
     pj_str_t contacts[] = {
         { "<sip:a>", 7 },
         { "<sip:b>", 7 },
-        { "<sip:c>", 7 }
+        { "<sip:c>", 7 },
+        { "<sip:d;x-uid=U>", 15 }
     };
 
     pjsip_regc *regc;
@@ -774,6 +775,44 @@ static int update_test(const pj_str_t *registrar_uri)
         }
 
         /* Destroy tdata */
+        pjsip_tx_data_dec_ref(tdata);
+        tdata = NULL;
+    }
+
+    /*****
+     * A Contact with an x-uid of its own goes out as given, also when set
+     * again
+     */
+    PJ_LOG(3,(THIS_FILE, "   updating with a Contact that has an x-uid"));
+    for (i=0; i<2; ++i) {
+        status = pjsip_regc_update_contact(regc, 1, &contacts[3]);
+        if (status != PJ_SUCCESS) {
+            ret = -790;
+            goto on_return;
+        }
+
+        status = pjsip_regc_register(regc, PJ_TRUE, &tdata);
+        if (status != PJ_SUCCESS) {
+            ret = -792;
+            goto on_return;
+        }
+
+        h1 = (pjsip_contact_hdr*)
+              pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CONTACT, NULL);
+        if (!h1 || h1->expires == 0 ||
+            check_contact_uri(h1, contacts[3].ptr, tmp) != 0)
+        {
+            ret = -794;
+            goto on_return;
+        }
+        /* The second pass removes nothing */
+        if (i==1 && (void*)h1->next != (void*)&tdata->msg->hdr &&
+            pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CONTACT, h1->next) != NULL)
+        {
+            ret = -796;
+            goto on_return;
+        }
+
         pjsip_tx_data_dec_ref(tdata);
         tdata = NULL;
     }

@@ -389,18 +389,22 @@ static pj_status_t set_contact( pjsip_regc *regc,
         if (regc->add_xuid_param && (PJSIP_URI_SCHEME_IS_SIP(hdr->uri) ||
                                      PJSIP_URI_SCHEME_IS_SIPS(hdr->uri))) 
         {
-            pjsip_param *xuid_param;
             pjsip_sip_uri *sip_uri;
 
-            xuid_param = PJ_POOL_ZALLOC_T(regc->pool, pjsip_param);
-            xuid_param->name = XUID_PARAM_NAME;
-            if (old_xuid)
-                xuid_param->value = old_xuid->value;
-            else
-                pj_create_unique_string(regc->pool, &xuid_param->value);
-
             sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(hdr->uri);
-            pj_list_push_back(&sip_uri->other_param, xuid_param);
+
+            /* Unless the Contact has one of its own */
+            if (!pjsip_param_cfind(&sip_uri->other_param, &XUID_PARAM_NAME)) {
+                pjsip_param *xuid_param;
+
+                xuid_param = PJ_POOL_ZALLOC_T(regc->pool, pjsip_param);
+                xuid_param->name = XUID_PARAM_NAME;
+                if (old_xuid)
+                    xuid_param->value = old_xuid->value;
+                else
+                    pj_create_unique_string(regc->pool, &xuid_param->value);
+                pj_list_push_back(&sip_uri->other_param, xuid_param);
+            }
         }
 
         pj_list_push_back(&regc->contact_hdr_list, hdr);
