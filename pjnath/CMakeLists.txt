@@ -80,7 +80,7 @@ endif()
 # ##############################################################################
 # TURN client and server, built with the other applications as make does
 
-if(NOT (PJ_BUILD_APPS AND NOT IOS))
+if(NOT PJ_BUILD_APPS)
   set(_pj_turn_exclude EXCLUDE_FROM_ALL)
 endif()
 

@@ -3,7 +3,7 @@ list(APPEND CMAKE_MESSAGE_CONTEXT "pjsip-apps")
 include(CMakeDependentOption)
 
 # The applications, see PJ_BUILD_APPS in the top-level CMakeLists.txt
-if(PJ_BUILD_APPS AND NOT IOS)
+if(PJ_BUILD_APPS)
 
 # ##############################################################################
 # pjsua
@@ -77,7 +77,7 @@ target_link_libraries(pjsua2_demo
 )
 endif() # PJ_WITH_CXX
 
-endif() # PJ_BUILD_APPS AND NOT IOS
+endif() # PJ_BUILD_APPS
 
 # ##############################################################################
 # SWIG bindings
