@@ -3,12 +3,21 @@ list(APPEND CMAKE_MESSAGE_CONTEXT "pjnath")
 # ##############################################################################
 # Options
 
+include(Pj/Option)
+
 # Include UPnP (Universal Plug and Play) support
+# an earlier version of this file forced it off without a way back
+get_property(_pj_doc CACHE PJNATH_WITH_UPNP PROPERTY HELPSTRING)
+if(_pj_doc MATCHES "\\(not found\\)$")
+  unset(PJNATH_WITH_UPNP CACHE)
+endif()
+unset(_pj_doc)
 option(PJNATH_WITH_UPNP "Enable UPnP support" ON)
+pj_retry_on_new_root(PJNATH_WITH_UPNP UPNP)
 if(PJNATH_WITH_UPNP)
   find_package(UPNP)
   if(NOT UPNP_FOUND)
-    set(PJNATH_WITH_UPNP OFF CACHE BOOL "Enable UPnP support (not found)" FORCE)
+    pj_force_set(PJNATH_WITH_UPNP OFF "UPnP not found")
   endif()
 endif()
 
