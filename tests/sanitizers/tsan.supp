@@ -142,6 +142,21 @@ deadlock:acc_check_nat_addr
 #=============================================================================
 
 #=============================================================================
+# The same cycle on IP change, exposed by pjsua_acc_test:
+#   M0 -> M1: handle_ip_change_on_acc(), or pjsua_acc_on_tp_state_changed()
+#     after the IP change transport shutdown, holds PJSUA_LOCK while
+#     pjsua_acc_update_contact_on_ip_change() re-registers, so
+#     pjsip_regc_send() takes the new transaction's grp_lock with
+#     PJSUA_LOCK held.
+#   M1 -> M0: regc_tsx_cb() takes PJSUA_LOCK from tsx_set_state(), as
+#     above.
+#
+# Suppressed on pjsua_acc_update_contact_on_ip_change because that frame
+# is unique to this cycle.
+deadlock:pjsua_acc_update_contact_on_ip_change
+#=============================================================================
+
+#=============================================================================
 # Lock-order-inversion between PJSUA_LOCK and a server presence
 # subscription's dialog grp_lock, exposed by pjsua_pres_test.
 #
