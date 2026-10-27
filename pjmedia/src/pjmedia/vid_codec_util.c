@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -80,7 +80,7 @@ static pj_status_t parse_custom_res_fmtp(const pj_str_t *fmtp_val,
     p_end = p + fmtp_val->slen;
 
     while (p<=p_end && i<PJ_ARRAY_SIZE(val)) {
-        if (*p==',' || p==p_end) {
+        if (p==p_end || *p==',') {
             token.slen = (char*)p - token.ptr;
             val[i++] = pj_strtoul(&token);
             token.ptr = (char*)p+1;
