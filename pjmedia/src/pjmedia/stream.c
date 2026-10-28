@@ -534,6 +534,15 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
              */
             exp_decoded_samples = PJ_MAX(bit_info, samples_per_frame);
             if (stream->dec_buf &&
+                exp_decoded_samples > stream->dec_buf_size)
+            {
+                PJ_LOG(4,(port->info.name.ptr,
+                          "Codec signalled %u decoded samples, more than "
+                          "the decoding buffer (%u), capping",
+                          exp_decoded_samples, stream->dec_buf_size));
+                exp_decoded_samples = stream->dec_buf_size;
+            }
+            if (stream->dec_buf &&
                 exp_decoded_samples * sizeof(pj_int16_t) > frame_out.size)
             {
                 stream->dec_buf_pos = 0;
@@ -655,6 +664,7 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
     pjmedia_channel *channel = c_strm->dec;
     pjmedia_frame_ext *f = (pjmedia_frame_ext*)frame;
     unsigned samples_per_frame, samples_required;
+    pj_size_t capacity, used = 0;
     pj_uint32_t rtp_ts = 0;
     pj_status_t status;
 
@@ -675,13 +685,21 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
                         stream->codec_param.info.frm_ptime_denum /
                         1000;
 
+    /* Capacity of the subframes area, see pjmedia_frame_ext. */
+    capacity = frame->size;
+
     pj_bzero(f, sizeof(pjmedia_frame_ext));
     f->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
 
     while (f->samples_cnt < samples_required) {
         char frame_type;
         pj_size_t frame_size = channel->buf_size;
+        pj_size_t subframe_size;
         pj_uint32_t bit_info;
+
+        /* Stop when not even an empty subframe can fit the capacity. */
+        if (capacity && used + sizeof(pj_uint16_t) > capacity)
+            break;
 
         /* Lock jitter buffer mutex first */
         pj_mutex_lock( c_strm->jb_mutex );
@@ -700,6 +718,15 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
         if (frame_type == PJMEDIA_JB_NORMAL_FRAME) {
             /* Got "NORMAL" frame from jitter buffer */
             pjmedia_frame frame_in;
+
+            subframe_size = sizeof(pj_uint16_t) + frame_size;
+            if (capacity && used + subframe_size > capacity) {
+                PJ_LOG(4,(port->info.name.ptr, "Frame of %lu bytes dropped, "
+                          "no space left in the extended frame",
+                          (unsigned long)frame_size));
+                break;
+            }
+            used += subframe_size;
 
             /* Decode */
             frame_in.buf = channel->buf;
@@ -776,6 +803,7 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
                 pjmedia_frame_ext_append_subframe(f, NULL, 0,
                                             (pj_uint16_t)samples_per_frame);
             }
+            used += sizeof(pj_uint16_t);
 
             if (frame_type == PJMEDIA_JB_MISSING_FRAME) {
                 if (frame_type != c_strm->jb_last_frm) {
@@ -1979,6 +2007,28 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     if (stream->codec_param.info.frm_ptime_denum < 1)
         stream->codec_param.info.frm_ptime_denum = 1;
 
+    /* The encoding buffer holds PJMEDIA_MAX_FRAME_DURATION_MS of audio, so
+     * cap the packet duration (e.g. requested by remote's ptime) to it.
+     */
+    if (stream->codec_param.info.frm_ptime > 0 &&
+        stream->codec_param.info.frm_ptime *
+        stream->codec_param.setting.frm_per_pkt >
+        PJMEDIA_MAX_FRAME_DURATION_MS * stream->codec_param.info.frm_ptime_denum)
+    {
+        unsigned max_frm_per_pkt;
+
+        max_frm_per_pkt = PJMEDIA_MAX_FRAME_DURATION_MS *
+                          stream->codec_param.info.frm_ptime_denum /
+                          stream->codec_param.info.frm_ptime;
+        if (max_frm_per_pkt < 1)
+            max_frm_per_pkt = 1;
+        PJ_LOG(4,(name.ptr, "Frames per packet %d exceeds %d ms, "
+                            "capped to %u",
+                            stream->codec_param.setting.frm_per_pkt,
+                            PJMEDIA_MAX_FRAME_DURATION_MS, max_frm_per_pkt));
+        stream->codec_param.setting.frm_per_pkt = (pj_uint8_t)max_frm_per_pkt;
+    }
+
     if (stream->codec_param.info.enc_ptime_denum < 1)
         stream->codec_param.info.enc_ptime_denum = 1;
 
@@ -2224,21 +2274,6 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
         jb_init = 0;
     }
 
-    /* Create jitter buffer */
-    status = pjmedia_jbuf_create(pool, &c_strm->port.info.name,
-                                 c_strm->frame_size,
-                                 stream->codec_param.info.frm_ptime,
-                                 jb_max, &c_strm->jb);
-    if (status != PJ_SUCCESS)
-        goto err_cleanup;
-
-
-    /* Set up jitter buffer */
-    pjmedia_jbuf_set_ptime2(c_strm->jb, stream->codec_param.info.frm_ptime,
-                            stream->codec_param.info.frm_ptime_denum);
-    pjmedia_jbuf_set_adaptive( c_strm->jb, jb_init, jb_min_pre, jb_max_pre);
-    pjmedia_jbuf_set_discard(c_strm->jb, info->jb_discard_algo);
-
     /* buf buffer is used for sending and receiving, so lets calculate
      * its size based on both. For receiving, we have c_strm->frame_size,
      * which is used in configuring jitter buffer frame length.
@@ -2255,6 +2290,12 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     if (status != PJ_SUCCESS)
         goto err_cleanup;
 
+    /* Frames are retrieved from the jitter buffer into the decoding channel
+     * buffer, which may be capped by the MTU, so cap the jitter buffer frame
+     * size to it.
+     */
+    if (c_strm->frame_size > c_strm->dec->buf_size)
+        c_strm->frame_size = c_strm->dec->buf_size;
 
     /* Create encoder channel: */
     status = create_channel( pool, c_strm, PJMEDIA_DIR_ENCODING,
@@ -2262,6 +2303,21 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     if (status != PJ_SUCCESS)
         goto err_cleanup;
 
+
+    /* Create jitter buffer */
+    status = pjmedia_jbuf_create(pool, &c_strm->port.info.name,
+                                 c_strm->frame_size,
+                                 stream->codec_param.info.frm_ptime,
+                                 jb_max, &c_strm->jb);
+    if (status != PJ_SUCCESS)
+        goto err_cleanup;
+
+
+    /* Set up jitter buffer */
+    pjmedia_jbuf_set_ptime2(c_strm->jb, stream->codec_param.info.frm_ptime,
+                            stream->codec_param.info.frm_ptime_denum);
+    pjmedia_jbuf_set_adaptive( c_strm->jb, jb_init, jb_min_pre, jb_max_pre);
+    pjmedia_jbuf_set_discard(c_strm->jb, info->jb_discard_algo);
 
     /* Init RTCP session: */
 

@@ -2810,9 +2810,16 @@ PJ_DEF(pj_status_t) pj_ssl_sock_set_certificate(
     pj_strdup_with_null(pool, &cert_->privkey_file, &cert->privkey_file);
     pj_strdup_with_null(pool, &cert_->privkey_pass, &cert->privkey_pass);
 
+#   if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_MBEDTLS)
+    /* Terminate with NUL for Mbed TLS PEM parsing. */
+    pj_strdup_with_null(pool, &cert_->CA_buf, &cert->CA_buf);
+    pj_strdup_with_null(pool, &cert_->cert_buf, &cert->cert_buf);
+    pj_strdup_with_null(pool, &cert_->privkey_buf, &cert->privkey_buf);
+#   else
     pj_strdup(pool, &cert_->CA_buf, &cert->CA_buf);
     pj_strdup(pool, &cert_->cert_buf, &cert->cert_buf);
     pj_strdup(pool, &cert_->privkey_buf, &cert->privkey_buf);
+#   endif
     pj_strdup(pool, &cert_->ocsp_resp_buf, &cert->ocsp_resp_buf);
 
     /* For OpenSSL version >= 3.0, add ref EVP_PKEY & X509 */

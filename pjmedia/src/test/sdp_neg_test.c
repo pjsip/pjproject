@@ -1896,6 +1896,234 @@ static int sdp_neg_static_pt_repr_test(pj_pool_t *pool)
     return 0;
 }
 
+/* A remote offer repeating a format (here RED, which the local m=text line
+ * carries once) must not inflate the answer's format list beyond the local
+ * one. Check both a repeated payload type and distinct payload types mapped
+ * to the same encoding.
+ */
+static int sdp_neg_dup_fmt_test(pj_pool_t *pool)
+{
+    static const char *offers[] = {
+        "v=0\r\n"
+        "o=- 1 1 IN IP4 127.0.0.1\r\n"
+        "s=-\r\nc=IN IP4 127.0.0.1\r\n"
+        "t=0 0\r\n"
+        "m=text 7002 RTP/AVP 100 100 100\r\n"
+        "a=rtpmap:100 red/1000\r\n",
+
+        "v=0\r\n"
+        "o=- 1 1 IN IP4 127.0.0.1\r\n"
+        "s=-\r\nc=IN IP4 127.0.0.1\r\n"
+        "t=0 0\r\n"
+        "m=text 7002 RTP/AVP 100 101 102 98\r\n"
+        "a=rtpmap:100 red/1000\r\n"
+        "a=rtpmap:101 red/1000\r\n"
+        "a=rtpmap:102 red/1000\r\n"
+        "a=rtpmap:98 t140/1000\r\n",
+
+        "v=0\r\n"
+        "o=- 1 1 IN IP4 127.0.0.1\r\n"
+        "s=-\r\nc=IN IP4 127.0.0.1\r\n"
+        "t=0 0\r\n"
+        "m=text 7002 RTP/AVP 100 100 98 98\r\n"
+        "a=rtpmap:100 red/1000\r\n"
+        "a=fmtp:100 98/98/98\r\n"
+        "a=rtpmap:98 t140/1000\r\n",
+    };
+    static const unsigned expected_fmt_count[] = { 1, 2, 2 };
+    /* With local codec order the first offer (RED only, no text codec)
+     * is correctly rejected for lack of a matching codec.
+     */
+    static const pj_status_t expected_local_order_status[] =
+        { PJMEDIA_SDPNEG_NOANSCODEC, PJ_SUCCESS, PJ_SUCCESS };
+    static const char local_str[] =
+        "v=0\r\n"
+        "o=- 2 1 IN IP4 127.0.0.1\r\n"
+        "s=-\r\nc=IN IP4 127.0.0.1\r\n"
+        "t=0 0\r\n"
+        "m=text 4000 RTP/AVP 100 98\r\n"
+        "a=rtpmap:100 red/1000\r\n"
+        "a=fmtp:100 98/98/98\r\n"
+        "a=rtpmap:98 t140/1000\r\n";
+    unsigned t;
+
+    for (t = 0; t < PJ_ARRAY_SIZE(offers); ++t) {
+        pjmedia_sdp_session *offer, *local;
+        pjmedia_sdp_neg *neg;
+        const pjmedia_sdp_session *active_local;
+        const pjmedia_sdp_media *m;
+        char *b1, *b2;
+        unsigned i;
+        int prefer_remote;
+        pj_status_t status;
+
+        for (prefer_remote = 0; prefer_remote < 2; ++prefer_remote) {
+            b1 = pj_pool_alloc(pool, pj_ansi_strlen(offers[t]) + 1);
+            b2 = pj_pool_alloc(pool, sizeof(local_str));
+            pj_memcpy(b1, offers[t], pj_ansi_strlen(offers[t]) + 1);
+            pj_memcpy(b2, local_str, sizeof(local_str));
+
+            PJ_TEST_SUCCESS(pjmedia_sdp_parse(pool, b1, pj_ansi_strlen(b1),
+                                              &offer), NULL, return -2100);
+            PJ_TEST_SUCCESS(pjmedia_sdp_parse(pool, b2, pj_ansi_strlen(b2),
+                                              &local), NULL, return -2110);
+            PJ_TEST_SUCCESS(pjmedia_sdp_neg_create_w_remote_offer(pool, local,
+                                                                 offer, &neg),
+                            NULL, return -2120);
+            pjmedia_sdp_neg_set_prefer_remote_codec_order(neg, prefer_remote);
+            status = pjmedia_sdp_neg_negotiate(pool, neg, 0);
+            if (!prefer_remote) {
+                PJ_TEST_EQ(status, expected_local_order_status[t], NULL,
+                           return -2130);
+                if (status != PJ_SUCCESS)
+                    continue;
+            } else {
+                PJ_TEST_SUCCESS(status, NULL, return -2135);
+            }
+
+            pjmedia_sdp_neg_get_active_local(neg, &active_local);
+            m = active_local->media[0];
+            PJ_TEST_EQ(m->desc.fmt_count, expected_fmt_count[t], NULL,
+                       return -2140);
+
+            /* Every answer format must be one of the local formats, and
+             * must appear only once.
+             */
+            for (i = 0; i < m->desc.fmt_count; ++i) {
+                unsigned j;
+
+                PJ_TEST_TRUE(pj_strcmp2(&m->desc.fmt[i], "100") == 0 ||
+                             pj_strcmp2(&m->desc.fmt[i], "98") == 0,
+                             NULL, return -2150);
+                for (j = i + 1; j < m->desc.fmt_count; ++j) {
+                    PJ_TEST_TRUE(pj_strcmp(&m->desc.fmt[i],
+                                           &m->desc.fmt[j]) != 0,
+                                 NULL, return -2160);
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
+/* Match H264 formats by their fmtp (packetization-mode) only. */
+static pj_status_t h264_fmtp_match(pj_pool_t *pool,
+                                   pjmedia_sdp_media *offer,
+                                   unsigned o_fmt_idx,
+                                   pjmedia_sdp_media *answer,
+                                   unsigned a_fmt_idx,
+                                   unsigned option)
+{
+    const pjmedia_sdp_attr *oa, *aa;
+    pjmedia_sdp_fmtp of, af;
+
+    PJ_UNUSED_ARG(pool);
+    PJ_UNUSED_ARG(option);
+
+    oa = pjmedia_sdp_media_find_attr2(offer, "fmtp",
+                                      &offer->desc.fmt[o_fmt_idx]);
+    aa = pjmedia_sdp_media_find_attr2(answer, "fmtp",
+                                      &answer->desc.fmt[a_fmt_idx]);
+    if (!oa || !aa ||
+        pjmedia_sdp_attr_get_fmtp(oa, &of) != PJ_SUCCESS ||
+        pjmedia_sdp_attr_get_fmtp(aa, &af) != PJ_SUCCESS ||
+        pj_strcmp(&of.fmt_param, &af.fmt_param) != 0)
+    {
+        return PJMEDIA_SDP_EFORMATNOTEQUAL;
+    }
+    return PJ_SUCCESS;
+}
+
+/* Two local formats sharing an encoding name and clock rate (here H264
+ * with different packetization-mode) must each be able to answer a distinct
+ * offer format when answering with multiple codecs: a local format already
+ * in the answer must not stop the search for the next offer format.
+ */
+static int sdp_neg_dup_enc_name_run(pj_pool_t *pool)
+{
+    static const char offer_str[] =
+        "v=0\r\n"
+        "o=- 1 1 IN IP4 127.0.0.1\r\n"
+        "s=-\r\nc=IN IP4 127.0.0.1\r\n"
+        "t=0 0\r\n"
+        "m=video 7004 RTP/AVP 96 99\r\n"
+        "a=rtpmap:96 H264/90000\r\n"
+        "a=fmtp:96 packetization-mode=1\r\n"
+        "a=rtpmap:99 H264/90000\r\n"
+        "a=fmtp:99 packetization-mode=0\r\n";
+    static const char local_str[] =
+        "v=0\r\n"
+        "o=- 2 1 IN IP4 127.0.0.1\r\n"
+        "s=-\r\nc=IN IP4 127.0.0.1\r\n"
+        "t=0 0\r\n"
+        "m=video 4002 RTP/AVP 97 98\r\n"
+        "a=rtpmap:97 H264/90000\r\n"
+        "a=fmtp:97 packetization-mode=1\r\n"
+        "a=rtpmap:98 H264/90000\r\n"
+        "a=fmtp:98 packetization-mode=0\r\n";
+    int prefer_remote;
+
+    for (prefer_remote = 0; prefer_remote < 2; ++prefer_remote) {
+        pjmedia_sdp_session *offer, *local;
+        pjmedia_sdp_neg *neg;
+        const pjmedia_sdp_session *active_local;
+        const pjmedia_sdp_media *m;
+        char *b1, *b2;
+
+        b1 = pj_pool_alloc(pool, sizeof(offer_str));
+        b2 = pj_pool_alloc(pool, sizeof(local_str));
+        pj_memcpy(b1, offer_str, sizeof(offer_str));
+        pj_memcpy(b2, local_str, sizeof(local_str));
+
+        PJ_TEST_SUCCESS(pjmedia_sdp_parse(pool, b1, pj_ansi_strlen(b1),
+                                          &offer), NULL, return -2200);
+        PJ_TEST_SUCCESS(pjmedia_sdp_parse(pool, b2, pj_ansi_strlen(b2),
+                                          &local), NULL, return -2210);
+        PJ_TEST_SUCCESS(pjmedia_sdp_neg_create_w_remote_offer(pool, local,
+                                                             offer, &neg),
+                        NULL, return -2220);
+        pjmedia_sdp_neg_set_prefer_remote_codec_order(neg, prefer_remote);
+        pjmedia_sdp_neg_set_answer_multiple_codecs(neg, PJ_TRUE);
+        PJ_TEST_SUCCESS(pjmedia_sdp_neg_negotiate(pool, neg, 0), NULL,
+                        return -2230);
+
+        pjmedia_sdp_neg_get_active_local(neg, &active_local);
+        m = active_local->media[0];
+        /* Both offer formats answered: local 97 for offer 96 and local 98
+         * for offer 99, renumbered when answering with symmetric PT.
+         */
+        PJ_TEST_EQ(m->desc.fmt_count, 2, NULL, return -2240);
+#if PJMEDIA_SDP_NEG_ANSWER_SYMMETRIC_PT
+        PJ_TEST_TRUE(pj_strcmp2(&m->desc.fmt[0], "96") == 0, NULL,
+                     return -2250);
+        PJ_TEST_TRUE(pj_strcmp2(&m->desc.fmt[1], "99") == 0, NULL,
+                     return -2260);
+#else
+        PJ_TEST_TRUE(pj_strcmp2(&m->desc.fmt[0], "97") == 0, NULL,
+                     return -2250);
+        PJ_TEST_TRUE(pj_strcmp2(&m->desc.fmt[1], "98") == 0, NULL,
+                     return -2260);
+#endif
+    }
+
+    return 0;
+}
+
+static int sdp_neg_dup_enc_name_test(pj_pool_t *pool)
+{
+    pj_str_t h264 = pj_str("H264");
+    int rc;
+
+    PJ_TEST_SUCCESS(pjmedia_sdp_neg_register_fmt_match_cb(&h264,
+                                                          &h264_fmtp_match),
+                    NULL, return -2270);
+    rc = sdp_neg_dup_enc_name_run(pool);
+    pjmedia_sdp_neg_register_fmt_match_cb(&h264, NULL);
+
+    return rc;
+}
+
 /* Real-world SDP offer/answer pair used to verify that
  * pjmedia_sdp_neg_negotiate_passthrough() promotes the fed-in SDP verbatim,
  * without the fmtp reconciliation / payload-type bookkeeping that a normal
@@ -2882,6 +3110,36 @@ int sdp_neg_test()
 
         PJ_LOG(3,(THIS_FILE, "  sdp_neg_static_pt_repr_test"));
         status = sdp_neg_static_pt_repr_test(pool);
+        pj_pool_release(pool);
+
+        if (status != 0)
+            return status;
+    }
+
+    {
+        pj_pool_t *pool;
+
+        pool = pj_pool_create(mem, "sdp_neg_dup_fmt", 4000, 4000, NULL);
+        if (!pool)
+            return PJ_ENOMEM;
+
+        PJ_LOG(3,(THIS_FILE, "  sdp_neg_dup_fmt_test"));
+        status = sdp_neg_dup_fmt_test(pool);
+        pj_pool_release(pool);
+
+        if (status != 0)
+            return status;
+    }
+
+    {
+        pj_pool_t *pool;
+
+        pool = pj_pool_create(mem, "sdp_neg_dup_enc", 4000, 4000, NULL);
+        if (!pool)
+            return PJ_ENOMEM;
+
+        PJ_LOG(3,(THIS_FILE, "  sdp_neg_dup_enc_name_test"));
+        status = sdp_neg_dup_enc_name_test(pool);
         pj_pool_release(pool);
 
         if (status != 0)

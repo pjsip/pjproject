@@ -124,6 +124,8 @@ PJ_DEF(pj_bool_t) pjsua_acc_is_valid(pjsua_acc_id acc_id)
  */
 PJ_DEF(pj_status_t) pjsua_acc_set_default(pjsua_acc_id acc_id)
 {
+    if (!pjsua_acc_is_valid(acc_id))
+        return PJ_EINVAL;
     pjsua_var.default_acc = acc_id;
     return PJ_SUCCESS;
 }
@@ -800,6 +802,27 @@ static void clear_sa_pin(pjsua_acc *acc)
 }
 
 
+/* pjsua.h requires exactly one of UNREGISTER and NO_UNREG. With neither or
+ * both, use NO_UNREG, so that every path reads the same method.
+ */
+static void normalize_contact_rewrite_method(pjsua_acc_config *cfg)
+{
+    const int both = PJSUA_CONTACT_REWRITE_UNREGISTER |
+                     PJSUA_CONTACT_REWRITE_NO_UNREG;
+    int method = cfg->contact_rewrite_method;
+
+    if ((method & both) != 0 && (method & both) != both)
+        return;
+
+    cfg->contact_rewrite_method = (method & ~both) |
+                                  PJSUA_CONTACT_REWRITE_NO_UNREG;
+    PJ_LOG(2,(THIS_FILE, "Account %.*s: contact_rewrite_method %d sets %s "
+              "of UNREGISTER and NO_UNREG, using %d",
+              (int)cfg->id.slen, cfg->id.ptr, method,
+              ((method & both) ? "both" : "neither"),
+              cfg->contact_rewrite_method));
+}
+
 /*
  * Add a new account to pjsua.
  */
@@ -864,6 +887,7 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
                 PJSIP_REGISTER_CLIENT_DELAY_BEFORE_REFRESH;
         }
     }
+    normalize_contact_rewrite_method(&pjsua_var.acc[id].cfg);
 
     /* Check the route URI's and force loose route if required */
     for (i=0; i<acc->cfg.proxy_cnt; ++i) {
@@ -4965,8 +4989,11 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
 
     /* If Record-Route is present, then URI is the top Record-Route. */
     if (rdata->msg_info.record_route) {
-        sip_uri = (pjsip_sip_uri*) 
-                pjsip_uri_get_uri(rdata->msg_info.record_route->name_addr.uri);
+        pjsip_uri *uri = rdata->msg_info.record_route->name_addr.uri;
+
+        if (!PJSIP_URI_SCHEME_IS_SIP(uri) && !PJSIP_URI_SCHEME_IS_SIPS(uri))
+            return PJSIP_EINVALIDROUTEURI;
+        sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(uri);
     } else {
         pjsip_hdr *pos = NULL;
         pjsip_contact_hdr *h_contact;

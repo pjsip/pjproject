@@ -1489,6 +1489,36 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request3(pjsip_rx_data *rdata,
         goto on_return;
     }
 
+    /* RFC 3261 section 16.6: every Record-Route value must be a SIP/SIPS
+     * URI, the route set built from them is otherwise unusable.
+     */
+    if (msg) {
+        const pjsip_rr_hdr *rr = (const pjsip_rr_hdr*)
+                       pjsip_msg_find_hdr(msg, PJSIP_H_RECORD_ROUTE, NULL);
+        while (rr) {
+            if (!PJSIP_URI_SCHEME_IS_SIP(rr->name_addr.uri) &&
+                !PJSIP_URI_SCHEME_IS_SIPS(rr->name_addr.uri))
+            {
+                pjsip_warning_hdr *w;
+                pj_str_t warn_text = pj_str("Bad Record-Route header");
+
+                w = pjsip_warning_hdr_create(tmp_pool, 399,
+                                             pjsip_endpt_name(endpt),
+                                             &warn_text);
+                if (w)
+                    pj_list_push_back(&res_hdr_list, w);
+
+                code = PJSIP_SC_BAD_REQUEST;
+                status = PJSIP_ERRNO_FROM_SIP_STATUS(code);
+                goto on_return;
+            }
+            if (rr->next == (void*)&msg->hdr)
+                break;
+            rr = (const pjsip_rr_hdr*)
+                 pjsip_msg_find_hdr(msg, PJSIP_H_RECORD_ROUTE, rr->next);
+        }
+    }
+
     /* Ticket #1735: Check Contact/Record-Route header in a secure dialog. */
     if (pjsip_cfg()->endpt.disable_secure_dlg_check == PJ_FALSE &&
         msg && PJSIP_URI_SCHEME_IS_SIPS(msg->line.req.uri))

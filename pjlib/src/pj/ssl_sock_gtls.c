@@ -339,7 +339,7 @@ static int tls_cert_verify_cb(gnutls_session_t session)
             return GNUTLS_E_CERTIFICATE_ERROR;
     }
 
-    if (ssock->param.verify_peer) {
+    if (ssock->param.verify_peer && ssock->param.server_name.slen) {
         gnutls_x509_crt_t cert;
         unsigned int cert_list_size;
         const gnutls_datum_t *cert_list;
@@ -814,8 +814,8 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
             gnutls_datum_t cert_buf;
             gnutls_datum_t privkey_buf;
 
-            cert_buf.data = (unsigned char*)cert->CA_buf.ptr;
-            cert_buf.size = cert->CA_buf.slen;
+            cert_buf.data = (unsigned char*)cert->cert_buf.ptr;
+            cert_buf.size = cert->cert_buf.slen;
             privkey_buf.data = (unsigned char*)cert->privkey_buf.ptr;
             privkey_buf.size = cert->privkey_buf.slen;
 

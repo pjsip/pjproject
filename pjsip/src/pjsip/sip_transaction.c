@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1537,7 +1537,10 @@ static void tsx_set_state( pjsip_transaction *tsx,
              * https://github.com/pjsip/pjproject/issues/1033)
              */
             if (tsx->pending_tx) {
+                /* Under the layer mutex, see send_msg_callback() */
+                pj_mutex_lock(mod_tsx_layer.mutex);
                 tsx->pending_tx->mod_data[mod_tsx_layer.mod.id] = NULL;
+                pj_mutex_unlock(mod_tsx_layer.mutex);
                 tsx->pending_tx = NULL;
 
                 /* Decrease pending send counter */
@@ -2153,28 +2156,36 @@ static void send_msg_callback( pjsip_send_state *send_state,
     pjsip_tx_data *tdata = send_state->tdata;
     pj_bool_t tdata_is_ours;
 
-    /* Check if transaction has cancelled itself from this transmit
-     * notification (https://github.com/pjsip/pjproject/issues/1033).
-     * Also check if the transaction layer itself may have been shutdown
+    /* Check if the transaction layer itself may have been shutdown
      * (https://github.com/pjsip/pjproject/issues/1535)
      */
-    if (mod_tsx_layer.mod.id < 0 ||
-        tdata->mod_data[mod_tsx_layer.mod.id] == NULL)
-    {
+    if (mod_tsx_layer.mod.id < 0) {
         *cont = PJ_FALSE;
-
-        /* Decrease pending send counter, but only if the transaction layer
-         * hasn't been shutdown.
-         */
-        // If tsx has cancelled itself from this transmit notification
-        // it should have also decreased pending send counter.
-        //if (mod_tsx_layer.mod.id >= 0)
-        //    pj_grp_lock_dec_ref(tsx->grp_lock);
-
         return;
     }
 
+    /* The transaction may cancel itself and drop its pending send counter
+     * at any time, so check it and take a reference under the layer mutex.
+     */
+    pj_mutex_lock(mod_tsx_layer.mutex);
+    if (tdata->mod_data[mod_tsx_layer.mod.id] == NULL) {
+        /* Cancelled from this transmit notification (#1033) */
+        pj_mutex_unlock(mod_tsx_layer.mutex);
+        *cont = PJ_FALSE;
+        return;
+    }
+    pj_grp_lock_add_ref(tsx->grp_lock);
+    pj_mutex_unlock(mod_tsx_layer.mutex);
+
     pj_grp_lock_acquire(tsx->grp_lock);
+    pj_grp_lock_dec_ref(tsx->grp_lock);
+
+    /* Cancelled while we were waiting for the lock */
+    if (tsx->pending_tx != tdata) {
+        *cont = PJ_FALSE;
+        pj_grp_lock_release(tsx->grp_lock);
+        return;
+    }
 
     /* Decrease pending send counter */
     pj_grp_lock_dec_ref(tsx->grp_lock);

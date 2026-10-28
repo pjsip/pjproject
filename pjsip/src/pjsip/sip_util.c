@@ -816,7 +816,8 @@ PJ_DEF(pj_status_t) pjsip_get_dest_info(const pjsip_uri *target_uri,
      * of the target scheme or transport type (see ticket #1740).
      */
     if (PJSIP_URI_SCHEME_IS_SIPS(target_uri) || 
-        (pjsip_cfg()->endpt.disable_tls_switch == 0 && request_uri &&
+        (PJSIP_URI_SCHEME_IS_SIP(target_uri) &&
+         pjsip_cfg()->endpt.disable_tls_switch == 0 && request_uri &&
          PJSIP_URI_SCHEME_IS_SIPS(request_uri)))
     {
         pjsip_uri *uri = (pjsip_uri*) target_uri;
@@ -912,6 +913,11 @@ PJ_DEF(pj_status_t) pjsip_get_request_dest(const pjsip_tx_data *tdata,
                       pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, NULL);
     if (first_route_hdr) {
         target_uri = first_route_hdr->name_addr.uri;
+        if (!PJSIP_URI_SCHEME_IS_SIP(target_uri) &&
+            !PJSIP_URI_SCHEME_IS_SIPS(target_uri))
+        {
+            return PJSIP_EINVALIDROUTEURI;
+        }
     } else {
         target_uri = tdata->msg->line.req.uri;
     }
@@ -958,6 +964,11 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
         pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, NULL);
     if (first_route_hdr) {
         topmost_route_uri = &first_route_hdr->name_addr;
+        if (!PJSIP_URI_SCHEME_IS_SIP(topmost_route_uri) &&
+            !PJSIP_URI_SCHEME_IS_SIPS(topmost_route_uri))
+        {
+            return PJSIP_EINVALIDROUTEURI;
+        }
         while (last_route_hdr->next != (void*)&tdata->msg->hdr) {
             pjsip_route_hdr *hdr;
             hdr = (pjsip_route_hdr*)

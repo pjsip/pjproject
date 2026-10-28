@@ -102,6 +102,12 @@ static void usage(void)
     puts  ("  --outb-disable      Disable SIP outbound (RFC 5626) for all accounts");
     puts  ("  --auto-update-nat=N Enable/disable SIP traversal behind symmetric NAT (def: 1)");
     puts  ("                      0: disabled, 1:enabled with exception, 2: fully enabled");
+    puts  ("  --contact-rewrite-method=N  Contact rewrite method, a sum of:");
+    puts  ("                      1: unregister, then register anew");
+    puts  ("                      2: replace it in the same registration");
+    puts  ("                      4: also on non-2xx responses, with 1 or 2");
+    printf("                      (default: %d)\n",
+            PJSUA_CONTACT_REWRITE_METHOD);
     puts  ("  --disable-stun      Disable STUN for this account");
     puts  ("  --next-cred         Add another credentials");
     puts  ("");
@@ -451,6 +457,7 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_STDOUT_NO_BUF,
 #endif
            OPT_AUTO_UPDATE_NAT,OPT_USE_COMPACT_FORM,OPT_DIS_CODEC,
+           OPT_CONTACT_REWRITE_METHOD,
            OPT_DISABLE_STUN, OPT_NO_FORCE_LR,
            OPT_TIMER, OPT_TIMER_SE, OPT_TIMER_MIN_SE,
            OPT_VIDEO, OPT_TEXT, OPT_TEXT_RED, OPT_EXTRA_AUDIO,
@@ -501,6 +508,7 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "reg-contact-params",1,0, OPT_REG_CONTACT_PARAMS},
         { "reg-contact-uri-params",1,0, OPT_REG_CONTACT_URI_PARAMS},
         { "auto-update-nat",    1, 0, OPT_AUTO_UPDATE_NAT},
+        { "contact-rewrite-method", 1, 0, OPT_CONTACT_REWRITE_METHOD},
         { "disable-stun",0,0, OPT_DISABLE_STUN},
         { "use-compact-form",   0, 0, OPT_USE_COMPACT_FORM},
         { "accept-redirect", 1, 0, OPT_ACCEPT_REDIRECT},
@@ -978,6 +986,24 @@ static pj_status_t parse_args(int argc, char *argv[],
 
         case OPT_AUTO_UPDATE_NAT:   /* OPT_AUTO_UPDATE_NAT */
             cur_acc->allow_contact_rewrite  = (pj_bool_t)pj_strtoul(pj_cstr(&tmp, pj_optarg));
+            break;
+
+        case OPT_CONTACT_REWRITE_METHOD:
+            {
+                unsigned long method;
+
+                pj_cstr(&tmp, pj_optarg);
+                if (pj_strspn2(&tmp, "0123456789") != tmp.slen ||
+                    pj_strtoul3(&tmp, &method, 10) != PJ_SUCCESS ||
+                    method > 7)
+                {
+                    PJ_LOG(1,(THIS_FILE, "Error: invalid "
+                              "--contact-rewrite-method value '%s'",
+                              pj_optarg));
+                    return PJ_EINVAL;
+                }
+                cur_acc->contact_rewrite_method = (int)method;
+            }
             break;
 
         case OPT_DISABLE_STUN:
@@ -2144,6 +2170,11 @@ static void write_account_settings(int acc_index, pj_str_t *result,
     {
         cfg_addf(result, max, "--auto-update-nat %i\n",
                         (int)acc_cfg->allow_contact_rewrite);
+    }
+
+    if (acc_cfg->contact_rewrite_method != PJSUA_CONTACT_REWRITE_METHOD) {
+        cfg_addf(result, max, "--contact-rewrite-method %d\n",
+                 acc_cfg->contact_rewrite_method);
     }
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)

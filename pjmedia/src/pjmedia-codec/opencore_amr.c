@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2011-2013 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2011-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2011 Dan Arrhenius <dan@keystream.se>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -839,6 +839,20 @@ static pj_status_t amr_codec_encode( pjmedia_codec *codec,
     bitstream = (unsigned char*)output->buf;
     while (nsamples >= samples_per_frame) {
         int size;
+        unsigned max_size;
+
+        /* Make sure the frame (1-byte header + frame data) fits */
+        max_size = 1 + (amr_data->enc_setting.amr_nb ?
+                        pjmedia_codec_amrnb_framelen[amr_data->enc_mode] :
+                        pjmedia_codec_amrwb_framelen[amr_data->enc_mode]);
+        if (out_size + max_size > output_buf_len) {
+            output->size = 0;
+            output->buf = NULL;
+            output->type = PJMEDIA_FRAME_TYPE_NONE;
+            TRACE_((THIS_FILE, "AMR encode() output buffer too small"));
+            return PJMEDIA_CODEC_EFRMTOOSHORT;
+        }
+
         if (amr_data->enc_setting.amr_nb) {
 #ifdef USE_AMRNB
             size = Encoder_Interface_Encode (amr_data->encoder,

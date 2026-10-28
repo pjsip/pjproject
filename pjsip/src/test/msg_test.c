@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -18,6 +18,8 @@
  */
 #include "test.h"
 #include <pjsip.h>
+#include <pjsip_simple.h>
+#include <pjsip_ua.h>
 #include <pjlib.h>
 
 #define POOL_SIZE       8000
@@ -2359,6 +2361,77 @@ static int route_hide_lr_test(void)
 }
 
 
+/*
+ * Printing a header into a buffer that is too small must fail without
+ * writing past the end of the buffer.
+ */
+static int hdr_print_bound_test(void)
+{
+    enum { BUF_LEN = 256, GUARD = 32 };
+    pj_pool_t *pool;
+    pjsip_event_hdr *event;
+    pjsip_sub_state_hdr *sub_state;
+    pjsip_replaces_hdr *replaces;
+    pjsip_hdr *hdrs[3];
+    char buf[BUF_LEN + GUARD];
+    unsigned i;
+
+    PJ_LOG(3,(THIS_FILE, "  testing header print bounds.."));
+
+    pool = pjsip_endpt_create_pool(endpt, NULL, 512, 512);
+
+    event = pjsip_event_hdr_create(pool);
+    event->event_type = pj_str("presence");
+    event->id_param = pj_str("1234");
+
+    sub_state = pjsip_sub_state_hdr_create(pool);
+    sub_state->sub_state = pj_str("active");
+    sub_state->expires_param = 3600;
+    sub_state->retry_after = 120;
+
+    replaces = pjsip_replaces_hdr_create(pool);
+    replaces->call_id = pj_str("1234@example.com");
+    replaces->to_tag = pj_str("totag");
+    replaces->from_tag = pj_str("fromtag");
+
+    hdrs[0] = (pjsip_hdr*)event;
+    hdrs[1] = (pjsip_hdr*)sub_state;
+    hdrs[2] = (pjsip_hdr*)replaces;
+
+    for (i = 0; i < PJ_ARRAY_SIZE(hdrs); ++i) {
+        int full_len, size, len, j;
+
+        full_len = pjsip_hdr_print_on(hdrs[i], buf, BUF_LEN);
+        if (full_len <= 0) {
+            pj_pool_release(pool);
+            return -900;
+        }
+
+        for (size = 0; size < full_len; ++size) {
+            pj_memset(buf, 0x5A, sizeof(buf));
+            len = pjsip_hdr_print_on(hdrs[i], buf, size);
+            for (j = size; j < (int)sizeof(buf); ++j) {
+                if (buf[j] != 0x5A) {
+                    PJ_LOG(3,(THIS_FILE, "    error: %.*s header printed "
+                              "past %d byte buffer",
+                              (int)hdrs[i]->name.slen, hdrs[i]->name.ptr,
+                              size));
+                    pj_pool_release(pool);
+                    return -910;
+                }
+            }
+            if (len >= 0) {
+                pj_pool_release(pool);
+                return -920;
+            }
+        }
+    }
+
+    pj_pool_release(pool);
+    return PJ_SUCCESS;
+}
+
+
 /*****************************************************************************/
 
 int msg_test(void)
@@ -2386,6 +2459,10 @@ int msg_test(void)
         return status;
 
     status = route_hide_lr_test();
+    if (status != PJ_SUCCESS)
+        return status;
+
+    status = hdr_print_bound_test();
     if (status != PJ_SUCCESS)
         return status;
 
