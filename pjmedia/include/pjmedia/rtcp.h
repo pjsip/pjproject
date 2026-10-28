@@ -401,9 +401,9 @@ PJ_DECL(void) pjmedia_rtcp_rx_rtp( pjmedia_rtcp_session *session,
  * @param ts        The RTP packet timestamp, in host byte order.
  * @param payload   Size of the payload.
  * @param discarded Flag to specify whether the packet is discarded.
- *                  A packet failing only the RTP sequence probation
- *                  check is counted as discarded only if this is set,
- *                  while pjmedia_rtcp_rx_rtp() always counts it.
+ *                  A packet failing the RTP sequence check is counted
+ *                  as discarded only if this is set, while
+ *                  pjmedia_rtcp_rx_rtp() always counts it.
  */
 PJ_DECL(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *session, 
                                    unsigned seq, 

@@ -572,24 +572,21 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 
     }
 
-#ifdef TEXT_STREAM
-    /* Text stream decides on bad RTP packet itself */
-#else
-    /* Skip bad RTP packet */
+#ifndef TEXT_STREAM
+    /* Skip bad RTP packet. Text stream decides on it itself. */
     if (seq_st.status.flag.bad) {
         pkt_discarded = PJ_TRUE;
         goto on_return;
     }
-#endif
 
-    /* Ignore if payloadlen is zero.
-     * Exception: text stream needs to accept empty text block to
-     * track sequence number and idle period.
+    /* Ignore if payloadlen is zero. Text stream needs to accept empty
+     * text block to track sequence number and idle period.
      */
-    if (c_strm->si->type != PJMEDIA_TYPE_TEXT && payloadlen == 0) {
+    if (payloadlen == 0) {
         pkt_discarded = PJ_TRUE;
         goto on_return;
     }
+#endif
 
     /* Pass it to specific stream for further processing. */
     on_stream_rx_rtp(c_strm, hdr, payload, payloadlen, seq_st,

@@ -176,7 +176,9 @@ static unsigned text_of(pj_uint16_t seq, char *buf)
         buf[0] = (char)('N' + (seq - 40000));
         return 1;
     }
-    if (seq == 2100 || seq == 5000 || seq == 20100 || seq == 20101) {
+    if (seq == 2100 || seq == 2101 || seq == 5000 || seq == 20100 ||
+        seq == 20101)
+    {
         buf[0] = 'X';
         return 1;
     }
@@ -248,9 +250,16 @@ static const scenario scenarios[] =
       { 100, 102, 101, 103, 104 },
       { "a?cde", "abcde" } },
 
+    /* Plain T.140 drops a skip of more than MAX_PROBATION_SKIP, while RED
+     * accepts it if its redundant blocks fill the gap.
+     */
+    { "deeper reordering at stream start", 5,
+      { 100, 103, 101, 102, 104 },
+      { "abc?e", "abcde" } },
+
     { "two packets lost at stream start", 4,
       { 100, 103, 104, 105 },
-      { "a???ef", "a?cdef" } },
+      { "a???ef", "abcdef" } },
 
     /* Skipping ahead more than MAX_PROBATION_SKIP during probation is
      * dropped, so the packets in between are not discarded as old.
@@ -277,9 +286,26 @@ static const scenario scenarios[] =
       { 100, 101, 102, 2100, 103, 104 },
       { "abcde", "abcde" } },
 
+    /* After RTP accepted a stray, the next real packet is RTP-bad but
+     * not in probation.
+     */
+    { "loss after stray packet", 6,
+      { 100, 101, 102, 2100, 105, 106 },
+      { "abc??fg", "abcdefg" } },
+
+    /* A later stray must not confirm an earlier one */
+    { "strays interleaved with the stream", 10,
+      { 100, 101, 102, 2100, 103, 104, 105, 2101, 106, 107 },
+      { "abcdefgh", "abcdefgh" } },
+
     { "long loss", 7,
       { 100, 101, 102, 123, 124, 125, 126 },
       { "abc???????yz{", "abc?????wxyz{" } },
+
+    /* A reordered packet far ahead is not a late packet */
+    { "long loss with reordering", 7,
+      { 100, 101, 102, 124, 123, 125, 126 },
+      { "abc???????x?z{", "abc?????vwxyz{" } },
 
     { "late packets", 16,
       { 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112,

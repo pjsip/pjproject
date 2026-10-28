@@ -346,10 +346,8 @@ static void rtcp_rx_rtp(pjmedia_rtcp_session *sess,
     }
 
     if (seq_st.status.flag.bad) {
-        /* A packet failing only the probation check may still be used
-         * by the stream (e.g: text stream).
-         */
-        if (count_all_bad || discarded || !seq_st.status.flag.probation)
+        /* The stream may still use a bad packet (e.g: text stream) */
+        if (count_all_bad || discarded)
             sess->stat.rx.discard++;
 
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)

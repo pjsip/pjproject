@@ -81,9 +81,17 @@
  */
 #define MAX_SEQ_GAP JBUF_MAX_COUNT
 
+/* A long loss must leave room for at least one lost text marker before
+ * the redundant blocks.
+ */
+#if PJMEDIA_TXT_STREAM_MAX_RED_LEVELS > MAX_SEQ_GAP - 2
+#  error PJMEDIA_TXT_STREAM_MAX_RED_LEVELS is too large
+#endif
+
 /* Maximum forward sequence jump accepted for a packet failing the RTP
- * probation check. Larger jumps are dropped as RTP probation does, so
- * the packets in between are not discarded as old when they arrive.
+ * probation check, unless its redundant blocks fill the gap. Larger
+ * jumps are dropped as RTP probation does, so the packets in between
+ * are not discarded as old when they arrive.
  */
 #define MAX_PROBATION_SKIP 2
 
@@ -121,8 +129,8 @@ typedef struct pjmedia_txt_stream {
     int tx_nred;                 /**< Num of redundant data. */
 
     int rx_last_seq; /**< Sequence of last rx.   */
-    int rx_jump_seq; /**< Expected seq to confirm
-                          a sequence jump.       */
+    int rx_jump_seq; /**< Unconfirmed sequence
+                          jump.                  */
 
     /* Incoming text callback. */
     void (*cb)(pjmedia_txt_stream *, void *, const pjmedia_txt_stream_data *);
@@ -765,13 +773,20 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
     big_gap = stream->rx_last_seq != -1 &&
               (diff > MAX_SEQ_GAP || diff < -MAX_SEQ_GAP);
 
-    if (big_gap && (seq_st.status.flag.bad || !seq_st.status.flag.outorder)) {
-        /* Accept a far sequence only if confirmed by the next packet (or
+    if (big_gap && (seq_st.status.flag.bad ||
+                    !seq_st.status.flag.outorder || diff > 0))
+    {
+        /* Accept a far sequence only if confirmed by a nearby packet (or
          * RTP session restart), otherwise it may be a stray packet. Late
-         * packets (good, but out of order) are processed as usual.
+         * packets (good, out of order and behind) are processed as usual.
          */
-        if (!seq_st.status.flag.restart && seq != stream->rx_jump_seq) {
-            stream->rx_jump_seq = (pj_uint16_t) (seq + 1);
+        pj_int16_t jump_diff = (pj_int16_t) (seq - stream->rx_jump_seq);
+
+        if (!seq_st.status.flag.restart &&
+            (stream->rx_jump_seq == -1 || jump_diff == 0 ||
+             jump_diff > MAX_SEQ_GAP || jump_diff < -MAX_SEQ_GAP))
+        {
+            stream->rx_jump_seq = seq;
             goto on_return;
         }
 
@@ -787,9 +802,12 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
         }
         diff = (pj_int16_t) (seq - stream->rx_last_seq);
 
-    } else if (seq_st.status.flag.bad && diff > MAX_PROBATION_SKIP) {
+    } else if (seq_st.status.flag.bad && seq_st.status.flag.probation &&
+               diff > PJ_MAX(MAX_PROBATION_SKIP, red_level + 1))
+    {
         goto on_return;
     }
+    stream->rx_jump_seq = -1;
     prev_last_seq = stream->rx_last_seq;
 
     if (is_red) {
