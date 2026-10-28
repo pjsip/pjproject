@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2019 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2019-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -284,17 +284,22 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
     cfstr_to_cstr(issuer_info, buf, bufsize);
 
     /* Get serial no, right-aligned as the OpenSSL backend stores it, so a
-     * prefix or a zero-extended serial does not compare equal. */
+     * prefix or a zero-extended serial does not compare equal. Security
+     * framework keeps the DER sign octet, dropped only if it won't fit. */
     if (__builtin_available(macOS 10.13, iOS 11.0, *)) {
         CFDataRef serial = SecCertificateCopySerialNumberData(cert, NULL);
         if (serial) {
+            const UInt8 *p = CFDataGetBytePtr(serial);
             CFIndex len = CFDataGetLength(serial);
+            while (len > (CFIndex)sizeof(serial_no) && *p == 0) {
+                ++p;
+                --len;
+            }
             if (len > (CFIndex)sizeof(serial_no)) {
                 len = sizeof(serial_no);
                 serial_truncated = PJ_TRUE;
             }
-            pj_memcpy(serial_no + sizeof(serial_no) - len,
-                      CFDataGetBytePtr(serial), len);
+            pj_memcpy(serial_no + sizeof(serial_no) - len, p, len);
             CFRelease(serial);
         }
     }

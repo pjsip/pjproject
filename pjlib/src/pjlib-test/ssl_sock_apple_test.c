@@ -119,6 +119,18 @@ static const char CERT_SER0100_DER[] =
     "00bfb3abb080d3f0526629f34922cc549bf729fc303fbdb90ff80ea305167a8d4a022100bb27"
     "4a05a9aedddf92c3fd394ac60df38655c1a57e45eb85660a19d385c8518c";
 
+/* Serial 81 02 .. 14: 20 octets, DER-encoded as 21 with the sign octet */
+static const char CERT_SIGNSER_DER[] =
+    "308201513081f8a0030201020215008102030405060708090a0b0c0d0e0f1011121314300a06"
+    "082a8648ce3d04030230163114301206035504030c0b73657269616c2e746573743020170d32"
+    "36303932373136353735355a180f32313236303930333136353735355a301631143012060355"
+    "04030c0b73657269616c2e746573743059301306072a8648ce3d020106082a8648ce3d030107"
+    "03420004a511a6820d505d8ee507b813d8336d0dac9c6577ab53f487213e8506f1a9dc2dea40"
+    "36097e5f76a43c3929db6157bb06dd680f9433f2bdc2294f42b060597d7ba321301f301d0603"
+    "551d0e041604147b614d28912b7639225a13d24b90e60160ef3205300a06082a8648ce3d0403"
+    "020348003045022100ebbc026892351ccc5bd0b3df9585ceece9790c782942f79528ebbb2df8"
+    "7048760220764fdbf78de95ee25bddbd615645d54f20111d43791984337557419e6041f2d5";
+
 static int hexval(char c)
 {
     if (c >= '0' && c <= '9') return c - '0';
@@ -236,6 +248,10 @@ static int refresh_tests(void)
         0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,
         0x0B,0x0C,0x0D,0x0E,0x0F,0x10,0x11,0x12,0x13,0x14
     };
+    static const pj_uint8_t signser[20] = {
+        0x81,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,
+        0x0B,0x0C,0x0D,0x0E,0x0F,0x10,0x11,0x12,0x13,0x14
+    };
     pj_pool_t *info_pool;
     pj_ssl_cert_info ci;
     SecCertificateRef cert = NULL;
@@ -276,6 +292,23 @@ static int refresh_tests(void)
         get_cert_info(info_pool, &ci, cert, PJ_TRUE);
     PJ_TEST_EQ(pj_pool_get_used_size(info_pool), used0,
                "refreshes must not grow the pool", rc = -22; goto on_return);
+    CFRelease(cert);
+
+    /* Sign octet: the serial fits, so re-reading must not refresh. Read
+     * without reclaiming, so that a refresh would grow the pool. */
+    pj_pool_reset(info_pool);
+    pj_bzero(&ci, sizeof(ci));
+    cert = cert_from_hex(CERT_SIGNSER_DER);
+    if (!cert) { rc = -26; goto on_return; }
+    get_cert_info(info_pool, &ci, cert, PJ_FALSE);
+    PJ_TEST_TRUE(pj_memcmp(ci.serial_no, signser, sizeof(signser)) == 0,
+                 "serial_no must drop the sign octet",
+                 rc = -27; goto on_return);
+    used0 = pj_pool_get_used_size(info_pool);
+    get_cert_info(info_pool, &ci, cert, PJ_FALSE);
+    PJ_TEST_EQ(pj_pool_get_used_size(info_pool), used0,
+               "a serial that fits must not refresh",
+               rc = -28; goto on_return);
     CFRelease(cert);
 
     /* Serial 01 00 after 01, same names: must refresh. */
