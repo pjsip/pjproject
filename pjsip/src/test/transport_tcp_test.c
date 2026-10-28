@@ -741,7 +741,17 @@ on_return:
  *
  * The request is written straight to a socket rather than sent through PJSIP,
  * because a pjsip_tx_data buffer is itself capped at PJSIP_MAX_PKT_LEN.
+ *
+ * The drop data callback must only be given the bytes that were received.
  */
+static pj_size_t rx_overflow_drop_len;
+
+static void rx_overflow_on_drop(pjsip_tp_dropped_data *data)
+{
+    if (data->status == PJSIP_ERXOVERFLOW && data->len > rx_overflow_drop_len)
+        rx_overflow_drop_len = data->len;
+}
+
 static int rx_overflow_test(const char *last_hdr_eol, const char *branch)
 {
     enum { TIMEOUT_MSEC = 10000, CHUNK = 1024 };
@@ -824,6 +834,10 @@ static int rx_overflow_test(const char *last_hdr_eol, const char *branch)
     pj_memset(req + len, 'x', body_len);
     req_len = (pj_size_t)len + body_len;
 
+    rx_overflow_drop_len = 0;
+    pjsip_tpmgr_set_drop_data_cb(pjsip_endpt_get_tpmgr(endpt),
+                                 &rx_overflow_on_drop);
+
     /* Nothing else polls the endpoint from this thread, so let it drain the
      * connection between chunks instead of filling the socket buffer.
      */
@@ -892,7 +906,19 @@ static int rx_overflow_test(const char *last_hdr_eol, const char *branch)
         goto on_return;
     }
 
+    if (rx_overflow_drop_len == 0 ||
+        rx_overflow_drop_len > PJSIP_MAX_PKT_LEN)
+    {
+        PJ_LOG(3,(THIS_FILE, "   error: dropped data length %u, expected "
+                             "1..%u (the receive buffer)",
+                  (unsigned)rx_overflow_drop_len, (unsigned)PJSIP_MAX_PKT_LEN));
+        rc = -550;
+        goto on_return;
+    }
+
 on_return:
+    pjsip_tpmgr_set_drop_data_cb(pjsip_endpt_get_tpmgr(endpt), NULL);
+
     if (sock != PJ_INVALID_SOCKET)
         pj_sock_close(sock);
 
