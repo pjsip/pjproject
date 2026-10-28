@@ -86,6 +86,9 @@ add_library(pjlib
   src/pj/unittest.c
 )
 
+# libpj, as make names it, so a shared build keeps make's libpj.so.2
+set_target_properties(pjlib PROPERTIES OUTPUT_NAME pj)
+
 # Ensure generated headers are found before source headers
 target_include_directories(pjlib
   PUBLIC

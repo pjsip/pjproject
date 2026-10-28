@@ -221,6 +221,9 @@ add_library(pjsua-lib
   src/pjsua-lib/pjsua_vid.c
 )
 
+# libpjsua, as make names it, so a shared build keeps make's libpjsua.so.2
+set_target_properties(pjsua-lib PROPERTIES OUTPUT_NAME pjsua)
+
 # headers
 target_sources(pjsua-lib
   PUBLIC

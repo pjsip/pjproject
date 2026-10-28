@@ -664,7 +664,7 @@ jobs:
     - name: test pkg-config
       run: |
         prefix=${{ runner.temp }}/pj-install
-        test -f "$prefix/lib/libpjlib.a" && test ! -e "$prefix/bin/libpjlib.a"
+        test -f "$prefix/lib/libpj.a" && test ! -e "$prefix/bin/libpj.a"
         export PKG_CONFIG_PATH="$prefix/lib/pkgconfig"
         cat "$PKG_CONFIG_PATH/libpjproject.pc"
         cc tests/cmake/test_consumer.c -o pc_consumer \
