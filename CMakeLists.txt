@@ -5,6 +5,7 @@ set(CMAKE_MESSAGE_CONTEXT_SHOW TRUE)
 
 # Read version from version.mak
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/version.mak" _version_lines)
+set(PJ_VERSION_SUFFIX "")
 foreach(_line IN LISTS _version_lines)
   if(_line MATCHES "^export PJ_VERSION_MAJOR[ \t]*:=[ \t]*([0-9]+)")
     set(_pj_ver_major "${CMAKE_MATCH_1}")
@@ -12,6 +13,9 @@ foreach(_line IN LISTS _version_lines)
     set(_pj_ver_minor "${CMAKE_MATCH_1}")
   elseif(_line MATCHES "^export PJ_VERSION_REV[ \t]*:=[ \t]*([0-9]+)")
     set(_pj_ver_rev "${CMAKE_MATCH_1}")
+  elseif(_line MATCHES "^export PJ_VERSION_SUFFIX[ \t]*:=[ \t]*([^ \t]+)")
+    # e.g. -dev, for the pkg-config Version, as make
+    set(PJ_VERSION_SUFFIX "${CMAKE_MATCH_1}")
   endif()
 endforeach()
 # CMake VERSION field only accepts numeric components
@@ -366,6 +370,17 @@ foreach(target IN LISTS install_targets)
     SOVERSION ${PROJECT_VERSION_MAJOR}
   )
 endforeach()
+
+# lib<name> on MSVC too (libpj.lib, libpj.dll), as on every other platform
+if(MSVC)
+  foreach(target IN LISTS install_targets)
+    get_target_property(_pj_type ${target} TYPE)
+    if(_pj_type MATCHES "^(STATIC|SHARED)_LIBRARY$")
+      set_target_properties(${target} PROPERTIES PREFIX lib IMPORT_PREFIX lib)
+    endif()
+  endforeach()
+  unset(_pj_type)
+endif()
 
 # install targets
 install(
