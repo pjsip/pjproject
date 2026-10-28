@@ -2738,9 +2738,7 @@ static int cert_verify_name_test(void)
  * certificate below and checks the peer serial in pj_ssl_cert_info, which
  * must be right-aligned, most significant octet first, whatever its length.
  */
-#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL) || \
-    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_GNUTLS) || \
-    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_MBEDTLS)
+#if TEST_CERT_BUFFER
 
 /* Self-signed P-256 certificates sharing this key, differing in serial */
 static const char serial_key_pem[] =
@@ -3046,7 +3044,7 @@ on_return:
     return (status == PJ_SUCCESS) ? 0 : -1;
 }
 
-#endif  /* OpenSSL, GnuTLS, MbedTLS */
+#endif  /* TEST_CERT_BUFFER */
 
 
 int ssl_sock_test(void)
@@ -3188,9 +3186,7 @@ int ssl_sock_test(void)
         return ret;
 #endif
 
-#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL) || \
-    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_GNUTLS) || \
-    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_MBEDTLS)
+#if TEST_CERT_BUFFER
     PJ_LOG(3,("", "..certificate serial number test"));
     ret = cert_serial_test();
     if (ret != 0)
