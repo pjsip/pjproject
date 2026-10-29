@@ -15,8 +15,7 @@ Repeat per ABI. `arm64-v8a`, `armeabi-v7a`, `x86_64` and `x86` are all built by
 CI; each needs its own build directory.
 
 This is an alternative to `./configure-android && make`, not a replacement for
-it. Both can build the libraries and the pjsua2 bindings; the autotools build
-additionally covers the desktop Java bindings, which CMake does not.
+it. Both can build the libraries and the pjsua2 bindings.
 
 ## Minimum API level
 
@@ -126,9 +125,6 @@ because an unpacked AAR is never inside a sysroot.
 - **No TLS unless you supply OpenSSL.** Android has no system OpenSSL; build
   one for the NDK and point the search roots at it as above. Otherwise the
   build silently comes out with `PJLIB_WITH_SSL` empty.
-- **No desktop Java bindings.** Those are still built by
-  `pjsip-apps/src/swig/java/Makefile`; they need a JDK probe, javac steps and
-  sample runners that no CMake consumer is asking for.
 - **No video codecs beyond MediaCodec.** OpenH264 and VPX are not bundled and
   have no Android packages to find. Build them for the NDK and add their
   prefixes to `CMAKE_FIND_ROOT_PATH`.

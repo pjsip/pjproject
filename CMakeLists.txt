@@ -145,11 +145,15 @@ option(PJ_BUILD_APPS "Build pjsua and the sample applications"
   ${_pj_build_apps_default})
 unset(_pj_build_apps_default)
 
-# The pjsua2 Python module and C# bindings, see pjsip-apps/src/swig/python and
-# csharp. Off by default, as they need SWIG (and the Python headers). Defined
+# The pjsua2 SWIG bindings, see pjsip-apps/src/swig. Off by default, as they
+# need SWIG (and a JDK or the Python headers); Gradle turns Java on. Defined
 # here, before the libraries, because the bindings link them into a shared
 # library, so they must be built position independent.
 include(CMakeDependentOption)
+cmake_dependent_option(PJ_BUILD_SWIG_JAVA
+  "Build the pjsua2 Java bindings with SWIG" OFF
+  "PJ_WITH_CXX;NOT IOS" OFF
+)
 cmake_dependent_option(PJ_BUILD_SWIG_PYTHON
   "Build the pjsua2 Python module with SWIG" OFF
   "PJ_WITH_CXX;NOT ANDROID;NOT IOS" OFF
@@ -158,7 +162,7 @@ cmake_dependent_option(PJ_BUILD_SWIG_CSHARP
   "Build the pjsua2 C# bindings with SWIG" OFF
   "PJ_WITH_CXX" OFF
 )
-if(PJ_BUILD_SWIG_PYTHON OR PJ_BUILD_SWIG_CSHARP)
+if(PJ_BUILD_SWIG_JAVA OR PJ_BUILD_SWIG_PYTHON OR PJ_BUILD_SWIG_CSHARP)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 

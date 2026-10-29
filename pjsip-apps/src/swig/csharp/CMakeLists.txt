@@ -289,6 +289,8 @@ if(BUILD_SHARED_LIBS AND NOT IOS AND NOT IS_ABSOLUTE "${PJ_INSTALL_CSHARPDIR}"
   file(RELATIVE_PATH _pj_up "/x/${PJ_INSTALL_CSHARPDIR}/lib"
     "/x/${CMAKE_INSTALL_LIBDIR}"
   )
+  # CMake 4 ends it with a slash
+  string(REGEX REPLACE "/$" "" _pj_up "${_pj_up}")
   if(APPLE)
     set_property(TARGET pjsua2_csharp APPEND PROPERTY INSTALL_RPATH
       "@loader_path/${_pj_up}"
