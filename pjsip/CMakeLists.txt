@@ -255,7 +255,7 @@ target_link_libraries(pjsua-lib
 # ##############################################################################
 # pjsua2
 
-if(PJ_WITH_CXX)
+if(PJ_BUILD_PJSUA2)
 add_library(pjsua2
   src/pjsua2/account.cpp
   src/pjsua2/endpoint.cpp
@@ -306,7 +306,7 @@ target_link_libraries(pjsua2
     pjsip-ua
     pjsua-lib
 )
-endif() # PJ_WITH_CXX
+endif() # PJ_BUILD_PJSUA2
 
 # ##############################################################################
 # Test application
@@ -382,7 +382,7 @@ if(BUILD_TESTING)
   )
 
   # pjsua2 test application
-  if(PJ_WITH_CXX)
+  if(PJ_BUILD_PJSUA2)
   add_executable(pjsua2-test
     src/pjsua2-test/main.cpp
     src/pjsua2-test/instant_messaging.cpp
@@ -410,5 +410,5 @@ if(BUILD_TESTING)
     COMMAND pjsua2-test
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build"
   )
-  endif() # PJ_WITH_CXX
+  endif() # PJ_BUILD_PJSUA2
 endif()
