@@ -6,6 +6,16 @@ include(CMakeFindDependencyMacro)
 set(_pj_saved_module_path "${CMAKE_MODULE_PATH}")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
 
+# Search for each dependency where pjproject found it, unless the consumer
+# already chose, or that file is gone, e.g. this install was copied to
+# another machine
+function(_pj_use_found var type value)
+  if(NOT DEFINED ${var} AND EXISTS "${value}")
+    set(${var} "${value}" CACHE ${type} "Found by the pjproject build")
+  endif()
+endfunction()
+include("${CMAKE_CURRENT_LIST_DIR}/PjFoundPaths.cmake")
+
 # Threading: not needed when pjlib was built with PJLIB_WITH_THREADS=OFF
 if(@PJLIB_WITH_THREADS@)
   find_dependency(Threads)

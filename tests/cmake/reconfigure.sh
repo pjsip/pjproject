@@ -20,7 +20,7 @@ snapshot() {
     for f in $(cd "$dir" && find . \( -name flags.make -o -name link.txt \
                  -o -name '*_auto.h' -o -name sip_autoconf.h \
                  -o -name PjConfig.cmake -o -name PjDeps.cmake \
-                 -o -name libpjproject.pc \) \
+                 -o -name PjFoundPaths.cmake -o -name libpjproject.pc \) \
                  -not -path './CMakeFiles/*'); do
         case $f in
         */CMakeFiles/*.dir/*)
