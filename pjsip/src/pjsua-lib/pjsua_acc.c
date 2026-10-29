@@ -33,6 +33,8 @@ enum
 
 static int get_ip_addr_ver(const pj_str_t *host);
 static void schedule_reregistration(pjsua_acc *acc);
+static pj_status_t acc_set_registration(pjsua_acc_id acc_id, pj_bool_t renew,
+                                        pj_bool_t release_all);
 static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te);
 
 /* Bridge: maps low-level auth challenge -> pjsua on_auth_challenge */
@@ -1959,7 +1961,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     /* Unregister first */
     if (unreg_first) {
         if (acc->regc && !cfg->disable_reg_on_modify) {
-            status = pjsua_acc_set_registration(acc->index, PJ_FALSE);
+            status = acc_set_registration(acc->index, PJ_FALSE, PJ_FALSE);
             if (status != PJ_SUCCESS) {
                 pjsua_perror(THIS_FILE, "Ignored failure in unregistering the "
                              "old account setting in modifying account",
@@ -2690,7 +2692,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
             /* Unregister current contact. Must be done before acc->contact
              * is replaced, as the unregister uses the old Contact.
              */
-            pjsua_acc_set_registration(acc->index, PJ_FALSE);
+            acc_set_registration(acc->index, PJ_FALSE, PJ_FALSE);
             destroy_regc(acc, PJ_TRUE);
         }
 
@@ -3857,6 +3859,7 @@ static pj_status_t acc_set_registration(pjsua_acc_id acc_id, pj_bool_t renew,
     //pjsua_var.acc[acc_id].auto_rereg.reg_tp = NULL;
 
     if (renew) {
+        acc->app_unreg = PJ_FALSE;
         if (pjsua_var.acc[acc_id].regc == NULL) {
             status = pjsua_regc_init(acc_id);
             if (status != PJ_SUCCESS) {
@@ -3996,7 +3999,32 @@ on_return:
 PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
                                                 pj_bool_t renew)
 {
-    return acc_set_registration(acc_id, renew, PJ_FALSE);
+    pj_bool_t app_unreg;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
+                     PJ_EINVAL);
+    PJ_ASSERT_RETURN(pjsua_var.acc[acc_id].valid, PJ_EINVALIDOP);
+
+    /* Remember that the application took the account offline, so that
+     * pjsua doesn't register it again by itself, e.g: on IP change.
+     */
+    PJSUA_LOCK();
+    app_unreg = pjsua_var.acc[acc_id].app_unreg;
+    if (!renew)
+        pjsua_var.acc[acc_id].app_unreg = PJ_TRUE;
+    PJSUA_UNLOCK();
+
+    status = acc_set_registration(acc_id, renew, PJ_FALSE);
+
+    /* The pending request decides whether the account is registered */
+    if (status == PJSIP_EBUSY) {
+        PJSUA_LOCK();
+        pjsua_var.acc[acc_id].app_unreg = app_unreg;
+        PJSUA_UNLOCK();
+    }
+
+    return status;
 }
 
 
@@ -5424,7 +5452,7 @@ static void auto_rereg_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
      * the auto-reregistration.
      */
     if (!acc->valid || !acc->auto_rereg.active || 
-        acc->cfg.reg_retry_interval == 0)
+        acc->cfg.reg_retry_interval == 0 || acc->app_unreg)
     {
         goto on_return;
     }
@@ -5471,8 +5499,8 @@ static void auto_rereg_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
                  * next retry rather than abandon the in-flight tsx
                  * and race a second REGISTER against it.
                  */
-                status = pjsua_acc_set_registration(acc->index,
-                                                   PJ_FALSE);
+                status = acc_set_registration(acc->index, PJ_FALSE,
+                                              PJ_FALSE);
                 if (status != PJ_SUCCESS) {
                     pjsua_perror(THIS_FILE,
                                  "Unable to send unregister of old"
@@ -5533,7 +5561,7 @@ static void schedule_reregistration(pjsua_acc *acc)
     pj_assert(acc);
 
     /* Validate the account and re-registration feature status */
-    if (!acc->valid || acc->cfg.reg_retry_interval == 0) {
+    if (!acc->valid || acc->cfg.reg_retry_interval == 0 || acc->app_unreg) {
         return;
     }
 
@@ -5727,6 +5755,10 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc)
     pj_bool_t no_unreg = ((acc->cfg.contact_rewrite_method &
                            PJSUA_CONTACT_REWRITE_NO_UNREG) != 0);
 
+    /* Don't register an account the application took offline */
+    if (acc->app_unreg)
+        return pjsua_acc_handle_call_on_ip_change(acc);
+
     acc->ip_change_op = PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT;
 
     PJ_LOG(3, (THIS_FILE, "%.*s: send %sregistration triggered "
@@ -5744,7 +5776,7 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc)
      */
     reset_outbound_rejection(acc);
 
-    status = pjsua_acc_set_registration(acc->index, !need_unreg);
+    status = acc_set_registration(acc->index, !need_unreg, PJ_FALSE);
     if ((status != PJ_SUCCESS)
         && (acc->ip_change_op == PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT))
     {
@@ -5776,8 +5808,8 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc)
                                                 "Contact", rc);
                         status = rc;
                     } else {
-                        status = pjsua_acc_set_registration(acc->index,
-                                                            !need_unreg);
+                        status = acc_set_registration(acc->index,
+                                                      !need_unreg, PJ_FALSE);
                         if (status == PJ_SUCCESS) {
                             return status;
                         }
