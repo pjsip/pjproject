@@ -6,9 +6,10 @@
 # see the jniclasscode pragma in pjsua2.i -- so its name is fixed. Gradle
 # compiles the Java beside it and packages both into the AAR.
 #
-# This covers Android only. The desktop Java, Python and C# bindings are still
-# built by pjsip-apps/src/swig/*/Makefile; they need a JDK probe, javac steps
-# and sample runners that have no CMake consumer asking for them.
+# This covers Android only; python/CMakeLists.txt builds the Python module.
+# The desktop Java and C# bindings are still built by
+# pjsip-apps/src/swig/*/Makefile; they need a JDK probe, javac steps and
+# sample runners that have no CMake consumer asking for them.
 
 find_package(SWIG 4.0 REQUIRED COMPONENTS java)
 include(UseSWIG)
