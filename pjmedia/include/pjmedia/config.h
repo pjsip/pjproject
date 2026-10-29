@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1818,6 +1818,9 @@
  * packet loss of up to 50%, while 2 can potentially protect
  * against 66.7%, so typically setting it to a higher value is
  * rarely necessary.
+ *
+ * The maximum value is 5, so that a long packet loss is still reported
+ * as lost text.
  *
  * Default: 2, as per the recommendation of RFC 4103.
  */

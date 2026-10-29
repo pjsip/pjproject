@@ -186,10 +186,11 @@ static unsigned text_of(pj_uint16_t seq, char *buf)
 }
 
 /* Build a T.140 packet, or a RED packet carrying the text of the
- * previous red_level packets as redundant blocks (RFC 4103).
+ * previous red_level packets as redundant blocks (RFC 4103). The blocks
+ * before first_seq are empty, unless it is -1.
  */
 static unsigned build_pkt(pj_uint16_t seq, pj_uint32_t ssrc, int red_level,
-                          pj_uint8_t *pkt)
+                          int first_seq, pj_uint8_t *pkt)
 {
     pjmedia_rtp_hdr *hdr = (pjmedia_rtp_hdr*)pkt;
     pj_uint32_t ts = (pj_uint32_t)seq * 300;
@@ -216,6 +217,8 @@ static unsigned build_pkt(pj_uint16_t seq, pj_uint32_t ssrc, int red_level,
         pj_uint32_t offset = (pj_uint32_t)i * 300;
 
         len = text_of((pj_uint16_t)(seq - i), text);
+        if (first_seq != -1 && (pj_int16_t)(seq - i - first_seq) < 0)
+            len = 0;
         *p++ = (pj_uint8_t)(0x80 | T140_PT);
         *p++ = (pj_uint8_t)(offset >> 6);
         *p++ = (pj_uint8_t)(((offset << 2) & 0xFC) | (len >> 8));
@@ -226,6 +229,8 @@ static unsigned build_pkt(pj_uint16_t seq, pj_uint32_t ssrc, int red_level,
 
     for (i = red_level; i >= 0; --i) {
         len = text_of((pj_uint16_t)(seq - i), text);
+        if (first_seq != -1 && (pj_int16_t)(seq - i - first_seq) < 0)
+            len = 0;
         pj_memcpy(p, text, len);
         p += len;
     }
@@ -239,7 +244,10 @@ typedef struct scenario
     unsigned     cnt;
     pj_uint16_t  seq[MAX_PKTS];
     const char  *expected[2];       /* T.140, RED level 2 */
-    unsigned     new_ssrc_idx;      /* First packet with a new SSRC, or 0 */
+    unsigned     ssrc_mask;         /* Bit i set: packet i has another
+                                       SSRC (no SSRC in SDP) */
+    int          ssrc_start;        /* First sequence of the other SSRC,
+                                       its earlier RED blocks are empty */
 } scenario;
 
 static const scenario scenarios[] =
@@ -328,18 +336,41 @@ static const scenario scenarios[] =
       { 100, 101, 102, 103, 40000, 40002 },
       { "abcd??P", "abcdNOP" } },
 
-    /* A new SSRC restarts the sequence (no SSRC in SDP) */
+    /* Known limitation: a restart back by up to RTP's MAX_MISORDER (100)
+     * with the same SSRC looks like late packets.
+     */
+    { "remote sequence restart back by less than 100", 9,
+      { 110, 111, 112, 113, 114, 115, 100, 101, 102 },
+      { "klmnop", "klmnop" } },
+
+    /* A new SSRC restarts the sequence once confirmed */
     { "remote restart with a new SSRC", 7,
       { 100, 101, 102, 103, 40000, 40001, 40002 },
-      { "abcdNOP", "abcdNOP" }, 4 },
+      { "abcd?OP", "abcdNOP" }, 0x70, 40000 },
 
     { "new SSRC with a nearby sequence", 7,
       { 100, 101, 102, 103, 120, 121, 122 },
-      { "abcduvw", "abcduvw" }, 4 },
+      { "abcd?vw", "abcduvw" }, 0x70, 120 },
 
     { "new SSRC with a lower sequence", 9,
       { 110, 111, 112, 113, 114, 115, 100, 101, 102 },
-      { "klmnopabc", "klmnopabc" }, 6 },
+      { "klmnop?bc", "klmnopabc" }, 0x1C0, 100 },
+
+    { "new SSRC with loss", 6,
+      { 100, 101, 102, 103, 40001, 40002 },
+      { "abcd?P", "abcdNOP" }, 0x30, 40000 },
+
+    { "new SSRC with reordering", 7,
+      { 100, 101, 102, 103, 40001, 40000, 40002 },
+      { "abcdN?P", "abcdNOP" }, 0x70, 40000 },
+
+    { "stray packet with another SSRC", 6,
+      { 100, 101, 102, 5000, 103, 104 },
+      { "abcde", "abcde" }, 0x08, 5000 },
+
+    { "interleaved SSRCs", 7,
+      { 100, 101, 40000, 102, 40001, 103, 40002 },
+      { "abcd", "abcd" }, 0x54, 40000 },
 };
 
 /* RTCP counts an RTP-bad packet as discarded only if the stream did */
@@ -406,14 +437,13 @@ static int run_scenario(pjmedia_endpt *endpt, const scenario *sc,
     for (i = 0; i < sc->cnt; ++i) {
         pj_uint8_t pkt[128];
         pjmedia_tp_cb_param param;
+        pj_bool_t other = (sc->ssrc_mask & (1 << i)) != 0;
 
         pj_bzero(&param, sizeof(param));
         param.user_data = stub.user_data;
         param.pkt = pkt;
-        param.size = build_pkt(sc->seq[i],
-                               (sc->new_ssrc_idx && i >= sc->new_ssrc_idx) ?
-                               SSRC + 1 : SSRC,
-                               red_level, pkt);
+        param.size = build_pkt(sc->seq[i], other ? SSRC + 1 : SSRC,
+                               red_level, other ? sc->ssrc_start : -1, pkt);
         (*stub.rtp_cb2)(&param);
     }
 

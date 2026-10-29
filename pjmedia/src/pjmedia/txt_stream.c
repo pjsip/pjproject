@@ -131,6 +131,8 @@ typedef struct pjmedia_txt_stream {
     int rx_last_seq; /**< Sequence of last rx.   */
     int rx_jump_seq; /**< Unconfirmed sequence
                           jump.                  */
+    pj_uint32_t rx_ssrc;      /**< SSRC of last rx.      */
+    pj_uint32_t rx_jump_ssrc; /**< SSRC of rx_jump_seq.  */
 
     /* Incoming text callback. */
     void (*cb)(pjmedia_txt_stream *, void *, const pjmedia_txt_stream_data *);
@@ -739,8 +741,9 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
     unsigned red_hdr_len = 0;
     pj_bool_t is_red = (hdr->pt == c_strm->si->rx_red_pt);
     pj_uint16_t seq = pj_ntohs(hdr->seq);
+    pj_uint32_t ssrc = pj_ntohl(hdr->ssrc);
     pj_int16_t diff = 0;
-    pj_bool_t big_gap;
+    pj_bool_t new_ssrc, big_gap;
     int prev_last_seq;
     pj_status_t status = PJ_SUCCESS;
 
@@ -759,18 +762,16 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
 
     pj_mutex_lock(c_strm->jb_mutex);
 
-    if (seq_st.status.flag.badssrc && !c_strm->si->has_rem_ssrc) {
-        /* Remote has restarted the stream with a new SSRC */
-        stream->rx_last_seq = (pj_uint16_t) (seq - 1);
-        stream->rx_jump_seq = -1;
-        pjmedia_jbuf_reset(c_strm->jb);
+    /* Without SSRC in SDP, a new SSRC may be a remote restart */
+    new_ssrc = !c_strm->si->has_rem_ssrc && stream->rx_last_seq != -1 &&
+               ssrc != stream->rx_ssrc;
 
     /* We track sequence ourselves, so a packet rejected by the RTP
      * sequence check (e.g: during probation) may still be used.
      */
-    } else if (seq_st.status.flag.bad &&
+    if (seq_st.status.flag.bad &&
         (seq_st.status.flag.badpt || seq_st.status.flag.badssrc ||
-         seq_st.status.flag.dup || stream->rx_last_seq == -1))
+         (seq_st.status.flag.dup && !new_ssrc) || stream->rx_last_seq == -1))
     {
         goto on_return;
     }
@@ -779,39 +780,44 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
     big_gap = stream->rx_last_seq != -1 &&
               (diff > MAX_SEQ_GAP || diff < -MAX_SEQ_GAP);
 
-    if (big_gap && (seq_st.status.flag.bad ||
-                    !seq_st.status.flag.outorder || diff > 0))
+    if (new_ssrc || (big_gap && (seq_st.status.flag.bad ||
+                                 !seq_st.status.flag.outorder || diff > 0)))
     {
-        /* Accept a far sequence only if confirmed by a nearby packet (or
-         * RTP session restart), otherwise it may be a stray packet. Late
-         * packets (good, out of order and behind) are processed as usual.
+        /* Accept a new SSRC or a far sequence only if confirmed by a nearby
+         * packet with the same SSRC (or RTP session restart), otherwise it
+         * may be a stray packet. Late packets (good, out of order and
+         * behind) are processed as usual.
          */
         pj_int16_t jump_diff = (pj_int16_t) (seq - stream->rx_jump_seq);
+        pj_bool_t nearby = stream->rx_jump_seq != -1 &&
+                           ssrc == stream->rx_jump_ssrc &&
+                           jump_diff <= MAX_SEQ_GAP &&
+                           jump_diff >= -MAX_SEQ_GAP;
+        pj_bool_t restart = seq_st.status.flag.restart && !new_ssrc;
 
-        if (!seq_st.status.flag.restart &&
-            (stream->rx_jump_seq == -1 || jump_diff == 0 ||
-             jump_diff > MAX_SEQ_GAP || jump_diff < -MAX_SEQ_GAP))
-        {
+        if (!restart && (!nearby || jump_diff == 0)) {
             stream->rx_jump_seq = seq;
+            stream->rx_jump_ssrc = ssrc;
             goto on_return;
         }
 
-        if (diff > 0 && !seq_st.status.flag.restart) {
+        if (diff > 0 && !restart && !new_ssrc) {
             /* Long loss, limit the number of lost text markers */
             stream->rx_last_seq = (pj_uint16_t) (seq - MAX_SEQ_GAP);
         } else {
-            /* Sequence restart (jump backward or RTP restart). Start from
-             * the unconfirmed packet, or the previous packet if none is
-             * nearby, as far as the jitter buffer allows. Older RED blocks
-             * may have been shown.
+            /* Sequence restart (new SSRC, jump backward or RTP restart).
+             * Start from the unconfirmed packet, or the previous packet if
+             * none is nearby, as far as the jitter buffer allows. Older RED
+             * blocks may have been shown, but those of a new SSRC are from
+             * the new stream.
              */
             int skip = 1;
 
-            if (stream->rx_jump_seq != -1 && jump_diff <= MAX_SEQ_GAP &&
-                jump_diff >= -MAX_SEQ_GAP)
-            {
-                skip = PJ_MAX(0, PJ_MIN(jump_diff, MAX_SEQ_GAP - 1));
-            }
+            if (nearby)
+                skip = PJ_MAX(0, jump_diff);
+            if (new_ssrc)
+                skip = PJ_MAX(skip, red_level);
+            skip = PJ_MIN(skip, MAX_SEQ_GAP - 1);
             stream->rx_last_seq = (pj_uint16_t) (seq - skip - 1);
             pjmedia_jbuf_reset(c_strm->jb);
         }
@@ -845,8 +851,10 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
     }
 
     *pkt_discarded = (stream->rx_last_seq == prev_last_seq);
-    if (!*pkt_discarded)
+    if (!*pkt_discarded) {
+        stream->rx_ssrc = ssrc;
         stream->rx_jump_seq = -1;
+    }
 
 on_return:
     /* Unlock mutex before calling the UI callback to prevent deadlocks */
