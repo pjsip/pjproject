@@ -282,8 +282,17 @@ on_return:
 }
 
 static pj_bool_t answer_1xx_on_rx_request(pjsip_rx_data *rdata);
+static void answer_1xx_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e);
 
-/* Answers 100 to the requests of terminate_async_test() */
+/* Whether to answer, and the provisional responses reported to the
+ * transaction user.
+ */
+static pj_bool_t answer_1xx_respond;
+static unsigned answer_1xx_reported;
+
+/* Answers the requests of terminate_async_test() with 100, and an INVITE
+ * also with 180, or drops them, and is the user of their transactions.
+ */
 static pjsip_module answer_1xx_mod =
 {
     NULL, NULL,                         /* prev and next        */
@@ -298,7 +307,7 @@ static pjsip_module answer_1xx_mod =
     NULL,                               /* on_rx_response()     */
     NULL,                               /* on_tx_request()      */
     NULL,                               /* on_tx_response()     */
-    NULL,                               /* on_tsx_state()       */
+    &answer_1xx_on_tsx_state,           /* on_tsx_state()       */
 };
 
 static pj_bool_t answer_1xx_on_rx_request(pjsip_rx_data *rdata)
@@ -309,19 +318,34 @@ static pj_bool_t answer_1xx_on_rx_request(pjsip_rx_data *rdata)
     if (pj_strcmp2(&from_uri->user, "tsx_basic_1xx"))
         return PJ_FALSE;
 
+    if (!answer_1xx_respond)
+        return PJ_TRUE;
+
     pjsip_endpt_respond_stateless(endpt, rdata, 100, NULL, NULL, NULL);
+    if (rdata->msg_info.msg->line.req.method.id == PJSIP_INVITE_METHOD)
+        pjsip_endpt_respond_stateless(endpt, rdata, 180, NULL, NULL, NULL);
     return PJ_TRUE;
+}
+
+static void answer_1xx_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
+{
+    if (tsx->state == PJSIP_TSX_STATE_PROCEEDING &&
+        e->body.tsx_state.type == PJSIP_EVENT_RX_MSG)
+    {
+        ++answer_1xx_reported;
+    }
 }
 
 enum terminate_async_case
 {
     TA_RETRANSMIT,      /* the request is retransmitted */
-    TA_1XX,             /* the INVITE is answered with 100 */
-    TA_SENDING          /* still being sent, then answered with 100 */
+    TA_1XX,             /* the INVITE is answered with 100 and 180 */
+    TA_SENDING          /* still being sent, not answered */
 };
 
-/* A request being terminated asynchronously must not be retransmitted, nor
- * brought back by a provisional response.
+/* A request being terminated asynchronously must not be retransmitted, and
+ * a provisional response must reach the user without cancelling the
+ * termination.
  */
 static int terminate_async_test(unsigned tid, enum terminate_async_case tc)
 {
@@ -335,6 +359,7 @@ static int terminate_async_test(unsigned tid, enum terminate_async_case tc)
     pj_bool_t prev_discard;
     unsigned prev_recv_delay, prev_send_delay;
     unsigned t1 = pjsip_cfg()->tsx.t1;
+    unsigned waited;
     int rc = 0;
 
     PJ_LOG(3,(THIS_FILE, "  terminate async test: %s", title[tc]));
@@ -366,7 +391,11 @@ static int terminate_async_test(unsigned tid, enum terminate_async_case tc)
                                                &target, &from, &target, NULL,
                                                NULL, -1, NULL, &tdata),
                     NULL, { rc = -405; goto on_return; });
-    PJ_TEST_SUCCESS(pjsip_tsx_create_uac(NULL, tdata, &tsx), NULL,
+    answer_1xx_respond = (tc == TA_1XX);
+    answer_1xx_reported = 0;
+    PJ_TEST_SUCCESS(pjsip_tsx_create_uac(tc == TA_RETRANSMIT ? NULL :
+                                             &answer_1xx_mod,
+                                         tdata, &tsx), NULL,
                     { pjsip_tx_data_dec_ref(tdata); rc = -410;
                       goto on_return; });
 
@@ -394,6 +423,12 @@ static int terminate_async_test(unsigned tid, enum terminate_async_case tc)
                                                 PJSIP_SC_REQUEST_TERMINATED);
                             rc = -430; });
 
+    /* The pending retransmission is cancelled */
+    pj_grp_lock_acquire(tsx->grp_lock);
+    if (rc == 0 && pj_timer_entry_running(&tsx->retransmit_timer))
+        rc = -432;
+    pj_grp_lock_release(tsx->grp_lock);
+
     /* Once sent, the request is not to be retransmitted */
     flush_events(t1);
     pj_grp_lock_acquire(tsx->grp_lock);
@@ -404,14 +439,23 @@ static int terminate_async_test(unsigned tid, enum terminate_async_case tc)
     }
     pj_grp_lock_release(tsx->grp_lock);
 
-    flush_events(t1 * 5);
+    /* Wait for the termination, generously for slow runners */
+    for (waited = 0; rc == 0 && waited < t1 * 64 &&
+                     tsx->state < PJSIP_TSX_STATE_TERMINATED; waited += 100)
+    {
+        flush_events(100);
+    }
 
+    pj_grp_lock_acquire(tsx->grp_lock);
     if (rc == 0 && tsx->retransmit_count != 0)
         rc = -440;
     if (rc == 0 && tsx->state < PJSIP_TSX_STATE_TERMINATED)
         rc = -445;
     if (rc == 0 && tsx->status_code != PJSIP_SC_REQUEST_TERMINATED)
         rc = -450;
+    if (rc == 0 && answer_1xx_reported != (tc == TA_1XX ? 2 : 0))
+        rc = -452;
+    pj_grp_lock_release(tsx->grp_lock);
     if (rc != 0)
         pjsip_tsx_terminate(tsx, PJSIP_SC_REQUEST_TERMINATED);
     pj_grp_lock_dec_ref(tsx->grp_lock);

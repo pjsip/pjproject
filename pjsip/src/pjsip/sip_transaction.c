@@ -1317,15 +1317,6 @@ static pj_status_t tsx_shutdown( pjsip_transaction *tsx )
 }
 
 
-/* Client transaction given its final status by pjsip_tsx_terminate_async2()
- * while still waiting for a final response.
- */
-static pj_bool_t is_uac_terminating(const pjsip_transaction *tsx)
-{
-    return tsx->role == PJSIP_ROLE_UAC && tsx->status_code >= 200 &&
-           tsx->state < PJSIP_TSX_STATE_COMPLETED;
-}
-
 /*
  * Callback when timer expires. Transport error also piggybacks this event
  * to avoid deadlock (https://github.com/pjsip/pjproject/issues/1646).
@@ -1344,7 +1335,8 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 
     if (entry->id == TERMINATE_TIMER) {
         if (tsx->state < PJSIP_TSX_STATE_TERMINATED) {
-            pjsip_tsx_terminate(tsx, tsx->status_code);
+            pjsip_tsx_terminate(tsx, tsx->status_code >= 200 ?
+                                        tsx->status_code : tsx->term_code);
         }
     } else if (entry->id == TRANSPORT_ERR_TIMER ||
                entry->id == TRANSPORT_DISC_TIMER)
@@ -1440,12 +1432,9 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 
         PJSIP_EVENT_INIT_TIMER(event, entry);
 
-        /* Dispatch event to transaction, but don't retransmit a request
-         * that is being terminated asynchronously.
-         */
+        /* Dispatch event to transaction. */
         pj_grp_lock_acquire(tsx->grp_lock);
-        if (entry != &tsx->retransmit_timer || !is_uac_terminating(tsx))
-            (*tsx->state_handler)(tsx, &event);
+        (*tsx->state_handler)(tsx, &event);
         pj_grp_lock_release(tsx->grp_lock);
 
         pj_log_pop_indent();
@@ -1999,9 +1988,11 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate_async2(pjsip_transaction *tsx,
     if (tsx->status_code < 200)
         tsx_set_status_code(tsx, code, reason);
 
-    /* With a final status, a request is no longer retransmitted */
-    if (tsx->role == PJSIP_ROLE_UAC)
-        tsx->transport_flag &= ~(TSX_HAS_PENDING_RESCHED);
+    /* A request being terminated is no longer retransmitted */
+    if (tsx->role == PJSIP_ROLE_UAC) {
+        tsx->term_code = tsx->status_code;
+        tsx_cancel_timer(tsx, &tsx->retransmit_timer);
+    }
     pj_grp_lock_release(tsx->grp_lock);
 
     /* Schedule the termination */
@@ -2152,16 +2143,9 @@ PJ_DEF(void) pjsip_tsx_recv_msg( pjsip_transaction *tsx,
     /* Init event. */
     PJSIP_EVENT_INIT_RX_MSG(event, rdata);
 
-    /* Dispatch to transaction. A provisional response must not bring
-     * back a request that is being terminated asynchronously.
-     */
+    /* Dispatch to transaction. */
     pj_grp_lock_acquire(tsx->grp_lock);
-    if (!is_uac_terminating(tsx) ||
-        rdata->msg_info.msg->type != PJSIP_RESPONSE_MSG ||
-        rdata->msg_info.msg->line.status.code >= 200)
-    {
-        (*tsx->state_handler)(tsx, &event);
-    }
+    (*tsx->state_handler)(tsx, &event);
     pj_grp_lock_release(tsx->grp_lock);
 
     pj_log_pop_indent();
@@ -2814,6 +2798,10 @@ static void tsx_resched_retransmission( pjsip_transaction *tsx )
 
     pj_assert((tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT) == 0);
 
+    /* Not while being terminated asynchronously */
+    if (tsx->term_code)
+        return;
+
     if (tsx->role==PJSIP_ROLE_UAC && tsx->status_code >= 100)
         msec_time = pjsip_cfg()->tsx.t2;
     else
@@ -3050,6 +3038,10 @@ static pj_status_t tsx_on_state_calling( pjsip_transaction *tsx,
     {
         pj_status_t status;
 
+        /* Not while being terminated asynchronously */
+        if (tsx->term_code)
+            return PJ_SUCCESS;
+
         /* Retransmit the request. */
         status = tsx_retransmit( tsx, 1 );
         if (status != PJ_SUCCESS) {
@@ -3111,7 +3103,9 @@ static pj_status_t tsx_on_state_calling( pjsip_transaction *tsx,
              *  - retransmit timer is set to T2
              *  - timeout timer F is not deleted.
              */
-            if (tsx->method.id == PJSIP_INVITE_METHOD) {
+            if (tsx->term_code) {
+                /* Keep the pending termination, without retransmission */
+            } else if (tsx->method.id == PJSIP_INVITE_METHOD) {
 
                 /* Cancel timeout timer */
                 lock_timer(tsx);
@@ -3505,6 +3499,10 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
         if (event->body.timer.entry == &tsx->retransmit_timer) {
             /* Retransmit message. */
             pj_status_t status;
+
+            /* Not while being terminated asynchronously */
+            if (tsx->term_code)
+                return PJ_SUCCESS;
 
             status = tsx_retransmit( tsx, 1 );
             
