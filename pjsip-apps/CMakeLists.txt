@@ -120,3 +120,8 @@ endif()
 if(PJ_BUILD_SWIG_PYTHON)
   add_subdirectory(src/swig/python)
 endif()
+
+# See PJ_BUILD_SWIG_CSHARP in the top-level CMakeLists.txt
+if(PJ_BUILD_SWIG_CSHARP)
+  add_subdirectory(src/swig/csharp)
+endif()

@@ -145,3 +145,34 @@ Open the resulting .ipa file in Xcode: ``` pjsip-apps/src/swig/csharp/pjsua2maui
 
 Drag it to your connected device under "Devices and Simulators."
 Xcode will handle the signing and deployment.
+
+### Building pjsip with CMake instead
+
+CMake can replace the `configure-android`/`configure-iphone`, `make` and
+`make` in `pjsip-apps/src/swig/csharp` steps above. With
+`-DPJ_BUILD_SWIG_CSHARP=ON` it builds the bindings into
+`<build>/pjsip-apps/src/swig/csharp` and copies them into this project, in
+the same places (point `PJSUA2_MAUI_DIR` at another copy of the project, or
+set it empty to skip the copy). It needs SWIG 4.0 or later. Configure once
+per ABI or architecture.
+
+Android, e.g. for the emulator:
+
+```bash
+cmake -B build-android-x86_64 \
+  -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake" \
+  -DANDROID_ABI=x86_64 -DANDROID_PLATFORM=android-23 \
+  -DANDROID_STL=c++_shared -DPJ_BUILD_SWIG_CSHARP=ON
+cmake --build build-android-x86_64 -j
+```
+
+iOS, for the Simulator on Apple silicon (`iphoneos` for a device):
+
+```bash
+cmake -B build-ios-sim -G Xcode -DCMAKE_SYSTEM_NAME=iOS \
+  -DCMAKE_OSX_SYSROOT=iphonesimulator -DCMAKE_OSX_ARCHITECTURES=arm64 \
+  -DPJ_BUILD_SWIG_CSHARP=ON
+cmake --build build-ios-sim -j
+```
+
+Then build and run the app with `dotnet` as above.
