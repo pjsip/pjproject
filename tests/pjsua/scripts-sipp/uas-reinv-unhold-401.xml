@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+
+<!--
+  pjsua puts the call on hold, and SIPp accepts it. pjsua then releases
+  the hold and SIPp answers that re-INVITE with 401. pjsua has no
+  credentials, so the unhold fails for good. SIPp then sends a sendrecv
+  re-INVITE: the answer must be sendonly, since the call is still on
+  hold.
+-->
+
+<scenario name="Unhold re-INVITE rejected with 401">
+  <recv request="INVITE" crlf="true">
+    <action>
+      <ereg regexp=".*" search_in="hdr" header="From" assign_to="3"/>
+      <ereg regexp="sip:(.*)>" search_in="hdr" header="Contact" assign_to="4,5"/>
+      <assign assign_to="4" variable="5" />
+    </action>
+  </recv>
+
+  <send retrans="500">
+    <![CDATA[
+
+      SIP/2.0 200 OK
+      [last_Via:]
+      [last_From:]
+      [last_To:];tag=[call_number]
+      [last_Call-ID:]
+      [last_CSeq:]
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+      v=0
+      o=- 1 1 IN IP4 [local_ip]
+      s=-
+      c=IN IP4 [local_ip]
+      t=0 0
+      m=audio 4444 RTP/AVP 0
+      a=rtpmap:0 PCMU/8000
+
+    ]]>
+  </send>
+
+  <recv request="ACK">
+  </recv>
+
+  <!-- pjsua's hold re-INVITE: accept it. -->
+  <recv request="INVITE" crlf="true">
+  </recv>
+
+  <send>
+    <![CDATA[
+
+      SIP/2.0 200 OK
+      [last_Via:]
+      [last_From:]
+      [last_To:]
+      [last_Call-ID:]
+      [last_CSeq:]
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+      v=0
+      o=- 1 2 IN IP4 [local_ip]
+      s=-
+      c=IN IP4 [local_ip]
+      t=0 0
+      m=audio 4444 RTP/AVP 0
+      a=rtpmap:0 PCMU/8000
+      a=recvonly
+
+    ]]>
+  </send>
+
+  <recv request="ACK">
+  </recv>
+
+  <!-- pjsua's unhold re-INVITE: challenge it. -->
+  <recv request="INVITE" crlf="true">
+  </recv>
+
+  <send>
+    <![CDATA[
+
+      SIP/2.0 401 Unauthorized
+      [last_Via:]
+      [last_From:]
+      [last_To:]
+      [last_Call-ID:]
+      [last_CSeq:]
+      WWW-Authenticate: Digest realm="sipp", nonce="1234", algorithm=MD5
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv request="ACK">
+  </recv>
+
+  <pause milliseconds="500"/>
+
+  <send retrans="500">
+    <![CDATA[
+
+      INVITE sip:[$5] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+      To[$3]
+      Call-ID: [call_id]
+      CSeq: 1 INVITE
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+      v=0
+      o=- 1 3 IN IP4 [local_ip]
+      s=-
+      c=IN IP4 [local_ip]
+      t=0 0
+      m=audio 4444 RTP/AVP 0
+      a=rtpmap:0 PCMU/8000
+      a=sendrecv
+
+    ]]>
+  </send>
+
+  <recv response="100" optional="true">
+  </recv>
+
+  <!-- The failed unhold must leave the answer on hold (sendonly). -->
+  <recv response="200">
+    <action>
+      <ereg regexp="a=sendonly" search_in="body"
+            assign_to="6"/>
+    </action>
+  </recv>
+  <nop next="found_6" test="6"/>
+  <nop>
+    <action>
+      <exec int_cmd="stop_now"/>
+    </action>
+  </nop>
+  <label id="found_6"/>
+
+  <send>
+    <![CDATA[
+
+      ACK sip:[$5] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+      To[$3]
+      Call-ID: [call_id]
+      CSeq: 1 ACK
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <pause milliseconds="1000"/>
+
+  <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>
+  <CallLengthRepartition value="10, 50, 100, 500, 1000, 5000, 10000"/>
+
+</scenario>
