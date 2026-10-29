@@ -1050,6 +1050,15 @@ struct UaConfig : public PersistentObject
      */
     bool                resolverFallback;
 
+    /**
+     * Enable Call::onCallSendAck() for application-controlled ACK handling.
+     * Set this before Endpoint::libInit(). When disabled, PJSIP sends ACK
+     * automatically without invoking the callback.
+     *
+     * Default: false
+     */
+    bool                enableCallSendAckCallback;
+
 public:
     /**
      * Default constructor to initialize with default values.
@@ -2440,6 +2449,8 @@ private:
                                     pjmedia_sdp_session *sdp,
                                     pj_pool_t *pool,
                                     const pjmedia_sdp_session *rem_sdp);
+    static pj_bool_t on_call_send_ack(pjsua_call_id call_id,
+                                 pjsip_rx_data *rdata);
     static void on_stream_precreate(pjsua_call_id call_id,
                                     pjsua_on_stream_precreate_param *param);
     static void on_stream_created2(pjsua_call_id call_id,

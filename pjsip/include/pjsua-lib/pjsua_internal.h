@@ -298,6 +298,7 @@ struct pjsua_call
                                     /**< Allocated size of siprec_metadata */
 
     pjmedia_av_sync     *av_sync;       /**< Media stream synchronizer      */
+    pjmedia_sdp_session *answer_sdp;/**< Application SDP pending media init.*/
 };
 
 PJ_INLINE(pj_bool_t) pjsua_call_media_is_app_managed(
@@ -941,6 +942,11 @@ pj_status_t pjsua_acc_get_uac_dlg_addr(pjsua_acc_id acc_id,
  */
 pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata);
 
+pj_status_t pjsua_call_validate_initial_local_offer(
+                                      const pjsua_call *call,
+                                      const pjsua_call_setting *opt,
+                                      const pjmedia_sdp_session *sdp);
+
 /*
  * Media channel.
  */
@@ -1056,6 +1062,11 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg);
  * Start call subsystem.
  */
 pj_status_t pjsua_call_subsys_start(void);
+
+/**
+ * Destroy call subsystem resources.
+ */
+void pjsua_call_subsys_destroy(void);
 
 /**
  * Init media subsystems.
