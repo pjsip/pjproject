@@ -115,3 +115,8 @@ cmake_dependent_option(PJ_BUILD_SWIG_JAVA
 if(PJ_BUILD_SWIG_JAVA)
   add_subdirectory(src/swig)
 endif()
+
+# See PJ_BUILD_SWIG_PYTHON in the top-level CMakeLists.txt
+if(PJ_BUILD_SWIG_PYTHON)
+  add_subdirectory(src/swig/python)
+endif()

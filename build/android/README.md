@@ -16,8 +16,7 @@ CI; each needs its own build directory.
 
 This is an alternative to `./configure-android && make`, not a replacement for
 it. Both can build the libraries and the pjsua2 bindings; the autotools build
-additionally covers the desktop Java, Python and C# bindings, which CMake does
-not.
+additionally covers the desktop Java and C# bindings, which CMake does not.
 
 ## Minimum API level
 
@@ -127,7 +126,7 @@ because an unpacked AAR is never inside a sysroot.
 - **No TLS unless you supply OpenSSL.** Android has no system OpenSSL; build
   one for the NDK and point the search roots at it as above. Otherwise the
   build silently comes out with `PJLIB_WITH_SSL` empty.
-- **No desktop Java, Python or C# bindings.** Those are still built by
+- **No desktop Java or C# bindings.** Those are still built by
   `pjsip-apps/src/swig/*/Makefile`; they need a JDK probe, javac steps and
   sample runners that no CMake consumer is asking for.
 - **No video codecs beyond MediaCodec.** OpenH264 and VPX are not bundled and
