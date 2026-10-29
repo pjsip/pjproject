@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -985,6 +985,9 @@ static pj_status_t codec_recover( pjmedia_codec *codec,
         return codec_decode(codec, NULL, output_buf_len, output);
 
     /* Otherwise just return zero-fill frame. */
+    if (output_buf_len < (codec_data->samples_per_frame << 1))
+        return PJMEDIA_CODEC_EPCMTOOSHORT;
+
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->size = codec_data->samples_per_frame << 1;
 

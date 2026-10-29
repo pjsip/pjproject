@@ -1021,8 +1021,12 @@ static void rebuffer(pjmedia_stream *stream,
     }
 
     /* Make sure we have space to store the new frame */
-    pj_assert(stream->enc_buf_count + (frame->size >> 1) <
-                stream->enc_buf_size);
+    if (frame->size > (stream->enc_buf_size - stream->enc_buf_count) << 1) {
+        PJ_LOG(5,(c_strm->port.info.name.ptr,
+                  "Frame too large for encoding buffer (%u bytes), "
+                  "truncated", (unsigned)frame->size));
+        frame->size = (stream->enc_buf_size - stream->enc_buf_count) << 1;
+    }
 
     /* Append new frame to the buffer */
     if (frame->size) {

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2012-2012 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2012-2026 Teluu Inc. (http://www.teluu.com)
  * Contributed by Regis Montoya (aka r3gis - www.r3gis.fr)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -925,6 +925,9 @@ static pj_status_t  silk_codec_recover(pjmedia_codec *codec,
 
     PJ_ASSERT_RETURN(codec && output_buf_len && output, PJ_EINVAL);
     silk = (silk_private*)codec->codec_data;
+
+    if (output_buf_len < silk->dec_buf_sz)
+        return PJMEDIA_CODEC_EPCMTOOSHORT;
 
     out_size = (SKP_int16)output_buf_len / silk->pcm_bytes_per_sample;
     err = SKP_Silk_SDK_Decode(silk->dec_st, &silk->dec_ctl,
