@@ -1140,8 +1140,6 @@ static pj_status_t  codec_decode( pjmedia_codec *codec,
     int fec = 0;
     int frm_size;
 
-    PJ_UNUSED_ARG(output_buf_len);
-
     pj_mutex_lock (opus_data->mutex);
 
     /* Validate input size against decode buffer capacity before any copy.
@@ -1194,8 +1192,8 @@ static pj_status_t  codec_decode( pjmedia_codec *codec,
      * then frame_size needs to be exactly the duration of audio that
      * is missing.
      */
-    frm_size = (int)output->size / (sizeof(opus_int16) *
-               opus_data->cfg.channel_cnt);
+    frm_size = (int)(output_buf_len / (sizeof(opus_int16) *
+               opus_data->cfg.channel_cnt));
     if (inframe->type != PJMEDIA_FRAME_TYPE_AUDIO || fec) {
         frm_size = PJ_MIN((unsigned)frm_size,
                           opus_data->cfg.sample_rate *
@@ -1278,8 +1276,8 @@ static pj_status_t  codec_recover( pjmedia_codec *codec,
     }
 
     inframe = &opus_data->dec_frame[opus_data->dec_frame_index];
-    frm_size = (int)output->size / (sizeof(opus_int16) *
-               opus_data->cfg.channel_cnt);
+    frm_size = (int)(output_buf_len / (sizeof(opus_int16) *
+               opus_data->cfg.channel_cnt));
     if (inframe->type != PJMEDIA_FRAME_TYPE_AUDIO) {
         frm_size = PJ_MIN((unsigned)frm_size, opus_data->cfg.sample_rate *
                           opus_data->dec_ptime / opus_data->dec_ptime_denum /

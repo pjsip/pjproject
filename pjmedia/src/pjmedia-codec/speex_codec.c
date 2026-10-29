@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -988,13 +988,11 @@ static pj_status_t  spx_codec_recover(pjmedia_codec *codec,
     struct spx_private *spx;
     unsigned count;
 
-    /* output_buf_len is unreferenced when building in Release mode */
-    PJ_UNUSED_ARG(output_buf_len);
-
     spx = (struct spx_private*) codec->codec_data;
 
-    count = spx_factory.speex_param[spx->param_id].clock_rate * 20 / 1000;
-    pj_assert(count <= output_buf_len/2);
+    count = spx_factory.speex_param[spx->param_id].samples_per_frame;
+    if (output_buf_len < count * 2)
+        return PJMEDIA_CODEC_EPCMTOOSHORT;
 
     /* Recover packet loss */
     speex_decode_int(spx->dec, NULL, (spx_int16_t*) output->buf);
