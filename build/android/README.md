@@ -43,6 +43,11 @@ silently drops the backend.
 | `PJMEDIA_WITH_VIDEODEV_OPENGL` | OpenGL ES renderer | NDK `GLESv2`, `EGL` |
 | `PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC` | MediaCodec audio and video codecs | NDK `mediandk` |
 
+`PJMEDIA_WITH_AUDIODEV_OPENSL` adds the OpenSL ES audio device, which needs
+NDK `OpenSLES` and no Java. It is off by default, as in
+`pjmedia-audiodev/config.h`. When on, it comes after Oboe and before the
+JNI device in the device list.
+
 ### Oboe
 
 Oboe is not bundled. Point the build at an unpacked `oboe-<version>.aar` from

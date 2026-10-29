@@ -56,6 +56,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release \
           -DPJ_SKIP_EXPERIMENTAL_NOTICE=ON \
           -DPJ_BUILD_SWIG_JAVA=ON \
+          -DPJMEDIA_WITH_AUDIODEV_OPENSL=ON \
           -DOboe_ROOT="${{ runner.temp }}/oboe"
 
     - name: build
@@ -71,6 +72,7 @@ jobs:
         fail=0
         for opt in PJMEDIA_WITH_AUDIODEV_OBOE \
                    PJMEDIA_WITH_AUDIODEV_JNI \
+                   PJMEDIA_WITH_AUDIODEV_OPENSL \
                    PJMEDIA_WITH_VIDEODEV_OPENGL \
                    PJMEDIA_WITH_VIDEODEV_ANDROID \
                    PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC; do
