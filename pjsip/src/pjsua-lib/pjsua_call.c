@@ -3118,9 +3118,15 @@ PJ_DEF(pj_status_t) pjsua_call_set_user_data( pjsua_call_id call_id,
  */
 PJ_DEF(void*) pjsua_call_get_user_data(pjsua_call_id call_id)
 {
+    void *user_data;
+
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
                      NULL);
-    return pjsua_var.calls[call_id].user_data;
+    pj_mutex_lock(pjsua_var.call_owner_mutex);
+    user_data = pjsua_var.calls[call_id].user_data;
+    pj_mutex_unlock(pjsua_var.call_owner_mutex);
+
+    return user_data;
 }
 
 
@@ -3922,16 +3928,11 @@ pj_status_t pjsua_call_release_owner(pjsua_call_id call_id, void *owner)
 
     call = &pjsua_var.calls[call_id];
 
-    /* Already detached, e.g. on disconnect. Deliberately unlocked to keep
-     * that case lock-free, checked again under the mutex.
-     */
-    if (call->user_data != owner)
-        return PJ_SUCCESS;
-
     /* While the library is being destroyed, it ends the calls itself */
     hangup = (pjsua_get_state() < PJSUA_STATE_CLOSING);
 
-    /* The slot is reset under the same mutex, so the flag can't be left
+    /* Already detached, e.g. on disconnect, if the owner doesn't match.
+     * The slot is reset under the same mutex, so the flag can't be left
      * on a new call.
      */
     pj_mutex_lock(pjsua_var.call_owner_mutex);
