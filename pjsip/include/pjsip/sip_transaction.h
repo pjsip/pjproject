@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -114,6 +114,9 @@ struct pjsip_transaction
     pj_str_t                    status_text;    /**< Last reason phrase.    */
     pjsip_tsx_state_e           state;          /**< State.                 */
     int                         handle_200resp; /**< UAS 200/INVITE  retrsm.*/
+    int                         term_code;      /**< UAC status code given
+                                                     by an asynchronous
+                                                     termination, or 0.     */
     int                         tracing;        /**< Tracing enabled?       */
 
     /** Handler according to current state. */
@@ -422,7 +425,8 @@ PJ_DECL(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx,
 
 /**
  * Force terminate transaction asynchronously, using the transaction
- * internal timer.
+ * internal timer. Until then, a client transaction doesn't retransmit
+ * its request, and a provisional response doesn't cancel the termination.
  *
  * @param tsx       The transaction.
  * @param code      The status code to report. This is applied only if
@@ -436,7 +440,8 @@ PJ_DECL(pj_status_t) pjsip_tsx_terminate_async(pjsip_transaction *tsx,
 
 /**
  * Force terminate transaction asynchronously, using the transaction
- * internal timer.
+ * internal timer. Until then, a client transaction doesn't retransmit
+ * its request, and a provisional response doesn't cancel the termination.
  *
  * @param tsx       The transaction.
  * @param code      The status code to report. This is applied only if
