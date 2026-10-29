@@ -60,7 +60,7 @@ foreach(_sample IN LISTS _pj_samples)
 endforeach()
 unset(_pj_samples)
 
-if(PJ_WITH_CXX)
+if(PJ_BUILD_PJSUA2)
   foreach(_sample pjsua2_demo pjsua2_hello_reg)
     add_executable(${_sample} src/samples/${_sample}.cpp)
     target_link_libraries(${_sample} PRIVATE ${_pj_app_libs} pjsua2)
@@ -68,7 +68,7 @@ if(PJ_WITH_CXX)
       RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/samples"
     )
   endforeach()
-endif() # PJ_WITH_CXX
+endif() # PJ_BUILD_PJSUA2
 
 # ##############################################################################
 # pjsua-test: the Python tests in tests/pjsua, as make pjsua-test. Not in

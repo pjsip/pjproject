@@ -42,6 +42,12 @@ if(PJ_WITH_CXX)
   enable_language(CXX)
 endif()
 
+# pjsua2 alone, keeping the C++ backends: autoconf's --disable-pjsua2
+include(CMakeDependentOption)
+cmake_dependent_option(PJ_BUILD_PJSUA2 "Build the pjsua2 C++ library" ON
+  "PJ_WITH_CXX" OFF
+)
+
 # As autoconf: -Wall everywhere, and -O2 when neither a build type nor an -O
 # flag is given. Not a CMake build type, as those define NDEBUG, which would
 # turn off pj_assert() and PJ_DEBUG. MSVC is left alone (clang-cl reads -Wall
@@ -149,18 +155,17 @@ unset(_pj_build_apps_default)
 # need SWIG (and a JDK or the Python headers); Gradle turns Java on. Defined
 # here, before the libraries, because the bindings link them into a shared
 # library, so they must be built position independent.
-include(CMakeDependentOption)
 cmake_dependent_option(PJ_BUILD_SWIG_JAVA
   "Build the pjsua2 Java bindings with SWIG" OFF
-  "PJ_WITH_CXX;NOT IOS" OFF
+  "PJ_BUILD_PJSUA2;NOT IOS" OFF
 )
 cmake_dependent_option(PJ_BUILD_SWIG_PYTHON
   "Build the pjsua2 Python module with SWIG" OFF
-  "PJ_WITH_CXX;NOT ANDROID;NOT IOS" OFF
+  "PJ_BUILD_PJSUA2;NOT ANDROID;NOT IOS" OFF
 )
 cmake_dependent_option(PJ_BUILD_SWIG_CSHARP
   "Build the pjsua2 C# bindings with SWIG" OFF
-  "PJ_WITH_CXX" OFF
+  "PJ_BUILD_PJSUA2" OFF
 )
 if(PJ_BUILD_SWIG_JAVA OR PJ_BUILD_SWIG_PYTHON OR PJ_BUILD_SWIG_CSHARP)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -377,7 +382,7 @@ set(install_targets
   pjsua-lib
 )
 
-# optional targets: pjsua2 needs PJ_WITH_CXX, pjsua PJ_BUILD_APPS
+# optional targets: pjsua2 needs PJ_BUILD_PJSUA2, pjsua PJ_BUILD_APPS
 foreach(target pjsua2 pjsua)
   if(TARGET ${target})
     list(APPEND install_targets ${target})
@@ -608,7 +613,7 @@ install(FILES
 # ##############################################################################
 # pkg-config file
 
-# The libraries in link order; pjsua2 needs PJ_WITH_CXX
+# The libraries in link order; pjsua2 needs PJ_BUILD_PJSUA2
 set(_pj_pc_libs
   pjsua-lib pjsip-ua pjsip-simple pjsip
   pjmedia-codec pjmedia-videodev pjmedia-audiodev pjmedia
