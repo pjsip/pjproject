@@ -2125,7 +2125,8 @@ static int sdp_neg_dup_enc_name_test(pj_pool_t *pool)
                                                           &h264_fmtp_match),
                     NULL, return -2270);
     rc = sdp_neg_dup_enc_name_run(pool);
-    pjmedia_sdp_neg_register_fmt_match_cb(&h264, NULL);
+    PJ_TEST_SUCCESS(pjmedia_sdp_neg_register_fmt_match_cb(&h264, NULL),
+                    NULL, return rc ? rc : -2271);
 
     return rc;
 }

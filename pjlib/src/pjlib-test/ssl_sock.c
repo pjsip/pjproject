@@ -601,6 +601,11 @@ static pj_status_t load_cert_to_buf(pj_pool_t *pool, const pj_str_t *file_name,
     pj_oshandle_t fd = 0;
     pj_ssize_t size = (pj_ssize_t)pj_file_size(file_name->ptr);
 
+    if (size < 0) {
+        status = pj_get_os_error();
+        return status ? status : PJ_ENOTFOUND;
+    }
+
     status = pj_file_open(pool, file_name->ptr, PJ_O_RDONLY, &fd);
     if (status != PJ_SUCCESS)
         return status;

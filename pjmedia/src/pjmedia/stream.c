@@ -2011,11 +2011,17 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     if (stream->codec_param.info.frm_ptime_denum < 1)
         stream->codec_param.info.frm_ptime_denum = 1;
 
+    /* The frame time divides the packet and PLC lengths below */
+    if (stream->codec_param.info.frm_ptime == 0) {
+        PJ_LOG(3,(name.ptr, "Invalid codec frame time 0"));
+        status = PJ_EINVAL;
+        goto err_cleanup;
+    }
+
     /* The encoding buffer holds PJMEDIA_MAX_FRAME_DURATION_MS of audio, so
      * cap the packet duration (e.g. requested by remote's ptime) to it.
      */
-    if (stream->codec_param.info.frm_ptime > 0 &&
-        stream->codec_param.info.frm_ptime *
+    if (stream->codec_param.info.frm_ptime *
         stream->codec_param.setting.frm_per_pkt >
         PJMEDIA_MAX_FRAME_DURATION_MS * stream->codec_param.info.frm_ptime_denum)
     {
