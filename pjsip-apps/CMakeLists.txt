@@ -1,7 +1,5 @@
 list(APPEND CMAKE_MESSAGE_CONTEXT "pjsip-apps")
 
-include(CMakeDependentOption)
-
 # The applications, see PJ_BUILD_APPS in the top-level CMakeLists.txt
 if(PJ_BUILD_APPS)
 
@@ -105,13 +103,7 @@ endif() # PJ_BUILD_APPS
 # ##############################################################################
 # SWIG bindings
 
-# Off by default: SWIG is a build dependency nothing else here needs, and most
-# people configuring this project only want the libraries. Gradle turns it on.
-cmake_dependent_option(PJ_BUILD_SWIG_JAVA
-  "Build the pjsua2 JNI bindings with SWIG" OFF
-  "ANDROID;PJ_WITH_CXX" OFF
-)
-
+# See PJ_BUILD_SWIG_JAVA in the top-level CMakeLists.txt
 if(PJ_BUILD_SWIG_JAVA)
   add_subdirectory(src/swig)
 endif()
