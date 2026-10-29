@@ -619,6 +619,192 @@ static int scenario_retry_keeps_setting(pj_pool_t *pool, pjmedia_endpt *endpt)
 }
 
 
+#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
+
+/* DTLS-SRTP keying runs over real UDP sockets on 127.0.0.1, polled from
+ * this thread.
+ */
+typedef struct dtls_peer
+{
+    pjmedia_transport   *tp;
+    pjmedia_sdp_session *sdp;
+    pj_status_t          nego_status;
+} dtls_peer;
+
+
+static void dtls_on_nego_complete(pjmedia_transport *tp, pj_status_t result)
+{
+    dtls_peer *peer = (dtls_peer*)tp->user_data;
+
+    if (peer)
+        peer->nego_status = result;
+}
+
+static pj_status_t dtls_peer_create(pjmedia_endpt *endpt, const char *name,
+                                    dtls_peer *peer)
+{
+    pj_str_t addr = pj_str("127.0.0.1");
+    pjmedia_transport *udp = NULL;
+    pjmedia_srtp_setting opt;
+    pj_status_t status = PJ_EUNKNOWN;
+    unsigned i;
+
+    pj_bzero(peer, sizeof(*peer));
+    peer->nego_status = PJ_EPENDING;
+
+    for (i = 0; i < 20 && status != PJ_SUCCESS; ++i) {
+        int port = 40000 + (pj_rand() % 10000) * 2;
+        status = pjmedia_transport_udp_create2(endpt, name, &addr, port, 0,
+                                               &udp);
+    }
+    if (status != PJ_SUCCESS)
+        return status;
+
+    pjmedia_srtp_setting_default(&opt);
+    opt.use = PJMEDIA_SRTP_MANDATORY;
+    opt.close_member_tp = PJ_TRUE;
+    opt.keying_count = 1;
+    opt.keying[0] = PJMEDIA_SRTP_KEYING_DTLS_SRTP;
+    opt.user_data = peer;
+    opt.cb.on_srtp_nego_complete = &dtls_on_nego_complete;
+
+    status = pjmedia_transport_srtp_create(endpt, udp, &opt, &peer->tp);
+    if (status != PJ_SUCCESS)
+        pjmedia_transport_close(udp);
+
+    return status;
+}
+
+static pj_status_t dtls_peer_create_sdp(pj_pool_t *pool, dtls_peer *peer)
+{
+    enum { SDP_LEN = 160 };
+    pjmedia_transport_info info;
+    char *buf;
+    int len;
+
+    pjmedia_transport_info_init(&info);
+    pjmedia_transport_get_info(peer->tp, &info);
+
+    buf = (char*)pj_pool_alloc(pool, SDP_LEN);
+    len = pj_ansi_snprintf(buf, SDP_LEN,
+                           "v=0\r\n"
+                           "o=- 1 1 IN IP4 127.0.0.1\r\n"
+                           "s=-\r\n"
+                           "c=IN IP4 127.0.0.1\r\n"
+                           "t=0 0\r\n"
+                           "m=audio %u RTP/AVP 0\r\n",
+                           (unsigned)pj_sockaddr_get_port(
+                                        &info.sock_info.rtp_addr_name));
+    if (len < 1 || len >= SDP_LEN)
+        return PJ_ETOOSMALL;
+
+    return pjmedia_sdp_parse(pool, buf, len, &peer->sdp);
+}
+
+/* The answerer becomes the DTLS client and starts the handshake from
+ * encode_sdp(), so the handshake can complete before media_start(), e.g.
+ * while the call is ringing. A fingerprint mismatch found at that point
+ * must still fail media_start() instead of SRTP being started with the
+ * unverified peer's keys. With tamper==PJ_FALSE the same flow must
+ * succeed.
+ */
+static int scenario_dtls_fprint(pj_pool_t *pool, pjmedia_endpt *endpt,
+                                pj_bool_t tamper)
+{
+    dtls_peer a, b;
+    pjmedia_sdp_session *offer;
+    pjmedia_transport_info info;
+    pjmedia_srtp_info *srtp_info;
+    pj_time_val now, end;
+    pj_status_t status;
+    int rc = 0;
+
+    a.tp = b.tp = NULL;
+
+    status = dtls_peer_create(endpt, "dtlsA", &a);
+    if (status == PJ_SUCCESS)
+        status = dtls_peer_create(endpt, "dtlsB", &b);
+    CHECK(status == PJ_SUCCESS, "create DTLS-SRTP transports");
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    /* A offers (a=setup:actpass) */
+    status = pjmedia_transport_media_create(a.tp, pool, 0, NULL, 0);
+    if (status == PJ_SUCCESS)
+        status = dtls_peer_create_sdp(pool, &a);
+    if (status == PJ_SUCCESS)
+        status = pjmedia_transport_encode_sdp(a.tp, pool, a.sdp, NULL, 0);
+    CHECK(status == PJ_SUCCESS, "create offer");
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    /* What B receives. When tampered, the certificate A presents does
+     * not match the offered fingerprint, as with a man in the middle.
+     */
+    offer = pjmedia_sdp_session_clone(pool, a.sdp);
+    if (tamper) {
+        pjmedia_sdp_attr *fp;
+
+        fp = pjmedia_sdp_media_find_attr2(offer->media[0], "fingerprint",
+                                          NULL);
+        CHECK(fp && fp->value.slen, "offer has a=fingerprint");
+        if (!fp || !fp->value.slen)
+            goto on_return;
+        fp->value.ptr[fp->value.slen-1] =
+            (char)(fp->value.ptr[fp->value.slen-1] == '0' ? '1' : '0');
+    }
+
+    /* B answers (a=setup:active) and starts the handshake */
+    status = pjmedia_transport_media_create(b.tp, pool, 0, offer, 0);
+    if (status == PJ_SUCCESS)
+        status = dtls_peer_create_sdp(pool, &b);
+    if (status == PJ_SUCCESS)
+        status = pjmedia_transport_encode_sdp(b.tp, pool, b.sdp, offer, 0);
+    CHECK(status == PJ_SUCCESS, "create answer");
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    /* Let the handshake complete before media_start() */
+    pj_gettickcount(&end);
+    end.sec += 10;
+    do {
+        pj_time_val timeout = {0, 10};
+        pj_ioqueue_poll(pjmedia_endpt_get_ioqueue(endpt), &timeout);
+        pj_gettickcount(&now);
+    } while (b.nego_status == PJ_EPENDING && PJ_TIME_VAL_LT(now, end));
+
+    status = pjmedia_transport_media_start(b.tp, pool, b.sdp, offer, 0);
+
+    pjmedia_transport_info_init(&info);
+    pjmedia_transport_get_info(b.tp, &info);
+    srtp_info = (pjmedia_srtp_info*)
+                pjmedia_transport_info_get_spc_info(
+                                    &info, PJMEDIA_TRANSPORT_TYPE_SRTP);
+
+    if (tamper) {
+        CHECK(b.nego_status == PJMEDIA_SRTP_DTLS_EFPNOTMATCH,
+              "DTLS nego reports the fingerprint mismatch");
+        CHECK(status != PJ_SUCCESS,
+              "media_start() fails after the fingerprint mismatch");
+        CHECK(srtp_info && !srtp_info->active,
+              "SRTP not started with unverified keys");
+    } else {
+        CHECK(b.nego_status == PJ_SUCCESS, "DTLS nego verified");
+        CHECK(status == PJ_SUCCESS, "media_start() succeeds");
+        CHECK(srtp_info && srtp_info->active, "SRTP started");
+    }
+
+on_return:
+    if (b.tp)
+        pjmedia_transport_close(b.tp);
+    if (a.tp)
+        pjmedia_transport_close(a.tp);
+    return rc;
+}
+
+#endif  /* PJMEDIA_SRTP_HAS_DTLS */
+
+
 int transport_srtp_test(void)
 {
     pjmedia_endpt *endpt = NULL;
@@ -643,6 +829,10 @@ int transport_srtp_test(void)
     rc |= scenario_winner_writeback(pool, endpt);
     rc |= scenario_other_ssrc_first(pool, endpt);
     rc |= scenario_retry_keeps_setting(pool, endpt);
+#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
+    rc |= scenario_dtls_fprint(pool, endpt, PJ_FALSE);
+    rc |= scenario_dtls_fprint(pool, endpt, PJ_TRUE);
+#endif
 
     pj_pool_release(pool);
     pjmedia_endpt_destroy2(endpt);
