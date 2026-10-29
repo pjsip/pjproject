@@ -188,7 +188,8 @@ static unsigned text_of(pj_uint16_t seq, char *buf)
 /* Build a T.140 packet, or a RED packet carrying the text of the
  * previous red_level packets as redundant blocks (RFC 4103).
  */
-static unsigned build_pkt(pj_uint16_t seq, int red_level, pj_uint8_t *pkt)
+static unsigned build_pkt(pj_uint16_t seq, pj_uint32_t ssrc, int red_level,
+                          pj_uint8_t *pkt)
 {
     pjmedia_rtp_hdr *hdr = (pjmedia_rtp_hdr*)pkt;
     pj_uint32_t ts = (pj_uint32_t)seq * 300;
@@ -202,7 +203,7 @@ static unsigned build_pkt(pj_uint16_t seq, int red_level, pj_uint8_t *pkt)
     hdr->pt = red_level ? RED_PT : T140_PT;
     hdr->seq = pj_htons(seq);
     hdr->ts = pj_htonl(ts);
-    hdr->ssrc = pj_htonl(SSRC);
+    hdr->ssrc = pj_htonl(ssrc);
 
     if (red_level == 0) {
         len = text_of(seq, text);
@@ -238,6 +239,7 @@ typedef struct scenario
     unsigned     cnt;
     pj_uint16_t  seq[MAX_PKTS];
     const char  *expected[2];       /* T.140, RED level 2 */
+    unsigned     new_ssrc_idx;      /* First packet with a new SSRC, or 0 */
 } scenario;
 
 static const scenario scenarios[] =
@@ -307,6 +309,11 @@ static const scenario scenarios[] =
       { 100, 101, 102, 124, 123, 125, 126 },
       { "abc???????x?z{", "abc?????vwxyz{" } },
 
+    /* A late packet must not cancel a pending jump */
+    { "late packet during long loss", 10,
+      { 100, 101, 102, 103, 104, 105, 115, 104, 116, 117 },
+      { "abcdef???????qr", "abcdef?????opqr" } },
+
     { "late packets", 16,
       { 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112,
         113, 100, 101 },
@@ -315,10 +322,45 @@ static const scenario scenarios[] =
     { "remote sequence restart", 7,
       { 100, 101, 102, 103, 40000, 40001, 40002 },
       { "abcd?OP", "abcdNOP" } },
+
+    /* The unconfirmed packet is not skipped on restart */
+    { "remote sequence restart with loss", 6,
+      { 100, 101, 102, 103, 40000, 40002 },
+      { "abcd??P", "abcdNOP" } },
+
+    /* A new SSRC restarts the sequence (no SSRC in SDP) */
+    { "remote restart with a new SSRC", 7,
+      { 100, 101, 102, 103, 40000, 40001, 40002 },
+      { "abcdNOP", "abcdNOP" }, 4 },
+
+    { "new SSRC with a nearby sequence", 7,
+      { 100, 101, 102, 103, 120, 121, 122 },
+      { "abcduvw", "abcduvw" }, 4 },
+
+    { "new SSRC with a lower sequence", 9,
+      { 110, 111, 112, 113, 114, 115, 100, 101, 102 },
+      { "klmnopabc", "klmnopabc" }, 6 },
 };
 
+/* RTCP counts an RTP-bad packet as discarded only if the stream did */
+static const struct rtcp_scenario
+{
+    scenario     sc;
+    unsigned     discard;           /* Expected RTCP discard count */
+} rtcp_scenarios[] =
+{
+    { { "RTCP discard of a used RTP-bad packet", 4,
+        { 100, 102, 103, 104 },
+        { "a?cde", "abcde" } }, 0 },
+
+    { { "RTCP discard of a stray packet", 5,
+        { 100, 20100, 101, 102, 103 },
+        { "abcd", "abcd" } }, 1 },
+};
+
+/* Run a scenario, optionally returning the RTCP statistics */
 static int run_scenario(pjmedia_endpt *endpt, const scenario *sc,
-                        int red_level)
+                        int red_level, pjmedia_rtcp_stat *stat)
 {
     const char *expected = sc->expected[red_level ? 1 : 0];
     pjmedia_txt_stream_info si;
@@ -368,7 +410,10 @@ static int run_scenario(pjmedia_endpt *endpt, const scenario *sc,
         pj_bzero(&param, sizeof(param));
         param.user_data = stub.user_data;
         param.pkt = pkt;
-        param.size = build_pkt(sc->seq[i], red_level, pkt);
+        param.size = build_pkt(sc->seq[i],
+                               (sc->new_ssrc_idx && i >= sc->new_ssrc_idx) ?
+                               SSRC + 1 : SSRC,
+                               red_level, pkt);
         (*stub.rtp_cb2)(&param);
     }
 
@@ -377,6 +422,12 @@ static int run_scenario(pjmedia_endpt *endpt, const scenario *sc,
                    sc->title, red_level ? "RED" : "T.140", expected,
                    out.buf));
         rc = -50;
+    }
+
+    if (stat) {
+        PJ_TEST_SUCCESS(pjmedia_stream_common_get_stat(
+                        (pjmedia_stream_common *) stream, stat),
+                        sc->title, rc = -60);
     }
 
 on_return:
@@ -388,22 +439,41 @@ int txt_stream_test(void)
 {
     pjmedia_endpt *endpt;
     unsigned i;
-    int rc = 0;
+    int status, rc = 0;
 
     PJ_TEST_SUCCESS(pjmedia_endpt_create2(mem, NULL, 0, &endpt),
                     NULL, return -1);
 
     /* Run all scenarios to report every mismatch */
     for (i = 0; i < PJ_ARRAY_SIZE(scenarios); ++i) {
-        int status;
-
         PJ_LOG(3, (THIS_FILE, "  %s", scenarios[i].title));
-        status = run_scenario(endpt, &scenarios[i], 0);
+        status = run_scenario(endpt, &scenarios[i], 0, NULL);
         if (status != 0 && rc == 0)
             rc = status;
-        status = run_scenario(endpt, &scenarios[i], 2);
+        status = run_scenario(endpt, &scenarios[i], 2, NULL);
         if (status != 0 && rc == 0)
             rc = status;
+    }
+
+    for (i = 0; i < PJ_ARRAY_SIZE(rtcp_scenarios); ++i) {
+        const struct rtcp_scenario *rs = &rtcp_scenarios[i];
+        pjmedia_rtcp_stat stat;
+        int red_level;
+
+        PJ_LOG(3, (THIS_FILE, "  %s", rs->sc.title));
+        for (red_level = 0; red_level <= 2; red_level += 2) {
+            pj_bzero(&stat, sizeof(stat));
+            status = run_scenario(endpt, &rs->sc, red_level, &stat);
+            if (status == 0 && stat.rx.discard != rs->discard) {
+                PJ_LOG(1, (THIS_FILE, "%s (%s): expecting %u RTCP discard, "
+                           "got %u", rs->sc.title,
+                           red_level ? "RED" : "T.140", rs->discard,
+                           stat.rx.discard));
+                status = -70;
+            }
+            if (status != 0 && rc == 0)
+                rc = status;
+        }
     }
 
     pjmedia_endpt_destroy2(endpt);

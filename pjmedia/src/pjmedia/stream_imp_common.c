@@ -597,8 +597,14 @@ on_return:
     if (c_strm->rtcp.peer_ssrc == 0)
         c_strm->rtcp.peer_ssrc = channel->rtp.peer_ssrc;
 
-    pjmedia_rtcp_rx_rtp2(&c_strm->rtcp, pj_ntohs(hdr->seq),
-                         pj_ntohl(hdr->ts), payloadlen, pkt_discarded);
+    if (channel->paused) {
+        /* The stream did not check the packet, let RTCP decide */
+        pjmedia_rtcp_rx_rtp(&c_strm->rtcp, pj_ntohs(hdr->seq),
+                            pj_ntohl(hdr->ts), payloadlen);
+    } else {
+        pjmedia_rtcp_rx_rtp2(&c_strm->rtcp, pj_ntohs(hdr->seq),
+                             pj_ntohl(hdr->ts), payloadlen, pkt_discarded);
+    }
 
     /* RTCP-FB generic NACK */
     if (c_strm->rtcp.received >= 10 && seq_st.diff > 1 &&

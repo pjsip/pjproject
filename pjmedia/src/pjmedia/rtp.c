@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -237,6 +237,7 @@ PJ_DEF(void) pjmedia_rtp_session_update2( pjmedia_rtp_session *ses,
                                           pj_bool_t check_pt)
 {
     pjmedia_rtp_status seq_st;
+    pj_bool_t badssrc = PJ_FALSE;
 
     /* for now check_pt MUST be either PJ_TRUE or PJ_FALSE.
      * In the future we might change check_pt from boolean to 
@@ -253,6 +254,7 @@ PJ_DEF(void) pjmedia_rtp_session_update2( pjmedia_rtp_session *ses,
         ses->peer_ssrc = pj_ntohl(hdr->ssrc);
 
     if (pj_ntohl(hdr->ssrc) != ses->peer_ssrc) {
+        badssrc = PJ_TRUE;
         seq_st.status.flag.badssrc = -1;
         if (!ses->has_peer_ssrc)
             ses->peer_ssrc = pj_ntohl(hdr->ssrc);
@@ -274,6 +276,8 @@ PJ_DEF(void) pjmedia_rtp_session_update2( pjmedia_rtp_session *ses,
 
     /* Check sequence number to see if remote session has been restarted. */
     pjmedia_rtp_seq_update( &ses->seq_ctrl, pj_ntohs(hdr->seq), &seq_st);
+    if (badssrc)
+        seq_st.status.flag.badssrc = -1;
     if (seq_st.status.flag.restart) {
         ++ses->received;
 

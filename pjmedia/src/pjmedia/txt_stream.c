@@ -82,9 +82,9 @@
 #define MAX_SEQ_GAP JBUF_MAX_COUNT
 
 /* A long loss must leave room for at least one lost text marker before
- * the redundant blocks.
+ * the redundant blocks, of which the remote may send up to NUM_BUFFERS.
  */
-#if PJMEDIA_TXT_STREAM_MAX_RED_LEVELS > MAX_SEQ_GAP - 2
+#if PJMEDIA_TXT_STREAM_MAX_RED_LEVELS + 1 > MAX_SEQ_GAP - 2
 #  error PJMEDIA_TXT_STREAM_MAX_RED_LEVELS is too large
 #endif
 
@@ -759,10 +759,16 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
 
     pj_mutex_lock(c_strm->jb_mutex);
 
+    if (seq_st.status.flag.badssrc && !c_strm->si->has_rem_ssrc) {
+        /* Remote has restarted the stream with a new SSRC */
+        stream->rx_last_seq = (pj_uint16_t) (seq - 1);
+        stream->rx_jump_seq = -1;
+        pjmedia_jbuf_reset(c_strm->jb);
+
     /* We track sequence ourselves, so a packet rejected by the RTP
      * sequence check (e.g: during probation) may still be used.
      */
-    if (seq_st.status.flag.bad &&
+    } else if (seq_st.status.flag.bad &&
         (seq_st.status.flag.badpt || seq_st.status.flag.badssrc ||
          seq_st.status.flag.dup || stream->rx_last_seq == -1))
     {
@@ -794,10 +800,19 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
             /* Long loss, limit the number of lost text markers */
             stream->rx_last_seq = (pj_uint16_t) (seq - MAX_SEQ_GAP);
         } else {
-            /* Sequence restart, only the previous (unconfirmed) packet
-             * is new, older RED blocks may have been shown.
+            /* Sequence restart (jump backward or RTP restart). Start from
+             * the unconfirmed packet, or the previous packet if none is
+             * nearby, as far as the jitter buffer allows. Older RED blocks
+             * may have been shown.
              */
-            stream->rx_last_seq = (pj_uint16_t) (seq - 2);
+            int skip = 1;
+
+            if (stream->rx_jump_seq != -1 && jump_diff <= MAX_SEQ_GAP &&
+                jump_diff >= -MAX_SEQ_GAP)
+            {
+                skip = PJ_MAX(0, PJ_MIN(jump_diff, MAX_SEQ_GAP - 1));
+            }
+            stream->rx_last_seq = (pj_uint16_t) (seq - skip - 1);
             pjmedia_jbuf_reset(c_strm->jb);
         }
         diff = (pj_int16_t) (seq - stream->rx_last_seq);
@@ -807,7 +822,6 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
     {
         goto on_return;
     }
-    stream->rx_jump_seq = -1;
     prev_last_seq = stream->rx_last_seq;
 
     if (is_red) {
@@ -831,6 +845,8 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
     }
 
     *pkt_discarded = (stream->rx_last_seq == prev_last_seq);
+    if (!*pkt_discarded)
+        stream->rx_jump_seq = -1;
 
 on_return:
     /* Unlock mutex before calling the UI callback to prevent deadlocks */
