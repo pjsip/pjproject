@@ -133,6 +133,11 @@ typedef struct pjmedia_txt_stream {
                           jump.                  */
     pj_uint32_t rx_ssrc;      /**< SSRC of last rx.      */
     pj_uint32_t rx_jump_ssrc; /**< SSRC of rx_jump_seq.  */
+    pj_uint32_t rx_prev_ssrc; /**< SSRC before restart.  */
+    int rx_prev_seq;          /**< Last sequence before
+                                   restart.              */
+    int rx_jb_seq;            /**< Extended sequence of
+                                   last jbuf put.        */
 
     /* Incoming text callback. */
     void (*cb)(pjmedia_txt_stream *, void *, const pjmedia_txt_stream_data *);
@@ -316,6 +321,8 @@ pjmedia_txt_stream_create(pjmedia_endpt *endpt, pj_pool_t *pool,
     c_strm->rtcp_fb_nack.pid = -1;
     stream->rx_last_seq = -1;
     stream->rx_jump_seq = -1;
+    stream->rx_prev_seq = -1;
+    stream->rx_jb_seq = -1;
     stream->is_idle = PJ_TRUE;
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
@@ -565,7 +572,7 @@ static void call_cb(pjmedia_txt_stream *stream, pj_bool_t now)
                 if (stream->cb) {
                     /* Inject U+FFFD (replacement char) for lost packets */
                     pjmedia_txt_stream_data data;
-                    data.seq = popped_seq;
+                    data.seq = (pj_uint16_t) popped_seq;
                     data.ts = ts;
                     data.text.ptr = "\xEF\xBF\xBD";
                     data.text.slen = 3;
@@ -592,7 +599,7 @@ static void call_cb(pjmedia_txt_stream *stream, pj_bool_t now)
         if (stream->cb && frm_size > 0) {
             pjmedia_txt_stream_data data;
 
-            data.seq = popped_seq;
+            data.seq = (pj_uint16_t) popped_seq;
             data.ts = ts;
             data.text.ptr = text_ptr;
             data.text.slen = frm_size;
@@ -608,6 +615,17 @@ static void call_cb(pjmedia_txt_stream *stream, pj_bool_t now)
     } while (1);
 
     pj_mutex_unlock(c_strm->jb_mutex);
+}
+
+/* The jitter buffer needs a sequence that doesn't wrap */
+static void put_frame(pjmedia_txt_stream *stream, const void *frame,
+                      pj_size_t size, pj_uint16_t seq)
+{
+    if (stream->rx_jb_seq == -1)
+        stream->rx_jb_seq = seq + 0x10000;
+    else
+        stream->rx_jb_seq += (pj_int16_t) (seq - stream->rx_jb_seq);
+    pjmedia_jbuf_put_frame(stream->base.jb, frame, size, stream->rx_jb_seq);
 }
 
 static pj_status_t parse_red(unsigned pt, const char *buf, unsigned buflen,
@@ -686,16 +704,14 @@ static void decode_red(pjmedia_txt_stream *stream, int seq,
         if (stream->rx_last_seq != -1 && diff > 1) {
             pj_uint16_t missing_seq = stream->rx_last_seq + 1;
             while (missing_seq != block_seq) {
-                pjmedia_jbuf_put_frame(stream->base.jb, "\xEF\xBF\xBD", 3,
-                                       missing_seq);
+                put_frame(stream, "\xEF\xBF\xBD", 3, missing_seq);
                 missing_seq++;
             }
         }
 
         /* Inject everything we missed, even length=0 frames! */
         if (stream->rx_last_seq != -1 && diff > 0) {
-            pjmedia_jbuf_put_frame(stream->base.jb, data_ptr, data_len,
-                                   block_seq);
+            put_frame(stream, data_ptr, data_len, block_seq);
             stream->rx_last_seq = block_seq; /* Update tracker */
         }
 
@@ -723,8 +739,7 @@ static void decode_red(pjmedia_txt_stream *stream, int seq,
     /* Detect gaps for primary */
     diff = (pj_int16_t) (seq - stream->rx_last_seq);
     if (stream->rx_last_seq == -1 || diff > 0) {
-        pjmedia_jbuf_put_frame(stream->base.jb, data_ptr, data_len,
-                               (pj_uint16_t) seq);
+        put_frame(stream, data_ptr, data_len, (pj_uint16_t) seq);
         stream->rx_last_seq = (pj_uint16_t) seq;
     }
 }
@@ -762,6 +777,9 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
 
     pj_mutex_lock(c_strm->jb_mutex);
 
+    if (c_strm->si->has_rem_ssrc && ssrc != c_strm->si->rem_ssrc)
+        goto on_return;
+
     /* Without SSRC in SDP, a new SSRC may be a remote restart */
     new_ssrc = !c_strm->si->has_rem_ssrc && stream->rx_last_seq != -1 &&
                ssrc != stream->rx_ssrc;
@@ -770,8 +788,8 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
      * sequence check (e.g: during probation) may still be used.
      */
     if (seq_st.status.flag.bad &&
-        (seq_st.status.flag.badpt || seq_st.status.flag.badssrc ||
-         (seq_st.status.flag.dup && !new_ssrc) || stream->rx_last_seq == -1))
+        (seq_st.status.flag.badpt || (seq_st.status.flag.dup && !new_ssrc) ||
+         stream->rx_last_seq == -1))
     {
         goto on_return;
     }
@@ -794,6 +812,15 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
                            jump_diff <= MAX_SEQ_GAP &&
                            jump_diff >= -MAX_SEQ_GAP;
         pj_bool_t restart = seq_st.status.flag.restart && !new_ssrc;
+        pj_int16_t prev_diff = (pj_int16_t) (seq - stream->rx_prev_seq);
+        pj_bool_t prev_near = stream->rx_prev_seq != -1 &&
+                              ssrc == stream->rx_prev_ssrc &&
+                              prev_diff > -MAX_SEQ_GAP;
+        int last_seq = stream->rx_last_seq;
+
+        /* Late packet of the sequence before the last jump */
+        if (prev_near && prev_diff <= 0)
+            goto on_return;
 
         if (!restart && (!nearby || jump_diff == 0)) {
             stream->rx_jump_seq = seq;
@@ -807,20 +834,24 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
         } else {
             /* Sequence restart (new SSRC, jump backward or RTP restart).
              * Start from the unconfirmed packet, or the previous packet if
-             * none is nearby, as far as the jitter buffer allows. Older RED
-             * blocks may have been shown, but those of a new SSRC are from
-             * the new stream.
+             * none is nearby, and recover earlier packets of the new
+             * sequence from RED, as far as the jitter buffer allows.
              */
             int skip = 1;
 
             if (nearby)
                 skip = PJ_MAX(0, jump_diff);
-            if (new_ssrc)
-                skip = PJ_MAX(skip, red_level);
-            skip = PJ_MIN(skip, MAX_SEQ_GAP - 1);
+            skip = PJ_MIN(PJ_MAX(skip, red_level), MAX_SEQ_GAP - 1);
+
+            /* When switching back, don't show again what was shown */
+            if (prev_near && prev_diff <= skip)
+                skip = prev_diff - 1;
             stream->rx_last_seq = (pj_uint16_t) (seq - skip - 1);
             pjmedia_jbuf_reset(c_strm->jb);
         }
+        stream->rx_prev_ssrc = stream->rx_ssrc;
+        stream->rx_prev_seq = last_seq;
+        stream->rx_ssrc = ssrc;
         diff = (pj_int16_t) (seq - stream->rx_last_seq);
 
     } else if (seq_st.status.flag.bad && seq_st.status.flag.probation &&
@@ -838,14 +869,13 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
         if (stream->rx_last_seq != -1 && diff > 1) {
             pj_uint16_t missing_seq = stream->rx_last_seq + 1;
             while (missing_seq != seq) {
-                pjmedia_jbuf_put_frame(c_strm->jb, "\xEF\xBF\xBD", 3,
-                                       missing_seq);
+                put_frame(stream, "\xEF\xBF\xBD", 3, missing_seq);
                 missing_seq++;
             }
         }
 
         if (stream->rx_last_seq == -1 || diff > 0) {
-            pjmedia_jbuf_put_frame(c_strm->jb, payload, payloadlen, seq);
+            put_frame(stream, payload, payloadlen, seq);
             stream->rx_last_seq = seq;
         }
     }

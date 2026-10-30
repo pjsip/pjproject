@@ -413,6 +413,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     pj_bool_t check_pt;
     pj_status_t status;
     pj_bool_t pkt_discarded = PJ_FALSE;
+    pj_bool_t paused;
 
     /* Hold a reference to the stream for the entire callback so it cannot
      * be destroyed by another thread while we are reading and updating its
@@ -524,7 +525,8 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     pj_bzero(&seq_st, sizeof(seq_st));
 
     /* Ignore the packet if decoder is paused */
-    if (channel->paused)
+    paused = channel->paused;
+    if (paused)
         goto on_return;
 
     /* Update RTP session (also checks if RTP session can accept
@@ -597,7 +599,7 @@ on_return:
     if (c_strm->rtcp.peer_ssrc == 0)
         c_strm->rtcp.peer_ssrc = channel->rtp.peer_ssrc;
 
-    if (channel->paused) {
+    if (paused) {
         /* The stream did not check the packet, let RTCP decide */
         pjmedia_rtcp_rx_rtp(&c_strm->rtcp, pj_ntohs(hdr->seq),
                             pj_ntohl(hdr->ts), payloadlen);

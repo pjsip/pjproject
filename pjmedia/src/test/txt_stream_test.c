@@ -163,8 +163,9 @@ static void on_rx_text(pjmedia_txt_stream *stream, void *user_data,
 }
 
 /* Text sent by the remote in the packet with the specified sequence:
- * a..z from seq 100, N, O, P after the remote restarts at seq 40000,
- * X for stray packets, and nothing otherwise.
+ * a..z from seq 100, N..Q after the remote restarts at seq 40000,
+ * A..P around the sequence wrap, X for stray packets, and nothing
+ * otherwise.
  */
 static unsigned text_of(pj_uint16_t seq, char *buf)
 {
@@ -172,8 +173,12 @@ static unsigned text_of(pj_uint16_t seq, char *buf)
         buf[0] = (char)('a' + (seq - 100));
         return 1;
     }
-    if (seq >= 40000 && seq < 40003) {
+    if (seq >= 40000 && seq < 40004) {
         buf[0] = (char)('N' + (seq - 40000));
+        return 1;
+    }
+    if (seq >= 65530 || seq < 10) {
+        buf[0] = (char)('A' + (pj_uint16_t)(seq - 65530));
         return 1;
     }
     if (seq == 2100 || seq == 2101 || seq == 5000 || seq == 20100 ||
@@ -248,6 +253,7 @@ typedef struct scenario
                                        SSRC (no SSRC in SDP) */
     int          ssrc_start;        /* First sequence of the other SSRC,
                                        its earlier RED blocks are empty */
+    pj_bool_t    has_rem_ssrc;      /* SSRC in SDP */
 } scenario;
 
 static const scenario scenarios[] =
@@ -322,6 +328,10 @@ static const scenario scenarios[] =
       { 100, 101, 102, 103, 104, 105, 115, 104, 116, 117 },
       { "abcdef???????qr", "abcdef?????opqr" } },
 
+    { "packet lost at sequence wrap", 7,
+      { 65532, 65533, 65534, 0, 1, 2, 3 },
+      { "CDE?GHIJ", "CDEFGHIJ" } },
+
     { "late packets", 16,
       { 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112,
         113, 100, 101 },
@@ -335,6 +345,10 @@ static const scenario scenarios[] =
     { "remote sequence restart with loss", 6,
       { 100, 101, 102, 103, 40000, 40002 },
       { "abcd??P", "abcdNOP" } },
+
+    { "remote sequence restart with first packet lost", 6,
+      { 100, 101, 102, 103, 40001, 40002 },
+      { "abcd?P", "abcdNOP" } },
 
     /* Known limitation: a restart back by up to RTP's MAX_MISORDER (100)
      * with the same SSRC looks like late packets.
@@ -371,6 +385,29 @@ static const scenario scenarios[] =
     { "interleaved SSRCs", 7,
       { 100, 101, 40000, 102, 40001, 103, 40002 },
       { "abcd", "abcd" }, 0x54, 40000 },
+
+    /* Text already shown is not shown again when switching back */
+    { "switch back to an earlier SSRC", 9,
+      { 100, 101, 102, 103, 40000, 40001, 40002, 104, 105 },
+      { "abcd?OP?f", "abcdNOPef" }, 0x70, 40000 },
+
+    { "late packets of an earlier SSRC", 10,
+      { 100, 101, 102, 103, 40000, 40001, 40002, 102, 103, 40003 },
+      { "abcd?OPQ", "abcdNOPQ" }, 0x270, 40000 },
+
+    /* Two strays confirm each other, like a real restart */
+    { "two strays with another SSRC", 7,
+      { 100, 101, 102, 5000, 5001, 103, 104 },
+      { "abc??e", "abcXde" }, 0x18, 5000 },
+
+    /* With SSRC in SDP, packets with another SSRC are dropped */
+    { "strays with another SSRC, SSRC in SDP", 7,
+      { 100, 101, 102, 5000, 5001, 103, 104 },
+      { "abcde", "abcde" }, 0x18, 5000, PJ_TRUE },
+
+    { "another SSRC during probation, SSRC in SDP", 4,
+      { 100, 102, 103, 104 },
+      { "a??de", "abcde" }, 0x02, 102, PJ_TRUE },
 };
 
 /* RTCP counts an RTP-bad packet as discarded only if the stream did */
@@ -423,6 +460,8 @@ static int run_scenario(pjmedia_endpt *endpt, const scenario *sc,
         si.tx_red_level = si.rx_red_level = red_level;
     }
     si.rtcp_sdes_bye_disabled = PJ_TRUE;
+    si.has_rem_ssrc = sc->has_rem_ssrc;
+    si.rem_ssrc = SSRC;
 
     PJ_TEST_SUCCESS(pjmedia_txt_stream_create(endpt, NULL, &si, &stub.base,
                                               NULL, &stream),
