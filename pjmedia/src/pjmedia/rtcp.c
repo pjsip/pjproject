@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -305,25 +305,33 @@ static void rtcp_init_seq(pjmedia_rtcp_session *sess)
     sess->jitter = 0;
 }
 
-/* If count_all_bad is set, every packet failing the RTP sequence check
- * is counted as discarded, even if the caller used it.
- */
-static void rtcp_rx_rtp(pjmedia_rtcp_session *sess,
-                        unsigned seq,
-                        unsigned rtp_ts,
-                        unsigned payload,
-                        pj_bool_t discarded,
-                        pj_bool_t count_all_bad)
+PJ_DEF(void) pjmedia_rtcp_rx_rtp( pjmedia_rtcp_session *sess, 
+                                  unsigned seq, 
+                                  unsigned rtp_ts,
+                                  unsigned payload)
 {
+    pjmedia_rtcp_rx_rtp2(sess, seq, rtp_ts, payload, PJ_FALSE);
+}
+
+PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess, 
+                                  unsigned seq, 
+                                  unsigned rtp_ts,
+                                  unsigned payload,
+                                  pj_bool_t discarded)
+{   
     pj_timestamp ts;
     pj_uint32_t arrival;
     pj_int32_t transit;
     pjmedia_rtp_status seq_st;
 
+#if !defined(PJMEDIA_HAS_RTCP_XR) || (PJMEDIA_HAS_RTCP_XR == 0)
+    PJ_UNUSED_ARG(discarded);
+#endif
+
     if (sess->stat.rx.pkt == 0) {
         /* Init sequence for the first time. */
         pjmedia_rtp_seq_init(&sess->seq_ctrl, (pj_uint16_t)seq);
-    }
+    } 
 
     sess->stat.rx.pkt++;
     sess->stat.rx.bytes += payload;
@@ -334,7 +342,7 @@ static void rtcp_rx_rtp(pjmedia_rtcp_session *sess,
     if (seq_st.status.flag.restart) {
         rtcp_init_seq(sess);
     }
-
+    
     if (seq_st.status.flag.dup) {
         sess->stat.rx.dup++;
         TRACE_((sess->name, "Duplicate packet detected"));
@@ -346,9 +354,7 @@ static void rtcp_rx_rtp(pjmedia_rtcp_session *sess,
     }
 
     if (seq_st.status.flag.bad) {
-        /* The stream may still use a bad packet (e.g: text stream) */
-        if (count_all_bad || discarded)
-            sess->stat.rx.discard++;
+        sess->stat.rx.discard++;
 
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
         pjmedia_rtcp_xr_rx_rtp(&sess->xr_session, seq, 
@@ -524,23 +530,6 @@ static void rtcp_rx_rtp(pjmedia_rtcp_session *sess,
 
     /* Update timestamp of last RX RTP packet */
     sess->rtp_last_ts = rtp_ts;
-}
-
-PJ_DEF(void) pjmedia_rtcp_rx_rtp( pjmedia_rtcp_session *sess, 
-                                  unsigned seq, 
-                                  unsigned rtp_ts,
-                                  unsigned payload)
-{
-    rtcp_rx_rtp(sess, seq, rtp_ts, payload, PJ_FALSE, PJ_TRUE);
-}
-
-PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess, 
-                                  unsigned seq, 
-                                  unsigned rtp_ts,
-                                  unsigned payload,
-                                  pj_bool_t discarded)
-{
-    rtcp_rx_rtp(sess, seq, rtp_ts, payload, discarded, PJ_FALSE);
 }
 
 PJ_DEF(void) pjmedia_rtcp_tx_rtp(pjmedia_rtcp_session *sess, 

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -401,9 +401,6 @@ PJ_DECL(void) pjmedia_rtcp_rx_rtp( pjmedia_rtcp_session *session,
  * @param ts        The RTP packet timestamp, in host byte order.
  * @param payload   Size of the payload.
  * @param discarded Flag to specify whether the packet is discarded.
- *                  A packet failing the RTP sequence check is counted
- *                  as discarded only if this is set, while
- *                  pjmedia_rtcp_rx_rtp() always counts it.
  */
 PJ_DECL(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *session, 
                                    unsigned seq, 

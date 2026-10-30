@@ -395,6 +395,19 @@ static const scenario scenarios[] =
       { 100, 101, 102, 103, 40000, 40001, 40002, 102, 103, 40003 },
       { "abcd?OPQ", "abcdNOPQ" }, 0x270, 40000 },
 
+    { "deep late packets of an earlier SSRC", 17,
+      { 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111,
+        40000, 40001, 101, 102, 40002 },
+      { "abcdefghijkl?OP", "abcdefghijklNOP" }, 0x13000, 40000 },
+
+    { "switch back to an earlier SSRC after loss", 9,
+      { 100, 101, 102, 103, 40000, 40001, 40002, 108, 109 },
+      { "abcd?OP?????j", "abcdNOP???hij" }, 0x70, 40000 },
+
+    { "several remote sequence restarts", 10,
+      { 100, 101, 102, 40000, 40001, 20100, 20101, 65534, 0, 1 },
+      { "abc?O?X??GH", "abcNOXXEFGH" } },
+
     /* Two strays confirm each other, like a real restart */
     { "two strays with another SSRC", 7,
       { 100, 101, 102, 5000, 5001, 103, 104 },
@@ -408,6 +421,26 @@ static const scenario scenarios[] =
     { "another SSRC during probation, SSRC in SDP", 4,
       { 100, 102, 103, 104 },
       { "a??de", "abcde" }, 0x02, 102, PJ_TRUE },
+
+    /* RTP starts its sequence at the stray, so 100 fails probation */
+    { "stray with another SSRC first, SSRC in SDP", 5,
+      { 5000, 100, 101, 102, 103 },
+      { "abcd", "abcd" }, 0x01, 5000, PJ_TRUE },
+
+    { "same sequence with another SSRC first, SSRC in SDP", 5,
+      { 100, 100, 101, 102, 103 },
+      { "abcd", "abcd" }, 0x01, 100, PJ_TRUE },
+
+    /* Until the SDP SSRC is received, another SSRC is tracked as without
+     * SSRC in SDP, e.g: an SBC rewriting the SSRC.
+     */
+    { "only another SSRC, SSRC in SDP", 4,
+      { 100, 101, 102, 103 },
+      { "?bcd", "abcd" }, 0x0F, 100, PJ_TRUE },
+
+    { "another SSRC, then the SDP SSRC, SSRC in SDP", 8,
+      { 40000, 40001, 40002, 100, 101, 102, 40003, 103 },
+      { "?OP?abcd", "NOPabcd" }, 0x47, 40000, PJ_TRUE },
 };
 
 /* RTCP counts an RTP-bad packet as discarded only if the stream did */
