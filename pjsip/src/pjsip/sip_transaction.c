@@ -1335,8 +1335,10 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 
     if (entry->id == TERMINATE_TIMER) {
         if (tsx->state < PJSIP_TSX_STATE_TERMINATED) {
-            pjsip_tsx_terminate(tsx, tsx->status_code >= 200 ?
-                                        tsx->status_code : tsx->term_code);
+            /* A 1xx may change the status code meanwhile, read it once */
+            int code = tsx->status_code;
+
+            pjsip_tsx_terminate(tsx, code >= 200 ? code : tsx->term_code);
         }
     } else if (entry->id == TRANSPORT_ERR_TIMER ||
                entry->id == TRANSPORT_DISC_TIMER)
@@ -1358,6 +1360,7 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 #if PJSIP_TSX_UAS_CONTINUE_ON_TP_ERROR
             if (tp_disc && tsx->method.id == PJSIP_INVITE_METHOD &&
                 tsx->role == PJSIP_ROLE_UAS && tsx->status_code < 200 &&
+                !tsx->term_code &&
                 !(tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT) &&
                 !(tsx->transport_flag & TSX_HAS_PENDING_DESTROY))
 #else
@@ -1380,7 +1383,9 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
                 return;
             }
 
-            if (tsx->status_code < 200) {
+            if (tsx->status_code < 200 && tsx->term_code) {
+                tsx_set_status_code(tsx, tsx->term_code, NULL);
+            } else if (tsx->status_code < 200) {
                 pj_str_t err;
                 char errmsg[PJ_ERR_MSG_SIZE];
 
@@ -1989,20 +1994,19 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate_async2(pjsip_transaction *tsx,
         tsx_set_status_code(tsx, code, reason);
 
     /* A request being terminated is no longer retransmitted */
-    if (tsx->role == PJSIP_ROLE_UAC) {
-        tsx->term_code = tsx->status_code;
+    if (tsx->role == PJSIP_ROLE_UAC)
         tsx_cancel_timer(tsx, &tsx->retransmit_timer);
-    }
-    pj_grp_lock_release(tsx->grp_lock);
 
     /* Schedule the termination */
     delay.msec = millisec;
     pj_time_val_normalize(&delay);
 
     lock_timer(tsx);
+    tsx->term_code = tsx->status_code;
     tsx_cancel_timer(tsx, &tsx->timeout_timer);
     tsx_schedule_timer(tsx, &tsx->timeout_timer, &delay, TERMINATE_TIMER);
     unlock_timer(tsx);
+    pj_grp_lock_release(tsx->grp_lock);
 
     return PJ_SUCCESS;
 }
@@ -2059,8 +2063,10 @@ PJ_DEF(pj_status_t) pjsip_tsx_set_timeout( pjsip_transaction *tsx,
      * #1121 says there is a (tolerable) window of race condition
      * where this might happen.
      */
-    if (tsx->status_code >= 200 && tsx->timeout_timer.id != 0) {
-        /* Timeout is already set */
+    if ((tsx->status_code >= 200 || tsx->term_code) &&
+        tsx->timeout_timer.id != 0)
+    {
+        /* Timeout or termination is already set */
         unlock_timer(tsx);
         return PJ_EEXISTS;
     }
@@ -2363,8 +2369,8 @@ static void send_msg_callback( pjsip_send_state *send_state,
             /* Reset retransmission count */
             tsx->retransmit_count = 0;
 
-            /* And reset timeout timer */
-            if (tsx->timeout_timer.id) {
+            /* And reset timeout timer, unless being terminated */
+            if (tsx->timeout_timer.id && !tsx->term_code) {
                 lock_timer(tsx);
                 tsx_cancel_timer(tsx, &tsx->timeout_timer);
                 tsx_schedule_timer( tsx, &tsx->timeout_timer,
@@ -2798,8 +2804,8 @@ static void tsx_resched_retransmission( pjsip_transaction *tsx )
 
     pj_assert((tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT) == 0);
 
-    /* Not while being terminated asynchronously */
-    if (tsx->term_code)
+    /* Not for a request being terminated asynchronously */
+    if (tsx->role == PJSIP_ROLE_UAC && tsx->term_code)
         return;
 
     if (tsx->role==PJSIP_ROLE_UAC && tsx->status_code >= 100)
@@ -2993,18 +2999,20 @@ static pj_status_t tsx_on_state_null( pjsip_transaction *tsx,
         }
 
         /* Start Timer B (or called timer F for non-INVITE) for transaction 
-         * timeout.
+         * timeout, unless being terminated asynchronously.
          */
-        lock_timer(tsx);
-        tsx_cancel_timer( tsx, &tsx->timeout_timer );
-        tsx_schedule_timer( tsx, &tsx->timeout_timer, &timeout_timer_val,
-                            TIMEOUT_TIMER);
-        unlock_timer(tsx);
+        if (!tsx->term_code) {
+            lock_timer(tsx);
+            tsx_cancel_timer( tsx, &tsx->timeout_timer );
+            tsx_schedule_timer( tsx, &tsx->timeout_timer, &timeout_timer_val,
+                                TIMEOUT_TIMER);
+            unlock_timer(tsx);
+        }
 
         /* Start Timer A (or timer E) for retransmission only if unreliable 
          * transport is being used.
          */
-        if (!tsx->is_reliable)  {
+        if (!tsx->is_reliable && !tsx->term_code)  {
             tsx->retransmit_count = 0;
             if (tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT) {
                 tsx->transport_flag |= TSX_HAS_PENDING_RESCHED;
@@ -3102,20 +3110,22 @@ static pj_status_t tsx_on_state_calling( pjsip_transaction *tsx,
              * of RFC 3261 says that:
              *  - retransmit timer is set to T2
              *  - timeout timer F is not deleted.
+             * Neither applies while being terminated asynchronously: the
+             * termination stays and the request isn't retransmitted.
              */
-            if (tsx->term_code) {
-                /* Keep the pending termination, without retransmission */
-            } else if (tsx->method.id == PJSIP_INVITE_METHOD) {
+            if (!tsx->term_code) {
+                if (tsx->method.id == PJSIP_INVITE_METHOD) {
 
-                /* Cancel timeout timer */
-                lock_timer(tsx);
-                tsx_cancel_timer(tsx, &tsx->timeout_timer);
-                unlock_timer(tsx);
+                    /* Cancel timeout timer */
+                    lock_timer(tsx);
+                    tsx_cancel_timer(tsx, &tsx->timeout_timer);
+                    unlock_timer(tsx);
 
-            } else {
-                if (!tsx->is_reliable) {
-                    tsx_schedule_timer(tsx, &tsx->retransmit_timer,
-                                       &t2_timer_val, RETRANSMIT_TIMER);
+                } else {
+                    if (!tsx->is_reliable) {
+                        tsx_schedule_timer(tsx, &tsx->retransmit_timer,
+                                           &t2_timer_val, RETRANSMIT_TIMER);
+                    }
                 }
             }
         }

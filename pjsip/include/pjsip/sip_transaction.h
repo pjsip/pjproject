@@ -114,9 +114,6 @@ struct pjsip_transaction
     pj_str_t                    status_text;    /**< Last reason phrase.    */
     pjsip_tsx_state_e           state;          /**< State.                 */
     int                         handle_200resp; /**< UAS 200/INVITE  retrsm.*/
-    int                         term_code;      /**< UAC status code given
-                                                     by an asynchronous
-                                                     termination, or 0.     */
     int                         tracing;        /**< Tracing enabled?       */
 
     /** Handler according to current state. */
@@ -150,6 +147,9 @@ struct pjsip_transaction
 
     /** Module specific data. */
     void                       *mod_data[PJSIP_MAX_MODULE];
+
+    /** Status code given by an asynchronous termination, or 0. Internal. */
+    int                         term_code;
 };
 
 
@@ -495,7 +495,9 @@ PJ_DECL(pj_status_t) pjsip_tsx_stop_retransmit(pjsip_transaction *tsx);
  * @param tsx       The transaction.
  * @param millisec  Timeout value in milliseconds.
  *
- * @return          PJ_SUCCESS or the appropriate error code.
+ * @return          PJ_SUCCESS, PJ_EEXISTS if a final status or an
+ *                  asynchronous termination already has its timer pending,
+ *                  or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_tsx_set_timeout(pjsip_transaction *tsx,
                                            unsigned millisec);
