@@ -33,6 +33,8 @@
  *      defers, account is deleted, deferred state is cleaned up safely.
  *   5. Hold re-INVITE whose challenge is deferred and then answered: the
  *      call ends up on hold.
+ *   6. Unhold that fails after a hold that got 3xx: the call is marked as
+ *      held again.
  */
 
 #include "test.h"
@@ -47,7 +49,7 @@
 /* SIP user name used to filter requests belonging to this test module */
 #define TEST_USER   "pjsua-auth-test"
 
-/* Users of the call in sub-test 5 */
+/* Users of the call in sub-tests 5 and 6 */
 #define CALLER_USER "pjsua-auth-caller"
 #define CALLEE_USER "pjsua-auth-callee"
 
@@ -114,14 +116,15 @@ static pj_bool_t mock_registrar_rx_request(pjsip_rx_data *rdata)
 
 
 /*****************************************************************************
- * Mock proxy: challenges the caller's next re-INVITE
+ * Mock proxy: answers the caller's next re-INVITE
  *****************************************************************************/
 
 static pj_bool_t mock_proxy_rx_request(pjsip_rx_data *rdata);
 
 static struct {
     pjsip_module  mod;
-    pj_bool_t     challenge;
+    int           status;       /* Answer to the next request, 0: none  */
+    unsigned      answered;
 } g_mock_proxy = {
     {
         NULL, NULL,
@@ -131,7 +134,8 @@ static struct {
         NULL, NULL, NULL, NULL,
         &mock_proxy_rx_request,
         NULL, NULL, NULL, NULL,
-    }
+    },
+    0, 0
 };
 
 static pj_bool_t mock_proxy_rx_request(pjsip_rx_data *rdata)
@@ -141,9 +145,10 @@ static pj_bool_t mock_proxy_rx_request(pjsip_rx_data *rdata)
     const pj_str_t hvalue =
         pj_str("Digest realm=\"test\", nonce=\"testnonce\"");
     pjsip_hdr  hdr_list;
+    int        code;
     pj_status_t status;
 
-    if (!g_mock_proxy.challenge ||
+    if (g_mock_proxy.status == 0 ||
         msg->line.req.method.id != PJSIP_INVITE_METHOD ||
         rdata->msg_info.to->tag.slen == 0 ||
         !is_user_equal(rdata->msg_info.from, CALLER_USER) ||
@@ -152,15 +157,19 @@ static pj_bool_t mock_proxy_rx_request(pjsip_rx_data *rdata)
         return PJ_FALSE;
     }
 
-    g_mock_proxy.challenge = PJ_FALSE;
+    code = g_mock_proxy.status;
+    g_mock_proxy.status = 0;
     pj_list_init(&hdr_list);
-    pj_list_push_back(&hdr_list,
-                      pjsip_generic_string_hdr_create(rdata->tp_info.pool,
-                                                      &hname, &hvalue));
-    status = pjsip_endpt_respond(pjsua_get_pjsip_endpt(), NULL, rdata, 401,
+    if (code == 401) {
+        pj_list_push_back(&hdr_list,
+                          pjsip_generic_string_hdr_create(rdata->tp_info.pool,
+                                                          &hname, &hvalue));
+    }
+    status = pjsip_endpt_respond(pjsua_get_pjsip_endpt(), NULL, rdata, code,
                                  NULL, &hdr_list, NULL, NULL);
     if (status != PJ_SUCCESS)
         PJ_PERROR(1, (THIS_FILE, status, "  mock proxy: respond failed"));
+    g_mock_proxy.answered++;
     return PJ_TRUE;
 }
 
@@ -730,12 +739,14 @@ static int acc_delete_deferred_test(pjsua_transport_id tp_id, int port)
 
 
 /*****************************************************************************
- * Sub-test 5: hold_deferred_respond_test
- *
- * The challenge of a hold re-INVITE is deferred, then answered with the
- * account's credentials, and the retry is accepted. The hold must not be
- * rolled back before the retry, so the call ends up on hold.
+ * Call from an account with credentials, used by sub-tests 5 and 6
  *****************************************************************************/
+typedef struct {
+    pjsua_acc_id  caller;
+    pjsua_acc_id  callee;
+    pjsua_call_id call_id;
+} test_call_t;
+
 static pj_bool_t call_has_state(pjsua_call_id call_id, pjsip_inv_state state)
 {
     pjsua_call_info ci;
@@ -752,31 +763,27 @@ static pj_bool_t call_is_held(pjsua_call_id call_id)
            ci.media_status == PJSUA_CALL_MEDIA_LOCAL_HOLD;
 }
 
-static int hold_deferred_respond_test(pjsua_transport_id tp_id, int port)
+/* Returns 0, or rc_base minus the failed step */
+static int test_call_start(test_call_t *tc, pjsua_transport_id tp_id,
+                           int port, int rc_base)
 {
     pjsua_acc_config acc_cfg;
-    pjsua_acc_id     caller = PJSUA_INVALID_ID;
-    pjsua_acc_id     callee = PJSUA_INVALID_ID;
-    pjsua_call_id    call_id = PJSUA_INVALID_ID;
     char             uri[64];
     pj_str_t         dst;
     unsigned         elapsed;
-    pj_status_t      status;
-    int              rc = 0;
 
-    PJ_LOG(3, (THIS_FILE, "  pjsua auth: hold deferred respond"));
-
-    pj_bzero(&g_ctx, sizeof(g_ctx));
+    tc->caller = tc->callee = PJSUA_INVALID_ID;
+    tc->call_id = PJSUA_INVALID_ID;
 
     if (pjsua_set_null_snd_dev() != PJ_SUCCESS)
-        return -2410;
+        return rc_base;
 
     pjsua_acc_config_default(&acc_cfg);
     acc_cfg.id = pj_str("sip:" CALLEE_USER "@127.0.0.1");
     acc_cfg.allow_contact_rewrite = PJ_FALSE;
     acc_cfg.transport_id = tp_id;
-    if (pjsua_acc_add(&acc_cfg, PJ_FALSE, &callee) != PJ_SUCCESS)
-        return -2411;
+    if (pjsua_acc_add(&acc_cfg, PJ_FALSE, &tc->callee) != PJ_SUCCESS)
+        return rc_base - 1;
 
     acc_cfg.id = pj_str("sip:" CALLER_USER "@127.0.0.1");
     acc_cfg.cred_count = 1;
@@ -786,35 +793,97 @@ static int hold_deferred_respond_test(pjsua_transport_id tp_id, int port)
     acc_cfg.cred_info[0].username  = pj_str(CALLER_USER);
     acc_cfg.cred_info[0].data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
     acc_cfg.cred_info[0].data      = pj_str("secret");
-    if (pjsua_acc_add(&acc_cfg, PJ_FALSE, &caller) != PJ_SUCCESS) {
-        rc = -2412;
-        goto on_return;
-    }
+    if (pjsua_acc_add(&acc_cfg, PJ_FALSE, &tc->caller) != PJ_SUCCESS)
+        return rc_base - 2;
 
     pj_ansi_snprintf(uri, sizeof(uri), "sip:" CALLEE_USER "@127.0.0.1:%d",
                      port);
     dst = pj_str(uri);
-    if (pjsua_call_make_call(caller, &dst, NULL, NULL, NULL,
-                             &call_id) != PJ_SUCCESS)
+    if (pjsua_call_make_call(tc->caller, &dst, NULL, NULL, NULL,
+                             &tc->call_id) != PJ_SUCCESS)
     {
-        rc = -2413;
-        goto on_return;
+        return rc_base - 3;
     }
 
     for (elapsed = 0; elapsed < 10000 &&
-         !call_has_state(call_id, PJSIP_INV_STATE_CONFIRMED); elapsed += 50)
+         !call_has_state(tc->call_id, PJSIP_INV_STATE_CONFIRMED);
+         elapsed += 50)
     {
         pjsua_handle_events(50);
     }
-    if (!call_has_state(call_id, PJSIP_INV_STATE_CONFIRMED)) {
-        rc = -2414;
-        goto on_return;
+    if (!call_has_state(tc->call_id, PJSIP_INV_STATE_CONFIRMED))
+        return rc_base - 4;
+
+    return 0;
+}
+
+static void test_call_end(test_call_t *tc)
+{
+    unsigned elapsed;
+
+    pjsua_call_hangup_all();
+    for (elapsed = 0; elapsed < 5000 && pjsua_call_get_count() != 0;
+         elapsed += 50)
+    {
+        pjsua_handle_events(50);
     }
+    if (tc->caller != PJSUA_INVALID_ID)
+        pjsua_acc_del(tc->caller);
+    if (tc->callee != PJSUA_INVALID_ID)
+        pjsua_acc_del(tc->callee);
+}
+
+/* The caller's call is marked as held */
+static pj_bool_t call_local_hold(pjsua_call_id call_id)
+{
+    pjsip_dialog *dlg = pjsua_var.calls[call_id].inv->dlg;
+    pj_bool_t     held;
+
+    pjsip_dlg_inc_lock(dlg);
+    held = pjsua_var.calls[call_id].local_hold;
+    pjsip_dlg_dec_lock(dlg);
+    return held;
+}
+
+/* The caller's re-INVITE or UPDATE has got its final answer */
+static pj_bool_t caller_tsx_done(pjsua_call_id call_id)
+{
+    pjsip_inv_session *inv = pjsua_var.calls[call_id].inv;
+    pj_bool_t          done;
+
+    pjsip_dlg_inc_lock(inv->dlg);
+    done = inv->invite_tsx == NULL && inv->update_tsx == NULL;
+    pjsip_dlg_dec_lock(inv->dlg);
+    return done;
+}
+
+
+/*****************************************************************************
+ * Sub-test 5: hold_deferred_respond_test
+ *
+ * The challenge of a hold re-INVITE is deferred, then answered with the
+ * account's credentials, and the retry is accepted. The hold must not be
+ * rolled back before the retry, so the call ends up on hold.
+ *****************************************************************************/
+static int hold_deferred_respond_test(pjsua_transport_id tp_id, int port)
+{
+    test_call_t      tc;
+    unsigned         elapsed;
+    pj_status_t      status;
+    int              rc;
+
+    PJ_LOG(3, (THIS_FILE, "  pjsua auth: hold deferred respond"));
+
+    pj_bzero(&g_ctx, sizeof(g_ctx));
+
+    rc = test_call_start(&tc, tp_id, port, -2410);
+    if (rc != 0)
+        goto on_return;
 
     /* The hold re-INVITE is challenged, and the challenge deferred */
     g_ctx.defer_enabled = PJ_TRUE;
-    g_mock_proxy.challenge = PJ_TRUE;
-    if (pjsua_call_set_hold(call_id, NULL) != PJ_SUCCESS) {
+    g_mock_proxy.status = 401;
+    if (pjsua_call_set_hold(tc.call_id, NULL) != PJ_SUCCESS) {
         rc = -2415;
         goto on_return;
     }
@@ -835,34 +904,102 @@ static int hold_deferred_respond_test(pjsua_transport_id tp_id, int port)
         goto on_return;
     }
 
-    for (elapsed = 0; elapsed < 10000 && !call_is_held(call_id);
+    for (elapsed = 0; elapsed < 10000 && !call_is_held(tc.call_id);
          elapsed += 50)
     {
         pjsua_handle_events(50);
     }
-    if (!call_is_held(call_id)) {
+    if (!call_is_held(tc.call_id)) {
         PJ_LOG(3, (THIS_FILE, "    error: the call is not on hold"));
         rc = -2418;
     }
 
 on_return:
     g_ctx.defer_enabled = PJ_FALSE;
-    g_mock_proxy.challenge = PJ_FALSE;
+    g_mock_proxy.status = 0;
     if (g_ctx.deferred.pending) {
         pjsip_auth_clt_async_abandon(g_ctx.deferred.auth_sess,
                                      g_ctx.deferred.token);
         do_deferred_abandon(&g_ctx.deferred);
     }
+    test_call_end(&tc);
 
-    pjsua_call_hangup_all();
-    for (elapsed = 0; elapsed < 5000 && pjsua_call_get_count() != 0;
+    return rc;
+}
+
+
+/*****************************************************************************
+ * Sub-test 6: unhold_fail_after_hold_3xx_test
+ *
+ * A hold gets 302, which leaves the call marked as held, and its request is
+ * freed. Then an unhold gets 488: the call must be marked as held again.
+ * The unhold request getting the memory of the hold request can't be
+ * forced, so this checks the mark of the unhold request.
+ *****************************************************************************/
+static int unhold_fail_after_hold_3xx_test(pjsua_transport_id tp_id,
+                                           int port)
+{
+    test_call_t      tc;
+    unsigned         elapsed;
+    int              rc;
+
+    PJ_LOG(3, (THIS_FILE, "  pjsua auth: unhold fails after hold 3xx"));
+
+    rc = test_call_start(&tc, tp_id, port, -2420);
+    if (rc != 0)
+        goto on_return;
+
+    g_mock_proxy.answered = 0;
+    g_mock_proxy.status = 302;
+    if (pjsua_call_set_hold(tc.call_id, NULL) != PJ_SUCCESS) {
+        rc = -2425;
+        goto on_return;
+    }
+
+    for (elapsed = 0; elapsed < 10000 && (g_mock_proxy.answered != 1 ||
+                                          !caller_tsx_done(tc.call_id));
          elapsed += 50)
     {
         pjsua_handle_events(50);
     }
-    if (caller != PJSUA_INVALID_ID)
-        pjsua_acc_del(caller);
-    pjsua_acc_del(callee);
+    if (g_mock_proxy.answered != 1 || !caller_tsx_done(tc.call_id)) {
+        rc = -2426;
+        goto on_return;
+    }
+
+    /* A 3xx is not taken as a failure of the hold */
+    if (!call_local_hold(tc.call_id)) {
+        rc = -2427;
+        goto on_return;
+    }
+
+    g_mock_proxy.status = 488;
+    if (pjsua_call_reinvite(tc.call_id, PJSUA_CALL_UNHOLD,
+                            NULL) != PJ_SUCCESS)
+    {
+        rc = -2428;
+        goto on_return;
+    }
+
+    for (elapsed = 0; elapsed < 10000 && (g_mock_proxy.answered != 2 ||
+                                          !caller_tsx_done(tc.call_id));
+         elapsed += 50)
+    {
+        pjsua_handle_events(50);
+    }
+    if (g_mock_proxy.answered != 2 || !caller_tsx_done(tc.call_id)) {
+        rc = -2429;
+        goto on_return;
+    }
+
+    if (!call_local_hold(tc.call_id)) {
+        PJ_LOG(3, (THIS_FILE, "    error: the call is not marked as held"));
+        rc = -2430;
+    }
+
+on_return:
+    g_mock_proxy.status = 0;
+    test_call_end(&tc);
 
     return rc;
 }
@@ -994,6 +1131,9 @@ int pjsua_auth_test(void)
     if (rc != 0) goto on_return; */
 
     rc = hold_deferred_respond_test(tp_id, (int)port);
+    if (rc != 0) goto on_return;
+
+    rc = unhold_fail_after_hold_3xx_test(tp_id, (int)port);
     if (rc != 0) goto on_return;
 
 on_return:

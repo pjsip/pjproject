@@ -44,6 +44,10 @@
 /* Max number of hangup retries. */
 #define CALL_HANGUP_MAX_RETRY        4
 
+/* Marks of a hold or unhold re-INVITE in its tx_data, kept by a retry */
+#define HOLD_REQ                     ((void*)(pj_size_t)1)
+#define UNHOLD_REQ                   ((void*)(pj_size_t)2)
+
 /*
  * The INFO method.
  */
@@ -4064,14 +4068,13 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold2(pjsua_call_id call_id,
     /* Add additional headers etc */
     pjsua_process_msg_data( tdata, msg_data);
 
-    /* Record the tx_data to keep track the operation */
-    call->hold_msg = (void*) tdata;
+    /* Mark the tx_data to keep track the operation */
+    tdata->mod_data[pjsua_var.mod.id] = HOLD_REQ;
 
     /* Send the request */
     status = pjsip_inv_send_msg( call->inv, tdata);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Unable to send re-INVITE", status);
-        call->hold_msg = NULL;
         goto on_return;
     }
 
@@ -4344,9 +4347,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite3(
     if (call->local_hold && (call->opt.flag & PJSUA_CALL_UNHOLD) &&
         (call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0)
     {
-        call->unhold_msg = (void*) tdata;
-    } else {
-        call->unhold_msg = NULL;
+        tdata->mod_data[pjsua_var.mod.id] = UNHOLD_REQ;
     }
 
     /* Send the request */
@@ -4358,7 +4359,6 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite3(
     {
         call->local_hold = PJ_FALSE;
     } else if (status != PJ_SUCCESS) {
-        call->unhold_msg = NULL;
         pjsua_perror(THIS_FILE, "Unable to send re-INVITE", status);
         goto on_error;
     }
@@ -7748,25 +7748,20 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
                 call_disconnect(call->inv, PJSIP_SC_OK, &reason);
             }
         } else {
+            void *req = tsx->last_tx->mod_data[pjsua_var.mod.id];
+
             /* Monitor the status of call hold/unhold request */
-            if (tsx->last_tx == (pjsip_tx_data*)call->hold_msg) {
+            if (req == HOLD_REQ) {
                 /* Outgoing call hold failed */
                 call->local_hold = PJ_FALSE;
                 PJ_LOG(3,(THIS_FILE, "Error putting call %d on hold "
                           "(reason=%d)", call->index, tsx->status_code));
-            } else if (tsx->last_tx == (pjsip_tx_data*)call->unhold_msg) {
+            } else if (req == UNHOLD_REQ) {
                 /* Call unhold failed */
                 call->local_hold = PJ_TRUE;
                 PJ_LOG(3,(THIS_FILE, "Error releasing hold on call %d "
                           "(reason=%d)", call->index, tsx->status_code));
             }   
-        }
-        
-        if (tsx->last_tx == (pjsip_tx_data*)call->hold_msg) {
-            call->hold_msg = NULL;
-        }
-        if (tsx->last_tx == (pjsip_tx_data*)call->unhold_msg) {
-            call->unhold_msg = NULL;
         }
         
         if (tsx->last_tx->msg->body &&

@@ -207,8 +207,6 @@ struct pjsua_call
     int                  secure_level;/**< Signaling security level.        */
     pjsua_call_hold_type call_hold_type; /**< How to do call hold.          */
     pj_bool_t            local_hold;/**< Flag for call-hold by local.       */
-    void                *hold_msg;  /**< Outgoing hold tx_data.             */
-    void                *unhold_msg;/**< Outgoing unhold tx_data, if held.  */
     pj_str_t             cname;     /**< RTCP CNAME.                        */
     char                 cname_buf[16];/**< cname buffer.                   */
 
