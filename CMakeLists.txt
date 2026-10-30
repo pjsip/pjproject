@@ -32,6 +32,18 @@ project(pjproject
   LANGUAGES C
 )
 
+# Programs and DLLs in bin, libraries in lib, so a Windows program finds its
+# DLLs. A project including this one with add_subdirectory can set its own.
+if(NOT DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+endif()
+if(NOT DEFINED CMAKE_LIBRARY_OUTPUT_DIRECTORY)
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
+endif()
+if(NOT DEFINED CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
+endif()
+
 # C++ is needed only by pjsua2 and a few backends (WebRTC AEC3, libyuv, Lyra,
 # OpenH264, Oboe, WASAPI, DirectShow, Android MediaCodec), by pjlib's
 # atomic_queue.cpp, which only those backends use, and by WebRTC's CPU

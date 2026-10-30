@@ -641,16 +641,16 @@ jobs:
       run: cmake --build build-debug -j $(sysctl -n hw.ncpu)
     - name: check Debug
       run: |
-        file build-debug/pjsip-apps/pjsua
-        otool -L build-debug/pjsip-apps/pjsua
+        file build-debug/bin/pjsua
+        otool -L build-debug/bin/pjsua
     - name: configure Release
       run: cmake -B build-release -DCMAKE_BUILD_TYPE=Release
     - name: build Release
       run: cmake --build build-release -j $(sysctl -n hw.ncpu)
     - name: check Release
       run: |
-        file build-release/pjsip-apps/pjsua
-        otool -L build-release/pjsip-apps/pjsua
+        file build-release/bin/pjsua
+        otool -L build-release/bin/pjsua
     - name: install Release
       run: cmake --install build-release --prefix ${{ runner.temp }}/pj-install
     - name: test find_package

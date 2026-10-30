@@ -55,7 +55,7 @@ foreach(_sample IN LISTS _pj_samples)
   add_executable(${_sample} src/samples/${_sample}.c)
   target_link_libraries(${_sample} PRIVATE ${_pj_app_libs})
   set_target_properties(${_sample} PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/samples"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/samples"
   )
 endforeach()
 unset(_pj_samples)
@@ -65,7 +65,7 @@ if(PJ_BUILD_PJSUA2)
     add_executable(${_sample} src/samples/${_sample}.cpp)
     target_link_libraries(${_sample} PRIVATE ${_pj_app_libs} pjsua2)
     set_target_properties(${_sample} PROPERTIES
-      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/samples"
+      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/samples"
     )
   endforeach()
 endif() # PJ_BUILD_PJSUA2
