@@ -102,6 +102,14 @@ jobs:
         done
         exit $fail
 
+    # Oboe already links libOpenSLES.so, so look for the OpenSL device itself.
+    - name: check OpenSL device is compiled in
+      run: |
+        set -eu
+        nm=$(find "${ANDROID_NDK_LATEST_HOME}" -name 'llvm-nm' | head -1)
+        "$nm" build/pjsip-apps/pjsua | grep -q ' T pjmedia_opensl_factory$' \
+          || { echo "::error::OpenSL device is not compiled in"; exit 1; }
+
     # The AAR is the Android deliverable, and it is only as good as the two
     # halves SWIG produces: the JNI library an app loads by name, and the
     # Java classes that call into it.
