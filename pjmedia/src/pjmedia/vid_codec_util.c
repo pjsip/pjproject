@@ -102,7 +102,7 @@ static pj_status_t parse_custom_res_fmtp(const pj_str_t *fmtp_val,
 
 
 /* H263 fmtp parser */
-PJ_DEF(pj_status_t) pjmedia_vid_codec_parse_h263_fmtp(
+PJ_DEF(pj_status_t) pjmedia_vid_codec_h263_parse_fmtp(
                                     const pjmedia_codec_fmtp *fmtp,
                                     pjmedia_vid_codec_h263_fmtp *h263_fmtp)
 {
@@ -190,7 +190,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h263_apply_fmtp(
         /* Get local param */
         // Local param should be fetched from "param->enc_fmt" instead of
         // "param->dec_fmtp".
-        //status = pjmedia_vid_codec_parse_h263_fmtp(&param->dec_fmtp,
+        //status = pjmedia_vid_codec_h263_parse_fmtp(&param->dec_fmtp,
         //                                         &fmtp_loc);
         //if (status != PJ_SUCCESS)
         //    return status;
@@ -199,7 +199,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h263_apply_fmtp(
         fmtp_loc.mpi[0].val  = fps_to_mpi(&vfd->fps);
 
         /* Get remote param */
-        status = pjmedia_vid_codec_parse_h263_fmtp(&param->enc_fmtp,
+        status = pjmedia_vid_codec_h263_parse_fmtp(&param->enc_fmtp,
                                                    &fmtp_rem);
         if (status != PJ_SUCCESS)
             return status;
@@ -265,7 +265,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h263_apply_fmtp(
         pjmedia_video_format_detail *vfd;
         pj_status_t status;
         
-        status = pjmedia_vid_codec_parse_h263_fmtp(&param->dec_fmtp,
+        status = pjmedia_vid_codec_h263_parse_fmtp(&param->dec_fmtp,
                                                    &fmtp);
         if (status != PJ_SUCCESS)
             return status;
