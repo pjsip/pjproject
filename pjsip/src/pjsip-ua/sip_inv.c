@@ -4876,6 +4876,8 @@ static pj_bool_t inv_handle_update_response( pjsip_inv_session *inv,
 
                 /* Re-send request. */
                 status = pjsip_inv_send_msg(inv, tdata);
+                if (status != PJ_SUCCESS && tsx_inv_data)
+                    tsx_inv_data->retrying = PJ_FALSE;
             }
             /* Somehow failed. Probably it's not a good idea to
              * terminate the session since this is just a request
