@@ -1045,7 +1045,7 @@ jobs:
         $PSNativeCommandUseErrorActionPreference = $true
         New-Item -ItemType Directory -Force pjlib/bin | Out-Null
         cd pjlib/bin
-        ../../build/pjlib/Release/pjlib-test.exe --ci-mode ${{ matrix.tests }}
+        ../../build/bin/Release/pjlib-test.exe --ci-mode ${{ matrix.tests }}
     - name: install
       run: cmake --install build --config Release --prefix "${{ runner.temp }}/pj-install"
     - name: check install layout
