@@ -12,6 +12,17 @@ This guide takes you from a clean machine to a SIP call running on Zephyr: first
 
 Current status: SIP over UDP and over TLS, G.711, G.722 and SDES-SRTP are working, single threaded and with pjsip and the media on two pthreads.
 
+As an indication of the footprint, these are the sizes of the whole AN521 image, Zephyr and its network stack included, for the four ways the sample builds:
+
+| Build | Flash | RAM |
+|---|---|---|
+| SIP over UDP, single thread | 344 KB | 339 KB |
+| SIP over UDP, threads | 352 KB | 405 KB |
+| SIP over TLS, single thread | 452 KB | 461 KB |
+| SIP over TLS, threads | 461 KB | 528 KB |
+
+Most of the RAM is what the configuration sets aside rather than pjproject's own data: a 256 KB heap arena for pjlib's pools (320 KB with TLS), the kernel heap the thread stacks come from in the threaded build, and the network buffers. The sample is built for up to four concurrent calls, and the image size is the same however many are active, since calls draw on the heap arena at run time; the tests so far ran one call at a time, and what four take from the arena is part of the footprint measurement still to come, which will also separate pjproject's share from Zephyr's.
+
 ## 1. Install Zephyr
 
 If you already have a working Zephyr workspace and SDK, skip to section 2. Otherwise follow the [Zephyr Getting Started Guide](https://docs.zephyrproject.org/latest/develop/getting_started/index.html); the steps below are its Ubuntu version, condensed.
@@ -159,8 +170,8 @@ The same `-DCONFIG_...` options as above apply. The end of the build prints the 
 
 ```
 Memory region         Used Size  Region Size  %age Used
-           FLASH:      352272 B         4 MB      8.40%
-             RAM:      347384 B       640 KB     53.01%
+           FLASH:      352224 B         4 MB      8.40%
+             RAM:      347536 B       640 KB     53.03%
 ```
 
 That is the whole image, Zephyr and its network stack included; 256 KB of the RAM is the heap arena pjlib's pools are carved from. With `overlay-tls.conf` the image is 452 KB of flash and 461 KB of RAM, and 528 KB of RAM with the threads overlay too: Mbed TLS's code, and the 64 KB the TLS overlay adds to the heap arena for its contexts.
