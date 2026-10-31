@@ -26,9 +26,12 @@ config PJPROJECT_THREADS
 
 	  PJLIB keeps its per-thread data in compiler thread-local storage
 	  rather than pthread keys, so that it works from Zephyr's main
-	  thread too; this needs THREAD_LOCAL_STORAGE. Threads PJLIB
-	  creates need DYNAMIC_THREAD, and get DYNAMIC_THREAD_STACK_SIZE
-	  each unless the application asks for more; see
+	  thread too; this needs THREAD_LOCAL_STORAGE. That storage comes
+	  off the top of every thread's stack, kernel threads included:
+	  PJLIB's share is about 270 bytes, more than the idle thread's
+	  default stack, so raise IDLE_STACK_SIZE. Threads PJLIB creates
+	  need DYNAMIC_THREAD, and get DYNAMIC_THREAD_STACK_SIZE each
+	  unless the application asks for more; see
 	  zephyr/samples/embedded_ua/overlay-threads.conf.
 
 config PJPROJECT_TLS

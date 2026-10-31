@@ -41,18 +41,6 @@
 #   endif
 #endif
 
-/* Whether the clock advances while a thread is busy. On Zephyr's native_sim
- * simulated time stands still until every thread sleeps, so a test that
- * spins, or busy-waits on the clock, never ends there.
- */
-#ifndef PJTEST_TIME_PASSES_WHEN_BUSY
-#   if defined(__ZEPHYR__) && defined(CONFIG_ARCH_POSIX)
-#       define PJTEST_TIME_PASSES_WHEN_BUSY    0
-#   else
-#       define PJTEST_TIME_PASSES_WHEN_BUSY    1
-#   endif
-#endif
-
 #define TEST_DEFAULT                1
 
 #define GROUP_LIBC                  TEST_DEFAULT

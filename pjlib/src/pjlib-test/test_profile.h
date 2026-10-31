@@ -44,11 +44,27 @@
 #endif
 
 /**
+ * Whether the clock advances while a thread is busy. On Zephyr's native_sim
+ * simulated time stands still until every thread sleeps, so a test that
+ * spins, or busy-waits on the clock, never ends there, and a benchmark
+ * measures no time at all.
+ */
+#ifndef PJTEST_TIME_PASSES_WHEN_BUSY
+#   if defined(__ZEPHYR__) && defined(CONFIG_ARCH_POSIX)
+#       define PJTEST_TIME_PASSES_WHEN_BUSY    0
+#   else
+#       define PJTEST_TIME_PASSES_WHEN_BUSY    1
+#   endif
+#endif
+
+/**
  * Exclude the benchmarks (pool, socket and ioqueue performance), which need
- * far more memory and time than the functional tests.
+ * far more memory and time than the functional tests, and a clock that
+ * runs while they do.
  */
 #ifndef PJ_EXCLUDE_BENCHMARK_TESTS
-#   define PJ_EXCLUDE_BENCHMARK_TESTS   PJTEST_SMALL_FOOTPRINT
+#   define PJ_EXCLUDE_BENCHMARK_TESTS   (PJTEST_SMALL_FOOTPRINT || \
+                                         !PJTEST_TIME_PASSES_WHEN_BUSY)
 #endif
 
 #endif  /* __PJLIB_TEST_PROFILE_H__ */
