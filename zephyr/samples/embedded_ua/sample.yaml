@@ -15,3 +15,17 @@ tests:
       - mps2/an521/cpu0
       - native_sim/native/64
     tags: net pjsip
+  sample.pjsip.embedded_ua.tls:
+    build_only: true
+    extra_args: EXTRA_CONF_FILE=overlay-tls.conf
+    platform_allow:
+      - mps2/an521/cpu0
+      - native_sim/native/64
+    tags: net pjsip
+  sample.pjsip.embedded_ua.tls_threads:
+    build_only: true
+    extra_args: EXTRA_CONF_FILE="overlay-threads.conf;overlay-tls.conf"
+    platform_allow:
+      - mps2/an521/cpu0
+      - native_sim/native/64
+    tags: net pjsip

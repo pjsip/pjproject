@@ -10,7 +10,7 @@ This guide takes you from a clean machine to a SIP call running on Zephyr: first
 - Tested targets: `native_sim/native/64` and `mps2/an521/cpu0` (Cortex-M33 under QEMU, limited to 640 KB of RAM to match an STM32H563). Both register and complete calls with zero packet loss.
 - pjlib-test, PJLIB's own test suite, runs on both targets through twister, single threaded and with threads.
 
-Current status: SIP over UDP, G.711, G.722 and SDES-SRTP are working, single threaded and with pjsip and the media on two pthreads. SIP over TLS with Zephyr's Mbed TLS is the next step and is described below as such.
+Current status: SIP over UDP and over TLS, G.711, G.722 and SDES-SRTP are working, single threaded and with pjsip and the media on two pthreads.
 
 ## 1. Install Zephyr
 
@@ -128,6 +128,18 @@ west build -p always -b native_sim/native/64 -d build-native ~/pjproject/zephyr/
 
 The server can be anywhere the host can reach: the host forwards packets from the TAP interface as it does for any other network, and a server on the host itself answers directly. The port was developed against Kamailio; any registrar that does digest authentication will do. Create an account `bob`/`secret` on it, or change `CONFIG_EMBUA_USERNAME` and `CONFIG_EMBUA_PASSWORD`. The log shows the REGISTER, the 401 challenge, the authenticated REGISTER and the 200 OK; after that the sample is reachable by calling `bob` through the server.
 
+### Over TLS
+
+Build with the TLS overlay and the sample registers over TLS instead, to port 5061 of the server, and listens for TLS on 55061:
+
+```sh
+west build -p always -b native_sim/native/64 -d build-native ~/pjproject/zephyr/samples/embedded_ua -- -DCONFIG_EMBUA_SIP_SERVER_IP=\"192.168.1.19\" -DEXTRA_CONF_FILE=overlay-tls.conf
+```
+
+For the threaded build give both overlays, `-DEXTRA_CONF_FILE="overlay-threads.conf;overlay-tls.conf"`. The overlay turns on `CONFIG_PJPROJECT_TLS` and TCP, and configures Zephyr's Mbed TLS as a TLS 1.2 client with one ciphersuite (ECDHE-RSA with AES-128-GCM), PEM parsing for the certificates an application may give pjsip, a 16 KB incoming and 4 KB outgoing record buffer, and 64 KB more heap arena, since Mbed TLS allocates its contexts from the same C library heap as pjlib's pools. pjlib drives Mbed TLS directly over a TCP socket; Zephyr's own TLS socket option is not involved. The server certificate is not verified, as in the sample everywhere else. The TLS transport also takes a few more pthread mutexes than UDP, which the threads overlay's `CONFIG_MAX_PTHREAD_MUTEX_COUNT` allows for. With threads, PSA Crypto is called from both of the sample's threads and needs Mbed TLS's threading layer; Zephyr has no Kconfig option for that, so the overlay names `psa_user_config.h` in the sample directory as the TF-PSA-Crypto user configuration, which defines `MBEDTLS_THREADING_C` and `MBEDTLS_THREADING_PTHREAD` when `CONFIG_PJPROJECT_THREADS` is set.
+
+The sample has no certificate of its own, so it cannot accept TLS connections: the server has to send requests back down the connection the sample opened to register, which SIP servers do for TLS clients behind NAT. Kamailio does it with `set_contact_alias()` on the REGISTER and `handle_ruri_alias()` plus `set_forward_no_connect()` before relaying, and its `tls.cfg` needs `method = TLSv1.2+`. The caller can stay on UDP; the server bridges the two.
+
 ### Driving it with SIP MESSAGE
 
 embedded_ua has no console input. Send it a SIP MESSAGE (in pjsua: add it as a buddy and use `i`) with one of these bodies: `call <uri>` makes it place a call, `mem` logs its pool usage, `quit` ends every call, unregisters and exits.
@@ -151,7 +163,7 @@ Memory region         Used Size  Region Size  %age Used
              RAM:      347384 B       640 KB     53.01%
 ```
 
-That is the whole image, Zephyr and its network stack included; 256 KB of the RAM is the heap arena pjlib's pools are carved from.
+That is the whole image, Zephyr and its network stack included; 256 KB of the RAM is the heap arena pjlib's pools are carved from. With `overlay-tls.conf` the image is 452 KB of flash and 461 KB of RAM, and 528 KB of RAM with the threads overlay too: Mbed TLS's code, and the 64 KB the TLS overlay adds to the heap arena for its contexts.
 
 Run it with the launcher that comes with the sample, giving it the build directory:
 
@@ -255,6 +267,8 @@ CONFIG_ENTROPY_GENERATOR=y
 
 The sample's `zephyr/samples/embedded_ua/prj.conf` is a complete, commented example and the best starting point; copy it and remove what you do not need. Two of its settings deserve a word. `CONFIG_NET_IPV4_FRAGMENT=y` is there because a SIP INVITE with SDP is usually larger than the Ethernet MTU and arrives as IP fragments. `CONFIG_ZVFS_OPEN_MAX` bounds the file descriptors `select()` can watch and must be at least `CONFIG_PJPROJECT_IOQUEUE_MAX_HANDLES`; the build checks this with a static assertion.
 
+For SIP over TLS add the options of the sample's `overlay-tls.conf`: `CONFIG_PJPROJECT_TLS`, TCP, and Mbed TLS with at least one ciphersuite, certificate parsing and record buffers; then start a TLS transport with `pjsip_tls_transport_start2()` as the sample does. A threaded application also needs the sample's `psa_user_config.h`, or its own, as `CONFIG_TF_PSA_CRYPTO_USER_CONFIG_FILE`.
+
 The application code is ordinary pjsip code. `embedded_ua.c` in `pjsip-apps/src/samples` is a complete example: it initialises pjlib, creates the endpoint, transport, dialog and invite layers, registers, handles calls and media, all from a single thread that polls the SIP endpoint and the media clock. It is portable C that also builds on Linux, Windows and macOS, which is how to develop and debug application logic before moving it to the board.
 
 ## 8. Configuration
@@ -267,7 +281,7 @@ All pjproject options live under "PJSIP (pjproject)" in `west build -t menuconfi
 |---|---|---|
 | `CONFIG_PJPROJECT` | n | Build pjproject. Requires `POSIX_API`, `NETWORKING`, `NET_SOCKETS`, `NET_IPV4`. |
 | `CONFIG_PJPROJECT_THREADS` | n | Build PJLIB with threads over pthreads. Off, PJLIB is single threaded and no pthread function is linked. See the note below. |
-| `CONFIG_PJPROJECT_TLS` | n | SIP over TLS with Zephyr's Mbed TLS. Requires `MBEDTLS` and `NET_TCP`. In progress. |
+| `CONFIG_PJPROJECT_TLS` | n | SIP over TLS with Zephyr's Mbed TLS. Requires `MBEDTLS` and `NET_TCP`; the sample's `overlay-tls.conf` has the Mbed TLS options a TLS client needs. |
 | `CONFIG_PJPROJECT_SRTP` | y | SDES-SRTP with the bundled libsrtp. |
 | `CONFIG_PJPROJECT_CODEC_G711` | y | G.711 PCMU and PCMA. |
 | `CONFIG_PJPROJECT_CODEC_G722` | y | G.722 wideband. |
@@ -329,6 +343,7 @@ Random numbers come from Zephyr's `sys_rand32_get()` rather than the C library's
 - QEMU's MPS2 boards drop full-size Ethernet frames: Zephyr's `smsc911x` driver rounds the frame length up before subtracting the checksum, asks for a buffer two bytes larger than the network stack allows for a 1514-byte frame, and the frame is lost. The first fragment of a SIP INVITE is such a frame. Until the driver is fixed, keep the host side of the TAP at MTU 1400 so that every frame is smaller. Real hardware and native_sim are not affected.
 - The QEMU boards have no entropy device, so the sample uses Zephyr's test random generator, seeded from the timer so that each boot differs. It is not a secure source; a real board must use its hardware RNG.
 - Logging at `CONFIG_PJPROJECT_LOG_MAX_LEVEL` below 5 produces a few unused-variable warnings in pjproject's own code. They are harmless.
+- The sample's TLS transport has no certificate, so it cannot take inbound TLS connections; requests to it must arrive on the connection it registered over (section 3). That is the sample's choice, not the port's: with a certificate and key in `pjsip_tls_setting` the listener works as on any platform.
 - `exit()` on Zephyr does not end the program; after `quit`, the sample's final log line is followed by an idle loop. Stop the emulator by hand.
 
 ## 11. Troubleshooting

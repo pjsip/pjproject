@@ -14,6 +14,8 @@ target_sources(app PRIVATE
   ${CMAKE_CURRENT_LIST_DIR}/../../../pjsip-apps/src/samples/embedded_ua.c
 )
 target_link_libraries(app PRIVATE pjproject)
+# For psa_user_config.h, which Mbed TLS's own build has to find
+zephyr_include_directories(${CMAKE_CURRENT_LIST_DIR})
 
 # Running under QEMU: see run-qemu.sh. "west build -t run" does not work on
 # the MPS2 boards, whose LAN9118 is on the system bus: Zephyr adds a pluggable

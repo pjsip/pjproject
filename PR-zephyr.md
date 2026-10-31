@@ -43,6 +43,8 @@ Tested targets are `native_sim/native/64`, which runs Zephyr as a Linux process,
 
 **Documentation**: `README_Zephyr.md` at the tree root is the full guide, from installing Zephyr to running on native_sim, QEMU and real hardware, using pjproject in an application, configuration, how the port is put together, known limitations and troubleshooting. docs.pjsip.org will link to or copy it.
 
+**SIP over TLS** (`zephyr/samples/embedded_ua/overlay-tls.conf`): pjlib's Mbed TLS backend builds unchanged against Zephyr's Mbed TLS 4.1, found through `zephyr/cmake/MbedTLSConfig.cmake`; the one change in the backend is that it logs the library version from `MBEDTLS_VERSION_STRING_FULL` instead of calling a function that needs `MBEDTLS_VERSION_C`. The overlay configures Mbed TLS as a TLS 1.2 client with one ciphersuite, adds 64 KB to the heap arena for its contexts, and names a TF-PSA-Crypto user configuration that turns on Mbed TLS's pthread threading layer in threaded builds, since PSA Crypto is then called from two threads and Zephyr has no Kconfig option for it. Both targets register over TLS to Kamailio and complete calls; the an521 image is 452 KB of flash and 461 KB of RAM, 528 KB with threads.
+
 ### Not in this PR
 
-SIP over TLS with Zephyr's Mbed TLS, footprint figures for the final configuration, and the IPv6 socket address layout. These follow in separate PRs.
+Footprint figures for the final configuration, and the IPv6 socket address layout. These follow in separate PRs.

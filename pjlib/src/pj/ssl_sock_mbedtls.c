@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2025-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (c) 2025 Arlo Technologies, Inc. (https://www.arlo.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -715,8 +715,6 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     int endpoint;
 #if MBEDTLS_VERSION_MAJOR < 4
     const char *pers = "ssl_client";
-    /* version.h: 18 bytes at most, including the terminating null */
-    char version[24];
 #endif
 
     /* Suppress warnings */
@@ -737,13 +735,7 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
         return status;
     }
 
-#if MBEDTLS_VERSION_MAJOR >= 4
-    PJ_LOG(4, (THIS_FILE, "Mbed TLS version %s",
-               mbedtls_version_get_string_full()));
-#else
-    mbedtls_version_get_string_full(version);
-    PJ_LOG(4, (THIS_FILE, "Mbed TLS version %s", version));
-#endif
+    PJ_LOG(4, (THIS_FILE, "Mbed TLS version %s", MBEDTLS_VERSION_STRING_FULL));
 
 #ifdef MBEDTLS_PSA_CRYPTO_C
     status = psa_init();

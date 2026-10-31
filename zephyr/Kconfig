@@ -39,7 +39,10 @@ config PJPROJECT_TLS
 	depends on MBEDTLS && NET_TCP
 	help
 	  Build PJLIB's Mbed TLS backend and the SIP TLS transport against
-	  the Mbed TLS that Zephyr provides.
+	  the Mbed TLS that Zephyr provides. The application configures
+	  Mbed TLS itself: TLS version, ciphersuites, certificate parsing
+	  and record buffer sizes. zephyr/samples/embedded_ua/overlay-tls.conf
+	  is a working TLS 1.2 client configuration.
 
 config PJPROJECT_SRTP
 	bool "Secure RTP (SDES-SRTP) with the bundled libsrtp"
