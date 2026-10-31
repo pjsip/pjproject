@@ -709,6 +709,26 @@
 
 
 /**
+ * Keep pj_thread_local_set()/pj_thread_local_get() values in compiler
+ * thread-local storage (#PJ_THREAD_LOCAL, i.e. __thread) rather than in
+ * pthread keys. This applies to the POSIX implementation only (Windows
+ * uses TlsAlloc() and is unaffected).
+ *
+ * Use it on a platform where pthread keys are not available to every
+ * thread, such as Zephyr, which keeps key values only for threads
+ * created with pthread_create() and so rejects them from its main
+ * thread, where pj_init() is usually called. The platform must give
+ * every thread its own thread-local storage; on Zephyr that is
+ * CONFIG_THREAD_LOCAL_STORAGE, which os_core_unix.c checks.
+ *
+ * Default: 0 (pthread keys). The PJ_CONFIG_ZEPHYR preset sets it to 1.
+ */
+#ifndef PJ_THREAD_LOCAL_USE_COMPILER_TLS
+#  define PJ_THREAD_LOCAL_USE_COMPILER_TLS    0
+#endif
+
+
+/**
  * Specify if PJ_CHECK_STACK() macro is enabled to check the sanity of 
  * the stack. The OS implementation may check that no stack overflow 
  * occurs, and it also may collect statistic about stack usage. Note

@@ -143,5 +143,8 @@
     <ClInclude Include="..\src\pjlib-test\test.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\pjlib-test\test_profile.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

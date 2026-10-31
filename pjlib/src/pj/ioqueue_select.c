@@ -1091,7 +1091,13 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
         }
 
 #if PJ_HAS_TCP
+        /* A failed connect() may be flagged in both the write and the
+         * exception set (Zephyr does); the write event above then already
+         * completes it. Without this check the exception event would be a
+         * no-op that still counts in the number of events returned.
+         */
         if (key_has_pending_connect(h) && PJ_FD_ISSET(h->fd, &xfdset) &&
+            !PJ_FD_ISSET(h->fd, &wfdset) &&
             !IS_CLOSING(h) && event_cnt < MAX_EVENTS)
         {
 #if PJ_IOQUEUE_HAS_SAFE_UNREG

@@ -18,15 +18,18 @@ if PJPROJECT
 config PJPROJECT_THREADS
 	bool "Thread support in PJLIB"
 	select POSIX_THREADS
+	select THREAD_LOCAL_STORAGE if ARCH_HAS_THREAD_LOCAL_STORAGE && TOOLCHAIN_SUPPORTS_THREAD_LOCAL_STORAGE
 	help
 	  Build PJLIB with threads, mutexes and semaphores over pthreads.
 	  Off, PJLIB is single threaded: the application drives everything
 	  by polling and no pthread function is linked.
 
-	  Zephyr keeps pthread-specific data only for threads created with
-	  pthread_create(), so with this option the application must call
-	  PJLIB (pj_init() included) from such a thread, not from Zephyr's
-	  main thread.
+	  PJLIB keeps its per-thread data in compiler thread-local storage
+	  rather than pthread keys, so that it works from Zephyr's main
+	  thread too; this needs THREAD_LOCAL_STORAGE. Threads PJLIB
+	  creates need DYNAMIC_THREAD, and get DYNAMIC_THREAD_STACK_SIZE
+	  each unless the application asks for more; see
+	  zephyr/samples/embedded_ua/overlay-threads.conf.
 
 config PJPROJECT_TLS
 	bool "SIP over TLS with Mbed TLS"

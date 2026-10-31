@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -22,6 +22,36 @@
 #include <pj/types.h>
 #include <pj/argparse.h>
 #include <pj/unittest.h>
+#include "test_profile.h"
+
+/*
+ * Settings the build can override. The defaults follow the test profile
+ * and the platform.
+ */
+
+/* Size of the timer test: PJTEST_TIMER_LOOP*250 timer entries, and the
+ * thread counts of its stress test scale with it too. 16 needs 1.2 MB of
+ * pools and 20 threads; 2 fits a 640 KB board.
+ */
+#ifndef PJTEST_TIMER_LOOP
+#   if PJTEST_SMALL_FOOTPRINT
+#       define PJTEST_TIMER_LOOP      2
+#   else
+#       define PJTEST_TIMER_LOOP      16
+#   endif
+#endif
+
+/* Whether the clock advances while a thread is busy. On Zephyr's native_sim
+ * simulated time stands still until every thread sleeps, so a test that
+ * spins, or busy-waits on the clock, never ends there.
+ */
+#ifndef PJTEST_TIME_PASSES_WHEN_BUSY
+#   if defined(__ZEPHYR__) && defined(CONFIG_ARCH_POSIX)
+#       define PJTEST_TIME_PASSES_WHEN_BUSY    0
+#   else
+#       define PJTEST_TIME_PASSES_WHEN_BUSY    1
+#   endif
+#endif
 
 #define TEST_DEFAULT                1
 
@@ -40,7 +70,8 @@
     #define APPLE_ASAN  0
 #endif
 #define GROUP_NETWORK               TEST_DEFAULT
-#if defined(PJ_SYMBIAN)
+/* Zephyr: the test app mounts no file system */
+#if defined(PJ_SYMBIAN) || defined(__ZEPHYR__)
 #   define GROUP_FILE               0
 #else
 #   define GROUP_FILE               TEST_DEFAULT
@@ -53,7 +84,7 @@
 #endif
 
 #define INCLUDE_ERRNO_TEST          GROUP_LIBC
-#define INCLUDE_TIMESTAMP_TEST      GROUP_OS
+#define INCLUDE_TIMESTAMP_TEST      (GROUP_OS && PJTEST_TIME_PASSES_WHEN_BUSY)
 #define INCLUDE_EXCEPTION_TEST      (GROUP_LIBC && !APPLE_ASAN)
 #define INCLUDE_RAND_TEST           GROUP_LIBC
 #define INCLUDE_LIST_TEST           GROUP_DATA_STRUCTURE
@@ -91,7 +122,8 @@
 #define INCLUDE_ACTIVESOCK_TEST     GROUP_NETWORK
 #define INCLUDE_SSLSOCK_TEST        (PJ_HAS_SSL_SOCK && GROUP_NETWORK)
 #define INCLUDE_IOQUEUE_PERF_TEST   (PJ_HAS_THREADS && GROUP_NETWORK && WITH_BENCHMARK)
-#define INCLUDE_IOQUEUE_UNREG_TEST  (PJ_HAS_THREADS && GROUP_NETWORK)
+#define INCLUDE_IOQUEUE_UNREG_TEST  (PJ_HAS_THREADS && GROUP_NETWORK && \
+                                     PJTEST_TIME_PASSES_WHEN_BUSY)
 #define INCLUDE_FILE_TEST           GROUP_FILE
 
 #define INCLUDE_ECHO_SERVER         0

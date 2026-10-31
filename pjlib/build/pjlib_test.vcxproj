@@ -804,6 +804,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\pjlib-test\test.h" />
+    <ClInclude Include="..\src\pjlib-test\test_profile.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\pjsip-apps\build\libpjproject.vcxproj">

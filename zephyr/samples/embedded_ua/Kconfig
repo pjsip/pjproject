@@ -5,15 +5,45 @@ mainmenu "PJSIP embedded_ua sample"
 
 menu "embedded_ua"
 
+# The sample's build settings. embedded_ua.c reads them as CONFIG_EMBUA_*
+# on every platform; on/off ones are ints so that they are always defined,
+# whichever way they are set.
+
+config EMBUA_AUDIO_CODEC
+	int "Audio codec: 1 G.711 (PCMU and PCMA), 2 G.722, 0 none"
+	range 0 2
+	default 1 if PJPROJECT_CODEC_G711
+	default 2 if PJPROJECT_CODEC_G722
+	default 0
+
+config EMBUA_USE_SRTP
+	int "Mandatory SDES-SRTP (1), or plain RTP (0)"
+	range 0 1
+	default 1 if PJPROJECT_SRTP
+	default 0
+
+config EMBUA_SIP_TRANSPORT
+	int "SIP transport: 1 UDP, 2 TLS"
+	range 1 2
+	default 2 if PJPROJECT_TLS
+	default 1
+
+config EMBUA_USE_MEDIA_THREAD
+	int "Run the media from its own thread (1)"
+	range 0 1
+	default 1 if PJPROJECT_THREADS
+	default 0
+
 config EMBUA_SIP_SERVER_IP
 	string "SIP server (registrar and proxy) IP address"
 	default "192.0.2.2"
 
 config EMBUA_USE_REGISTRATION
-	bool "Register to the SIP server"
-	default y
+	int "Register to the SIP server (1)"
+	range 0 1
+	default 1
 	help
-	  Off, the UA is reached at its own address and makes calls to
+	  With 0 the UA is reached at its own address and makes calls to
 	  whatever URI it is told to.
 
 config EMBUA_USERNAME

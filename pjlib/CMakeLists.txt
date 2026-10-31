@@ -839,52 +839,55 @@ target_sources(pjlib
 )
 
 # ##############################################################################
-# pjlib test application
+# pjlib test application. The sources, except main, are an INTERFACE
+# target so that another build (the Zephyr test app) compiles the same list.
+
+add_library(pjlib-test-sources INTERFACE)
+target_sources(pjlib-test-sources INTERFACE
+  src/pjlib-test/activesock.c
+  src/pjlib-test/atomic.c
+  src/pjlib-test/atomic_slist.c
+  src/pjlib-test/echo_clt.c
+  src/pjlib-test/errno.c
+  src/pjlib-test/exception.c
+  src/pjlib-test/fifobuf.c
+  src/pjlib-test/file.c
+  src/pjlib-test/hash_test.c
+  src/pjlib-test/ioq_perf.c
+  src/pjlib-test/ioq_udp.c
+  src/pjlib-test/ioq_stress_test.c
+  src/pjlib-test/ioq_unreg.c
+  src/pjlib-test/ioq_tcp.c
+  src/pjlib-test/ioq_iocp_unreg_test.c
+  src/pjlib-test/list.c
+  src/pjlib-test/mutex.c
+  src/pjlib-test/os.c
+  src/pjlib-test/pool.c
+  src/pjlib-test/pool_perf.c
+  src/pjlib-test/rand.c
+  src/pjlib-test/rbtree.c
+  src/pjlib-test/select.c
+  src/pjlib-test/sleep.c
+  src/pjlib-test/sock.c
+  src/pjlib-test/sock_perf.c
+  src/pjlib-test/ssl_sock.c
+  src/pjlib-test/ssl_sock_apple_test.c
+  src/pjlib-test/ssl_sock_stress.c
+  src/pjlib-test/string.c
+  src/pjlib-test/test.c
+  src/pjlib-test/thread.c
+  src/pjlib-test/timer.c
+  src/pjlib-test/timestamp.c
+  src/pjlib-test/udp_echo_srv_sync.c
+  src/pjlib-test/udp_echo_srv_ioqueue.c
+  src/pjlib-test/unittest_test.c
+  src/pjlib-test/util.c
+)
 
 if(BUILD_TESTING)
-  add_executable(pjlib-test
-    src/pjlib-test/activesock.c
-    src/pjlib-test/atomic.c
-    src/pjlib-test/atomic_slist.c
-    src/pjlib-test/echo_clt.c
-    src/pjlib-test/errno.c
-    src/pjlib-test/exception.c
-    src/pjlib-test/fifobuf.c
-    src/pjlib-test/file.c
-    src/pjlib-test/hash_test.c
-    src/pjlib-test/ioq_perf.c
-    src/pjlib-test/ioq_udp.c
-    src/pjlib-test/ioq_stress_test.c
-    src/pjlib-test/ioq_unreg.c
-    src/pjlib-test/ioq_tcp.c
-    src/pjlib-test/ioq_iocp_unreg_test.c
-    src/pjlib-test/list.c
-    src/pjlib-test/mutex.c
-    src/pjlib-test/os.c
-    src/pjlib-test/pool.c
-    src/pjlib-test/pool_perf.c
-    src/pjlib-test/rand.c
-    src/pjlib-test/rbtree.c
-    src/pjlib-test/select.c
-    src/pjlib-test/sleep.c
-    src/pjlib-test/sock.c
-    src/pjlib-test/sock_perf.c
-    src/pjlib-test/ssl_sock.c
-    src/pjlib-test/ssl_sock_apple_test.c
-    src/pjlib-test/ssl_sock_stress.c
-    src/pjlib-test/string.c
-    src/pjlib-test/test.c
-    src/pjlib-test/thread.c
-    src/pjlib-test/timer.c
-    src/pjlib-test/timestamp.c
-    src/pjlib-test/udp_echo_srv_sync.c
-    src/pjlib-test/udp_echo_srv_ioqueue.c
-    src/pjlib-test/unittest_test.c
-    src/pjlib-test/util.c
-    src/pjlib-test/${PJ_TEST_MAIN}
-  )
+  add_executable(pjlib-test src/pjlib-test/${PJ_TEST_MAIN})
 
-  target_link_libraries(pjlib-test PRIVATE pjlib pjlib-ssl)
+  target_link_libraries(pjlib-test PRIVATE pjlib-test-sources pjlib pjlib-ssl)
   if(APPLE)
     # ssl_sock_apple_test.c calls Security.framework directly,
     # independent of which SSL backend was configured.

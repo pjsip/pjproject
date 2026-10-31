@@ -24,6 +24,7 @@
 #include <pjsip/sip_ua_layer.h>
 #include <pjsip-ua/sip_inv.h>
 #include <pj/string.h>
+#include "../../../pjlib/src/pjlib-test/test_profile.h"
 
 extern pjsip_endpoint *endpt;
 

@@ -8,3 +8,10 @@ tests:
       - mps2/an521/cpu0
       - native_sim/native/64
     tags: net pjsip
+  sample.pjsip.embedded_ua.threads:
+    build_only: true
+    extra_args: EXTRA_CONF_FILE=overlay-threads.conf
+    platform_allow:
+      - mps2/an521/cpu0
+      - native_sim/native/64
+    tags: net pjsip

@@ -106,6 +106,11 @@ struct pj_thread_t
 {
     char            obj_name[PJ_MAX_OBJ_NAME];
     pthread_t       thread;
+    /* Only when the thread was created with attributes; see
+     * create_thread().
+     */
+    pthread_attr_t  attr;
+    pj_bool_t       has_attr;
     pj_thread_proc *proc;
     void           *arg;
     pj_uint32_t     signature1;
@@ -215,11 +220,42 @@ static int initialized;
     static long thread_tls_id;
     static pj_mutex_t critical_section;
 #else
-#   define MAX_THREADS 32
-    static int tls_flag[MAX_THREADS];
-    static void *tls[MAX_THREADS];
-
     static pj_thread_t main_thread;
+#endif
+
+/* Thread-local storage is a slot array: static without threads, in
+ * compiler TLS when PJ_THREAD_LOCAL_USE_COMPILER_TLS is set, otherwise a
+ * pthread key per slot.
+ */
+#if !PJ_HAS_THREADS || PJ_THREAD_LOCAL_USE_COMPILER_TLS
+#   define TLS_USE_PTHREAD_KEYS 0
+#   define MAX_TLS          32
+    /* Generation of each slot, 0 while free. A thread's value counts only
+     * when set in the slot's current generation, so a freed and
+     * reallocated slot reads NULL in every thread, as a new pthread key.
+     */
+    static unsigned tls_gen[MAX_TLS];
+    static unsigned tls_gen_counter;
+#   if PJ_HAS_THREADS
+#       ifndef PJ_THREAD_LOCAL
+#           error "PJ_THREAD_LOCAL_USE_COMPILER_TLS needs PJ_THREAD_LOCAL"
+#       endif
+        /* Zephyr's kernel only sets up a TLS area per thread with
+         * CONFIG_THREAD_LOCAL_STORAGE; without it the array would be
+         * shared by all threads. On native_sim the host libc provides it.
+         */
+#       if defined(__ZEPHYR__) && !defined(CONFIG_THREAD_LOCAL_STORAGE) && \
+           !defined(CONFIG_ARCH_POSIX)
+#           error "compiler TLS needs CONFIG_THREAD_LOCAL_STORAGE"
+#       endif
+        static PJ_THREAD_LOCAL void *tls[MAX_TLS];
+        static PJ_THREAD_LOCAL unsigned tls_set_gen[MAX_TLS];
+#   else
+        static void *tls[MAX_TLS];
+        static unsigned tls_set_gen[MAX_TLS];
+#   endif
+#else
+#   define TLS_USE_PTHREAD_KEYS 1
 #endif
 
 static unsigned atexit_count;
@@ -611,7 +647,7 @@ PJ_DEF(int) pj_thread_get_prio_min(pj_thread_t *thread)
 }
 
 
-#if PJ_HAS_THREADS
+#if PJ_HAS_THREADS && defined(_POSIX_PRIORITY_SCHEDULING)
 static int get_prio_max(pj_thread_t *thread)
 {
     int ori_policy, policy;
@@ -724,13 +760,14 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
          */
         if (p && *(p+1)=='p' && *(p+2)=='\0')
             pj_ansi_snprintf(thread->obj_name, sizeof(thread->obj_name),
-                             cstr_thread_name, (void*)thread->thread);
+                             cstr_thread_name,
+                             (void*)(pj_ssize_t)thread->thread);
         else
             pj_ansi_strxcpy(thread->obj_name, cstr_thread_name,
                             sizeof(thread->obj_name));
     } else {
         pj_ansi_snprintf(thread->obj_name, sizeof(thread->obj_name),
-                         "thr%p", (void*)thread->thread);
+                         "thr%p", (void*)(pj_ssize_t)thread->thread);
     }
 
     rc = pj_thread_local_set(thread_tls_id, thread);
@@ -859,6 +896,14 @@ static void *thread_main(void *param)
     return result;
 }
 
+static void destroy_thread_attr(pj_thread_t *rec)
+{
+    if (rec->has_attr) {
+        pthread_attr_destroy(&rec->attr);
+        rec->has_attr = PJ_FALSE;
+    }
+}
+
 static pj_status_t create_thread(const char *thread_name,
                                  pj_thread_proc *proc,
                                  void *arg,
@@ -866,7 +911,7 @@ static pj_status_t create_thread(const char *thread_name,
                                  void *stack_addr,
                                  pj_thread_t *rec)
 {
-    pthread_attr_t thread_attr;
+    pthread_attr_t *attr = NULL;
     int rc;
     const char *ch;
 
@@ -895,17 +940,24 @@ static pj_status_t create_thread(const char *thread_name,
     rec->stk_max_usage = 0;
 #endif
 
-    /* Init thread attributes */
-    pthread_attr_init(&thread_attr);
-
+    /* Thread attributes are only used when there is something to set, and
+     * are kept until the thread is joined or destroyed. On Zephyr,
+     * pthread_attr_init() allocates the stack the thread will run on, and
+     * only pthread_attr_destroy() frees it, which fails while the thread
+     * is still running. A thread created without attributes gets a stack
+     * of its own instead.
+     */
 #if defined(PJ_THREAD_SET_STACK_SIZE) && PJ_THREAD_SET_STACK_SIZE!=0
     /* Set thread's stack size if caller specified one;
      * 0 means let OS pick the default.
      */
     if (stack_size != 0) {
-        rc = pthread_attr_setstacksize(&thread_attr, stack_size);
+        pthread_attr_init(&rec->attr);
+        rec->has_attr = PJ_TRUE;
+        attr = &rec->attr;
+        rc = pthread_attr_setstacksize(attr, stack_size);
         if (rc != 0) {
-            pthread_attr_destroy(&thread_attr);
+            destroy_thread_attr(rec);
             return PJ_RETURN_OS_ERROR(rc);
         }
     }
@@ -916,9 +968,14 @@ static pj_status_t create_thread(const char *thread_name,
     /* Allocate memory for the stack */
     PJ_ASSERT_RETURN(stack_addr, PJ_EINVAL);
 
-    rc = pthread_attr_setstackaddr(&thread_attr, stack_addr);
+    if (!attr) {
+        pthread_attr_init(&rec->attr);
+        rec->has_attr = PJ_TRUE;
+        attr = &rec->attr;
+    }
+    rc = pthread_attr_setstackaddr(attr, stack_addr);
     if (rc != 0) {
-        pthread_attr_destroy(&thread_attr);
+        destroy_thread_attr(rec);
         return PJ_RETURN_OS_ERROR(rc);
     }
 #endif  /* PJ_THREAD_ALLOCATE_STACK */
@@ -927,14 +984,11 @@ static pj_status_t create_thread(const char *thread_name,
     /* Create the thread. */
     rec->proc = proc;
     rec->arg = arg;
-    rc = pthread_create( &rec->thread, &thread_attr, &thread_main, rec);
+    rc = pthread_create( &rec->thread, attr, &thread_main, rec);
     if (rc != 0) {
-        pthread_attr_destroy(&thread_attr);
+        destroy_thread_attr(rec);
         return PJ_RETURN_OS_ERROR(rc);
     }
-
-    /* Destroy thread attributes */
-    pthread_attr_destroy(&thread_attr);
 
     PJ_LOG(6, (rec->obj_name, "Thread created"));
     return PJ_SUCCESS;
@@ -1102,6 +1156,7 @@ PJ_DEF(pj_status_t) pj_thread_join(pj_thread_t *p)
 
     PJ_LOG(6, (pj_thread_this()->obj_name, "Joining thread %s", p->obj_name));
     result = pthread_join( rec->thread, &ret);
+    destroy_thread_attr(rec);
 
     if (result == 0)
         return PJ_SUCCESS;
@@ -1169,6 +1224,7 @@ PJ_DEF(pj_status_t) pj_thread_destroy(pj_thread_t *p)
         pj_mutex_destroy(p->suspended_mutex);
         p->suspended_mutex = NULL;
     }
+    destroy_thread_attr(p);
 
     return PJ_SUCCESS;
 #else
@@ -1505,7 +1561,7 @@ PJ_DEF(void) pj_atomic_add( pj_atomic_t *atomic_var,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-#if PJ_HAS_THREADS
+#if TLS_USE_PTHREAD_KEYS
 /* The pthread key is handed back to the caller as a long index. */
 PJ_STATIC_ASSERT(sizeof(pthread_key_t) <= sizeof(long),
                  pthread_key_t_must_fit_in_long);
@@ -1516,7 +1572,7 @@ PJ_STATIC_ASSERT(sizeof(pthread_key_t) <= sizeof(long),
  */
 PJ_DEF(pj_status_t) pj_thread_local_alloc(long *p_index)
 {
-#if PJ_HAS_THREADS
+#if TLS_USE_PTHREAD_KEYS
     pthread_key_t key;
     int rc;
 
@@ -1529,15 +1585,30 @@ PJ_DEF(pj_status_t) pj_thread_local_alloc(long *p_index)
     return PJ_SUCCESS;
 #else
     int i;
-    for (i=0; i<MAX_THREADS; ++i) {
-        if (tls_flag[i] == 0)
+
+    PJ_ASSERT_RETURN(p_index != NULL, PJ_EINVAL);
+
+    /* Before pj_init() completes there is only one thread, so no lock is
+     * needed.
+     */
+    if (initialized)
+        pj_enter_critical_section();
+
+    for (i=0; i<MAX_TLS; ++i) {
+        if (tls_gen[i] == 0)
             break;
     }
-    if (i == MAX_THREADS)
-        return PJ_ETOOMANY;
+    if (i < MAX_TLS) {
+        if (++tls_gen_counter == 0)
+            ++tls_gen_counter;
+        tls_gen[i] = tls_gen_counter;
+    }
 
-    tls_flag[i] = 1;
-    tls[i] = NULL;
+    if (initialized)
+        pj_leave_critical_section();
+
+    if (i == MAX_TLS)
+        return PJ_ETOOMANY;
 
     *p_index = i;
     return PJ_SUCCESS;
@@ -1550,10 +1621,14 @@ PJ_DEF(pj_status_t) pj_thread_local_alloc(long *p_index)
 PJ_DEF(void) pj_thread_local_free(long index)
 {
     PJ_CHECK_STACK();
-#if PJ_HAS_THREADS
+#if TLS_USE_PTHREAD_KEYS
     pthread_key_delete(index);
 #else
-    tls_flag[index] = 0;
+    if (initialized)
+        pj_enter_critical_section();
+    tls_gen[index] = 0;
+    if (initialized)
+        pj_leave_critical_section();
 #endif
 }
 
@@ -1565,11 +1640,12 @@ PJ_DEF(pj_status_t) pj_thread_local_set(long index, void *value)
     //Can't check stack because this function is called in the
     //beginning before main thread is initialized.
     //PJ_CHECK_STACK();
-#if PJ_HAS_THREADS
+#if TLS_USE_PTHREAD_KEYS
     int rc=pthread_setspecific(index, value);
     return rc==0 ? PJ_SUCCESS : PJ_RETURN_OS_ERROR(rc);
 #else
-    pj_assert(index >= 0 && index < MAX_THREADS);
+    pj_assert(index >= 0 && index < MAX_TLS);
+    tls_set_gen[index] = tls_gen[index];
     tls[index] = value;
     return PJ_SUCCESS;
 #endif
@@ -1580,11 +1656,12 @@ PJ_DEF(void*) pj_thread_local_get(long index)
     //Can't check stack because this function is called
     //by PJ_CHECK_STACK() itself!!!
     //PJ_CHECK_STACK();
-#if PJ_HAS_THREADS
+#if TLS_USE_PTHREAD_KEYS
     return pthread_getspecific(index);
 #else
-    pj_assert(index >= 0 && index < MAX_THREADS);
-    return tls[index];
+    pj_assert(index >= 0 && index < MAX_TLS);
+    return tls_gen[index] && tls_set_gen[index] == tls_gen[index] ?
+           tls[index] : NULL;
 #endif
 }
 

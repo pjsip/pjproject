@@ -113,150 +113,117 @@
 
 #define THIS_FILE           "embedded_ua.c"
 
-/* Zephyr's Kconfig setting. Define it here for non Zephyr. */
-#ifndef __ZEPHYR__
-#  define CONFIG_PJPROJECT_TLS      1
-#endif
+/* Values for CONFIG_EMBUA_SIP_TRANSPORT. */
+#define SIP_UDP             1
+#define SIP_TLS             2
 
-/* Values for EMBUA_SIP_TRANSPORT, also used as the port to listen on. */
-#define SIP_UDP             55060
-#define SIP_TLS             55061
+/* Values for CONFIG_EMBUA_AUDIO_CODEC. */
+#define CODEC_G711          1
+#define CODEC_G722          2
 
-/* Values for EMBUA_AUDIO_CODEC. */
-#define CODEC_G711          3
-#define CODEC_G722          4
-
-/* The EMBUA_ settings below pick what gets built in. Each follows what the
- * libraries provide by default, and each can be overridden from the build,
- * e.g. -DEMBUA_USE_SRTP=0.
+/* The CONFIG_EMBUA_ settings below pick what gets built in. Each follows
+ * what the libraries provide by default, and each can be set from the build,
+ * e.g. -DCONFIG_EMBUA_USE_SRTP=0. On Zephyr they are the sample's Kconfig
+ * options, which always define them, so the defaults here apply elsewhere.
  */
 
 /* Audio codec: G.711 (PCMU and PCMA) or G.722. */
-#ifndef EMBUA_AUDIO_CODEC
-#  if defined(PJMEDIA_HAS_G711_CODEC) && PJMEDIA_HAS_G711_CODEC!=0
-#    define EMBUA_AUDIO_CODEC       CODEC_G711
-#  elif defined(PJMEDIA_HAS_G722_CODEC) && PJMEDIA_HAS_G722_CODEC!=0
-#    define EMBUA_AUDIO_CODEC       CODEC_G722
+#ifndef CONFIG_EMBUA_AUDIO_CODEC
+#  if PJMEDIA_HAS_G711_CODEC
+#    define CONFIG_EMBUA_AUDIO_CODEC        CODEC_G711
+#  elif PJMEDIA_HAS_G722_CODEC
+#    define CONFIG_EMBUA_AUDIO_CODEC        CODEC_G722
 #  else
-#    define EMBUA_AUDIO_CODEC       0   /* none: see main() at the end */
+#    define CONFIG_EMBUA_AUDIO_CODEC        0   /* none: see main() */
 #  endif
 #endif
 
-#if EMBUA_AUDIO_CODEC==CODEC_G711 && \
-    (!defined(PJMEDIA_HAS_G711_CODEC) || PJMEDIA_HAS_G711_CODEC==0)
-#  error EMBUA_AUDIO_CODEC is G.711 but PJMEDIA_HAS_G711_CODEC is disabled
-#elif EMBUA_AUDIO_CODEC==CODEC_G722 && \
-    (!defined(PJMEDIA_HAS_G722_CODEC) || PJMEDIA_HAS_G722_CODEC==0)
-#  error EMBUA_AUDIO_CODEC is G.722 but PJMEDIA_HAS_G722_CODEC is disabled
+#if CONFIG_EMBUA_AUDIO_CODEC==CODEC_G711 && !PJMEDIA_HAS_G711_CODEC
+#  error CONFIG_EMBUA_AUDIO_CODEC is G.711 but PJMEDIA_HAS_G711_CODEC is disabled
+#elif CONFIG_EMBUA_AUDIO_CODEC==CODEC_G722 && !PJMEDIA_HAS_G722_CODEC
+#  error CONFIG_EMBUA_AUDIO_CODEC is G.722 but PJMEDIA_HAS_G722_CODEC is disabled
+#elif CONFIG_EMBUA_AUDIO_CODEC!=CODEC_G711 && \
+      CONFIG_EMBUA_AUDIO_CODEC!=CODEC_G722 && CONFIG_EMBUA_AUDIO_CODEC!=0
+#  error CONFIG_EMBUA_AUDIO_CODEC must be CODEC_G711, CODEC_G722 or 0
 #endif
 
 /* Mandatory SDES-SRTP, or plain RTP when 0. */
-#ifndef EMBUA_USE_SRTP
-#  if defined(PJMEDIA_HAS_SRTP) && PJMEDIA_HAS_SRTP!=0 && \
-      defined(PJMEDIA_SRTP_HAS_SDES) && PJMEDIA_SRTP_HAS_SDES!=0
-#    define EMBUA_USE_SRTP          1
+#ifndef CONFIG_EMBUA_USE_SRTP
+#  if PJMEDIA_HAS_SRTP && PJMEDIA_SRTP_HAS_SDES
+#    define CONFIG_EMBUA_USE_SRTP           1
 #  else
-#    define EMBUA_USE_SRTP          0
+#    define CONFIG_EMBUA_USE_SRTP           0
 #  endif
 #endif
 
-#if EMBUA_USE_SRTP && (!defined(PJMEDIA_HAS_SRTP) || PJMEDIA_HAS_SRTP==0 || \
-                       !defined(PJMEDIA_SRTP_HAS_SDES) || \
-                       PJMEDIA_SRTP_HAS_SDES==0)
-#  error EMBUA_USE_SRTP requires PJMEDIA_HAS_SRTP and PJMEDIA_SRTP_HAS_SDES
+#if CONFIG_EMBUA_USE_SRTP && (!PJMEDIA_HAS_SRTP || !PJMEDIA_SRTP_HAS_SDES)
+#  error CONFIG_EMBUA_USE_SRTP requires PJMEDIA_HAS_SRTP and PJMEDIA_SRTP_HAS_SDES
 #endif
 
 /* SIP transport, SIP_UDP or SIP_TLS. TLS runs over TCP, so it also needs
  * PJ_HAS_TCP.
  */
-#ifndef EMBUA_SIP_TRANSPORT
-#  if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0 && \
-      defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0 && \
-      defined(CONFIG_PJPROJECT_TLS) && CONFIG_PJPROJECT_TLS!=0
-#    define EMBUA_SIP_TRANSPORT     SIP_TLS
+#ifndef CONFIG_EMBUA_SIP_TRANSPORT
+#  if PJSIP_HAS_TLS_TRANSPORT && PJ_HAS_TCP
+#    define CONFIG_EMBUA_SIP_TRANSPORT      SIP_TLS
 #  else
-#    define EMBUA_SIP_TRANSPORT     SIP_UDP
+#    define CONFIG_EMBUA_SIP_TRANSPORT      SIP_UDP
 #  endif
 #endif
 
-#if EMBUA_SIP_TRANSPORT==SIP_TLS
-#  if !defined(PJSIP_HAS_TLS_TRANSPORT) || PJSIP_HAS_TLS_TRANSPORT==0 || \
-      !defined(PJ_HAS_TCP) || PJ_HAS_TCP==0
+#if CONFIG_EMBUA_SIP_TRANSPORT==SIP_TLS
+#  if !PJSIP_HAS_TLS_TRANSPORT || !PJ_HAS_TCP
 #    error SIP_TLS requires PJSIP_HAS_TLS_TRANSPORT and PJ_HAS_TCP
 #  endif
-#  if !defined(CONFIG_PJPROJECT_TLS) || CONFIG_PJPROJECT_TLS==0
-#    error SIP_TLS requires CONFIG_PJPROJECT_TLS in Kconfig
-#  endif
+#  define SIP_PORT                  55061
 #  define SIP_TRANSPORT_PARAM       ";transport=tls"
-#elif EMBUA_SIP_TRANSPORT==SIP_UDP
+#elif CONFIG_EMBUA_SIP_TRANSPORT==SIP_UDP
+#  define SIP_PORT                  55060
 #  define SIP_TRANSPORT_PARAM       ""
 #else
-#  error EMBUA_SIP_TRANSPORT must be SIP_UDP or SIP_TLS
+#  error CONFIG_EMBUA_SIP_TRANSPORT must be SIP_UDP or SIP_TLS
 #endif
 
 /* Run the media from its own thread, which polls pjmedia's ioqueue, so that
  * neither incoming RTP nor the media clock waits for the main thread.
  */
-#ifndef EMBUA_USE_MEDIA_THREAD
+#ifndef CONFIG_EMBUA_USE_MEDIA_THREAD
 #  if PJ_HAS_THREADS
-#    define EMBUA_USE_MEDIA_THREAD  1
+#    define CONFIG_EMBUA_USE_MEDIA_THREAD   1
 #  else
-#    define EMBUA_USE_MEDIA_THREAD  0
+#    define CONFIG_EMBUA_USE_MEDIA_THREAD   0
 #  endif
 #endif
 
-#if EMBUA_USE_MEDIA_THREAD && !PJ_HAS_THREADS
-#  error EMBUA_USE_MEDIA_THREAD requires PJ_HAS_THREADS
+#if CONFIG_EMBUA_USE_MEDIA_THREAD && !PJ_HAS_THREADS
+#  error CONFIG_EMBUA_USE_MEDIA_THREAD requires PJ_HAS_THREADS
 #endif
 
-/* Register to EMBUA_SIP_SERVER_IP. With 0 the UA is reached at its own
- * address. On Zephyr the sample's Kconfig sets this.
+/* Register to CONFIG_EMBUA_SIP_SERVER_IP. With 0 the UA is reached at its
+ * own address.
  */
-#ifndef EMBUA_USE_REGISTRATION
-#  if defined(__ZEPHYR__)
-#    if defined(CONFIG_EMBUA_USE_REGISTRATION)
-#      define EMBUA_USE_REGISTRATION  1
-#    else
-#      define EMBUA_USE_REGISTRATION  0
-#    endif
-#  else
-#    define EMBUA_USE_REGISTRATION    1
-#  endif
+#ifndef CONFIG_EMBUA_USE_REGISTRATION
+#  define CONFIG_EMBUA_USE_REGISTRATION     1
 #endif
 
-/* The SIP server and the account. On Zephyr the sample's Kconfig sets them,
- * and its CONFIG_ strings arrive already quoted.
- */
-#ifndef EMBUA_SIP_SERVER_IP
-#  ifdef CONFIG_EMBUA_SIP_SERVER_IP
-#    define EMBUA_SIP_SERVER_IP     CONFIG_EMBUA_SIP_SERVER_IP
-#  else
-#    define EMBUA_SIP_SERVER_IP     "192.168.0.7"
-#  endif
+/* The SIP server and the account, as quoted strings. */
+#ifndef CONFIG_EMBUA_SIP_SERVER_IP
+#  define CONFIG_EMBUA_SIP_SERVER_IP        "192.168.0.7"
 #endif
-#ifndef EMBUA_USERNAME
-#  ifdef CONFIG_EMBUA_USERNAME
-#    define EMBUA_USERNAME          CONFIG_EMBUA_USERNAME
-#  else
-#    define EMBUA_USERNAME          "bob"
-#  endif
+#ifndef CONFIG_EMBUA_USERNAME
+#  define CONFIG_EMBUA_USERNAME             "bob"
 #endif
-#ifndef EMBUA_PASSWORD
-#  ifdef CONFIG_EMBUA_PASSWORD
-#    define EMBUA_PASSWORD          CONFIG_EMBUA_PASSWORD
-#  else
-#    define EMBUA_PASSWORD          "secret"
-#  endif
+#ifndef CONFIG_EMBUA_PASSWORD
+#  define CONFIG_EMBUA_PASSWORD             "secret"
 #endif
 
-#if EMBUA_AUDIO_CODEC
+#if CONFIG_EMBUA_AUDIO_CODEC
 
-#define SIP_PORT            EMBUA_SIP_TRANSPORT
 #define RTP_START_PORT      44000
 #define MAX_CALLS           4
 
 /* PCM loopback buffer size; worst case is G.722, 16 kHz mono 20 ms. */
-#if EMBUA_AUDIO_CODEC==CODEC_G711
+#if CONFIG_EMBUA_AUDIO_CODEC==CODEC_G711
 #  define MAX_FRAME_SAMPLES   160
 #  define CODEC_CLOCK_RATE    8000
 #else
@@ -287,7 +254,7 @@
 /* Longest the media clock waits when no call has a frame due. With a media
  * thread, one frame: a transport added while it polls is only seen next poll.
  */
-#if EMBUA_USE_MEDIA_THREAD
+#if CONFIG_EMBUA_USE_MEDIA_THREAD
 #  define MEDIA_IDLE_POLL_MSEC  FRAME_PTIME_MSEC
 #else
 #  define MEDIA_IDLE_POLL_MSEC  MAX_POLL_MSEC
@@ -296,11 +263,11 @@
 /* Gap between overdue frames while the media clock catches up. */
 #define MEDIA_CATCHUP_MSEC  2
 
-#define SIP_SERVER_IP       EMBUA_SIP_SERVER_IP
+#define SIP_SERVER_IP       CONFIG_EMBUA_SIP_SERVER_IP
 #define SIP_REGISTRAR       "sip:" SIP_SERVER_IP SIP_TRANSPORT_PARAM
 #define SIP_AOR             "sip:" AUTH_USERNAME "@" SIP_SERVER_IP
-#define AUTH_USERNAME       EMBUA_USERNAME
-#define AUTH_PASSWD         EMBUA_PASSWORD
+#define AUTH_USERNAME       CONFIG_EMBUA_USERNAME
+#define AUTH_PASSWD         CONFIG_EMBUA_PASSWORD
 
 
 static struct global_t {
@@ -312,13 +279,13 @@ static struct global_t {
     pj_pool_t            *pool;
     char                  contact_buf[80];
     pj_str_t              contact;   /* our Contact URI, built at init */
-#if EMBUA_USE_REGISTRATION
+#if CONFIG_EMBUA_USE_REGISTRATION
     pjsip_regc           *regc;
     pj_time_val           reg_due;   /* next REGISTER, {0,0} if none due */
     pj_bool_t             unregistering; /* un-REGISTER is in flight  */
     pjsip_tp_state_callback prev_tp_state_cb; /* pjsip's own, chained */
 #endif
-#if EMBUA_USE_MEDIA_THREAD
+#if CONFIG_EMBUA_USE_MEDIA_THREAD
     pj_thread_t          *media_thread;
     pj_mutex_t           *media_lock;  /* guards the media clock state */
     volatile pj_bool_t    media_quit;
@@ -330,7 +297,7 @@ static struct global_t {
  * needs it: the ioqueue is polled outside the lock, so closing a transport
  * never waits for a thread that is blocked here.
  */
-#if EMBUA_USE_MEDIA_THREAD
+#if CONFIG_EMBUA_USE_MEDIA_THREAD
 #  define MEDIA_LOCK()      do { if (g.media_lock) \
                                      pj_mutex_lock(g.media_lock); } while (0)
 #  define MEDIA_UNLOCK()    do { if (g.media_lock) \
@@ -377,12 +344,12 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata );
 static void deinit_call(struct call_t *call);
 static void clear_call(struct call_t *call);
 static void hangup_call(struct call_t *call, int code);
-#if EMBUA_USE_REGISTRATION
+#if CONFIG_EMBUA_USE_REGISTRATION
 static void send_unregister(void);
 #endif
 static unsigned media_poll(void);
 static unsigned active_calls(void);
-#if EMBUA_USE_MEDIA_THREAD
+#if CONFIG_EMBUA_USE_MEDIA_THREAD
 static int media_thread_proc(void *arg);
 #endif
 
@@ -481,7 +448,7 @@ static void deinit(void)
 {
     int i;
 
-#if EMBUA_USE_MEDIA_THREAD
+#if CONFIG_EMBUA_USE_MEDIA_THREAD
     /* Stop the media thread before anything it touches goes away. */
     if (g.media_thread) {
         g.media_quit = PJ_TRUE;
@@ -494,14 +461,14 @@ static void deinit(void)
     for (i=0; i<MAX_CALLS; ++i)
         deinit_call(&g_calls[i]);
 
-#if EMBUA_USE_MEDIA_THREAD
+#if CONFIG_EMBUA_USE_MEDIA_THREAD
     if (g.media_lock) {
         pj_mutex_destroy(g.media_lock);
         g.media_lock = NULL;
     }
 #endif
 
-#if EMBUA_USE_REGISTRATION
+#if CONFIG_EMBUA_USE_REGISTRATION
     if (g.regc) {
         pjsip_regc_destroy(g.regc);
     }
@@ -512,7 +479,7 @@ static void deinit(void)
         g.event_mgr = NULL;
     }
 
-#if EMBUA_AUDIO_CODEC==CODEC_G711
+#if CONFIG_EMBUA_AUDIO_CODEC==CODEC_G711
     pjmedia_codec_g711_deinit();
 #else
     pjmedia_codec_g722_deinit();
@@ -559,7 +526,7 @@ static void app_quit(void)
             hangup_call(&g_calls[i], PJSIP_SC_DECLINE);
     }
 
-#if EMBUA_USE_REGISTRATION
+#if CONFIG_EMBUA_USE_REGISTRATION
     /* Drop our binding, so that the registrar does not keep routing calls to
      * an endpoint that is gone until the registration expires.
      */
@@ -580,7 +547,7 @@ static void init_cred(pjsip_cred_info *cred)
     cred->data = pj_str(AUTH_PASSWD);
 }
 
-#if EMBUA_USE_REGISTRATION
+#if CONFIG_EMBUA_USE_REGISTRATION
 /* Ask the main loop to send a REGISTER in \a delay seconds. */
 static void schedule_register(unsigned delay)
 {
@@ -725,7 +692,7 @@ static void on_tp_state_changed(pjsip_transport *tp,
      */
     schedule_register(SIP_REG_RETRY_TIMEOUT);
 }
-#endif  /* EMBUA_USE_REGISTRATION */
+#endif  /* CONFIG_EMBUA_USE_REGISTRATION */
 
 /* Build our Contact URI into g.contact, once: the address is fixed for the
  * life of the process.
@@ -751,7 +718,7 @@ static void init(void)
 {
     pj_sockaddr addr;
     pjsip_inv_callback inv_cb;
-#if EMBUA_SIP_TRANSPORT==SIP_TLS
+#if CONFIG_EMBUA_SIP_TRANSPORT==SIP_TLS
     pjsip_tls_setting tls_setting;
 #endif
 
@@ -780,7 +747,7 @@ static void init(void)
         CHKS( pjsip_endpt_create(&g.cp.factory, endpt_name,  &g.endpt), 30);
     }
 
-#if EMBUA_USE_REGISTRATION
+#if CONFIG_EMBUA_USE_REGISTRATION
     g.prev_tp_state_cb =
         pjsip_tpmgr_get_state_cb(pjsip_endpt_get_tpmgr(g.endpt));
     CHKS( pjsip_tpmgr_set_state_cb(pjsip_endpt_get_tpmgr(g.endpt),
@@ -788,7 +755,7 @@ static void init(void)
 #endif
 
     pj_sockaddr_init(PJ_AF_INET, &addr, NULL, (pj_uint16_t)SIP_PORT);
-#if EMBUA_SIP_TRANSPORT==SIP_TLS
+#if CONFIG_EMBUA_SIP_TRANSPORT==SIP_TLS
     pjsip_tls_setting_default(&tls_setting);
     CHKS( pjsip_tls_transport_start2(g.endpt, &tls_setting, &addr, NULL, 1,
                                      NULL), 50);
@@ -820,7 +787,7 @@ static void init(void)
     CHKS( pjsip_endpt_add_capability( g.endpt, &mod_embedded_ua, PJSIP_H_ALLOW,
                                       NULL, 1, &message_method.name), 105 );
 
-#if EMBUA_USE_MEDIA_THREAD
+#if CONFIG_EMBUA_USE_MEDIA_THREAD
     /* Give pjmedia its own ioqueue and no worker thread of its own: the
      * media thread created below polls that ioqueue itself, so incoming RTP
      * and the media clock are serviced by the same thread and neither has
@@ -836,7 +803,7 @@ static void init(void)
                                0, &g.med_endpt), 110);
 #endif
 
-#if EMBUA_AUDIO_CODEC==CODEC_G711
+#if CONFIG_EMBUA_AUDIO_CODEC==CODEC_G711
     CHKS( pjmedia_codec_g711_init(g.med_endpt), 130);
 #else
     CHKS( pjmedia_codec_g722_init(g.med_endpt), 140);
@@ -848,7 +815,7 @@ static void init(void)
     CHKS( pjmedia_event_mgr_create(g.pool, PJMEDIA_EVENT_MGR_NO_THREAD,
                                    &g.event_mgr), 150);
 
-#if EMBUA_USE_MEDIA_THREAD
+#if CONFIG_EMBUA_USE_MEDIA_THREAD
     /* Start the media before registering: the first REGISTER can block the
      * main thread in a name lookup or a TLS handshake.
      */
@@ -859,7 +826,7 @@ static void init(void)
 
     CHKS( create_contact(), 190);
 
-#if EMBUA_USE_REGISTRATION
+#if CONFIG_EMBUA_USE_REGISTRATION
     {
         pj_str_t registrar_uri = pj_str(SIP_REGISTRAR);
         pj_str_t aor = pj_str(SIP_AOR);
@@ -918,7 +885,7 @@ static unsigned active_calls(void)
  */
 static pj_bool_t shutdown_complete(void)
 {
-#if EMBUA_USE_REGISTRATION
+#if CONFIG_EMBUA_USE_REGISTRATION
     if (g.unregistering)
         return PJ_FALSE;
 #endif
@@ -936,7 +903,7 @@ int main(void)
         pj_time_val timeout;
 
         timeout.sec = 0;
-#if EMBUA_USE_MEDIA_THREAD
+#if CONFIG_EMBUA_USE_MEDIA_THREAD
         /* The media thread paces itself; nothing here needs a short block. */
         timeout.msec = MAX_POLL_MSEC;
 #else
@@ -950,7 +917,7 @@ int main(void)
 
         end_failed_calls();
 
-#if EMBUA_USE_REGISTRATION
+#if CONFIG_EMBUA_USE_REGISTRATION
         /* Send a REGISTER if one is due. Doing it here rather than from a
          * callback keeps it out of the transport manager's lock.
          */
@@ -976,7 +943,7 @@ int main(void)
             break;
 
         timeout.sec = 0;
-#if EMBUA_USE_MEDIA_THREAD
+#if CONFIG_EMBUA_USE_MEDIA_THREAD
         timeout.msec = MAX_POLL_MSEC;
 #else
         timeout.msec = media_poll();
@@ -1078,7 +1045,7 @@ static pj_status_t create_call(const pjmedia_sdp_session *rem_sdp,
                                pjmedia_sdp_session **p_sdp)
 {
     struct call_t *call = NULL;
-#if EMBUA_USE_SRTP
+#if CONFIG_EMBUA_USE_SRTP
     pjmedia_srtp_setting srtp_opt;
 #endif
     pjmedia_transport *udp_tp;
@@ -1106,7 +1073,7 @@ static pj_status_t create_call(const pjmedia_sdp_session *rem_sdp,
     if (status != PJ_SUCCESS)
         goto on_error;
 
-#if EMBUA_USE_SRTP
+#if CONFIG_EMBUA_USE_SRTP
     /* Wrap it in SDES-SRTP. The SRTP transport takes ownership of the UDP
      * transport, so closing the former closes both.
      */
@@ -1514,7 +1481,7 @@ static unsigned media_poll(void)
     return delay;
 }
 
-#if EMBUA_USE_MEDIA_THREAD
+#if CONFIG_EMBUA_USE_MEDIA_THREAD
 /* Runs the media clock and receives RTP, so a busy SIP thread cannot stall
  * the audio.
  */
@@ -1677,7 +1644,7 @@ on_error:
     call->end_pending = PJ_TRUE;
 }
 
-#else   /* EMBUA_AUDIO_CODEC */
+#else   /* CONFIG_EMBUA_AUDIO_CODEC */
 
 #include <stdio.h>
 
@@ -1688,4 +1655,4 @@ int main(void)
     return 1;
 }
 
-#endif  /* EMBUA_AUDIO_CODEC */
+#endif  /* CONFIG_EMBUA_AUDIO_CODEC */

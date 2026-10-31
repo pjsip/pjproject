@@ -21,6 +21,7 @@
 
 #include <pjmedia.h>
 #include <pjlib.h>
+#include "../../../pjlib/src/pjlib-test/test_profile.h"
 
 #if defined(PJ_EXCLUDE_BENCHMARK_TESTS) && (PJ_EXCLUDE_BENCHMARK_TESTS==1)
 #   define WITH_BENCHMARK           0

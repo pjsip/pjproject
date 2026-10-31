@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -55,8 +55,18 @@ static void usage()
 }
 
 
+#ifdef __ZEPHYR__
+/* Zephyr's main() has no arguments. No worker thread: tests then run one at
+ * a time, so a small target only needs stacks for one test's threads.
+ */
+int main(void)
+{
+    char *argv[] = { "pjlib-test", "--ci-mode", "-w", "0", NULL };
+    int argc = PJ_ARRAY_SIZE(argv) - 1;
+#else
 int main(int argc, char *argv[])
 {
+#endif
     int rc;
     int interractive = 0;
 

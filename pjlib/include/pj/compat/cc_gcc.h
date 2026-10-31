@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -43,6 +43,7 @@
 
 #define PJ_THREAD_FUNC  
 #define PJ_NORETURN             
+#define PJ_THREAD_LOCAL         __thread
 
 #define PJ_HAS_INT64            1
 
@@ -51,15 +52,15 @@
   typedef int64_t               pj_int64_t;
   typedef uint64_t              pj_uint64_t;
   #define PJ_INLINE_SPECIFIER   static __inline
-  #define PJ_ATTR_NORETURN      
-  #define PJ_ATTR_MAY_ALIAS     
 #else
   typedef long long             pj_int64_t;
   typedef unsigned long long    pj_uint64_t;
   #define PJ_INLINE_SPECIFIER   static inline
-  #define PJ_ATTR_NORETURN      __attribute__ ((noreturn))
-  #define PJ_ATTR_MAY_ALIAS     __attribute__((__may_alias__))
 #endif
+
+/* __attribute__ is available whatever the -std, strict ANSI included */
+#define PJ_ATTR_NORETURN        __attribute__ ((noreturn))
+#define PJ_ATTR_MAY_ALIAS       __attribute__((__may_alias__))
 
 #define PJ_INT64(val)           val##LL
 #define PJ_UINT64(val)          val##ULL

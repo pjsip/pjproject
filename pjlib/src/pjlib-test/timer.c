@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -35,7 +35,7 @@
 
 #include <pjlib.h>
 
-#define LOOP            16
+#define LOOP            PJTEST_TIMER_LOOP
 #define MIN_COUNT       250
 #define MAX_COUNT       (LOOP * MIN_COUNT)
 #define MIN_DELAY       2
@@ -210,17 +210,21 @@ static int test_timer_heap(void)
  */
 #define SIMULATE_ENTRY_DESTROYED    PJ_TIMER_USE_COPY
 
+/* The stress test scales with LOOP so that a small LOOP also shrinks its
+ * thread stacks and entry pool: 20 threads and 10000 entries at the default
+ * LOOP of 16, 2 threads and 1250 entries at 2.
+ */
 #if RANDOMIZED_TEST
-    #define ST_STRESS_THREAD_COUNT          20
+    #define ST_STRESS_THREAD_COUNT          (20 * LOOP / 16)
     #define ST_POLL_THREAD_COUNT            0
     #define ST_CANCEL_THREAD_COUNT          0
 #else
     #define ST_STRESS_THREAD_COUNT          0
-    #define ST_POLL_THREAD_COUNT            10
-    #define ST_CANCEL_THREAD_COUNT          10
+    #define ST_POLL_THREAD_COUNT            (10 * LOOP / 16)
+    #define ST_CANCEL_THREAD_COUNT          (10 * LOOP / 16)
 #endif
 
-#define ST_ENTRY_COUNT              10000
+#define ST_ENTRY_COUNT              (625 * LOOP)
 #define ST_DURATION                 30000
 #define ST_ENTRY_MAX_TIMEOUT_MS     ST_DURATION/10
 

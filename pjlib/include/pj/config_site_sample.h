@@ -514,6 +514,13 @@
 
     #define PJ_CRC32_HAS_TABLES                 0
 
+    /* Zephyr keeps pthread key values only for threads made by
+     * pthread_create(), not for its main thread; compiler TLS covers every
+     * thread. Needs CONFIG_THREAD_LOCAL_STORAGE, which zephyr/Kconfig
+     * selects.
+     */
+    #define PJ_THREAD_LOCAL_USE_COMPILER_TLS    1
+
     /*
      * PJSIP settings.
      */

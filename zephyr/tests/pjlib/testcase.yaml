@@ -1,0 +1,35 @@
+# native_sim runs under twister. The AN521 is build-only here: with
+# networking enabled Zephyr adds the board's LAN9118 to the QEMU command line
+# as a pluggable device, which QEMU rejects, so twister cannot start the
+# image; run it with samples/embedded_ua/run-qemu.sh <build dir> -nic none.
+common:
+  tags: pjsip
+tests:
+  pjsip.pjlib:
+    platform_allow:
+      - native_sim/native/64
+    harness: console
+    harness_config:
+      type: one_line
+      regex:
+        - "Looks like everything is okay"
+    timeout: 900
+  pjsip.pjlib.threads:
+    platform_allow:
+      - native_sim/native/64
+    extra_args: EXTRA_CONF_FILE=overlay-threads.conf
+    harness: console
+    harness_config:
+      type: one_line
+      regex:
+        - "Looks like everything is okay"
+    timeout: 900
+  pjsip.pjlib.an521:
+    platform_allow:
+      - mps2/an521/cpu0
+    build_only: true
+  pjsip.pjlib.an521.threads:
+    platform_allow:
+      - mps2/an521/cpu0
+    extra_args: EXTRA_CONF_FILE=overlay-threads.conf
+    build_only: true

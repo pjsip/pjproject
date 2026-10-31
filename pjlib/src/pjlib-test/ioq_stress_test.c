@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2022 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -85,7 +85,7 @@ typedef union op_key_user_data {
  */
 struct test_desc
 {
-    struct {
+    struct test_cfg {
         const char *title;
         int expected_ret_code;
         int max_fd;             /* ioqueue's max_fd */
@@ -131,6 +131,23 @@ struct test_desc
 };
 
 static pj_ioqueue_callback test_cb;
+
+/* SO_RCVBUF/SO_SNDBUF in multiples of sizeof(int). An OS without them
+ * (Zephyr) keeps its default buffer sizes.
+ */
+static pj_status_t set_so_buf(pj_sock_t sock, pj_uint16_t opt, unsigned n_ints)
+{
+    int value = n_ints * sizeof(int);
+    pj_status_t status;
+
+    status = pj_sock_setsockopt(sock, pj_SOL_SOCKET(), opt,
+                                &value, sizeof(value));
+#if defined(ENOPROTOOPT)
+    if (status == PJ_STATUS_FROM_OS(ENOPROTOOPT))
+        status = PJ_SUCCESS;
+#endif
+    return status;
+}
 
 static op_key_user_data *alloc_okud(test_desc *test, int side)
 {
@@ -186,7 +203,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                     counter = test->state.cnt[SERVER]++;
                     if (*p != counter && test->cfg.sock_type==pj_SOCK_STREAM()) {
                         PJ_LOG(3,(THIS_FILE, "  Error: TCP RX sequence mismatch at idx=%ld. Expecting %d, got %d",
-                                  p-start, counter, *p));
+                                  (long)(p-start), counter, *p));
                         test->state.retcode = 412;
                         okud->server.status = PJ_EBUG;
                         pj_lock_release((pj_lock_t*)test->state.grp_lock);
@@ -202,7 +219,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                             test->state.udp_rx_mismatch_cnt++;
                             if (test->state.udp_rx_mismatch_cnt <= MAX_UDP_MISMATCH_LOG) {
                                 PJ_LOG(3,(THIS_FILE, "  UDP RX sequence mismatch at idx=%ld. Expecting %d, got %d",
-                                          p-start, counter, *p));
+                                          (long)(p-start), counter, *p));
                             }
                             //test->state.retcode = 413;
                             //okud->server.status = PJ_EBUG;
@@ -328,11 +345,8 @@ static void on_accept_complete(pj_ioqueue_key_t *key,
     pj_lock_acquire((pj_lock_t*)test->state.grp_lock);
 
     if (test->cfg.rx_so_buf_size) {
-        int value = test->cfg.rx_so_buf_size * sizeof(int);
-        okud->server.status = pj_sock_setsockopt(sock,
-                                                 pj_SOL_SOCKET(),
-                                                 pj_SO_RCVBUF(),
-                                                 &value, sizeof(value));
+        okud->server.status = set_so_buf(sock, pj_SO_RCVBUF(),
+                                         test->cfg.rx_so_buf_size);
     }
 
     status = pj_ioqueue_register_sock2(test->state.pool,
@@ -573,11 +587,8 @@ static int perform_single_pass(test_desc *test)
                                             &test->state.keys[SERVER]));
 
         if (test->cfg.rx_so_buf_size) {
-            int value = test->cfg.rx_so_buf_size * sizeof(int);
-            CHECK(34, pj_sock_setsockopt(test->state.socks[SERVER],
-                                         pj_SOL_SOCKET(),
-                                         pj_SO_RCVBUF(),
-                                         &value, sizeof(value)));
+            CHECK(34, set_so_buf(test->state.socks[SERVER], pj_SO_RCVBUF(),
+                                 test->cfg.rx_so_buf_size));
         }
 
         /* kick off parallel recvs */
@@ -606,11 +617,8 @@ static int perform_single_pass(test_desc *test)
                              &test->state.socks[CLIENT]));
     addr.ipv4.sin_addr = pj_inet_addr(&localhost);
     if (test->cfg.tx_so_buf_size) {
-        int value = test->cfg.tx_so_buf_size * sizeof(int);
-        CHECK(41, pj_sock_setsockopt(test->state.socks[CLIENT],
-                                     pj_SOL_SOCKET(),
-                                     pj_SO_RCVBUF(),
-                                     &value, sizeof(value)));
+        CHECK(41, set_so_buf(test->state.socks[CLIENT], pj_SO_RCVBUF(),
+                             test->cfg.tx_so_buf_size));
     }
 
     /* We cannot use the global group lock for registering keys (here and
@@ -772,67 +780,70 @@ on_return:
 }
 
 
-static test_desc tests[128] = {
+/* The configurations only; the run-time state, which is large, is in the
+ * one test_desc that ioqueue_stress_test() reuses for each of them.
+ */
+static const struct test_cfg test_cfgs[] = {
     /* simplest test, no threads, no parallel send/recv, it's good for debugging.
      * max_fd is limited to test management of closing keys in ioqueue safe
      * unregistration.
      */
     {
-        .cfg.title = "basic udp (single thread)",
-        .cfg.max_fd = 4,
-        .cfg.allow_concur = 1,
-        .cfg.epoll_flags = PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS,
-        .cfg.sock_type = SOCK_DGRAM, /* cannot use pj_SOCK_DGRAM (not constant) */
-        .cfg.n_threads = 0,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 512,
-        .cfg.rx_cnt = 512,
-        .cfg.n_servers = 1,
-        .cfg.n_clients = 1,
-        .cfg.repeat = 4
+        .title = "basic udp (single thread)",
+        .max_fd = 4,
+        .allow_concur = 1,
+        .epoll_flags = PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS,
+        .sock_type = SOCK_DGRAM, /* cannot use pj_SOCK_DGRAM (not constant) */
+        .n_threads = 0,
+        .pkt_len = 4,
+        .tx_cnt = 512,
+        .rx_cnt = 512,
+        .n_servers = 1,
+        .n_clients = 1,
+        .repeat = 4
     },
     #if PJ_IOQUEUE_IMP==PJ_IOQUEUE_IMP_EPOLL
     {
-        .cfg.title = "basic udp (single thread, EPOLLEXCLUSIVE)",
-        .cfg.max_fd = 4,
-        .cfg.allow_concur = 1,
-        .cfg.epoll_flags = PJ_IOQUEUE_EPOLL_EXCLUSIVE,
-        .cfg.sock_type = SOCK_DGRAM,
-        .cfg.n_threads = 0,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 512,
-        .cfg.rx_cnt = 512,
-        .cfg.n_servers = 1,
-        .cfg.n_clients = 1,
-        .cfg.repeat = 4
+        .title = "basic udp (single thread, EPOLLEXCLUSIVE)",
+        .max_fd = 4,
+        .allow_concur = 1,
+        .epoll_flags = PJ_IOQUEUE_EPOLL_EXCLUSIVE,
+        .sock_type = SOCK_DGRAM,
+        .n_threads = 0,
+        .pkt_len = 4,
+        .tx_cnt = 512,
+        .rx_cnt = 512,
+        .n_servers = 1,
+        .n_clients = 1,
+        .repeat = 4
     },
     {
-        .cfg.title = "basic udp (single thread, EPOLLONESHOT)",
-        .cfg.max_fd = 4,
-        .cfg.allow_concur = 1,
-        .cfg.epoll_flags = PJ_IOQUEUE_EPOLL_ONESHOT,
-        .cfg.sock_type = SOCK_DGRAM,
-        .cfg.n_threads = 0,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 512,
-        .cfg.rx_cnt = 512,
-        .cfg.n_servers = 1,
-        .cfg.n_clients = 1,
-        .cfg.repeat = 4
+        .title = "basic udp (single thread, EPOLLONESHOT)",
+        .max_fd = 4,
+        .allow_concur = 1,
+        .epoll_flags = PJ_IOQUEUE_EPOLL_ONESHOT,
+        .sock_type = SOCK_DGRAM,
+        .n_threads = 0,
+        .pkt_len = 4,
+        .tx_cnt = 512,
+        .rx_cnt = 512,
+        .n_servers = 1,
+        .n_clients = 1,
+        .repeat = 4
     },
     {
-        .cfg.title = "basic udp (single thread, epoll plain)",
-        .cfg.max_fd = 4,
-        .cfg.allow_concur = 1,
-        .cfg.epoll_flags = 0,
-        .cfg.sock_type = SOCK_DGRAM,
-        .cfg.n_threads = 0,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 512,
-        .cfg.rx_cnt = 512,
-        .cfg.n_servers = 1,
-        .cfg.n_clients = 1,
-        .cfg.repeat = 4
+        .title = "basic udp (single thread, epoll plain)",
+        .max_fd = 4,
+        .allow_concur = 1,
+        .epoll_flags = 0,
+        .sock_type = SOCK_DGRAM,
+        .n_threads = 0,
+        .pkt_len = 4,
+        .tx_cnt = 512,
+        .rx_cnt = 512,
+        .n_servers = 1,
+        .n_clients = 1,
+        .repeat = 4
     },
     #endif
     /* simplest test (tcp), no threads, no parallel send/recv, it's good for debugging.
@@ -840,217 +851,217 @@ static test_desc tests[128] = {
      * unregistration.
      */
     {
-        .cfg.title = "basic tcp (single thread)",
-        .cfg.max_fd = 6,
-        .cfg.allow_concur = 1,
-        .cfg.epoll_flags = PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS,
-        .cfg.sock_type = SOCK_STREAM,
-        .cfg.n_threads = 0,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 20,
-        .cfg.rx_cnt = 20,
-        .cfg.n_servers = 1,
-        .cfg.n_clients = 1,
-        .cfg.repeat = 4
+        .title = "basic tcp (single thread)",
+        .max_fd = 6,
+        .allow_concur = 1,
+        .epoll_flags = PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS,
+        .sock_type = SOCK_STREAM,
+        .n_threads = 0,
+        .pkt_len = 4,
+        .tx_cnt = 20,
+        .rx_cnt = 20,
+        .n_servers = 1,
+        .n_clients = 1,
+        .repeat = 4
     },
     #if PJ_IOQUEUE_IMP==PJ_IOQUEUE_IMP_EPOLL
     {
-        .cfg.title = "basic tcp (single thread, EPOLLEXCLUSIVE)",
-        .cfg.max_fd = 6,
-        .cfg.allow_concur = 1,
-        .cfg.epoll_flags = PJ_IOQUEUE_EPOLL_EXCLUSIVE,
-        .cfg.sock_type = SOCK_STREAM,
-        .cfg.n_threads = 0,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 20,
-        .cfg.rx_cnt = 20,
-        .cfg.n_servers = 1,
-        .cfg.n_clients = 1,
-        .cfg.repeat = 4
+        .title = "basic tcp (single thread, EPOLLEXCLUSIVE)",
+        .max_fd = 6,
+        .allow_concur = 1,
+        .epoll_flags = PJ_IOQUEUE_EPOLL_EXCLUSIVE,
+        .sock_type = SOCK_STREAM,
+        .n_threads = 0,
+        .pkt_len = 4,
+        .tx_cnt = 20,
+        .rx_cnt = 20,
+        .n_servers = 1,
+        .n_clients = 1,
+        .repeat = 4
     },
     {
-        .cfg.title = "basic tcp (single thread, EPOLLONESHOT)",
-        .cfg.max_fd = 6,
-        .cfg.allow_concur = 1,
-        .cfg.epoll_flags = PJ_IOQUEUE_EPOLL_ONESHOT,
-        .cfg.sock_type = SOCK_STREAM,
-        .cfg.n_threads = 0,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 20,
-        .cfg.rx_cnt = 20,
-        .cfg.n_servers = 1,
-        .cfg.n_clients = 1,
-        .cfg.repeat = 4
+        .title = "basic tcp (single thread, EPOLLONESHOT)",
+        .max_fd = 6,
+        .allow_concur = 1,
+        .epoll_flags = PJ_IOQUEUE_EPOLL_ONESHOT,
+        .sock_type = SOCK_STREAM,
+        .n_threads = 0,
+        .pkt_len = 4,
+        .tx_cnt = 20,
+        .rx_cnt = 20,
+        .n_servers = 1,
+        .n_clients = 1,
+        .repeat = 4
     },
     {
-        .cfg.title = "basic tcp (single thread, plain)",
-        .cfg.max_fd = 6,
-        .cfg.allow_concur = 1,
-        .cfg.epoll_flags = 0,
-        .cfg.sock_type = SOCK_STREAM,
-        .cfg.n_threads = 0,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 20,
-        .cfg.rx_cnt = 20,
-        .cfg.n_servers = 1,
-        .cfg.n_clients = 1,
-        .cfg.repeat = 4
+        .title = "basic tcp (single thread, plain)",
+        .max_fd = 6,
+        .allow_concur = 1,
+        .epoll_flags = 0,
+        .sock_type = SOCK_STREAM,
+        .n_threads = 0,
+        .pkt_len = 4,
+        .tx_cnt = 20,
+        .rx_cnt = 20,
+        .n_servers = 1,
+        .n_clients = 1,
+        .repeat = 4
     },
     #endif
     /* failed TCP connect().
      */
     {
-        .cfg.title = "failed tcp connect (pls wait)",
-        .cfg.expected_ret_code = RETCODE_CONNECT_FAILED,
-        .cfg.max_fd = 6,
-        .cfg.allow_concur = 1,
-        .cfg.epoll_flags = PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS,
-        .cfg.failed_connect = 1,
-        .cfg.sock_type = SOCK_STREAM,
-        .cfg.n_threads = MAX_THREADS,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 20,
-        .cfg.rx_cnt = 20,
-        .cfg.n_servers = 1,
-        .cfg.n_clients = 1,
-        .cfg.repeat = 2
+        .title = "failed tcp connect (pls wait)",
+        .expected_ret_code = RETCODE_CONNECT_FAILED,
+        .max_fd = 6,
+        .allow_concur = 1,
+        .epoll_flags = PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS,
+        .failed_connect = 1,
+        .sock_type = SOCK_STREAM,
+        .n_threads = MAX_THREADS,
+        .pkt_len = 4,
+        .tx_cnt = 20,
+        .rx_cnt = 20,
+        .n_servers = 1,
+        .n_clients = 1,
+        .repeat = 2
     },
     #if PJ_IOQUEUE_IMP==PJ_IOQUEUE_IMP_EPOLL
     {
-        .cfg.title = "failed tcp connect (EPOLLEXCLUSIVE)",
-        .cfg.expected_ret_code = RETCODE_CONNECT_FAILED,
-        .cfg.max_fd = 6,
-        .cfg.allow_concur = 1,
-        .cfg.epoll_flags = PJ_IOQUEUE_EPOLL_EXCLUSIVE,
-        .cfg.failed_connect = 1,
-        .cfg.sock_type = SOCK_STREAM,
-        .cfg.n_threads = MAX_THREADS,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 20,
-        .cfg.rx_cnt = 20,
-        .cfg.n_servers = 1,
-        .cfg.n_clients = 1,
-        .cfg.repeat = 2
+        .title = "failed tcp connect (EPOLLEXCLUSIVE)",
+        .expected_ret_code = RETCODE_CONNECT_FAILED,
+        .max_fd = 6,
+        .allow_concur = 1,
+        .epoll_flags = PJ_IOQUEUE_EPOLL_EXCLUSIVE,
+        .failed_connect = 1,
+        .sock_type = SOCK_STREAM,
+        .n_threads = MAX_THREADS,
+        .pkt_len = 4,
+        .tx_cnt = 20,
+        .rx_cnt = 20,
+        .n_servers = 1,
+        .n_clients = 1,
+        .repeat = 2
     },
     {
-        .cfg.title = "failed tcp connect (EPOLLONESHOT)",
-        .cfg.expected_ret_code = RETCODE_CONNECT_FAILED,
-        .cfg.max_fd = 6,
-        .cfg.allow_concur = 1,
-        .cfg.epoll_flags = PJ_IOQUEUE_EPOLL_ONESHOT,
-        .cfg.failed_connect = 1,
-        .cfg.sock_type = SOCK_STREAM,
-        .cfg.n_threads = MAX_THREADS,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 20,
-        .cfg.rx_cnt = 20,
-        .cfg.n_servers = 1,
-        .cfg.n_clients = 1,
-        .cfg.repeat = 2
+        .title = "failed tcp connect (EPOLLONESHOT)",
+        .expected_ret_code = RETCODE_CONNECT_FAILED,
+        .max_fd = 6,
+        .allow_concur = 1,
+        .epoll_flags = PJ_IOQUEUE_EPOLL_ONESHOT,
+        .failed_connect = 1,
+        .sock_type = SOCK_STREAM,
+        .n_threads = MAX_THREADS,
+        .pkt_len = 4,
+        .tx_cnt = 20,
+        .rx_cnt = 20,
+        .n_servers = 1,
+        .n_clients = 1,
+        .repeat = 2
     },
     {
-        .cfg.title = "failed tcp connect (plain)",
-        .cfg.expected_ret_code = RETCODE_CONNECT_FAILED,
-        .cfg.max_fd = 6,
-        .cfg.allow_concur = 1,
-        .cfg.epoll_flags = 0,
-        .cfg.failed_connect = 1,
-        .cfg.sock_type = SOCK_STREAM,
-        .cfg.n_threads = MAX_THREADS,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 20,
-        .cfg.rx_cnt = 20,
-        .cfg.n_servers = 1,
-        .cfg.n_clients = 1,
-        .cfg.repeat = 2
+        .title = "failed tcp connect (plain)",
+        .expected_ret_code = RETCODE_CONNECT_FAILED,
+        .max_fd = 6,
+        .allow_concur = 1,
+        .epoll_flags = 0,
+        .failed_connect = 1,
+        .sock_type = SOCK_STREAM,
+        .n_threads = MAX_THREADS,
+        .pkt_len = 4,
+        .tx_cnt = 20,
+        .rx_cnt = 20,
+        .n_servers = 1,
+        .n_clients = 1,
+        .repeat = 2
     },
     #endif
     /* reject TCP connect().
      */
     {
-        .cfg.title = "tcp connect rejected",
-        .cfg.expected_ret_code = RETCODE_CONNECT_FAILED,
-        .cfg.max_fd = 6,
-        .cfg.allow_concur = 1,
-        .cfg.epoll_flags = PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS,
-        .cfg.reject_connect = 1,
-        .cfg.sock_type = SOCK_STREAM,
-        .cfg.n_threads = MAX_THREADS,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 20,
-        .cfg.rx_cnt = 20,
-        .cfg.n_servers = 1,
-        .cfg.n_clients = 1,
-        .cfg.repeat = 2
+        .title = "tcp connect rejected",
+        .expected_ret_code = RETCODE_CONNECT_FAILED,
+        .max_fd = 6,
+        .allow_concur = 1,
+        .epoll_flags = PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS,
+        .reject_connect = 1,
+        .sock_type = SOCK_STREAM,
+        .n_threads = MAX_THREADS,
+        .pkt_len = 4,
+        .tx_cnt = 20,
+        .rx_cnt = 20,
+        .n_servers = 1,
+        .n_clients = 1,
+        .repeat = 2
     },
     /* quite involved test (udp). Multithreads, parallel send/recv operations,
      * limitation in recv buffer. max_fd is very limited to test management of
      * closing keys in ioqueue safe unregistration.
      */
     {
-        .cfg.title = "udp (multithreads)",
-        .cfg.max_fd = 4,
-        .cfg.allow_concur = 1,
-        .cfg.epoll_flags = PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS,
-        .cfg.sock_type = SOCK_DGRAM,
-        .cfg.n_threads = MAX_THREADS,
-        .cfg.rx_so_buf_size = MAX_THREADS,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 4*8*512,
-        .cfg.rx_cnt = 4*8*512,
-        .cfg.n_servers = MAX_ASYNC,
-        .cfg.n_clients = MAX_ASYNC,
-        .cfg.repeat = 4
+        .title = "udp (multithreads)",
+        .max_fd = 4,
+        .allow_concur = 1,
+        .epoll_flags = PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS,
+        .sock_type = SOCK_DGRAM,
+        .n_threads = MAX_THREADS,
+        .rx_so_buf_size = MAX_THREADS,
+        .pkt_len = 4,
+        .tx_cnt = 4*8*512,
+        .rx_cnt = 4*8*512,
+        .n_servers = MAX_ASYNC,
+        .n_clients = MAX_ASYNC,
+        .repeat = 4
     },
     #if PJ_IOQUEUE_IMP==PJ_IOQUEUE_IMP_EPOLL
     /* EPOLLEXCLUSIVE (udp).
      */
     {
-        .cfg.title = "udp (multithreads, EPOLLEXCLUSIVE)",
-        .cfg.max_fd = 4,
-        .cfg.allow_concur = 1,
-        .cfg.epoll_flags = PJ_IOQUEUE_EPOLL_EXCLUSIVE,
-        .cfg.sock_type = SOCK_DGRAM,
-        .cfg.n_threads = MAX_THREADS,
-        .cfg.rx_so_buf_size = MAX_THREADS,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 4*8*512,
-        .cfg.rx_cnt = 4*8*512,
-        .cfg.n_servers = MAX_ASYNC,
-        .cfg.n_clients = MAX_ASYNC,
-        .cfg.repeat = 4
+        .title = "udp (multithreads, EPOLLEXCLUSIVE)",
+        .max_fd = 4,
+        .allow_concur = 1,
+        .epoll_flags = PJ_IOQUEUE_EPOLL_EXCLUSIVE,
+        .sock_type = SOCK_DGRAM,
+        .n_threads = MAX_THREADS,
+        .rx_so_buf_size = MAX_THREADS,
+        .pkt_len = 4,
+        .tx_cnt = 4*8*512,
+        .rx_cnt = 4*8*512,
+        .n_servers = MAX_ASYNC,
+        .n_clients = MAX_ASYNC,
+        .repeat = 4
     },
     /* EPOLLONESHOT (udp).
      */
     {
-        .cfg.title = "udp (multithreads, EPOLLONESHOT)",
-        .cfg.max_fd = 4,
-        .cfg.allow_concur = 1,
-        .cfg.epoll_flags = PJ_IOQUEUE_EPOLL_ONESHOT,
-        .cfg.sock_type = SOCK_DGRAM,
-        .cfg.n_threads = 2,
-        .cfg.rx_so_buf_size = 2,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 4*8*512,
-        .cfg.rx_cnt = 4*8*512,
-        .cfg.n_servers = 2,
-        .cfg.n_clients = 2,
-        .cfg.repeat = 4
+        .title = "udp (multithreads, EPOLLONESHOT)",
+        .max_fd = 4,
+        .allow_concur = 1,
+        .epoll_flags = PJ_IOQUEUE_EPOLL_ONESHOT,
+        .sock_type = SOCK_DGRAM,
+        .n_threads = 2,
+        .rx_so_buf_size = 2,
+        .pkt_len = 4,
+        .tx_cnt = 4*8*512,
+        .rx_cnt = 4*8*512,
+        .n_servers = 2,
+        .n_clients = 2,
+        .repeat = 4
     },
     {
-        .cfg.title = "udp (multithreads, plain epoll)",
-        .cfg.max_fd = 4,
-        .cfg.allow_concur = 1,
-        .cfg.epoll_flags = 0,
-        .cfg.sock_type = SOCK_DGRAM,
-        .cfg.n_threads = 2,
-        .cfg.rx_so_buf_size = 2,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 4*8*512,
-        .cfg.rx_cnt = 4*8*512,
-        .cfg.n_servers = 2,
-        .cfg.n_clients = 2,
-        .cfg.repeat = 4
+        .title = "udp (multithreads, plain epoll)",
+        .max_fd = 4,
+        .allow_concur = 1,
+        .epoll_flags = 0,
+        .sock_type = SOCK_DGRAM,
+        .n_threads = 2,
+        .rx_so_buf_size = 2,
+        .pkt_len = 4,
+        .tx_cnt = 4*8*512,
+        .rx_cnt = 4*8*512,
+        .n_servers = 2,
+        .n_clients = 2,
+        .repeat = 4
     },
     #endif
     /* quite involved test (tcp). Multithreads, parallel send/recv operations,
@@ -1058,142 +1069,142 @@ static test_desc tests[128] = {
      * closing keys in ioqueue safe unregistration.
      */
     {
-        .cfg.title = "tcp (multithreads)",
-        .cfg.max_fd = 6,
-        .cfg.allow_concur = 1,
-        .cfg.epoll_flags = PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS,
-        .cfg.sock_type = SOCK_STREAM,
-        .cfg.n_threads = MAX_THREADS,
-        .cfg.rx_so_buf_size = 2,        /* Set to small to control flow of tcp */
-        .cfg.tx_so_buf_size = MAX_ASYNC,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 4*MAX_THREADS*512,
-        .cfg.rx_cnt = 4*MAX_THREADS*512,
-        .cfg.n_servers = MAX_ASYNC,
-        .cfg.n_clients = MAX_ASYNC,
-        .cfg.repeat = 4
+        .title = "tcp (multithreads)",
+        .max_fd = 6,
+        .allow_concur = 1,
+        .epoll_flags = PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS,
+        .sock_type = SOCK_STREAM,
+        .n_threads = MAX_THREADS,
+        .rx_so_buf_size = 2,        /* Set to small to control flow of tcp */
+        .tx_so_buf_size = MAX_ASYNC,
+        .pkt_len = 4,
+        .tx_cnt = 4*MAX_THREADS*512,
+        .rx_cnt = 4*MAX_THREADS*512,
+        .n_servers = MAX_ASYNC,
+        .n_clients = MAX_ASYNC,
+        .repeat = 4
     },
     #if PJ_IOQUEUE_IMP==PJ_IOQUEUE_IMP_EPOLL
     {
-        .cfg.title = "tcp (multithreads, EPOLLEXCLUSIVE)",
-        .cfg.max_fd = 6,
-        .cfg.epoll_flags = PJ_IOQUEUE_EPOLL_EXCLUSIVE,
-        .cfg.allow_concur = 1,
-        .cfg.sock_type = SOCK_STREAM,
-        .cfg.n_threads = MAX_THREADS,
-        .cfg.rx_so_buf_size = 2,        /* Set to small to control flow of tcp */
-        .cfg.tx_so_buf_size = MAX_ASYNC,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 4*MAX_THREADS*512,
-        .cfg.rx_cnt = 4*MAX_THREADS*512,
-        .cfg.n_servers = MAX_ASYNC,
-        .cfg.n_clients = MAX_ASYNC,
-        .cfg.repeat = 4
+        .title = "tcp (multithreads, EPOLLEXCLUSIVE)",
+        .max_fd = 6,
+        .epoll_flags = PJ_IOQUEUE_EPOLL_EXCLUSIVE,
+        .allow_concur = 1,
+        .sock_type = SOCK_STREAM,
+        .n_threads = MAX_THREADS,
+        .rx_so_buf_size = 2,        /* Set to small to control flow of tcp */
+        .tx_so_buf_size = MAX_ASYNC,
+        .pkt_len = 4,
+        .tx_cnt = 4*MAX_THREADS*512,
+        .rx_cnt = 4*MAX_THREADS*512,
+        .n_servers = MAX_ASYNC,
+        .n_clients = MAX_ASYNC,
+        .repeat = 4
     },
     {
-        .cfg.title = "tcp (multithreads, EPOLLONESHOT)",
-        .cfg.max_fd = 6,
-        .cfg.epoll_flags = PJ_IOQUEUE_EPOLL_ONESHOT,
-        .cfg.allow_concur = 1,
-        .cfg.sock_type = SOCK_STREAM,
-        .cfg.n_threads = MAX_THREADS,
-        .cfg.rx_so_buf_size = 2,        /* Set to small to control flow of tcp */
-        .cfg.tx_so_buf_size = MAX_ASYNC,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 4*MAX_THREADS*512,
-        .cfg.rx_cnt = 4*MAX_THREADS*512,
-        .cfg.n_servers = MAX_ASYNC,
-        .cfg.n_clients = MAX_ASYNC,
-        .cfg.repeat = 4
+        .title = "tcp (multithreads, EPOLLONESHOT)",
+        .max_fd = 6,
+        .epoll_flags = PJ_IOQUEUE_EPOLL_ONESHOT,
+        .allow_concur = 1,
+        .sock_type = SOCK_STREAM,
+        .n_threads = MAX_THREADS,
+        .rx_so_buf_size = 2,        /* Set to small to control flow of tcp */
+        .tx_so_buf_size = MAX_ASYNC,
+        .pkt_len = 4,
+        .tx_cnt = 4*MAX_THREADS*512,
+        .rx_cnt = 4*MAX_THREADS*512,
+        .n_servers = MAX_ASYNC,
+        .n_clients = MAX_ASYNC,
+        .repeat = 4
     },
     {
-        .cfg.title = "tcp (multithreads, plain epoll)",
-        .cfg.max_fd = 6,
-        .cfg.epoll_flags = 0,
-        .cfg.allow_concur = 1,
-        .cfg.sock_type = SOCK_STREAM,
-        .cfg.n_threads = MAX_THREADS,
-        .cfg.rx_so_buf_size = 2,        /* Set to small to control flow of tcp */
-        .cfg.tx_so_buf_size = MAX_ASYNC,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 4*MAX_THREADS*512,
-        .cfg.rx_cnt = 4*MAX_THREADS*512,
-        .cfg.n_servers = MAX_ASYNC,
-        .cfg.n_clients = MAX_ASYNC,
-        .cfg.repeat = 4
+        .title = "tcp (multithreads, plain epoll)",
+        .max_fd = 6,
+        .epoll_flags = 0,
+        .allow_concur = 1,
+        .sock_type = SOCK_STREAM,
+        .n_threads = MAX_THREADS,
+        .rx_so_buf_size = 2,        /* Set to small to control flow of tcp */
+        .tx_so_buf_size = MAX_ASYNC,
+        .pkt_len = 4,
+        .tx_cnt = 4*MAX_THREADS*512,
+        .rx_cnt = 4*MAX_THREADS*512,
+        .n_servers = MAX_ASYNC,
+        .n_clients = MAX_ASYNC,
+        .repeat = 4
     },
     #endif
     /* when concurrency is disabled, TCP packets should be received in correct
      * order
      */
     {
-        .cfg.title = "tcp (multithreads, sequenced, concur=0)",
-        .cfg.max_fd = 6,
-        .cfg.allow_concur = 0,
-        .cfg.epoll_flags = PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS,
-        .cfg.sequenced = 1,
-        .cfg.sock_type = SOCK_STREAM,
-        .cfg.n_threads = MAX_THREADS,
-        .cfg.rx_so_buf_size = 2,         /* Set to small to control flow of tcp */
-        .cfg.tx_so_buf_size = MAX_ASYNC,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 4*MAX_THREADS*512,
-        .cfg.rx_cnt = 4*MAX_THREADS*512,
-        .cfg.n_servers = MAX_ASYNC,
-        .cfg.n_clients = MAX_ASYNC,
-        .cfg.repeat = 4
+        .title = "tcp (multithreads, sequenced, concur=0)",
+        .max_fd = 6,
+        .allow_concur = 0,
+        .epoll_flags = PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS,
+        .sequenced = 1,
+        .sock_type = SOCK_STREAM,
+        .n_threads = MAX_THREADS,
+        .rx_so_buf_size = 2,         /* Set to small to control flow of tcp */
+        .tx_so_buf_size = MAX_ASYNC,
+        .pkt_len = 4,
+        .tx_cnt = 4*MAX_THREADS*512,
+        .rx_cnt = 4*MAX_THREADS*512,
+        .n_servers = MAX_ASYNC,
+        .n_clients = MAX_ASYNC,
+        .repeat = 4
     },
     #if PJ_IOQUEUE_IMP==PJ_IOQUEUE_IMP_EPOLL
     {
-        .cfg.title = "tcp (multithreads, sequenced, concur=0, EPOLLEXCLUSIVE)",
-        .cfg.max_fd = 6,
-        .cfg.allow_concur = 0,
-        .cfg.epoll_flags = PJ_IOQUEUE_EPOLL_EXCLUSIVE,
-        .cfg.sequenced = 1,
-        .cfg.sock_type = SOCK_STREAM,
-        .cfg.n_threads = MAX_THREADS,
-        .cfg.rx_so_buf_size = 2,         /* Set to small to control flow of tcp */
-        .cfg.tx_so_buf_size = MAX_ASYNC,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 4*MAX_THREADS*512,
-        .cfg.rx_cnt = 4*MAX_THREADS*512,
-        .cfg.n_servers = MAX_ASYNC,
-        .cfg.n_clients = MAX_ASYNC,
-        .cfg.repeat = 4
+        .title = "tcp (multithreads, sequenced, concur=0, EPOLLEXCLUSIVE)",
+        .max_fd = 6,
+        .allow_concur = 0,
+        .epoll_flags = PJ_IOQUEUE_EPOLL_EXCLUSIVE,
+        .sequenced = 1,
+        .sock_type = SOCK_STREAM,
+        .n_threads = MAX_THREADS,
+        .rx_so_buf_size = 2,         /* Set to small to control flow of tcp */
+        .tx_so_buf_size = MAX_ASYNC,
+        .pkt_len = 4,
+        .tx_cnt = 4*MAX_THREADS*512,
+        .rx_cnt = 4*MAX_THREADS*512,
+        .n_servers = MAX_ASYNC,
+        .n_clients = MAX_ASYNC,
+        .repeat = 4
     },
     {
-        .cfg.title = "tcp (multithreads, sequenced, concur=0, EPOLLONESHOT)",
-        .cfg.max_fd = 6,
-        .cfg.allow_concur = 0,
-        .cfg.epoll_flags = PJ_IOQUEUE_EPOLL_ONESHOT,
-        .cfg.sequenced = 1,
-        .cfg.sock_type = SOCK_STREAM,
-        .cfg.n_threads = MAX_THREADS,
-        .cfg.rx_so_buf_size = 2,         /* Set to small to control flow of tcp */
-        .cfg.tx_so_buf_size = MAX_ASYNC,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 4*MAX_THREADS*512,
-        .cfg.rx_cnt = 4*MAX_THREADS*512,
-        .cfg.n_servers = MAX_ASYNC,
-        .cfg.n_clients = MAX_ASYNC,
-        .cfg.repeat = 4
+        .title = "tcp (multithreads, sequenced, concur=0, EPOLLONESHOT)",
+        .max_fd = 6,
+        .allow_concur = 0,
+        .epoll_flags = PJ_IOQUEUE_EPOLL_ONESHOT,
+        .sequenced = 1,
+        .sock_type = SOCK_STREAM,
+        .n_threads = MAX_THREADS,
+        .rx_so_buf_size = 2,         /* Set to small to control flow of tcp */
+        .tx_so_buf_size = MAX_ASYNC,
+        .pkt_len = 4,
+        .tx_cnt = 4*MAX_THREADS*512,
+        .rx_cnt = 4*MAX_THREADS*512,
+        .n_servers = MAX_ASYNC,
+        .n_clients = MAX_ASYNC,
+        .repeat = 4
     },
     {
-        .cfg.title = "tcp (multithreads, sequenced, concur=0, epoll plain)",
-        .cfg.max_fd = 6,
-        .cfg.allow_concur = 0,
-        .cfg.epoll_flags = 0,
-        .cfg.sequenced = 1,
-        .cfg.sock_type = SOCK_STREAM,
-        .cfg.n_threads = MAX_THREADS,
-        .cfg.rx_so_buf_size = 2,         /* Set to small to control flow of tcp */
-        .cfg.tx_so_buf_size = MAX_ASYNC,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 4*MAX_THREADS*512,
-        .cfg.rx_cnt = 4*MAX_THREADS*512,
-        .cfg.n_servers = MAX_ASYNC,
-        .cfg.n_clients = MAX_ASYNC,
-        .cfg.repeat = 4
+        .title = "tcp (multithreads, sequenced, concur=0, epoll plain)",
+        .max_fd = 6,
+        .allow_concur = 0,
+        .epoll_flags = 0,
+        .sequenced = 1,
+        .sock_type = SOCK_STREAM,
+        .n_threads = MAX_THREADS,
+        .rx_so_buf_size = 2,         /* Set to small to control flow of tcp */
+        .tx_so_buf_size = MAX_ASYNC,
+        .pkt_len = 4,
+        .tx_cnt = 4*MAX_THREADS*512,
+        .rx_cnt = 4*MAX_THREADS*512,
+        .n_servers = MAX_ASYNC,
+        .n_clients = MAX_ASYNC,
+        .repeat = 4
     },
     #endif
     /* when concurrency is *enabled*, TCP packets are received in correct
@@ -1201,21 +1212,21 @@ static test_desc tests[128] = {
      * all backends)
      */
     {
-        .cfg.title = "tcp (multithreads, sequenced, concur=1)",
-        .cfg.max_fd = 6,
-        .cfg.allow_concur = 1,          /* enabled */
-        .cfg.epoll_flags = PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS,
-        .cfg.sequenced = 1,
-        .cfg.sock_type = SOCK_STREAM,
-        .cfg.n_threads = MAX_THREADS,
-        .cfg.rx_so_buf_size = 2,         /* Set to small to control flow of tcp */
-        .cfg.tx_so_buf_size = MAX_ASYNC,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 4*MAX_THREADS*512,
-        .cfg.rx_cnt = 4*MAX_THREADS*512,
-        .cfg.n_servers = MAX_ASYNC,
-        .cfg.n_clients = MAX_ASYNC,
-        .cfg.repeat = 4
+        .title = "tcp (multithreads, sequenced, concur=1)",
+        .max_fd = 6,
+        .allow_concur = 1,          /* enabled */
+        .epoll_flags = PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS,
+        .sequenced = 1,
+        .sock_type = SOCK_STREAM,
+        .n_threads = MAX_THREADS,
+        .rx_so_buf_size = 2,         /* Set to small to control flow of tcp */
+        .tx_so_buf_size = MAX_ASYNC,
+        .pkt_len = 4,
+        .tx_cnt = 4*MAX_THREADS*512,
+        .rx_cnt = 4*MAX_THREADS*512,
+        .n_servers = MAX_ASYNC,
+        .n_clients = MAX_ASYNC,
+        .repeat = 4
     },
     /* when concurrency is disabled, UDP packets should be received in increasing
      * order (although some packets may be lost). Edit: it turns out packets
@@ -1223,21 +1234,21 @@ static test_desc tests[128] = {
      * in the callback (only warning will be printed).
      */
     {
-        .cfg.title = "udp (multithreads, sequenced, concur=0)",
-        .cfg.max_fd = 6,
-        .cfg.allow_concur = 0,
-        .cfg.epoll_flags = PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS,
-        .cfg.sequenced = 1,
-        .cfg.sock_type = SOCK_DGRAM,
-        .cfg.n_threads = MAX_THREADS,
-        .cfg.rx_so_buf_size = MAX_ASYNC, /* Set to small so some packets will be dropped */
-        .cfg.tx_so_buf_size = MAX_ASYNC,
-        .cfg.pkt_len = 4,
-        .cfg.tx_cnt = 4*MAX_THREADS*512,
-        .cfg.rx_cnt = 4*MAX_THREADS*512,
-        .cfg.n_servers = MAX_ASYNC,
-        .cfg.n_clients = MAX_ASYNC,
-        .cfg.repeat = 4
+        .title = "udp (multithreads, sequenced, concur=0)",
+        .max_fd = 6,
+        .allow_concur = 0,
+        .epoll_flags = PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS,
+        .sequenced = 1,
+        .sock_type = SOCK_DGRAM,
+        .n_threads = MAX_THREADS,
+        .rx_so_buf_size = MAX_ASYNC, /* Set to small so some packets will be dropped */
+        .tx_so_buf_size = MAX_ASYNC,
+        .pkt_len = 4,
+        .tx_cnt = 4*MAX_THREADS*512,
+        .rx_cnt = 4*MAX_THREADS*512,
+        .n_servers = MAX_ASYNC,
+        .n_clients = MAX_ASYNC,
+        .repeat = 4
     },
 };
 
@@ -1253,10 +1264,12 @@ int ioqueue_stress_test(void)
     test_cb.on_accept_complete = on_accept_complete;
     test_cb.on_connect_complete = on_connect_complete;
 
-    for (i=0; i<(int)PJ_ARRAY_SIZE(tests); ++i) {
+    for (i=0; i<(int)PJ_ARRAY_SIZE(test_cfgs); ++i) {
+        static test_desc test_buf;
+        test_desc *test = &test_buf;
         int r;
 
-        test_desc *test = &tests[i];
+        test->cfg = test_cfgs[i];
         if (!test->cfg.title)
             break;
 
@@ -1268,7 +1281,7 @@ int ioqueue_stress_test(void)
         }
 #endif
 
-        r = perform_test(&tests[i]);
+        r = perform_test(test);
         if (r && !retcode)
             retcode = r;
     }

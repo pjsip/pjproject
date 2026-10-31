@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1276,7 +1276,7 @@ static pj_status_t socketpair_imp(int family,
     pj_sock_t lfd = PJ_INVALID_SOCKET;
     pj_sock_t cfd = PJ_INVALID_SOCKET;
     pj_str_t loopback;
-    pj_sockaddr sa;
+    pj_sockaddr sa, csa;
     int salen;
     int type0 = type;
 
@@ -1323,8 +1323,16 @@ static pj_status_t socketpair_imp(int family,
     }
 #endif
 
-    /* connect to listen fd */
+    /* connect to listen fd. Bind first: getsockname() below must give
+     * the loopback address, and Zephyr reports the unspecified address
+     * for a socket that connect() bound.
+     */
     status = pj_sock_socket(family, type, protocol, &cfd);
+    if (status != PJ_SUCCESS)
+        goto on_error;
+    pj_sockaddr_cp(&csa, &sa);
+    pj_sockaddr_set_port(&csa, 0);
+    status = pj_sock_bind(cfd, &csa, salen);
     if (status != PJ_SUCCESS)
         goto on_error;
     status = pj_sock_connect(cfd, &sa, salen);
@@ -1389,7 +1397,10 @@ PJ_DEF(pj_status_t) pj_sock_socketpair(int family,
 
     status = socketpair(family, type, protocol, tmp_sv);
     if (status != PJ_SUCCESS) {
-        if (errno == EOPNOTSUPP) {
+        /* Linux reports EOPNOTSUPP for AF_INET, Zephyr EAFNOSUPPORT */
+        if (errno == EOPNOTSUPP || errno == EAFNOSUPPORT ||
+            errno == EPROTONOSUPPORT)
+        {
             return socketpair_imp(family, type0, protocol, sv);
         }
         status = PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
