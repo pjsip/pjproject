@@ -572,14 +572,8 @@ target_sources(pjmedia
 # compile definitions
 target_compile_definitions(pjmedia
   PUBLIC
-    # srtp
-    PJMEDIA_HAS_SRTP=$<BOOL:${PJMEDIA_WITH_SRTP}>
-
     # the null audio device changes what RTCP-XR reports (rtcp_xr.c)
     PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO=$<BOOL:${PJMEDIA_WITH_AUDIODEV_NULL}>
-
-    # resampling backend
-    PJMEDIA_RESAMPLE_IMP=PJMEDIA_RESAMPLE_$<UPPER_CASE:${PJMEDIA_WITH_RESAMPLE}>
 
     # aec
     PJMEDIA_HAS_SPEEX_AEC=$<BOOL:${PJMEDIA_WITH_SPEEX_AEC}>
@@ -619,6 +613,11 @@ endif()
 block(SCOPE_FOR VARIABLES)
   # G711 codec
   set(PJMEDIA_HAS_G711_CODEC ${PJMEDIA_WITH_G711_CODEC})
+  # SRTP
+  set(PJMEDIA_HAS_SRTP ${PJMEDIA_WITH_SRTP})
+  # resampling backend
+  string(TOUPPER "${PJMEDIA_WITH_RESAMPLE}" _resample)
+  set(PJMEDIA_RESAMPLE_IMP "PJMEDIA_RESAMPLE_${_resample}")
 
   # write configured header
   configure_file(

@@ -10,7 +10,7 @@ This guide takes you from a clean machine to a SIP call running on Zephyr: first
 - Tested targets: `native_sim/native/64` and `mps2/an521/cpu0` (Cortex-M33 under QEMU, limited to 640 KB of RAM to match an STM32H563). Both register and complete calls with zero packet loss.
 - pjlib-test, PJLIB's own test suite, runs on both targets through twister, single threaded and with threads.
 
-Current status: SIP over UDP and over TLS, G.711, G.722 and SDES-SRTP are working, single threaded and with pjsip and the media on two pthreads.
+Current status: SIP over UDP and over TLS, G.711, G.722 and SDES-SRTP are working, single threaded and with pjsip and the media on two pthreads. The preset builds G.711 only; G.722 and the resampler are a `config_site.h` setting away.
 
 As an indication of the footprint, these are the sizes of the whole AN521 image, Zephyr and its network stack included, for the four ways the sample builds:
 
@@ -286,24 +286,17 @@ The application code is ordinary pjsip code. `embedded_ua.c` in `pjsip-apps/src/
 
 ### Kconfig options
 
-All pjproject options live under "PJSIP (pjproject)" in `west build -t menuconfig`, or in `prj.conf`:
+The Kconfig options cover what the build has to know: whether to build pjproject at all, with threads, with TLS, with floating point, and where a custom `config_site.h` is. Everything else about pjproject, which codecs, how much logging, how many sockets an I/O queue watches, is set in `config_site.h` as on every other platform, so that each setting has one place. The options live under "PJSIP (pjproject)" in `west build -t menuconfig`, or in `prj.conf`:
 
 | Option | Default | What it does |
 |---|---|---|
 | `CONFIG_PJPROJECT` | n | Build pjproject. Requires `POSIX_API`, `NETWORKING`, `NET_SOCKETS`, `NET_IPV4`. |
 | `CONFIG_PJPROJECT_THREADS` | n | Build PJLIB with threads over pthreads. Off, PJLIB is single threaded and no pthread function is linked. See the note below. |
 | `CONFIG_PJPROJECT_TLS` | n | SIP over TLS with Zephyr's Mbed TLS. Requires `MBEDTLS` and `NET_TCP`; the sample's `overlay-tls.conf` has the Mbed TLS options a TLS client needs. |
-| `CONFIG_PJPROJECT_SRTP` | y | SDES-SRTP with the bundled libsrtp. |
-| `CONFIG_PJPROJECT_CODEC_G711` | y | G.711 PCMU and PCMA. |
-| `CONFIG_PJPROJECT_CODEC_G722` | y | G.722 wideband. |
-| `CONFIG_PJPROJECT_CODEC_L16` | n | L16 linear PCM. |
-| `CONFIG_PJPROJECT_RESAMPLE` | y | The bundled resampler, needed when codecs of different clock rates are both enabled. |
 | `CONFIG_PJPROJECT_FLOATING_POINT` | follows `FPU` | Floating point arithmetic in PJLIB. Off saves the soft-float helpers on a core without an FPU. |
-| `CONFIG_PJPROJECT_LOG_MAX_LEVEL` | 5 | `PJ_LOG_MAX_LEVEL`. 0 compiles all logging out; 3 is info, 4 debug, 5 and 6 trace. Lower values save flash. |
-| `CONFIG_PJPROJECT_IOQUEUE_MAX_HANDLES` | 16 | `PJ_IOQUEUE_MAX_HANDLES`, the sockets one I/O queue can watch. |
 | `CONFIG_PJPROJECT_CONFIG_SITE` | empty | Path to a custom `config_site.h`, see below. |
 
-The other codecs (Opus, Speex, iLBC, GSM, G.722.1, AMR), video, the echo cancellers and the sound device backends are not built. The sample does not need a sound device: media comes from the network and goes back to it.
+The module always builds the bundled libsrtp and libresample, and G.711, G.722 and L16 need no library; they are static archives, so an application that does not use one of them does not link it. The other codecs (Opus, Speex, iLBC, GSM, G.722.1, AMR), video, the echo cancellers and the sound device backends are not built. The sample does not need a sound device: media comes from the network and goes back to it.
 
 A note on threads. The sample runs single threaded by default, which needs nothing special and is the smallest build. Build it with `-DEXTRA_CONF_FILE=overlay-threads.conf` and pjsip runs in one pthread and the media clock and RTP in another. The overlay shows what a threaded build needs besides `CONFIG_PJPROJECT_THREADS`: `CONFIG_DYNAMIC_THREAD` with heap-allocated stacks, since pjlib creates threads at run time; `CONFIG_DYNAMIC_THREAD_STACK_SIZE` raised to 16 KB, because a thread pjlib creates with stack size 0 gets that default and Zephyr's 1 KB is far too small; and more mutexes and condition variables than Zephyr's default of 5 each. A thread created with an explicit stack size gets a stack of that size from the same heap; Zephyr frees it only when the thread's attributes are destroyed after it has ended, which pjlib does in `pj_thread_join()` or `pj_thread_destroy()`, so join or destroy threads you create to get their stacks back. Zephyr keeps pthread key values only for threads created with `pthread_create()`, not for its main thread, so on Zephyr pjlib keeps its per-thread data in compiler thread-local storage instead (`PJ_THREAD_LOCAL_USE_COMPILER_TLS` in the preset, `CONFIG_THREAD_LOCAL_STORAGE` selected by `CONFIG_PJPROJECT_THREADS`). The application can therefore use pjlib from `main()` as on any other platform. Zephyr takes that storage off the top of every thread's stack, kernel threads included, so each stack loses pjlib's share of about 270 bytes: the overlay raises `CONFIG_IDLE_STACK_SIZE` from its default of 256 bytes, which is smaller than that, and the net stack's small kernel stacks were checked to still have room.
 
@@ -316,11 +309,17 @@ pjproject's compile-time settings beyond Kconfig are in `config_site.h`. The Zep
 #include <pj/config_site_sample.h>
 ```
 
-The `PJ_CONFIG_ZEPHYR` preset in `pjlib/include/pj/config_site_sample.h` holds the Zephyr settings: logging and I/O queue sizes from Kconfig, 31 transactions and dialogs, no socket buffer tuning (Zephyr has no `SO_SNDBUF`), the codec selection from Kconfig, G.711 computed instead of table driven, no video, no echo canceller, the null sound device, and SDES-only SRTP. Read it to see exactly what is set.
+The `PJ_CONFIG_ZEPHYR` preset in `pjlib/include/pj/config_site_sample.h` holds the Zephyr settings: G.711 only, SDES-only SRTP, no sample rate conversion, full logging, 16 sockets per I/O queue, 31 transactions and dialogs, no socket buffer tuning (Zephyr has no `SO_SNDBUF`), G.711 computed instead of table driven, no video, no echo canceller, and the null sound device. Read it to see exactly what is set.
 
-To change any of this, write your own `config_site.h` and point `CONFIG_PJPROJECT_CONFIG_SITE` at it (an absolute path, or relative to the application directory). Start it with the same two lines so the preset stays in effect, then override:
+To change any of this, write your own `config_site.h` and point `CONFIG_PJPROJECT_CONFIG_SITE` at it (an absolute path, or relative to the application directory). The codec, logging, I/O queue, SRTP and resampling settings take whatever is defined before the preset is included; the rest is overridden after it:
 
 ```c
+#define PJMEDIA_HAS_G722_CODEC 1    /* G.722 as well as G.711 */
+#define PJMEDIA_RESAMPLE_IMP PJMEDIA_RESAMPLE_LIBRESAMPLE  /* needed to switch between the two mid-call */
+#define PJMEDIA_HAS_SRTP 0          /* plain RTP; libsrtp stays out of the image */
+#define PJ_LOG_MAX_LEVEL 3          /* info and below */
+#define PJ_IOQUEUE_MAX_HANDLES 32   /* CONFIG_ZVFS_OPEN_MAX must be at least this */
+
 #define PJ_CONFIG_ZEPHYR 1
 #include <pj/config_site_sample.h>
 
@@ -328,9 +327,11 @@ To change any of this, write your own `config_site.h` and point `CONFIG_PJPROJEC
 #define PJSIP_MAX_TSX_COUNT 15
 ```
 
+The pjlib test application in `zephyr/tests/pjlib` does exactly this to get a 64-socket I/O queue; its `config_site.h` is a three-line example.
+
 ### The sample's own options
 
-The sample's build settings are `CONFIG_EMBUA_*` macros that `embedded_ua.c` reads on every platform; on Zephyr they are options in the sample's Kconfig, set in `prj.conf`, in menuconfig or with `-DCONFIG_...` on the west command line. `CONFIG_EMBUA_SIP_SERVER_IP` (default 192.0.2.2), `CONFIG_EMBUA_USE_REGISTRATION` (1), `CONFIG_EMBUA_USERNAME` (bob) and `CONFIG_EMBUA_PASSWORD` (secret) describe the account. `CONFIG_EMBUA_AUDIO_CODEC` (1 for G.711, 2 for G.722), `CONFIG_EMBUA_USE_SRTP`, `CONFIG_EMBUA_SIP_TRANSPORT` (1 for UDP, 2 for TLS) and `CONFIG_EMBUA_USE_MEDIA_THREAD` follow the `CONFIG_PJPROJECT_*` options by default. The on/off settings are ints rather than Kconfig bools so that the macro is always defined. `CONFIG_EMBUA_HOST_TAP_IFACE` (zeth) is only used by `run-qemu.sh`. Without registration the sample is reached at `sip:<address>:55060`.
+The sample's build settings are `CONFIG_EMBUA_*` macros that `embedded_ua.c` reads on every platform; on Zephyr they are options in the sample's Kconfig, set in `prj.conf`, in menuconfig or with `-DCONFIG_...` on the west command line. `CONFIG_EMBUA_SIP_SERVER_IP` (default 192.0.2.2), `CONFIG_EMBUA_USE_REGISTRATION` (1), `CONFIG_EMBUA_USERNAME` (bob) and `CONFIG_EMBUA_PASSWORD` (secret) describe the account. `CONFIG_EMBUA_AUDIO_CODEC` (1 for G.711, 2 for G.722, which also needs `PJMEDIA_HAS_G722_CODEC` in `config_site.h`), `CONFIG_EMBUA_USE_SRTP`, `CONFIG_EMBUA_SIP_TRANSPORT` (1 for UDP, 2 for TLS) and `CONFIG_EMBUA_USE_MEDIA_THREAD` follow the `CONFIG_PJPROJECT_*` options by default. The on/off settings are ints rather than Kconfig bools so that the macro is always defined. `CONFIG_EMBUA_HOST_TAP_IFACE` (zeth) is only used by `run-qemu.sh`. Without registration the sample is reached at `sip:<address>:55060`.
 
 ## 9. How the port is put together
 
@@ -353,7 +354,7 @@ Random numbers come from Zephyr's `sys_rand32_get()` rather than the C library's
 - IPv6 is disabled on Zephyr.
 - QEMU's MPS2 boards drop full-size Ethernet frames: Zephyr's `smsc911x` driver rounds the frame length up before subtracting the checksum, asks for a buffer two bytes larger than the network stack allows for a 1514-byte frame, and the frame is lost. The first fragment of a SIP INVITE is such a frame. Until the driver is fixed, keep the host side of the TAP at MTU 1400 so that every frame is smaller. Real hardware and native_sim are not affected.
 - The QEMU boards have no entropy device, so the sample uses Zephyr's test random generator, seeded from the timer so that each boot differs. It is not a secure source; a real board must use its hardware RNG.
-- Logging at `CONFIG_PJPROJECT_LOG_MAX_LEVEL` below 5 produces a few unused-variable warnings in pjproject's own code. They are harmless.
+- Logging at a `PJ_LOG_MAX_LEVEL` below 5 produces a few unused-variable warnings in pjproject's own code. They are harmless.
 - The sample's TLS transport has no certificate, so it cannot take inbound TLS connections; requests to it must arrive on the connection it registered over (section 3). That is the sample's choice, not the port's: with a certificate and key in `pjsip_tls_setting` the listener works as on any platform.
 - `exit()` on Zephyr does not end the program; after `quit`, the sample's final log line is followed by an idle loop. Stop the emulator by hand.
 
@@ -362,6 +363,6 @@ Random numbers come from Zephyr's `sys_rand32_get()` rather than the C library's
 - "no Zephyr build in ..." from `run-qemu.sh`: give it the build directory you passed to `west build -d`.
 - The guest never gets a response: check `ip addr show zeth` shows 192.0.2.2 and the interface is UP, and that no firewall drops traffic on it. On QEMU, check the MTU is 1400.
 - A registrar answers the second REGISTER with 400 or "invalid CSeq": on native_sim, you forgot `-seed-random`; on QEMU, `CONFIG_TIMER_RANDOM_GENERATOR` is missing from the build.
-- The build stops with `PJ_IOQUEUE_MAX_HANDLES_must_not_exceed_FD_SETSIZE`: `FD_SETSIZE` on Zephyr is `CONFIG_ZVFS_OPEN_MAX`; raise it to at least `CONFIG_PJPROJECT_IOQUEUE_MAX_HANDLES`.
-- The image does not fit: lower `CONFIG_PJPROJECT_LOG_MAX_LEVEL`, shrink `CONFIG_COMMON_LIBC_MALLOC_ARENA_SIZE`, turn off G.722 and the resampler if only G.711 is needed.
+- The build stops with `PJ_IOQUEUE_MAX_HANDLES_must_not_exceed_FD_SETSIZE`: `FD_SETSIZE` on Zephyr is `CONFIG_ZVFS_OPEN_MAX`; raise it to at least `PJ_IOQUEUE_MAX_HANDLES` (16 in the preset).
+- The image does not fit: in `config_site.h` lower `PJ_LOG_MAX_LEVEL`; in `prj.conf` shrink `CONFIG_COMMON_LIBC_MALLOC_ARENA_SIZE`.
 - A SIP INVITE arrives in the host log but never in the guest: `CONFIG_NET_IPV4_FRAGMENT` is off, or the fragment buffers (`CONFIG_NET_IPV4_FRAGMENT_MAX_PKT`, `CONFIG_NET_BUF_RX_COUNT`) are too few.

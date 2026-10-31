@@ -476,12 +476,12 @@
 
 /*
  * Zephyr RTOS: a small SIP endpoint on a Cortex-M class device. A few
- * calls, G.711 and G.722, SDES-SRTP, optionally SIP over TLS with Zephyr's
- * Mbed TLS, no video, no echo canceller, no sound device.
+ * calls, G.711 (G.722 optionally), SDES-SRTP, optionally SIP over TLS with
+ * Zephyr's Mbed TLS, no video, no echo canceller, no sound device.
  *
  * The platform itself (threads, TCP, IPv6, TLS) is described by
- * pj/compat/os_zephyr.h from Kconfig. Where a CONFIG_PJPROJECT_* symbol
- * exists, the value follows Kconfig.
+ * pj/compat/os_zephyr.h from Kconfig. Everything here can be overridden
+ * by defining it before including this file from config_site.h.
  */
 #if defined(PJ_CONFIG_ZEPHYR) && PJ_CONFIG_ZEPHYR
 
@@ -494,21 +494,14 @@
      * PJLIB settings.
      */
 
-    /* Logging stays on while a port is being brought up; 0 compiles it
-     * out.
+    /* Logging stays at pjlib's default of 5 while a port is being brought
+     * up; a lower PJ_LOG_MAX_LEVEL saves flash, 0 compiles logging out.
      */
-    #ifdef CONFIG_PJPROJECT_LOG_MAX_LEVEL
-    #   define PJ_LOG_MAX_LEVEL                 CONFIG_PJPROJECT_LOG_MAX_LEVEL
-    #else
-    #   define PJ_LOG_MAX_LEVEL                 4
-    #endif
 
     /* Zephyr's select() is sized by CONFIG_ZVFS_OPEN_MAX, which must be at
      * least this (ioqueue_select.c checks at build time).
      */
-    #ifdef CONFIG_PJPROJECT_IOQUEUE_MAX_HANDLES
-    #   define PJ_IOQUEUE_MAX_HANDLES           CONFIG_PJPROJECT_IOQUEUE_MAX_HANDLES
-    #else
+    #ifndef PJ_IOQUEUE_MAX_HANDLES
     #   define PJ_IOQUEUE_MAX_HANDLES           16
     #endif
 
@@ -543,22 +536,17 @@
      * PJMEDIA settings
      */
 
-    /* G.711 and G.722 are built in, L16 optionally; the rest need
-     * libraries the Zephyr module does not build.
+    /* G.711 only by default. G.722 and L16 need no library and can be
+     * turned on here; the other codecs need libraries the Zephyr module
+     * does not build.
      */
-    #if defined(CONFIG_PJPROJECT_CODEC_G711) || !defined(__ZEPHYR__)
+    #ifndef PJMEDIA_HAS_G711_CODEC
     #   define PJMEDIA_HAS_G711_CODEC           1
-    #else
-    #   define PJMEDIA_HAS_G711_CODEC           0
     #endif
-    #if defined(CONFIG_PJPROJECT_CODEC_G722) || !defined(__ZEPHYR__)
-    #   define PJMEDIA_HAS_G722_CODEC           1
-    #else
+    #ifndef PJMEDIA_HAS_G722_CODEC
     #   define PJMEDIA_HAS_G722_CODEC           0
     #endif
-    #if defined(CONFIG_PJPROJECT_CODEC_L16)
-    #   define PJMEDIA_HAS_L16_CODEC            1
-    #else
+    #ifndef PJMEDIA_HAS_L16_CODEC
     #   define PJMEDIA_HAS_L16_CODEC            0
     #endif
     #define PJMEDIA_HAS_GSM_CODEC               0
@@ -596,9 +584,18 @@
     #define PJMEDIA_AUDIO_DEV_HAS_WMME          0
     #define PJMEDIA_HAS_LEGACY_SOUND_API        0
 
-    /* SRTP keyed by SDES only. PJMEDIA_HAS_SRTP follows
-     * CONFIG_PJPROJECT_SRTP through the build.
+    /* No sample rate conversion: with one codec clock rate none is
+     * needed. PJMEDIA_RESAMPLE_LIBRESAMPLE brings in the bundled
+     * libresample, for a call that switches between G.711 and G.722.
      */
+    #ifndef PJMEDIA_RESAMPLE_IMP
+    #   define PJMEDIA_RESAMPLE_IMP             PJMEDIA_RESAMPLE_NONE
+    #endif
+
+    /* SRTP keyed by SDES only. 0 leaves libsrtp out of the image. */
+    #ifndef PJMEDIA_HAS_SRTP
+    #   define PJMEDIA_HAS_SRTP                 1
+    #endif
     #define PJMEDIA_SRTP_HAS_SDES               1
     #define PJMEDIA_SRTP_HAS_DTLS               0
     #define PJMEDIA_SRTP_HAS_AES_CM_256         0

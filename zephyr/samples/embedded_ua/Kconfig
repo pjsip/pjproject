@@ -12,15 +12,12 @@ menu "embedded_ua"
 config EMBUA_AUDIO_CODEC
 	int "Audio codec: 1 G.711 (PCMU and PCMA), 2 G.722, 0 none"
 	range 0 2
-	default 1 if PJPROJECT_CODEC_G711
-	default 2 if PJPROJECT_CODEC_G722
-	default 0
+	default 1
 
 config EMBUA_USE_SRTP
 	int "Mandatory SDES-SRTP (1), or plain RTP (0)"
 	range 0 1
-	default 1 if PJPROJECT_SRTP
-	default 0
+	default 1
 
 config EMBUA_SIP_TRANSPORT
 	int "SIP transport: 1 UDP, 2 TLS"

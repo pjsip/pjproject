@@ -29,7 +29,7 @@ Tested targets are `native_sim/native/64`, which runs Zephyr as a Linux process,
 
 ### Changes
 
-**The Zephyr module** (`zephyr/`): `module.yml`, a `Kconfig` with the `CONFIG_PJPROJECT_*` options (threads, TLS, SRTP, codecs, resampling, floating point, log level, ioqueue size, custom `config_site.h`), and a `CMakeLists.txt` that drives pjproject's own per-library CMake files with options derived from Kconfig, generates `config_site.h`, applies Zephyr's include paths and flags to every library, and defines a `pjproject` link target. `cmake/MbedTLSConfig.cmake` lets pjlib's Mbed TLS backend find Zephyr's Mbed TLS.
+**The Zephyr module** (`zephyr/`): `module.yml`, a `Kconfig` with the `CONFIG_PJPROJECT_*` options for what the build has to know (threads, TLS, floating point, a custom `config_site.h`; codecs, logging and queue sizes stay in `config_site.h`, so that each setting has one place), and a `CMakeLists.txt` that drives pjproject's own per-library CMake files with options derived from Kconfig, generates `config_site.h`, applies Zephyr's include paths and flags to every library, and defines a `pjproject` link target. `cmake/MbedTLSConfig.cmake` lets pjlib's Mbed TLS backend find Zephyr's Mbed TLS.
 
 **The platform layer in pjlib**: `pj/compat/os_zephyr.h` describes the platform from Kconfig (available headers and socket functions, threads, TCP, TLS, no IPv6), selected by `pj/config.h` when `__ZEPHYR__` is defined. `pj/ip_helper_zephyr.c` enumerates interfaces and routes through `net_if`. A `PJ_CONFIG_ZEPHYR` preset in `config_site_sample.h` sizes pjsip and pjmedia for a small endpoint and follows the Kconfig codec and logging choices. `compat/rand.h` uses Zephyr's entropy-fed generator.
 
@@ -44,6 +44,24 @@ Tested targets are `native_sim/native/64`, which runs Zephyr as a Linux process,
 **Documentation**: `README_Zephyr.md` at the tree root is the full guide, from installing Zephyr to running on native_sim, QEMU and real hardware, using pjproject in an application, configuration, how the port is put together, known limitations and troubleshooting. docs.pjsip.org will link to or copy it.
 
 **SIP over TLS** (`zephyr/samples/embedded_ua/overlay-tls.conf`): pjlib's Mbed TLS backend builds unchanged against Zephyr's Mbed TLS 4.1, found through `zephyr/cmake/MbedTLSConfig.cmake`; the one change in the backend is that it logs the library version from `MBEDTLS_VERSION_STRING_FULL` instead of calling a function that needs `MBEDTLS_VERSION_C`. The overlay configures Mbed TLS as a TLS 1.2 client with one ciphersuite, adds 64 KB to the heap arena for its contexts, and names a TF-PSA-Crypto user configuration that turns on Mbed TLS's pthread threading layer in threaded builds, since PSA Crypto is then called from two threads and Zephyr has no Kconfig option for it. Both targets register over TLS to Kamailio and complete calls; the an521 image is 452 KB of flash and 461 KB of RAM, 528 KB with threads.
+
+### Compatibility
+
+Two changes can break an existing build:
+
+- **CMake: `PJMEDIA_HAS_SRTP` and `PJMEDIA_RESAMPLE_IMP` are no longer compile definitions.** pjmedia's CMake used to put them on the command line of pjmedia and of everything that links it (PUBLIC definitions), which made them impossible to set from `config_site.h` without a redefinition. They now go into the generated `pjmedia/config_auto.h` behind `#ifndef`, like the codec macros, so `config_site.h` wins. A consumer that read them from pjmedia's `INTERFACE_COMPILE_DEFINITIONS`, or that compiled code against them without including pjmedia's headers, no longer sees them; and `PJMEDIA_WITH_SRTP=OFF` or `PJMEDIA_WITH_RESAMPLE=none` no longer overrides a consumer that defines the macro itself. The GNU make and Visual Studio builds never had the definition and are unaffected.
+- **embedded_ua's build settings are renamed and renumbered.** `EMBUA_*` became `CONFIG_EMBUA_*`, so a `-DEMBUA_...` on a command line is silently ignored. The values of `CONFIG_EMBUA_AUDIO_CODEC` (1 G.711, 2 G.722, 0 none) and `CONFIG_EMBUA_SIP_TRANSPORT` (1 UDP, 2 TLS) changed too; the names `CODEC_G711`, `CODEC_G722`, `SIP_UDP` and `SIP_TLS` still work, and the listening ports are unchanged.
+
+Behaviour changes that existing code should not notice, listed for review:
+
+- `PJ_ATTR_NORETURN` and `PJ_ATTR_MAY_ALIAS` in `cc_gcc.h` and `cc_clang.h` are now defined under strict ANSI too (`-std=c89`, `-std=c99`, `-ansi`), where they used to be empty. `__attribute__` works under any `-std`; the empty definitions made `exception.c` warn about a noreturn function returning.
+- `pj_sock_bind()` binds through a copy, so an OS that writes the chosen port back into the address (Zephyr does) no longer modifies the caller's; use `pj_sock_getsockname()` for the port, as on Linux all along. The length is now also checked against `sizeof(pj_sockaddr)`.
+- `pj_inet_aton()` sets the output to `PJ_INADDR_NONE` when it fails, instead of leaving whatever `inet_pton()` left.
+- The select ioqueue does not dispatch an exception event for a descriptor that was also writable in the same poll: a failed `connect()` that an OS flags in both sets completes once and counts once. Linux never sets both; Windows sets only the exception set.
+- `pj_thread_create()` initialises pthread attributes only when a stack size or address is given, and keeps them for the thread's lifetime (Zephyr frees the stack when the attributes are destroyed, which it refuses while the thread runs). A thread with the default stack is created with a null attribute pointer.
+- Thread-local storage in the slot-array implementation (the no-threads build, and the new compiler-TLS option) now behaves like pthread keys: a slot that is freed and allocated again reads NULL in every thread, where the stale value used to remain.
+- The test suites: every suite's `test.h` includes the new `test_profile.h`, which gives `PJ_EXCLUDE_BENCHMARK_TESTS` a default (1 on a Zephyr board with less than 2 MB of RAM or where the clock stands still while the CPU is busy, 0 elsewhere); a build that defines it still wins. pjlib-test's sources are a new CMake INTERFACE target, `pjlib-test-sources`; the `pjlib-test` executable is unchanged.
+- Additions with no effect unless used: the `PJ_THREAD_LOCAL` keyword macro in the compiler headers, the `PJ_THREAD_LOCAL_USE_COMPILER_TLS` option (default 0), `pj/compat/os_zephyr.h` selected only when `__ZEPHYR__` is defined, the `PJ_CONFIG_ZEPHYR` preset, and the Mbed TLS backend no longer requiring `MBEDTLS_VERSION_C`.
 
 ### Not in this PR
 

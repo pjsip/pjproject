@@ -35,6 +35,16 @@
 #cmakedefine01 PJMEDIA_HAS_G711_CODEC
 #endif
 
+/* SRTP */
+#ifndef PJMEDIA_HAS_SRTP
+#cmakedefine01 PJMEDIA_HAS_SRTP
+#endif
+
+/* Resampling backend */
+#ifndef PJMEDIA_RESAMPLE_IMP
+#define PJMEDIA_RESAMPLE_IMP @PJMEDIA_RESAMPLE_IMP@
+#endif
+
 
 #endif  /* __PJMEDIA_CONFIG_AUTO_H_ */
 

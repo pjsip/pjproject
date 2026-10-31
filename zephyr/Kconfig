@@ -13,6 +13,10 @@ menuconfig PJPROJECT
 	  enable POSIX_API and networking. Link the application against the
 	  "pjproject" CMake target.
 
+	  These options cover what the build has to know. Everything else
+	  about pjproject, codecs, logging, pool and queue sizes, is set in
+	  config_site.h as on every other platform; see PJPROJECT_CONFIG_SITE.
+
 if PJPROJECT
 
 config PJPROJECT_THREADS
@@ -44,30 +48,6 @@ config PJPROJECT_TLS
 	  and record buffer sizes. zephyr/samples/embedded_ua/overlay-tls.conf
 	  is a working TLS 1.2 client configuration.
 
-config PJPROJECT_SRTP
-	bool "Secure RTP (SDES-SRTP) with the bundled libsrtp"
-	default y
-	help
-	  Build third_party/srtp. It uses its own AES and SHA-1 code.
-
-config PJPROJECT_CODEC_G711
-	bool "G.711 (PCMU and PCMA) codec"
-	default y
-
-config PJPROJECT_CODEC_G722
-	bool "G.722 codec"
-	default y
-
-config PJPROJECT_CODEC_L16
-	bool "L16 (linear PCM) codec"
-
-config PJPROJECT_RESAMPLE
-	bool "Resampling with the bundled libresample"
-	default y
-	help
-	  Needed when codecs of different clock rates, such as G.711 and
-	  G.722, are both enabled and a call may switch between them.
-
 config PJPROJECT_FLOATING_POINT
 	bool "Floating point in PJLIB"
 	default FPU
@@ -76,28 +56,18 @@ config PJPROJECT_FLOATING_POINT
 	  soft-float helpers on a core without an FPU. The G.711 and G.722
 	  codecs use integers only.
 
-config PJPROJECT_LOG_MAX_LEVEL
-	int "Maximum log level compiled in"
-	range 0 6
-	default 5
-	help
-	  PJ_LOG_MAX_LEVEL: 0 compiles all logging out, 3 is info, 4 debug,
-	  5 and 6 trace. Lower values save flash.
-
-config PJPROJECT_IOQUEUE_MAX_HANDLES
-	int "Maximum sockets per I/O queue"
-	default 16
-	help
-	  PJ_IOQUEUE_MAX_HANDLES. PJLIB's select() backend needs
-	  CONFIG_ZVFS_OPEN_MAX to be at least this many; the build checks.
-
 config PJPROJECT_CONFIG_SITE
 	string "Path to a custom config_site.h"
 	help
 	  Empty, the generated pj/config_site.h selects the PJ_CONFIG_ZEPHYR
-	  preset in pj/config_site_sample.h. Otherwise the file at this path
-	  (absolute, or relative to the application) is used as
-	  pj/config_site.h, and should normally start with
-	  #define PJ_CONFIG_ZEPHYR 1 and #include <pj/config_site_sample.h>.
+	  preset in pj/config_site_sample.h: G.711 only, SDES-SRTP, no
+	  resampling, full logging, 16 sockets per I/O queue. To change any of that,
+	  give the path of your own file (absolute, or relative to the
+	  application), which defines what it wants to differ and then
+	  does
+	    #define PJ_CONFIG_ZEPHYR 1
+	    #include <pj/config_site_sample.h>
+	  libsrtp and libresample are always built; an application that
+	  does not use them does not link them.
 
 endif # PJPROJECT

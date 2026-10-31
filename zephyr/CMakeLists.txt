@@ -41,30 +41,21 @@ else()
   pj_set_option(PJLIB_WITH_SSL "")
 endif()
 
-# Bundled third-party libraries: only what the profile needs
+# Bundled third-party libraries: libsrtp and libresample are always built,
+# and an application that does not use them does not link them. The codecs
+# needing other libraries are out.
 foreach(_dep G7221 GSM ILBC SPEEX WEBRTC WEBRTC_AEC3 YUV)
   pj_set_option(PJ_DEP_${_dep} none)
 endforeach()
-if(CONFIG_PJPROJECT_SRTP)
-  pj_set_option(PJ_DEP_SRTP bundled)
-  # libsrtp's own crypto; the host's OpenSSL must not be picked up
-  pj_set_bool(SRTP_WITH_OPENSSL FALSE)
-else()
-  pj_set_option(PJ_DEP_SRTP none)
-endif()
-if(CONFIG_PJPROJECT_RESAMPLE)
-  pj_set_option(PJ_DEP_RESAMPLE bundled)
-  pj_set_option(PJMEDIA_WITH_RESAMPLE libresample)
-else()
-  pj_set_option(PJ_DEP_RESAMPLE none)
-  pj_set_option(PJMEDIA_WITH_RESAMPLE none)
-endif()
+pj_set_option(PJ_DEP_SRTP bundled)
+# libsrtp's own crypto; the host's OpenSSL must not be picked up
+pj_set_bool(SRTP_WITH_OPENSSL FALSE)
+pj_set_option(PJ_DEP_RESAMPLE bundled)
+pj_set_option(PJMEDIA_WITH_RESAMPLE libresample)
 pj_set_bool(PJNATH_WITH_UPNP FALSE)
 
-# Codecs and media
-pj_set_bool(PJMEDIA_WITH_G711_CODEC CONFIG_PJPROJECT_CODEC_G711)
-pj_set_bool(PJMEDIA_WITH_G722_CODEC CONFIG_PJPROJECT_CODEC_G722)
-pj_set_bool(PJMEDIA_WITH_L16_CODEC CONFIG_PJPROJECT_CODEC_L16)
+# Codecs and media. G.711, G.722 and L16 need no library and follow
+# config_site.h (PJMEDIA_HAS_*_CODEC); the rest are out.
 foreach(_opt OPENCORE_AMRNB_CODEC OPENCORE_AMRWB_CODEC SILK_CODEC OPUS_CODEC
              BCG729_CODEC)
   pj_set_bool(PJMEDIA_WITH_${_opt} FALSE)
