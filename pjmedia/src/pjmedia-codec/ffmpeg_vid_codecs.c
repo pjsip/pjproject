@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2010-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2010-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -77,6 +77,10 @@
 #  define AV_OPT_SET_INT(obj,name,val)  (av_set_int(obj,name,val)!=NULL)
 #endif
 #define AVCODEC_HAS_DECODE(c)           (c->decode != (void*)0)
+
+#if !LIBAVCODEC_VER_AT_LEAST(56,35)
+#  define AV_INPUT_BUFFER_PADDING_SIZE  FF_INPUT_BUFFER_PADDING_SIZE
+#endif
 
 /* AVCodec H264 default PT */
 #define AVC_H264_PT                       PJMEDIA_RTP_PT_H264_RSV3
@@ -580,11 +584,18 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
         AVCodecContext *ctx = ff->dec_ctx;
 
         /* Apply the "sprop-parameter-sets" fmtp from remote SDP to
-         * extradata of ffmpeg codec context.
+         * extradata of ffmpeg codec context. ffmpeg owns and frees
+         * extradata, so it must come from av_malloc() with input padding.
          */
         if (data->fmtp.sprop_param_sets_len) {
-            ctx->extradata_size = (int)data->fmtp.sprop_param_sets_len;
-            ctx->extradata = data->fmtp.sprop_param_sets;
+            pj_size_t len = data->fmtp.sprop_param_sets_len;
+
+            ctx->extradata = (pj_uint8_t*)
+                             av_mallocz(len + AV_INPUT_BUFFER_PADDING_SIZE);
+            if (!ctx->extradata)
+                return PJ_ENOMEM;
+            pj_memcpy(ctx->extradata, data->fmtp.sprop_param_sets, len);
+            ctx->extradata_size = (int)len;
         }
     }
 
@@ -1280,6 +1291,7 @@ static void free_codec_context(AVCodecContext **ctx, pj_bool_t opened)
         return;
     if (opened)
         avcodec_close(*ctx);
+    av_freep(&(*ctx)->extradata);
     av_free(*ctx);
     *ctx = NULL;
 #endif

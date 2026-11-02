@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2011-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -457,6 +457,65 @@ on_return:
     return rc;
 }
 
+/* Open and close each H264 decoder with "sprop-parameter-sets" in the
+ * remote fmtp.
+ */
+static int h264_sprop_test(pj_pool_t *pool)
+{
+    const pj_str_t codec_id = {"H264", 4};
+    const pjmedia_vid_codec_info *info[8];
+    unsigned i, cnt = PJ_ARRAY_SIZE(info);
+    pj_status_t status;
+
+    PJ_LOG(3, (THIS_FILE, "  H264 sprop-parameter-sets decoder test"));
+
+    status = pjmedia_vid_codec_mgr_find_codecs_by_id(NULL, &codec_id, &cnt,
+                                                     info, NULL);
+    if (status != PJ_SUCCESS)
+        return 0;
+
+    for (i = 0; i < cnt; ++i) {
+        pjmedia_vid_codec_param param;
+        pjmedia_vid_codec *codec;
+
+        if ((info[i]->dir & PJMEDIA_DIR_DECODING) == 0)
+            continue;
+
+        status = pjmedia_vid_codec_mgr_get_default_param(NULL, info[i],
+                                                         &param);
+        if (status != PJ_SUCCESS)
+            return 300;
+
+        /* SPS and PPS of the RFC 6184 example */
+        param.dir = PJMEDIA_DIR_DECODING;
+        param.enc_fmtp.cnt = 2;
+        param.enc_fmtp.param[0].name = pj_str("profile-level-id");
+        param.enc_fmtp.param[0].val = pj_str("42000a");
+        param.enc_fmtp.param[1].name = pj_str("sprop-parameter-sets");
+        param.enc_fmtp.param[1].val = pj_str("Z0IACpZTBYmI,aMljiA==");
+
+        status = pjmedia_vid_codec_mgr_alloc_codec(NULL, info[i], &codec);
+        if (status != PJ_SUCCESS)
+            return 310;
+
+        status = pjmedia_vid_codec_init(codec, pool);
+        if (status == PJ_SUCCESS) {
+            /* Close must release what open applied, even on open failure */
+            if (pjmedia_vid_codec_open(codec, &param) != PJ_SUCCESS) {
+                PJ_LOG(3, (THIS_FILE, "    %.*s decoder open failed",
+                           (int)info[i]->encoding_name.slen,
+                           info[i]->encoding_name.ptr));
+            }
+            pjmedia_vid_codec_close(codec);
+        }
+        pjmedia_vid_codec_mgr_dealloc_codec(NULL, codec);
+        if (status != PJ_SUCCESS)
+            return 320;
+    }
+
+    return 0;
+}
+
 int vid_codec_test(void)
 {
     pj_pool_t *pool;
@@ -503,6 +562,10 @@ int vid_codec_test(void)
 #endif
 
     rc = enum_codecs();
+    if (rc != 0)
+        goto on_return;
+
+    rc = h264_sprop_test(pool);
     if (rc != 0)
         goto on_return;
 
