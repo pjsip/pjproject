@@ -141,7 +141,7 @@ typedef struct dtls_srtp
                                                nego not done yet, so start
                                                the SRTP once the nego done  */
     pj_bool_t            is_destroying;     /* DTLS being destroyed?        */
-    pj_bool_t            got_keys;          /* DTLS nego done & keys ready  */
+    pj_bool_t            got_keys;          /* RTP nego done & keys ready   */
     pjmedia_srtp_crypto  tx_crypto[NUM_CHANNEL];
     pjmedia_srtp_crypto  rx_crypto[NUM_CHANNEL];
 
@@ -766,7 +766,8 @@ static pj_status_t ssl_get_srtp_material(dtls_srtp *ds, unsigned idx)
         pj_memcpy(k2, p, key_len); p += key_len;
         pj_memcpy(k1+key_len, p, salt_len); p += salt_len;
         pj_memcpy(k2+key_len, p, salt_len);
-        ds->got_keys = PJ_TRUE;
+        if (idx == RTP_CHANNEL)
+            ds->got_keys = PJ_TRUE;
     }
 
 on_return:
@@ -1929,6 +1930,7 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
     pj_bool_t use_rtcp_mux = PJ_FALSE;
     pj_status_t status = PJ_SUCCESS;
     struct transport_srtp *srtp = (struct transport_srtp*)tp->user_data;
+    unsigned i;
 
 #if DTLS_DEBUG
     PJ_LOG(2,(ds->base.name, "dtls_media_start()"));
@@ -1990,29 +1992,39 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
                       &ds->rem_rtcp, NULL);
     }
 
+    /* Verify remote fingerprint for each completed DTLS nego, including
+     * one that completed before the fingerprint was known.
+     */
+    for (i = 0; i < NUM_CHANNEL; ++i) {
+        pj_status_t fp_status;
+
+        if (ds->nego_completed[i] && ds->rem_fingerprint.slen &&
+            ds->rem_fprint_status[i] == PJ_EPENDING)
+        {
+            ds->rem_fprint_status[i] = ssl_match_fingerprint(ds, i);
+        }
+
+        fp_status = ds->rem_fprint_status[i];
+        if (fp_status == PJ_SUCCESS || fp_status == PJ_EPENDING)
+            continue;
+
+        pj_perror(4, ds->base.name, fp_status,
+                  "Fingerprint specified in remote SDP doesn't match "
+                  "to actual remote certificate fingerprint!");
+        if (i == RTCP_CHANNEL) {
+            pj_lock_acquire(ds->srtp->mutex);
+            destroy_srtp_ctx(ds->srtp, &ds->srtp->srtp_rtcp);
+            pj_lock_release(ds->srtp->mutex);
+        }
+        if (status == PJ_SUCCESS)
+            status = fp_status;
+    }
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
     /* Check if the background DTLS nego has completed */
     if (ds->got_keys) { 
         unsigned idx = RTP_CHANNEL;
-        unsigned i;
-
-        /* Verify remote fingerprint (if available) */
-        if (ds->rem_fingerprint.slen &&
-            ds->rem_fprint_status[idx] == PJ_EPENDING)
-        {
-            ds->rem_fprint_status[idx] = ssl_match_fingerprint(ds, idx);
-        }
-
-        /* Also fail on a mismatch found when a channel's nego completed */
-        for (i = 0; i < NUM_CHANNEL; ++i) {
-            if (ds->rem_fprint_status[i] != PJ_SUCCESS &&
-                ds->rem_fprint_status[i] != PJ_EPENDING)
-            {
-                pj_perror(4, ds->base.name, ds->rem_fprint_status[i],
-                          "Fingerprint specified in remote SDP doesn't match "
-                          "to actual remote certificate fingerprint!");
-                return ds->rem_fprint_status[i];
-            }
-        }
 
         ds->srtp->srtp_ctx.tx_policy_neg = ds->tx_crypto[idx];
         ds->srtp->srtp_ctx.rx_policy_neg = ds->rx_crypto[idx];
