@@ -7731,7 +7731,8 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
                pjsip_method_cmp(&tsx->method, pjsip_get_invite_method())==0 &&
                tsx->state >= PJSIP_TSX_STATE_COMPLETED &&
                e->body.tsx_state.prev_state < PJSIP_TSX_STATE_COMPLETED &&
-               (!PJSIP_IS_STATUS_IN_CLASS(tsx->status_code, 300) &&
+               ((!PJSIP_IS_STATUS_IN_CLASS(tsx->status_code, 300) ||
+                 inv->state == PJSIP_INV_STATE_CONFIRMED) &&
                 ((tsx->status_code!=401 && tsx->status_code!=407) ||
                  is_unretried_auth_failure(call, tsx)) &&
                 tsx->status_code!=422))
