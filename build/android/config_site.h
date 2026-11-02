@@ -48,9 +48,8 @@
 /*
  * No audio backend other than Oboe and the Java one is built. OpenSL ES is
  * superseded by Oboe, which uses AAudio where it can and falls back to
- * OpenSL ES itself.
+ * OpenSL ES itself; build-aar.sh turns its CMake option off.
  */
-#define PJMEDIA_AUDIO_DEV_HAS_OPENSL        0
 #define PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO     0
 #define PJMEDIA_AUDIO_DEV_HAS_WMME          0
 
