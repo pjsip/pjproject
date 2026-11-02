@@ -33,8 +33,9 @@
  *      defers, account is deleted, deferred state is cleaned up safely.
  *   5. Hold re-INVITE whose challenge is deferred and then answered: the
  *      call ends up on hold.
- *   6. Hold that gets 3xx: the call is not held. Unhold that gets 488:
- *      the call is marked as held again.
+ *   6. Unhold of a call not held that gets 488: the call is not held.
+ *      Hold that gets 3xx: the call is not held. Unhold that gets 488, as
+ *      re-INVITE or UPDATE: the call is marked as held again.
  *   7. UPDATE whose retry with credentials can't be sent: its offer is not
  *      left pending and its provisional media is reverted.
  *   8. The same for a re-INVITE.
@@ -872,10 +873,11 @@ static pj_bool_t call_is_held(pjsua_call_id call_id)
 static int test_call_start(test_call_t *tc, pjsua_transport_id tp_id,
                            int port, int rc_base)
 {
-    pjsua_acc_config acc_cfg;
-    char             uri[64];
-    pj_str_t         dst;
-    unsigned         elapsed;
+    pjsua_acc_config   acc_cfg;
+    pjsua_call_setting opt;
+    char               uri[64];
+    pj_str_t           dst;
+    unsigned           elapsed;
 
     tc->caller = tc->callee = PJSUA_INVALID_ID;
     tc->call_id = PJSUA_INVALID_ID;
@@ -905,7 +907,9 @@ static int test_call_start(test_call_t *tc, pjsua_transport_id tp_id,
     pj_ansi_snprintf(uri, sizeof(uri), "sip:" CALLEE_USER "@127.0.0.1:%d",
                      port);
     dst = pj_str(uri);
-    if (pjsua_call_make_call(tc->caller, &dst, NULL, NULL, NULL,
+    pjsua_call_setting_default(&opt);
+    opt.txt_cnt = 0;
+    if (pjsua_call_make_call(tc->caller, &dst, &opt, NULL, NULL,
                              &tc->call_id) != PJ_SUCCESS)
     {
         return rc_base - 3;
@@ -925,7 +929,8 @@ static int test_call_start(test_call_t *tc, pjsua_transport_id tp_id,
 
 static void test_call_end(test_call_t *tc)
 {
-    unsigned elapsed;
+    pj_time_val t0, now;
+    unsigned    elapsed;
 
     pjsua_call_hangup_all();
     for (elapsed = 0; elapsed < 5000 && pjsua_call_get_count() != 0;
@@ -938,8 +943,15 @@ static void test_call_end(test_call_t *tc)
     if (tc->callee != PJSUA_INVALID_ID)
         pjsua_acc_del(tc->callee);
 
-    /* Let the ioqueue reuse the closed media sockets for the next call */
-    pjsua_handle_events(PJ_IOQUEUE_KEY_FREE_DELAY + 100);
+    /* Closed media sockets keep their ioqueue slot for
+     * PJ_IOQUEUE_KEY_FREE_DELAY msec, polls may return early.
+     */
+    pj_gettickcount(&t0);
+    do {
+        pjsua_handle_events(50);
+        pj_gettickcount(&now);
+        PJ_TIME_VAL_SUB(now, t0);
+    } while (PJ_TIME_VAL_MSEC(now) < PJ_IOQUEUE_KEY_FREE_DELAY + 200);
 }
 
 /* The invite session of an active call, or NULL */
@@ -1067,10 +1079,40 @@ on_return:
 /*****************************************************************************
  * Sub-test 6: hold_3xx_unhold_fail_test
  *
- * A hold answered with 302 has failed: the call must not be marked as held.
- * Then a hold is accepted and an unhold gets 488: the call must be marked
- * as held again.
+ * An unhold of a call that is not held gets 488: the call must not become
+ * held. A hold answered with 302 has failed: the call must not be marked as
+ * held. Then a hold is accepted, and an unhold sent as re-INVITE, then as
+ * UPDATE, gets 488: the call must be marked as held again each time.
  *****************************************************************************/
+
+/* Sends an unhold that the mock proxy answers with 488 as its n-th answer.
+ * Returns 0 if the call is then marked as held or not as expected, or
+ * rc_base minus the failed step.
+ */
+static int unhold_rejected(pjsua_call_id call_id, pj_bool_t update,
+                           unsigned n, int held_expected, int rc_base)
+{
+    pj_status_t status;
+    int         held;
+
+    mock_proxy_arm(488, update, RETRY_SENT);
+    status = update ? pjsua_call_update(call_id, PJSUA_CALL_UNHOLD, NULL) :
+                      pjsua_call_reinvite(call_id, PJSUA_CALL_UNHOLD, NULL);
+    if (status != PJ_SUCCESS)
+        return rc_base;
+    if (!wait_answered(call_id, n))
+        return rc_base - 1;
+
+    held = call_hold_mark(call_id);
+    if (held != held_expected) {
+        PJ_LOG(3, (THIS_FILE, "    error: after a failed %s unhold the "
+                   "call is %s", update ? "UPDATE" : "re-INVITE",
+                   held < 0 ? "gone" : (held ? "held" : "not held")));
+        return rc_base - 2;
+    }
+    return 0;
+}
+
 static int hold_3xx_unhold_fail_test(pjsua_transport_id tp_id, int port)
 {
     test_call_t      tc;
@@ -1085,12 +1127,16 @@ static int hold_3xx_unhold_fail_test(pjsua_transport_id tp_id, int port)
     if (rc != 0)
         goto on_return;
 
+    rc = unhold_rejected(tc.call_id, PJ_FALSE, 1, 0, -2433);
+    if (rc != 0)
+        goto on_return;
+
     mock_proxy_arm(302, PJ_FALSE, RETRY_SENT);
     if (pjsua_call_set_hold(tc.call_id, NULL) != PJ_SUCCESS) {
         rc = -2425;
         goto on_return;
     }
-    if (!wait_answered(tc.call_id, 1)) {
+    if (!wait_answered(tc.call_id, 2)) {
         rc = -2426;
         goto on_return;
     }
@@ -1116,23 +1162,11 @@ static int hold_3xx_unhold_fail_test(pjsua_transport_id tp_id, int port)
         goto on_return;
     }
 
-    mock_proxy_arm(488, PJ_FALSE, RETRY_SENT);
-    if (pjsua_call_reinvite(tc.call_id, PJSUA_CALL_UNHOLD,
-                            NULL) != PJ_SUCCESS)
-    {
-        rc = -2430;
+    rc = unhold_rejected(tc.call_id, PJ_FALSE, 3, 1, -2430);
+    if (rc != 0)
         goto on_return;
-    }
-    if (!wait_answered(tc.call_id, 2)) {
-        rc = -2431;
-        goto on_return;
-    }
-    held = call_hold_mark(tc.call_id);
-    if (held != 1) {
-        PJ_LOG(3, (THIS_FILE, "    error: the call is %s",
-                   held < 0 ? "gone" : "not marked as held"));
-        rc = -2432;
-    }
+
+    rc = unhold_rejected(tc.call_id, PJ_TRUE, 4, 1, -2436);
 
 on_return:
     mock_proxy_reset();
@@ -1141,6 +1175,10 @@ on_return:
     return rc;
 }
 
+
+/*****************************************************************************
+ * Helpers for sub-tests 7 to 12
+ *****************************************************************************/
 
 /* Gets the numbers of active and provisional media of the call */
 static pj_bool_t get_media_counts(pjsua_call_id call_id, unsigned *med_cnt,
@@ -1207,7 +1245,7 @@ static int retry_unsent_test(pjsua_transport_id tp_id, int port,
     test_call_t        tc;
     pj_uint32_t        cseq, cseq2;
     pj_bool_t          offer_pending;
-    unsigned           med_cnt, prov_cnt;
+    unsigned           med_cnt, med_cnt2, prov_cnt;
     pj_status_t        status;
     int                rc;
 
@@ -1260,14 +1298,23 @@ static int retry_unsent_test(pjsua_transport_id tp_id, int port,
         goto on_return;
     }
 
-    /* A new offer gets through, after the retry if it had been sent */
+    /* A new offer adding a stream is accepted, after the retry if it had
+     * been sent.
+     */
     mock_proxy_arm(0, update, RETRY_SENT);
-    if (send_offer(tc.call_id, update, PJ_FALSE) != PJ_SUCCESS) {
+    if (send_offer(tc.call_id, update, PJ_TRUE) != PJ_SUCCESS) {
         rc = rc_base - 12;
         goto on_return;
     }
-    if (!wait_answered(tc.call_id, 1)) {
+    if (!wait_answered(tc.call_id, 1) ||
+        !get_media_counts(tc.call_id, &med_cnt2, &prov_cnt))
+    {
         rc = rc_base - 13;
+        goto on_return;
+    }
+    if (med_cnt2 <= med_cnt || prov_cnt != med_cnt2) {
+        PJ_LOG(3, (THIS_FILE, "    error: the new offer was not accepted"));
+        rc = rc_base - 15;
         goto on_return;
     }
     if (mock_proxy_auth_count() != 0) {

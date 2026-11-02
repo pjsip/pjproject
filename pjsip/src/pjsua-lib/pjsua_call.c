@@ -44,7 +44,7 @@
 /* Max number of hangup retries. */
 #define CALL_HANGUP_MAX_RETRY        4
 
-/* Marks of a hold or unhold re-INVITE in its tx_data, kept by a retry */
+/* Marks of a hold or unhold request in its tx_data, kept by a retry */
 #define HOLD_REQ                     ((void*)(pj_size_t)1)
 #define UNHOLD_REQ                   ((void*)(pj_size_t)2)
 
@@ -4550,6 +4550,13 @@ PJ_DEF(pj_status_t) pjsua_call_update3(
     /* Add additional headers etc */
     pjsua_process_msg_data( tdata, msg_data);
 
+    /* The hold is restored if an unhold of a held call fails */
+    if (call->local_hold && (call->opt.flag & PJSUA_CALL_UNHOLD) &&
+        (call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0)
+    {
+        tdata->mod_data[pjsua_var.mod.id] = UNHOLD_REQ;
+    }
+
     /* Send the request */
     call->med_update_success = PJ_FALSE;
     status = pjsip_inv_send_msg( call->inv, tdata);
@@ -7559,7 +7566,8 @@ on_return:
 static pj_bool_t is_unretried_auth_failure(pjsua_call *call,
                                            pjsip_transaction *tsx)
 {
-    return tsx->last_tx && tsx->last_tx->msg->body && call->inv->neg &&
+    return tsx->last_tx && call->inv->neg &&
+           pjsip_tdata_get_sdp_info(tsx->last_tx)->sdp &&
            pjmedia_sdp_neg_get_state(call->inv->neg) !=
                 PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER;
 }
@@ -7789,6 +7797,15 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
                 is_unretried_auth_failure(call, tsx)) &&
                tsx->status_code!=422)
     {
+        if (tsx->status_code/100 != 2 &&
+            tsx->last_tx->mod_data[pjsua_var.mod.id] == UNHOLD_REQ)
+        {
+            /* Call unhold failed */
+            call->local_hold = PJ_TRUE;
+            PJ_LOG(3,(THIS_FILE, "Error releasing hold on call %d "
+                      "(reason=%d)", call->index, tsx->status_code));
+        }
+
         if (tsx->last_tx->msg->body &&
             (tsx->status_code/100 != 2 || !call->med_update_success))
         {
