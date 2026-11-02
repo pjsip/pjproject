@@ -437,11 +437,18 @@ cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_V4L2
 )
 import_if_or_set(PJMEDIA_WITH_VIDEODEV_V4L2 OFF V4L2)
 
-# DirectShow backend
+# DirectShow backend, the Windows camera capture: on by default on Windows, as
+# autoconf does for MinGW with video
+if(WIN32)
+  set(_pj_dshow_default ON)
+else()
+  set(_pj_dshow_default OFF)
+endif()
 cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_DSHOW
-  "Enable DirectShow video device backend" OFF
+  "Enable DirectShow video device backend" ${_pj_dshow_default}
   "PJMEDIA_WITH_VIDEODEV;WIN32 OR CYGWIN OR MINGW;PJ_WITH_CXX" OFF
 )
+unset(_pj_dshow_default)
 
 # The top-level directory writes these into PjConfig.cmake. An option whose
 # cmake_dependent_option() condition turned false on a reconfigure is OFF in
