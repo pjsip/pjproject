@@ -540,6 +540,12 @@ function(_pj_pc_lib_flag out target)
   if(prefix AND NOT prefix STREQUAL CMAKE_STATIC_LIBRARY_PREFIX)
     set(name "${prefix}${name}")
   endif()
+  # The configuration a multi-config generator puts in the file name, see
+  # "Output directories" in the top-level CMakeLists.txt
+  get_target_property(postfix ${target} PJ_CONFIG_POSTFIX)
+  if(postfix)
+    string(APPEND name "-$<CONFIG>")
+  endif()
   set(${out} "-l${name}" PARENT_SCOPE)
 endfunction()
 
@@ -655,6 +661,30 @@ function(pj_generate_pkgconfig template destination)
 
   file(READ "${template}" content)
   string(CONFIGURE "${content}" content @ONLY)
+  # A multi-config generator names the libraries per configuration, so each
+  # configuration gets its own file, installed by `cmake --install --config`.
+  # The files share a timestamp, which install takes for "up to date", so the
+  # one installed before is removed: the last configuration installed wins.
+  get_property(multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+  if(multi_config)
+    set(output "${PROJECT_BINARY_DIR}/pkgconfig/$<CONFIG>/libpjproject.pc")
+    file(GENERATE OUTPUT "${output}" CONTENT "${content}")
+    if(IS_ABSOLUTE "${destination}")
+      set(installed "${destination}/libpjproject.pc")
+    else()
+      set(installed "\${CMAKE_INSTALL_PREFIX}/${destination}/libpjproject.pc")
+    endif()
+    install(
+      CODE "file(REMOVE \"\$ENV{DESTDIR}${installed}\")"
+      COMPONENT PjDevelopment
+    )
+    install(
+      FILES "${output}"
+      DESTINATION "${destination}"
+      COMPONENT PjDevelopment
+    )
+    return()
+  endif()
   # Written as it is, as a second substitution pass could alter a path with
   # an "@" in it; and only when changed, so it is not rewritten every time.
   # In this project's binary directory, not the top-level one of a project

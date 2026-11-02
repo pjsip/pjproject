@@ -841,8 +841,8 @@ jobs:
       run: cmake --build build -j $(nproc)
     - name: check
       run: |
-        file build/bin/pjsua
-        ldd build/bin/pjsua
+        file build/pjsip-apps/bin/pjsua
+        ldd build/pjsip-apps/bin/pjsua
     - name: install
       run: cmake --install build --prefix ${{ runner.temp }}/pj-install
     - name: test find_package
@@ -940,7 +940,7 @@ jobs:
       run: cmake --build build-cross --target resample -j $(nproc)
     - name: check target
       run: |
-        arm-none-eabi-readelf -A build-cross/lib/libresample.a | grep 'Tag_CPU_name: "8-M.MAIN"'
+        arm-none-eabi-readelf -A build-cross/third_party/lib/libresample.a | grep 'Tag_CPU_name: "8-M.MAIN"'
     - name: build pjlib (libc-only files)
       # Compile only, nothing links. The files that include pj/sock.h need a
       # socket API and os_core_unix.c needs pthreads, which an RTOS supplies;

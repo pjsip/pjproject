@@ -32,18 +32,6 @@ project(pjproject
   LANGUAGES C
 )
 
-# Programs and DLLs in bin, libraries in lib, so a Windows program finds its
-# DLLs. A project including this one with add_subdirectory can set its own.
-if(NOT DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY)
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
-endif()
-if(NOT DEFINED CMAKE_LIBRARY_OUTPUT_DIRECTORY)
-  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
-endif()
-if(NOT DEFINED CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
-  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
-endif()
-
 # C++ is needed only by pjsua2 and a few backends (WebRTC AEC3, libyuv, Lyra,
 # OpenH264, Oboe, WASAPI, DirectShow, Android MediaCodec), by pjlib's
 # atomic_queue.cpp, which only those backends use, and by WebRTC's CPU
@@ -374,6 +362,96 @@ if(IOS AND PJ_IOS_SAMPLE_LIBS)
   unset(_pj_name)
   unset(_parts)
 endif()
+
+# ##############################################################################
+# Output directories
+
+# Each module's programs in <build>/<module>/bin and its libraries (DLLs too)
+# in <build>/<module>/lib, the layout make uses in the source tree. A
+# multi-config generator (Visual Studio, Xcode) puts every configuration in the
+# same folders, with the configuration in the file name (libpj-Debug.lib), as
+# pjproject's own Visual Studio projects do. Left alone: targets given an
+# output directory already, by a parent project's CMAKE_*_OUTPUT_DIRECTORY or
+# in their own CMakeLists (SWIG modules, cmp_wav), and the SWIG modules, whose
+# names their language loads them by.
+get_property(_pj_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+set(_pj_dirs "${PROJECT_SOURCE_DIR}")
+while(_pj_dirs)
+  list(POP_FRONT _pj_dirs _pj_dir)
+  get_property(_pj_subdirs DIRECTORY "${_pj_dir}" PROPERTY SUBDIRECTORIES)
+  list(APPEND _pj_dirs ${_pj_subdirs})
+
+  file(RELATIVE_PATH _pj_rel "${PROJECT_SOURCE_DIR}" "${_pj_dir}")
+  if(_pj_rel STREQUAL "" OR _pj_rel MATCHES "^pjsip-apps/src/swig(/|$)")
+    continue()
+  endif()
+  string(REGEX REPLACE "/.*" "" _pj_module "${_pj_rel}")
+  set(_pj_bin "${PROJECT_BINARY_DIR}/${_pj_module}/bin")
+  set(_pj_lib "${PROJECT_BINARY_DIR}/${_pj_module}/lib")
+
+  get_property(_pj_targets DIRECTORY "${_pj_dir}" PROPERTY BUILDSYSTEM_TARGETS)
+  foreach(_pj_tgt IN LISTS _pj_targets)
+    get_target_property(_pj_type ${_pj_tgt} TYPE)
+    if(NOT _pj_type MATCHES "^(EXECUTABLE|STATIC_LIBRARY|SHARED_LIBRARY|MODULE_LIBRARY)$")
+      continue()
+    endif()
+    set(_pj_set FALSE)
+    foreach(_pj_kind RUNTIME LIBRARY ARCHIVE)
+      get_target_property(_pj_out ${_pj_tgt} ${_pj_kind}_OUTPUT_DIRECTORY)
+      if(_pj_out)
+        set(_pj_set TRUE)
+      endif()
+    endforeach()
+    if(_pj_set)
+      continue()
+    endif()
+
+    if(_pj_type STREQUAL "EXECUTABLE")
+      get_target_property(_pj_sub ${_pj_tgt} PJ_OUTPUT_SUBDIR)
+      if(_pj_sub)
+        set(_pj_out "${_pj_bin}/${_pj_sub}")
+      else()
+        set(_pj_out "${_pj_bin}")
+      endif()
+    else()
+      set(_pj_out "${_pj_lib}")
+    endif()
+    # A generator expression keeps a multi-config generator from adding a
+    # per-configuration subdirectory
+    if(_pj_multi_config)
+      set(_pj_out "$<1:${_pj_out}>")
+      foreach(_pj_cfg IN LISTS CMAKE_CONFIGURATION_TYPES)
+        string(TOUPPER "${_pj_cfg}" _pj_cfg_upper)
+        set_target_properties(${_pj_tgt} PROPERTIES
+          ${_pj_cfg_upper}_POSTFIX "-${_pj_cfg}"
+        )
+      endforeach()
+      set_target_properties(${_pj_tgt} PROPERTIES PJ_CONFIG_POSTFIX TRUE)
+    endif()
+    set_target_properties(${_pj_tgt} PROPERTIES
+      RUNTIME_OUTPUT_DIRECTORY "${_pj_out}"
+      LIBRARY_OUTPUT_DIRECTORY "${_pj_out}"
+      ARCHIVE_OUTPUT_DIRECTORY "${_pj_out}"
+    )
+  endforeach()
+endwhile()
+unset(_pj_multi_config)
+unset(_pj_dirs)
+unset(_pj_dir)
+unset(_pj_subdirs)
+unset(_pj_rel)
+unset(_pj_module)
+unset(_pj_bin)
+unset(_pj_lib)
+unset(_pj_targets)
+unset(_pj_tgt)
+unset(_pj_type)
+unset(_pj_set)
+unset(_pj_kind)
+unset(_pj_out)
+unset(_pj_sub)
+unset(_pj_cfg)
+unset(_pj_cfg_upper)
 
 # ##############################################################################
 # Installation

@@ -54,9 +54,8 @@ set(_pj_samples
 foreach(_sample IN LISTS _pj_samples)
   add_executable(${_sample} src/samples/${_sample}.c)
   target_link_libraries(${_sample} PRIVATE ${_pj_app_libs})
-  set_target_properties(${_sample} PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/samples"
-  )
+  # in bin/samples, see "Output directories" in the top-level CMakeLists.txt
+  set_target_properties(${_sample} PROPERTIES PJ_OUTPUT_SUBDIR samples)
 endforeach()
 unset(_pj_samples)
 
@@ -64,9 +63,7 @@ if(PJ_BUILD_PJSUA2)
   foreach(_sample pjsua2_demo pjsua2_hello_reg)
     add_executable(${_sample} src/samples/${_sample}.cpp)
     target_link_libraries(${_sample} PRIVATE ${_pj_app_libs} pjsua2)
-    set_target_properties(${_sample} PROPERTIES
-      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/samples"
-    )
+    set_target_properties(${_sample} PROPERTIES PJ_OUTPUT_SUBDIR samples)
   endforeach()
 endif() # PJ_BUILD_PJSUA2
 
