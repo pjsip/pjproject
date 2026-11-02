@@ -194,8 +194,8 @@ static unsigned text_of(pj_uint16_t seq, char *buf)
  * previous red_level packets as redundant blocks (RFC 4103). The blocks
  * before first_seq are empty, unless it is -1.
  */
-static unsigned build_pkt(pj_uint16_t seq, pj_uint32_t ssrc, int red_level,
-                          int first_seq, pj_uint8_t *pkt)
+static unsigned build_pkt(pj_uint16_t seq, pj_uint32_t ssrc, pj_bool_t red,
+                          int red_level, int first_seq, pj_uint8_t *pkt)
 {
     pjmedia_rtp_hdr *hdr = (pjmedia_rtp_hdr*)pkt;
     pj_uint32_t ts = (pj_uint32_t)seq * 300;
@@ -206,12 +206,12 @@ static unsigned build_pkt(pj_uint16_t seq, pj_uint32_t ssrc, int red_level,
 
     pj_bzero(hdr, sizeof(*hdr));
     hdr->v = 2;
-    hdr->pt = red_level ? RED_PT : T140_PT;
+    hdr->pt = red ? RED_PT : T140_PT;
     hdr->seq = pj_htons(seq);
     hdr->ts = pj_htonl(ts);
     hdr->ssrc = pj_htonl(ssrc);
 
-    if (red_level == 0) {
+    if (!red) {
         len = text_of(seq, text);
         pj_memcpy(p, text, len);
         return (unsigned)sizeof(pjmedia_rtp_hdr) + len;
@@ -254,6 +254,8 @@ typedef struct scenario
     int          ssrc_start;        /* First sequence of the other SSRC,
                                        its earlier RED blocks are empty */
     pj_bool_t    has_rem_ssrc;      /* SSRC in SDP */
+    unsigned     red_level_mask;    /* Bit i set: packet i has no
+                                       redundant blocks (RED only) */
 } scenario;
 
 static const scenario scenarios[] =
@@ -261,6 +263,11 @@ static const scenario scenarios[] =
     { "packet lost at stream start", 4,
       { 100, 102, 103, 104 },
       { "a?cde", "abcde" } },
+
+    /* Without RED, the first packet can't be known to be lost */
+    { "first packet lost", 3,
+      { 101, 102, 103 },
+      { "bcd", "abcd" } },
 
     { "reordering at stream start", 5,
       { 100, 102, 101, 103, 104 },
@@ -330,7 +337,7 @@ static const scenario scenarios[] =
 
     { "packet lost at sequence wrap", 7,
       { 65532, 65533, 65534, 0, 1, 2, 3 },
-      { "CDE?GHIJ", "CDEFGHIJ" } },
+      { "CDE?GHIJ", "ABCDEFGHIJ" } },
 
     { "late packets", 16,
       { 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112,
@@ -355,7 +362,14 @@ static const scenario scenarios[] =
      */
     { "remote sequence restart back by less than 100", 9,
       { 110, 111, 112, 113, 114, 115, 100, 101, 102 },
-      { "klmnop", "klmnop" } },
+      { "klmnop", "ijklmnop" } },
+
+    /* Known limitation: two consecutive packets more than MAX_MISORDER
+     * late look like a restart, so they are shown after newer text.
+     */
+    { "packets more than 100 late", 10,
+      { 100, 101, 102, 300, 301, 110, 111, 302, 303, 304 },
+      { "abc????????l?", "abc?????jkl" } },
 
     /* A new SSRC restarts the sequence once confirmed */
     { "remote restart with a new SSRC", 7,
@@ -368,7 +382,7 @@ static const scenario scenarios[] =
 
     { "new SSRC with a lower sequence", 9,
       { 110, 111, 112, 113, 114, 115, 100, 101, 102 },
-      { "klmnop?bc", "klmnopabc" }, 0x1C0, 100 },
+      { "klmnop?bc", "ijklmnopabc" }, 0x1C0, 100 },
 
     { "new SSRC with loss", 6,
       { 100, 101, 102, 103, 40001, 40002 },
@@ -404,6 +418,14 @@ static const scenario scenarios[] =
       { 100, 101, 102, 103, 40000, 40001, 40002, 108, 109 },
       { "abcd?OP?????j", "abcdNOP???hij" }, 0x70, 40000 },
 
+    /* Late packets of the sequence before a jump are only dropped shortly
+     * after the jump, later a restart near it is accepted.
+     */
+    { "restart near the sequence before a long loss", 17,
+      { 100, 101, 102, 300, 301, 302, 303, 304, 305, 306, 307, 308, 309,
+        98, 99, 100, 101 },
+      { "abc????????ab", "abc?????ab" } },
+
     { "several remote sequence restarts", 10,
       { 100, 101, 102, 40000, 40001, 20100, 20101, 65534, 0, 1 },
       { "abc?O?X??GH", "abcNOXXEFGH" } },
@@ -413,6 +435,13 @@ static const scenario scenarios[] =
       { 100, 101, 102, 5000, 5001, 103, 104 },
       { "abc??e", "abcXde" }, 0x18, 5000 },
 
+    /* Known limitation: an old stream sending two packets in a row while
+     * the current one is idle looks like an SSRC change.
+     */
+    { "old SSRC sending while idle", 8,
+      { 100, 101, 102, 103, 40000, 40001, 104, 105 },
+      { "abcd?O?f", "abcdNOef" }, 0x30, 40000 },
+
     /* With SSRC in SDP, packets with another SSRC are dropped */
     { "strays with another SSRC, SSRC in SDP", 7,
       { 100, 101, 102, 5000, 5001, 103, 104 },
@@ -421,6 +450,24 @@ static const scenario scenarios[] =
     { "another SSRC during probation, SSRC in SDP", 4,
       { 100, 102, 103, 104 },
       { "a??de", "abcde" }, 0x02, 102, PJ_TRUE },
+
+    /* RTP flags the real 102 as a duplicate of the dropped one */
+    /* No lost text marker is missed with RED without redundant blocks */
+    { "RED without redundant blocks after loss", 5,
+      { 100, 101, 102, 104, 105 },
+      { "abc?ef", "abc?ef" }, 0, 0, PJ_FALSE, 0x18 },
+
+    { "RED without redundant blocks after long loss", 5,
+      { 100, 101, 102, 120, 121 },
+      { "abc???????v", "abc???????v" }, 0, 0, PJ_FALSE, 0x18 },
+
+    { "same sequence with another SSRC after loss", 4,
+      { 100, 102, 102, 103 },
+      { "a?cd", "abcd" }, 0x02, 102 },
+
+    { "same sequence with another SSRC after loss, SSRC in SDP", 4,
+      { 100, 102, 102, 103 },
+      { "a?cd", "abcd" }, 0x02, 102, PJ_TRUE },
 
     /* RTP starts its sequence at the stray, so 100 fails probation */
     { "stray with another SSRC first, SSRC in SDP", 5,
@@ -440,7 +487,11 @@ static const scenario scenarios[] =
 
     { "another SSRC, then the SDP SSRC, SSRC in SDP", 8,
       { 40000, 40001, 40002, 100, 101, 102, 40003, 103 },
-      { "?OP?abcd", "NOPabcd" }, 0x47, 40000, PJ_TRUE },
+      { "?OP?bcd", "NOPabcd" }, 0x47, 40000, PJ_TRUE },
+
+    { "stray with the SDP SSRC, SSRC in SDP", 5,
+      { 40000, 40001, 40002, 100, 40003 },
+      { "?OPQ", "NOPQ" }, 0x17, 40000, PJ_TRUE },
 };
 
 /* RTCP counts an RTP-bad packet as discarded only if the stream did */
@@ -510,12 +561,14 @@ static int run_scenario(pjmedia_endpt *endpt, const scenario *sc,
         pj_uint8_t pkt[128];
         pjmedia_tp_cb_param param;
         pj_bool_t other = (sc->ssrc_mask & (1 << i)) != 0;
+        pj_bool_t level0 = (sc->red_level_mask & (1 << i)) != 0;
 
         pj_bzero(&param, sizeof(param));
         param.user_data = stub.user_data;
         param.pkt = pkt;
         param.size = build_pkt(sc->seq[i], other ? SSRC + 1 : SSRC,
-                               red_level, other ? sc->ssrc_start : -1, pkt);
+                               red_level != 0, level0 ? 0 : red_level,
+                               other ? sc->ssrc_start : -1, pkt);
         (*stub.rtp_cb2)(&param);
     }
 
