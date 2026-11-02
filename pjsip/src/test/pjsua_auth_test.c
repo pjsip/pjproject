@@ -38,6 +38,9 @@
  *   7. UPDATE whose retry with credentials can't be sent: its offer is not
  *      left pending.
  *   8. The same for a re-INVITE.
+ *   9. UPDATE adding a stream, answered with 302: its provisional media is
+ *      reverted.
+ *  10. The same for a re-INVITE.
  */
 
 #include "test.h"
@@ -52,7 +55,7 @@
 /* SIP user name used to filter requests belonging to this test module */
 #define TEST_USER   "pjsua-auth-test"
 
-/* Users of the call in sub-tests 5 to 8 */
+/* Users of the call in sub-tests 5 to 10 */
 #define CALLER_USER "pjsua-auth-caller"
 #define CALLEE_USER "pjsua-auth-callee"
 
@@ -832,7 +835,7 @@ static int acc_delete_deferred_test(pjsua_transport_id tp_id, int port)
 
 
 /*****************************************************************************
- * Call from an account with credentials, used by sub-tests 5 to 8
+ * Call from an account with credentials, used by sub-tests 5 to 10
  *****************************************************************************/
 typedef struct {
     pjsua_acc_id  caller;
@@ -1224,6 +1227,81 @@ on_return:
 
 
 /*****************************************************************************
+ * Sub-tests 9 and 10: offer_3xx_test
+ *
+ * An UPDATE (9) or a re-INVITE (10) that adds a stream is answered with
+ * 302: the provisional media of the request must be reverted.
+ *****************************************************************************/
+
+/* Gets the numbers of active and provisional media of the call */
+static pj_bool_t get_media_counts(pjsua_call_id call_id, unsigned *med_cnt,
+                                  unsigned *prov_cnt)
+{
+    pjsip_inv_session *inv = call_inv(call_id);
+
+    if (!inv)
+        return PJ_FALSE;
+    pjsip_dlg_inc_lock(inv->dlg);
+    *med_cnt = pjsua_var.calls[call_id].med_cnt;
+    *prov_cnt = pjsua_var.calls[call_id].med_prov_cnt;
+    pjsip_dlg_dec_lock(inv->dlg);
+    return PJ_TRUE;
+}
+
+static int offer_3xx_test(pjsua_transport_id tp_id, int port,
+                          pj_bool_t update)
+{
+    const int          rc_base = update ? -2480 : -2490;
+    test_call_t        tc;
+    pjsua_call_info    ci;
+    pjsua_call_setting opt;
+    unsigned           med_cnt, prov_cnt;
+    pj_status_t        status;
+    int                rc;
+
+    PJ_LOG(3, (THIS_FILE, "  pjsua auth: %s answered with 302",
+               update ? "UPDATE" : "re-INVITE"));
+
+    mock_proxy_reset();
+    rc = test_call_start(&tc, tp_id, port, rc_base);
+    if (rc != 0)
+        goto on_return;
+
+    if (pjsua_call_get_info(tc.call_id, &ci) != PJ_SUCCESS) {
+        rc = rc_base - 5;
+        goto on_return;
+    }
+    opt = ci.setting;
+    opt.aud_cnt++;
+
+    mock_proxy_arm(302, update, PJ_FALSE);
+    status = update ? pjsua_call_update2(tc.call_id, &opt, NULL) :
+                      pjsua_call_reinvite2(tc.call_id, &opt, NULL);
+    if (status != PJ_SUCCESS) {
+        rc = rc_base - 6;
+        goto on_return;
+    }
+    if (!wait_answered(tc.call_id, 1) ||
+        !get_media_counts(tc.call_id, &med_cnt, &prov_cnt))
+    {
+        rc = rc_base - 7;
+        goto on_return;
+    }
+    if (prov_cnt != med_cnt) {
+        PJ_LOG(3, (THIS_FILE, "    error: provisional media not reverted "
+                   "(%u, active %u)", prov_cnt, med_cnt));
+        rc = rc_base - 8;
+    }
+
+on_return:
+    mock_proxy_reset();
+    test_call_end(&tc);
+
+    return rc;
+}
+
+
+/*****************************************************************************
  * Main entry point
  *****************************************************************************/
 int pjsua_auth_test(void)
@@ -1363,6 +1441,12 @@ int pjsua_auth_test(void)
     if (rc != 0) goto on_return;
 
     rc = retry_unsent_test(tp_id, (int)port, PJ_FALSE);
+    if (rc != 0) goto on_return;
+
+    rc = offer_3xx_test(tp_id, (int)port, PJ_TRUE);
+    if (rc != 0) goto on_return;
+
+    rc = offer_3xx_test(tp_id, (int)port, PJ_FALSE);
     if (rc != 0) goto on_return;
 
 on_return:
