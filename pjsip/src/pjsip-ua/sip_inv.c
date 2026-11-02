@@ -4876,8 +4876,11 @@ static pj_bool_t inv_handle_update_response( pjsip_inv_session *inv,
 
                 /* Re-send request. */
                 status = pjsip_inv_send_msg(inv, tdata);
-                if (status != PJ_SUCCESS && tsx_inv_data)
-                    tsx_inv_data->retrying = PJ_FALSE;
+                if (status != PJ_SUCCESS) {
+                    tsx->last_tx->auth_retry = PJ_FALSE;
+                    if (tsx_inv_data)
+                        tsx_inv_data->retrying = PJ_FALSE;
+                }
             }
             /* Somehow failed. Probably it's not a good idea to
              * terminate the session since this is just a request
@@ -5435,6 +5438,7 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
 
         /* No retry follows */
         if (status != PJ_SUCCESS) {
+            tsx->last_tx->auth_retry = PJ_FALSE;
             cancel_failed_offer(
                 inv, (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id]);
         }

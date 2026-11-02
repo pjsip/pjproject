@@ -4068,7 +4068,7 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold2(pjsua_call_id call_id,
     /* Add additional headers etc */
     pjsua_process_msg_data( tdata, msg_data);
 
-    /* Mark the tx_data to keep track the operation */
+    /* Mark the tx_data to keep track of the operation */
     tdata->mod_data[pjsua_var.mod.id] = HOLD_REQ;
 
     /* Send the request */
@@ -7553,14 +7553,13 @@ on_return:
 
 
 /*
- * A 401/407 to our re-INVITE with an SDP offer is final if the offer is
+ * A 401/407 to our request with an SDP offer is final if the offer is
  * no longer pending: a retry with credentials, sync or deferred, keeps it.
  */
 static pj_bool_t is_unretried_auth_failure(pjsua_call *call,
                                            pjsip_transaction *tsx)
 {
-    return call->inv->state == PJSIP_INV_STATE_CONFIRMED &&
-           tsx->last_tx && tsx->last_tx->msg->body && call->inv->neg &&
+    return tsx->last_tx && tsx->last_tx->msg->body && call->inv->neg &&
            pjmedia_sdp_neg_get_state(call->inv->neg) !=
                 PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER;
 }
@@ -7734,7 +7733,8 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
                ((!PJSIP_IS_STATUS_IN_CLASS(tsx->status_code, 300) ||
                  inv->state == PJSIP_INV_STATE_CONFIRMED) &&
                 ((tsx->status_code!=401 && tsx->status_code!=407) ||
-                 is_unretried_auth_failure(call, tsx)) &&
+                 (inv->state == PJSIP_INV_STATE_CONFIRMED &&
+                  is_unretried_auth_failure(call, tsx))) &&
                 tsx->status_code!=422))
     {
         if (tsx->status_code/100 == 2) {
@@ -7785,7 +7785,8 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
                pjsip_method_cmp(&tsx->method, &pjsip_update_method)==0 &&
                tsx->state >= PJSIP_TSX_STATE_COMPLETED &&
                e->body.tsx_state.prev_state < PJSIP_TSX_STATE_COMPLETED &&
-               tsx->status_code!=401 && tsx->status_code!=407 &&
+               ((tsx->status_code!=401 && tsx->status_code!=407) ||
+                is_unretried_auth_failure(call, tsx)) &&
                tsx->status_code!=422)
     {
         if (tsx->last_tx->msg->body &&
