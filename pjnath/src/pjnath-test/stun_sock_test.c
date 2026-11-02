@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -834,6 +834,81 @@ on_return:
 }
 
 
+/*
+ * The SRV query of the server is answered from the cache, and the socket is
+ * destroyed while the DNS A query is pending: the late answer must not
+ * reach the destroyed socket.
+ */
+static int dns_pending_destroy_test(pj_stun_config *cfg)
+{
+    pj_str_t host = pj_str("stun.example.test");
+    pj_str_t srv_name = pj_str("_stun._udp.stun.example.test");
+    pj_str_t ns = pj_str("127.0.0.1");
+    pj_dns_server *dns = NULL;
+    pj_dns_resolver *res = NULL;
+    struct stun_client *client = NULL;
+    pj_dns_parsed_rr rr;
+    pj_sockaddr addr;
+    pj_in_addr ip;
+    pj_uint16_t port;
+    int i, ret = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  destroy with a pending DNS query test"));
+
+    PJ_TEST_SUCCESS(pj_dns_server_create(mem, cfg->ioqueue, pj_AF_INET(),
+                                         0, 0, &dns),
+                    NULL, return -800);
+    PJ_TEST_SUCCESS(pj_dns_server_get_addr(dns, &addr), NULL,
+                    {ret = -801; goto on_return;});
+    port = pj_sockaddr_get_port(&addr);
+    ip = pj_inet_addr2("127.0.0.1");
+    pj_dns_init_a_rr(&rr, &host, PJ_DNS_CLASS_IN, 60, &ip);
+    PJ_TEST_SUCCESS(pj_dns_server_add_rec(dns, 1, &rr), NULL,
+                    {ret = -802; goto on_return;});
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_create(mem, NULL, 0, cfg->timer_heap,
+                                           cfg->ioqueue, &res),
+                    NULL, {ret = -803; goto on_return;});
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(res, 1, &ns, &port), NULL,
+                    {ret = -804; goto on_return;});
+
+    /* No SRV record: the negative answer of the server is cached */
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &srv_name,
+                                                PJ_DNS_TYPE_SRV, 0, NULL,
+                                                NULL, NULL),
+                    NULL, {ret = -805; goto on_return;});
+    for (i = 0; pj_dns_resolver_get_cached_count(res) < 1 && i < 50; ++i)
+        handle_events(cfg, 100);
+    PJ_TEST_EQ(pj_dns_resolver_get_cached_count(res), 1, NULL,
+               {ret = -806; goto on_return;});
+
+    PJ_TEST_SUCCESS(create_client(cfg, &client, PJ_FALSE, PJ_FALSE), NULL,
+                    {ret = -807; goto on_return;});
+    PJ_TEST_SUCCESS(pj_stun_sock_start(client->sock, &host, PJ_STUN_PORT,
+                                       res),
+                    NULL, {ret = -808; goto on_return;});
+    pj_stun_sock_destroy(client->sock);
+    client->sock = NULL;
+
+    /* The late answer to the DNS A query is only cached */
+    for (i = 0; pj_dns_resolver_get_cached_count(res) < 2 && i < 50; ++i)
+        handle_events(cfg, 100);
+    PJ_TEST_EQ(pj_dns_resolver_get_cached_count(res), 2, NULL,
+               {ret = -809; goto on_return;});
+
+on_return:
+    if (client)
+        destroy_client(client);
+    if (res)
+        pj_dns_resolver_destroy(res, PJ_FALSE);
+    if (dns)
+        pj_dns_server_destroy(dns);
+    for (i = 0; i < 5; ++i)
+        handle_events(cfg, 50);
+
+    return ret;
+}
+
 #define DO_TEST(expr)       \
             capture_pjlib_state(&app_sess.stun_cfg, &pjlib_state); \
             ret = expr; \
@@ -860,6 +935,8 @@ int stun_sock_test(void)
     DO_TEST(missing_attr_test(&app_sess.stun_cfg, PJ_TRUE, USE_IPV6));
 
     DO_TEST(keep_alive_test(&app_sess.stun_cfg, USE_IPV6));
+
+    DO_TEST(dns_pending_destroy_test(&app_sess.stun_cfg));
 
 on_return:
     destroy_stun_config(&app_sess);

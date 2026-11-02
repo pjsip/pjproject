@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -303,7 +303,8 @@ PJ_DEF(pj_status_t) pj_dns_srv_resolve( const pj_str_t *domain_name,
         return status;
     }
 
-    if (query_job->q_srv)
+    /* A cached SRV answer may leave the A/AAAA queries pending */
+    if (!query_job->deferred_cb)
         p_q = query_job;
 
     if (p_query)
