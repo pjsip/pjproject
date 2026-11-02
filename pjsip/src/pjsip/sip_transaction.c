@@ -182,6 +182,8 @@ static void        tsx_set_state( pjsip_transaction *tsx,
                                   pjsip_event_id_e event_src_type,
                                   void *event_src,
                                   int flag);
+static void        tsx_set_failure_code(pjsip_transaction *tsx,
+                                        int code, const pj_str_t *reason);
 static void        tsx_set_status_code(pjsip_transaction *tsx,
                                        int code, const pj_str_t *reason);
 static pj_status_t tsx_create( pjsip_module *tsx_user,
@@ -1383,14 +1385,12 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
                 return;
             }
 
-            if (tsx->status_code < 200 && tsx->term_code) {
-                tsx_set_status_code(tsx, tsx->term_code, NULL);
-            } else if (tsx->status_code < 200) {
+            if (tsx->status_code < 200) {
                 pj_str_t err;
                 char errmsg[PJ_ERR_MSG_SIZE];
 
                 err = pj_strerror(tsx->transport_err, errmsg, sizeof(errmsg));
-                tsx_set_status_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
+                tsx_set_failure_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
             }
 
             /* Set transaction state etc, but don't notify TU now,
@@ -1932,6 +1932,20 @@ static void tsx_set_status_code(pjsip_transaction *tsx,
 
 
 /*
+ * Set the status code of a transport failure, unless an asynchronous
+ * termination has given one.
+ */
+static void tsx_set_failure_code(pjsip_transaction *tsx,
+                                 int code, const pj_str_t *reason)
+{
+    if (!tsx->term_code)
+        tsx_set_status_code(tsx, code, reason);
+    else if (tsx->status_code != tsx->term_code)
+        tsx_set_status_code(tsx, tsx->term_code, NULL);
+}
+
+
+/*
  * Forcely terminate transaction.
  */
 PJ_DEF(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx, int code )
@@ -1988,8 +2002,15 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate_async2(pjsip_transaction *tsx,
 
     PJ_ASSERT_RETURN(code >= 200, PJ_EINVAL);
 
-    /* Set termination status code, if not yet */
     pj_grp_lock_acquire(tsx->grp_lock);
+
+    /* Already terminated: keep its destroy timer */
+    if (tsx->state >= PJSIP_TSX_STATE_TERMINATED) {
+        pj_grp_lock_release(tsx->grp_lock);
+        return PJ_SUCCESS;
+    }
+
+    /* Set termination status code, if not yet */
     if (tsx->status_code < 200)
         tsx_set_status_code(tsx, code, reason);
 
@@ -2334,7 +2355,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
                 tsx->state != PJSIP_TSX_STATE_TERMINATED &&
                 tsx->state != PJSIP_TSX_STATE_DESTROYED)
             {
-                tsx_set_status_code(tsx, sc, &err);
+                tsx_set_failure_code(tsx, sc, &err);
                 /* Set tsx state to TERMINATED, but release the lock
                  * when invoking the callback, to avoid deadlock.
                  */
@@ -2347,7 +2368,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
              */
             else if (tsx->transport_flag & TSX_HAS_PENDING_DESTROY)
             {
-                tsx_set_status_code(tsx, sc, &err);
+                tsx_set_failure_code(tsx, sc, &err);
                 tsx_set_state( tsx, PJSIP_TSX_STATE_DESTROYED, 
                                PJSIP_EVENT_TRANSPORT_ERROR,
                                send_state->tdata, 0);
@@ -2689,7 +2710,7 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
                   "Err=%d (%s)",
                   status, errmsg));
 
-        tsx_set_status_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
+        tsx_set_failure_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
         tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
                        PJSIP_EVENT_TRANSPORT_ERROR, NULL, 0 );
 
@@ -2726,7 +2747,7 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
             pj_str_t err;
 
             err = pj_strerror(status, errmsg, sizeof(errmsg));
-            tsx_set_status_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
+            tsx_set_failure_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
 
             tsx->transport_flag &= ~(TSX_HAS_PENDING_TRANSPORT);
             pj_grp_lock_dec_ref(tsx->grp_lock);

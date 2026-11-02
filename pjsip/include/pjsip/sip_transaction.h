@@ -427,6 +427,7 @@ PJ_DECL(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx,
  * Force terminate transaction asynchronously, using the transaction
  * internal timer. Until then, a client transaction doesn't retransmit
  * its request, and a provisional response doesn't cancel the termination.
+ * A transaction already terminated is left as it is.
  *
  * @param tsx       The transaction.
  * @param code      The status code to report. This is applied only if
@@ -442,6 +443,7 @@ PJ_DECL(pj_status_t) pjsip_tsx_terminate_async(pjsip_transaction *tsx,
  * Force terminate transaction asynchronously, using the transaction
  * internal timer. Until then, a client transaction doesn't retransmit
  * its request, and a provisional response doesn't cancel the termination.
+ * A transaction already terminated is left as it is.
  *
  * @param tsx       The transaction.
  * @param code      The status code to report. This is applied only if
