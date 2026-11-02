@@ -1138,6 +1138,26 @@ target_link_libraries(pjmedia-videodev
     $<$<BOOL:${PJMEDIA_WITH_LIBYUV}>:Pj::Dep::YUV>
 )
 
+# sdl_dev.c asks MSVC to link "sdl2.lib" with #pragma comment(lib); name the
+# file actually linked instead, which differs per configuration (SDL2d.lib in
+# a vcpkg Debug build)
+if(MSVC AND PJMEDIA_WITH_VIDEODEV_SDL)
+  set(_pj_sdl_target SDL2::SDL2)
+  get_target_property(_pj_sdl_aliased SDL2::SDL2 ALIASED_TARGET)
+  if(_pj_sdl_aliased)
+    set(_pj_sdl_target ${_pj_sdl_aliased})
+  endif()
+  get_target_property(_pj_sdl_type ${_pj_sdl_target} TYPE)
+  if(NOT _pj_sdl_type STREQUAL "INTERFACE_LIBRARY")
+    target_compile_definitions(pjmedia-videodev PRIVATE
+      "PJMEDIA_SDL_LIB=\"$<TARGET_LINKER_FILE_NAME:${_pj_sdl_target}>\""
+    )
+  endif()
+  unset(_pj_sdl_target)
+  unset(_pj_sdl_aliased)
+  unset(_pj_sdl_type)
+endif()
+
 # DirectShow capture is the only user of the bundled BaseClasses, so they are
 # compiled in here rather than built and installed as a library of their own.
 if(PJMEDIA_WITH_VIDEODEV_DSHOW)
