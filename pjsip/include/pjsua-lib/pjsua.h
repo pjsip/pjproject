@@ -5864,7 +5864,7 @@ PJ_DECL(pj_status_t) pjsua_acc_set_online_status2(pjsua_acc_id acc_id,
  *
  * After an unregistration, pjsua doesn't register the account again by
  * itself, e.g: on IP change or with an auto retry, until the application
- * renews the registration.
+ * renews the registration or modifies the account so that it registers.
  *
  * @param acc_id        The account ID.
  * @param renew         If renew argument is zero, this will start 

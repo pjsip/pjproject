@@ -52,13 +52,11 @@
  *  11. PJSUA_CONTACT_REWRITE_ALWAYS_UPDATE alone, which names no 2xx
  *      method: the rewrite must still reach the registrar.
  *  12. UNREGISTER and NO_UNREG together, likewise.
- *  13. An IP change, or an auto retry, must not register an account that
- *      the application unregistered, also when the unregistration failed
- *      or its TCP connection was lost. An IP change must still register
- *      an account whose registration failed, whose regc was dropped by a
- *      modify with disable_reg_on_modify, or whose unregistration was
- *      refused because a REGISTER was pending. A registration refused
- *      because the unregistration was pending changes nothing.
+ *  13. pjsua must not register an account that the application
+ *      unregistered: not on IP change, by an auto retry or by a NAT
+ *      Contact rewrite, also when the unregistration failed or went out
+ *      while another REGISTER was completing. A call refused with
+ *      PJSIP_EBUSY changes nothing, a later registration undoes it.
  */
 
 #include "test.h"
@@ -94,15 +92,17 @@ static struct {
     char          last_contact[PJSIP_MAX_URL_SIZE];  /* as seen on the wire */
     /* host of the first Contact not sent with expires=0 */
     char          live_host[PJ_INET6_ADDRSTRLEN + 16];
+    unsigned      reg_count;    /* requests that add a binding */
     int           code;         /* response code, or 0 for 200 */
     pj_bool_t     drop;         /* don't answer */
-    int           dropped;      /* set when a request was not answered */
+    pj_bool_t     dropped;      /* a request was not answered */
 } g_mock_reg = {
     {
         NULL, NULL,
         { "mod-pjsua-acc-reg", 17 },
         -1,
-        PJSIP_MOD_PRIORITY_APPLICATION,
+        /* Before pjsua's module, which takes PJSUA_LOCK */
+        PJSIP_MOD_PRIORITY_APPLICATION - 1,
         NULL, NULL, NULL, NULL,
         &mock_registrar_rx_request,
         NULL, NULL, NULL, NULL,
@@ -122,7 +122,7 @@ static pj_bool_t mock_registrar_rx_request(pjsip_rx_data *rdata)
 
     g_mock_reg.req_count++;
     if (g_mock_reg.drop) {
-        g_mock_reg.dropped = 1;
+        g_mock_reg.dropped = PJ_TRUE;
         return PJ_TRUE;
     }
 
@@ -169,21 +169,23 @@ static pj_bool_t mock_registrar_rx_request(pjsip_rx_data *rdata)
         }
     }
 
+    {
+        pjsip_expires_hdr *he = (pjsip_expires_hdr*)
+                                pjsip_msg_find_hdr(msg, PJSIP_H_EXPIRES,
+                                                   NULL);
+        if (g_mock_reg.live_host[0] && (!he || he->ivalue))
+            g_mock_reg.reg_count++;
+    }
+
     if (g_mock_reg.received) {
         pj_strdup2(rdata->tp_info.pool, &rdata->msg_info.via->recvd_param,
                    g_mock_reg.received);
     }
 
     pj_list_init(&hdr_list);
-    {
-        /* An unregistration is answered with Expires: 0 */
-        pjsip_expires_hdr *he = (pjsip_expires_hdr*)
-                                pjsip_msg_find_hdr(msg, PJSIP_H_EXPIRES,
-                                                   NULL);
-        pj_list_push_back(&hdr_list,
-                          pjsip_expires_hdr_create(rdata->tp_info.pool,
-                                (he && he->ivalue == 0)? 0 : TEST_EXPIRES));
-    }
+    pj_list_push_back(&hdr_list,
+                      pjsip_expires_hdr_create(rdata->tp_info.pool,
+                                               TEST_EXPIRES));
 
     pjsip_endpt_respond_stateless(pjsua_get_pjsip_endpt(), rdata,
                                   g_mock_reg.code ? g_mock_reg.code : 200,
@@ -257,17 +259,35 @@ static struct {
     pj_bool_t   reg_done;
     int         reg_code;
     unsigned    reg_ok_count;
+    pj_bool_t   unreg_done;     /* an unregistration was answered */
+    int         ipc_update_cnt; /* ACC_UPDATE_CONTACT reports */
+    int         ipc_done_cnt;   /* COMPLETED reports */
 } g_ctx;
 
 static void on_reg_state2(pjsua_acc_id acc_id, pjsua_reg_info *info)
 {
     PJ_UNUSED_ARG(acc_id);
 
+    if (!info->renew)
+        g_ctx.unreg_done = PJ_TRUE;
     g_ctx.reg_code = info->cbparam->code;
     if (info->cbparam->code / 100 == 2) {
         g_ctx.reg_ok_count++;
         g_ctx.reg_done = PJ_TRUE;
     }
+}
+
+
+static void on_ip_change_progress(pjsua_ip_change_op op, pj_status_t status,
+                                  const pjsua_ip_change_op_info *info)
+{
+    PJ_UNUSED_ARG(status);
+    PJ_UNUSED_ARG(info);
+
+    if (op == PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT)
+        g_ctx.ipc_update_cnt++;
+    else if (op == PJSUA_IP_CHANGE_OP_COMPLETED)
+        g_ctx.ipc_done_cnt++;
 }
 
 
@@ -339,15 +359,30 @@ static int check_acc_reg_contact(pjsua_acc_id acc_id, pj_bool_t require_uri)
     return rc;
 }
 
+/* Pump the event loop for the whole period, or until *flag is set.
+ * Without timers, only the network.
+ */
+static void pump_events(unsigned ms, const int *flag, pj_bool_t timers)
+{
+    pj_ioqueue_t *ioq = pjsip_endpt_get_ioqueue(pjsua_get_pjsip_endpt());
+    pj_time_val end, now, timeout = {0, 10};
+
+    pj_gettickcount(&end);
+    end.msec += ms;
+    pj_time_val_normalize(&end);
+    do {
+        if (timers)
+            pjsua_handle_events(10);
+        else
+            pj_ioqueue_poll(ioq, &timeout);
+        pj_gettickcount(&now);
+    } while ((!flag || !*flag) && PJ_TIME_VAL_LT(now, end));
+}
+
 /* Pump the event loop until the pending registration completes. */
 static int wait_reg(unsigned max_ms)
 {
-    unsigned elapsed = 0;
-
-    while (elapsed < max_ms && !g_ctx.reg_done) {
-        pjsua_handle_events(50);
-        elapsed += 50;
-    }
+    pump_events(max_ms, &g_ctx.reg_done, PJ_TRUE);
     return g_ctx.reg_done ? 0 : -1;
 }
 
@@ -698,27 +733,31 @@ on_return:
 
 
 /*****************************************************************************
- * IP change
+ * Unregistered by the application
  *****************************************************************************/
 
-typedef enum ip_change_action
+typedef enum unreg_action
 {
-    IPC_UNREG,          /* unregister */
-    IPC_REG_FAILED,     /* registration fails with 503 */
-    IPC_UNREG_FAILED,   /* unregistration fails with 503 */
-    IPC_MODIFY,         /* modify with disable_reg_on_modify */
-    IPC_UNREG_TCP_LOST, /* TCP connection lost during unregistration */
-    IPC_UNREG_BUSY,     /* unregister while a REGISTER is pending */
-    IPC_REG_BUSY,       /* register while the unregistration is pending */
-} ip_change_action;
+    UA_UNREG,           /* unregister */
+    UA_UNREG_FAILED,    /* unregistration fails with 503 */
+    UA_UNREG_SEND_FAIL, /* unregistration fails inside the send */
+    UA_REG_FAILED,      /* registration fails with 503, then unregister */
+    UA_UNREG_BUSY,      /* unregister while a REGISTER is pending */
+    UA_UNREG_RENEW,     /* unregister, then register again */
+    UA_UNREG_MODIFY,    /* unregister, then a modify that registers */
+    UA_IPC_DONE,        /* unregister before the IP change handles calls */
+    UA_NAT_WINDOW,      /* unregister while a NAT rewrite 2xx waits */
+    UA_IPC_WINDOW,      /* unregister while the IP change's 2xx waits */
+} unreg_action;
 
-typedef struct ip_change_case
+typedef struct unreg_case
 {
     const char         *title;
-    ip_change_action    action;
+    unreg_action        action;
+    int                 method;         /* contact_rewrite_method */
     pj_bool_t           expect_reg;     /* IP change must register */
     int                 rc;
-} ip_change_case;
+} unreg_case;
 
 static pj_status_t ip_change(void)
 {
@@ -730,164 +769,199 @@ static pj_status_t ip_change(void)
     return pjsua_handle_ip_change(&param);
 }
 
-/* Pump the event loop for the whole period, or until *flag is non-zero */
-static void pump_events(unsigned ms, const int *flag)
-{
-    pj_time_val end, now;
+#if PJ_HAS_THREADS
+static pj_bool_t g_poll_stop;
 
-    pj_gettickcount(&end);
-    end.msec += ms;
-    pj_time_val_normalize(&end);
-    do {
-        pjsua_handle_events(50);
-        pj_gettickcount(&now);
-    } while ((!flag || !*flag) && PJ_TIME_VAL_LT(now, end));
+static int poll_thread(void *arg)
+{
+    PJ_UNUSED_ARG(arg);
+    while (!g_poll_stop)
+        pjsua_handle_events(10);
+    return 0;
 }
 
-/* Send a request that the registrar sees but doesn't answer yet */
-static pj_status_t send_unanswered(pjsua_acc_id acc_id, pj_bool_t renew)
+/* Unregister while another thread's registration callback for the 2xx of
+ * the request sent first waits for PJSUA_LOCK.
+ */
+static pj_bool_t unreg_in_window(pjsua_acc_id acc_id, pj_bool_t ipc,
+                                 unsigned *reg_count)
 {
-    pj_status_t status;
+    pj_thread_t *thread;
+    pj_status_t status, unreg;
+    unsigned i;
 
-    g_mock_reg.drop = PJ_TRUE;
-    g_mock_reg.dropped = 0;
-    status = pjsua_acc_set_registration(acc_id, renew);
-    if (status == PJ_SUCCESS) {
-        pump_events(5000, &g_mock_reg.dropped);
-        if (!g_mock_reg.dropped)
-            status = PJ_ETIMEDOUT;
+    g_poll_stop = PJ_FALSE;
+    if (pj_thread_create(pjsua_var.pool, "acc_poll", &poll_thread, NULL,
+                         0, 0, &thread) != PJ_SUCCESS)
+    {
+        return PJ_FALSE;
     }
-    return status;
-}
 
-/* Run the action. Returns PJ_TRUE if it ended as expected. */
-static pj_bool_t ip_change_do_action(pjsua_acc_id acc_id,
-                                     pjsua_acc_config *acc_cfg,
-                                     ip_change_action action)
+    PJSUA_LOCK();
+    status = ipc? ip_change() : pjsua_acc_set_registration(acc_id, PJ_TRUE);
+    /* Accepted once the 2xx has cleared the pending transaction */
+    unreg = PJSIP_EBUSY;
+    for (i=0; status == PJ_SUCCESS && unreg == PJSIP_EBUSY && i<5000; ++i) {
+        if (i)
+            pj_thread_sleep(1);
+        unreg = pjsua_acc_set_registration(acc_id, PJ_FALSE);
+    }
+    *reg_count = g_mock_reg.reg_count;
+    PJSUA_UNLOCK();
+
+    g_poll_stop = PJ_TRUE;
+    pj_thread_join(thread);
+    pj_thread_destroy(thread);
+    return status == PJ_SUCCESS && unreg == PJ_SUCCESS;
+}
+#endif
+
+/* Run the action, and take the count of REGISTERs that add a binding once
+ * the account is unregistered. Returns PJ_TRUE if it ended as expected.
+ */
+static pj_bool_t unreg_do_action(pjsua_acc_id acc_id,
+                                 pjsua_acc_config *acc_cfg,
+                                 unreg_action action, unsigned *reg_count)
 {
     pjsua_acc *acc = &pjsua_var.acc[acc_id];
-    pjsip_regc_info reg_info;
+    pj_bool_t ok = PJ_FALSE;
+    pj_size_t pools;
     pj_status_t status;
 
     g_ctx.reg_done = PJ_FALSE;
     g_ctx.reg_code = 0;
 
     switch (action) {
-    case IPC_UNREG:
+    case UA_UNREG:
+    case UA_UNREG_RENEW:
+    case UA_UNREG_MODIFY:
         status = pjsua_acc_set_registration(acc_id, PJ_FALSE);
-        return status == PJ_SUCCESS && wait_reg(5000) == 0 &&
-               acc->regc == NULL;
+        ok = status == PJ_SUCCESS && wait_reg(5000) == 0;
+        if (!ok || action == UA_UNREG)
+            break;
+        g_ctx.reg_done = PJ_FALSE;
+        if (action == UA_UNREG_RENEW) {
+            status = pjsua_acc_set_registration(acc_id, PJ_TRUE);
+        } else {
+            acc_cfg->reg_contact_params = pj_str(";test=modify");
+            status = pjsua_acc_modify(acc_id, acc_cfg);
+        }
+        ok = status == PJ_SUCCESS && wait_reg(5000) == 0;
+        break;
 
-    case IPC_REG_FAILED:
-    case IPC_UNREG_FAILED:
+    case UA_UNREG_FAILED:
+    case UA_REG_FAILED:
         g_mock_reg.code = PJSIP_SC_SERVICE_UNAVAILABLE;
         status = pjsua_acc_set_registration(acc_id,
-                                            action == IPC_REG_FAILED);
+                                            action == UA_REG_FAILED);
         if (status == PJ_SUCCESS)
-            pump_events(5000, &g_ctx.reg_code);
+            pump_events(5000, &g_ctx.reg_code, PJ_TRUE);
         g_mock_reg.code = 0;
-        return g_ctx.reg_code == PJSIP_SC_SERVICE_UNAVAILABLE &&
-               acc->regc == NULL;
+        ok = g_ctx.reg_code == PJSIP_SC_SERVICE_UNAVAILABLE &&
+             (action == UA_UNREG_FAILED ||
+              pjsua_acc_set_registration(acc_id, PJ_FALSE) ==
+              PJ_EINVALIDOP);
+        break;
 
-    case IPC_MODIFY:
-        /* A changed reg_contact_params drops the regc, nothing is sent */
-        acc_cfg->reg_contact_params = pj_str(";test=modify");
-        acc_cfg->disable_reg_on_modify = PJ_TRUE;
-        status = pjsua_acc_modify(acc_id, acc_cfg);
-        return status == PJ_SUCCESS && acc->regc == NULL;
+    case UA_UNREG_SEND_FAIL:
+        g_fail_tx.host = g_mock_reg.live_host;
+        status = pjsua_acc_set_registration(acc_id, PJ_FALSE);
+        pump_events(1000, NULL, PJ_TRUE);
+        ok = g_fail_tx.host == NULL &&
+             (status != PJ_SUCCESS || g_ctx.reg_code >= 300);
+        break;
 
-    case IPC_UNREG_TCP_LOST:
-        status = send_unanswered(acc_id, PJ_FALSE);
+    case UA_UNREG_BUSY:
+        /* The REGISTER is answered on retransmission */
+        g_mock_reg.drop = PJ_TRUE;
+        g_mock_reg.dropped = PJ_FALSE;
+        status = pjsua_acc_set_registration(acc_id, PJ_TRUE);
+        if (status == PJ_SUCCESS)
+            pump_events(5000, &g_mock_reg.dropped, PJ_TRUE);
         g_mock_reg.drop = PJ_FALSE;
-        if (status != PJ_SUCCESS || acc->regc == NULL ||
-            pjsip_regc_get_info(acc->regc, &reg_info) != PJ_SUCCESS ||
-            reg_info.transport == NULL)
+        /* The refused request is released */
+        pools = pjsua_var.cp.used_count;
+        status = pjsua_acc_set_registration(acc_id, PJ_FALSE);
+        ok = g_mock_reg.dropped && status == PJSIP_EBUSY &&
+             pjsua_var.cp.used_count == pools &&
+             wait_reg(5000) == 0 && acc->regc != NULL;
+        break;
+
+    case UA_IPC_DONE:
+        /* The IP change's REGISTER completes, its call handling waits for
+         * the timer.
+         */
+        if (ip_change() != PJ_SUCCESS)
+            break;
+        pump_events(5000, &g_ctx.ipc_update_cnt, PJ_FALSE);
+        if (g_ctx.ipc_update_cnt != 1 ||
+            pjsua_acc_set_registration(acc_id, PJ_FALSE) != PJ_SUCCESS)
         {
-            return PJ_FALSE;
+            break;
         }
-        /* Under PJSUA_LOCK, as pjsua does on IP change */
-        PJSUA_LOCK();
-        pjsip_transport_shutdown2(reg_info.transport, PJ_TRUE);
-        PJSUA_UNLOCK();
-        return PJ_TRUE;
+        *reg_count = g_mock_reg.reg_count;
+        pump_events(5000, &g_ctx.unreg_done, PJ_FALSE);
+        return g_ctx.unreg_done;
 
-    case IPC_UNREG_BUSY:
-    case IPC_REG_BUSY:
-        /* The pending request is answered on retransmission */
-        status = send_unanswered(acc_id, action == IPC_UNREG_BUSY);
-        if (status == PJ_SUCCESS) {
-            status = pjsua_acc_set_registration(acc_id,
-                                                action == IPC_REG_BUSY);
+    case UA_NAT_WINDOW:
+    case UA_IPC_WINDOW:
+#if PJ_HAS_THREADS
+        if (action == UA_NAT_WINDOW) {
+            /* Its callback acts on >= 400 only. Without it, the 2xx waits
+             * in the registration callback, after the regc is done with it.
+             */
+            pjsip_regc_set_reg_tsx_cb(acc->regc, NULL);
+            g_mock_reg.received = "1.2.3.4";
         }
-        g_mock_reg.drop = PJ_FALSE;
-        return status == PJSIP_EBUSY && wait_reg(5000) == 0 &&
-               (acc->regc == NULL) == (action == IPC_REG_BUSY);
+        return unreg_in_window(acc_id, action == UA_IPC_WINDOW, reg_count);
+#else
+        break;
+#endif
     }
 
-    return PJ_FALSE;
+    *reg_count = g_mock_reg.reg_count;
+    return ok;
 }
 
-static int ip_change_test(pjsua_transport_id tp_id, int port,
-                          const ip_change_case *c)
+static int unreg_test(pjsua_transport_id tp_id, int port,
+                      const unreg_case *c)
 {
     pjsua_acc_config acc_cfg;
     pjsua_acc_id     acc_id = PJSUA_INVALID_ID;
-    char             reg_uri[80];
-    unsigned         req_count;
-    pj_status_t      status;
+    char             reg_uri[64];
+    unsigned         reg_count = 0;
+    pj_bool_t        window = (c->action >= UA_IPC_DONE);
     int              rc = 0;
 
-    PJ_LOG(3, (THIS_FILE, "  pjsua acc: IP change after %s", c->title));
+    PJ_LOG(3, (THIS_FILE, "  pjsua acc: unregistered by %s", c->title));
 
     pj_bzero(&g_ctx, sizeof(g_ctx));
-
-    if (c->action == IPC_UNREG_TCP_LOST) {
-        pjsua_transport_config tp_cfg;
-        pjsua_transport_info ti;
-
-        pjsua_transport_config_default(&tp_cfg);
-        status = pjsua_transport_create(PJSIP_TRANSPORT_TCP, &tp_cfg,
-                                        &tp_id);
-        if (status != PJ_SUCCESS)
-            return c->rc;
-        pjsua_transport_get_info(tp_id, &ti);
-        port = pj_sockaddr_get_port(&ti.local_addr);
-    }
-    pj_ansi_snprintf(reg_uri, sizeof(reg_uri), "sip:127.0.0.1:%d%s", port,
-                     c->action == IPC_UNREG_TCP_LOST? ";transport=tcp": "");
+    pj_ansi_snprintf(reg_uri, sizeof(reg_uri), "sip:127.0.0.1:%d", port);
 
     pjsua_acc_config_default(&acc_cfg);
     acc_cfg.id       = pj_str("sip:" TEST_USER "@pjsip.org");
     acc_cfg.reg_uri  = pj_str(reg_uri);
     acc_cfg.transport_id = tp_id;
     acc_cfg.register_on_acc_add = PJ_FALSE;
-    acc_cfg.allow_contact_rewrite = PJ_TRUE;
+    acc_cfg.allow_contact_rewrite = 2;
     acc_cfg.allow_via_rewrite = PJ_FALSE;
-    /* An account left unregistered must not be registered by an auto
-     * retry either, which would come within a second.
-     */
+    if (c->method)
+        acc_cfg.contact_rewrite_method = c->method;
+    /* An auto retry would come within a second */
     acc_cfg.reg_retry_interval = c->expect_reg? 0 : 1;
     acc_cfg.reg_first_retry_interval = acc_cfg.reg_retry_interval;
     acc_cfg.reg_retry_random_interval = 0;
 
-    status = pjsua_acc_add(&acc_cfg, PJ_FALSE, &acc_id);
-    if (status != PJ_SUCCESS) {
-        PJ_LOG(3, (THIS_FILE, "    error: pjsua_acc_add failed (%d)", status));
-        rc = c->rc;
+    if (pjsua_acc_add(&acc_cfg, PJ_FALSE, &acc_id) != PJ_SUCCESS ||
+        (c->action != UA_REG_FAILED &&
+         (pjsua_acc_set_registration(acc_id, PJ_TRUE) != PJ_SUCCESS ||
+          wait_reg(5000) != 0)))
+    {
+        rc = c->rc - 1;
         goto on_return;
     }
 
-    if (c->action != IPC_REG_FAILED) {
-        /* The first registration also rewrites the Contact */
-        status = pjsua_acc_set_registration(acc_id, PJ_TRUE);
-        if (status != PJ_SUCCESS || wait_reg(5000) != 0) {
-            PJ_LOG(3, (THIS_FILE, "    error: account did not register"));
-            rc = c->rc - 1;
-            goto on_return;
-        }
-    }
-
-    if (!ip_change_do_action(acc_id, &acc_cfg, c->action)) {
+    if (!unreg_do_action(acc_id, &acc_cfg, c->action, &reg_count)) {
         PJ_LOG(3, (THIS_FILE, "    error: the action did not end as "
                    "expected (code %d)", g_ctx.reg_code));
         rc = c->rc - 2;
@@ -904,41 +978,40 @@ static int ip_change_test(pjsua_transport_id tp_id, int port,
         goto on_return;
     }
 
-    req_count = g_mock_reg.req_count;
-    pump_events(2000, NULL);
-    if (g_mock_reg.req_count != req_count ||
+    /* Auto retry, then IP change */
+    pump_events(2000, NULL, PJ_TRUE);
+    if (!window) {
+        if (ip_change() != PJ_SUCCESS) {
+            rc = c->rc - 3;
+            goto on_return;
+        }
+        pump_events(1000, NULL, PJ_TRUE);
+    }
+    if (g_mock_reg.reg_count != reg_count ||
         pjsua_var.acc[acc_id].auto_rereg.timer.id)
     {
-        PJ_LOG(3, (THIS_FILE, "    error: auto retry registered the "
-                   "unregistered account"));
-        rc = c->rc - 3;
-        goto on_return;
-    }
-
-    if (ip_change() != PJ_SUCCESS) {
+        PJ_LOG(3, (THIS_FILE, "    error: the account was registered"));
         rc = c->rc - 4;
         goto on_return;
     }
-    pump_events(1000, NULL);
-    if (g_mock_reg.req_count != req_count ||
-        pjsua_var.acc[acc_id].regc != NULL ||
-        pjsua_var.acc[acc_id].ip_change_op != PJSUA_IP_CHANGE_OP_COMPLETED)
+    if (g_ctx.ipc_update_cnt != (c->action == UA_IPC_DONE ||
+                                 c->action == UA_IPC_WINDOW) ||
+        g_ctx.ipc_done_cnt != (c->action != UA_NAT_WINDOW))
     {
-        PJ_LOG(3, (THIS_FILE, "    error: IP change registered the "
-                   "unregistered account"));
-        rc = c->rc - 4;
-        goto on_return;
+        PJ_LOG(3, (THIS_FILE, "    error: IP change reported %d updates "
+                   "and %d completions", g_ctx.ipc_update_cnt,
+                   g_ctx.ipc_done_cnt));
+        rc = c->rc - 5;
     }
 
 on_return:
+    g_mock_reg.received = NULL;
     g_mock_reg.drop = PJ_FALSE;
+    g_mock_reg.code = 0;
+    g_fail_tx.host = NULL;
     if (acc_id != PJSUA_INVALID_ID)
         pjsua_acc_del(acc_id);
     pjsua_handle_events(500);
-    if (c->action == IPC_UNREG_TCP_LOST) {
-        pjsua_transport_close(tp_id, PJ_FALSE);
-        pjsua_handle_events(500);
-    }
     return rc;
 }
 
@@ -975,6 +1048,7 @@ int pjsua_acc_test(void)
 
     pjsua_config_default(&ua_cfg);
     ua_cfg.cb.on_reg_state2 = &on_reg_state2;
+    ua_cfg.cb.on_ip_change_progress = &on_ip_change_progress;
     /* No worker threads: everything runs from pjsua_handle_events() so
      * the Contact can be inspected at known points.
      */
@@ -1122,26 +1196,33 @@ int pjsua_acc_test(void)
     if (rc != 0) goto on_return;
 
     {
-        static const ip_change_case cases[] = {
-            { "unregistration", IPC_UNREG, PJ_FALSE, -2550 },
-            { "a failed registration", IPC_REG_FAILED, PJ_TRUE, -2555 },
-            { "a failed unregistration", IPC_UNREG_FAILED, PJ_FALSE,
-              -2560 },
-            { "a modify with disable_reg_on_modify", IPC_MODIFY, PJ_TRUE,
-              -2565 },
-#if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
-            { "an unregistration lost with its TCP connection",
-              IPC_UNREG_TCP_LOST, PJ_FALSE, -2570 },
+        static const unreg_case cases[] = {
+            { "unregistration", UA_UNREG, 0, PJ_FALSE, -4000 },
+            { "a failed unregistration", UA_UNREG_FAILED, 0, PJ_FALSE,
+              -4010 },
+            { "an unregistration failed in the send", UA_UNREG_SEND_FAIL,
+              0, PJ_FALSE, -4020 },
+            { "unregistering a failed registration", UA_REG_FAILED, 0,
+              PJ_FALSE, -4030 },
+            { "a refused unregistration", UA_UNREG_BUSY, 0, PJ_TRUE,
+              -4040 },
+            { "unregistration, then registration", UA_UNREG_RENEW, 0,
+              PJ_TRUE, -4050 },
+            { "unregistration, then modify", UA_UNREG_MODIFY, 0, PJ_TRUE,
+              -4060 },
+            { "unregistration before IP change call handling", UA_IPC_DONE,
+              0, PJ_FALSE, -4070 },
+#if PJ_HAS_THREADS
+            { "unregistration during a NAT rewrite", UA_NAT_WINDOW,
+              PJSUA_CONTACT_REWRITE_UNREGISTER, PJ_FALSE, -4080 },
+            { "unregistration during an IP change", UA_IPC_WINDOW,
+              PJSUA_CONTACT_REWRITE_UNREGISTER, PJ_FALSE, -4090 },
 #endif
-            { "an unregistration refused for a pending REGISTER",
-              IPC_UNREG_BUSY, PJ_TRUE, -2575 },
-            { "a registration refused for a pending unregistration",
-              IPC_REG_BUSY, PJ_FALSE, -2580 },
         };
         unsigned i;
 
         for (i=0; i<PJ_ARRAY_SIZE(cases); ++i) {
-            rc = ip_change_test(tp_id, (int)port, &cases[i]);
+            rc = unreg_test(tp_id, (int)port, &cases[i]);
             if (rc != 0) goto on_return;
         }
     }

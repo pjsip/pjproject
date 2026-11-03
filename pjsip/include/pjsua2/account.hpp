@@ -2442,7 +2442,8 @@ public:
      *
      * After an unregistration, the library doesn't register the account
      * again by itself, e.g: on IP change or with an auto retry, until the
-     * application renews the registration.
+     * application renews the registration or modifies the account so that
+     * it registers.
      *
      * @param renew             If False, this will start unregistration
      *                          process.

@@ -142,18 +142,19 @@ deadlock:acc_check_nat_addr
 #=============================================================================
 
 #=============================================================================
-# The same cycle on IP change, exposed by pjsua_acc_test:
-#   M0 -> M1: handle_ip_change_on_acc(), or pjsua_acc_on_tp_state_changed()
-#     after the IP change transport shutdown, holds PJSUA_LOCK while
-#     pjsua_acc_update_contact_on_ip_change() re-registers, so
-#     pjsip_regc_send() takes the new transaction's grp_lock with
-#     PJSUA_LOCK held.
-#   M1 -> M0: regc_tsx_cb() takes PJSUA_LOCK from tsx_set_state(), as
-#     above.
+# The same cycle in other senders, exposed by pjsua_acc_test:
+#   M0 -> M1: acc_set_registration() releases only its own level of
+#     PJSUA_LOCK, so pjsip_regc_send() takes the new transaction's
+#     grp_lock under the caller's: handle_ip_change_on_acc(), or
+#     pjsua_acc_on_tp_state_changed(), re-registers through
+#     pjsua_acc_update_contact_on_ip_change(); pjsua_acc_modify()
+#     re-registers; the test's unreg_in_window() unregisters under
+#     PJSUA_LOCK on purpose, to send while another thread waits for it
+#     in regc_cb().
+#   M1 -> M0: regc_cb() / regc_tsx_cb(), as above.
 #
-# Suppressed on pjsua_acc_update_contact_on_ip_change because that frame
-# is unique to this cycle.
-deadlock:pjsua_acc_update_contact_on_ip_change
+# Suppressed on acc_set_registration, the sender common to all of them.
+deadlock:acc_set_registration
 #=============================================================================
 
 #=============================================================================

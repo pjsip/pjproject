@@ -121,6 +121,9 @@ struct pjsip_regc
      * purpose: we don't keep that transport.
      */
     pjsip_tx_data               *pending_tdata;
+
+    /* The request reserved with pjsip_regc_reserve(), not sent yet */
+    pjsip_tx_data               *reserved_tdata;
 };
 
 
@@ -196,7 +199,7 @@ PJ_DEF(pj_status_t) pjsip_regc_destroy2(pjsip_regc *regc, pj_bool_t force)
 
     pj_lock_acquire(regc->lock);
 
-    if (!force && regc->has_tsx) {
+    if (!force && (regc->has_tsx || regc->reserved_tdata)) {
         pj_lock_release(regc->lock);
         return PJ_EBUSY;
     }
@@ -1637,6 +1640,16 @@ handle_err:
     pjsip_regc_dec_ref(regc);
 }
 
+/* Not an un-REGISTER, by the same rule as current_op */
+static pj_bool_t req_adds_binding(const pjsip_tx_data *tdata)
+{
+    const pjsip_expires_hdr *expires_hdr;
+
+    expires_hdr = (const pjsip_expires_hdr*)
+                  pjsip_msg_find_hdr(tdata->msg, PJSIP_H_EXPIRES, NULL);
+    return !expires_hdr || expires_hdr->ivalue != 0;
+}
+
 PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
 {
     pj_status_t status;
@@ -1647,8 +1660,24 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     pjsip_regc_add_ref(regc);
     pj_lock_acquire(regc->lock);
 
+    if (regc->reserved_tdata == tdata) {
+        regc->reserved_tdata = NULL;
+        pjsip_tx_data_dec_ref(tdata);
+        pj_atomic_dec(regc->busy_ctr);
+
+        /* Once destroyed, only an un-REGISTER is still sent */
+        if (regc->_delete_flag && req_adds_binding(tdata)) {
+            PJ_LOG(4,(THIS_FILE, "Not sending the reserved request, regc "
+                                 "has been destroyed"));
+            pjsip_tx_data_dec_ref(tdata);
+            pj_lock_release(regc->lock);
+            pjsip_regc_dec_ref(regc);
+            return PJ_ECANCELLED;
+        }
+    }
+
     /* Make sure we don't have pending transaction. */
-    if (regc->has_tsx) {
+    if (regc->has_tsx || regc->reserved_tdata) {
         PJ_LOG(4,(THIS_FILE, "Unable to send request, regc has another "
                              "transaction pending"));
         pjsip_tx_data_dec_ref( tdata );
@@ -1741,6 +1770,28 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
 
     /* Delete the record if user destroy regc during the callback. */
     pjsip_regc_dec_ref(regc);
+
+    return status;
+}
+
+PJ_DEF(pj_status_t) pjsip_regc_reserve(pjsip_regc *regc,
+                                       pjsip_tx_data *tdata)
+{
+    pj_status_t status = PJ_SUCCESS;
+
+    PJ_ASSERT_RETURN(regc && tdata, PJ_EINVAL);
+
+    pj_lock_acquire(regc->lock);
+    if (regc->_delete_flag) {
+        status = PJ_EINVALIDOP;
+    } else if (regc->has_tsx || regc->reserved_tdata) {
+        status = PJSIP_EBUSY;
+    } else {
+        pjsip_regc_add_ref(regc);
+        pjsip_tx_data_add_ref(tdata);
+        regc->reserved_tdata = tdata;
+    }
+    pj_lock_release(regc->lock);
 
     return status;
 }

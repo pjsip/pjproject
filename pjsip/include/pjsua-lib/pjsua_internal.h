@@ -341,7 +341,6 @@ typedef struct pjsua_acc
                                          contact if outbound is used    */
     pj_bool_t        contact_rewritten;
                                     /**< Contact rewrite has been done? */
-    pj_bool_t        app_unreg;     /**< Unregistered by application.   */
     pjsip_host_port  via_addr;      /**< Address for Via header         */
     pjsip_transport *via_tp;        /**< Transport associated with
                                          the Via address                */
@@ -447,6 +446,9 @@ typedef struct pjsua_acc
     pjsua_ip_change_op ip_change_op;/**< IP change process progress.    */
     pjsip_auth_clt_sess shared_auth_sess; /**< Share one auth session over
                                                all requests             */
+    pj_bool_t        app_unreg;     /**< Unregistered by application.   */
+    pj_bool_t        ip_change_reg_done; /**< IP change registration step
+                                              is over.                  */
 } pjsua_acc;
 
 
