@@ -32,6 +32,18 @@ project(pjproject
   LANGUAGES C
 )
 
+# The libraries mark nothing for export, which GNU ld's automatic export
+# covers for MinGW but MSVC has no equivalent of: its DLLs would export
+# nothing and get no import library. No pjproject build makes MSVC DLLs of
+# them; the SWIG bindings link them statically into one DLL instead.
+if(MSVC AND BUILD_SHARED_LIBS)
+  message(FATAL_ERROR
+    "BUILD_SHARED_LIBS=ON is not supported with MSVC: the pjproject libraries "
+    "export no symbols. Build them static (the default), or use the SWIG "
+    "bindings (PJ_BUILD_SWIG_CSHARP, PJ_BUILD_SWIG_JAVA, PJ_BUILD_SWIG_PYTHON) "
+    "for a single DLL.")
+endif()
+
 # C++ is needed only by pjsua2 and a few backends (WebRTC AEC3, libyuv, Lyra,
 # OpenH264, Oboe, WASAPI, DirectShow, Android MediaCodec), by pjlib's
 # atomic_queue.cpp, which only those backends use, and by WebRTC's CPU
