@@ -4161,12 +4161,13 @@ static void cancel_created_local_offer(pjsua_call *call,
 }
 
 /* Restore the hold state and media from before our failed offer */
-static void call_offer_failed(pjsua_call *call)
+static void call_offer_failed(pjsua_call *call, int reason)
 {
     if (call->local_hold != call->offer_hold) {
         PJ_LOG(3,(THIS_FILE, call->offer_hold ?
-                  "Error releasing hold on call %d" :
-                  "Error putting call %d on hold", call->index));
+                  "Error releasing hold on call %d (reason=%d)" :
+                  "Error putting call %d on hold (reason=%d)",
+                  call->index, reason));
         call->local_hold = call->offer_hold;
     }
     pjsua_media_prov_revert(call->index);
@@ -4174,14 +4175,14 @@ static void call_offer_failed(pjsua_call *call)
 }
 
 /* Our offer has failed once the negotiator no longer waits for its answer */
-static void call_check_offer(pjsua_call *call)
+static void call_check_offer(pjsua_call *call, int reason)
 {
     if (call->offer_sent &&
         (!call->inv->neg ||
          pjmedia_sdp_neg_get_state(call->inv->neg) !=
              PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER))
     {
-        call_offer_failed(call);
+        call_offer_failed(call, reason);
     }
 }
 
@@ -4203,7 +4204,7 @@ pj_status_t pjsua_call_send_offer(pjsua_call *call, pjsip_tx_data *tdata,
 
         /* A send failure may have ended the call or the offer already */
         if (first && call->inv && call->offer_sent)
-            call_offer_failed(call);
+            call_offer_failed(call, 0);
     }
     return status;
 }
@@ -7645,7 +7646,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
         (tsx->method.id == PJSIP_INVITE_METHOD ||
          pjsip_method_cmp(&tsx->method, &pjsip_update_method) == 0))
     {
-        call_check_offer(call);
+        call_check_offer(call, tsx->status_code);
     }
 
     /* https://github.com/pjsip/pjproject/issues/1452:
