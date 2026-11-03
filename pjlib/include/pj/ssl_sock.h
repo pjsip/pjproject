@@ -1504,7 +1504,8 @@ typedef struct pj_ssl_sock_param
      * client, the backend will cache sessions per server name (see
      * \a server_name) and resume them on subsequent connections from
      * sockets with the same CA list, certificate and verification settings,
-     * avoiding a full handshake. When acting as server, the backend will issue session
+     * avoiding a full handshake. Client sessions are not cached when
+     * \a on_verify_cb is set, so that it is called on every connection. When acting as server, the backend will issue session
      * tickets (including TLS 1.3 tickets) so clients can resume.
      *
      * Currently only implemented by the OpenSSL backend.

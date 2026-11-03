@@ -752,12 +752,35 @@ static int new_session_cb(SSL *ssl, SSL_SESSION *sess)
     return 0;
 }
 
+/* Digest an X509 including its auxiliary trust settings, which a PEM
+ * "TRUSTED CERTIFICATE" in a CA list may carry.
+ */
+static int digest_x509_aux(EVP_MD_CTX *md, X509 *x)
+{
+    unsigned char *buf, *p;
+    int len, ok;
+
+    len = i2d_X509_AUX(x, NULL);
+    if (len <= 0)
+        return 0;
+    buf = p = (unsigned char *)OPENSSL_malloc(len);
+    if (!buf)
+        return 0;
+    ok = (i2d_X509_AUX(x, &p) == len) && EVP_DigestUpdate(md, buf, len);
+    OPENSSL_free(buf);
+    return ok;
+}
+
 /* Compute the socket's session cache context ID: a digest of the settings
  * that decide which servers the client trusts and which certificate it
  * presents. A cached session is only resumed by a socket with the same
  * settings, as resumption skips certificate verification and keeps the
- * identity the session was made with. Must be called once the SSL_CTX
- * credentials are loaded.
+ * identity the session was made with.
+ *
+ * Must be called once the SSL_CTX credentials are loaded, but before the
+ * certificate is wiped, as CA_path is needed. A socket with on_verify_cb
+ * gets no ID and doesn't use the cache, as the callback's policy can't be
+ * identified and it must run on every connection.
  */
 static pj_bool_t sess_ctx_id_init(pj_ssl_sock_t *ssock)
 {
@@ -771,6 +794,9 @@ static pj_bool_t sess_ctx_id_init(pj_ssl_sock_t *ssock)
     int i, ok;
 
     ossock->sess_ctx_valid = PJ_FALSE;
+
+    if (ssock->param.cb.on_verify_cb)
+        return PJ_FALSE;
 
     md = EVP_MD_CTX_new();
     if (!md)
@@ -794,7 +820,7 @@ static pj_bool_t sess_ctx_id_init(pj_ssl_sock_t *ssock)
 
         len = 0;
         if (X509_OBJECT_get_type(obj) == X509_LU_X509) {
-            ok = X509_digest(X509_OBJECT_get0_X509(obj), sha256, dgst, &len);
+            ok = digest_x509_aux(md, X509_OBJECT_get0_X509(obj));
         } else if (X509_OBJECT_get_type(obj) == X509_LU_CRL) {
             ok = X509_CRL_digest(X509_OBJECT_get0_X509_CRL(obj), sha256,
                                  dgst, &len);
@@ -812,9 +838,7 @@ static pj_bool_t sess_ctx_id_init(pj_ssl_sock_t *ssock)
     /* Verification settings */
     if (ok) {
         ok = EVP_DigestUpdate(md, &ssock->param.verify_peer,
-                              sizeof(ssock->param.verify_peer)) &&
-             EVP_DigestUpdate(md, &ssock->param.cb.on_verify_cb,
-                              sizeof(ssock->param.cb.on_verify_cb));
+                              sizeof(ssock->param.verify_peer));
     }
 
     len = 0;
@@ -2084,6 +2108,11 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
     }
 #endif
 
+#if OSSL_SESS_CACHE_ENABLED
+    if (!ssock->is_server && ssock->param.enable_session_reuse)
+        sess_ctx_id_init(ssock);
+#endif
+
     /* Early sensitive data cleanup after OpenSSL context setup. However,
      * this cannot be done for listener sockets, as the data will still
      * be needed by accepted sockets.
@@ -2172,7 +2201,7 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 #if OSSL_SESS_CACHE_ENABLED
     /* Client: resume a cached session for this server, if any. */
     if (!ssock->is_server && ssock->param.enable_session_reuse &&
-        ssock->param.server_name.slen && sess_ctx_id_init(ssock))
+        ssock->param.server_name.slen && ossock->sess_ctx_valid)
     {
         SSL_SESSION *sess = sess_cache_get(&ssock->param.server_name,
                                            ossock->sess_ctx_id);
