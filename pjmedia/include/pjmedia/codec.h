@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -469,7 +469,10 @@ typedef struct pjmedia_codec_op
      *
      * @param codec     The codec instance.
      * @param input     The input frame.
-     * @param out_size  The length of buffer in the output frame.
+     * @param out_size  The length of buffer in the output frame, in bytes.
+     *                  A PCM codec must not write past it, and returns an
+     *                  error such as PJMEDIA_CODEC_EPCMTOOSHORT (or a
+     *                  shorter frame) when the frame does not fit.
      * @param output    The output frame.
      *
      * @return          PJ_SUCCESS on success;
@@ -486,7 +489,10 @@ typedef struct pjmedia_codec_op
      * calling this function directly.
      *
      * @param codec     The codec instance.
-     * @param out_size  The length of buffer in the output frame.
+     * @param out_size  The length of buffer in the output frame, in bytes.
+     *                  A PCM codec must not write past it, and returns an
+     *                  error such as PJMEDIA_CODEC_EPCMTOOSHORT (or a
+     *                  shorter frame) when the frame does not fit.
      * @param output    The output frame where generated signal
      *                  will be placed.
      *
@@ -1105,7 +1111,10 @@ PJ_INLINE(pj_status_t) pjmedia_codec_encode(
  *
  * @param codec         The codec instance.
  * @param input         The input frame.
- * @param out_size      The length of buffer in the output frame.
+ * @param out_size      The length of buffer in the output frame, in bytes.
+ *                      A PCM codec must not write past it, and returns an
+ *                      error such as PJMEDIA_CODEC_EPCMTOOSHORT (or a
+ *                      shorter frame) when the frame does not fit.
  * @param output        The output frame.
  *
  * @return              PJ_SUCCESS on success;
@@ -1124,7 +1133,10 @@ PJ_INLINE(pj_status_t) pjmedia_codec_decode(
  * Instruct the codec to recover a missing frame.
  *
  * @param codec         The codec instance.
- * @param out_size      The length of buffer in the output frame.
+ * @param out_size      The length of buffer in the output frame, in bytes.
+ *                      A PCM codec must not write past it, and returns an
+ *                      error such as PJMEDIA_CODEC_EPCMTOOSHORT (or a
+ *                      shorter frame) when the frame does not fit.
  * @param output        The output frame where generated signal
  *                      will be placed.
  *

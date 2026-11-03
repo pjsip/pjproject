@@ -1422,7 +1422,8 @@
 /**
  * Maximum number of TLS client sessions cached for resumption by the OpenSSL
  * backend when pj_ssl_sock_param.enable_session_reuse is set. Sessions are
- * cached per server name; the oldest entry is evicted when the cache is full.
+ * cached per server name and per CA list, certificate and verification
+ * settings; the oldest entry is evicted when the cache is full.
  *
  * Default: 64
  */

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2009-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2009-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -281,9 +281,17 @@ typedef struct pj_ssl_cert_info {
 
     unsigned    version;            /**< Certificate version    */
 
-    pj_uint8_t  serial_no[20];      /**< Serial number, array of
-                                         octets, first index is
-                                         MSB                    */
+    pj_uint8_t  serial_no[20];      /**< Serial number, most
+                                         significant octet first,
+                                         right-aligned and padded
+                                         with leading zero octets.
+                                         A serial longer than 20
+                                         octets keeps its 20 most
+                                         significant octets. A
+                                         negative serial, which
+                                         RFC 5280 does not allow,
+                                         has a layout that depends
+                                         on the backend.        */
 
     struct {
         pj_str_t        cn;         /**< Common name            */
@@ -1494,9 +1502,12 @@ typedef struct pj_ssl_sock_param
     /**
      * Specify if TLS session reuse (resumption) is enabled. When acting as
      * client, the backend will cache sessions per server name (see
-     * \a server_name) and resume them on subsequent connections, avoiding a
-     * full handshake. When acting as server, the backend will issue session
-     * tickets (including TLS 1.3 tickets) so clients can resume.
+     * \a server_name) and resume them on subsequent connections from
+     * sockets with the same CA list, certificate and verification settings,
+     * avoiding a full handshake. Client sessions are not cached when
+     * \a on_verify_cb is set, so that it is called on every connection.
+     * When acting as server, the backend will issue session tickets
+     * (including TLS 1.3 tickets) so clients can resume.
      *
      * Currently only implemented by the OpenSSL backend.
      *

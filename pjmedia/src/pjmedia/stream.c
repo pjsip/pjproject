@@ -534,6 +534,15 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
              */
             exp_decoded_samples = PJ_MAX(bit_info, samples_per_frame);
             if (stream->dec_buf &&
+                exp_decoded_samples > stream->dec_buf_size)
+            {
+                PJ_LOG(4,(port->info.name.ptr,
+                          "Codec signalled %u decoded samples, more than "
+                          "the decoding buffer (%u), capping",
+                          exp_decoded_samples, stream->dec_buf_size));
+                exp_decoded_samples = stream->dec_buf_size;
+            }
+            if (stream->dec_buf &&
                 exp_decoded_samples * sizeof(pj_int16_t) > frame_out.size)
             {
                 stream->dec_buf_pos = 0;
@@ -1012,8 +1021,12 @@ static void rebuffer(pjmedia_stream *stream,
     }
 
     /* Make sure we have space to store the new frame */
-    pj_assert(stream->enc_buf_count + (frame->size >> 1) <
-                stream->enc_buf_size);
+    if (frame->size > (stream->enc_buf_size - stream->enc_buf_count) << 1) {
+        PJ_LOG(5,(c_strm->port.info.name.ptr,
+                  "Frame too large for encoding buffer (%u bytes), "
+                  "truncated", (unsigned)frame->size));
+        frame->size = (stream->enc_buf_size - stream->enc_buf_count) << 1;
+    }
 
     /* Append new frame to the buffer */
     if (frame->size) {
@@ -1998,11 +2011,17 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     if (stream->codec_param.info.frm_ptime_denum < 1)
         stream->codec_param.info.frm_ptime_denum = 1;
 
+    /* The frame time divides the packet and PLC lengths below */
+    if (stream->codec_param.info.frm_ptime == 0) {
+        PJ_LOG(3,(name.ptr, "Invalid codec frame time 0"));
+        status = PJ_EINVAL;
+        goto err_cleanup;
+    }
+
     /* The encoding buffer holds PJMEDIA_MAX_FRAME_DURATION_MS of audio, so
      * cap the packet duration (e.g. requested by remote's ptime) to it.
      */
-    if (stream->codec_param.info.frm_ptime > 0 &&
-        stream->codec_param.info.frm_ptime *
+    if (stream->codec_param.info.frm_ptime *
         stream->codec_param.setting.frm_per_pkt >
         PJMEDIA_MAX_FRAME_DURATION_MS * stream->codec_param.info.frm_ptime_denum)
     {

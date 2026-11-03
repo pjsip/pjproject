@@ -147,9 +147,17 @@ typedef std::vector<SslCertName> SslCertNameVector;
 struct SslCertInfo
 {
     unsigned            version;            /**< Certificate version    */
-    unsigned char       serialNo[20];       /**< Serial number, array
-                                                 of octets, first index
-                                                 is MSB                 */
+    unsigned char       serialNo[20];       /**< Serial number, most
+                                                 significant octet first,
+                                                 right-aligned and padded
+                                                 with leading zero octets.
+                                                 A serial longer than 20
+                                                 octets keeps its 20 most
+                                                 significant octets. A
+                                                 negative serial, which
+                                                 RFC 5280 does not allow,
+                                                 has a layout that depends
+                                                 on the backend.        */
     string              subjectCn;          /**< Subject common name    */
     string              subjectInfo;        /**< One line subject, fields
                                                  are separated by slash, e.g:

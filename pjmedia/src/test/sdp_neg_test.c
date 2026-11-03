@@ -2115,11 +2115,18 @@ static int sdp_neg_dup_enc_name_test(pj_pool_t *pool)
     pj_str_t h264 = pj_str("H264");
     int rc;
 
+    /* Drop any H264 matcher left behind by a codec initialized earlier in
+     * this process (e.g. by vid_codec_test): a name can only be registered
+     * once, with one callback.
+     */
+    pjmedia_sdp_neg_register_fmt_match_cb(&h264, NULL);
+
     PJ_TEST_SUCCESS(pjmedia_sdp_neg_register_fmt_match_cb(&h264,
                                                           &h264_fmtp_match),
                     NULL, return -2270);
     rc = sdp_neg_dup_enc_name_run(pool);
-    pjmedia_sdp_neg_register_fmt_match_cb(&h264, NULL);
+    PJ_TEST_SUCCESS(pjmedia_sdp_neg_register_fmt_match_cb(&h264, NULL),
+                    NULL, return rc ? rc : -2271);
 
     return rc;
 }
