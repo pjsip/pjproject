@@ -364,6 +364,13 @@ function(_pj_pc_module_flags out found modules path)
   endif()
   set(flags "")
   foreach(flag IN LISTS result)
+    # What only an application links: SDL's WinMain wrapper, and the GUI
+    # subsystem it comes with on MinGW (sdl2.pc), which would turn the
+    # consumer's console program into a GUI one. pjproject uses SDL with
+    # SDL_MAIN_HANDLED and links only the library.
+    if(flag MATCHES "^-(mwindows|mconsole|lmingw32|lSDL2?main)$")
+      continue()
+    endif()
     if(flag MATCHES "^-([LF])(.+)$")
       _pj_pc_dir_flag(flag "-${CMAKE_MATCH_1}" "${CMAKE_MATCH_2}")
     else()
