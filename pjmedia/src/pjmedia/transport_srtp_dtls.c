@@ -963,17 +963,22 @@ static pj_status_t ssl_flush_wbio(dtls_srtp *ds, unsigned idx)
         goto on_return;
     }
 
-    /* Verify remote fingerprint if we've already got one from SDP */
+    /* Verify remote fingerprint if we've already got one from SDP. A
+     * failure already stored by dtls_media_start() is final.
+     */
     if (ds->rem_fingerprint.slen &&
         ds->rem_fprint_status[idx] == PJ_EPENDING)
     {
-        ds->rem_fprint_status[idx] = status = ssl_match_fingerprint(ds, idx);
-        if (status != PJ_SUCCESS) {
-            pj_perror(4, ds->base.name, status,
-                      "Fingerprint specified in remote SDP doesn't match "
-                      "to actual remote certificate fingerprint!");
-            goto on_return;
-        }
+        ds->rem_fprint_status[idx] = ssl_match_fingerprint(ds, idx);
+    }
+    status = ds->rem_fprint_status[idx];
+    if (status == PJ_EPENDING) {
+        status = PJ_SUCCESS;
+    } else if (status != PJ_SUCCESS) {
+        pj_perror(4, ds->base.name, status,
+                  "Fingerprint specified in remote SDP doesn't match "
+                  "to actual remote certificate fingerprint!");
+        goto on_return;
     }
 
     /* If media_start() has been called, start SRTP now */
@@ -2025,6 +2030,17 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
     /* Check if the background DTLS nego has completed */
     if (ds->got_keys) { 
         unsigned idx = RTP_CHANNEL;
+
+        /* RTP nego may have completed after the check above */
+        if (ds->rem_fprint_status[idx] == PJ_EPENDING)
+            ds->rem_fprint_status[idx] = ssl_match_fingerprint(ds, idx);
+        status = ds->rem_fprint_status[idx];
+        if (status != PJ_SUCCESS) {
+            pj_perror(4, ds->base.name, status,
+                      "Fingerprint specified in remote SDP doesn't match "
+                      "to actual remote certificate fingerprint!");
+            goto on_return;
+        }
 
         ds->srtp->srtp_ctx.tx_policy_neg = ds->tx_crypto[idx];
         ds->srtp->srtp_ctx.rx_policy_neg = ds->rx_crypto[idx];
