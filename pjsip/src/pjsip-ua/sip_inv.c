@@ -403,23 +403,6 @@ static void inv_initial_invite_auth_abandon_impl(
     inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, &usr_event);
 }
 
-/* A request that has failed for good must not leave its SDP offer pending.
- * Called with the dialog lock held.
- */
-static void cancel_failed_offer(pjsip_inv_session *inv,
-                                struct tsx_inv_data *tsx_inv_data)
-{
-    if (tsx_inv_data && tsx_inv_data->has_sdp && !tsx_inv_data->sdp_done &&
-        inv->neg && pjmedia_sdp_neg_get_state(inv->neg) ==
-                        PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER)
-    {
-        pjmedia_sdp_neg_cancel_offer(inv->neg);
-
-        /* Prevent from us cancelling different offer! */
-        tsx_inv_data->sdp_done = PJ_TRUE;
-    }
-}
-
 /*
  * Decrease INVITE session reference, destroy it when the reference count
  * reaches zero.
@@ -1042,6 +1025,26 @@ static pj_bool_t inv_offer_tsx_pending(const pjsip_inv_session *inv)
            (tsx->status_code/100 == 2 ||
             (tsx->status_code/100 == 1 &&
              (inv->options & PJSIP_INV_REQUIRE_100REL)));
+}
+
+/*
+ * Cancel the offer of an ended UAC request if no other request carries it.
+ * The request must no longer be inv->invite_tsx or inv->update_tsx.
+ */
+static void inv_cancel_orphan_offer(pjsip_inv_session *inv,
+                                    struct tsx_inv_data *tsx_inv_data)
+{
+    if (tsx_inv_data && tsx_inv_data->has_sdp && !tsx_inv_data->sdp_done &&
+        !tsx_inv_data->retrying && inv->neg &&
+        pjmedia_sdp_neg_get_state(inv->neg) ==
+            PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER &&
+        !inv_offer_tsx_pending(inv))
+    {
+        pjmedia_sdp_neg_cancel_offer(inv->neg);
+
+        /* Prevent from us cancelling different offer! */
+        tsx_inv_data->sdp_done = PJ_TRUE;
+    }
 }
 
 PJ_DEF(pj_bool_t) pjsip_inv_has_pending_offerless_invite(
@@ -4906,11 +4909,8 @@ static pj_bool_t inv_handle_update_response( pjsip_inv_session *inv,
 
                 /* Re-send request. */
                 status = pjsip_inv_send_msg(inv, tdata);
-                if (status != PJ_SUCCESS) {
-                    tsx->last_tx->auth_retry = PJ_FALSE;
-                    if (tsx_inv_data)
-                        tsx_inv_data->retrying = PJ_FALSE;
-                }
+                if (status != PJ_SUCCESS && tsx_inv_data)
+                    tsx_inv_data->retrying = PJ_FALSE;
             }
             /* Somehow failed. Probably it's not a good idea to
              * terminate the session since this is just a request
@@ -4984,10 +4984,9 @@ static pj_bool_t inv_handle_update_response( pjsip_inv_session *inv,
     }
 
     /* Cancel the negotiation if we don't get successful negotiation by now,
-     * unless it's authentication challenge and the request is being retried.
+     * unless the request is being retried.
      */
-    if (tsx_inv_data && !tsx_inv_data->retrying)
-        cancel_failed_offer(inv, tsx_inv_data);
+    inv_cancel_orphan_offer(inv, tsx_inv_data);
 
     return handled;
 }
@@ -5450,27 +5449,23 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
                                         &inv->dlg->auth_sess,
                                         e->body.tsx_state.src.rdata,
                                         tsx->last_tx, &tdata);
+            tsx_inv_data =
+                (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
             if (status == PJ_SUCCESS) {
-                tsx_inv_data =
-                    (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
                 if (tsx_inv_data)
                     tsx_inv_data->retrying = PJ_TRUE;
 
                 /* Re-send request. */
                 status = pjsip_inv_send_msg(inv, tdata);
+                if (status != PJ_SUCCESS && tsx_inv_data)
+                    tsx_inv_data->retrying = PJ_FALSE;
             }
             /* Somehow failed. Probably it's not a good idea to
              * terminate the session since this is just a request
              * within dialog. And even if we terminate we should
              * send BYE.
              */
-        }
-
-        /* No retry follows */
-        if (status != PJ_SUCCESS) {
-            tsx->last_tx->auth_retry = PJ_FALSE;
-            cancel_failed_offer(
-                inv, (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id]);
+            inv_cancel_orphan_offer(inv, tsx_inv_data);
         }
 
         return PJ_TRUE; /* Handled */
@@ -5482,6 +5477,12 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
     {
         handle_timer_response(inv, e->body.tsx_state.src.rdata, 
                               PJ_FALSE);
+
+        /* The offer is dropped if the request is not resent */
+        if (tsx == inv->invite_tsx)
+            inv->invite_tsx = NULL;
+        inv_cancel_orphan_offer(
+                inv, (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id]);
 
         return PJ_TRUE; /* Handled */
 
@@ -6789,21 +6790,12 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
              * been cancelled when tsx state is 'completed'.
              */
 
-            pjmedia_sdp_neg_state neg_state;
-            struct tsx_inv_data *tsx_inv_data;
-
-            tsx_inv_data = (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
-
-            /* Outgoing INVITE transaction has failed, cancel SDP nego */
-            neg_state = pjmedia_sdp_neg_get_state(inv->neg);
-            if (neg_state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER &&
-                tsx_inv_data->retrying == PJ_FALSE)
-            {
-                pjmedia_sdp_neg_cancel_offer(inv->neg);
-            }
-
             if (tsx == inv->invite_tsx)
                 inv->invite_tsx = NULL;
+
+            /* Outgoing INVITE transaction has failed, cancel SDP nego */
+            inv_cancel_orphan_offer(
+                inv, (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id]);
 
             /* Process 502/503 error for session timer refresh */
             if (tsx->status_code == 503 || tsx->status_code == 502) {
