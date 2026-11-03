@@ -1060,6 +1060,8 @@ target_link_libraries(pjmedia-audiodev
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_OBOE}>:Oboe::Oboe>
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_WASAPI}>:WASAPI::WASAPI>
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_PORTAUDIO}>:PortAudio::PortAudio>
+    # pjlib links winmm privately, which a shared pjlib does not pass on
+    $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_WMME}>:winmm>
 
     # opensl_dev.c is enabled in config_site.h; autoconf links it on Android
     $<$<BOOL:${ANDROID}>:OpenSLES>

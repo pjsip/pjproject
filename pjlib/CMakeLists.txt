@@ -266,10 +266,13 @@ if(WIN32 OR CYGWIN OR MINGW)
   if(PJ_HAS_MSWSOCK_H)
     target_link_libraries(pjlib PRIVATE mswsock)
   endif()
+  # Public: pjlib's headers bring in Winsock, and code using them, e.g. the
+  # bundled srtp, calls it directly. A shared pjlib does not pass on a
+  # private one; autoconf links it into everything.
   if(PJ_HAS_WINSOCK2_H)
-    target_link_libraries(pjlib PRIVATE ws2_32)
+    target_link_libraries(pjlib PUBLIC ws2_32)
   elseif(PJ_HAS_WINSOCK_H)
-    target_link_libraries(pjlib PRIVATE wsock32)
+    target_link_libraries(pjlib PUBLIC wsock32)
   endif()
 endif()
 
