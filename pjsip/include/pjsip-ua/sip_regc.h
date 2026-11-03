@@ -541,6 +541,11 @@ PJ_DECL(pj_status_t) pjsip_regc_set_auth_sess( pjsip_regc *regc,
 /**
  * Get the authentication session used by this client registration.
  *
+ * When the application handles a challenge asynchronously, the
+ * authenticated request is not sent, and PJ_ECANCELLED is returned, if the
+ * registration has sent another request since the challenge, or has been
+ * destroyed and the request does not have an Expires header of zero.
+ *
  * @param regc      The client registration structure.
  *
  * @return          The client authentication session.

@@ -43,6 +43,8 @@ public:
     void deferredRespondWithCreds();
     void deferredAbandon();
     void accountDeleteWithPending();
+    void deferredRespondAfterUnregister();
+    void deferredRespondAfterDelete(bool with_creds);
     void digestToPj();
     void credAuthOtherParam();
 

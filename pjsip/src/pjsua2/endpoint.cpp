@@ -1249,6 +1249,7 @@ pj_status_t AuthChallenge::respond()
         PJSUA_LOCK();
         if (!pjsua_acc_is_valid(acc_id_)) {
             PJSUA_UNLOCK();
+            pjsip_auth_clt_async_abandon(auth_sess_, token_);
             consumed_ = true;
             return PJ_EINVALIDOP;
         }
@@ -1276,15 +1277,8 @@ pj_status_t AuthChallenge::respond()
         PJSUA_UNLOCK();
 
     if (status == PJ_SUCCESS && new_tdata) {
+        /* Consumes the token even on failure, when it may be freed */
         status = pjsip_auth_clt_async_send_req(sess, tok, new_tdata);
-        if (status != PJ_SUCCESS) {
-            /* send_req may fail without consuming the token (e.g. account
-             * deleted between unlock and send) — abandon to release the
-             * token's grp_lock reference.  If the token was already
-             * consumed, abandon will harmlessly return PJ_EINVAL.
-             */
-            pjsip_auth_clt_async_abandon(sess, tok);
-        }
     } else {
         pjsip_auth_clt_async_abandon(sess, tok);
         if (status == PJ_SUCCESS)
@@ -1307,6 +1301,7 @@ pj_status_t AuthChallenge::respond(const AuthCredInfoVector &creds)
         PJSUA_LOCK();
         if (!pjsua_acc_is_valid(acc_id_)) {
             PJSUA_UNLOCK();
+            pjsip_auth_clt_async_abandon(auth_sess_, token_);
             consumed_ = true;
             return PJ_EINVALIDOP;
         }

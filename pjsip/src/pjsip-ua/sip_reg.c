@@ -127,6 +127,9 @@ struct pjsip_regc
 };
 
 
+static pj_status_t regc_send(pjsip_regc *regc, pjsip_tx_data *tdata,
+                             pj_bool_t auth_retry, pj_bool_t *superseded);
+
 /* Declaration of async auth send implementation */
 static pj_status_t async_auth_send_impl(pjsip_auth_clt_sess *auth_sess,
                                         void *user_data,
@@ -1202,11 +1205,13 @@ static pj_status_t async_auth_send_impl(pjsip_auth_clt_sess *auth_sess,
 {
     pj_status_t status;
     pjsip_regc *regc = (pjsip_regc*)user_data;
+    pj_bool_t superseded = PJ_FALSE;
 
     PJ_UNUSED_ARG(auth_sess);
 
-    status = pjsip_regc_send(regc, tdata);
-    if (status != PJ_SUCCESS) {
+    /* A superseded request is reported by the newer one or by destroy */
+    status = regc_send(regc, tdata, PJ_TRUE, &superseded);
+    if (status != PJ_SUCCESS && !superseded) {
         char errmsg[PJ_ERR_MSG_SIZE];
         pj_bool_t is_unreg = (regc->current_op == REGC_UNREGISTERING);
         pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
@@ -1650,7 +1655,13 @@ static pj_bool_t req_adds_binding(const pjsip_tx_data *tdata)
     return !expires_hdr || expires_hdr->ivalue != 0;
 }
 
-PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
+/* With auth_retry, tdata is the authentication of a challenged request,
+ * not sent if the regc has sent another request since, or has been
+ * destroyed and tdata adds a binding: an un-REGISTER is still sent after
+ * destroy, as in the sync path.
+ */
+static pj_status_t regc_send(pjsip_regc *regc, pjsip_tx_data *tdata,
+                             pj_bool_t auth_retry, pj_bool_t *superseded)
 {
     pj_status_t status;
     pjsip_cseq_hdr *cseq_hdr;
@@ -1659,6 +1670,22 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
 
     pjsip_regc_add_ref(regc);
     pj_lock_acquire(regc->lock);
+
+    if (auth_retry) {
+        cseq_hdr = (pjsip_cseq_hdr*)
+                   pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL);
+        if ((regc->_delete_flag && req_adds_binding(tdata)) ||
+            !cseq_hdr || cseq_hdr->cseq != regc->cseq_hdr->cseq)
+        {
+            PJ_LOG(4,(THIS_FILE, "Not sending the authentication of a "
+                                 "superseded request"));
+            *superseded = PJ_TRUE;
+            pjsip_tx_data_dec_ref(tdata);
+            pj_lock_release(regc->lock);
+            pjsip_regc_dec_ref(regc);
+            return PJ_ECANCELLED;
+        }
+    }
 
     if (regc->reserved_tdata == tdata) {
         regc->reserved_tdata = NULL;
@@ -1794,6 +1821,11 @@ PJ_DEF(pj_status_t) pjsip_regc_reserve(pjsip_regc *regc,
     pj_lock_release(regc->lock);
 
     return status;
+}
+
+PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
+{
+    return regc_send(regc, tdata, PJ_FALSE, NULL);
 }
 
 PJ_DEF(pj_status_t) pjsip_regc_set_auth_sess( pjsip_regc *regc,

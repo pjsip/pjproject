@@ -2031,10 +2031,15 @@ public:
     /**
      * Respond to the authentication challenge by building and sending
      * an authenticated request. Uses credentials currently configured
-     * on the auth session.
+     * on the auth session. A deferred REGISTER is not sent, and
+     * PJ_ECANCELLED is returned, if the account has sent another REGISTER
+     * since the challenge, or has dropped its registration and the
+     * deferred REGISTER is not an unregistration. The challenge is
+     * consumed whatever the result.
      *
-     * @return          PJ_SUCCESS on success, or PJ_EINVALIDOP if already
-     *                  consumed by a prior respond()/abandon()/defer() call.
+     * @return          PJ_SUCCESS on success, PJ_EINVALIDOP if already
+     *                  consumed by a prior respond()/abandon()/defer() call,
+     *                  or the error of building or sending the request.
      */
     pj_status_t respond();
 
