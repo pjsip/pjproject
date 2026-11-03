@@ -367,6 +367,22 @@ endif()
 
 # ssl
 add_library(pjlib-ssl INTERFACE) # a target to expose SSL deps
+
+# FindOpenSSL does no link test; reject an OpenSSL that is found but cannot be
+# linked, e.g. built for another architecture, as autoconf's AC_CHECK_LIB does
+function(_pj_check_openssl_usable)
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(OpenSSL
+    CODE [=[
+      #include <openssl/err.h>
+      #include <openssl/ssl.h>
+      int main(void) { SSL_CTX_free(0); ERR_clear_error(); return 0; }
+    ]=]
+    INCLUDE_DIRS ${OPENSSL_INCLUDE_DIR}
+    LIBRARIES OpenSSL::SSL OpenSSL::Crypto
+  )
+endfunction()
+
 pj_retry_on_new_root(PJLIB_WITH_SSL OpenSSL)
 set(_pj_ssl "${PJLIB_WITH_SSL}")
 if(_pj_ssl STREQUAL "none")
@@ -377,6 +393,12 @@ elseif(_pj_ssl STREQUAL "auto")
     find_package(OpenSSL COMPONENTS Crypto SSL CONFIG QUIET)
   endif()
   if(OPENSSL_FOUND)
+    _pj_check_openssl_usable()
+    if(NOT OpenSSL_USABLE)
+      message(STATUS "[!] OpenSSL was found but cannot be linked")
+    endif()
+  endif()
+  if(OPENSSL_FOUND AND OpenSSL_USABLE)
     set(_pj_ssl openssl)
   else()
     find_package(GnuTLS QUIET)
@@ -388,7 +410,7 @@ elseif(_pj_ssl STREQUAL "auto")
         set(_pj_ssl mbedtls)
       else()
         set(_pj_ssl "")
-        message(STATUS "[!] No OpenSSL, GnuTLS or MbedTLS found. building without SSL")
+        message(STATUS "[!] No usable OpenSSL, GnuTLS or MbedTLS found. building without SSL")
       endif()
     endif()
   endif()
@@ -399,7 +421,13 @@ if(_pj_ssl STREQUAL "openssl")
     find_package(OpenSSL COMPONENTS Crypto SSL CONFIG)
   endif()
   if(OPENSSL_FOUND)
+    _pj_check_openssl_usable()
+  endif()
+  if(OPENSSL_FOUND AND OpenSSL_USABLE)
     target_link_libraries(pjlib-ssl INTERFACE OpenSSL::Crypto OpenSSL::SSL)
+  elseif(OPENSSL_FOUND)
+    pj_force_set(PJLIB_WITH_SSL "" "OpenSSL found but cannot be linked")
+    set(_pj_ssl "")
   else()
     pj_force_set(PJLIB_WITH_SSL "" "OpenSSL not found")
     set(_pj_ssl "")
