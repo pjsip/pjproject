@@ -1994,6 +1994,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate_async2(pjsip_transaction *tsx,
                                                unsigned millisec)
 {
     pj_time_val delay = {0, 0};
+    int term_code = 0;
 
     PJ_ASSERT_RETURN(tsx != NULL, PJ_EINVAL);
 
@@ -2011,21 +2012,31 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate_async2(pjsip_transaction *tsx,
     }
 
     /* Set termination status code, if not yet */
-    if (tsx->status_code < 200)
+    if (tsx->status_code < 200) {
         tsx_set_status_code(tsx, code, reason);
+        term_code = code;
 
-    /* A request being terminated is no longer retransmitted */
-    if (tsx->role == PJSIP_ROLE_UAC)
-        tsx_cancel_timer(tsx, &tsx->retransmit_timer);
+        /* A request being terminated is no longer retransmitted */
+        if (tsx->role == PJSIP_ROLE_UAC)
+            tsx_cancel_timer(tsx, &tsx->retransmit_timer);
+    }
 
     /* Schedule the termination */
     delay.msec = millisec;
     pj_time_val_normalize(&delay);
 
     lock_timer(tsx);
-    tsx->term_code = tsx->status_code;
-    tsx_cancel_timer(tsx, &tsx->timeout_timer);
-    tsx_schedule_timer(tsx, &tsx->timeout_timer, &delay, TERMINATE_TIMER);
+    if (term_code)
+        tsx->term_code = term_code;
+
+    /* A transport error already posted ends the transaction sooner */
+    if (tsx->timeout_timer.id != TRANSPORT_ERR_TIMER &&
+        tsx->timeout_timer.id != TRANSPORT_DISC_TIMER)
+    {
+        tsx_cancel_timer(tsx, &tsx->timeout_timer);
+        tsx_schedule_timer(tsx, &tsx->timeout_timer, &delay,
+                           TERMINATE_TIMER);
+    }
     unlock_timer(tsx);
     pj_grp_lock_release(tsx->grp_lock);
 
@@ -3268,6 +3279,10 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
         tsx_set_status_code(tsx, msg->line.status.code, 
                             &msg->line.status.reason);
 
+        /* A final response replaces the code of a termination */
+        if (tsx->status_code >= 200)
+            tsx->term_code = 0;
+
         /* Discard the saved last response (it will be updated later as
          * necessary).
          */
@@ -3525,6 +3540,10 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 
         tsx_set_status_code(tsx, msg->line.status.code, 
                             &msg->line.status.reason);
+
+        /* A final response replaces the code of a termination */
+        if (tsx->status_code >= 200)
+            tsx->term_code = 0;
 
     } else {
         if (event->body.timer.entry == &tsx->retransmit_timer) {

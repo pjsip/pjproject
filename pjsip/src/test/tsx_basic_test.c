@@ -284,11 +284,14 @@ on_return:
 static pj_bool_t answer_1xx_on_rx_request(pjsip_rx_data *rdata);
 static void answer_1xx_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e);
 
-/* Whether to answer, whether through a server transaction being terminated
+/* Whether to answer, whether with a final response after which the loop
+ * transport fails, whether through a server transaction being terminated
  * asynchronously, and the provisional responses reported to the
  * transaction user.
  */
 static pj_bool_t answer_1xx_respond;
+static int answer_1xx_final;
+static pjsip_transport *answer_1xx_tp;
 static pj_bool_t answer_1xx_uas;
 static unsigned answer_1xx_uas_delay;
 static pjsip_transaction *answer_1xx_uas_tsx;
@@ -298,8 +301,8 @@ static unsigned answer_1xx_reported;
 static pjsip_transaction *answer_1xx_uac_tsx;
 
 /* Answers the requests of terminate_async_test() with 100, and an INVITE
- * also with 180, or only with 180 from a server transaction, or drops
- * them, and is the user of their transactions.
+ * also with 180, or only with 180 from a server transaction, or with a
+ * final response, or drops them, and is the user of their transactions.
  */
 static pjsip_module answer_1xx_mod =
 {
@@ -330,6 +333,14 @@ static pj_bool_t answer_1xx_on_rx_request(pjsip_rx_data *rdata)
 
     if (!answer_1xx_respond)
         return PJ_TRUE;
+
+    if (answer_1xx_final) {
+        /* The ACK then fails at once */
+        pjsip_endpt_respond_stateless(endpt, rdata, answer_1xx_final, NULL,
+                                      NULL, NULL);
+        pjsip_loop_set_failure(answer_1xx_tp, 1, NULL);
+        return PJ_TRUE;
+    }
 
     if (answer_1xx_uas) {
         /* Terminated before its 180 is sent */
@@ -380,6 +391,14 @@ enum terminate_async_case
                          * terminated asynchronously, with 180 */
     TA_OPTIONS_1XX,     /* an OPTIONS answered with 100 */
     TA_SEND_FAIL,       /* as TA_SENDING, and the send fails */
+    TA_SYNC_FAIL,       /* terminated before a send that fails at once */
+    TA_RESEND_FAIL,     /* sent, then a manual resend fails at once */
+    TA_ACK_FAIL,        /* the INVITE is answered with 486, and the ACK
+                         * fails at once */
+    TA_ACK_FAIL_486,    /* as TA_ACK_FAIL, terminated with 486 */
+    TA_NEXT_ADDR,       /* the send fails and goes to the next address */
+    TA_DISC_POSTED,     /* terminated after a disconnection is posted, on
+                         * a transport of its own */
     TA_UAS_DISC         /* as TA_UAS, then the transport is disconnected;
                          * last, as it shuts the transport down */
 };
@@ -398,8 +417,10 @@ static unsigned answer_1xx_get(pjsip_transaction *tsx,
     return reported;
 }
 
-/* A request being terminated asynchronously must not be retransmitted, and
- * a provisional response or a timeout must not cancel the termination.
+/* A request being terminated asynchronously must not be retransmitted, a
+ * provisional response or a timeout must not cancel the termination, and a
+ * transport failure reports the requested code unless a final response
+ * came first.
  */
 static int terminate_async_test(unsigned tid, enum terminate_async_case tc)
 {
@@ -407,33 +428,78 @@ static int terminate_async_test(unsigned tid, enum terminate_async_case tc)
                                    "pending send", "timeout set",
                                    "before sending", "server transaction",
                                    "provisional response to OPTIONS",
-                                   "failed send", "transport disconnected" };
+                                   "failed send", "failed send at once",
+                                   "failed manual resend", "failed ACK",
+                                   "failed ACK, terminated with 486",
+                                   "next address",
+                                   "transport disconnection posted",
+                                   "transport disconnected" };
     char from_buf[PJSIP_MAX_URL_SIZE];
+    char target_buf[PJSIP_MAX_URL_SIZE];
     pj_str_t target, from;
     pjsip_tx_data *tdata;
     pjsip_transaction *tsx = NULL;
     pjsip_transaction *uas;
+    pjsip_transport *tp = g[tid].tp;
+    pjsip_transport *own_tp = NULL;
     pjsip_tpselector tp_sel;
-    pj_bool_t blackhole = (tc == TA_RETRANSMIT || tc == TA_BEFORE_SEND);
+    pj_bool_t blackhole = (tc == TA_RETRANSMIT || tc == TA_BEFORE_SEND ||
+                           tc == TA_SYNC_FAIL || tc == TA_RESEND_FAIL ||
+                           tc == TA_NEXT_ADDR || tc == TA_DISC_POSTED);
     pj_bool_t uas_answers = (tc == TA_UAS || tc == TA_UAS_DISC);
-    pj_bool_t invite = (tc == TA_1XX || tc == TA_SET_TIMEOUT || uas_answers);
+    pj_bool_t ack_fails = (tc == TA_ACK_FAIL || tc == TA_ACK_FAIL_486);
+    pj_bool_t invite = (tc == TA_1XX || tc == TA_SET_TIMEOUT || uas_answers ||
+                        ack_fails);
     pj_bool_t answered = (invite || tc == TA_OPTIONS_1XX);
-    unsigned expected_1xx = (invite && !uas_answers ? 2 : (answered ? 1 : 0));
+    unsigned expected_1xx = (ack_fails ? 0 :
+                             invite && !uas_answers ? 2 : (answered ? 1 : 0));
+    pj_bool_t before_send = (tc == TA_BEFORE_SEND || tc == TA_SYNC_FAIL);
+    int term_code = (tc == TA_ACK_FAIL_486 ? PJSIP_SC_BUSY_HERE :
+                     PJSIP_SC_REQUEST_TERMINATED);
+    int expected_code = (ack_fails ? PJSIP_SC_TSX_TRANSPORT_ERROR :
+                         PJSIP_SC_REQUEST_TERMINATED);
+    int code_rc;
     unsigned term_delay;
-    pj_bool_t sending = (tc == TA_SENDING || tc == TA_SEND_FAIL);
+    pj_bool_t sending = (tc == TA_SENDING || tc == TA_SEND_FAIL ||
+                         tc == TA_NEXT_ADDR);
     pj_bool_t prev_discard;
     unsigned prev_recv_delay, prev_send_delay;
     int prev_failure;
     unsigned t1 = pjsip_cfg()->tsx.t1;
-    unsigned waited;
+    unsigned waited, elapsed;
+    pj_time_val term_time, end_time;
+    pj_status_t status;
     int rc = 0;
 
     PJ_LOG(3,(THIS_FILE, "  terminate async test: %s", title[tc]));
 
     /* Later when the test must act before the termination is due */
-    term_delay = (tc == TA_SET_TIMEOUT || tc == TA_UAS_DISC ? t1 * 8 : t1 * 4);
+    term_delay = (tc == TA_SET_TIMEOUT || tc == TA_UAS_DISC ||
+                  tc == TA_DISC_POSTED ? t1 * 8 : t1 * 4);
 
-    target = pj_str(g[tid].TARGET_URI);
+    /* The cases about the code of a failure have their own error code */
+    switch (tc) {
+    case TA_SYNC_FAIL:      code_rc = -470; break;
+    case TA_RESEND_FAIL:    code_rc = -471; break;
+    case TA_ACK_FAIL:       code_rc = -472; break;
+    case TA_ACK_FAIL_486:   code_rc = -473; break;
+    default:                code_rc = -450; break;
+    }
+
+    if (tc == TA_SYNC_FAIL) {
+        /* Not for the loop transport selected below */
+        pj_ansi_snprintf(target_buf, sizeof(target_buf),
+                         "sip:tsx_basic_test@127.0.0.1:%d;transport=udp",
+                         tsx_test[tid].port);
+        target = pj_str(target_buf);
+    } else {
+        target = pj_str(g[tid].TARGET_URI);
+    }
+    if (tc == TA_DISC_POSTED) {
+        PJ_TEST_SUCCESS(pjsip_loop_start(endpt, &own_tp), NULL, return -475);
+        pjsip_transport_add_ref(own_tp);
+        tp = own_tp;
+    }
     if (!blackhole) {
         PJ_TEST_SUCCESS(pjsip_endpt_register_module(endpt, &answer_1xx_mod),
                         NULL, return -400);
@@ -446,12 +512,12 @@ static int terminate_async_test(unsigned tid, enum terminate_async_case tc)
     }
 
     /* The answer, and the end of the send, come after we start terminating */
-    pjsip_loop_set_discard(g[tid].tp, blackhole, &prev_discard);
-    pjsip_loop_set_recv_delay(g[tid].tp, blackhole ? 0 : t1 / 4,
-                              &prev_recv_delay);
-    pjsip_loop_set_send_callback_delay(g[tid].tp, sending ? t1 / 8 : 0,
+    pjsip_loop_set_discard(tp, blackhole, &prev_discard);
+    pjsip_loop_set_recv_delay(tp, blackhole ? 0 : t1 / 4, &prev_recv_delay);
+    pjsip_loop_set_send_callback_delay(tp, sending ? t1 / 8 : 0,
                                        &prev_send_delay);
-    pjsip_loop_set_failure(g[tid].tp, tc == TA_SEND_FAIL, &prev_failure);
+    pjsip_loop_set_failure(tp, tc == TA_SEND_FAIL || tc == TA_NEXT_ADDR,
+                           &prev_failure);
 
     PJ_TEST_SUCCESS(pjsip_endpt_create_request(endpt,
                                                invite ? &pjsip_invite_method :
@@ -459,7 +525,26 @@ static int terminate_async_test(unsigned tid, enum terminate_async_case tc)
                                                &target, &from, &target, NULL,
                                                NULL, -1, NULL, &tdata),
                     NULL, { rc = -405; goto on_return; });
+    if (tc == TA_NEXT_ADDR) {
+        /* Two addresses, as if resolved, the first one failing */
+        pjsip_server_addresses *addr = &tdata->dest_info.addr;
+        pj_str_t lo = pj_str("127.0.0.1");
+        unsigned i;
+
+        for (i = 0; i < 2; ++i) {
+            addr->entry[i].type = PJSIP_TRANSPORT_LOOP_DGRAM;
+            pj_sockaddr_init(pj_AF_INET(), &addr->entry[i].addr, &lo,
+                             (pj_uint16_t)(tsx_test[tid].port + i));
+            addr->entry[i].addr_len = sizeof(pj_sockaddr_in);
+            addr->entry[i].name = lo;
+        }
+        addr->count = 2;
+        tdata->dest_info.cur_addr = 0;
+        tdata->dest_info.name = lo;
+    }
     answer_1xx_respond = answered;
+    answer_1xx_final = (ack_fails ? PJSIP_SC_BUSY_HERE : 0);
+    answer_1xx_tp = tp;
     answer_1xx_uas_delay = (tc == TA_UAS_DISC ? t1 * 8 : t1 * 2);
     answer_1xx_uas = uas_answers;
     answer_1xx_uas_tsx = NULL;
@@ -475,29 +560,56 @@ static int terminate_async_test(unsigned tid, enum terminate_async_case tc)
 
     pj_bzero(&tp_sel, sizeof(tp_sel));
     tp_sel.type = PJSIP_TPSELECTOR_TRANSPORT;
-    tp_sel.u.transport = g[tid].tp;
+    tp_sel.u.transport = tp;
     PJ_TEST_SUCCESS(pjsip_tsx_set_transport(tsx, &tp_sel), NULL,
                     { pjsip_tx_data_dec_ref(tdata); rc = -415;
                       goto on_return; });
 
     /* Terminate after the first retransmission or the answer is due */
-    if (tc == TA_BEFORE_SEND) {
-        PJ_TEST_SUCCESS(pjsip_tsx_terminate_async2(tsx,
-                                                PJSIP_SC_REQUEST_TERMINATED,
-                                                NULL, term_delay),
+    if (before_send) {
+        pj_gettickcount(&term_time);
+        PJ_TEST_SUCCESS(pjsip_tsx_terminate_async2(tsx, term_code, NULL,
+                                                   term_delay),
                         NULL, { pjsip_tx_data_dec_ref(tdata); rc = -418;
                                 goto on_return; });
     }
 
-    PJ_TEST_SUCCESS(pjsip_tsx_send_msg(tsx, NULL), NULL,
-                    { pjsip_tx_data_dec_ref(tdata); rc = -420;
-                      goto on_return; });
+    if (tc == TA_SYNC_FAIL) {
+        status = pjsip_tsx_send_msg(tsx, NULL);
+        if (status != PJ_SUCCESS)
+            pjsip_tx_data_dec_ref(tdata);
+        PJ_TEST_EQ(status, PJSIP_ETPNOTSUITABLE, NULL,
+                   { rc = -476; goto on_return; });
+    } else {
+        PJ_TEST_SUCCESS(pjsip_tsx_send_msg(tsx, NULL), NULL,
+                        { pjsip_tx_data_dec_ref(tdata); rc = -420;
+                          goto on_return; });
+    }
 
-    if (tc != TA_BEFORE_SEND) {
-        PJ_TEST_SUCCESS(pjsip_tsx_terminate_async2(tsx,
-                                                PJSIP_SC_REQUEST_TERMINATED,
-                                                NULL, term_delay),
+    /* Disconnected, with the event posted to the transaction */
+    if (tc == TA_DISC_POSTED)
+        pjsip_transport_shutdown2(tp, PJ_TRUE);
+
+    if (!before_send) {
+        pj_gettickcount(&term_time);
+        PJ_TEST_SUCCESS(pjsip_tsx_terminate_async2(tsx, term_code, NULL,
+                                                   term_delay),
                         NULL, { rc = -430; goto on_return; });
+    }
+
+    /* The next address works */
+    if (tc == TA_NEXT_ADDR)
+        pjsip_loop_set_failure(tp, 0, NULL);
+
+    /* A manual resend fails at once */
+    if (rc == 0 && tc == TA_RESEND_FAIL) {
+        pjsip_loop_set_failure(tp, 1, NULL);
+        pjsip_tx_data_add_ref(tdata);
+        status = pjsip_tsx_retransmit_no_state(tsx, tdata);
+        if (status == PJ_SUCCESS)
+            rc = -477;
+        else
+            pjsip_tx_data_dec_ref(tdata);
     }
 
     /* The pending retransmission is cancelled */
@@ -516,6 +628,18 @@ static int terminate_async_test(unsigned tid, enum terminate_async_case tc)
         rc = -435;
     }
     pj_grp_lock_release(tsx->grp_lock);
+
+    /* The send went to the next address, the tdata still held by the
+     * transaction.
+     */
+    if (rc == 0 && tc == TA_NEXT_ADDR) {
+        pj_grp_lock_acquire(tsx->grp_lock);
+        if (tsx->state >= PJSIP_TSX_STATE_TERMINATED)
+            rc = -478;
+        else if (tdata->dest_info.cur_addr != 1)
+            rc = -479;
+        pj_grp_lock_release(tsx->grp_lock);
+    }
 
     /* A timeout set after the provisional responses, as when the INVITE
      * is cancelled, keeps the termination.
@@ -557,14 +681,26 @@ static int terminate_async_test(unsigned tid, enum terminate_async_case tc)
         }
         flush_events(100);
     }
+    pj_gettickcount(&end_time);
+    PJ_TIME_VAL_SUB(end_time, term_time);
+    elapsed = (unsigned)PJ_TIME_VAL_MSEC(end_time);
 
     pj_grp_lock_acquire(tsx->grp_lock);
+    /* After a failover, the termination still comes when requested */
+    if (rc == 0 && tc == TA_NEXT_ADDR &&
+        (tsx->state < PJSIP_TSX_STATE_TERMINATED || elapsed < term_delay / 2))
+    {
+        rc = -480;
+    }
+    /* A disconnection posted before is not delayed by the termination */
+    if (rc == 0 && tc == TA_DISC_POSTED && elapsed >= term_delay / 2)
+        rc = -481;
     if (rc == 0 && tsx->retransmit_count != 0)
         rc = -440;
     if (rc == 0 && tsx->state < PJSIP_TSX_STATE_TERMINATED)
         rc = -445;
-    if (rc == 0 && tsx->status_code != PJSIP_SC_REQUEST_TERMINATED)
-        rc = -450;
+    if (rc == 0 && tsx->status_code != expected_code)
+        rc = code_rc;
     if (rc == 0 && answer_1xx_reported != expected_1xx)
         rc = -452;
     pj_grp_lock_release(tsx->grp_lock);
@@ -591,10 +727,14 @@ on_return:
             pjsip_tsx_terminate(tsx, PJSIP_SC_REQUEST_TERMINATED);
         pj_grp_lock_dec_ref(tsx->grp_lock);
     }
-    pjsip_loop_set_failure(g[tid].tp, prev_failure, NULL);
-    pjsip_loop_set_send_callback_delay(g[tid].tp, prev_send_delay, NULL);
-    pjsip_loop_set_recv_delay(g[tid].tp, prev_recv_delay, NULL);
-    pjsip_loop_set_discard(g[tid].tp, prev_discard, NULL);
+    pjsip_loop_set_failure(tp, prev_failure, NULL);
+    pjsip_loop_set_send_callback_delay(tp, prev_send_delay, NULL);
+    pjsip_loop_set_recv_delay(tp, prev_recv_delay, NULL);
+    pjsip_loop_set_discard(tp, prev_discard, NULL);
+    if (own_tp) {
+        pjsip_transport_shutdown(own_tp);
+        pjsip_transport_dec_ref(own_tp);
+    }
     if (!blackhole) {
         PJ_TEST_SUCCESS(pjsip_endpt_unregister_module(endpt,
                                                       &answer_1xx_mod),

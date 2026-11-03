@@ -148,7 +148,8 @@ struct pjsip_transaction
     /** Module specific data. */
     void                       *mod_data[PJSIP_MAX_MODULE];
 
-    /** Status code given by an asynchronous termination, or 0. Internal. */
+    /** Status code given by an asynchronous termination, until a final
+     *  response replaces it, or 0. Internal. */
     int                         term_code;
 };
 
