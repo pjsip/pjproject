@@ -59,5 +59,7 @@ if(OpenCoreAMRNB_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${OpenCoreAMRNB_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${OpenCoreAMRNB_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(OpenCoreAMRNB::OpenCoreAMRNB OpenCoreAMRNB_LIBRARY)
   endif()
 endif()

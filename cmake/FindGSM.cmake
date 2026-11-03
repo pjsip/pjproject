@@ -59,5 +59,7 @@ if(GSM_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${GSM_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${GSM_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(GSM::GSM GSM_LIBRARY)
   endif()
 endif()

@@ -44,5 +44,7 @@ if(SampleRate_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${SampleRate_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${SampleRate_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(SampleRate::SampleRate SampleRate_LIBRARY)
   endif()
 endif()

@@ -57,5 +57,7 @@ if(WebRTC_FOUND)
       IMPORTED_LOCATION "${WebRTC_LIBRARIES}"
       INTERFACE_INCLUDE_DIRECTORIES "${WebRTC_INCLUDE_DIRS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(WebRTC::WebRTC WebRTC_LIBRARY)
   endif()
 endif()

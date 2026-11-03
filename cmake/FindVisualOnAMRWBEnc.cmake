@@ -64,5 +64,7 @@ if(VisualOnAMRWBEnc_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${VisualOnAMRWBEnc_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${VisualOnAMRWBEnc_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(VisualOnAMRWBEnc::VisualOnAMRWBEnc VisualOnAMRWBEnc_LIBRARY)
   endif()
 endif()

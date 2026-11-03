@@ -50,5 +50,7 @@ if(Speex_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${Speex_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${Speex_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(Speex::Speex Speex_LIBRARY)
   endif()
 endif()

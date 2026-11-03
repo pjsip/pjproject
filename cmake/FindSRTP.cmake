@@ -96,6 +96,8 @@ if(SRTP_FOUND)
       SRTP_HAS_SHUTDOWN "$<BOOL:${SRTP_HAS_SHUTDOWN}>"
       SRTP_VERSION_MAJOR "${SRTP_VERSION_MAJOR}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(SRTP::SRTP SRTP_LIBRARY)
   endif()
 endif()
 

@@ -43,5 +43,7 @@ if(SpeexDSP_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${SpeexDSP_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${SpeexDSP_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(SpeexDSP::SpeexDSP SpeexDSP_LIBRARY)
   endif()
 endif()

@@ -65,5 +65,7 @@ if(BCG729_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${BCG729_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${BCG729_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(BCG729::BCG729 BCG729_LIBRARY)
   endif()
 endif()

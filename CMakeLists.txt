@@ -685,6 +685,7 @@ if(_pj_find_modules)
   # Helpers the Find modules include as Pj/<name>
   install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/CheckLibraryUsable.cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/DebugLibrary.cmake"
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/GetMacroValue.cmake"
     DESTINATION "${PJ_CMAKE_INSTALL_DIR}/Pj"
     COMPONENT PjDevelopment
