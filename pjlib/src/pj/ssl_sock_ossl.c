@@ -571,8 +571,8 @@ static int sslsock_idx;
  * is captured asynchronously in new_session_cb() and stored here keyed by the
  * target server name and the socket's context ID (see sess_ctx_id_init()),
  * then re-injected on the next connection to the same server from a socket
- * with the same context ID. Entries are kept MRU-first; the least recently used is evicted when
- * the cache is full.
+ * with the same context ID. Entries are kept MRU-first; the least recently
+ * used is evicted when the cache is full.
  */
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
 #  define OSSL_SESS_CACHE_ENABLED   1
@@ -812,9 +812,7 @@ static pj_bool_t sess_ctx_id_init(pj_ssl_sock_t *ssock)
         return PJ_FALSE;
 
     md = EVP_MD_CTX_new();
-    if (!md)
-        return PJ_FALSE;
-    ok = EVP_DigestInit_ex(md, sha256, NULL);
+    ok = md && EVP_DigestInit_ex(md, sha256, NULL);
 
     /* Own certificate. Without a private key it is never sent, so it
      * counts as no certificate.
@@ -836,9 +834,14 @@ static pj_bool_t sess_ctx_id_init(pj_ssl_sock_t *ssock)
             ok = digest_x509_aux(X509_OBJECT_get0_X509(obj), dgst, &len) &&
                  digest_part(md, PART_CA, dgst, len);
         } else if (X509_OBJECT_get_type(obj) == X509_LU_CRL) {
+#if USING_BORINGSSL
+            /* No CRL accessor, so don't use the cache */
+            ok = 0;
+#else
             ok = X509_CRL_digest(X509_OBJECT_get0_X509_CRL(obj), sha256,
                                  dgst, &len) &&
                  digest_part(md, PART_CRL, dgst, len);
+#endif
         }
     }
 
@@ -858,10 +861,14 @@ static pj_bool_t sess_ctx_id_init(pj_ssl_sock_t *ssock)
     len = 0;
     if (ok)
         ok = EVP_DigestFinal_ex(md, dgst, &len);
-    EVP_MD_CTX_free(md);
+    if (md)
+        EVP_MD_CTX_free(md);
 
-    if (!ok || len != OSSL_SESS_CTX_ID_LEN)
+    if (!ok || len != OSSL_SESS_CTX_ID_LEN) {
+        PJ_LOG(4,(ssock->pool->obj_name, "Failed to compute TLS session "
+                  "cache ID, session reuse disabled"));
         return PJ_FALSE;
+    }
 
     pj_memcpy(ossock->sess_ctx_id, dgst, OSSL_SESS_CTX_ID_LEN);
     ossock->sess_ctx_valid = PJ_TRUE;
