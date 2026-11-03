@@ -73,5 +73,7 @@ if(OpenH264_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${OpenH264_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${OpenH264_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(OpenH264::OpenH264 OpenH264_LIBRARY)
   endif()
 endif()

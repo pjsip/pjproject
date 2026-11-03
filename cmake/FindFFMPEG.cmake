@@ -121,6 +121,8 @@ function(_ffmpeg_find_component component)
       INTERFACE_INCLUDE_DIRECTORIES "${FFMPEG_${component}_INCLUDE_DIR}"
       INTERFACE_LINK_LIBRARIES "${_dep_targets}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library("FFMPEG::${component}" "FFMPEG_${component}_LIBRARY")
     unset(_dep_targets)
   endif()
 

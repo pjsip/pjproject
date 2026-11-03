@@ -42,6 +42,8 @@ if(YUV_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${YUV_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${YUV_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(YUV::YUV YUV_LIBRARY)
   endif()
 endif()
 

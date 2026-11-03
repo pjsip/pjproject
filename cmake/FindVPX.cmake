@@ -71,5 +71,7 @@ if(VPX_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${VPX_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${VPX_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(VPX::VPX VPX_LIBRARY)
   endif()
 endif()

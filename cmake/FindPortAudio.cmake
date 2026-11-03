@@ -75,6 +75,8 @@ if(PortAudio_FOUND)
       INTERFACE_COMPILE_OPTIONS "${PortAudio_DEFINITIONS}"
       INTERFACE_LINK_LIBRARIES "${_portaudio_link_libs}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(PortAudio::PortAudio PortAudio_LIBRARY)
   endif()
 endif()
 unset(_portaudio_link_libs)

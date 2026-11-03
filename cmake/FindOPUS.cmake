@@ -59,6 +59,8 @@ if(OPUS_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${OPUS_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${OPUS_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(OPUS::OPUS OPUS_LIBRARY)
   endif()
 endif()
 

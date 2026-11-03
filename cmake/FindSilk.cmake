@@ -66,5 +66,7 @@ if(Silk_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${Silk_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${Silk_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(Silk::Silk Silk_LIBRARY)
   endif()
 endif()

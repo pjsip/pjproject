@@ -46,5 +46,7 @@ if(Resample_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${Resample_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${Resample_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(Resample::Resample Resample_LIBRARY)
   endif()
 endif()

@@ -59,5 +59,7 @@ if(OpenCoreAMRWB_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${OpenCoreAMRWB_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${OpenCoreAMRWB_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(OpenCoreAMRWB::OpenCoreAMRWB OpenCoreAMRWB_LIBRARY)
   endif()
 endif()

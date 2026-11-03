@@ -149,6 +149,8 @@ if(Lyra_FOUND)
       INTERFACE_COMPILE_OPTIONS "${Lyra_DEFINITIONS}"
       INTERFACE_COMPILE_FEATURES cxx_std_17
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(Lyra::Lyra Lyra_LIBRARY)
     if(Lyra_MODEL_PATH)
       # default model directory, as autoconf: DIR/model_coeffs
       set_target_properties(Lyra::Lyra PROPERTIES

@@ -100,6 +100,8 @@ if(WebRTC_AEC3_FOUND)
       INTERFACE_COMPILE_DEFINITIONS "${_aec3_definitions}"
       INTERFACE_COMPILE_FEATURES cxx_std_17
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(WebRTC_AEC3::WebRTC_AEC3 WebRTC_AEC3_LIBRARY)
     if(ANDROID)
       # logging uses __android_log_print
       set_target_properties(WebRTC_AEC3::WebRTC_AEC3 PROPERTIES
