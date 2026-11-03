@@ -453,6 +453,52 @@ unset(_pj_sub)
 unset(_pj_cfg)
 unset(_pj_cfg_upper)
 
+# A Windows program finds its DLLs only beside it or on PATH, and each
+# module's DLLs are in its own lib folder: give the tests those folders
+if(WIN32 OR CYGWIN)
+  set(_pj_dll_path "")
+  set(_pj_tests "")
+  set(_pj_dirs "${PROJECT_SOURCE_DIR}")
+  while(_pj_dirs)
+    list(POP_FRONT _pj_dirs _pj_dir)
+    get_property(_pj_subdirs DIRECTORY "${_pj_dir}" PROPERTY SUBDIRECTORIES)
+    list(APPEND _pj_dirs ${_pj_subdirs})
+    get_property(_pj_targets DIRECTORY "${_pj_dir}" PROPERTY BUILDSYSTEM_TARGETS)
+    foreach(_pj_tgt IN LISTS _pj_targets)
+      get_target_property(_pj_type ${_pj_tgt} TYPE)
+      if(_pj_type STREQUAL "SHARED_LIBRARY")
+        list(APPEND _pj_dll_path
+          "PATH=path_list_prepend:$<TARGET_FILE_DIR:${_pj_tgt}>")
+      endif()
+    endforeach()
+    get_property(_pj_dir_tests DIRECTORY "${_pj_dir}" PROPERTY TESTS)
+    foreach(_pj_test IN LISTS _pj_dir_tests)
+      list(APPEND _pj_tests "${_pj_dir}|${_pj_test}")
+    endforeach()
+  endwhile()
+  if(_pj_dll_path)
+    foreach(_pj_entry IN LISTS _pj_tests)
+      string(REPLACE "|" ";" _pj_entry "${_pj_entry}")
+      list(GET _pj_entry 0 _pj_dir)
+      list(GET _pj_entry 1 _pj_test)
+      set_property(TEST "${_pj_test}" DIRECTORY "${_pj_dir}"
+        APPEND PROPERTY ENVIRONMENT_MODIFICATION ${_pj_dll_path}
+      )
+    endforeach()
+  endif()
+  unset(_pj_dll_path)
+  unset(_pj_tests)
+  unset(_pj_dirs)
+  unset(_pj_dir)
+  unset(_pj_subdirs)
+  unset(_pj_targets)
+  unset(_pj_tgt)
+  unset(_pj_type)
+  unset(_pj_dir_tests)
+  unset(_pj_test)
+  unset(_pj_entry)
+endif()
+
 # ##############################################################################
 # Installation
 
