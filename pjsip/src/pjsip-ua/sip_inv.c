@@ -1052,12 +1052,15 @@ static void inv_cancel_orphan_offer(pjsip_inv_session *inv,
                                     struct tsx_inv_data *tsx_inv_data)
 {
     if (tsx_inv_data && tsx_inv_data->has_sdp && !tsx_inv_data->sdp_done &&
-        !tsx_inv_data->retrying && inv->neg &&
-        pjmedia_sdp_neg_get_state(inv->neg) ==
-            PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER &&
-        !inv_offer_carried(inv))
+        !tsx_inv_data->retrying)
     {
-        pjmedia_sdp_neg_cancel_offer(inv->neg);
+        if (inv->neg &&
+            pjmedia_sdp_neg_get_state(inv->neg) ==
+                PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER &&
+            !inv_offer_carried(inv))
+        {
+            pjmedia_sdp_neg_cancel_offer(inv->neg);
+        }
 
         /* Prevent from us cancelling different offer! */
         tsx_inv_data->sdp_done = PJ_TRUE;
@@ -4929,10 +4932,8 @@ static pj_bool_t inv_handle_update_response( pjsip_inv_session *inv,
                 if (status != PJ_SUCCESS && tsx_inv_data)
                     tsx_inv_data->retrying = PJ_FALSE;
             }
-            /* Somehow failed. Probably it's not a good idea to
-             * terminate the session since this is just a request
-             * within dialog. And even if we terminate we should
-             * send BYE.
+            /* If the request is not retried, the session goes on without
+             * its offer: this is just a request within dialog.
              */
         }
 
