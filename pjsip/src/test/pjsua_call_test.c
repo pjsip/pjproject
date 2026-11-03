@@ -7526,6 +7526,95 @@ on_restore:
     return rc;
 }
 
+/* Test that offerless re-INVITE does not invoke the callback when
+ * notify_offerless_reinvite is off.
+ */
+static int test_offerless_reinvite_callback_off(void)
+{
+    pjsua_call_id caller = PJSUA_INVALID_ID;
+    pjsua_call_id callee = PJSUA_INVALID_ID;
+    pjsua_call_setting opt;
+    const pjmedia_sdp_session *remote;
+    pj_status_t status;
+    int rc = 0;
+
+    PJ_LOG(3, (THIS_FILE,
+               "  offerless re-INVITE with notify_offerless_reinvite=OFF: "
+               "callback should NOT be invoked"));
+
+    rc = establish_self_call(&caller, &callee, -2060);
+    if (rc != 0)
+        goto on_return;
+
+    g_ctx.late_offer_reinvite_armed = PJ_TRUE;
+    g_ctx.late_offer_reinvite_callee = callee;
+    g_ctx.late_offer_reinvite_seen = PJ_FALSE;
+    g_ctx.late_offer_async_answer = PJ_FALSE;
+
+    /* Send offerless re-INVITE */
+    pjsua_call_setting_default(&opt);
+    opt.aud_cnt = 1;
+    opt.vid_cnt = 0;
+    opt.txt_cnt = 0;
+    opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
+    status = pjsua_call_reinvite2(caller, &opt, NULL);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    reinvite2 failed: %d", status));
+        rc = -2061;
+        goto on_return;
+    }
+
+    /* Wait for re-INVITE to complete */
+    if (!wait_until(&reinvite_tsx_done, caller, TEST_TIMEOUT_MSEC) ||
+        !wait_until(&reinvite_tsx_done, callee, TEST_TIMEOUT_MSEC))
+    {
+        PJ_LOG(1, (THIS_FILE, "    re-INVITE transaction timeout"));
+        rc = -2062;
+        goto on_return;
+    }
+
+    /* With notify_offerless_reinvite=OFF, callback should NOT fire */
+    if (g_ctx.late_offer_reinvite_seen) {
+        PJ_LOG(1, (THIS_FILE, "    ERROR: callback was invoked with "
+                   "notify_offerless_reinvite=OFF (should be disabled)"));
+        rc = -2063;
+        goto on_return;
+    }
+
+    /* Verify both calls are still confirmed */
+    if (!call_is_confirmed(caller) || !call_is_confirmed(callee)) {
+        PJ_LOG(1, (THIS_FILE, "    calls not confirmed after re-INVITE"));
+        rc = -2064;
+        goto on_return;
+    }
+
+    /* Verify SDP negotiation is complete */
+    if (pjmedia_sdp_neg_get_state(pjsua_var.calls[caller].inv->neg) !=
+            PJMEDIA_SDP_NEG_STATE_DONE ||
+        pjmedia_sdp_neg_get_state(pjsua_var.calls[callee].inv->neg) !=
+            PJMEDIA_SDP_NEG_STATE_DONE)
+    {
+        PJ_LOG(1, (THIS_FILE, "    SDP negotiation not done"));
+        rc = -2065;
+        goto on_return;
+    }
+
+    status = pjmedia_sdp_neg_get_active_remote(
+                                    pjsua_var.calls[caller].inv->neg, &remote);
+    if (status != PJ_SUCCESS || !remote->media_count) {
+        PJ_LOG(1, (THIS_FILE,
+                   "    200 response offer missing from remote SDP"));
+        rc = -2066;
+        goto on_return;
+    }
+
+on_return:
+    g_ctx.late_offer_reinvite_armed = PJ_FALSE;
+    g_ctx.late_offer_reinvite_callee = PJSUA_INVALID_ID;
+    drain_all_calls();
+    return rc;
+}
+
 int pjsua_late_sdp_offer_test(void)
 {
     extern pjsip_endpoint *endpt;
@@ -7667,6 +7756,106 @@ int pjsua_late_sdp_offer_test(void)
     if (settings_saved)
         restore_msg_size(&lib_settings);
     pjsua_destroy2(PJSUA_DESTROY_NO_RX_MSG);
+
+    /* Test with notify_offerless_reinvite disabled (default/PJ_FALSE).
+     * Verifies that callback is NOT invoked when option is OFF.
+     */
+    if (rc == 0) {
+        status = pjsua_create();
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(1, (THIS_FILE, "  pjsua_create failed (%d)", status));
+            rc = -1958;
+            goto on_restore;
+        }
+
+        pjsua_config_default(&ua_cfg);
+        ua_cfg.cb.on_incoming_call = &on_incoming_call;
+        ua_cfg.cb.on_call_rx_reinvite = &on_call_rx_reinvite;
+        ua_cfg.notify_offerless_reinvite = PJ_FALSE;  /* Default: OFF */
+        ua_cfg.cb.on_stream_created2 = &on_stream_created2;
+        ua_cfg.cb.on_stream_destroyed = &on_stream_destroyed;
+        ua_cfg.cb.on_call_media_state = &on_call_media_state;
+        ua_cfg.thread_cnt = 0;
+        ua_cfg.require_100rel = PJSUA_100REL_NOT_USED;
+        ua_cfg.use_timer = PJSUA_SIP_TIMER_INACTIVE;
+        ua_cfg.use_srtp = PJMEDIA_SRTP_DISABLED;
+
+        pjsua_logging_config_default(&log_cfg);
+        log_cfg.level = 3;
+        log_cfg.console_level = 3;
+
+        pjsua_media_config_default(&media_cfg);
+        media_cfg.no_vad = PJ_TRUE;
+        media_cfg.enable_ice = PJ_FALSE;
+
+        status = pjsua_init(&ua_cfg, &log_cfg, &media_cfg);
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(1, (THIS_FILE, "  pjsua_init failed (%d)", status));
+            pjsua_destroy();
+            rc = -1959;
+            goto on_restore;
+        }
+
+        pjsua_transport_config_default(&tp_cfg);
+        tp_cfg.port = 0;
+        status = pjsua_transport_create(PJSIP_TRANSPORT_UDP, &tp_cfg, &tp_id);
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(1, (THIS_FILE, "  transport_create failed (%d)", status));
+            pjsua_destroy();
+            rc = -1960;
+            goto on_restore;
+        }
+
+        pj_bzero(&g_ctx, sizeof(g_ctx));
+
+        status = pjsua_start();
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(1, (THIS_FILE, "  pjsua_start failed (%d)", status));
+            pjsua_destroy();
+            rc = -1961;
+            goto on_restore;
+        }
+
+        status = pjsua_set_null_snd_dev();
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(1, (THIS_FILE, "  set_null_snd_dev failed (%d)", status));
+            pjsua_destroy();
+            rc = -1962;
+            goto on_restore;
+        }
+
+        {
+            pjsua_transport_info ti;
+
+            status = pjsua_transport_get_info(tp_id, &ti);
+            if (status != PJ_SUCCESS) {
+                PJ_LOG(1, (THIS_FILE,
+                           "  transport_get_info failed (%d)", status));
+                pjsua_destroy();
+                rc = -1964;
+                goto on_restore;
+            }
+            port = pj_sockaddr_get_port(&ti.local_addr);
+        }
+
+        status = pjsua_acc_add_local(tp_id, PJ_TRUE, &g_ctx.acc_id);
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(1, (THIS_FILE, "  acc_add_local failed (%d)", status));
+            pjsua_destroy();
+            rc = -1963;
+            goto on_restore;
+        }
+
+        pj_ansi_snprintf(g_ctx.self_uri, sizeof(g_ctx.self_uri),
+                         "sip:%s@127.0.0.1:%u", TEST_USER, (unsigned)port);
+
+        g_ctx.med_state_target = 1;
+
+        /* Run test with option OFF: callback should NOT be invoked */
+        rc = test_offerless_reinvite_callback_off();
+
+        pjsua_destroy2(PJSUA_DESTROY_NO_RX_MSG);
+    }
 
 on_restore:
     status = pjsip_endpt_create(&caching_pool.factory, "endpt", &endpt);

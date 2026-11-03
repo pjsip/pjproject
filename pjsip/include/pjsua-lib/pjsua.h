@@ -7009,7 +7009,10 @@ PJ_DECL(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
  *                      be persistent in all next answers/responses for this
  *                      INVITE request.
  *
- * @return              PJ_SUCCESS on success, or the appropriate error code.
+ * @return              PJ_SUCCESS on success, PJ_EPENDING if media
+ *                      initialization is asynchronous, in which case the 
+ *                      answer will be sent once the media initialization 
+ *                      completes, or the appropriate error code on failure.
  */
 PJ_DECL(pj_status_t)
 pjsua_call_answer_with_sdp(pjsua_call_id call_id,
