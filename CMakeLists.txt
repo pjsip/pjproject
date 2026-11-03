@@ -707,6 +707,11 @@ endforeach()
 if(PJ_SSL_BACKEND STREQUAL "openssl"
    OR (PJ_SRTP_WITH_OPENSSL AND PJ_DEP_SRTP STREQUAL "bundled"))
   list(APPEND _pj_found_pkgs OpenSSL)
+  # On Windows FindOpenSSL keeps its libraries in LIB_EAY and SSL_EAY
+  # (MinGW), or LIB_EAY_* and SSL_EAY_* (MSVC)
+  if(WIN32)
+    list(APPEND _pj_found_pkgs LIB_EAY SSL_EAY)
+  endif()
 elseif(PJ_SSL_BACKEND STREQUAL "gnutls")
   list(APPEND _pj_found_pkgs GnuTLS)
 elseif(PJ_SSL_BACKEND STREQUAL "mbedtls")
@@ -743,9 +748,9 @@ foreach(_var IN LISTS _pj_cache_vars)
   # Find modules name their entries in either case: OPUS_LIBRARY, UUID_...
   string(TOUPPER "${_var}" _var_upper)
   foreach(_pkg IN LISTS _pj_found_pkgs)
-    string(TOUPPER "${_pkg}_" _prefix)
-    string(FIND "${_var_upper}" "${_prefix}" _pos)
-    if(_pos EQUAL 0)
+    string(TOUPPER "${_pkg}" _pkg_upper)
+    string(FIND "${_var_upper}" "${_pkg_upper}_" _pos)
+    if(_pos EQUAL 0 OR _var_upper STREQUAL _pkg_upper)
       string(APPEND _pj_found_paths
         "_pj_use_found(${_var} ${_type} [==[${_value}]==])\n"
       )
