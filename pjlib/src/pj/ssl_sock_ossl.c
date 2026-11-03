@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2009-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2009-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -221,6 +221,9 @@ static void update_certs_info(pj_ssl_sock_t* ssock,
 /*
  * Secure socket structure definition.
  */
+/* Length of the client session cache context ID (SHA-256). */
+#define OSSL_SESS_CTX_ID_LEN    32
+
 typedef struct ossl_sock_t
 {
     pj_ssl_sock_t         base;
@@ -236,6 +239,10 @@ typedef struct ossl_sock_t
      * socket it holds the response stapled by the peer, if any.
      */
     pj_str_t              ocsp_resp;
+
+    /* Client session cache key for this socket, see sess_ctx_id_init(). */
+    pj_bool_t             sess_ctx_valid;
+    unsigned char         sess_ctx_id[OSSL_SESS_CTX_ID_LEN];
 } ossl_sock_t;
 
 
@@ -562,9 +569,10 @@ static int sslsock_idx;
 /* Client TLS session cache for session resumption. TLS 1.3 delivers the
  * resumption ticket via a NewSessionTicket message after the handshake, so it
  * is captured asynchronously in new_session_cb() and stored here keyed by the
- * target server name, then re-injected on the next connection to the same
- * server. Entries are kept MRU-first; the least recently used is evicted when
- * the cache is full.
+ * target server name and the socket's context ID (see sess_ctx_id_init()),
+ * then re-injected on the next connection to the same server from a socket
+ * with the same context ID. Entries are kept MRU-first; the least recently
+ * used is evicted when the cache is full.
  */
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
 #  define OSSL_SESS_CACHE_ENABLED   1
@@ -575,6 +583,7 @@ static int sslsock_idx;
 #if OSSL_SESS_CACHE_ENABLED
 typedef struct ossl_sess_cache_entry {
     char          server_name[PJ_MAX_HOSTNAME];
+    unsigned char ctx_id[OSSL_SESS_CTX_ID_LEN];
     SSL_SESSION  *sess;
 } ossl_sess_cache_entry;
 
@@ -584,24 +593,31 @@ static pj_caching_pool       ossl_sess_cp;
 static pj_pool_t            *ossl_sess_pool;
 static pj_lock_t            *ossl_sess_cache_lock;
 
-/* Find the cache slot for the given server name. Returns -1 if not found.
- * Caller must hold ossl_sess_cache_lock.
+/* Find the cache slot for the given server name and context ID. Returns -1
+ * if not found. Caller must hold ossl_sess_cache_lock.
  */
-static int sess_cache_find(const char *name)
+static int sess_cache_find(const char *name, const unsigned char *ctx_id)
 {
     unsigned i;
     for (i = 0; i < ossl_sess_cache_cnt; ++i) {
-        if (pj_ansi_strcmp(ossl_sess_cache[i].server_name, name) == 0)
+        if (pj_ansi_strcmp(ossl_sess_cache[i].server_name, name) == 0 &&
+            pj_memcmp(ossl_sess_cache[i].ctx_id, ctx_id,
+                      OSSL_SESS_CTX_ID_LEN) == 0)
+        {
             return (int)i;
+        }
     }
     return -1;
 }
 
-/* Store a session for the given server name, taking ownership of the reference
- * held on sess (as handed to new_session_cb). Any previous session for the
- * same name is replaced. The new entry becomes MRU (front of the array).
+/* Store a session for the given server name and context ID, taking ownership
+ * of the reference held on sess (as handed to new_session_cb). Any previous
+ * session for the same key is replaced. The new entry becomes MRU (front of
+ * the array).
  */
-static pj_bool_t sess_cache_store(const pj_str_t *name, SSL_SESSION *sess)
+static pj_bool_t sess_cache_store(const pj_str_t *name,
+                                  const unsigned char *ctx_id,
+                                  SSL_SESSION *sess)
 {
     int idx;
     unsigned n;
@@ -620,7 +636,7 @@ static pj_bool_t sess_cache_store(const pj_str_t *name, SSL_SESSION *sess)
         pj_memcpy(nbuf, name->ptr, name->slen);
         nbuf[name->slen] = '\0';
 
-        idx = sess_cache_find(nbuf);
+        idx = sess_cache_find(nbuf, ctx_id);
         if (idx >= 0 && (unsigned)idx < ossl_sess_cache_cnt) {
             SSL_SESSION_free(ossl_sess_cache[idx].sess);
             for (n = (unsigned)idx; n + 1 < ossl_sess_cache_cnt; ++n)
@@ -641,6 +657,7 @@ static pj_bool_t sess_cache_store(const pj_str_t *name, SSL_SESSION *sess)
 
         pj_memcpy(ossl_sess_cache[0].server_name, name->ptr, name->slen);
         ossl_sess_cache[0].server_name[name->slen] = '\0';
+        pj_memcpy(ossl_sess_cache[0].ctx_id, ctx_id, OSSL_SESS_CTX_ID_LEN);
         ossl_sess_cache[0].sess = sess;
         ossl_sess_cache_cnt++;
     }
@@ -649,11 +666,13 @@ static pj_bool_t sess_cache_store(const pj_str_t *name, SSL_SESSION *sess)
     return PJ_TRUE;
 }
 
-/* Look up a cached session for the given server name. On success, returns the
- * session with its reference count incremented (caller must SSL_SESSION_free()
- * it) and promotes the entry to MRU. Returns NULL if not found.
+/* Look up a cached session for the given server name and context ID. On
+ * success, returns the session with its reference count incremented (caller
+ * must SSL_SESSION_free() it) and promotes the entry to MRU. Returns NULL if
+ * not found.
  */
-static SSL_SESSION *sess_cache_get(const pj_str_t *name)
+static SSL_SESSION *sess_cache_get(const pj_str_t *name,
+                                   const unsigned char *ctx_id)
 {
     char nbuf[PJ_MAX_HOSTNAME];
     SSL_SESSION *sess = NULL;
@@ -669,7 +688,7 @@ static SSL_SESSION *sess_cache_get(const pj_str_t *name)
     nbuf[name->slen] = '\0';
 
     pj_lock_acquire(ossl_sess_cache_lock);
-    idx = sess_cache_find(nbuf);
+    idx = sess_cache_find(nbuf, ctx_id);
     if (idx >= 0 && (unsigned)idx < ossl_sess_cache_cnt) {
         unsigned n;
         ossl_sess_cache_entry e = ossl_sess_cache[idx];
@@ -723,10 +742,137 @@ static int new_session_cb(SSL *ssl, SSL_SESSION *sess)
 {
     pj_ssl_sock_t *ssock = SSL_get_ex_data(ssl, sslsock_idx);
 
-    if (ssock && ssock->param.server_name.slen) {
-        return sess_cache_store(&ssock->param.server_name, sess) ? 1 : 0;
+    if (ssock && ssock->param.server_name.slen &&
+        ((ossl_sock_t *)ssock)->sess_ctx_valid)
+    {
+        return sess_cache_store(&ssock->param.server_name,
+                                ((ossl_sock_t *)ssock)->sess_ctx_id,
+                                sess) ? 1 : 0;
     }
     return 0;
+}
+
+/* Add a tagged, length-prefixed part to a context ID digest, so that
+ * different combinations of parts can't produce the same input.
+ */
+static int digest_part(EVP_MD_CTX *md, unsigned char tag,
+                       const void *data, unsigned int len)
+{
+    return EVP_DigestUpdate(md, &tag, sizeof(tag)) &&
+           EVP_DigestUpdate(md, &len, sizeof(len)) &&
+           (len == 0 || EVP_DigestUpdate(md, data, len));
+}
+
+/* SHA-256 of an X509 including its auxiliary trust settings, which a PEM
+ * "TRUSTED CERTIFICATE" in a CA list may carry.
+ */
+static int digest_x509_aux(X509 *x, unsigned char *dgst, unsigned int *dlen)
+{
+    unsigned char *buf, *p;
+    int len, ok;
+
+    len = i2d_X509_AUX(x, NULL);
+    if (len <= 0)
+        return 0;
+    buf = p = (unsigned char *)OPENSSL_malloc(len);
+    if (!buf)
+        return 0;
+    ok = (i2d_X509_AUX(x, &p) == len) &&
+         EVP_Digest(buf, len, dgst, dlen, EVP_sha256(), NULL);
+    OPENSSL_free(buf);
+    return ok;
+}
+
+/* Compute the socket's session cache context ID: a digest of the settings
+ * that decide which servers the client trusts and which certificate it
+ * presents. A cached session is only resumed by a socket with the same
+ * settings, as resumption skips certificate verification and keeps the
+ * identity the session was made with.
+ *
+ * Must be called once the SSL_CTX credentials are loaded, but before the
+ * certificate is wiped, as CA_path is needed. A socket with on_verify_cb
+ * gets no ID and doesn't use the cache, as the callback's policy can't be
+ * identified and it must run on every connection.
+ */
+static pj_bool_t sess_ctx_id_init(pj_ssl_sock_t *ssock)
+{
+    enum { PART_CERT = 1, PART_CA, PART_CRL, PART_CA_PATH, PART_VERIFY };
+    ossl_sock_t *ossock = (ossl_sock_t *)ssock;
+    const EVP_MD *sha256 = EVP_sha256();
+    STACK_OF(X509_OBJECT) *objs;
+    EVP_MD_CTX *md;
+    unsigned char dgst[EVP_MAX_MD_SIZE];
+    unsigned int len;
+    X509 *x;
+    int i, ok;
+
+    ossock->sess_ctx_valid = PJ_FALSE;
+
+    if (ssock->param.cb.on_verify_cb)
+        return PJ_FALSE;
+
+    md = EVP_MD_CTX_new();
+    ok = md && EVP_DigestInit_ex(md, sha256, NULL);
+
+    /* Own certificate. Without a private key it is never sent, so it
+     * counts as no certificate.
+     */
+    len = 0;
+    x = SSL_CTX_get0_certificate(ossock->ossl_ctx);
+    if (ok && x && SSL_CTX_get0_privatekey(ossock->ossl_ctx))
+        ok = X509_digest(x, sha256, dgst, &len);
+    if (ok)
+        ok = digest_part(md, PART_CERT, dgst, len);
+
+    /* Trusted CAs and CRLs */
+    objs = X509_STORE_get0_objects(SSL_CTX_get_cert_store(ossock->ossl_ctx));
+    for (i = 0; ok && objs && i < sk_X509_OBJECT_num(objs); ++i) {
+        X509_OBJECT *obj = sk_X509_OBJECT_value(objs, i);
+
+        len = 0;
+        if (X509_OBJECT_get_type(obj) == X509_LU_X509) {
+            ok = digest_x509_aux(X509_OBJECT_get0_X509(obj), dgst, &len) &&
+                 digest_part(md, PART_CA, dgst, len);
+        } else if (X509_OBJECT_get_type(obj) == X509_LU_CRL) {
+#if USING_BORINGSSL
+            /* No CRL accessor, so don't use the cache */
+            ok = 0;
+#else
+            ok = X509_CRL_digest(X509_OBJECT_get0_X509_CRL(obj), sha256,
+                                 dgst, &len) &&
+                 digest_part(md, PART_CRL, dgst, len);
+#endif
+        }
+    }
+
+    /* CA_path certificates are loaded on demand, so take the path itself. */
+    if (ok) {
+        const pj_str_t *path = ssock->cert ? &ssock->cert->CA_path : NULL;
+        ok = digest_part(md, PART_CA_PATH, path ? path->ptr : NULL,
+                         path ? (unsigned int)path->slen : 0);
+    }
+
+    /* Verification settings */
+    if (ok) {
+        ok = digest_part(md, PART_VERIFY, &ssock->param.verify_peer,
+                         sizeof(ssock->param.verify_peer));
+    }
+
+    len = 0;
+    if (ok)
+        ok = EVP_DigestFinal_ex(md, dgst, &len);
+    if (md)
+        EVP_MD_CTX_free(md);
+
+    if (!ok || len != OSSL_SESS_CTX_ID_LEN) {
+        PJ_LOG(4,(ssock->pool->obj_name, "Failed to compute TLS session "
+                  "cache ID, session reuse disabled"));
+        return PJ_FALSE;
+    }
+
+    pj_memcpy(ossock->sess_ctx_id, dgst, OSSL_SESS_CTX_ID_LEN);
+    ossock->sess_ctx_valid = PJ_TRUE;
+    return PJ_TRUE;
 }
 #endif  /* OSSL_SESS_CACHE_ENABLED */
 
@@ -1983,6 +2129,11 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
     }
 #endif
 
+#if OSSL_SESS_CACHE_ENABLED
+    if (!ssock->is_server && ssock->param.enable_session_reuse)
+        sess_ctx_id_init(ssock);
+#endif
+
     /* Early sensitive data cleanup after OpenSSL context setup. However,
      * this cannot be done for listener sockets, as the data will still
      * be needed by accepted sockets.
@@ -2071,9 +2222,10 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 #if OSSL_SESS_CACHE_ENABLED
     /* Client: resume a cached session for this server, if any. */
     if (!ssock->is_server && ssock->param.enable_session_reuse &&
-        ssock->param.server_name.slen)
+        ssock->param.server_name.slen && ossock->sess_ctx_valid)
     {
-        SSL_SESSION *sess = sess_cache_get(&ssock->param.server_name);
+        SSL_SESSION *sess = sess_cache_get(&ssock->param.server_name,
+                                           ossock->sess_ctx_id);
         if (sess) {
             SSL_set_session(ossock->ossl_ssl, sess);
             SSL_SESSION_free(sess);
