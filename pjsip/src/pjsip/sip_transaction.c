@@ -1336,12 +1336,12 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 
 
     if (entry->id == TERMINATE_TIMER) {
+        pj_grp_lock_acquire(tsx->grp_lock);
         if (tsx->state < PJSIP_TSX_STATE_TERMINATED) {
-            /* A 1xx may change the status code meanwhile, read it once */
-            int code = tsx->status_code;
-
-            pjsip_tsx_terminate(tsx, code >= 200 ? code : tsx->term_code);
+            pjsip_tsx_terminate(tsx, tsx->status_code >= 200 ?
+                                     tsx->status_code : tsx->term_code);
         }
+        pj_grp_lock_release(tsx->grp_lock);
     } else if (entry->id == TRANSPORT_ERR_TIMER ||
                entry->id == TRANSPORT_DISC_TIMER)
     {
@@ -3701,8 +3701,10 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
                 return status;
 
             status = tsx_send_msg( tsx, ack_tdata);
-            if (status != PJ_SUCCESS)
+            if (status != PJ_SUCCESS) {
+                pjsip_tx_data_dec_ref(ack_tdata);
                 return status;
+            }
 
         } else if ((tsx->method.id == PJSIP_BYE_METHOD) &&
                    (tsx->status_code == PJSIP_SC_REQUEST_TIMEOUT ||

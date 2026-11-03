@@ -751,8 +751,6 @@ static int terminate_async_terminated_test(unsigned tid)
     pj_str_t target, from;
     pjsip_tx_data *tdata;
     pjsip_transaction *tsx;
-    pjsip_tpselector tp_sel;
-    pj_bool_t prev_discard;
     unsigned t1 = pjsip_cfg()->tsx.t1;
     unsigned waited;
     int rc = 0;
@@ -761,31 +759,20 @@ static int terminate_async_terminated_test(unsigned tid)
 
     target = pj_str(g[tid].TARGET_URI);
     from = pj_str(g[tid].FROM_URI);
-    pjsip_loop_set_discard(g[tid].tp, PJ_TRUE, &prev_discard);
 
     PJ_TEST_SUCCESS(pjsip_endpt_create_request(endpt, &pjsip_options_method,
                                                &target, &from, &target, NULL,
                                                NULL, -1, NULL, &tdata),
-                    NULL, { rc = -460; goto on_return; });
+                    NULL, return -460);
     PJ_TEST_SUCCESS(pjsip_tsx_create_uac(NULL, tdata, &tsx), NULL,
-                    { pjsip_tx_data_dec_ref(tdata); rc = -461;
-                      goto on_return; });
+                    { pjsip_tx_data_dec_ref(tdata); return -461; });
     pj_grp_lock_add_ref(tsx->grp_lock);
 
-    pj_bzero(&tp_sel, sizeof(tp_sel));
-    tp_sel.type = PJSIP_TPSELECTOR_TRANSPORT;
-    tp_sel.u.transport = g[tid].tp;
-    if (pjsip_tsx_set_transport(tsx, &tp_sel) != PJ_SUCCESS ||
-        pjsip_tsx_send_msg(tsx, NULL) != PJ_SUCCESS)
-    {
-        pjsip_tx_data_dec_ref(tdata);
-        rc = -462;
-    }
+    /* Not sent, so only its destroy timer ends it */
+    pjsip_tx_data_dec_ref(tdata);
 
-    /* Terminated, with its destroy due before the events are polled */
     pjsip_tsx_terminate(tsx, PJSIP_SC_REQUEST_TIMEOUT);
-    if (rc == 0 &&
-        pjsip_tsx_terminate_async2(tsx, PJSIP_SC_REQUEST_TERMINATED, NULL,
+    if (pjsip_tsx_terminate_async2(tsx, PJSIP_SC_REQUEST_TERMINATED, NULL,
                                    t1) != PJ_SUCCESS)
     {
         rc = -463;
@@ -805,8 +792,6 @@ static int terminate_async_terminated_test(unsigned tid)
     pj_grp_lock_release(tsx->grp_lock);
     pj_grp_lock_dec_ref(tsx->grp_lock);
 
-on_return:
-    pjsip_loop_set_discard(g[tid].tp, prev_discard, NULL);
     return rc;
 }
 
@@ -838,15 +823,15 @@ int tsx_basic_test(unsigned tid)
     if (status != 0)
         goto on_return;
 
+    status = terminate_async_terminated_test(tid);
+    if (status != 0)
+        goto on_return;
+
     /* These tests need the loop transport to blackhole the request. */
     if (g[tid].tp) {
         int tc;
 
         status = send_request2_test(tid);
-        if (status != 0)
-            goto on_return;
-
-        status = terminate_async_terminated_test(tid);
         if (status != 0)
             goto on_return;
 
