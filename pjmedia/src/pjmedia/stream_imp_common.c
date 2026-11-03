@@ -414,9 +414,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     pj_status_t status;
     pj_bool_t pkt_discarded = PJ_FALSE;
     pj_bool_t paused;
-#ifdef TEXT_STREAM
-    unsigned rx_discard;
-#endif
+    pjmedia_rtcp_rx_rtp_param rtcp_prm;
 
     /* Hold a reference to the stream for the entire callback so it cannot
      * be destroyed by another thread while we are reading and updating its
@@ -602,18 +600,16 @@ on_return:
     if (c_strm->rtcp.peer_ssrc == 0)
         c_strm->rtcp.peer_ssrc = channel->rtp.peer_ssrc;
 
+    pjmedia_rtcp_rx_rtp_param_default(&rtcp_prm);
+    rtcp_prm.seq = pj_ntohs(hdr->seq);
+    rtcp_prm.ts = pj_ntohl(hdr->ts);
+    rtcp_prm.payload = payloadlen;
+    rtcp_prm.discarded = pkt_discarded;
 #ifdef TEXT_STREAM
-    rx_discard = c_strm->rtcp.stat.rx.discard;
+    /* The text stream decides on packets failing the sequence check */
+    rtcp_prm.bad_used = !paused && !pkt_discarded;
 #endif
-    pjmedia_rtcp_rx_rtp2(&c_strm->rtcp, pj_ntohs(hdr->seq),
-                         pj_ntohl(hdr->ts), payloadlen, pkt_discarded);
-#ifdef TEXT_STREAM
-    /* RTCP counts a packet failing its sequence check as discarded, but
-     * the text stream may still use it.
-     */
-    if (!paused && !pkt_discarded)
-        c_strm->rtcp.stat.rx.discard = rx_discard;
-#endif
+    pjmedia_rtcp_rx_rtp3(&c_strm->rtcp, &rtcp_prm);
 
     /* RTCP-FB generic NACK */
     if (c_strm->rtcp.received >= 10 && seq_st.diff > 1 &&

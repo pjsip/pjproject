@@ -321,6 +321,23 @@ static const scenario scenarios[] =
       { 100, 101, 102, 2100, 103, 104, 105, 2101, 106, 107 },
       { "abcdefgh", "abcdefgh" } },
 
+    /* Beyond MAX_DROPOUT, RTP flags the second stray as a restart */
+    { "strays beyond MAX_DROPOUT interleaved with the stream", 10,
+      { 100, 101, 102, 20100, 103, 104, 105, 20101, 106, 107 },
+      { "abcdefgh", "abcdefgh" } },
+
+    /* The strays make RTP flag 113 as a restart */
+    { "long loss after strays of another SSRC", 8,
+      { 100, 101, 102, 40000, 103, 40001, 113, 114 },
+      { "abcd???????o", "abcd?????mno" }, 0x28, 40000 },
+
+    /* Known limitation: looks like the strays above, so the restart's
+     * second packet needs confirmation too.
+     */
+    { "remote restart with a packet of the old sequence between", 7,
+      { 100, 101, 102, 40000, 103, 40001, 40002 },
+      { "abcd?P", "abcdNOP" } },
+
     { "long loss", 7,
       { 100, 101, 102, 123, 124, 125, 126 },
       { "abc???????yz{", "abc?????wxyz{" } },
@@ -418,6 +435,11 @@ static const scenario scenarios[] =
       { 100, 101, 102, 103, 40000, 40001, 40002, 108, 109 },
       { "abcd?OP?????j", "abcdNOP???hij" }, 0x70, 40000 },
 
+    /* Far from where it stopped, e.g: restarted, so no long loss markers */
+    { "switch back to an earlier SSRC far from where it stopped", 10,
+      { 100, 101, 102, 103, 40000, 40001, 40002, 120, 121, 122 },
+      { "abcd?OP?vw", "abcdNOPtuvw" }, 0x70, 40000 },
+
     /* Late packets of the sequence before a jump are only dropped shortly
      * after the jump, later a restart near it is accepted.
      */
@@ -447,11 +469,11 @@ static const scenario scenarios[] =
       { 100, 101, 102, 5000, 5001, 103, 104 },
       { "abcde", "abcde" }, 0x18, 5000, PJ_TRUE },
 
+    /* Another SSRC does not end the probation, so 103 skips too far */
     { "another SSRC during probation, SSRC in SDP", 4,
       { 100, 102, 103, 104 },
-      { "a??de", "abcde" }, 0x02, 102, PJ_TRUE },
+      { "a???e", "abcde" }, 0x02, 102, PJ_TRUE },
 
-    /* RTP flags the real 102 as a duplicate of the dropped one */
     /* No lost text marker is missed with RED without redundant blocks */
     { "RED without redundant blocks after loss", 5,
       { 100, 101, 102, 104, 105 },
@@ -461,6 +483,7 @@ static const scenario scenarios[] =
       { 100, 101, 102, 120, 121 },
       { "abc???????v", "abc???????v" }, 0, 0, PJ_FALSE, 0x18 },
 
+    /* RTP flags the real 102 as a duplicate of the dropped one */
     { "same sequence with another SSRC after loss", 4,
       { 100, 102, 102, 103 },
       { "a?cd", "abcd" }, 0x02, 102 },
