@@ -31,20 +31,13 @@
  *   3. Deferred abandon: callback defers, event loop abandons the token.
  *   4. Account deletion with outstanding deferred challenge: callback
  *      defers, account is deleted, deferred state is cleaned up safely.
- *   5. Hold re-INVITE whose challenge is deferred and then answered: the
- *      call ends up on hold.
- *   6. Unhold of a call not held that gets 488: the call is not held.
- *      Hold that gets 3xx: the call is not held. Unhold that gets 488, as
- *      re-INVITE or UPDATE: the call is marked as held again.
- *   7. UPDATE whose retry with credentials can't be sent: its offer is not
- *      left pending and its provisional media is reverted.
- *   8. The same for a re-INVITE.
- *   9. The same for a hold, which is also rolled back.
- *  10. UPDATE adding a stream, answered with 302: its provisional media is
- *      reverted.
- *  11. The same for a re-INVITE.
- *  12. UPDATE adding a stream, challenged with no matching credentials:
- *      its provisional media is reverted.
+ *   5. A re-INVITE or UPDATE with an offer that is challenged, retried,
+ *      redirected or rejected: the offer, the hold state and the media
+ *      end up as the final answer says.
+ *   6. A request without SDP that is challenged does not drop an offer
+ *      staged by the application.
+ *   7. An offer staged by the application once an UPDATE is answered is
+ *      not dropped.
  */
 
 #include "test.h"
@@ -59,7 +52,7 @@
 /* SIP user name used to filter requests belonging to this test module */
 #define TEST_USER   "pjsua-auth-test"
 
-/* Users of the call in sub-tests 5 to 12 */
+/* Users of the call in sub-tests 5 to 7 */
 #define CALLER_USER "pjsua-auth-caller"
 #define CALLEE_USER "pjsua-auth-callee"
 
@@ -126,27 +119,44 @@ static pj_bool_t mock_registrar_rx_request(pjsip_rx_data *rdata)
 
 
 /*****************************************************************************
- * Mock proxy: answers the caller's next re-INVITE or UPDATE
+ * Mock proxy: answers the caller's next in-dialog requests of one method
  *****************************************************************************/
 
 static pj_bool_t mock_proxy_rx_request(pjsip_rx_data *rdata);
 
 static const pjsip_method update_method = { PJSIP_OTHER_METHOD,
                                             { "UPDATE", 6 } };
+static const pjsip_method info_method = { PJSIP_OTHER_METHOD,
+                                          { "INFO", 4 } };
 
 /* What becomes of the retry with credentials of a challenged request */
 enum { RETRY_SENT, RETRY_UNSENT, RETRY_NO_CREDS };
 
+/* Answers besides plain status codes */
+enum {
+    ANS_PASS = 0,           /* Not answered, the callee gets the request */
+    ANS_200_NO_SDP = 1000,  /* 200 without SDP answer                    */
+    ANS_200_BAD_SDP,        /* 200 with an answer that has no codec       */
+    ANS_422_NO_MIN_SE       /* 422 without Min-SE                        */
+};
+
+#define MAX_ANSWERS 2
+
 /* Fields after mod are shared with the event threads, under mutex */
 static struct {
-    pjsip_module  mod;
-    pj_pool_t    *pool;
-    pj_mutex_t   *mutex;
-    int           status;       /* Answer to the next request, 0: none  */
-    pj_bool_t     update;       /* Answer UPDATE instead of re-INVITE   */
-    int           retry;        /* RETRY_* after a 401                  */
-    unsigned      answered;
-    unsigned      auth_count;   /* Requests with credentials seen       */
+    pjsip_module         mod;
+    pj_pool_t           *pool;
+    pj_mutex_t          *mutex;
+    const pjsip_method  *method;    /* Method answered, NULL: none        */
+    int                  answer[MAX_ANSWERS]; /* To the next requests     */
+    unsigned             next;      /* Index of the next answer           */
+    int                  retry;     /* RETRY_* after a 401                */
+    unsigned             answered;
+    unsigned             auth_count;/* Requests with credentials seen     */
+    pjsua_call_id        callee_call;
+    int                  peer_status; /* Final answer to callee's INVITE  */
+    pj_bool_t            stage;     /* Stage an offer on caller's media   */
+    pj_status_t          staged;    /* Result of staging it               */
 } g_mock_proxy = {
     {
         NULL, NULL,
@@ -157,24 +167,32 @@ static struct {
         &mock_proxy_rx_request,
         NULL, NULL, NULL, NULL,
     },
-    NULL, NULL, 0, PJ_FALSE, RETRY_SENT, 0, 0
+    NULL, NULL, NULL, { 0 }, 0, RETRY_SENT, 0, 0, PJSUA_INVALID_ID, 0,
+    PJ_FALSE, PJ_EUNKNOWN
 };
 
-/* Sets the answer to the caller's next request, 0 for none */
-static void mock_proxy_arm(int status, pj_bool_t update, int retry)
+/* Sets the answers to the caller's next requests of the method */
+static void mock_proxy_arm(const pjsip_method *method, int answer0,
+                           int answer1, int retry)
 {
     pj_mutex_lock(g_mock_proxy.mutex);
-    g_mock_proxy.status = status;
-    g_mock_proxy.update = update;
+    g_mock_proxy.method = method;
+    g_mock_proxy.answer[0] = answer0;
+    g_mock_proxy.answer[1] = answer1;
+    g_mock_proxy.next = 0;
     g_mock_proxy.retry = retry;
     pj_mutex_unlock(g_mock_proxy.mutex);
 }
 
 static void mock_proxy_reset(void)
 {
-    mock_proxy_arm(0, PJ_FALSE, RETRY_SENT);
+    mock_proxy_arm(NULL, ANS_PASS, ANS_PASS, RETRY_SENT);
     pj_mutex_lock(g_mock_proxy.mutex);
     g_mock_proxy.answered = g_mock_proxy.auth_count = 0;
+    g_mock_proxy.callee_call = PJSUA_INVALID_ID;
+    g_mock_proxy.peer_status = 0;
+    g_mock_proxy.stage = PJ_FALSE;
+    g_mock_proxy.staged = PJ_EUNKNOWN;
     pj_mutex_unlock(g_mock_proxy.mutex);
 }
 
@@ -221,6 +239,35 @@ static void break_retry_of(pjsip_rx_data *rdata)
     pj_grp_lock_dec_ref(tsx->grp_lock);
 }
 
+/* An answer to the offer of the request with no codec in common */
+static pjsip_msg_body *create_bad_answer(pjsip_rx_data *rdata)
+{
+    pjsip_rdata_sdp_info *sdp_info = pjsip_rdata_get_sdp_info(rdata);
+    pj_pool_t            *pool = rdata->tp_info.pool;
+    pjmedia_sdp_session  *sdp;
+    pjsip_msg_body       *body;
+    unsigned              i;
+
+    if (!sdp_info->sdp)
+        return NULL;
+    sdp = pjmedia_sdp_session_clone(pool, sdp_info->sdp);
+    for (i = 0; i < sdp->media_count; ++i) {
+        pjmedia_sdp_media *m = sdp->media[i];
+        pjmedia_sdp_attr  *a;
+
+        m->desc.fmt_count = 1;
+        m->desc.fmt[0] = pj_str("98");
+        pjmedia_sdp_media_remove_all_attr(m, "rtpmap");
+        pjmedia_sdp_media_remove_all_attr(m, "fmtp");
+        a = pjmedia_sdp_attr_create(pool, "rtpmap", NULL);
+        a->value = pj_str("98 no-such-codec/8000");
+        pjmedia_sdp_media_add_attr(m, a);
+    }
+    if (pjsip_create_sdp_body(pool, sdp, &body) != PJ_SUCCESS)
+        return NULL;
+    return body;
+}
+
 static pj_bool_t mock_proxy_rx_request(pjsip_rx_data *rdata)
 {
     pjsip_msg *msg = rdata->msg_info.msg;
@@ -229,10 +276,14 @@ static pj_bool_t mock_proxy_rx_request(pjsip_rx_data *rdata)
         pj_str("Digest realm=\"test\", nonce=\"testnonce\"");
     const pj_str_t hvalue_no_creds =
         pj_str("Digest realm=\"nocreds\", nonce=\"testnonce\"");
-    pjsip_hdr  hdr_list;
-    int        retry;
-    int        code = 0;
-    pj_status_t status;
+    const pj_str_t min_se_name  = pj_str("Min-SE");
+    const pj_str_t min_se_value = pj_str("90");
+    pjsip_hdr       hdr_list;
+    pjsip_msg_body *body = NULL;
+    int             retry;
+    int             answer = ANS_PASS;
+    int             code;
+    pj_status_t     status;
 
     if (rdata->msg_info.to->tag.slen == 0 ||
         !is_user_equal(rdata->msg_info.from, CALLER_USER))
@@ -241,25 +292,37 @@ static pj_bool_t mock_proxy_rx_request(pjsip_rx_data *rdata)
     }
 
     pj_mutex_lock(g_mock_proxy.mutex);
-    if (pjsip_method_cmp(&msg->line.req.method,
-                         g_mock_proxy.update ? &update_method :
-                                               pjsip_get_invite_method()))
+    if (g_mock_proxy.method &&
+        pjsip_method_cmp(&msg->line.req.method, g_mock_proxy.method) == 0)
     {
-        /* Not the method under test */
-    } else if (pjsip_msg_find_hdr(msg, PJSIP_H_AUTHORIZATION, NULL)) {
-        g_mock_proxy.auth_count++;
-    } else {
-        code = g_mock_proxy.status;
-        g_mock_proxy.status = 0;
+        if (pjsip_msg_find_hdr(msg, PJSIP_H_AUTHORIZATION, NULL))
+            g_mock_proxy.auth_count++;
+        if (g_mock_proxy.next < MAX_ANSWERS)
+            answer = g_mock_proxy.answer[g_mock_proxy.next++];
     }
     retry = g_mock_proxy.retry;
     pj_mutex_unlock(g_mock_proxy.mutex);
 
-    if (code == 0)
+    if (answer == ANS_PASS)
         return PJ_FALSE;
 
     pj_list_init(&hdr_list);
-    if (code == 401) {
+    code = answer;
+    if (answer == ANS_200_NO_SDP) {
+        code = 200;
+    } else if (answer == ANS_200_BAD_SDP) {
+        code = 200;
+        body = create_bad_answer(rdata);
+        if (!body)
+            PJ_LOG(1, (THIS_FILE, "  mock proxy: no answer created"));
+    } else if (answer == ANS_422_NO_MIN_SE) {
+        code = 422;
+    } else if (answer == 422) {
+        pj_list_push_back(&hdr_list,
+                          pjsip_generic_string_hdr_create(
+                              rdata->tp_info.pool, &min_se_name,
+                              &min_se_value));
+    } else if (answer == 401) {
         pj_list_push_back(&hdr_list,
                           pjsip_generic_string_hdr_create(
                               rdata->tp_info.pool, &hname,
@@ -269,7 +332,7 @@ static pj_bool_t mock_proxy_rx_request(pjsip_rx_data *rdata)
             break_retry_of(rdata);
     }
     status = pjsip_endpt_respond(pjsua_get_pjsip_endpt(), NULL, rdata, code,
-                                 NULL, &hdr_list, NULL, NULL);
+                                 NULL, &hdr_list, body, NULL);
     if (status != PJ_SUCCESS)
         PJ_PERROR(1, (THIS_FILE, status, "  mock proxy: respond failed"));
 
@@ -361,7 +424,52 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 {
     PJ_UNUSED_ARG(acc_id);
     PJ_UNUSED_ARG(rdata);
+    pj_mutex_lock(g_mock_proxy.mutex);
+    g_mock_proxy.callee_call = call_id;
+    pj_mutex_unlock(g_mock_proxy.mutex);
     pjsua_call_answer(call_id, PJSIP_SC_OK, NULL, NULL);
+}
+
+/* Stages an offer when the caller's media is updated, if asked */
+static void on_call_media_state(pjsua_call_id call_id)
+{
+    pjsip_inv_session         *inv = pjsua_var.calls[call_id].inv;
+    const pjmedia_sdp_session *active;
+    pj_bool_t                  stage;
+    pj_status_t                status;
+
+    pj_mutex_lock(g_mock_proxy.mutex);
+    stage = g_mock_proxy.stage && call_id != g_mock_proxy.callee_call;
+    g_mock_proxy.stage = g_mock_proxy.stage && !stage;
+    pj_mutex_unlock(g_mock_proxy.mutex);
+    if (!stage || !inv)
+        return;
+
+    status = pjmedia_sdp_neg_get_active_local(inv->neg, &active);
+    if (status == PJ_SUCCESS) {
+        status = pjsip_inv_set_local_sdp(
+                    inv, pjmedia_sdp_session_clone(inv->pool_prov, active));
+    }
+    pj_mutex_lock(g_mock_proxy.mutex);
+    g_mock_proxy.staged = status;
+    pj_mutex_unlock(g_mock_proxy.mutex);
+}
+
+/* Records the final answer to the callee's re-INVITE */
+static void on_call_tsx_state(pjsua_call_id call_id, pjsip_transaction *tsx,
+                              pjsip_event *e)
+{
+    PJ_UNUSED_ARG(e);
+    if (tsx->role != PJSIP_ROLE_UAC ||
+        tsx->method.id != PJSIP_INVITE_METHOD ||
+        tsx->state < PJSIP_TSX_STATE_COMPLETED || tsx->status_code < 200)
+    {
+        return;
+    }
+    pj_mutex_lock(g_mock_proxy.mutex);
+    if (call_id == g_mock_proxy.callee_call && !g_mock_proxy.peer_status)
+        g_mock_proxy.peer_status = tsx->status_code;
+    pj_mutex_unlock(g_mock_proxy.mutex);
 }
 
 static void on_reg_state2(pjsua_acc_id acc_id, pjsua_reg_info *info)
@@ -845,7 +953,7 @@ static int acc_delete_deferred_test(pjsua_transport_id tp_id, int port)
 
 
 /*****************************************************************************
- * Call from an account with credentials, used by sub-tests 5 to 12
+ * Call from an account with credentials, used by sub-tests 5 to 7
  *****************************************************************************/
 typedef struct {
     pjsua_acc_id  caller;
@@ -867,6 +975,16 @@ static pj_bool_t call_is_held(pjsua_call_id call_id)
 
     return pjsua_call_get_info(call_id, &ci) == PJ_SUCCESS &&
            ci.media_status == PJSUA_CALL_MEDIA_LOCAL_HOLD;
+}
+
+static pjsua_call_id callee_call(void)
+{
+    pjsua_call_id call_id;
+
+    pj_mutex_lock(g_mock_proxy.mutex);
+    call_id = g_mock_proxy.callee_call;
+    pj_mutex_unlock(g_mock_proxy.mutex);
+    return call_id;
 }
 
 /* Returns 0, or rc_base minus the failed step */
@@ -916,13 +1034,19 @@ static int test_call_start(test_call_t *tc, pjsua_transport_id tp_id,
     }
 
     for (elapsed = 0; elapsed < 10000 &&
-         !call_has_state(tc->call_id, PJSIP_INV_STATE_CONFIRMED);
+         (!call_has_state(tc->call_id, PJSIP_INV_STATE_CONFIRMED) ||
+          callee_call() == PJSUA_INVALID_ID ||
+          !call_has_state(callee_call(), PJSIP_INV_STATE_CONFIRMED));
          elapsed += 50)
     {
         pjsua_handle_events(50);
     }
-    if (!call_has_state(tc->call_id, PJSIP_INV_STATE_CONFIRMED))
+    if (!call_has_state(tc->call_id, PJSIP_INV_STATE_CONFIRMED) ||
+        callee_call() == PJSUA_INVALID_ID ||
+        !call_has_state(callee_call(), PJSIP_INV_STATE_CONFIRMED))
+    {
         return rc_base - 4;
+    }
 
     return 0;
 }
@@ -961,20 +1085,6 @@ static pjsip_inv_session *call_inv(pjsua_call_id call_id)
                                            NULL;
 }
 
-/* 1 if the call is marked as held, 0 if not, -1 if it is gone */
-static int call_hold_mark(pjsua_call_id call_id)
-{
-    pjsip_inv_session *inv = call_inv(call_id);
-    int                held;
-
-    if (!inv)
-        return -1;
-    pjsip_dlg_inc_lock(inv->dlg);
-    held = pjsua_var.calls[call_id].local_hold ? 1 : 0;
-    pjsip_dlg_dec_lock(inv->dlg);
-    return held;
-}
-
 /* The caller's re-INVITE or UPDATE has got its final answer */
 static pj_bool_t caller_tsx_done(pjsua_call_id call_id)
 {
@@ -990,7 +1100,7 @@ static pj_bool_t caller_tsx_done(pjsua_call_id call_id)
 }
 
 /* Waits until the mock proxy has answered n requests and the caller has
- * got the answer.
+ * got the final answer.
  */
 static pj_bool_t wait_answered(pjsua_call_id call_id, unsigned n)
 {
@@ -1007,59 +1117,346 @@ static pj_bool_t wait_answered(pjsua_call_id call_id, unsigned n)
 
 
 /*****************************************************************************
- * Sub-test 5: hold_deferred_respond_test
+ * Sub-test 5: offer_fail_test
  *
- * The challenge of a hold re-INVITE is deferred, then answered with the
- * account's credentials, and the retry is accepted. The hold must not be
- * rolled back before the retry, so the call ends up on hold.
+ * The caller sends a re-INVITE or an UPDATE with an offer, and the mock
+ * proxy answers it, and its retries, as the row says. Afterwards:
+ *   - the offer is not left pending,
+ *   - a re-INVITE from the callee is accepted,
+ *   - the call is held only if the peer has accepted a hold, or if it was
+ *     held and the request has failed,
+ *   - the provisional media are back to the active ones, or the new
+ *     stream is active.
  *****************************************************************************/
-static int hold_deferred_respond_test(pjsua_transport_id tp_id, int port)
-{
-    test_call_t      tc;
-    unsigned         elapsed;
-    pj_status_t      status;
-    int              rc;
 
-    PJ_LOG(3, (THIS_FILE, "  pjsua auth: hold deferred respond"));
+/* What the caller sends */
+enum {
+    OP_HOLD,        /* pjsua_call_set_hold()                             */
+    OP_UNHOLD,      /* re-INVITE or UPDATE with PJSUA_CALL_UNHOLD        */
+    OP_REOFFER,     /* re-INVITE or UPDATE with no flag                  */
+    OP_ADD_STREAM,  /* re-INVITE or UPDATE with one more audio stream    */
+    OP_HOLD_NO_TP,  /* hold whose re-INVITE has no route to the callee   */
+    OP_HOLD_TP_FAIL /* hold whose re-INVITE has no transport             */
+};
+
+typedef struct {
+    const char *title;
+    pj_bool_t   update;     /* UPDATE instead of re-INVITE                */
+    int         op;         /* OP_*                                       */
+    pj_bool_t   held;       /* Put the call on hold first                 */
+    pj_bool_t   defer;      /* Defer the challenge, then answer it        */
+    int         answer[MAX_ANSWERS]; /* Mock's answers, ANS_* or code     */
+    int         retry;      /* RETRY_* after a 401                        */
+    unsigned    answered;   /* Requests the mock answers                  */
+    unsigned    auth;       /* Of them and passed ones, with credentials  */
+    unsigned    cseq;       /* CSeq numbers the operation uses            */
+    pj_bool_t   held_after; /* local_hold afterwards                      */
+    unsigned    added;      /* Streams added                              */
+} offer_case_t;
+
+static const offer_case_t offer_cases[] =
+{
+    /* title                         upd    op             held  defer
+     *  answers                        retry           ans auth cseq
+     *  held_after added
+     */
+    { "hold, 401 without credentials", PJ_FALSE, OP_HOLD, PJ_FALSE, PJ_FALSE,
+      { 401 }, RETRY_NO_CREDS, 1, 0, 1, PJ_FALSE, 0 },
+    { "hold, 401 to its retry", PJ_FALSE, OP_HOLD, PJ_FALSE, PJ_FALSE,
+      { 401, 401 }, RETRY_SENT, 2, 1, 2, PJ_FALSE, 0 },
+    { "hold, retry can't be sent", PJ_FALSE, OP_HOLD, PJ_FALSE, PJ_FALSE,
+      { 401 }, RETRY_UNSENT, 1, 0, 2, PJ_FALSE, 0 },
+    { "hold, retry gets 500", PJ_FALSE, OP_HOLD, PJ_FALSE, PJ_FALSE,
+      { 401, 500 }, RETRY_SENT, 2, 1, 2, PJ_FALSE, 0 },
+    { "UPDATE, retry can't be sent", PJ_TRUE, OP_ADD_STREAM, PJ_FALSE,
+      PJ_FALSE, { 401 }, RETRY_UNSENT, 1, 0, 2, PJ_FALSE, 0 },
+    { "UPDATE, 422 then 200", PJ_TRUE, OP_ADD_STREAM, PJ_FALSE, PJ_FALSE,
+      { 422 }, RETRY_SENT, 1, 0, 2, PJ_FALSE, 1 },
+    { "hold, 422 then 200", PJ_FALSE, OP_HOLD, PJ_FALSE, PJ_FALSE,
+      { 422 }, RETRY_SENT, 1, 0, 2, PJ_TRUE, 0 },
+    { "hold, 422 twice", PJ_FALSE, OP_HOLD, PJ_FALSE, PJ_FALSE,
+      { 422, 422 }, RETRY_SENT, 2, 0, 2, PJ_FALSE, 0 },
+    { "hold, 422 without Min-SE", PJ_FALSE, OP_HOLD, PJ_FALSE, PJ_FALSE,
+      { ANS_422_NO_MIN_SE }, RETRY_SENT, 1, 0, 1, PJ_FALSE, 0 },
+    { "UPDATE, 422 twice", PJ_TRUE, OP_ADD_STREAM, PJ_FALSE, PJ_FALSE,
+      { 422, 422 }, RETRY_SENT, 2, 0, 2, PJ_FALSE, 0 },
+    { "hold, 302", PJ_FALSE, OP_HOLD, PJ_FALSE, PJ_FALSE,
+      { 302 }, RETRY_SENT, 1, 0, 1, PJ_FALSE, 0 },
+    { "re-INVITE, 302", PJ_FALSE, OP_ADD_STREAM, PJ_FALSE, PJ_FALSE,
+      { 302 }, RETRY_SENT, 1, 0, 1, PJ_FALSE, 0 },
+    { "unhold of a call not held, 488", PJ_FALSE, OP_UNHOLD, PJ_FALSE,
+      PJ_FALSE, { 488 }, RETRY_SENT, 1, 0, 1, PJ_FALSE, 0 },
+    { "unhold, 488", PJ_FALSE, OP_UNHOLD, PJ_TRUE, PJ_FALSE,
+      { 488 }, RETRY_SENT, 1, 0, 1, PJ_TRUE, 0 },
+    { "UPDATE unhold, 488", PJ_TRUE, OP_UNHOLD, PJ_TRUE, PJ_FALSE,
+      { 488 }, RETRY_SENT, 1, 0, 1, PJ_TRUE, 0 },
+    { "hold, 200 without answer", PJ_FALSE, OP_HOLD, PJ_FALSE, PJ_FALSE,
+      { ANS_200_NO_SDP }, RETRY_SENT, 1, 0, 1, PJ_FALSE, 0 },
+    { "hold, 200 with no codec", PJ_FALSE, OP_HOLD, PJ_FALSE, PJ_FALSE,
+      { ANS_200_BAD_SDP }, RETRY_SENT, 1, 0, 1, PJ_FALSE, 0 },
+    { "re-offer of a held call, 488", PJ_FALSE, OP_REOFFER, PJ_TRUE,
+      PJ_FALSE, { 488 }, RETRY_SENT, 1, 0, 1, PJ_TRUE, 0 },
+    { "hold, 401, deferred retry", PJ_FALSE, OP_HOLD, PJ_FALSE, PJ_TRUE,
+      { 401 }, RETRY_SENT, 1, 1, 2, PJ_TRUE, 0 },
+    { "UPDATE, 401, deferred retry", PJ_TRUE, OP_ADD_STREAM, PJ_FALSE,
+      PJ_TRUE, { 401 }, RETRY_SENT, 1, 1, 2, PJ_FALSE, 1 },
+    { "hold, 401, retry", PJ_FALSE, OP_HOLD, PJ_FALSE, PJ_FALSE,
+      { 401 }, RETRY_SENT, 1, 1, 2, PJ_TRUE, 0 },
+    { "hold can't be sent", PJ_FALSE, OP_HOLD_NO_TP, PJ_FALSE, PJ_FALSE,
+      { ANS_PASS }, RETRY_SENT, 0, 0, 1, PJ_FALSE, 0 },
+    { "hold, no transport", PJ_FALSE, OP_HOLD_TP_FAIL, PJ_FALSE, PJ_FALSE,
+      { ANS_PASS }, RETRY_SENT, 0, 0, 1, PJ_FALSE, 0 },
+    { "hold, 487", PJ_FALSE, OP_HOLD, PJ_FALSE, PJ_FALSE,
+      { 487 }, RETRY_SENT, 1, 0, 1, PJ_FALSE, 0 },
+};
+
+/* Snapshot of the caller's offer state */
+typedef struct {
+    pj_uint32_t cseq;
+    pj_bool_t   offer_pending;
+    pj_bool_t   held;
+    unsigned    med_cnt;
+    unsigned    prov_cnt;
+    pj_bool_t   prov_same;  /* Provisional transports are the active ones */
+} offer_state_t;
+
+static pj_bool_t get_offer_state(pjsua_call_id call_id, offer_state_t *st)
+{
+    pjsip_inv_session *inv = call_inv(call_id);
+    pjsua_call        *call = &pjsua_var.calls[call_id];
+    unsigned           i;
+
+    if (!inv)
+        return PJ_FALSE;
+    pjsip_dlg_inc_lock(inv->dlg);
+    st->cseq = inv->dlg->local.cseq;
+    st->offer_pending = inv->neg && pjmedia_sdp_neg_get_state(inv->neg) ==
+                                    PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER;
+    st->held = call->local_hold;
+    st->med_cnt = call->med_cnt;
+    st->prov_cnt = call->med_prov_cnt;
+    st->prov_same = PJ_TRUE;
+    for (i = 0; i < call->med_cnt && i < call->med_prov_cnt; ++i) {
+        if (call->media_prov[i].tp != call->media[i].tp)
+            st->prov_same = PJ_FALSE;
+    }
+    pjsip_dlg_dec_lock(inv->dlg);
+    return PJ_TRUE;
+}
+
+/* Sends an UPDATE or a re-INVITE with the given flags, or adding a
+ * stream.
+ */
+static pj_status_t send_offer(pjsua_call_id call_id, pj_bool_t update,
+                              unsigned flag, pj_bool_t add_stream)
+{
+    pjsua_call_info    ci;
+    pjsua_call_setting opt;
+
+    if (pjsua_call_get_info(call_id, &ci) != PJ_SUCCESS)
+        return PJ_EINVAL;
+    opt = ci.setting;
+    opt.flag = flag;
+    if (add_stream)
+        opt.aud_cnt++;
+
+    return update ? pjsua_call_update2(call_id, &opt, NULL) :
+                    pjsua_call_reinvite2(call_id, &opt, NULL);
+}
+
+/* Puts the call on hold through the callee */
+static pj_bool_t hold_call(pjsua_call_id call_id)
+{
+    unsigned elapsed;
+
+    if (pjsua_call_set_hold(call_id, NULL) != PJ_SUCCESS)
+        return PJ_FALSE;
+    for (elapsed = 0; elapsed < 10000 && (!call_is_held(call_id) ||
+                                          !caller_tsx_done(call_id));
+         elapsed += 50)
+    {
+        pjsua_handle_events(50);
+    }
+    return call_is_held(call_id) && caller_tsx_done(call_id);
+}
+
+/* Holds the call with a re-INVITE to another target, which can't be sent:
+ * with no route the transaction is not created, with no transport it is.
+ * Returns PJ_TRUE if the hold has failed.
+ */
+static pj_bool_t hold_unsent(pjsua_call_id call_id, const char *uri)
+{
+    pjsip_inv_session *inv = call_inv(call_id);
+    pjsip_uri         *target;
+    pjsip_uri         *new_target;
+    char               buf[64];
+    pj_status_t        status;
+
+    if (!inv || pjsip_inv_add_ref(inv) != PJ_SUCCESS)
+        return PJ_FALSE;
+    pjsip_dlg_inc_lock(inv->dlg);
+    target = inv->dlg->target;
+    pj_ansi_strxcpy(buf, uri, sizeof(buf));
+    new_target = pjsip_parse_uri(inv->dlg->pool, buf, pj_ansi_strlen(buf),
+                                 0);
+    if (new_target)
+        inv->dlg->target = new_target;
+    pjsip_dlg_dec_lock(inv->dlg);
+
+    status = new_target ? pjsua_call_set_hold(call_id, NULL) : PJ_SUCCESS;
+
+    pjsip_dlg_inc_lock(inv->dlg);
+    inv->dlg->target = target;
+    pjsip_dlg_dec_lock(inv->dlg);
+    pjsip_inv_dec_ref(inv);
+    return status != PJ_SUCCESS;
+}
+
+/* Sends a re-INVITE from the callee and returns its final status, or 0 */
+static int peer_reinvite(void)
+{
+    pjsua_call_id call_id = callee_call();
+    unsigned      elapsed;
+    int           status = 0;
+
+    pj_mutex_lock(g_mock_proxy.mutex);
+    g_mock_proxy.peer_status = 0;
+    pj_mutex_unlock(g_mock_proxy.mutex);
+
+    if (pjsua_call_reinvite(call_id, 0, NULL) != PJ_SUCCESS)
+        return 0;
+    for (elapsed = 0; elapsed < 10000 && status == 0; elapsed += 50) {
+        pjsua_handle_events(50);
+        pj_mutex_lock(g_mock_proxy.mutex);
+        status = g_mock_proxy.peer_status;
+        pj_mutex_unlock(g_mock_proxy.mutex);
+    }
+    return status;
+}
+
+static int offer_fail_test(pjsua_transport_id tp_id, int port, unsigned idx)
+{
+    const offer_case_t *c = &offer_cases[idx];
+    const int           rc_base = -5000 - 20 * (int)idx;
+    const pjsip_method *method = c->update ? &update_method :
+                                             pjsip_get_invite_method();
+    test_call_t         tc;
+    offer_state_t       st0, st;
+    unsigned            elapsed;
+    pj_status_t         status;
+    int                 peer;
+    int                 rc;
+
+    PJ_LOG(3, (THIS_FILE, "  pjsua auth: %s", c->title));
 
     pj_bzero(&g_ctx, sizeof(g_ctx));
-
-    rc = test_call_start(&tc, tp_id, port, -2410);
+    mock_proxy_reset();
+    rc = test_call_start(&tc, tp_id, port, rc_base);
     if (rc != 0)
         goto on_return;
 
-    /* The hold re-INVITE is challenged, and the challenge deferred */
-    g_ctx.defer_enabled = PJ_TRUE;
-    mock_proxy_arm(401, PJ_FALSE, RETRY_SENT);
-    if (pjsua_call_set_hold(tc.call_id, NULL) != PJ_SUCCESS) {
-        rc = -2415;
+    if (c->held && !hold_call(tc.call_id)) {
+        rc = rc_base - 5;
         goto on_return;
     }
 
-    for (elapsed = 0; elapsed < 10000 && !g_ctx.deferred.pending;
-         elapsed += 50)
-    {
-        pjsua_handle_events(50);
-    }
-    if (!g_ctx.deferred.pending) {
-        rc = -2416;
+    g_ctx.defer_enabled = c->defer;
+    mock_proxy_arm(method, c->answer[0], c->answer[1], c->retry);
+    if (!get_offer_state(tc.call_id, &st0)) {
+        rc = rc_base - 6;
         goto on_return;
     }
-
-    status = do_deferred_respond(&g_ctx.deferred);
+    switch (c->op) {
+    case OP_HOLD:
+        status = pjsua_call_set_hold(tc.call_id, NULL);
+        break;
+    case OP_HOLD_NO_TP:
+    case OP_HOLD_TP_FAIL:
+        status = hold_unsent(tc.call_id, c->op == OP_HOLD_NO_TP ?
+                             "tel:+15550100" :
+                             "sip:x@127.0.0.1:5999;transport=tcp") ?
+                 PJ_SUCCESS : PJ_EBUG;
+        break;
+    default:
+        status = send_offer(tc.call_id, c->update,
+                            c->op == OP_UNHOLD ? PJSUA_CALL_UNHOLD : 0,
+                            c->op == OP_ADD_STREAM);
+        break;
+    }
     if (status != PJ_SUCCESS) {
-        rc = -2417;
+        rc = rc_base - 7;
         goto on_return;
     }
 
-    for (elapsed = 0; elapsed < 10000 && !call_is_held(tc.call_id);
-         elapsed += 50)
-    {
-        pjsua_handle_events(50);
+    if (c->defer) {
+        for (elapsed = 0; elapsed < 10000 && !g_ctx.deferred.pending;
+             elapsed += 50)
+        {
+            pjsua_handle_events(50);
+        }
+        if (!g_ctx.deferred.pending ||
+            do_deferred_respond(&g_ctx.deferred) != PJ_SUCCESS)
+        {
+            rc = rc_base - 8;
+            goto on_return;
+        }
     }
-    if (!call_is_held(tc.call_id)) {
-        PJ_LOG(3, (THIS_FILE, "    error: the call is not on hold"));
-        rc = -2418;
+
+    if (!wait_answered(tc.call_id, c->answered) ||
+        !get_offer_state(tc.call_id, &st))
+    {
+        rc = rc_base - 9;
+        goto on_return;
+    }
+
+    /* The request and its retries were sent and answered as planned */
+    if (mock_proxy_auth_count() != c->auth) {
+        PJ_LOG(3, (THIS_FILE, "    error: %u requests with credentials",
+                   mock_proxy_auth_count()));
+        rc = rc_base - 10;
+        goto on_return;
+    }
+    if (st.cseq != st0.cseq + c->cseq) {
+        PJ_LOG(3, (THIS_FILE, "    error: %u requests sent",
+                   st.cseq - st0.cseq));
+        rc = rc_base - 11;
+        goto on_return;
+    }
+
+    if (st.offer_pending) {
+        PJ_LOG(3, (THIS_FILE, "    error: the offer is still pending"));
+        rc = rc_base - 12;
+        goto on_return;
+    }
+    if (st.held != c->held_after) {
+        PJ_LOG(3, (THIS_FILE, "    error: the call is %sheld",
+                   st.held ? "" : "not "));
+        rc = rc_base - 13;
+        goto on_return;
+    }
+    if (st.prov_cnt != st.med_cnt) {
+        PJ_LOG(3, (THIS_FILE, "    error: provisional media not reverted "
+                   "(%u, active %u)", st.prov_cnt, st.med_cnt));
+        rc = rc_base - 14;
+        goto on_return;
+    }
+    if (!st.prov_same) {
+        PJ_LOG(3, (THIS_FILE, "    error: provisional transports differ"));
+        rc = rc_base - 15;
+        goto on_return;
+    }
+    if (st.med_cnt != st0.med_cnt + c->added) {
+        PJ_LOG(3, (THIS_FILE, "    error: %u streams, %u before",
+                   st.med_cnt, st0.med_cnt));
+        rc = rc_base - 16;
+        goto on_return;
+    }
+
+    /* The callee can still change the session */
+    peer = peer_reinvite();
+    if (peer != 200) {
+        PJ_LOG(3, (THIS_FILE, "    error: callee's re-INVITE got %d", peer));
+        rc = rc_base - 17;
     }
 
 on_return:
@@ -1077,250 +1474,70 @@ on_return:
 
 
 /*****************************************************************************
- * Sub-test 6: hold_3xx_unhold_fail_test
+ * Sub-test 6: staged_offer_test
  *
- * An unhold of a call that is not held gets 488: the call must not become
- * held. A hold answered with 302 has failed: the call must not be marked as
- * held. Then a hold is accepted, and an unhold sent as re-INVITE, then as
- * UPDATE, gets 488: the call must be marked as held again each time.
+ * An offer is staged, then a request without SDP sent in the session is
+ * challenged with no matching credentials: the staged offer is kept.
  *****************************************************************************/
-
-/* Sends an unhold that the mock proxy answers with 488 as its n-th answer.
- * Returns 0 if the call is then marked as held or not as expected, or
- * rc_base minus the failed step.
- */
-static int unhold_rejected(pjsua_call_id call_id, pj_bool_t update,
-                           unsigned n, int held_expected, int rc_base)
+static int staged_offer_test(pjsua_transport_id tp_id, int port)
 {
-    pj_status_t status;
-    int         held;
+    const int                  rc_base = -5500;
+    test_call_t                tc;
+    pjsip_inv_session         *inv;
+    const pjmedia_sdp_session *active;
+    pjmedia_sdp_session       *sdp;
+    pjsip_tx_data             *tdata;
+    offer_state_t              st;
+    pj_status_t                status;
+    int                        rc;
 
-    mock_proxy_arm(488, update, RETRY_SENT);
-    status = update ? pjsua_call_update(call_id, PJSUA_CALL_UNHOLD, NULL) :
-                      pjsua_call_reinvite(call_id, PJSUA_CALL_UNHOLD, NULL);
-    if (status != PJ_SUCCESS)
-        return rc_base;
-    if (!wait_answered(call_id, n))
-        return rc_base - 1;
+    PJ_LOG(3, (THIS_FILE, "  pjsua auth: staged offer, INFO gets 401"));
 
-    held = call_hold_mark(call_id);
-    if (held != held_expected) {
-        PJ_LOG(3, (THIS_FILE, "    error: after a failed %s unhold the "
-                   "call is %s", update ? "UPDATE" : "re-INVITE",
-                   held < 0 ? "gone" : (held ? "held" : "not held")));
-        return rc_base - 2;
-    }
-    return 0;
-}
-
-static int hold_3xx_unhold_fail_test(pjsua_transport_id tp_id, int port)
-{
-    test_call_t      tc;
-    unsigned         elapsed;
-    int              held;
-    int              rc;
-
-    PJ_LOG(3, (THIS_FILE, "  pjsua auth: hold 3xx, unhold fails"));
-
-    mock_proxy_reset();
-    rc = test_call_start(&tc, tp_id, port, -2420);
-    if (rc != 0)
-        goto on_return;
-
-    rc = unhold_rejected(tc.call_id, PJ_FALSE, 1, 0, -2433);
-    if (rc != 0)
-        goto on_return;
-
-    mock_proxy_arm(302, PJ_FALSE, RETRY_SENT);
-    if (pjsua_call_set_hold(tc.call_id, NULL) != PJ_SUCCESS) {
-        rc = -2425;
-        goto on_return;
-    }
-    if (!wait_answered(tc.call_id, 2)) {
-        rc = -2426;
-        goto on_return;
-    }
-    held = call_hold_mark(tc.call_id);
-    if (held != 0) {
-        PJ_LOG(3, (THIS_FILE, "    error: the call is %s",
-                   held < 0 ? "gone" : "held after 302"));
-        rc = -2427;
-        goto on_return;
-    }
-
-    if (pjsua_call_set_hold(tc.call_id, NULL) != PJ_SUCCESS) {
-        rc = -2428;
-        goto on_return;
-    }
-    for (elapsed = 0; elapsed < 10000 && !call_is_held(tc.call_id);
-         elapsed += 50)
-    {
-        pjsua_handle_events(50);
-    }
-    if (!call_is_held(tc.call_id) || !caller_tsx_done(tc.call_id)) {
-        rc = -2429;
-        goto on_return;
-    }
-
-    rc = unhold_rejected(tc.call_id, PJ_FALSE, 3, 1, -2430);
-    if (rc != 0)
-        goto on_return;
-
-    rc = unhold_rejected(tc.call_id, PJ_TRUE, 4, 1, -2436);
-
-on_return:
-    mock_proxy_reset();
-    test_call_end(&tc);
-
-    return rc;
-}
-
-
-/*****************************************************************************
- * Helpers for sub-tests 7 to 12
- *****************************************************************************/
-
-/* Gets the numbers of active and provisional media of the call */
-static pj_bool_t get_media_counts(pjsua_call_id call_id, unsigned *med_cnt,
-                                  unsigned *prov_cnt)
-{
-    pjsip_inv_session *inv = call_inv(call_id);
-
-    if (!inv)
-        return PJ_FALSE;
-    pjsip_dlg_inc_lock(inv->dlg);
-    *med_cnt = pjsua_var.calls[call_id].med_cnt;
-    *prov_cnt = pjsua_var.calls[call_id].med_prov_cnt;
-    pjsip_dlg_dec_lock(inv->dlg);
-    return PJ_TRUE;
-}
-
-/* Sends an UPDATE or a re-INVITE with a new offer, adding a stream */
-static pj_status_t send_offer(pjsua_call_id call_id, pj_bool_t update,
-                              pj_bool_t add_stream)
-{
-    pjsua_call_info    ci;
-    pjsua_call_setting opt;
-
-    if (pjsua_call_get_info(call_id, &ci) != PJ_SUCCESS)
-        return PJ_EINVAL;
-    opt = ci.setting;
-    if (add_stream)
-        opt.aud_cnt++;
-
-    return update ? pjsua_call_update2(call_id, &opt, NULL) :
-                    pjsua_call_reinvite2(call_id, &opt, NULL);
-}
-
-
-/*****************************************************************************
- * Sub-tests 7 to 9: retry_unsent_test
- *
- * An UPDATE (7) or a re-INVITE (8) adding a stream, or a hold (9), is
- * challenged and its retry with credentials can't be sent. The offer must
- * not be left pending, the provisional media must be reverted and the hold
- * rolled back.
- *****************************************************************************/
-
-/* Gets the caller's next local CSeq and whether its offer is pending */
-static pj_bool_t get_offer_state(pjsua_call_id call_id, pj_uint32_t *cseq,
-                                 pj_bool_t *offer_pending)
-{
-    pjsip_inv_session *inv = call_inv(call_id);
-
-    if (!inv)
-        return PJ_FALSE;
-    pjsip_dlg_inc_lock(inv->dlg);
-    *cseq = inv->dlg->local.cseq;
-    *offer_pending = pjmedia_sdp_neg_get_state(inv->neg) ==
-                     PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER;
-    pjsip_dlg_dec_lock(inv->dlg);
-    return PJ_TRUE;
-}
-
-static int retry_unsent_test(pjsua_transport_id tp_id, int port,
-                             pj_bool_t update, pj_bool_t hold)
-{
-    const int          rc_base = update ? -2440 : (hold ? -2500 : -2460);
-    test_call_t        tc;
-    pj_uint32_t        cseq, cseq2;
-    pj_bool_t          offer_pending;
-    unsigned           med_cnt, med_cnt2, prov_cnt;
-    pj_status_t        status;
-    int                rc;
-
-    PJ_LOG(3, (THIS_FILE, "  pjsua auth: %s retry can't be sent",
-               update ? "UPDATE" : (hold ? "hold" : "re-INVITE")));
-
+    pj_bzero(&g_ctx, sizeof(g_ctx));
     mock_proxy_reset();
     rc = test_call_start(&tc, tp_id, port, rc_base);
     if (rc != 0)
         goto on_return;
 
-    mock_proxy_arm(401, update, RETRY_UNSENT);
-    if (!get_offer_state(tc.call_id, &cseq, &offer_pending)) {
+    inv = call_inv(tc.call_id);
+    if (!inv) {
         rc = rc_base - 5;
         goto on_return;
     }
-    status = hold ? pjsua_call_set_hold(tc.call_id, NULL) :
-                    send_offer(tc.call_id, update, PJ_TRUE);
+    mock_proxy_arm(&info_method, 401, ANS_PASS, RETRY_NO_CREDS);
+    pjsip_dlg_inc_lock(inv->dlg);
+    status = pjmedia_sdp_neg_get_active_local(inv->neg, &active);
+    if (status == PJ_SUCCESS) {
+        sdp = pjmedia_sdp_session_clone(inv->pool_prov, active);
+        status = pjsip_inv_set_local_sdp(inv, sdp);
+    }
+    if (status == PJ_SUCCESS) {
+        status = pjsip_dlg_create_request(inv->dlg, &info_method, -1,
+                                          &tdata);
+    }
+    if (status == PJ_SUCCESS)
+        status = pjsip_inv_send_msg(inv, tdata);
+    pjsip_dlg_dec_lock(inv->dlg);
     if (status != PJ_SUCCESS) {
         rc = rc_base - 6;
         goto on_return;
     }
-    if (!wait_answered(tc.call_id, 1) ||
-        !get_offer_state(tc.call_id, &cseq2, &offer_pending) ||
-        !get_media_counts(tc.call_id, &med_cnt, &prov_cnt))
-    {
+
+    if (!wait_answered(tc.call_id, 1) || !get_offer_state(tc.call_id, &st)) {
         rc = rc_base - 7;
         goto on_return;
     }
-
-    /* The retry was given to the dialog, which failed to send it */
-    if (cseq2 != cseq + 2) {
+    if (!st.offer_pending) {
+        PJ_LOG(3, (THIS_FILE, "    error: the staged offer is dropped"));
         rc = rc_base - 8;
         goto on_return;
     }
-    if (offer_pending) {
-        PJ_LOG(3, (THIS_FILE, "    error: the offer is still pending"));
-        rc = rc_base - 9;
-        goto on_return;
-    }
-    if (prov_cnt != med_cnt) {
-        PJ_LOG(3, (THIS_FILE, "    error: provisional media not reverted "
-                   "(%u, active %u)", prov_cnt, med_cnt));
-        rc = rc_base - 10;
-        goto on_return;
-    }
-    if (hold && call_hold_mark(tc.call_id) != 0) {
-        PJ_LOG(3, (THIS_FILE, "    error: the hold is not rolled back"));
-        rc = rc_base - 11;
-        goto on_return;
-    }
 
-    /* A new offer adding a stream is accepted, after the retry if it had
-     * been sent.
-     */
-    mock_proxy_arm(0, update, RETRY_SENT);
-    if (send_offer(tc.call_id, update, PJ_TRUE) != PJ_SUCCESS) {
-        rc = rc_base - 12;
-        goto on_return;
-    }
-    if (!wait_answered(tc.call_id, 1) ||
-        !get_media_counts(tc.call_id, &med_cnt2, &prov_cnt))
-    {
-        rc = rc_base - 13;
-        goto on_return;
-    }
-    if (med_cnt2 <= med_cnt || prov_cnt != med_cnt2) {
-        PJ_LOG(3, (THIS_FILE, "    error: the new offer was not accepted"));
-        rc = rc_base - 15;
-        goto on_return;
-    }
-    if (mock_proxy_auth_count() != 0) {
-        PJ_LOG(3, (THIS_FILE, "    error: the retry was sent"));
-        rc = rc_base - 14;
-    }
+    pjsip_dlg_inc_lock(inv->dlg);
+    status = pjsip_inv_set_local_sdp(inv, NULL);
+    pjsip_dlg_dec_lock(inv->dlg);
+    if (status != PJ_SUCCESS)
+        rc = rc_base - 9;
 
 on_return:
     mock_proxy_reset();
@@ -1331,45 +1548,63 @@ on_return:
 
 
 /*****************************************************************************
- * Sub-tests 10 to 12: offer_fail_test
+ * Sub-test 7: answered_then_staged_test
  *
- * An UPDATE (10) or a re-INVITE (11) adding a stream is answered with 302,
- * or an UPDATE adding a stream gets a 401 with no matching credentials
- * (12): the provisional media of the request must be reverted.
+ * An UPDATE is answered, and the application stages a new offer when it
+ * is told of the new media: the staged offer is kept.
  *****************************************************************************/
-static int offer_fail_test(pjsua_transport_id tp_id, int port,
-                           pj_bool_t update, int code)
+static int answered_then_staged_test(pjsua_transport_id tp_id, int port)
 {
-    const int          rc_base = code == 401 ? -2520 :
-                                 (update ? -2480 : -2490);
+    const int          rc_base = -5520;
     test_call_t        tc;
-    unsigned           med_cnt, prov_cnt;
+    pjsip_inv_session *inv;
+    offer_state_t      st;
+    pj_status_t        staged;
+    pj_status_t        status;
     int                rc;
 
-    PJ_LOG(3, (THIS_FILE, "  pjsua auth: %s answered with %d",
-               update ? "UPDATE" : "re-INVITE", code));
+    PJ_LOG(3, (THIS_FILE, "  pjsua auth: offer staged after an answer"));
 
+    pj_bzero(&g_ctx, sizeof(g_ctx));
     mock_proxy_reset();
     rc = test_call_start(&tc, tp_id, port, rc_base);
     if (rc != 0)
         goto on_return;
 
-    mock_proxy_arm(code, update, RETRY_NO_CREDS);
-    if (send_offer(tc.call_id, update, PJ_TRUE) != PJ_SUCCESS) {
+    pj_mutex_lock(g_mock_proxy.mutex);
+    g_mock_proxy.stage = PJ_TRUE;
+    pj_mutex_unlock(g_mock_proxy.mutex);
+    if (send_offer(tc.call_id, PJ_TRUE, 0, PJ_FALSE) != PJ_SUCCESS) {
+        rc = rc_base - 5;
+        goto on_return;
+    }
+    if (!wait_answered(tc.call_id, 0) || !get_offer_state(tc.call_id, &st)) {
         rc = rc_base - 6;
         goto on_return;
     }
-    if (!wait_answered(tc.call_id, 1) ||
-        !get_media_counts(tc.call_id, &med_cnt, &prov_cnt))
-    {
+    pj_mutex_lock(g_mock_proxy.mutex);
+    staged = g_mock_proxy.staged;
+    pj_mutex_unlock(g_mock_proxy.mutex);
+    if (staged != PJ_SUCCESS) {
         rc = rc_base - 7;
         goto on_return;
     }
-    if (prov_cnt != med_cnt) {
-        PJ_LOG(3, (THIS_FILE, "    error: provisional media not reverted "
-                   "(%u, active %u)", prov_cnt, med_cnt));
+    if (!st.offer_pending) {
+        PJ_LOG(3, (THIS_FILE, "    error: the staged offer is dropped"));
         rc = rc_base - 8;
+        goto on_return;
     }
+
+    inv = call_inv(tc.call_id);
+    if (!inv) {
+        rc = rc_base - 9;
+        goto on_return;
+    }
+    pjsip_dlg_inc_lock(inv->dlg);
+    status = pjsip_inv_set_local_sdp(inv, NULL);
+    pjsip_dlg_dec_lock(inv->dlg);
+    if (status != PJ_SUCCESS)
+        rc = rc_base - 10;
 
 on_return:
     mock_proxy_reset();
@@ -1390,6 +1625,7 @@ int pjsua_auth_test(void)
     pjsua_transport_id tp_id;
     pj_uint16_t        port;
     pj_status_t        status;
+    unsigned           i;
     int rc = 0;
 
     PJ_LOG(3, (THIS_FILE, "pjsua auth challenge test"));
@@ -1417,6 +1653,8 @@ int pjsua_auth_test(void)
     ua_cfg.cb.on_auth_challenge = &on_auth_challenge;
     ua_cfg.cb.on_reg_state2     = &on_reg_state2;
     ua_cfg.cb.on_incoming_call  = &on_incoming_call;
+    ua_cfg.cb.on_call_tsx_state = &on_call_tsx_state;
+    ua_cfg.cb.on_call_media_state = &on_call_media_state;
 
     pjsua_logging_config_default(&log_cfg);
     log_cfg.level        = 3;
@@ -1509,28 +1747,15 @@ int pjsua_auth_test(void)
     /* rc = acc_delete_deferred_test(tp_id, (int)port);
     if (rc != 0) goto on_return; */
 
-    rc = hold_deferred_respond_test(tp_id, (int)port);
+    for (i = 0; i < PJ_ARRAY_SIZE(offer_cases); ++i) {
+        rc = offer_fail_test(tp_id, (int)port, i);
+        if (rc != 0) goto on_return;
+    }
+
+    rc = staged_offer_test(tp_id, (int)port);
     if (rc != 0) goto on_return;
 
-    rc = hold_3xx_unhold_fail_test(tp_id, (int)port);
-    if (rc != 0) goto on_return;
-
-    rc = retry_unsent_test(tp_id, (int)port, PJ_TRUE, PJ_FALSE);
-    if (rc != 0) goto on_return;
-
-    rc = retry_unsent_test(tp_id, (int)port, PJ_FALSE, PJ_FALSE);
-    if (rc != 0) goto on_return;
-
-    rc = retry_unsent_test(tp_id, (int)port, PJ_FALSE, PJ_TRUE);
-    if (rc != 0) goto on_return;
-
-    rc = offer_fail_test(tp_id, (int)port, PJ_TRUE, 302);
-    if (rc != 0) goto on_return;
-
-    rc = offer_fail_test(tp_id, (int)port, PJ_FALSE, 302);
-    if (rc != 0) goto on_return;
-
-    rc = offer_fail_test(tp_id, (int)port, PJ_TRUE, 401);
+    rc = answered_then_staged_test(tp_id, (int)port);
     if (rc != 0) goto on_return;
 
 on_return:
