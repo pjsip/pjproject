@@ -1028,6 +1028,23 @@ static pj_bool_t inv_offer_tsx_pending(const pjsip_inv_session *inv)
 }
 
 /*
+ * Check if a pending request carries the local offer. An outgoing INVITE
+ * without SDP doesn't.
+ */
+static pj_bool_t inv_offer_carried(const pjsip_inv_session *inv)
+{
+    pjsip_transaction *tsx = inv->invite_tsx;
+    struct tsx_inv_data *tsx_inv_data;
+
+    if (!inv->update_tsx && tsx && tsx->role == PJSIP_ROLE_UAC) {
+        tsx_inv_data = (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
+        return tsx_inv_data && tsx_inv_data->has_sdp &&
+               !tsx_inv_data->sdp_done;
+    }
+    return inv_offer_tsx_pending(inv);
+}
+
+/*
  * Cancel the offer of an ended UAC request if no other request carries it.
  * The request must no longer be inv->invite_tsx or inv->update_tsx.
  */
@@ -1038,7 +1055,7 @@ static void inv_cancel_orphan_offer(pjsip_inv_session *inv,
         !tsx_inv_data->retrying && inv->neg &&
         pjmedia_sdp_neg_get_state(inv->neg) ==
             PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER &&
-        !inv_offer_tsx_pending(inv))
+        !inv_offer_carried(inv))
     {
         pjmedia_sdp_neg_cancel_offer(inv->neg);
 
@@ -5460,10 +5477,8 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
                 if (status != PJ_SUCCESS && tsx_inv_data)
                     tsx_inv_data->retrying = PJ_FALSE;
             }
-            /* Somehow failed. Probably it's not a good idea to
-             * terminate the session since this is just a request
-             * within dialog. And even if we terminate we should
-             * send BYE.
+            /* If the request is not retried, the session goes on without
+             * its offer: this is just a request within dialog.
              */
             inv_cancel_orphan_offer(inv, tsx_inv_data);
         }
