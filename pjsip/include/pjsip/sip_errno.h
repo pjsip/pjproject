@@ -162,6 +162,11 @@ PJ_BEGIN_DECL
  * URI is too long.
  */
 #define PJSIP_EURITOOLONG       (PJSIP_ERRNO_START_PJSIP + 43)  /* 171043 */
+/**
+ * @hideinitializer
+ * Route URI is not a SIP/SIPS URI (RFC 3261 section 16.6).
+ */
+#define PJSIP_EINVALIDROUTEURI  (PJSIP_ERRNO_START_PJSIP + 44)  /* 171044 */
 
 /**
  * @hideinitializer

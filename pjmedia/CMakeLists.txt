@@ -250,6 +250,12 @@ cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_JNI
   "PJMEDIA_WITH_AUDIODEV;ANDROID" OFF
 )
 
+# Android OpenSL ES backend, off by default as in pjmedia-audiodev/config.h
+cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_OPENSL
+  "Enable OpenSL ES audio device backend" OFF
+  "PJMEDIA_WITH_AUDIODEV;ANDROID" OFF
+)
+
 # Android OBOE backend. Oboe is not bundled; see cmake/FindOboe.cmake for
 # where to point the build at an SDK.
 cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_OBOE
@@ -889,6 +895,7 @@ add_library(pjmedia-audiodev
   src/pjmedia-audiodev/android_jni_dev.c
   src/pjmedia-audiodev/errno.c
   src/pjmedia-audiodev/null_dev.c
+  src/pjmedia-audiodev/opensl_dev.c
   $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-audiodev/oboe_dev.cpp>
   $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-audiodev/wasapi_dev.cpp>
   $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-audiodev/wasapi_dev_win.cpp>
@@ -923,6 +930,7 @@ target_compile_definitions(pjmedia-audiodev
   PUBLIC
     PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO=$<BOOL:${PJMEDIA_WITH_AUDIODEV_NULL}>
     PJMEDIA_AUDIO_DEV_HAS_ANDROID_JNI=$<BOOL:${PJMEDIA_WITH_AUDIODEV_JNI}>
+    PJMEDIA_AUDIO_DEV_HAS_OPENSL=$<BOOL:${PJMEDIA_WITH_AUDIODEV_OPENSL}>
     PJMEDIA_AUDIO_DEV_HAS_OBOE=$<BOOL:${PJMEDIA_WITH_AUDIODEV_OBOE}>
     PJMEDIA_AUDIO_DEV_HAS_COREAUDIO=$<BOOL:${PJMEDIA_WITH_AUDIODEV_COREAUDIO}>
     PJMEDIA_AUDIO_DEV_HAS_ALSA=$<BOOL:${PJMEDIA_WITH_AUDIODEV_ALSA}>
@@ -932,7 +940,6 @@ target_compile_definitions(pjmedia-audiodev
     # unsupported backends
     PJMEDIA_AUDIO_DEV_HAS_BDIMAD=0
     PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=0
-    PJMEDIA_AUDIO_DEV_HAS_OPENSL=0
     PJMEDIA_AUDIO_DEV_HAS_BB10=0
     PJMEDIA_AUDIO_DEV_HAS_SYMB_APS=0
     PJMEDIA_AUDIO_DEV_HAS_LEGACY_DEVICE=0
@@ -952,6 +959,7 @@ target_link_libraries(pjmedia-audiodev
     # audio backends
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_ALSA}>:ALSA::ALSA>
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_COREAUDIO}>:CoreAudio::CoreAudio>
+    $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_OPENSL}>:OpenSLES>
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_OBOE}>:Oboe::Oboe>
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_WASAPI}>:WASAPI::WASAPI>
     # TODO: add remaining APIs' dependencies

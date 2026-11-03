@@ -558,6 +558,14 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
     while (rr != NULL) {
         pjsip_route_hdr *route;
 
+        /* RFC 3261 section 16.6: Record-Route must be a SIP/SIPS URI. */
+        if (!PJSIP_URI_SCHEME_IS_SIP(rr->name_addr.uri) &&
+            !PJSIP_URI_SCHEME_IS_SIPS(rr->name_addr.uri))
+        {
+            status = PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_BAD_REQUEST);
+            goto on_error;
+        }
+
         /* Clone the Record-Route, change the type to Route header. */
         route = (pjsip_route_hdr*) pjsip_hdr_clone(dlg->pool, rr);
         pjsip_routing_hdr_set_route(route);
@@ -846,6 +854,18 @@ PJ_DEF(pj_status_t) pjsip_dlg_fork( const pjsip_dialog *first_dlg,
     for (hdr=msg->hdr.prev; hdr!=end_hdr; hdr=hdr->prev) {
         if (hdr->type == PJSIP_H_RECORD_ROUTE) {
             pjsip_route_hdr *r;
+            const pjsip_uri *uri = ((pjsip_rr_hdr*)hdr)->name_addr.uri;
+
+            /* RFC 3261 section 16.6: Record-Route must be a SIP/SIPS URI.
+             * The route set must only hold SIP/SIPS URIs, drop the rest.
+             */
+            if (!PJSIP_URI_SCHEME_IS_SIP(uri) &&
+                !PJSIP_URI_SCHEME_IS_SIPS(uri))
+            {
+                PJ_LOG(3,(dlg->obj_name, "Ignoring non-SIP URI in "
+                                         "Record-Route"));
+                continue;
+            }
             r = (pjsip_route_hdr*) pjsip_hdr_clone(dlg->pool, hdr);
             pjsip_routing_hdr_set_route(r);
             pj_list_push_back(&dlg->route_set, r);
@@ -2172,6 +2192,18 @@ static void dlg_update_routeset(pjsip_dialog *dlg, const pjsip_rx_data *rdata)
     for (hdr=msg->hdr.prev; hdr!=end_hdr; hdr=hdr->prev) {
         if (hdr->type == PJSIP_H_RECORD_ROUTE) {
             pjsip_route_hdr *r;
+            const pjsip_uri *uri = ((pjsip_rr_hdr*)hdr)->name_addr.uri;
+
+            /* RFC 3261 section 16.6: Record-Route must be a SIP/SIPS URI.
+             * The route set must only hold SIP/SIPS URIs, drop the rest.
+             */
+            if (!PJSIP_URI_SCHEME_IS_SIP(uri) &&
+                !PJSIP_URI_SCHEME_IS_SIPS(uri))
+            {
+                PJ_LOG(3,(dlg->obj_name, "Ignoring non-SIP URI in "
+                                         "Record-Route"));
+                continue;
+            }
             r = (pjsip_route_hdr*) pjsip_hdr_clone(dlg->pool, hdr);
             pjsip_routing_hdr_set_route(r);
             pj_list_push_back(&dlg->route_set, r);

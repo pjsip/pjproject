@@ -2299,6 +2299,7 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
                     }
                     /* Overflow, buffer too small. */
                     dd_status = PJSIP_ERXOVERFLOW;
+                    msg_fragment_size = remaining_len;
                 } else {
                     /* msg_status == PJSIP_EMISSINGHDR ||
                        msg_status == PJSIP_EINVALIDHDR

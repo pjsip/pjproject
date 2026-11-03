@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1406,6 +1406,9 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * matching of Contact URIs in the 200/OK REGISTER response, in 
  * case the registrar is unable to return exact Contact URI in the
  * 200/OK response.
+ *
+ * A Contact URI that has an "x-uid" parameter of its own keeps it, and
+ * no other is added.
  *
  * This setting can be changed in run-time by setting 
  * \a regc.add_xuid_param field of pjsip_cfg().

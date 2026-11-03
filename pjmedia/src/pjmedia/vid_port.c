@@ -202,8 +202,12 @@ static pj_status_t create_converter(pjmedia_vid_port *vp)
     if (vp->frm_buf && vp->src_size > vp->frm_buf_size) {
         void *buf = pj_pool_zalloc(vp->pool, vp->src_size);
 
-        pjmedia_video_format_fill_black(&vp->conv.conv_param.src, buf,
-                                        vp->src_size);
+        status = pjmedia_video_format_fill_black(&vp->conv.conv_param.src,
+                                                 buf, vp->src_size);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(4,(THIS_FILE, status,
+                         "Warning: failed to init buffer with black"));
+        }
         pj_mutex_lock(vp->frm_mutex);
         vp->frm_buf->buf = buf;
         vp->frm_buf->size = vp->src_size;

@@ -409,7 +409,9 @@ PJ_DECL(pj_status_t) pjsip_get_dest_info(const pjsip_uri *target_uri,
  *                  resolving this host with server resolution procedure
  *                  described in RFC 3263.
  *
- * @return          PJ_SUCCESS, or the appropriate error code.
+ * @return          PJ_SUCCESS, PJSIP_EINVALIDROUTEURI if the first Route
+ *                  URI is not a SIP/SIPS URI, or the appropriate error
+ *                  code.
  *
  * @see pjsip_process_route_set
  */
@@ -436,7 +438,9 @@ PJ_DECL(pj_status_t) pjsip_get_request_dest(const pjsip_tx_data *tdata,
  *                  resolving this host with server resolution procedure
  *                  described in RFC 3263.
  *
- * @return          PJ_SUCCESS, or the appropriate error code.
+ * @return          PJ_SUCCESS, PJSIP_EINVALIDROUTEURI if the first Route
+ *                  URI is not a SIP/SIPS URI, or the appropriate error
+ *                  code.
  *
  * @see pjsip_get_request_addr
  */

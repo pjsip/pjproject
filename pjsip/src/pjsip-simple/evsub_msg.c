@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -65,8 +65,8 @@ static int pjsip_event_hdr_print( pjsip_event_hdr *hdr,
     const pjsip_parser_const_t *pc = pjsip_parser_const();
 
     copy_advance(p, hdr->name);
-    *p++ = ':';
-    *p++ = ' ';
+    copy_advance_char_check(p, ':');
+    copy_advance_char_check(p, ' ');
 
     copy_advance(p, hdr->event_type);
     copy_advance_pair(p, ";id=", 4, hdr->id_param);
@@ -164,19 +164,23 @@ static int pjsip_sub_state_hdr_print(pjsip_sub_state_hdr *hdr,
     const pjsip_parser_const_t *pc = pjsip_parser_const();
 
     copy_advance(p, hdr->name);
-    *p++ = ':';
-    *p++ = ' ';
+    copy_advance_char_check(p, ':');
+    copy_advance_char_check(p, ' ');
 
     copy_advance_escape(p, hdr->sub_state, pc->pjsip_TOKEN_SPEC);
     copy_advance_pair_escape(p, ";reason=", 8, hdr->reason_param,
                              pc->pjsip_TOKEN_SPEC);
     if (hdr->expires_param != PJSIP_EXPIRES_NOT_SPECIFIED) {
+        if (endbuf - p < 9 + 11)
+            return -1;
         pj_memcpy(p, ";expires=", 9);
         p += 9;
         printed = pj_utoa(hdr->expires_param, p);
         p += printed;
     }
     if (hdr->retry_after >= 0) {
+        if (endbuf - p < 13 + 11)
+            return -1;
         pj_memcpy(p, ";retry-after=", 13);
         p += 13;
         printed = pj_utoa(hdr->retry_after, p);

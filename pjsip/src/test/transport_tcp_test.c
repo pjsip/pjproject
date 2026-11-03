@@ -219,9 +219,10 @@ static int restart_failure_test(void)
         goto on_return;
     }
 
+    pjsip_transport_shutdown(tcp);
     pjsip_transport_dec_ref(tcp);
-    pjsip_transport_destroy(tcp);
     tcp = NULL;
+    flush_events(500);
 
     /* A second restart, with the port still occupied, must fail too.
      *
@@ -322,10 +323,16 @@ static int listener_destroy_local_name_test(void)
     if (ret == 0 && tcp->factory != NULL)
         ret = -124;
 
+    /* Once released, another thread may destroy it */
+    pjsip_transport_shutdown(tcp);
     pjsip_transport_dec_ref(tcp);
-    pjsip_transport_destroy(tcp);
     flush_events(500);
     return ret;
+}
+
+static void tp_destroyed(void *arg)
+{
+    pj_atomic_inc((pj_atomic_t*)arg);
 }
 
 int transport_tcp_test(void)
@@ -344,6 +351,8 @@ int transport_tcp_test(void)
     unsigned i;
     unsigned num_listener = NUM_LISTENER;
     unsigned num_tp = NUM_TP;
+    pj_pool_t *pool;
+    pj_atomic_t *destroyed;
 
     status = restart_failure_test();
     if (status != 0)
@@ -418,14 +427,16 @@ int transport_tcp_test(void)
             return -80;
     }
 
-    for (i = 0; i < num_tp; ++i) {
-        /* Destroy this transport. */
-        pjsip_transport_dec_ref(tcp[i]);
+    pool = pjsip_endpt_create_pool(endpt, "tcptest", 128, 128);
+    if (!pool || pj_atomic_create(pool, 0, &destroyed) != PJ_SUCCESS)
+        return -85;
 
-        /* Force destroy this transport. */
-        status = pjsip_transport_destroy(tcp[i]);
-        if (status != PJ_SUCCESS)
-            return -90;
+    for (i = 0; i < num_tp; ++i) {
+        pj_grp_lock_add_handler(tcp[i]->grp_lock, pool, destroyed,
+                                &tp_destroyed);
+        /* Once released, another thread may destroy it */
+        pjsip_transport_shutdown(tcp[i]);
+        pjsip_transport_dec_ref(tcp[i]);
     }
 
     for (i = 0; i < num_listener; ++i) {
@@ -439,6 +450,19 @@ int transport_tcp_test(void)
     /* Flush events. */
     PJ_LOG(3,(THIS_FILE, "   Flushing events, 1 second..."));
     flush_events(1000);
+
+    /* Every released transport must be destroyed */
+    for (i = 0; i < 50 && pj_atomic_get(destroyed) != (pj_atomic_value_t)num_tp;
+         ++i)
+    {
+        flush_events(100);
+    }
+    /* On failure the pool is kept, a late destroy may still use it */
+    if (pj_atomic_get(destroyed) != (pj_atomic_value_t)num_tp)
+        return -90;
+
+    pj_atomic_destroy(destroyed);
+    pj_pool_release(pool);
 
     /* Done */
     return 0;
@@ -717,7 +741,17 @@ on_return:
  *
  * The request is written straight to a socket rather than sent through PJSIP,
  * because a pjsip_tx_data buffer is itself capped at PJSIP_MAX_PKT_LEN.
+ *
+ * The drop data callback must only be given the bytes that were received.
  */
+static pj_size_t rx_overflow_drop_len;
+
+static void rx_overflow_on_drop(pjsip_tp_dropped_data *data)
+{
+    if (data->status == PJSIP_ERXOVERFLOW && data->len > rx_overflow_drop_len)
+        rx_overflow_drop_len = data->len;
+}
+
 static int rx_overflow_test(const char *last_hdr_eol, const char *branch)
 {
     enum { TIMEOUT_MSEC = 10000, CHUNK = 1024 };
@@ -800,6 +834,10 @@ static int rx_overflow_test(const char *last_hdr_eol, const char *branch)
     pj_memset(req + len, 'x', body_len);
     req_len = (pj_size_t)len + body_len;
 
+    rx_overflow_drop_len = 0;
+    pjsip_tpmgr_set_drop_data_cb(pjsip_endpt_get_tpmgr(endpt),
+                                 &rx_overflow_on_drop);
+
     /* Nothing else polls the endpoint from this thread, so let it drain the
      * connection between chunks instead of filling the socket buffer.
      */
@@ -868,7 +906,19 @@ static int rx_overflow_test(const char *last_hdr_eol, const char *branch)
         goto on_return;
     }
 
+    if (rx_overflow_drop_len == 0 ||
+        rx_overflow_drop_len > PJSIP_MAX_PKT_LEN)
+    {
+        PJ_LOG(3,(THIS_FILE, "   error: dropped data length %u, expected "
+                             "1..%u (the receive buffer)",
+                  (unsigned)rx_overflow_drop_len, (unsigned)PJSIP_MAX_PKT_LEN));
+        rc = -550;
+        goto on_return;
+    }
+
 on_return:
+    pjsip_tpmgr_set_drop_data_cb(pjsip_endpt_get_tpmgr(endpt), NULL);
+
     if (sock != PJ_INVALID_SOCKET)
         pj_sock_close(sock);
 

@@ -388,7 +388,9 @@
     /* We have our own OpenSL ES backend */
     #define PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO     0
     #define PJMEDIA_AUDIO_DEV_HAS_WMME          0
+    #ifndef PJMEDIA_AUDIO_DEV_HAS_OPENSL
     #define PJMEDIA_AUDIO_DEV_HAS_OPENSL        0
+    #endif
     #define PJMEDIA_AUDIO_DEV_HAS_ANDROID_JNI   1
 
     /* Disable some codecs */

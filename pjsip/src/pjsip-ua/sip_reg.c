@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -347,6 +347,8 @@ static pj_status_t set_contact( pjsip_regc *regc,
 
     /* Process new contacts */
     while (!pj_list_empty(&new_list)) {
+        const pjsip_param *old_xuid = NULL;
+
         hdr = new_list.next;
         pj_list_erase(hdr);
 
@@ -361,6 +363,18 @@ static pj_status_t set_contact( pjsip_regc *regc,
                                h->uri, hdr->uri);
             if (rc == 0) {
                 /* Match */
+                if (PJSIP_URI_SCHEME_IS_SIP(h->uri) ||
+                    PJSIP_URI_SCHEME_IS_SIPS(h->uri))
+                {
+                    pjsip_sip_uri *sip_uri;
+
+                    /* Keep its x-uid: the match ignores it, and a new
+                     * value would leave the old binding registered.
+                     */
+                    sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(h->uri);
+                    old_xuid = pjsip_param_cfind(&sip_uri->other_param,
+                                                 &XUID_PARAM_NAME);
+                }
                 pj_list_erase(h);
                 break;
             }
@@ -375,15 +389,22 @@ static pj_status_t set_contact( pjsip_regc *regc,
         if (regc->add_xuid_param && (PJSIP_URI_SCHEME_IS_SIP(hdr->uri) ||
                                      PJSIP_URI_SCHEME_IS_SIPS(hdr->uri))) 
         {
-            pjsip_param *xuid_param;
             pjsip_sip_uri *sip_uri;
 
-            xuid_param = PJ_POOL_ZALLOC_T(regc->pool, pjsip_param);
-            xuid_param->name = XUID_PARAM_NAME;
-            pj_create_unique_string(regc->pool, &xuid_param->value);
-
             sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(hdr->uri);
-            pj_list_push_back(&sip_uri->other_param, xuid_param);
+
+            /* Unless the Contact has one of its own */
+            if (!pjsip_param_cfind(&sip_uri->other_param, &XUID_PARAM_NAME)) {
+                pjsip_param *xuid_param;
+
+                xuid_param = PJ_POOL_ZALLOC_T(regc->pool, pjsip_param);
+                xuid_param->name = XUID_PARAM_NAME;
+                if (old_xuid)
+                    xuid_param->value = old_xuid->value;
+                else
+                    pj_create_unique_string(regc->pool, &xuid_param->value);
+                pj_list_push_back(&sip_uri->other_param, xuid_param);
+            }
         }
 
         pj_list_push_back(&regc->contact_hdr_list, hdr);

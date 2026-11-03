@@ -1336,6 +1336,19 @@ static void apply_answer_symmetric_pt(pj_pool_t *pool,
 }
 
 
+/* Check whether a local format has already been put in the answer. */
+static pj_bool_t pt_answer_has(const pj_str_t *pt_answer, unsigned count,
+                               const pj_str_t *fmt)
+{
+    unsigned i;
+
+    for (i = 0; i < count; ++i) {
+        if (!pj_strcmp(&pt_answer[i], fmt))
+            return PJ_TRUE;
+    }
+    return PJ_FALSE;
+}
+
 /* Try to match offer with answer. */
 static pj_status_t match_offer(pj_pool_t *pool,
                                pj_bool_t prefer_remote_codec_order,
@@ -1426,6 +1439,17 @@ static pj_status_t match_offer(pj_pool_t *pool,
                     if (p == pt && pj_isdigit(*slave->desc.fmt[j].ptr)) {
                         unsigned k;
 
+                        /* Skip a repeated offer format, the local format
+                         * is already in the answer.
+                         */
+                        if (pt_answer_has(pt_answer, pt_answer_count,
+                                          prefer_remote_codec_order?
+                                          &slave->desc.fmt[j]:
+                                          &master->desc.fmt[i]))
+                        {
+                            continue;
+                        }
+
                         found_matching_codec = 1;
                         pt_offer[pt_answer_count] = prefer_remote_codec_order?
                                                     master->desc.fmt[i]:
@@ -1497,6 +1521,18 @@ static pj_status_t match_offer(pj_pool_t *pool,
                                                   *lr.param.ptr=='1'))) 
                         {
                             /* Match! */
+
+                            /* Skip a repeated offer format, the local
+                             * format is already in the answer.
+                             */
+                            if (pt_answer_has(pt_answer, pt_answer_count,
+                                              prefer_remote_codec_order?
+                                              &preanswer->desc.fmt[j]:
+                                              &preanswer->desc.fmt[i]))
+                            {
+                                continue;
+                            }
+
                             if (is_codec) {
                                 pjmedia_sdp_media *o_med, *a_med;
                                 unsigned o_fmt_idx, a_fmt_idx;
@@ -1742,14 +1778,25 @@ static pj_status_t match_offer(pj_pool_t *pool,
      * to suit the offer.
      */
     answer = pjmedia_sdp_media_clone(pool, preanswer);
-    for (i=0; i<pt_answer_count; ++i) {
+    for (i=0; i<pt_answer_count; ) {
         unsigned j;
         for (j=i; j<answer->desc.fmt_count; ++j) {
             if (!pj_strcmp(&answer->desc.fmt[j], &pt_answer[i]))
                 break;
         }
-        pj_assert(j != answer->desc.fmt_count);
+        if (j == answer->desc.fmt_count) {
+            /* Not in the local format list (e.g. a duplicate), drop it so
+             * the answer never refers to formats beyond the clone.
+             */
+            pj_array_erase(pt_answer, sizeof(pt_answer[0]),
+                           pt_answer_count, i);
+            pj_array_erase(pt_offer, sizeof(pt_offer[0]),
+                           pt_answer_count, i);
+            pt_answer_count--;
+            continue;
+        }
         str_swap(&answer->desc.fmt[i], &answer->desc.fmt[j]);
+        ++i;
     }
     
     /* Remove unwanted local formats. */

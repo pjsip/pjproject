@@ -53,7 +53,8 @@ static const struct
     PJ_BUILD_ERR( PJSIP_EINVALIDSCHEME, "Invalid URI scheme" ),
     PJ_BUILD_ERR( PJSIP_EMISSINGREQURI, "Missing Request-URI" ),
     PJ_BUILD_ERR( PJSIP_EINVALIDREQURI, "Invalid Request URI" ),
-    PJ_BUILD_ERR( PJSIP_EURITOOLONG,    "URI is too long" ), 
+    PJ_BUILD_ERR( PJSIP_EURITOOLONG,    "URI is too long" ),
+    PJ_BUILD_ERR( PJSIP_EINVALIDROUTEURI, "Route URI is not a SIP/SIPS URI" ),
 
     PJ_BUILD_ERR( PJSIP_EMISSINGHDR,    "Missing required header(s)" ),
     PJ_BUILD_ERR( PJSIP_EINVALIDHDR,    "Invalid header field"),

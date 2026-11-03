@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1645,9 +1645,9 @@ static pj_status_t  ipp_codec_recover(pjmedia_codec *codec,
     struct ipp_codec *ippc = &ipp_codec[codec_data->codec_idx];
     unsigned samples_per_frame;
 
-    PJ_UNUSED_ARG(output_buf_len);
-
     samples_per_frame = ippc->samples_per_frame;
+    if (output_buf_len < (samples_per_frame << 1))
+        return PJMEDIA_CODEC_EPCMTOOSHORT;
 
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->size = samples_per_frame << 1;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2025-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (c) 2025 Arlo Technologies, Inc. (https://www.arlo.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -406,13 +406,24 @@ static void update_cert_info(const mbedtls_x509_crt *crt,
     int ret;
     char buf[1024];
     size_t bufsize = sizeof(buf);
+    const unsigned char *serial = crt->serial.p;
+    size_t serial_len = crt->serial.len;
 
     pj_bzero(ci, sizeof(pj_ssl_cert_info));
 
     ci->version = crt->version;
 
-    /* Serial number */
-    pj_memcpy(ci->serial_no, crt->serial.p, sizeof(ci->serial_no));
+    /* Serial number, right-aligned as the OpenSSL backend stores it. Mbed TLS
+     * keeps the DER sign octet, dropped only if the serial won't fit.
+     */
+    while (serial_len > sizeof(ci->serial_no) && *serial == 0) {
+        ++serial;
+        --serial_len;
+    }
+    if (serial_len > sizeof(ci->serial_no))
+        serial_len = sizeof(ci->serial_no);
+    pj_memcpy(ci->serial_no + sizeof(ci->serial_no) - serial_len, serial,
+              serial_len);
 
     /* Issuer */
     ret = mbedtls_x509_dn_gets(buf, bufsize, &crt->issuer);
@@ -549,6 +560,25 @@ static int cert_verify_cb(void *data, mbedtls_x509_crt *crt,
     return 0;
 }
 
+/* Mbed TLS requires PEM lengths to include NUL, but DER lengths must be exact.
+ * pj_ssl_sock_set_certificate() adds a trailing NUL without changing slen,
+ * so the PEM parse length can safely include that extra byte.
+ */
+static pj_size_t get_cert_parse_len(const pj_ssl_cert_buffer *src)
+{
+    pj_str_t pem_header = pj_str("-----BEGIN ");
+
+    /* DER certificates and keys start with an ASN.1 SEQUENCE (0x30). */
+    if (src->slen >= pem_header.slen && src->ptr[0] != 0x30 &&
+        src->ptr[src->slen - 1] != '\0' && pj_strstr(src, &pem_header))
+    {
+        return src->slen + 1;
+    }
+
+    return src->slen;
+}
+
+
 static pj_status_t set_cert(pj_ssl_sock_t *ssock)
 {
     mbedtls_sock_t *mssock = (mbedtls_sock_t *)ssock;
@@ -563,7 +593,7 @@ static pj_status_t set_cert(pj_ssl_sock_t *ssock)
     if (cert->CA_buf.slen) {
         ret = mbedtls_x509_crt_parse(&mssock->cacert,
                                      (const unsigned char *)cert->CA_buf.ptr,
-                                     cert->CA_buf.slen);
+                                     get_cert_parse_len(&cert->CA_buf));
         if (ret != 0) {
             PJ_LOG(1, (THIS_FILE, "Failed to CA mbedtls_x509_crt_parse, "
                                   "ret = -0x%04X", -ret));
@@ -575,7 +605,7 @@ static pj_status_t set_cert(pj_ssl_sock_t *ssock)
     if (cert->cert_buf.slen && cert->privkey_buf.slen) {
         ret = mbedtls_x509_crt_parse(&mssock->cert,
                                      (const unsigned char *)cert->cert_buf.ptr,
-                                     cert->cert_buf.slen);
+                                     get_cert_parse_len(&cert->cert_buf));
         if (ret != 0) {
             PJ_LOG(1, (THIS_FILE, "Failed to mbedtls_x509_crt_parse, "
                                   "ret = -0x%04X", -ret));
@@ -584,7 +614,7 @@ static pj_status_t set_cert(pj_ssl_sock_t *ssock)
 
         ret = mbedtls_pk_parse_key(&mssock->pk_ctx,
                                    (const unsigned char *)cert->privkey_buf.ptr,
-                                   cert->privkey_buf.slen,
+                                   get_cert_parse_len(&cert->privkey_buf),
                                    (const unsigned char *)cert->privkey_pass.ptr,
                                    cert->privkey_pass.slen
 #if MBEDTLS_VERSION_MAJOR < 4
