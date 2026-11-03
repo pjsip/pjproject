@@ -1192,7 +1192,10 @@ if(PJMEDIA_WITH_VIDEODEV_DSHOW)
     ${_baseclasses}/wxutil.cpp
   )
   target_sources(pjmedia-videodev PRIVATE ${_baseclasses_sources})
-  target_include_directories(pjmedia-videodev
+  # SYSTEM, and -w below: Microsoft's sample code is not ours to clean up,
+  # and under GCC's -Wall its headers would bury the warnings of the code
+  # including them (dshowclasses.cpp)
+  target_include_directories(pjmedia-videodev SYSTEM
     PRIVATE
       $<BUILD_INTERFACE:${_baseclasses}>
   )
@@ -1206,7 +1209,7 @@ if(PJMEDIA_WITH_VIDEODEV_DSHOW)
     set_source_files_properties(${_baseclasses_sources}
       TARGET_DIRECTORY pjmedia-videodev
       PROPERTIES
-        COMPILE_OPTIONS "-fpermissive"
+        COMPILE_OPTIONS "-fpermissive;-w"
         COMPILE_DEFINITIONS "__STRSAFE__NO_INLINE=1"
     )
     target_link_libraries(pjmedia-videodev PRIVATE oleaut32 uuid)
