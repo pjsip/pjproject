@@ -1085,8 +1085,8 @@ static pjsip_inv_session *call_inv(pjsua_call_id call_id)
                                            NULL;
 }
 
-/* The caller's re-INVITE or UPDATE has got its final answer */
-static pj_bool_t caller_tsx_done(pjsua_call_id call_id)
+/* The call has no re-INVITE or offer UPDATE pending */
+static pj_bool_t call_tsx_done(pjsua_call_id call_id)
 {
     pjsip_inv_session *inv = call_inv(call_id);
     pj_bool_t          done;
@@ -1097,6 +1097,15 @@ static pj_bool_t caller_tsx_done(pjsua_call_id call_id)
     done = inv->invite_tsx == NULL && inv->update_tsx == NULL;
     pjsip_dlg_dec_lock(inv->dlg);
     return done;
+}
+
+/* Both sides of the call are done with their requests */
+static pj_bool_t caller_tsx_done(pjsua_call_id call_id)
+{
+    pjsua_call_id callee = callee_call();
+
+    return call_tsx_done(call_id) &&
+           (callee == PJSUA_INVALID_ID || call_tsx_done(callee));
 }
 
 /* Waits until the mock proxy has answered n requests and the caller has
