@@ -2343,7 +2343,9 @@ on_return:
  * - REUSE_CA_FILE: only the first client has the CA list, and the second
  *   must report the server certificate as untrusted;
  * - REUSE_CA_PATH: the clients have different CA directories;
- * - REUSE_VERIFY_CB: both clients have a verification callback.
+ * - REUSE_VERIFY_CB: both clients have a verification callback;
+ * - REUSE_CLI_KEY: both clients have the same client certificate, but only
+ *   the first has its private key.
  */
 #if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
 
@@ -2352,7 +2354,8 @@ enum reuse_mode
     REUSE_SAME,
     REUSE_CA_FILE,
     REUSE_CA_PATH,
-    REUSE_VERIFY_CB
+    REUSE_VERIFY_CB,
+    REUSE_CLI_KEY
 };
 
 static const char reuse_greeting[] = "hello";
@@ -2566,13 +2569,22 @@ static int session_reuse_test(enum reuse_mode mode)
             goto on_return;
 
         if (mode == REUSE_SAME || mode == REUSE_CA_PATH ||
-            (mode == REUSE_CA_FILE && i == 0))
+            mode == REUSE_CLI_KEY || (mode == REUSE_CA_FILE && i == 0))
         {
             pj_str_t ca_file = pj_str(CERT_CA_FILE);
             pj_str_t ca_path = pj_str(i == 0 ? CERT_DIR : ".");
+            pj_str_t crt = pj_str(CERT_CLI_FILE);
+            pj_str_t key = pj_str(CERT_CLI_PRIVKEY_FILE);
+            pj_str_t pass = pj_str(CERT_PRIVKEY_PASS);
             pj_ssl_cert_t *cert = NULL;
 
-            if (mode != REUSE_CA_PATH) {
+            if (mode == REUSE_CLI_KEY) {
+                status = pj_ssl_cert_load_from_files2(pool, &ca_file, NULL,
+                                                      &crt,
+                                                      i == 0 ? &key : NULL,
+                                                      i == 0 ? &pass : NULL,
+                                                      &cert);
+            } else if (mode != REUSE_CA_PATH) {
                 status = pj_ssl_cert_load_from_files2(pool, &ca_file, NULL,
                                                       NULL, NULL, NULL,
                                                       &cert);
@@ -2610,6 +2622,12 @@ static int session_reuse_test(enum reuse_mode mode)
             pj_time_val delay = {0, 100};
             pj_ioqueue_poll(ioqueue, &delay);
             pj_timer_heap_poll(timer, NULL);
+        }
+        if (!state_cli.done) {
+            PJ_LOG(1, ("", "...ERROR: connection %d timed out", i + 1));
+            pj_ssl_sock_close(ssock_cli);
+            status = PJ_ETIMEDOUT;
+            goto on_return;
         }
 
         /* Drain so the ticket is fully processed and the server-side socket
@@ -3194,6 +3212,11 @@ int ssl_sock_test(void)
 
     PJ_LOG(3,("", "..TLSv1.3 no session resumption with verify callback"));
     ret = session_reuse_test(REUSE_VERIFY_CB);
+    if (ret != 0)
+        return ret;
+
+    PJ_LOG(3,("", "..TLSv1.3 no session resumption without client key"));
+    ret = session_reuse_test(REUSE_CLI_KEY);
     if (ret != 0)
         return ret;
 #endif

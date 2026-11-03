@@ -752,10 +752,21 @@ static int new_session_cb(SSL *ssl, SSL_SESSION *sess)
     return 0;
 }
 
-/* Digest an X509 including its auxiliary trust settings, which a PEM
+/* Add a tagged, length-prefixed part to a context ID digest, so that
+ * different combinations of parts can't produce the same input.
+ */
+static int digest_part(EVP_MD_CTX *md, unsigned char tag,
+                       const void *data, unsigned int len)
+{
+    return EVP_DigestUpdate(md, &tag, sizeof(tag)) &&
+           EVP_DigestUpdate(md, &len, sizeof(len)) &&
+           (len == 0 || EVP_DigestUpdate(md, data, len));
+}
+
+/* SHA-256 of an X509 including its auxiliary trust settings, which a PEM
  * "TRUSTED CERTIFICATE" in a CA list may carry.
  */
-static int digest_x509_aux(EVP_MD_CTX *md, X509 *x)
+static int digest_x509_aux(X509 *x, unsigned char *dgst, unsigned int *dlen)
 {
     unsigned char *buf, *p;
     int len, ok;
@@ -766,7 +777,8 @@ static int digest_x509_aux(EVP_MD_CTX *md, X509 *x)
     buf = p = (unsigned char *)OPENSSL_malloc(len);
     if (!buf)
         return 0;
-    ok = (i2d_X509_AUX(x, &p) == len) && EVP_DigestUpdate(md, buf, len);
+    ok = (i2d_X509_AUX(x, &p) == len) &&
+         EVP_Digest(buf, len, dgst, dlen, EVP_sha256(), NULL);
     OPENSSL_free(buf);
     return ok;
 }
@@ -784,6 +796,7 @@ static int digest_x509_aux(EVP_MD_CTX *md, X509 *x)
  */
 static pj_bool_t sess_ctx_id_init(pj_ssl_sock_t *ssock)
 {
+    enum { PART_CERT = 1, PART_CA, PART_CRL, PART_CA_PATH, PART_VERIFY };
     ossl_sock_t *ossock = (ossl_sock_t *)ssock;
     const EVP_MD *sha256 = EVP_sha256();
     STACK_OF(X509_OBJECT) *objs;
@@ -803,15 +816,15 @@ static pj_bool_t sess_ctx_id_init(pj_ssl_sock_t *ssock)
         return PJ_FALSE;
     ok = EVP_DigestInit_ex(md, sha256, NULL);
 
-    /* Own certificate */
+    /* Own certificate. Without a private key it is never sent, so it
+     * counts as no certificate.
+     */
     len = 0;
     x = SSL_CTX_get0_certificate(ossock->ossl_ctx);
-    if (ok && x)
+    if (ok && x && SSL_CTX_get0_privatekey(ossock->ossl_ctx))
         ok = X509_digest(x, sha256, dgst, &len);
     if (ok)
-        ok = EVP_DigestUpdate(md, &len, sizeof(len));
-    if (ok && len)
-        ok = EVP_DigestUpdate(md, dgst, len);
+        ok = digest_part(md, PART_CERT, dgst, len);
 
     /* Trusted CAs and CRLs */
     objs = X509_STORE_get0_objects(SSL_CTX_get_cert_store(ossock->ossl_ctx));
@@ -820,25 +833,26 @@ static pj_bool_t sess_ctx_id_init(pj_ssl_sock_t *ssock)
 
         len = 0;
         if (X509_OBJECT_get_type(obj) == X509_LU_X509) {
-            ok = digest_x509_aux(md, X509_OBJECT_get0_X509(obj));
+            ok = digest_x509_aux(X509_OBJECT_get0_X509(obj), dgst, &len) &&
+                 digest_part(md, PART_CA, dgst, len);
         } else if (X509_OBJECT_get_type(obj) == X509_LU_CRL) {
             ok = X509_CRL_digest(X509_OBJECT_get0_X509_CRL(obj), sha256,
-                                 dgst, &len);
+                                 dgst, &len) &&
+                 digest_part(md, PART_CRL, dgst, len);
         }
-        if (ok && len)
-            ok = EVP_DigestUpdate(md, dgst, len);
     }
 
     /* CA_path certificates are loaded on demand, so take the path itself. */
-    if (ok && ssock->cert && ssock->cert->CA_path.slen) {
-        ok = EVP_DigestUpdate(md, ssock->cert->CA_path.ptr,
-                              ssock->cert->CA_path.slen);
+    if (ok) {
+        const pj_str_t *path = ssock->cert ? &ssock->cert->CA_path : NULL;
+        ok = digest_part(md, PART_CA_PATH, path ? path->ptr : NULL,
+                         path ? (unsigned int)path->slen : 0);
     }
 
     /* Verification settings */
     if (ok) {
-        ok = EVP_DigestUpdate(md, &ssock->param.verify_peer,
-                              sizeof(ssock->param.verify_peer));
+        ok = digest_part(md, PART_VERIFY, &ssock->param.verify_peer,
+                         sizeof(ssock->param.verify_peer));
     }
 
     len = 0;
