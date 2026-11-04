@@ -5,7 +5,6 @@ set(DEPS)
 # G7221
 set(DEP_G7221_HELP    "G7221 codec implementation provider")
 set(DEP_G7221_SUBDIR  "g7221")
-set(DEP_G7221_PACKAGE "G7221")
 list(APPEND DEPS G7221)
 
 # GSM
