@@ -155,6 +155,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 {
     test_desc *test = (test_desc*)pj_ioqueue_get_user_data(key);
     op_key_user_data *okud = (op_key_user_data*)op_key->user_data;
+    pj_status_t status;
 
     assert(okud->common.side == SERVER);
 
@@ -232,17 +233,22 @@ static void on_read_complete(pj_ioqueue_key_t *key,
             break;
         }
 
-        /* next read */
+        /* next read. Once pending, the op may complete in another thread,
+         * which then updates okud, so don't touch okud afterwards.
+         */
         bytes_read = test->cfg.pkt_len * sizeof(int);
-        okud->server.status = pj_ioqueue_recv(key, op_key, okud->server.recv_buf,
-                                              &bytes_read, 0);
-        if (okud->server.status != PJ_SUCCESS && okud->server.status != PJ_EPENDING) {
-            PJ_PERROR(1,(THIS_FILE, okud->server.status, "pj_ioqueue_recv() error"));
+        okud->server.status = PJ_EPENDING;
+        status = pj_ioqueue_recv(key, op_key, okud->server.recv_buf,
+                                 &bytes_read, 0);
+        if (status != PJ_EPENDING)
+            okud->server.status = status;
+        if (status != PJ_SUCCESS && status != PJ_EPENDING) {
+            PJ_PERROR(1,(THIS_FILE, status, "pj_ioqueue_recv() error"));
             test->state.retcode = 420;
             return;
         }
 
-    } while (okud->server.status==PJ_SUCCESS &&
+    } while (status==PJ_SUCCESS &&
              test->state.retcode==0  // <= this can be set by other thread
             );
 }
@@ -256,6 +262,7 @@ static void on_write_complete(pj_ioqueue_key_t *key,
     unsigned *p, *end;
     unsigned counter;
     pj_ssize_t total, sent;
+    pj_status_t status;
 
     pj_assert(okud != NULL);
     assert(okud->common.side == CLIENT);
@@ -305,17 +312,20 @@ static void on_write_complete(pj_ioqueue_key_t *key,
     sent = 0;
     do {
         bytes_sent = total - sent;
-        okud->client.status = pj_ioqueue_send(key, op_key,
-                                              (char*)okud->client.send_buf+sent,
-                                              &bytes_sent, 0);
-        if (okud->client.status == PJ_SUCCESS)
+        okud->client.status = PJ_EPENDING;
+        status = pj_ioqueue_send(key, op_key,
+                                 (char*)okud->client.send_buf+sent,
+                                 &bytes_sent, 0);
+        if (status != PJ_EPENDING)
+            okud->client.status = status;
+        if (status == PJ_SUCCESS)
             sent += bytes_sent;
-    } while (okud->client.status == PJ_SUCCESS && bytes_sent > 0 &&
+    } while (status == PJ_SUCCESS && bytes_sent > 0 &&
              sent < total && test->cfg.sock_type == pj_SOCK_STREAM());
-    if (okud->client.status != PJ_SUCCESS && okud->client.status != PJ_EPENDING) {
-        PJ_PERROR(1,(THIS_FILE, okud->client.status, "pj_ioqueue_send() error"));
+    if (status != PJ_SUCCESS && status != PJ_EPENDING) {
+        PJ_PERROR(1,(THIS_FILE, status, "pj_ioqueue_send() error"));
         test->state.retcode = 520;
-    } else if (okud->client.status == PJ_SUCCESS) {
+    } else if (status == PJ_SUCCESS) {
         counter = test->state.cnt[CLIENT];
         if (test->cfg.sock_type==pj_SOCK_STREAM() && counter >= test->cfg.tx_cnt) {
             //TRACE((THIS_FILE, "op_key:%p: TX counter reached (%d)",
