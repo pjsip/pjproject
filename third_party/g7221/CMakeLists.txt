@@ -29,6 +29,10 @@ if(NOT EXISTS "${g7221_interface_dir}")
 endif()
 
 # link files
+if(POLICY CMP0205)
+  # copy the directory content if linking fails
+  cmake_policy(SET CMP0205 NEW)
+endif()
 foreach(g7221_include IN ITEMS common encode decode)
   if(NOT EXISTS "${g7221_interface_dir}/${g7221_include}")
     if (WIN32 OR MINGW OR CYGWIN)
