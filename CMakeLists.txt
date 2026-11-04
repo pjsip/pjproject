@@ -589,6 +589,11 @@ set(PJ_CMAKE_TARGETS_FILE        "PjTargets.cmake")
 set(PJ_CMAKE_CONFIG_FILE         "PjConfig.cmake")
 set(PJ_CMAKE_CONFIG_VERSION_FILE "PjConfigVersion.cmake")
 
+# Whether the bundled srtp links OpenSSL, set by it only. Once a cache entry,
+# which outlived a switch to the system srtp.
+unset(PJ_SRTP_WITH_OPENSSL CACHE)
+get_property(PJ_SRTP_WITH_OPENSSL GLOBAL PROPERTY PJ_SRTP_WITH_OPENSSL)
+
 # install exports
 install(
   EXPORT      PjTargets
