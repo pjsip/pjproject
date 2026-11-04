@@ -926,35 +926,9 @@ block(SCOPE_FOR VARIABLES)
   )
 endblock()
 
-# config_site.h: the source tree's, shared by every build folder as with make,
-# or the file PJ_CONFIG_SITE names. Either is copied to the same place in this
-# build folder, found before the source tree's and installed, so the compiled
-# files always depend on that one path and switching rebuilds them. An edit to
-# the file re-runs CMake (configure_file), so the next build picks it up.
-set(PJ_CONFIG_SITE "" CACHE FILEPATH
-  "config_site.h for this build folder (default: pjlib/include/pj/config_site.h)")
-if(PJ_CONFIG_SITE)
-  if(NOT EXISTS "${PJ_CONFIG_SITE}" OR IS_DIRECTORY "${PJ_CONFIG_SITE}")
-    message(FATAL_ERROR "PJ_CONFIG_SITE: ${PJ_CONFIG_SITE} is not a file")
-  endif()
-  set(_pj_config_site_src "${PJ_CONFIG_SITE}")
-else()
-  # generate a dummy `pj/config_site.h` if it does not exist
-  if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/include/pj/config_site.h")
-    file(TOUCH "${CMAKE_CURRENT_SOURCE_DIR}/include/pj/config_site.h")
-  endif()
-  set(_pj_config_site_src "${CMAKE_CURRENT_SOURCE_DIR}/include/pj/config_site.h")
-endif()
-set(_pj_config_site "${CMAKE_CURRENT_BINARY_DIR}/include/pj/config_site.h")
-if(EXISTS "${_pj_config_site}" AND NOT _PJ_CONFIG_SITE_COPIED)
-  message(WARNING
-    "${_pj_config_site} already exists and is used instead of "
-    "${_pj_config_site_src}. Remove it to use that file.")
-  message(STATUS "config_site.h: ${_pj_config_site}")
-else()
-  configure_file("${_pj_config_site_src}" "${_pj_config_site}" COPYONLY)
-  set(_PJ_CONFIG_SITE_COPIED TRUE CACHE INTERNAL "")
-  message(STATUS "config_site.h: ${_pj_config_site_src}")
+# generate a dummy `pj/config_site.h` if it does not exist
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/include/pj/config_site.h")
+  file(TOUCH "${CMAKE_CURRENT_SOURCE_DIR}/include/pj/config_site.h")
 endif()
 
 # add generated files includes
@@ -965,7 +939,7 @@ target_sources(pjlib
         "${CMAKE_CURRENT_BINARY_DIR}/include"
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
       FILES
-        "${_pj_config_site}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/pj/config_site.h"
         # config_site.h is where a build states its overrides, and the
         # documented way to write one is to include config_site_sample.h and
         # pick a profile from it. Installing the former without the latter
@@ -974,8 +948,6 @@ target_sources(pjlib
         "${CMAKE_CURRENT_BINARY_DIR}/include/pj/compat/m_auto.h"
         "${CMAKE_CURRENT_BINARY_DIR}/include/pj/compat/os_auto.h"
 )
-unset(_pj_config_site)
-unset(_pj_config_site_src)
 
 # ##############################################################################
 # pjlib test application
