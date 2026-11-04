@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -493,6 +493,7 @@ static int timer_stress_test(void)
     pj_atomic_t **entries_status = NULL;
     pj_grp_lock_t **grp_locks = NULL;
     pj_pool_t *pool;
+    pj_pool_t *heap_pool = NULL;
     pj_timer_heap_t *timer = NULL;
     pj_lock_t *timer_lock;
     pj_status_t status;
@@ -515,11 +516,21 @@ static int timer_stress_test(void)
         goto on_return;
     }
 
+    /* The heap grows from the worker threads while this thread still
+     * allocates from pool, so the heap needs a pool of its own.
+     */
+    heap_pool = pj_pool_create( mem, NULL, 128, 128, NULL);
+    if (!heap_pool) {
+        PJ_LOG(3,("test", "...error: unable to create heap pool"));
+        err = -15;
+        goto on_return;
+    }
+
     /* Create timer heap.
      * Initially we only create a fraction of what's required,
      * to test the timer heap growth algorithm.
      */
-    status = pj_timer_heap_create(pool, ST_ENTRY_COUNT/64, &timer);
+    status = pj_timer_heap_create(heap_pool, ST_ENTRY_COUNT/64, &timer);
     if (status != PJ_SUCCESS) {
         app_perror("...error: unable to create timer heap", status);
         err = -20;
@@ -775,6 +786,7 @@ on_return:
                           (match? "yes": "no")));
     }
 
+    pj_pool_safe_release(&heap_pool);
     pj_pool_safe_release(&pool);
 
     return (err? err: t_err);
