@@ -908,7 +908,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: install dependencies
-      run: sudo apt-get update && sudo apt-get install -y libssl-dev
+      run: sudo apt-get update && sudo apt-get install -y libssl-dev libsrtp2-dev
     - name: reconfigure vs fresh configure
       run: tests/cmake/reconfigure.sh . ${{ runner.temp }}/reconfigure
 

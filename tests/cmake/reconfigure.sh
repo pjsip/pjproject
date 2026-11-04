@@ -8,8 +8,32 @@
 
 set -e
 src=$(cd "$1" && pwd)
-work=$2
+mkdir -p "$2"
+work=$(cd "$2" && pwd)
 common="-DPJ_SKIP_EXPERIMENTAL_NOTICE=ON"
+
+# Two copies of the installed libsrtp2 as package roots, for the pairs that
+# add, remove or move SRTP_ROOT; those pairs are skipped without libsrtp2.
+roots=
+make_root() {
+    dir=$work/roots/$1
+    incdir=$(pkg-config --variable=includedir libsrtp2)
+    libdir=$(pkg-config --variable=libdir libsrtp2)
+    pcfile=$(pkg-config --variable=pcfiledir libsrtp2)/libsrtp2.pc
+    rm -rf "$dir"
+    mkdir -p "$dir/include" "$dir/lib/pkgconfig"
+    cp -R "$incdir/srtp2" "$dir/include/"
+    cp -P "$libdir"/libsrtp2.* "$dir/lib/"
+    sed -e "s#^prefix=.*#prefix=$dir#" \
+        -e 's#^libdir=.*#libdir=${prefix}/lib#' \
+        -e 's#^includedir=.*#includedir=${prefix}/include#' \
+        "$pcfile" > "$dir/lib/pkgconfig/libsrtp2.pc"
+}
+if pkg-config --exists libsrtp2 2>/dev/null; then
+    make_root srtp-a
+    make_root srtp-b
+    roots=$work/roots
+fi
 
 # Everything a stale value could change: the installed package description,
 # the generated headers, every target's flags and link line, the target list.
@@ -36,8 +60,19 @@ snapshot() {
 }
 
 status=0
-while IFS='|' read -r first second; do
-    case $first in ''|'#'*) continue;; esac
+while IFS= read -r pair; do
+    case $pair in ''|'#'*) continue;; esac
+    case $pair in
+    *@ROOTS@*)
+        if [ -z "$roots" ]; then
+            echo "### $pair: skipped, no libsrtp2 for the roots"
+            continue
+        fi
+        pair=$(echo "$pair" | sed "s#@ROOTS@#$roots#g")
+        ;;
+    esac
+    first=${pair%%|*}
+    second=${pair#*|}
     echo "### $first -> $second"
     rm -rf "$work/fresh" "$work/reconf"
     cmake -S "$src" -B "$work/fresh" $common $second > /dev/null
@@ -64,5 +99,9 @@ done <<'PAIRS'
 -DPJMEDIA_WITH_WEBRTC_AEC3=OFF|-DPJMEDIA_WITH_WEBRTC_AEC3=ON
 -DPJLIB_WITH_SSL=|-DPJLIB_WITH_SSL=openssl
 -DPJ_BUILD_APPS=OFF|-DPJ_BUILD_APPS=ON
+# a root added (bundled -> system), removed (back to bundled), moved
+|-DSRTP_ROOT=@ROOTS@/srtp-a
+-DSRTP_ROOT=@ROOTS@/srtp-a|-USRTP_ROOT
+-DSRTP_ROOT=@ROOTS@/srtp-a|-DSRTP_ROOT=@ROOTS@/srtp-b
 PAIRS
 exit $status
