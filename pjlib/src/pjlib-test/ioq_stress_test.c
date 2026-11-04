@@ -116,7 +116,7 @@ struct test_desc
         pj_ioqueue_t *ioq;
         pj_grp_lock_t *grp_lock;
         pj_sock_t listen_sock;       /* tcp listening socket */
-        pj_sock_t refuse_sock;       /* bound, not listening */
+        pj_sock_t refuse_sock;       /* to pick a free port */
         pj_timestamp pass_start;
         pj_ioqueue_key_t *listen_key;/* tcp listening key */
 
@@ -681,17 +681,22 @@ static int perform_single_pass(test_desc *test)
     if (test->cfg.sock_type == pj_SOCK_STREAM()) {
         if (test->cfg.failed_connect) {
             /* A fixed port may be in use, or picked as the client's own
-             * ephemeral port (TCP self-connect). Connect to a port that
-             * is bound but not listening instead.
+             * ephemeral port (TCP self-connect). Bind the client, then
+             * connect to a free port that differs from the client's.
+             * The port must not stay bound, macOS doesn't refuse
+             * connections to a bound, non-listening socket.
              */
             pj_sockaddr refuse_addr;
             int refuse_len = sizeof(refuse_addr);
 
+            CHECK(43, pj_sock_bind_in(test->state.socks[CLIENT], 0, 0));
             CHECK(43, pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0,
                                      &test->state.refuse_sock));
             CHECK(43, pj_sock_bind_in(test->state.refuse_sock, 0, 0));
             CHECK(43, pj_sock_getsockname(test->state.refuse_sock,
                                           &refuse_addr, &refuse_len));
+            pj_sock_close(test->state.refuse_sock);
+            test->state.refuse_sock = PJ_INVALID_SOCKET;
             pj_sockaddr_in_init((pj_sockaddr_in*)&addr, &localhost,
                                 pj_sockaddr_get_port(&refuse_addr));
             test->state.connect_status = pj_ioqueue_connect(test->state.keys[CLIENT],
