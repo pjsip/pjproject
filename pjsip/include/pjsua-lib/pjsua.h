@@ -7010,8 +7010,8 @@ PJ_DECL(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
  *                      INVITE request.
  *
  * @return              PJ_SUCCESS on success, PJ_EPENDING if media
- *                      initialization is asynchronous, in which case the 
- *                      answer will be sent once the media initialization 
+ *                      initialization is asynchronous, in which case the
+ *                      answer will be sent once the media initialization
  *                      completes, or the appropriate error code on failure.
  */
 PJ_DECL(pj_status_t)

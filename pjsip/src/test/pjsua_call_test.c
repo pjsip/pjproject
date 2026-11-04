@@ -7764,7 +7764,7 @@ int pjsua_late_sdp_offer_test(void)
         status = pjsua_create();
         if (status != PJ_SUCCESS) {
             PJ_LOG(1, (THIS_FILE, "  pjsua_create failed (%d)", status));
-            rc = -1958;
+            rc = -2067;
             goto on_restore;
         }
 
@@ -7792,7 +7792,7 @@ int pjsua_late_sdp_offer_test(void)
         if (status != PJ_SUCCESS) {
             PJ_LOG(1, (THIS_FILE, "  pjsua_init failed (%d)", status));
             pjsua_destroy();
-            rc = -1959;
+            rc = -2068;
             goto on_restore;
         }
 
@@ -7802,7 +7802,7 @@ int pjsua_late_sdp_offer_test(void)
         if (status != PJ_SUCCESS) {
             PJ_LOG(1, (THIS_FILE, "  transport_create failed (%d)", status));
             pjsua_destroy();
-            rc = -1960;
+            rc = -2069;
             goto on_restore;
         }
 
@@ -7812,7 +7812,7 @@ int pjsua_late_sdp_offer_test(void)
         if (status != PJ_SUCCESS) {
             PJ_LOG(1, (THIS_FILE, "  pjsua_start failed (%d)", status));
             pjsua_destroy();
-            rc = -1961;
+            rc = -2070;
             goto on_restore;
         }
 
@@ -7820,7 +7820,7 @@ int pjsua_late_sdp_offer_test(void)
         if (status != PJ_SUCCESS) {
             PJ_LOG(1, (THIS_FILE, "  set_null_snd_dev failed (%d)", status));
             pjsua_destroy();
-            rc = -1962;
+            rc = -2071;
             goto on_restore;
         }
 
@@ -7832,7 +7832,7 @@ int pjsua_late_sdp_offer_test(void)
                 PJ_LOG(1, (THIS_FILE,
                            "  transport_get_info failed (%d)", status));
                 pjsua_destroy();
-                rc = -1964;
+                rc = -2072;
                 goto on_restore;
             }
             port = pj_sockaddr_get_port(&ti.local_addr);
@@ -7842,7 +7842,7 @@ int pjsua_late_sdp_offer_test(void)
         if (status != PJ_SUCCESS) {
             PJ_LOG(1, (THIS_FILE, "  acc_add_local failed (%d)", status));
             pjsua_destroy();
-            rc = -1963;
+            rc = -2073;
             goto on_restore;
         }
 
