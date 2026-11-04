@@ -166,6 +166,8 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     PRIVATE
       -Wno-return-type
       -Wno-deprecated-builtins
+      -Wno-address
+      $<$<CXX_COMPILER_ID:GNU>:-Wno-nonnull-compare>
   )
 elseif(MSVC)
   # As third_party/build/webrtc_aec3/libwebrtc_aec3.vcxproj
