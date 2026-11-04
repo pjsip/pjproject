@@ -39,6 +39,8 @@
  *   6. Superseded request: the challenge is deferred, then the regc sends
  *      an un-REGISTER or is destroyed. The deferred authentication must not
  *      be sent, unless it is an un-REGISTER and the regc was destroyed.
+ *   7. Reset session: the deferred send on a session that lost its async
+ *      settings sends nothing and abandons the token.
  */
 
 #include "test.h"
@@ -862,6 +864,91 @@ on_return:
 
 
 /*****************************************************************************
+ * Sub-test 7: Reset session - pjsip_auth_clt_async_send_req() on a session
+ * that lost its async settings (pjsua_acc_del() zeroes the account's
+ * session) returns PJ_EINVALIDOP, sends nothing and abandons the token.
+ *****************************************************************************/
+static int reset_session_test(const pj_str_t *registrar_uri)
+{
+    pjsip_regc          *regc = NULL;
+    pjsip_tx_data       *tdata;
+    pjsip_auth_clt_sess  reset_sess;
+    pj_grp_lock_t       *tsx_lock;
+    unsigned             i, cnt;
+    int                  lock_ref, tdata_ref, lock_dec, tdata_dec;
+    pj_status_t          status, abandon_status;
+    int                  rc = 0;
+
+    PJ_LOG(3, (THIS_FILE, "  async auth: deferred send on a reset session"));
+
+    pj_bzero(&g_ctx, sizeof(g_ctx));
+    pj_bzero(&g_superseded, sizeof(g_superseded));
+
+    if (create_regc(registrar_uri, &on_challenge_keep_first, NULL,
+                    &regc) != 0 ||
+        pjsip_regc_register(regc, PJ_TRUE, &tdata) != PJ_SUCCESS ||
+        pjsip_regc_send(regc, tdata) != PJ_SUCCESS)
+    {
+        rc = -1701;
+        goto on_return;
+    }
+    for (i = 0; i < 50 && !g_superseded.token; ++i)
+        flush_events(100);
+    if (!g_superseded.token) {
+        rc = -1702;
+        goto on_return;
+    }
+
+    /* Keep the token and the request readable after the call */
+    tsx_lock = ((pjsip_auth_clt_async_impl_token*)
+                g_superseded.token)->grp_lock;
+    pj_grp_lock_add_ref(tsx_lock);
+    pjsip_tx_data_add_ref(g_superseded.tdata);
+
+    pj_bzero(&reset_sess, sizeof(reset_sess));
+    cnt = g_registrar.req_count;
+    lock_ref = pj_grp_lock_get_ref(tsx_lock);
+    tdata_ref = (int)pj_atomic_get(g_superseded.tdata->ref_cnt);
+    status = pjsip_auth_clt_async_send_req(&reset_sess, g_superseded.token,
+                                           g_superseded.tdata);
+    lock_dec = lock_ref - pj_grp_lock_get_ref(tsx_lock);
+    tdata_dec = tdata_ref - (int)pj_atomic_get(g_superseded.tdata->ref_cnt);
+
+    /* Also releases a token the send has left */
+    abandon_status = pjsip_auth_clt_async_abandon(g_superseded.sess,
+                                                  g_superseded.token);
+    if (tdata_dec == 0)
+        pjsip_tx_data_dec_ref(g_superseded.tdata);
+    pjsip_tx_data_dec_ref(g_superseded.tdata);
+    g_superseded.tdata = NULL;
+    pj_grp_lock_dec_ref(tsx_lock);
+    flush_events(500);
+
+    if (status != PJ_EINVALIDOP)
+        rc = -1710;
+    else if (g_registrar.req_count != cnt)
+        rc = -1711;
+    else if (abandon_status != PJ_EINVAL)
+        rc = -1712;
+    else if (lock_dec != 1)
+        rc = -1713;
+    else if (tdata_dec != 1)
+        rc = -1714;
+    else if (!g_ctx.done || g_ctx.reg_code != PJSIP_SC_UNAUTHORIZED)
+        rc = -1715;
+
+on_return:
+    if (g_superseded.tdata) {
+        pjsip_tx_data_dec_ref(g_superseded.tdata);
+        pjsip_auth_clt_async_abandon(g_superseded.sess, g_superseded.token);
+    }
+    if (regc)
+        pjsip_regc_destroy(regc);
+    return rc;
+}
+
+
+/*****************************************************************************
  * Main entry point
  *****************************************************************************/
 int auth_async_test(void)
@@ -931,6 +1018,10 @@ int auth_async_test(void)
     if (rc != 0) goto on_return;
 
     rc = superseded_test(&registrar_uri, UNREG_AFTER_DESTROY, -1600);
+    if (rc != 0) goto on_return;
+
+    /* 7. Session reset before the deferred send */
+    rc = reset_session_test(&registrar_uri);
     if (rc != 0) goto on_return;
 
 on_return:

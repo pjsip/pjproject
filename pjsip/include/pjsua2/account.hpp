@@ -2038,8 +2038,9 @@ public:
      * consumed whatever the result.
      *
      * @return          PJ_SUCCESS on success, PJ_EINVALIDOP if already
-     *                  consumed by a prior respond()/abandon()/defer() call,
-     *                  or the error of building or sending the request.
+     *                  consumed by a prior respond()/abandon()/defer() call
+     *                  or if the account has been deleted, or the error of
+     *                  building or sending the request.
      */
     pj_status_t respond();
 
@@ -2050,7 +2051,8 @@ public:
      * affecting all subsequent authentication for the account.
      *
      * @param creds     Credentials to set on the auth session.
-     * @return          PJ_SUCCESS on success.
+     * @return          Same as respond(), or the error of setting the
+     *                  credentials.
      */
     pj_status_t respond(const AuthCredInfoVector &creds);
 

@@ -760,10 +760,15 @@ PJ_DECL(pj_status_t) pjsip_auth_clt_async_configure(
  * only used when the application has configured the authentication client to
  * handle authentication manually.
  *
- * The token is single-use: this call consumes it whether it succeeds or
- * fails, so the application must not pass it to this function or to
+ * The token is single-use: once it is found to be valid, this call
+ * consumes it and the request whether it succeeds or fails, so the
+ * application must not pass the token to this function or to
  * #pjsip_auth_clt_async_abandon() again. Its memory may already be
  * released, e.g. when the challenged transaction has terminated.
+ *
+ * If the session has lost its asynchronous settings since the challenge,
+ * e.g. it was reset because its owner was deleted, the request is not sent
+ * and the token is abandoned as with #pjsip_auth_clt_async_abandon().
  *
  * If application sends the new request with authentication response
  * from outside the callback, application must maintain the validity of the
@@ -777,9 +782,10 @@ PJ_DECL(pj_status_t) pjsip_auth_clt_async_configure(
  * @param new_request   The new request to be sent.
  *
  * @return              PJ_SUCCESS on success, PJ_EINVAL if the token is
- *                      found to be invalid, or an error from the owner of
- *                      the session, e.g. PJ_ECANCELLED when the request is
- *                      no longer wanted.
+ *                      found to be invalid, PJ_EINVALIDOP if the session
+ *                      has lost its asynchronous settings, or an error
+ *                      from the owner of the session, e.g. PJ_ECANCELLED
+ *                      when the request is no longer wanted.
  */
 PJ_DECL(pj_status_t) pjsip_auth_clt_async_send_req(
                                     pjsip_auth_clt_sess *sess,
