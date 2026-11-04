@@ -2332,11 +2332,18 @@ on_return:
 
 
 /*
- * TLS session resumption test (OpenSSL backend). Opens a server that issues
- * TLS 1.3 session tickets, then makes two client connections to it with
- * session reuse enabled. The first connection must perform a full handshake;
- * the second must resume the cached session. With REUSE_SAME, both clients
- * have the same CA list.
+ * TLS session resumption test (OpenSSL backend). Opens a server, then makes
+ * two client connections to it with session reuse enabled. The first
+ * connection must perform a full handshake; the second must resume the
+ * cached session if 'expect_reuse'.
+ *
+ * With REUSE_SAME and REUSE_UNTRUSTED, both clients have the same settings
+ * and the server requires a client certificate:
+ * - REUSE_SAME: both ends have the CA list and must report no verification
+ *   error on either connection;
+ * - REUSE_UNTRUSTED: neither end trusts the other's certificate, and a
+ *   resumed connection must report the same verification failure as the
+ *   full handshake.
  *
  * With any other 'mode', the second client must not resume the first one's
  * session:
@@ -2352,6 +2359,7 @@ on_return:
 enum reuse_mode
 {
     REUSE_SAME,
+    REUSE_UNTRUSTED,
     REUSE_CA_FILE,
     REUSE_CA_PATH,
     REUSE_VERIFY_CB,
@@ -2365,9 +2373,13 @@ struct reuse_state
     pj_pool_t      *pool;
     pj_bool_t       is_server;
     pj_bool_t       done;           /* client round completed              */
+    pj_bool_t       closed;         /* client: closed in a callback        */
     pj_status_t     err;
     pj_bool_t       reused;         /* client: was the session resumed     */
     pj_uint32_t     verify_status;  /* client: server cert verify status   */
+    unsigned        acc_cnt;        /* listener: accepted connections      */
+    pj_bool_t       acc_reused[2];  /* listener: per-connection resumption */
+    pj_uint32_t     acc_verify[2];  /* listener: client cert verify status */
     pj_uint8_t      read_buf[128];
     struct send_key send_key;
 };
@@ -2381,6 +2393,7 @@ static pj_bool_t reuse_on_accept(pj_ssl_sock_t *ssock,
     struct reuse_state *parent_st = (struct reuse_state*)
                                     pj_ssl_sock_get_user_data(ssock);
     struct reuse_state *st;
+    pj_ssl_sock_info info;
     void *read_buf[1];
     pj_ssize_t len;
     pj_status_t status;
@@ -2390,6 +2403,14 @@ static pj_bool_t reuse_on_accept(pj_ssl_sock_t *ssock,
 
     if (accept_status != PJ_SUCCESS)
         return PJ_TRUE;             /* keep listening */
+
+    if (parent_st->acc_cnt < PJ_ARRAY_SIZE(parent_st->acc_reused) &&
+        pj_ssl_sock_get_info(newsock, &info) == PJ_SUCCESS)
+    {
+        parent_st->acc_reused[parent_st->acc_cnt] = info.session_reused;
+        parent_st->acc_verify[parent_st->acc_cnt] = info.verify_status;
+    }
+    parent_st->acc_cnt++;
 
     st = (struct reuse_state*) pj_pool_zalloc(parent_st->pool, sizeof(*st));
     st->pool = parent_st->pool;
@@ -2429,6 +2450,7 @@ static pj_bool_t reuse_on_connect(pj_ssl_sock_t *ssock, pj_status_t status)
     if (status != PJ_SUCCESS) {
         st->err = status;
         st->done = PJ_TRUE;
+        st->closed = PJ_TRUE;
         pj_ssl_sock_close(ssock);
         return PJ_FALSE;
     }
@@ -2444,6 +2466,7 @@ static pj_bool_t reuse_on_connect(pj_ssl_sock_t *ssock, pj_status_t status)
     if (status != PJ_SUCCESS) {
         st->err = status;
         st->done = PJ_TRUE;
+        st->closed = PJ_TRUE;
         pj_ssl_sock_close(ssock);
         return PJ_FALSE;
     }
@@ -2470,6 +2493,10 @@ static pj_bool_t reuse_on_read(pj_ssl_sock_t *ssock,
 
     /* Client: receiving the greeting means the NewSessionTicket (if any) has
      * already been processed and cached.
+     *
+     * Don't close the socket here: this may be called from within
+     * pj_ssl_sock_start_read2(), which can't handle the socket being
+     * destroyed. The test closes it once the round is done.
      */
     if (size > 0)
         st->done = PJ_TRUE;
@@ -2477,10 +2504,6 @@ static pj_bool_t reuse_on_read(pj_ssl_sock_t *ssock,
         if (status != PJ_EEOF)
             st->err = status;
         st->done = PJ_TRUE;
-    }
-    if (st->done) {
-        pj_ssl_sock_close(ssock);
-        return PJ_FALSE;
     }
     return PJ_TRUE;
 }
@@ -2492,8 +2515,13 @@ static pj_bool_t reuse_on_verify(pj_ssl_sock_t *ssock, pj_bool_t is_server)
     return PJ_TRUE;
 }
 
-static int session_reuse_test(enum reuse_mode mode)
+static int session_reuse_test(pj_ssl_sock_proto proto,
+                              pj_bool_t srv_reuse,
+                              enum reuse_mode mode,
+                              pj_bool_t expect_reuse)
 {
+    pj_bool_t same_cfg = (mode == REUSE_SAME || mode == REUSE_UNTRUSTED);
+    pj_bool_t untrusted = (mode == REUSE_UNTRUSTED);
     pj_pool_t *pool = NULL;
     pj_ioqueue_t *ioqueue = NULL;
     pj_timer_heap_t *timer = NULL;
@@ -2508,8 +2536,8 @@ static int session_reuse_test(enum reuse_mode mode)
     pj_status_t status;
 
     pj_bzero(&state_serv, sizeof(state_serv));
-    reused[0] = PJ_TRUE;        /* must become FALSE         */
-    reused[1] = (mode != REUSE_SAME);   /* must become mode == REUSE_SAME */
+    reused[0] = PJ_TRUE;            /* must become FALSE */
+    reused[1] = !expect_reuse;      /* must become expect_reuse */
     cli_verify[0] = cli_verify[1] = 0;
 
     pool = pj_pool_create(mem, "ssl_reuse", 512, 512, NULL);
@@ -2520,15 +2548,15 @@ static int session_reuse_test(enum reuse_mode mode)
     if (status != PJ_SUCCESS)
         goto on_return;
 
-    /* Server: issue TLS 1.3 tickets. */
     pj_ssl_sock_param_default(&param);
     param.cb.on_accept_complete2 = &reuse_on_accept;
     param.cb.on_data_read = &reuse_on_read;
     param.cb.on_data_sent = &ssl_on_data_sent;
     param.ioqueue = ioqueue;
     param.timer_heap = timer;
-    param.proto = PJ_SSL_SOCK_PROTO_TLS1_3;
-    param.enable_session_reuse = PJ_TRUE;
+    param.proto = proto;
+    param.enable_session_reuse = srv_reuse;
+    param.require_client_cert = same_cfg;
     param.user_data = &state_serv;
     state_serv.pool = pool;
     state_serv.is_server = PJ_TRUE;
@@ -2536,10 +2564,31 @@ static int session_reuse_test(enum reuse_mode mode)
     pj_sockaddr_init(PJ_AF_INET, &listen_addr,
                      pj_strset2(&tmp_st, "127.0.0.1"), 0);
 
-    status = ssl_test_create_server(pool, &param, "session_reuse_test",
-                                    &ssock_serv, &listen_addr);
-    if (status != PJ_SUCCESS)
-        goto on_return;
+    {
+        pj_str_t ca = pj_str(CERT_CA_FILE);
+        pj_str_t crt = pj_str(CERT_FILE);
+        pj_str_t key = pj_str(CERT_PRIVKEY_FILE);
+        pj_str_t pass = pj_str(CERT_PRIVKEY_PASS);
+        pj_ssl_cert_t *cert = NULL;
+        pj_ssl_sock_info info;
+
+        status = pj_ssl_sock_create(pool, &param, &ssock_serv);
+        if (status == PJ_SUCCESS)
+            status = pj_ssl_cert_load_from_files(pool,
+                                                 untrusted ? NULL : &ca,
+                                                 &crt, &key, &pass, &cert);
+        if (status == PJ_SUCCESS)
+            status = pj_ssl_sock_set_certificate(ssock_serv, pool, cert);
+        if (status == PJ_SUCCESS)
+            status = pj_ssl_sock_start_accept(ssock_serv, pool, &listen_addr,
+                                        pj_sockaddr_get_len(&listen_addr));
+        if (status != PJ_SUCCESS) {
+            app_perror("...session_reuse_test: server", status);
+            goto on_return;
+        }
+        pj_ssl_sock_get_info(ssock_serv, &info);
+        listen_addr = info.local_addr;
+    }
 
     /* Two client rounds against the same server. */
     for (i = 0; i < 2; ++i) {
@@ -2557,7 +2606,7 @@ static int session_reuse_test(enum reuse_mode mode)
         cparam.cb.on_data_sent = &ssl_on_data_sent;
         cparam.ioqueue = ioqueue;
         cparam.timer_heap = timer;
-        cparam.proto = PJ_SSL_SOCK_PROTO_TLS1_3;
+        cparam.proto = proto;
         cparam.enable_session_reuse = PJ_TRUE;
         cparam.server_name = pj_str("127.0.0.1");
         cparam.user_data = &state_cli;
@@ -2568,35 +2617,28 @@ static int session_reuse_test(enum reuse_mode mode)
         if (status != PJ_SUCCESS)
             goto on_return;
 
-        if (mode == REUSE_SAME || mode == REUSE_CA_PATH ||
-            mode == REUSE_CLI_KEY || (mode == REUSE_CA_FILE && i == 0))
-        {
+        if (mode != REUSE_VERIFY_CB && (mode != REUSE_CA_FILE || i == 0)) {
             pj_str_t ca_file = pj_str(CERT_CA_FILE);
             pj_str_t ca_path = pj_str(i == 0 ? CERT_DIR : ".");
             pj_str_t crt = pj_str(CERT_CLI_FILE);
             pj_str_t key = pj_str(CERT_CLI_PRIVKEY_FILE);
             pj_str_t pass = pj_str(CERT_PRIVKEY_PASS);
+            pj_bool_t has_ca = !untrusted && mode != REUSE_CA_PATH;
+            pj_bool_t has_crt = same_cfg || mode == REUSE_CLI_KEY;
+            pj_bool_t has_key = same_cfg || (mode == REUSE_CLI_KEY && i == 0);
             pj_ssl_cert_t *cert = NULL;
 
-            if (mode == REUSE_CLI_KEY) {
-                status = pj_ssl_cert_load_from_files2(pool, &ca_file, NULL,
-                                                      &crt,
-                                                      i == 0 ? &key : NULL,
-                                                      i == 0 ? &pass : NULL,
-                                                      &cert);
-            } else if (mode != REUSE_CA_PATH) {
-                status = pj_ssl_cert_load_from_files2(pool, &ca_file, NULL,
-                                                      NULL, NULL, NULL,
-                                                      &cert);
-            } else {
-                status = pj_ssl_cert_load_from_files2(pool, NULL, &ca_path,
-                                                      NULL, NULL, NULL,
-                                                      &cert);
-            }
+            status = pj_ssl_cert_load_from_files2(pool,
+                                    has_ca ? &ca_file : NULL,
+                                    mode == REUSE_CA_PATH ? &ca_path : NULL,
+                                    has_crt ? &crt : NULL,
+                                    has_key ? &key : NULL,
+                                    has_key ? &pass : NULL,
+                                    &cert);
             if (status == PJ_SUCCESS)
                 status = pj_ssl_sock_set_certificate(ssock_cli, pool, cert);
             if (status != PJ_SUCCESS) {
-                app_perror("...session_reuse_test: client CA", status);
+                app_perror("...session_reuse_test: client cert", status);
                 pj_ssl_sock_close(ssock_cli);
                 goto on_return;
             }
@@ -2630,6 +2672,9 @@ static int session_reuse_test(enum reuse_mode mode)
             goto on_return;
         }
 
+        if (!state_cli.closed)
+            pj_ssl_sock_close(ssock_cli);
+
         /* Drain so the ticket is fully processed and the server-side socket
          * observes the client close.
          */
@@ -2646,8 +2691,10 @@ static int session_reuse_test(enum reuse_mode mode)
             goto on_return;
         }
 
-        PJ_LOG(3, ("", "...connection %d: session_reused=%d",
-                   i + 1, state_cli.reused));
+        PJ_LOG(3, ("", "...connection %d: session_reused=%d, "
+                   "verify_status cli=0x%x srv=0x%x",
+                   i + 1, state_cli.reused, state_cli.verify_status,
+                   state_serv.acc_verify[i]));
         reused[i] = state_cli.reused;
         cli_verify[i] = state_cli.verify_status;
     }
@@ -2657,14 +2704,38 @@ static int session_reuse_test(enum reuse_mode mode)
         status = PJ_EBUG;
         goto on_return;
     }
-    if (reused[1] != (mode == REUSE_SAME)) {
+    if (reused[1] != expect_reuse || state_serv.acc_cnt != 2 ||
+        state_serv.acc_reused[1] != expect_reuse)
+    {
         PJ_LOG(1, ("", "...ERROR: second connection %s session",
-                   reused[1] ? "unexpectedly resumed" : "did not resume"));
+                   expect_reuse ? "did not resume" : "unexpectedly resumed"));
         status = PJ_EBUG;
         goto on_return;
     }
     if (mode == REUSE_CA_FILE && (cli_verify[0] != 0 || cli_verify[1] == 0)) {
         PJ_LOG(1, ("", "...ERROR: unexpected verify_status"));
+        status = PJ_EBUG;
+        goto on_return;
+    }
+    for (i = 0; same_cfg && i < 2; ++i) {
+        if (!untrusted && (cli_verify[i] || state_serv.acc_verify[i])) {
+            PJ_LOG(1, ("", "...ERROR: connection %d reports a trusted "
+                       "certificate as unverified", i + 1));
+            status = PJ_EBUG;
+            goto on_return;
+        }
+        if (untrusted && (!cli_verify[i] || !state_serv.acc_verify[i])) {
+            PJ_LOG(1, ("", "...ERROR: connection %d reports an untrusted "
+                       "certificate as verified", i + 1));
+            status = PJ_EBUG;
+            goto on_return;
+        }
+    }
+    if (same_cfg && (cli_verify[1] != cli_verify[0] ||
+                     state_serv.acc_verify[1] != state_serv.acc_verify[0]))
+    {
+        PJ_LOG(1, ("", "...ERROR: second connection reports a different "
+                   "verification status"));
         status = PJ_EBUG;
         goto on_return;
     }
@@ -3196,27 +3267,50 @@ int ssl_sock_test(void)
 
 #if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
     PJ_LOG(3,("", "..TLSv1.3 session resumption test"));
-    ret = session_reuse_test(REUSE_SAME);
+    ret = session_reuse_test(PJ_SSL_SOCK_PROTO_TLS1_3, PJ_TRUE, REUSE_SAME,
+                             PJ_TRUE);
+    if (ret != 0)
+        return ret;
+
+    PJ_LOG(3,("", "..TLSv1.3 session resumption test w/ untrusted certs"));
+    ret = session_reuse_test(PJ_SSL_SOCK_PROTO_TLS1_3, PJ_TRUE,
+                             REUSE_UNTRUSTED, PJ_TRUE);
+    if (ret != 0)
+        return ret;
+
+    PJ_LOG(3,("", "..TLSv1.3 no session resumption unless server opts in"));
+    ret = session_reuse_test(PJ_SSL_SOCK_PROTO_TLS1_3, PJ_FALSE,
+                             REUSE_UNTRUSTED, PJ_FALSE);
+    if (ret != 0)
+        return ret;
+
+    PJ_LOG(3,("", "..TLSv1.2 session resumption test w/ untrusted certs"));
+    ret = session_reuse_test(PJ_SSL_SOCK_PROTO_TLS1_2, PJ_FALSE,
+                             REUSE_UNTRUSTED, PJ_TRUE);
     if (ret != 0)
         return ret;
 
     PJ_LOG(3,("", "..TLSv1.3 no session resumption across CA lists"));
-    ret = session_reuse_test(REUSE_CA_FILE);
+    ret = session_reuse_test(PJ_SSL_SOCK_PROTO_TLS1_3, PJ_TRUE, REUSE_CA_FILE,
+                             PJ_FALSE);
     if (ret != 0)
         return ret;
 
     PJ_LOG(3,("", "..TLSv1.3 no session resumption across CA directories"));
-    ret = session_reuse_test(REUSE_CA_PATH);
+    ret = session_reuse_test(PJ_SSL_SOCK_PROTO_TLS1_3, PJ_TRUE, REUSE_CA_PATH,
+                             PJ_FALSE);
     if (ret != 0)
         return ret;
 
     PJ_LOG(3,("", "..TLSv1.3 no session resumption with verify callback"));
-    ret = session_reuse_test(REUSE_VERIFY_CB);
+    ret = session_reuse_test(PJ_SSL_SOCK_PROTO_TLS1_3, PJ_TRUE, REUSE_VERIFY_CB,
+                             PJ_FALSE);
     if (ret != 0)
         return ret;
 
     PJ_LOG(3,("", "..TLSv1.3 no session resumption without client key"));
-    ret = session_reuse_test(REUSE_CLI_KEY);
+    ret = session_reuse_test(PJ_SSL_SOCK_PROTO_TLS1_3, PJ_TRUE, REUSE_CLI_KEY,
+                             PJ_FALSE);
     if (ret != 0)
         return ret;
 #endif
