@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -535,6 +535,18 @@
  */
 #ifndef PJMEDIA_RTP_NAT_PROBATION_CNT   
 #  define PJMEDIA_RTP_NAT_PROBATION_CNT         10
+#endif
+
+
+/**
+ * Maximum number of packets an incoming RTP packet can be behind the
+ * highest sequence received to be treated as a late packet, rather than
+ * a sequence restart (RFC 3550 A.1).
+ *
+ * Default: 100
+ */
+#ifndef PJMEDIA_RTP_MAX_MISORDER
+#  define PJMEDIA_RTP_MAX_MISORDER              100
 #endif
 
 

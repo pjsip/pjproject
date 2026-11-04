@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2025 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2025-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -413,6 +413,8 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     pj_bool_t check_pt;
     pj_status_t status;
     pj_bool_t pkt_discarded = PJ_FALSE;
+    pj_bool_t paused;
+    pjmedia_rtcp_rx_rtp_param rtcp_prm;
 
     /* Hold a reference to the stream for the entire callback so it cannot
      * be destroyed by another thread while we are reading and updating its
@@ -524,7 +526,8 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     pj_bzero(&seq_st, sizeof(seq_st));
 
     /* Ignore the packet if decoder is paused */
-    if (channel->paused)
+    paused = channel->paused;
+    if (paused)
         goto on_return;
 
     /* Update RTP session (also checks if RTP session can accept
@@ -572,20 +575,21 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 
     }
 
-    /* Skip bad RTP packet */
+#ifndef TEXT_STREAM
+    /* Skip bad RTP packet. Text stream decides on it itself. */
     if (seq_st.status.flag.bad) {
         pkt_discarded = PJ_TRUE;
         goto on_return;
     }
 
-    /* Ignore if payloadlen is zero.
-     * Exception: text stream needs to accept empty text block to
-     * track sequence number and idle period.
+    /* Ignore if payloadlen is zero. Text stream needs to accept empty
+     * text block to track sequence number and idle period.
      */
-    if (c_strm->si->type != PJMEDIA_TYPE_TEXT && payloadlen == 0) {
+    if (payloadlen == 0) {
         pkt_discarded = PJ_TRUE;
         goto on_return;
     }
+#endif
 
     /* Pass it to specific stream for further processing. */
     on_stream_rx_rtp(c_strm, hdr, payload, payloadlen, seq_st,
@@ -596,8 +600,16 @@ on_return:
     if (c_strm->rtcp.peer_ssrc == 0)
         c_strm->rtcp.peer_ssrc = channel->rtp.peer_ssrc;
 
-    pjmedia_rtcp_rx_rtp2(&c_strm->rtcp, pj_ntohs(hdr->seq),
-                         pj_ntohl(hdr->ts), payloadlen, pkt_discarded);
+    pjmedia_rtcp_rx_rtp_param_default(&rtcp_prm);
+    rtcp_prm.seq = pj_ntohs(hdr->seq);
+    rtcp_prm.ts = pj_ntohl(hdr->ts);
+    rtcp_prm.payload = payloadlen;
+    rtcp_prm.discarded = pkt_discarded;
+#ifdef TEXT_STREAM
+    /* The text stream decides on packets failing the sequence check */
+    rtcp_prm.bad_used = !paused && !pkt_discarded;
+#endif
+    pjmedia_rtcp_rx_rtp3(&c_strm->rtcp, &rtcp_prm);
 
     /* RTCP-FB generic NACK */
     if (c_strm->rtcp.received >= 10 && seq_st.diff > 1 &&
