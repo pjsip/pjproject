@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_search_module(PC_GSM QUIET gsm libgsm)
+  pj_pkg_search_module(PC_GSM QUIET gsm libgsm)
   set(GSM_VERSION ${PC_GSM_VERSION})
 endif()
 

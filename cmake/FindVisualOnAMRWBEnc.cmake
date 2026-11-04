@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_search_module(PC_VisualOnAMRWBEnc QUIET vo-amrwbenc libvo-amrwbenc)
+  pj_pkg_search_module(PC_VisualOnAMRWBEnc QUIET vo-amrwbenc libvo-amrwbenc)
   set(VisualOnAMRWBEnc_VERSION ${PC_VisualOnAMRWBEnc_VERSION})
 endif()
 

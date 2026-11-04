@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_check_modules(PC_OPUS QUIET opus)
+  pj_pkg_search_module(PC_OPUS QUIET opus)
   set(OPUS_VERSION ${PC_OPUS_VERSION})
 endif()
 

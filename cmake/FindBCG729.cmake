@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_search_module(PC_BCG729 bcg729 libbcg729)
+  pj_pkg_search_module(PC_BCG729 bcg729 libbcg729)
   set(BCG729_VERSION ${PC_BCG729_VERSION})
 endif()
 

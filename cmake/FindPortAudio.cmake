@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_check_modules(PC_PortAudio QUIET portaudio-2.0)
+  pj_pkg_search_module(PC_PortAudio QUIET portaudio-2.0)
   set(PortAudio_VERSION ${PC_PortAudio_VERSION})
 endif()
 

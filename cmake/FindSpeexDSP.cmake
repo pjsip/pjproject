@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_search_module(PC_SpeexDSP QUIET speexdsp libspeexdsp)
+  pj_pkg_search_module(PC_SpeexDSP QUIET speexdsp libspeexdsp)
 endif()
 
 find_path(SpeexDSP_INCLUDE_DIR

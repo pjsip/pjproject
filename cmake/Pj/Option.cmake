@@ -1,3 +1,5 @@
+include(Pj/PackageRoot)
+
 function(pj_option variable help_text)
   # parse options
   set(options REQUIRED)
@@ -65,21 +67,6 @@ function(pj_force_set variable value)
   # show warning
   if(ARGC GREATER 2)
     message(STATUS "[!] ${ARGV2}. setting ${variable} to ${value}")
-  endif()
-endfunction()
-
-# pj_package_root_given(<package> <out-var>)
-#
-# TRUE when <package>_ROOT or <PACKAGE>_ROOT is set, as a variable or in the
-# environment, i.e. the user named where find_package() should look.
-function(pj_package_root_given package out)
-  string(TOUPPER "${package}" _upper)
-  if(${package}_ROOT OR ${_upper}_ROOT
-     OR NOT "$ENV{${package}_ROOT}" STREQUAL ""
-     OR NOT "$ENV{${_upper}_ROOT}" STREQUAL "")
-    set(${out} TRUE PARENT_SCOPE)
-  else()
-    set(${out} FALSE PARENT_SCOPE)
   endif()
 endfunction()
 

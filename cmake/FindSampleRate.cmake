@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_search_module(PC_SampleRate QUIET samplerate libsamplerate)
+  pj_pkg_search_module(PC_SampleRate QUIET samplerate libsamplerate)
   set(SampleRate_VERSION ${PC_SampleRate_VERSION})
 endif()
 

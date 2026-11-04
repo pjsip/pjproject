@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_search_module(PC_YUV QUIET libyuv yuv)
+  pj_pkg_search_module(PC_YUV QUIET libyuv yuv)
   set(YUV_VERSION ${PC_YUV_VERSION})
 endif()
 

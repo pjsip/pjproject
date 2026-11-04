@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_search_module(PC_UUID QUIET uuid libuuid)
+  pj_pkg_search_module(PC_UUID QUIET uuid libuuid)
   set(UUID_VERSION ${PC_UUID_VERSION})
 endif()
 
