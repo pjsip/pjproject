@@ -297,7 +297,8 @@ void OnVideoMediaOpCompletedParam::fromPj(const pjmedia_vid_conf_op_info &info)
 
 ///////////////////////////////////////////////////////////////////////////////
 UaConfig::UaConfig()
-: mainThreadOnly(false)
+: mainThreadOnly(false),
+  enableCallSendAckCallback(false)
 {
     pjsua_config ua_cfg;
 
@@ -334,6 +335,7 @@ void UaConfig::fromPj(const pjsua_config &ua_cfg)
     this->accServerAffinityDefault = PJ2BOOL(ua_cfg.acc_server_affinity_default);
     this->serverFailover = PJ2BOOL(ua_cfg.server_failover);
     this->resolverFallback = PJ2BOOL(ua_cfg.resolver_fallback);
+    this->notifyOfferlessReinvite = PJ2BOOL(ua_cfg.notify_offerless_reinvite);
 }
 
 pjsua_config UaConfig::toPj() const
@@ -378,6 +380,7 @@ pjsua_config UaConfig::toPj() const
     pua_cfg.acc_server_affinity_default = this->accServerAffinityDefault;
     pua_cfg.server_failover = this->serverFailover;
     pua_cfg.resolver_fallback = this->resolverFallback;
+    pua_cfg.notify_offerless_reinvite = this->notifyOfferlessReinvite;
 
     return pua_cfg;
 }
@@ -402,6 +405,8 @@ void UaConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
     NODE_READ_BOOL_OPT( this_node, accServerAffinityDefault);
     NODE_READ_BOOL_OPT( this_node, serverFailover);
     NODE_READ_BOOL_OPT( this_node, resolverFallback);
+    NODE_READ_BOOL_OPT( this_node, enableCallSendAckCallback);
+    NODE_READ_BOOL_OPT( this_node, notifyOfferlessReinvite);
 }
 
 void UaConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
@@ -424,6 +429,8 @@ void UaConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
     NODE_WRITE_BOOL    ( this_node, accServerAffinityDefault);
     NODE_WRITE_BOOL    ( this_node, serverFailover);
     NODE_WRITE_BOOL    ( this_node, resolverFallback);
+    NODE_WRITE_BOOL    ( this_node, enableCallSendAckCallback);
+    NODE_WRITE_BOOL    ( this_node, notifyOfferlessReinvite);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1572,6 +1579,30 @@ void Endpoint::on_call_sdp_created(pjsua_call_id call_id,
     }
 }
 
+pj_bool_t Endpoint::on_call_send_ack(pjsua_call_id call_id,
+                                     pjsip_rx_data *rdata)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+        return PJ_FALSE;
+    }
+
+    OnCallSendAckParam prm;
+    prm.rdata.fromPj(*rdata);
+    prm.cseq = rdata->msg_info.cseq->cseq;
+
+    try {
+        call->onCallSendAck(prm);
+    } catch (Error &err) {
+        PJ_LOG(1,(THIS_FILE, "onCallSendAck() error: %s", err.info().c_str()));
+        return PJ_FALSE;
+    } catch (...) {
+        PJ_LOG(1,(THIS_FILE, "onCallSendAck() threw an unknown exception"));
+        return PJ_FALSE;
+    }
+    return prm.suppressSendAck ? PJ_TRUE : PJ_FALSE;
+}
+
 void Endpoint::on_stream_precreate(pjsua_call_id call_id,
                                    pjsua_on_stream_precreate_param *param)
 {
@@ -2379,6 +2410,9 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
                                         = &Endpoint::on_call_tsx_terminate_session;
     ua_cfg.cb.on_call_media_state       = &Endpoint::on_call_media_state;
     ua_cfg.cb.on_call_sdp_created       = &Endpoint::on_call_sdp_created;
+    if (prmEpConfig.uaConfig.enableCallSendAckCallback) {
+        ua_cfg.cb.on_call_send_ack      = &Endpoint::on_call_send_ack;
+    }
     ua_cfg.cb.on_stream_precreate       = &Endpoint::on_stream_precreate;
     ua_cfg.cb.on_stream_created2        = &Endpoint::on_stream_created2;
     ua_cfg.cb.on_stream_destroyed       = &Endpoint::on_stream_destroyed;

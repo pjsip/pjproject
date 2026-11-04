@@ -95,6 +95,16 @@
 #      define USING_BORINGSSL 0
 #endif
 
+/* OpenSSL 1.1.1 session ticket API: SSL_CTX_set_num_tickets() and
+ * SSL_SESSION_set1_ticket_appdata().
+ */
+#if !USING_LIBRESSL && !USING_BORINGSSL && \
+    OPENSSL_VERSION_NUMBER >= 0x1010100fL
+#      define OSSL_HAS_TICKET_API 1
+#else
+#      define OSSL_HAS_TICKET_API 0
+#endif
+
 #if !USING_LIBRESSL && !defined(OPENSSL_NO_EC) \
         && OPENSSL_VERSION_NUMBER >= 0x1000200fL
 
@@ -1300,6 +1310,82 @@ static int password_cb(char *buf, int num, int rwflag, void *user_data)
 }
 
 
+/* Map an X509 verification error to PJ_SSL_CERT_* flags. */
+static pj_uint32_t verify_err_to_status(long err)
+{
+    pj_uint32_t status = 0;
+
+    switch (err) {
+    case X509_V_OK:
+        break;
+
+    case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT:
+        status = PJ_SSL_CERT_EISSUER_NOT_FOUND;
+        break;
+
+    case X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD:
+    case X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD:
+    case X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE:
+    case X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY:
+        status = PJ_SSL_CERT_EINVALID_FORMAT;
+        break;
+
+    case X509_V_ERR_CERT_NOT_YET_VALID:
+    case X509_V_ERR_CERT_HAS_EXPIRED:
+        status = PJ_SSL_CERT_EVALIDITY_PERIOD;
+        break;
+
+    case X509_V_ERR_UNABLE_TO_GET_CRL:
+    case X509_V_ERR_CRL_NOT_YET_VALID:
+    case X509_V_ERR_CRL_HAS_EXPIRED:
+    case X509_V_ERR_UNABLE_TO_DECRYPT_CRL_SIGNATURE:
+    case X509_V_ERR_CRL_SIGNATURE_FAILURE:
+    case X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD:
+    case X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD:
+        status = PJ_SSL_CERT_ECRL_FAILURE;
+        break;
+
+    case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
+    case X509_V_ERR_CERT_UNTRUSTED:
+    case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
+    case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY:
+        status = PJ_SSL_CERT_EUNTRUSTED;
+        break;
+
+    case X509_V_ERR_CERT_SIGNATURE_FAILURE:
+    case X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE:
+    case X509_V_ERR_SUBJECT_ISSUER_MISMATCH:
+    case X509_V_ERR_AKID_SKID_MISMATCH:
+    case X509_V_ERR_AKID_ISSUER_SERIAL_MISMATCH:
+    case X509_V_ERR_KEYUSAGE_NO_CERTSIGN:
+        status = PJ_SSL_CERT_EISSUER_MISMATCH;
+        break;
+
+    case X509_V_ERR_CERT_REVOKED:
+        status = PJ_SSL_CERT_EREVOKED;
+        break;
+
+    case X509_V_ERR_INVALID_PURPOSE:
+    case X509_V_ERR_CERT_REJECTED:
+    case X509_V_ERR_INVALID_CA:
+        status = PJ_SSL_CERT_EINVALID_PURPOSE;
+        break;
+
+    case X509_V_ERR_CERT_CHAIN_TOO_LONG: /* not really used */
+    case X509_V_ERR_PATH_LENGTH_EXCEEDED:
+        status = PJ_SSL_CERT_ECHAIN_TOO_LONG;
+        break;
+
+    /* Unknown errors */
+    case X509_V_ERR_OUT_OF_MEM:
+    default:
+        status = PJ_SSL_CERT_EUNKNOWN;
+        break;
+    }
+
+    return status;
+}
+
 /* SSL certificate verification result callback.
  * Note that this callback seems to be always called from library worker
  * thread, e.g: active socket on_read_complete callback, which should have
@@ -1333,73 +1419,20 @@ static int verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
 
     /* Store verification status */
     err = X509_STORE_CTX_get_error(x509_ctx);
-    switch (err) {
-    case X509_V_OK:
-        break;
+    ssock->verify_status |= verify_err_to_status(err);
 
-    case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT:
-        ssock->verify_status |= PJ_SSL_CERT_EISSUER_NOT_FOUND;
-        break;
-
-    case X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD:
-    case X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD:
-    case X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE:
-    case X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY:
-        ssock->verify_status |= PJ_SSL_CERT_EINVALID_FORMAT;
-        break;
-
-    case X509_V_ERR_CERT_NOT_YET_VALID:
-    case X509_V_ERR_CERT_HAS_EXPIRED:
-        ssock->verify_status |= PJ_SSL_CERT_EVALIDITY_PERIOD;
-        break;
-
-    case X509_V_ERR_UNABLE_TO_GET_CRL:
-    case X509_V_ERR_CRL_NOT_YET_VALID:
-    case X509_V_ERR_CRL_HAS_EXPIRED:
-    case X509_V_ERR_UNABLE_TO_DECRYPT_CRL_SIGNATURE:
-    case X509_V_ERR_CRL_SIGNATURE_FAILURE:
-    case X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD:
-    case X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD:
-        ssock->verify_status |= PJ_SSL_CERT_ECRL_FAILURE;
-        break;  
-
-    case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
-    case X509_V_ERR_CERT_UNTRUSTED:
-    case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
-    case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY:
-        ssock->verify_status |= PJ_SSL_CERT_EUNTRUSTED;
-        break;  
-
-    case X509_V_ERR_CERT_SIGNATURE_FAILURE:
-    case X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE:
-    case X509_V_ERR_SUBJECT_ISSUER_MISMATCH:
-    case X509_V_ERR_AKID_SKID_MISMATCH:
-    case X509_V_ERR_AKID_ISSUER_SERIAL_MISMATCH:
-    case X509_V_ERR_KEYUSAGE_NO_CERTSIGN:
-        ssock->verify_status |= PJ_SSL_CERT_EISSUER_MISMATCH;
-        break;
-
-    case X509_V_ERR_CERT_REVOKED:
-        ssock->verify_status |= PJ_SSL_CERT_EREVOKED;
-        break;  
-
-    case X509_V_ERR_INVALID_PURPOSE:
-    case X509_V_ERR_CERT_REJECTED:
-    case X509_V_ERR_INVALID_CA:
-        ssock->verify_status |= PJ_SSL_CERT_EINVALID_PURPOSE;
-        break;
-
-    case X509_V_ERR_CERT_CHAIN_TOO_LONG: /* not really used */
-    case X509_V_ERR_PATH_LENGTH_EXCEEDED:
-        ssock->verify_status |= PJ_SSL_CERT_ECHAIN_TOO_LONG;
-        break;
-
-    /* Unknown errors */
-    case X509_V_ERR_OUT_OF_MEM:
-    default:
-        ssock->verify_status |= PJ_SSL_CERT_EUNKNOWN;
-        break;
+#if OSSL_HAS_TICKET_API
+    /* Also keep it in the session, as a resumed session only restores the
+     * last chain error (see ssl_do_handshake()).
+     */
+    {
+        SSL_SESSION *sess = SSL_get_session(ossl_ssl);
+        if (sess) {
+            SSL_SESSION_set1_ticket_appdata(sess, &ssock->verify_status,
+                                            sizeof(ssock->verify_status));
+        }
     }
+#endif
 
     /* Invoke app's verification callback */
     if (ssock->param.cb.on_verify_cb) {
@@ -1663,7 +1696,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
          */
         if (!ssock->param.enable_session_reuse) {
             ssl_opt |= SSL_OP_NO_TICKET;
-#ifdef SSL_CTX_set_num_tickets
+#if OSSL_HAS_TICKET_API
             /* Set the number of TLSv1.3 session tickets issued to 0. */
             SSL_CTX_set_num_tickets(ctx, 0);
 #endif
@@ -3078,6 +3111,30 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
 
     /* Check if handshake has been completed */
     if (SSL_is_init_finished(ossock->ossl_ssl)) {
+
+        /* A resumed session skips chain verification, so verify_cb() is not
+         * called. Take the result stored in the session instead.
+         */
+        if (ssock->ssl_state != SSL_STATE_ESTABLISHED &&
+            SSL_session_reused(ossock->ossl_ssl))
+        {
+#if OSSL_HAS_TICKET_API
+            SSL_SESSION *sess = SSL_get_session(ossock->ossl_ssl);
+            void *data = NULL;
+            size_t len = 0;
+            pj_uint32_t vs;
+
+            if (sess &&
+                SSL_SESSION_get0_ticket_appdata(sess, &data, &len) &&
+                data && len == sizeof(vs))
+            {
+                pj_memcpy(&vs, data, sizeof(vs));
+                ssock->verify_status |= vs;
+            }
+#endif
+            ssock->verify_status |= verify_err_to_status(
+                                    SSL_get_verify_result(ossock->ossl_ssl));
+        }
 
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
         if (ssock->is_server && ssock->ssl_state != SSL_STATE_ESTABLISHED) {
