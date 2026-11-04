@@ -875,3 +875,7 @@ add_custom_target(uninstall
     -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/Uninstall.cmake"
   VERBATIM
 )
+
+# A <Pkg>_ROOT is searched first, not only: point out what came from elsewhere
+include(Pj/PackageRoot)
+pj_warn_outside_package_roots()
