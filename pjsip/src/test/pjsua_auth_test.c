@@ -470,12 +470,16 @@ static void on_auth_challenge(pjsua_on_auth_challenge_param *param)
 static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
                              pjsip_rx_data *rdata)
 {
+    pjsua_call_setting opt;
+
     PJ_UNUSED_ARG(acc_id);
     PJ_UNUSED_ARG(rdata);
     pj_mutex_lock(g_mock_proxy.mutex);
     g_mock_proxy.callee_call = call_id;
     pj_mutex_unlock(g_mock_proxy.mutex);
-    pjsua_call_answer(call_id, PJSIP_SC_OK, NULL, NULL);
+    pjsua_call_setting_default(&opt);
+    opt.vid_cnt = 0;
+    pjsua_call_answer2(call_id, &opt, PJSIP_SC_OK, NULL, NULL);
 }
 
 /* Stages an offer when the caller's media is updated, if asked */
@@ -1089,6 +1093,7 @@ static int test_call_start(test_call_t *tc, pjsua_transport_id tp_id,
                      port);
     dst = pj_str(uri);
     pjsua_call_setting_default(&opt);
+    opt.vid_cnt = 0;
     opt.txt_cnt = 0;
     if (pjsua_call_make_call(tc->caller, &dst, &opt, NULL, NULL,
                              &tc->call_id) != PJ_SUCCESS)
