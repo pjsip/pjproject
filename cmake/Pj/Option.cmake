@@ -68,6 +68,21 @@ function(pj_force_set variable value)
   endif()
 endfunction()
 
+# pj_package_root_given(<package> <out-var>)
+#
+# TRUE when <package>_ROOT or <PACKAGE>_ROOT is set, as a variable or in the
+# environment, i.e. the user named where find_package() should look.
+function(pj_package_root_given package out)
+  string(TOUPPER "${package}" _upper)
+  if(${package}_ROOT OR ${_upper}_ROOT
+     OR NOT "$ENV{${package}_ROOT}" STREQUAL ""
+     OR NOT "$ENV{${_upper}_ROOT}" STREQUAL "")
+    set(${out} TRUE PARENT_SCOPE)
+  else()
+    set(${out} FALSE PARENT_SCOPE)
+  endif()
+endfunction()
+
 # pj_retry_on_new_root(<option> <package>)
 #
 # When <package>_ROOT or <PACKAGE>_ROOT (variable or environment), or

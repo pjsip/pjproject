@@ -63,12 +63,14 @@ unset(_pj_arch)
 if(PJ_WITH_CXX)
   option(PJMEDIA_WITH_WEBRTC_AEC3
     "Enable WebRTC Acoustic Echo Cancellation 3 (WebRTC AEC3) support" OFF)
+  pj_package_root_given(WebRTC_AEC3 _pj_aec3_root)
   if(PJMEDIA_WITH_WEBRTC_AEC3 AND _pj_osx_arch_count GREATER 1)
     message(STATUS "[!] WebRTC AEC3 cannot be built for several "
       "architectures at once. leaving it out")
   # The bundled sources take MSVC's or POSIX threading paths, and neither
-  # compiles with MinGW (autoconf fails the same way); a system one may
-  elseif(PJMEDIA_WITH_WEBRTC_AEC3 AND MINGW
+  # compiles with MinGW (autoconf fails the same way); a system one may.
+  # A root makes it system by default.
+  elseif(PJMEDIA_WITH_WEBRTC_AEC3 AND MINGW AND NOT _pj_aec3_root
          AND (NOT PJ_DEP_WEBRTC_AEC3 OR PJ_DEP_WEBRTC_AEC3 STREQUAL "bundled"))
     message(STATUS "[!] The bundled WebRTC AEC3 cannot be built with MinGW. "
       "leaving it out")
@@ -78,6 +80,7 @@ if(PJ_WITH_CXX)
     set(DEP_WebRTC_AEC3_PACKAGE "WebRTC_AEC3")
     list(APPEND DEPS WebRTC_AEC3)
   endif()
+  unset(_pj_aec3_root)
 endif()
 
 unset(_pj_osx_arch_count)
@@ -113,6 +116,20 @@ foreach(dep IN LISTS DEPS)
   # add option
   string(TOUPPER "PJ_DEP_${dep}" dep_option_name)
   list(GET dep_providers 0 dep_option_default)
+  # a root for the package means the installed library is wanted
+  if(DEP_${dep}_PACKAGE)
+    pj_package_root_given(${DEP_${dep}_PACKAGE} _root_given)
+    if(_root_given)
+      set(dep_option_default "system")
+    endif()
+  endif()
+  # follow a changed default unless the user picked another value
+  if(DEFINED CACHE{_PJ_${dep_option_name}_DEFAULT}
+     AND "${${dep_option_name}}" STREQUAL "$CACHE{_PJ_${dep_option_name}_DEFAULT}"
+     AND NOT dep_option_default STREQUAL "$CACHE{_PJ_${dep_option_name}_DEFAULT}")
+    set_property(CACHE ${dep_option_name} PROPERTY VALUE "${dep_option_default}")
+  endif()
+  set(_PJ_${dep_option_name}_DEFAULT "${dep_option_default}" CACHE INTERNAL "")
 
   pj_option(${dep_option_name} "${DEP_${dep}_HELP}"
     DEFAULT ${dep_option_default}
