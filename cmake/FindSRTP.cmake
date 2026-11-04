@@ -1,3 +1,5 @@
+include(Pj/PackageRoot)
+
 function(_srtp_find version)
   if(DEFINED SRTP_FIND_VERSION_MAJOR
       AND NOT SRTP_FIND_VERSION_MAJOR EQUAL ${version})
@@ -17,7 +19,7 @@ function(_srtp_find version)
 
   find_package(PkgConfig QUIET)
   if(PKG_CONFIG_FOUND)
-    pkg_search_module(PC_SRTP QUIET ${libs})
+    pj_pkg_search_module(PC_SRTP QUIET ${libs})
   endif()
 
   find_path(SRTP_INCLUDE_DIR

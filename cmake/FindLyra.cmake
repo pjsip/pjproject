@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_check_modules(PC_Lyra QUIET lyra)
+  pj_pkg_search_module(PC_Lyra QUIET lyra)
   set(Lyra_VERSION ${PC_Lyra_VERSION})
 endif()
 

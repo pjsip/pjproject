@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_check_modules(PC_Silk QUIET SKP_SILK_SDK)
+  pj_pkg_search_module(PC_Silk QUIET SKP_SILK_SDK)
   set(Silk_VERSION ${PC_Silk_VERSION})
 endif()
 

@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_search_module(PC_Speex QUIET speex libspeex)
+  pj_pkg_search_module(PC_Speex QUIET speex libspeex)
 endif()
 
 find_path(Speex_INCLUDE_DIR

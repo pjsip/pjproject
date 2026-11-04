@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_check_modules(PC_OpenCoreAMRNB QUIET opencore-amrnb)
+  pj_pkg_search_module(PC_OpenCoreAMRNB QUIET opencore-amrnb)
   set(OpenCoreAMRNB_VERSION ${PC_OpenCoreAMRNB_VERSION})
 endif()
 

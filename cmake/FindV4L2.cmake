@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_search_module(PC_V4L2 QUIET libv4l2 v4l2)
+  pj_pkg_search_module(PC_V4L2 QUIET libv4l2 v4l2)
   set(V4L2_VERSION ${PC_V4L2_VERSION})
 endif()
 

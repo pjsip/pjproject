@@ -745,6 +745,7 @@ if(_pj_find_modules)
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/CheckLibraryUsable.cmake"
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/DebugLibrary.cmake"
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/GetMacroValue.cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/PackageRoot.cmake"
     DESTINATION "${PJ_CMAKE_INSTALL_DIR}/Pj"
     COMPONENT PjDevelopment
   )

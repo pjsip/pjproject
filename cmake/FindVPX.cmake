@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_check_modules(PC_VPX QUIET vpx)
+  pj_pkg_search_module(PC_VPX QUIET vpx)
   set(VPX_VERSION ${PC_VPX_VERSION})
 endif()
 

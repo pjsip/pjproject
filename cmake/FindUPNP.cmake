@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_search_module(PC_UPNP QUIET upnp libupnp)
+  pj_pkg_search_module(PC_UPNP QUIET upnp libupnp)
 endif()
 
 # The directory holding upnp/, as the sources include <upnp/upnp.h>

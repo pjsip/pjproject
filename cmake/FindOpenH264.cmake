@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_check_modules(PC_OpenH264 QUIET openh264)
+  pj_pkg_search_module(PC_OpenH264 QUIET openh264)
   set(OpenH264_VERSION ${PC_OpenH264_VERSION})
 endif()
 

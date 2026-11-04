@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_search_module(PC_Resample QUIET resample libresample)
+  pj_pkg_search_module(PC_Resample QUIET resample libresample)
   set(Resample_VERSION ${PC_Resample_VERSION})
 endif()
 
