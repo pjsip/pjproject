@@ -182,6 +182,8 @@ static void        tsx_set_state( pjsip_transaction *tsx,
                                   pjsip_event_id_e event_src_type,
                                   void *event_src,
                                   int flag);
+static void        tsx_set_failure_code(pjsip_transaction *tsx,
+                                        int code, const pj_str_t *reason);
 static void        tsx_set_status_code(pjsip_transaction *tsx,
                                        int code, const pj_str_t *reason);
 static pj_status_t tsx_create( pjsip_module *tsx_user,
@@ -1334,9 +1336,12 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 
 
     if (entry->id == TERMINATE_TIMER) {
+        pj_grp_lock_acquire(tsx->grp_lock);
         if (tsx->state < PJSIP_TSX_STATE_TERMINATED) {
-            pjsip_tsx_terminate(tsx, tsx->status_code);
+            pjsip_tsx_terminate(tsx, tsx->status_code >= 200 ?
+                                     tsx->status_code : tsx->term_code);
         }
+        pj_grp_lock_release(tsx->grp_lock);
     } else if (entry->id == TRANSPORT_ERR_TIMER ||
                entry->id == TRANSPORT_DISC_TIMER)
     {
@@ -1357,6 +1362,7 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 #if PJSIP_TSX_UAS_CONTINUE_ON_TP_ERROR
             if (tp_disc && tsx->method.id == PJSIP_INVITE_METHOD &&
                 tsx->role == PJSIP_ROLE_UAS && tsx->status_code < 200 &&
+                !tsx->term_code &&
                 !(tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT) &&
                 !(tsx->transport_flag & TSX_HAS_PENDING_DESTROY))
 #else
@@ -1384,7 +1390,7 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
                 char errmsg[PJ_ERR_MSG_SIZE];
 
                 err = pj_strerror(tsx->transport_err, errmsg, sizeof(errmsg));
-                tsx_set_status_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
+                tsx_set_failure_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
             }
 
             /* Set transaction state etc, but don't notify TU now,
@@ -1929,6 +1935,20 @@ static void tsx_set_status_code(pjsip_transaction *tsx,
 
 
 /*
+ * Set the status code of a transport failure, unless an asynchronous
+ * termination has given one.
+ */
+static void tsx_set_failure_code(pjsip_transaction *tsx,
+                                 int code, const pj_str_t *reason)
+{
+    if (!tsx->term_code)
+        tsx_set_status_code(tsx, code, reason);
+    else if (tsx->status_code != tsx->term_code)
+        tsx_set_status_code(tsx, tsx->term_code, NULL);
+}
+
+
+/*
  * Forcely terminate transaction.
  */
 PJ_DEF(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx, int code )
@@ -1977,6 +1997,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate_async2(pjsip_transaction *tsx,
                                                unsigned millisec)
 {
     pj_time_val delay = {0, 0};
+    int term_code = 0;
 
     PJ_ASSERT_RETURN(tsx != NULL, PJ_EINVAL);
 
@@ -1985,20 +2006,42 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate_async2(pjsip_transaction *tsx,
 
     PJ_ASSERT_RETURN(code >= 200, PJ_EINVAL);
 
-    /* Set termination status code, if not yet */
     pj_grp_lock_acquire(tsx->grp_lock);
-    if (tsx->status_code < 200)
+
+    /* Already terminated: keep its destroy timer */
+    if (tsx->state >= PJSIP_TSX_STATE_TERMINATED) {
+        pj_grp_lock_release(tsx->grp_lock);
+        return PJ_SUCCESS;
+    }
+
+    /* Set termination status code, if not yet */
+    if (tsx->status_code < 200) {
         tsx_set_status_code(tsx, code, reason);
-    pj_grp_lock_release(tsx->grp_lock);
+        term_code = code;
+
+        /* A request being terminated is no longer retransmitted */
+        if (tsx->role == PJSIP_ROLE_UAC)
+            tsx_cancel_timer(tsx, &tsx->retransmit_timer);
+    }
 
     /* Schedule the termination */
     delay.msec = millisec;
     pj_time_val_normalize(&delay);
 
     lock_timer(tsx);
-    tsx_cancel_timer(tsx, &tsx->timeout_timer);
-    tsx_schedule_timer(tsx, &tsx->timeout_timer, &delay, TERMINATE_TIMER);
+    if (term_code)
+        tsx->term_code = term_code;
+
+    /* A transport error already posted ends the transaction sooner */
+    if (tsx->timeout_timer.id != TRANSPORT_ERR_TIMER &&
+        tsx->timeout_timer.id != TRANSPORT_DISC_TIMER)
+    {
+        tsx_cancel_timer(tsx, &tsx->timeout_timer);
+        tsx_schedule_timer(tsx, &tsx->timeout_timer, &delay,
+                           TERMINATE_TIMER);
+    }
     unlock_timer(tsx);
+    pj_grp_lock_release(tsx->grp_lock);
 
     return PJ_SUCCESS;
 }
@@ -2055,8 +2098,10 @@ PJ_DEF(pj_status_t) pjsip_tsx_set_timeout( pjsip_transaction *tsx,
      * #1121 says there is a (tolerable) window of race condition
      * where this might happen.
      */
-    if (tsx->status_code >= 200 && tsx->timeout_timer.id != 0) {
-        /* Timeout is already set */
+    if ((tsx->status_code >= 200 || tsx->term_code) &&
+        tsx->timeout_timer.id != 0)
+    {
+        /* Timeout or termination is already set */
         unlock_timer(tsx);
         return PJ_EEXISTS;
     }
@@ -2332,7 +2377,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
                 tsx->state != PJSIP_TSX_STATE_TERMINATED &&
                 tsx->state != PJSIP_TSX_STATE_DESTROYED)
             {
-                tsx_set_status_code(tsx, sc, &err);
+                tsx_set_failure_code(tsx, sc, &err);
                 /* Set tsx state to TERMINATED, but release the lock
                  * when invoking the callback, to avoid deadlock.
                  */
@@ -2345,7 +2390,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
              */
             else if (tsx->transport_flag & TSX_HAS_PENDING_DESTROY)
             {
-                tsx_set_status_code(tsx, sc, &err);
+                tsx_set_failure_code(tsx, sc, &err);
                 tsx_set_state( tsx, PJSIP_TSX_STATE_DESTROYED, 
                                PJSIP_EVENT_TRANSPORT_ERROR,
                                send_state->tdata, 0);
@@ -2367,8 +2412,8 @@ static void send_msg_callback( pjsip_send_state *send_state,
             /* Reset retransmission count */
             tsx->retransmit_count = 0;
 
-            /* And reset timeout timer */
-            if (tsx->timeout_timer.id) {
+            /* And reset timeout timer, unless being terminated */
+            if (tsx->timeout_timer.id && !tsx->term_code) {
                 lock_timer(tsx);
                 tsx_cancel_timer(tsx, &tsx->timeout_timer);
                 tsx_schedule_timer( tsx, &tsx->timeout_timer,
@@ -2687,7 +2732,7 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
                   "Err=%d (%s)",
                   status, errmsg));
 
-        tsx_set_status_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
+        tsx_set_failure_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
         tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
                        PJSIP_EVENT_TRANSPORT_ERROR, NULL, 0 );
 
@@ -2724,7 +2769,7 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
             pj_str_t err;
 
             err = pj_strerror(status, errmsg, sizeof(errmsg));
-            tsx_set_status_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
+            tsx_set_failure_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
 
             tsx->transport_flag &= ~(TSX_HAS_PENDING_TRANSPORT);
             pj_grp_lock_dec_ref(tsx->grp_lock);
@@ -2801,6 +2846,10 @@ static void tsx_resched_retransmission( pjsip_transaction *tsx )
     pj_uint32_t msec_time;
 
     pj_assert((tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT) == 0);
+
+    /* Not for a request being terminated asynchronously */
+    if (tsx->role == PJSIP_ROLE_UAC && tsx->term_code)
+        return;
 
     if (tsx->role==PJSIP_ROLE_UAC && tsx->status_code >= 100)
         msec_time = pjsip_cfg()->tsx.t2;
@@ -2993,18 +3042,20 @@ static pj_status_t tsx_on_state_null( pjsip_transaction *tsx,
         }
 
         /* Start Timer B (or called timer F for non-INVITE) for transaction 
-         * timeout.
+         * timeout, unless being terminated asynchronously.
          */
-        lock_timer(tsx);
-        tsx_cancel_timer( tsx, &tsx->timeout_timer );
-        tsx_schedule_timer( tsx, &tsx->timeout_timer, &timeout_timer_val,
-                            TIMEOUT_TIMER);
-        unlock_timer(tsx);
+        if (!tsx->term_code) {
+            lock_timer(tsx);
+            tsx_cancel_timer( tsx, &tsx->timeout_timer );
+            tsx_schedule_timer( tsx, &tsx->timeout_timer, &timeout_timer_val,
+                                TIMEOUT_TIMER);
+            unlock_timer(tsx);
+        }
 
         /* Start Timer A (or timer E) for retransmission only if unreliable 
          * transport is being used.
          */
-        if (!tsx->is_reliable)  {
+        if (!tsx->is_reliable && !tsx->term_code)  {
             tsx->retransmit_count = 0;
             if (tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT) {
                 tsx->transport_flag |= TSX_HAS_PENDING_RESCHED;
@@ -3037,6 +3088,10 @@ static pj_status_t tsx_on_state_calling( pjsip_transaction *tsx,
         event->body.timer.entry == &tsx->retransmit_timer) 
     {
         pj_status_t status;
+
+        /* Not while being terminated asynchronously */
+        if (tsx->term_code)
+            return PJ_SUCCESS;
 
         /* Retransmit the request. */
         status = tsx_retransmit( tsx, 1 );
@@ -3098,18 +3153,22 @@ static pj_status_t tsx_on_state_calling( pjsip_transaction *tsx,
              * of RFC 3261 says that:
              *  - retransmit timer is set to T2
              *  - timeout timer F is not deleted.
+             * Neither applies while being terminated asynchronously: the
+             * termination stays and the request isn't retransmitted.
              */
-            if (tsx->method.id == PJSIP_INVITE_METHOD) {
+            if (!tsx->term_code) {
+                if (tsx->method.id == PJSIP_INVITE_METHOD) {
 
-                /* Cancel timeout timer */
-                lock_timer(tsx);
-                tsx_cancel_timer(tsx, &tsx->timeout_timer);
-                unlock_timer(tsx);
+                    /* Cancel timeout timer */
+                    lock_timer(tsx);
+                    tsx_cancel_timer(tsx, &tsx->timeout_timer);
+                    unlock_timer(tsx);
 
-            } else {
-                if (!tsx->is_reliable) {
-                    tsx_schedule_timer(tsx, &tsx->retransmit_timer,
-                                       &t2_timer_val, RETRANSMIT_TIMER);
+                } else {
+                    if (!tsx->is_reliable) {
+                        tsx_schedule_timer(tsx, &tsx->retransmit_timer,
+                                           &t2_timer_val, RETRANSMIT_TIMER);
+                    }
                 }
             }
         }
@@ -3230,6 +3289,10 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
         /* Update last status */
         tsx_set_status_code(tsx, msg->line.status.code, 
                             &msg->line.status.reason);
+
+        /* A final response replaces the code of a termination */
+        if (tsx->status_code >= 200)
+            tsx->term_code = 0;
 
         /* Discard the saved last response (it will be updated later as
          * necessary).
@@ -3489,10 +3552,18 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
         tsx_set_status_code(tsx, msg->line.status.code, 
                             &msg->line.status.reason);
 
+        /* A final response replaces the code of a termination */
+        if (tsx->status_code >= 200)
+            tsx->term_code = 0;
+
     } else {
         if (event->body.timer.entry == &tsx->retransmit_timer) {
             /* Retransmit message. */
             pj_status_t status;
+
+            /* Not while being terminated asynchronously */
+            if (tsx->term_code)
+                return PJ_SUCCESS;
 
             status = tsx_retransmit( tsx, 1 );
             
@@ -3641,8 +3712,10 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
                 return status;
 
             status = tsx_send_msg( tsx, ack_tdata);
-            if (status != PJ_SUCCESS)
+            if (status != PJ_SUCCESS) {
+                pjsip_tx_data_dec_ref(ack_tdata);
                 return status;
+            }
 
         } else if ((tsx->method.id == PJSIP_BYE_METHOD) &&
                    (tsx->status_code == PJSIP_SC_REQUEST_TIMEOUT ||
