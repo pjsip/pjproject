@@ -75,6 +75,13 @@ if(NOT ANDROID)
   target_include_directories(pjsua2jni PRIVATE ${JNI_INCLUDE_DIRS})
 endif()
 
+# The wrapper reads pointers out of jlong by type punning, which SWIG advises
+# compiling with -fno-strict-aliasing; it also has unused helper functions.
+target_compile_options(pjsua2jni PRIVATE
+  $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-fno-strict-aliasing>
+  $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wno-unused-function>
+)
+
 # Export the JNI entry points and nothing else; see pjsua2jni.map. Only the
 # GNU-style linkers use a version script, which on Android is all of them.
 if(ANDROID)
