@@ -12,8 +12,8 @@
 # is linked through its library file instead, which
 # pj_pc_remember_imported_targets() records in the directory that found it,
 # where the target is visible: when pkg-config has a module for that same
-# library, the module's own `--static --libs` flags are used, otherwise the
-# file as -L/-l.
+# library, the module's own `--libs` flags are used (with `--static` for a
+# static library), otherwise the file as -L/-l.
 #
 # Everything is known at configure time, so the .pc is written then, and
 # installed like any other file. Its prefix is relative to the file itself,
@@ -304,19 +304,25 @@ function(_pj_pc_file_flags out path)
   set(${out} "${flags}" PARENT_SCOPE)
 endfunction()
 
-# The `--static --libs` flags of the pkg-config module among `modules` that
-# describes the library at `path`, found by comparing its libdir: a module
-# found elsewhere may describe another copy, e.g. the host's when
-# cross-compiling, or MSYS2's in an MSVC build. Results are cached, keyed on
-# the modules, the path and pkg-config's settings, to keep pkg-config out of
-# every reconfigure.
+# The `--libs` flags of the pkg-config module among `modules` that describes
+# the library at `path`, found by comparing its libdir: a module found
+# elsewhere may describe another copy, e.g. the host's when cross-compiling,
+# or MSYS2's in an MSVC build. `--static` is added only for a static library
+# (or a .lib, which may be one): a shared one links what it needs itself, and
+# its module's private libraries are often not installed (Debian -dev).
+# Results are cached, keyed on the modules, the path, the options and
+# pkg-config's settings, to keep pkg-config out of every reconfigure.
 function(_pj_pc_module_flags out found modules path)
   set(${found} FALSE PARENT_SCOPE)
   set(${out} "" PARENT_SCOPE)
   if(NOT PKG_CONFIG_EXECUTABLE OR NOT modules)
     return()
   endif()
-  set(key "${modules}|${path}|${PKG_CONFIG_EXECUTABLE}")
+  set(options "--libs")
+  if(path MATCHES "\\.(a|lib)$" AND NOT path MATCHES "\\.dll\\.a$")
+    set(options "--static;--libs")
+  endif()
+  set(key "${modules}|${path}|${options}|${PKG_CONFIG_EXECUTABLE}")
   foreach(var IN ITEMS PKG_CONFIG_PATH PKG_CONFIG_LIBDIR PKG_CONFIG_SYSROOT_DIR)
     string(APPEND key "|$ENV{${var}}")
   endforeach()
@@ -342,7 +348,7 @@ function(_pj_pc_module_flags out found modules path)
         continue()
       endif()
       execute_process(
-        COMMAND "${PKG_CONFIG_EXECUTABLE}" --static --libs "${module}"
+        COMMAND "${PKG_CONFIG_EXECUTABLE}" ${options} "${module}"
         RESULT_VARIABLE status
         OUTPUT_VARIABLE libs
         OUTPUT_STRIP_TRAILING_WHITESPACE
