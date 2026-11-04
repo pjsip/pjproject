@@ -222,6 +222,11 @@ struct SdpSession
 
 public:
     /**
+     * Default constructor
+     */
+    SdpSession() : pjSdpSession(nullptr) {}
+
+    /**
      * Convert from pjsip
      */
     void fromPj(const pjmedia_sdp_session &sdp);
@@ -834,6 +839,36 @@ struct OnCallSdpCreatedParam
 };
 
 /**
+ * This structure contains parameters for Call::onCallSendAck() callback.
+ */
+struct OnCallSendAckParam
+{
+    /**
+     * The 2xx response for INVITE that triggered the need to send an ACK
+     * request.
+     */
+    SipRxData rdata;
+
+    /**
+     * Output: application sets this to true if it has sent (or will send)
+     * the ACK itself, to suppress the automatic ACK sending. Default is false,
+     * i.e. the library sends the ACK after this callback returns.
+     */
+    bool suppressSendAck;
+
+    /**
+     * The CSeq of the 2xx response.
+     */
+    pj_int32_t cseq;
+
+    /**
+     * Default constructor
+     */
+    OnCallSendAckParam() : suppressSendAck(false), cseq(-1)
+    {}
+};
+
+/**
  * This structure contains parameters for Call::onStreamPreCreate()
  * callback.
  */
@@ -1183,9 +1218,9 @@ struct OnCallRxOfferParam
 struct OnCallRxReinviteParam
 {
     /**
-     * The new offer received. For an application-managed call receiving
-     * a re-INVITE without SDP,
-     * #SdpSession::wholeSdp is empty.
+     * The new offer received. For a re-INVITE without SDP on an
+     * application-managed call or when UaConfig::notifyOfferlessReinvite
+     * is enabled, #SdpSession::wholeSdp is empty.
      */
     SdpSession          offer;
 
@@ -1202,8 +1237,11 @@ struct OnCallRxReinviteParam
     
     /**
      * Status code to be returned for answering the offer. On input,
-     * it contains status code PJSIP_SC_OK (200). Currently, valid values are only
-     * PJSIP_SC_OK (200) and PJSIP_SC_NOT_ACCEPTABLE_HERE (488).
+     * it contains status code PJSIP_SC_OK (200). For a re-INVITE containing
+     * SDP, valid values are PJSIP_SC_OK (200) and
+     * PJSIP_SC_NOT_ACCEPTABLE_HERE (488). For a synchronous offerless
+     * re-INVITE, 2xx is treated as 200, 300-699 rejects the request, and
+     * values outside 200-699 are changed to 500.
      */
     pjsip_status_code   statusCode;
     
@@ -1771,6 +1809,27 @@ public:
     void hangup(const CallOpParam &prm) PJSUA2_THROW(Error);
     
     /**
+     * Create and send an ACK request for the 2xx response, optionally with
+     * an SDP answer \a sdp attached to it. Application would normally call
+     * this from within onCallSendAck(), to manually take over the ACK
+     * transmission, e.g. to attach an SDP answer to the ACK for a late
+     * SDP offer received in the 2xx response.
+     * When called synchronously from onCallSendAck(), this method may only
+     * be used on the Call whose ACK triggered the callback; another Call
+     * fails with PJ_EINVALIDOP.
+     *
+     * @param cseq      CSeq of the 2xx response that triggered the need to
+     *                  send an ACK request; normally this is the CSeq of
+     *                  the \a rdata received in the onCallSendAck()
+     *                  callback.
+     * @param sdp       Optional SDP answer to be attached to the ACK
+     *                  request. If its wholeSdp is empty, no SDP body
+     *                  will be attached.
+     */
+    void sendAck(int cseq, const SdpSession &sdp = SdpSession())
+                PJSUA2_THROW(Error);
+
+    /**
      * Put the specified call on hold. This will send re-INVITE with the
      * appropriate SDP to inform remote that the call is being put on hold.
      * The final status of the request itself will be reported on the
@@ -2132,6 +2191,22 @@ public:
     { PJ_UNUSED_ARG(prm); }
 
     /**
+     * Notify application when the framework needs to send an ACK request
+     * after it receives an incoming 2xx response for INVITE (e.g. when the
+     * 2xx response carries a late SDP offer). The default implementation
+     * does nothing and lets the framework send the ACK. Application can
+     * set prm.suppressSendAck to true and then the application is responsible
+     * for sending the ACK.
+     *
+     * This callback is enabled only when
+     * UaConfig::enableCallSendAckCallback is set before Endpoint::libInit().
+     *
+     * @param prm       Callback parameter.
+     */
+    virtual void onCallSendAck(OnCallSendAckParam &prm)
+    { PJ_UNUSED_ARG(prm); }
+
+    /**
      * Notify application when an audio media session is about to be created
      * (as opposed to onStreamCreated(), which is called *after* the session
      * has been created). The application may change
@@ -2310,10 +2385,13 @@ public:
      * the SDP answer. Otherwise, by default the re-INVITE will be
      * answered automatically after the callback returns.
      *
-     * For an application-managed call receiving a re-INVITE without SDP,
-     * this callback is also called with an empty prm.offer. By default,
-     * the active local SDP is re-offered. Application may set prm.isAsync
-     * to true and later call #pj::Call::answer() with its own local SDP offer.
+     * For a re-INVITE without SDP, this callback is called with an empty
+     * prm.offer only for application-managed calls or when
+     * UaConfig::notifyOfferlessReinvite is enabled. Otherwise, ordinary
+     * calls handle the request automatically without invoking this callback.
+     * By default, the active local SDP is re-offered. Application may set
+     * prm.isAsync to true and later call #pj::Call::answer() with its own
+     * local SDP offer.
      * On the asynchronous path, a successful final response requires an
      * application-supplied offer; the active local SDP is not automatically
      * re-offered.
