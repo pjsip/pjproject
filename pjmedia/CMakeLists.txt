@@ -386,7 +386,7 @@ cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_SDL
   "Enable SDL video device backend" ON
   "PJMEDIA_WITH_VIDEODEV" OFF
 )
-import_if_or_set(PJMEDIA_WITH_VIDEODEV_SDL OFF SDL2)
+import_if_or_set(PJMEDIA_WITH_VIDEODEV_SDL OFF SDL2 QUIET)
 # SDL's own package does no link test; reject a library built for another
 # target, e.g. the host's in a cross build
 if(PJMEDIA_WITH_VIDEODEV_SDL)
