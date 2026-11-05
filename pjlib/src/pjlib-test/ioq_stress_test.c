@@ -122,6 +122,8 @@ struct test_desc
 
         pj_sock_t socks[2];          /* server/client sockets */
         unsigned cnt[2];             /* number of packets sent/received */
+        pj_uint8_t rx_carry[sizeof(int)]; /* TCP bytes of a partial int */
+        unsigned rx_carry_len;
         pj_ioqueue_key_t *keys[2];   /* server/client keys */
         pj_status_t connect_status;
 
@@ -162,8 +164,9 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     do {
         unsigned counter = test->state.cnt[SERVER];
 
-        /* can only handle multiple of ints,*/
-        PJ_ASSERT_ON_FAIL(bytes_read<0 || bytes_read%sizeof(int)==0,
+        /* TCP may split an int across reads, it is carried over below */
+        PJ_ASSERT_ON_FAIL(bytes_read<0 || bytes_read%sizeof(int)==0 ||
+                          test->cfg.sock_type==pj_SOCK_STREAM(),
                           {
                              test->state.retcode = 410;
                              okud->server.status = PJ_EBUG;
@@ -180,13 +183,32 @@ static void on_read_complete(pj_ioqueue_key_t *key,
         }
 
         if (bytes_read > 0) {
+            pj_uint8_t *buf = (pj_uint8_t*)okud->server.recv_buf;
+            pj_size_t n_bytes = (pj_size_t)bytes_read;
+            unsigned n_ints;
+
             pj_lock_acquire((pj_lock_t*)test->state.grp_lock);
+
+            /* Prepend the bytes carried from the previous read, recv_buf
+             * has room for one more int. With concur=1 completions may be
+             * reordered, but the byte count stays exact.
+             */
+            if (test->state.rx_carry_len) {
+                pj_memmove(buf + test->state.rx_carry_len, buf, n_bytes);
+                pj_memcpy(buf, test->state.rx_carry, test->state.rx_carry_len);
+                n_bytes += test->state.rx_carry_len;
+            }
+            n_ints = (unsigned)(n_bytes / sizeof(int));
+            test->state.rx_carry_len = (unsigned)(n_bytes % sizeof(int));
+            pj_memcpy(test->state.rx_carry, buf + n_ints * sizeof(int),
+                      test->state.rx_carry_len);
+
             if (test->cfg.sequenced) {
                 unsigned *p, *start, *end;
                 pj_bool_t has_error = PJ_FALSE;
 
                 start = okud->server.recv_buf;
-                end = start + (bytes_read / sizeof(int));
+                end = start + n_ints;
 
                 for (p=start; p!=end; ++p) {
                     counter = test->state.cnt[SERVER]++;
@@ -221,7 +243,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                     }
                 }
             } else {
-                test->state.cnt[SERVER] += (unsigned)(bytes_read / 4);
+                test->state.cnt[SERVER] += n_ints;
             }
             pj_lock_release((pj_lock_t*)test->state.grp_lock);
         }
@@ -379,7 +401,9 @@ static void on_accept_complete(pj_ioqueue_key_t *key,
     }
 
     if (!okud->server.recv_buf) {
-        okud->server.recv_buf = pj_pool_calloc(test->state.pool, test->cfg.pkt_len,
+        /* One more int for the bytes carried over from the previous read */
+        okud->server.recv_buf = pj_pool_calloc(test->state.pool,
+                                               test->cfg.pkt_len + 1,
                                                sizeof(int));
     }
 
@@ -572,6 +596,7 @@ static int perform_single_pass(test_desc *test)
     test->state.listen_key = NULL;
     test->state.listen_sock = PJ_INVALID_SOCKET;
     test->state.refuse_sock = PJ_INVALID_SOCKET;
+    test->state.rx_carry_len = 0;
     pj_get_timestamp(&test->state.pass_start);
     for (i=0; i<2; ++i) {
         int j;
@@ -650,7 +675,7 @@ static int perform_single_pass(test_desc *test)
             okud = alloc_okud(test, SERVER);
             if (!okud->server.recv_buf) {
                 okud->server.recv_buf = pj_pool_calloc(test->state.pool,
-                                                       test->cfg.pkt_len,
+                                                       test->cfg.pkt_len + 1,
                                                        sizeof(int));
             }
             pj_ioqueue_op_key_init(&okud->server.recv_op, sizeof(pj_ioqueue_op_key_t));
