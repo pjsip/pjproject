@@ -267,7 +267,9 @@ static void on_write_complete(pj_ioqueue_key_t *key,
     pj_assert(okud != NULL);
     assert(okud->common.side == CLIENT);
 
-    PJ_ASSERT_ON_FAIL(bytes_sent<0 || bytes_sent%sizeof(int)==0,
+    /* A queued TCP remainder may end anywhere in an int */
+    PJ_ASSERT_ON_FAIL(bytes_sent<0 || bytes_sent%sizeof(int)==0 ||
+                      test->cfg.sock_type==pj_SOCK_STREAM(),
                       {
                          test->state.retcode = 501;
                          okud->client.status = PJ_EBUG;
