@@ -747,9 +747,11 @@ target_link_libraries(pjmedia
     pjlib
     # srtp - PUBLIC to propagate shared library dependency to consumers
     $<$<BOOL:${PJMEDIA_WITH_SRTP}>:Pj::Dep::SRTP>
+    # included by the public headers
+    pjlib-util pjnath
   PRIVATE
     # project
-    pjlib-ssl pjlib-util pjnath
+    pjlib-ssl
 
     # resampling backend
     $<$<STREQUAL:${PJMEDIA_WITH_RESAMPLE},libresample>:Pj::Dep::Resample>
@@ -955,10 +957,11 @@ endif()
 
 target_link_libraries(pjmedia-codec
   PUBLIC
-    pjlib
+    # pjmedia: included by the public headers
+    pjlib pjmedia
   PRIVATE
     # project
-    pjlib-util pjmedia
+    pjlib-util
 
     # audio codecs
     $<$<BOOL:${PJMEDIA_WITH_GSM_CODEC}>:Pj::Dep::GSM>
@@ -1056,10 +1059,11 @@ target_compile_definitions(pjmedia-audiodev
 
 target_link_libraries(pjmedia-audiodev
   PUBLIC
-    pjlib
+    # pjmedia: included by the public headers
+    pjlib pjmedia
   PRIVATE
     # project
-    pjlib-util pjmedia
+    pjlib-util
 
     # audio backends
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_ALSA}>:ALSA::ALSA>
@@ -1137,10 +1141,11 @@ target_include_directories(pjmedia-videodev BEFORE
 
 target_link_libraries(pjmedia-videodev
   PUBLIC
-    pjlib
+    # pjmedia: included by the public headers
+    pjlib pjmedia
   PRIVATE
     # project
-    pjlib-util pjmedia
+    pjlib-util
 
     # video backends
     $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_OPENGL}>:${PJ_OPENGL_LINK_TARGETS}>

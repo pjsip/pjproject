@@ -80,9 +80,10 @@ target_sources(pjsip
 target_link_libraries(pjsip
   PUBLIC
     pjlib
+    # included by the public headers
+    pjlib-util
   PRIVATE
     pjlib-ssl
-    pjlib-util
 )
 
 if(PJSIP_WITH_DIGEST_AKA_AUTH)
@@ -165,7 +166,8 @@ target_sources(pjsip-simple
 )
 
 # dependencies
-target_link_libraries(pjsip-simple PUBLIC pjlib PRIVATE pjlib-util pjsip)
+# PUBLIC: what the public headers include
+target_link_libraries(pjsip-simple PUBLIC pjlib pjlib-util pjsip)
 
 # ##############################################################################
 # pjsip-ua
@@ -201,8 +203,10 @@ target_sources(pjsip-ua
 target_link_libraries(pjsip-ua
   PUBLIC
     pjlib
+    # included by the public headers
+    pjmedia pjsip pjsip-simple
   PRIVATE
-    pjlib-util pjmedia pjsip pjsip-simple
+    pjlib-util
 )
 
 # ##############################################################################
@@ -240,16 +244,17 @@ target_sources(pjsua-lib
 target_link_libraries(pjsua-lib
   PUBLIC
     pjlib
-  PRIVATE
+    # included by pjsua.h
     pjlib-util
     pjnath
     pjmedia
     pjmedia-codec
-    pjmedia-audiodev
     pjmedia-videodev
     pjsip
     pjsip-simple
     pjsip-ua
+  PRIVATE
+    pjmedia-audiodev
 )
 
 # ##############################################################################
@@ -294,8 +299,10 @@ target_sources(pjsua2
 target_link_libraries(pjsua2
   PUBLIC
     pjlib
-  PRIVATE
+    # included by the public headers (pjsua-lib brings the rest)
     pjlib-util
+    pjsua-lib
+  PRIVATE
     pjnath
     pjmedia
     pjmedia-codec
@@ -304,7 +311,6 @@ target_link_libraries(pjsua2
     pjsip
     pjsip-simple
     pjsip-ua
-    pjsua-lib
 )
 endif() # PJ_BUILD_PJSUA2
 
