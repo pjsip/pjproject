@@ -2113,13 +2113,16 @@ static int sdp_neg_dup_enc_name_run(pj_pool_t *pool)
 static int sdp_neg_dup_enc_name_test(pj_pool_t *pool)
 {
     pj_str_t h264 = pj_str("H264");
+    pj_status_t status;
     int rc;
 
     /* Drop any H264 matcher left behind by a codec initialized earlier in
      * this process (e.g. by vid_codec_test): a name can only be registered
      * once, with one callback.
      */
-    pjmedia_sdp_neg_register_fmt_match_cb(&h264, NULL);
+    status = pjmedia_sdp_neg_register_fmt_match_cb(&h264, NULL);
+    PJ_TEST_TRUE(status == PJ_SUCCESS || status == PJ_ENOTFOUND, NULL,
+                 return -2269);
 
     PJ_TEST_SUCCESS(pjmedia_sdp_neg_register_fmt_match_cb(&h264,
                                                           &h264_fmtp_match),

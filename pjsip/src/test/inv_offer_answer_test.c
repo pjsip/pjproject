@@ -663,8 +663,6 @@ static pj_bool_t log_on_rx_msg(pjsip_rx_data *rdata)
         return PJ_FALSE;
 
     if (expect_null_offer_response && msg->type == PJSIP_RESPONSE_MSG &&
-        rdata->msg_info.cid &&
-        rdata->msg_info.cseq &&
         rdata->msg_info.cseq->method.id == PJSIP_INVITE_METHOD &&
         rdata->msg_info.cseq->cseq == null_offer_cseq &&
         pj_strcmp(&rdata->msg_info.cid->id, &null_offer_call_id) == 0 &&

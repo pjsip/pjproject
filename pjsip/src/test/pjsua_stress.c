@@ -764,7 +764,7 @@ static int run_stress(const stress_opts_t *opts)
         char name[32];
         worker_ctx_t *w = &g.workers[i];
         w->id = i;
-        w->rng_state = opts->seed ^ (unsigned)(i * 2654435761u);
+        w->rng_state = opts->seed ^ (unsigned)((pj_uint64_t)i * 2654435761u);
         pj_ansi_snprintf(name, sizeof(name), "stress-%d", i);
         status = pj_thread_create(g.pool, name, &worker_thread, w,
                                   0, 0, &w->thread);
