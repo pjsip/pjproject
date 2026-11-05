@@ -344,6 +344,7 @@ if(IOS AND PJ_IOS_SAMPLE_LIBS)
     )
   endforeach()
 
+  get_property(_pj_used_deps GLOBAL PROPERTY PJ_USED_DEPS)
   foreach(_entry IN LISTS _pj_ios_sample_libs)
     string(REPLACE "|" ";" _parts "${_entry}")
     list(GET _parts 0 _pj_tgt)
@@ -351,10 +352,12 @@ if(IOS AND PJ_IOS_SAMPLE_LIBS)
 
     # The third-party entries are the provider-agnostic Pj::Dep:: aliases, so
     # a system provider is staged as readily as a bundled one. Only a library
-    # this configuration genuinely does not have falls back to the
-    # placeholder, and it says so rather than leaving the sample to fail with
-    # unresolved symbols later.
-    if(TARGET ${_pj_tgt})
+    # this configuration genuinely does not have, or does not link and so does
+    # not build, falls back to the placeholder, and it says so rather than
+    # leaving the sample to fail with unresolved symbols later.
+    string(REGEX REPLACE "^Pj::Dep::" "" _pj_dep "${_pj_tgt}")
+    if(TARGET ${_pj_tgt} AND
+       (_pj_dep STREQUAL _pj_tgt OR _pj_dep IN_LIST _pj_used_deps))
       if(NOT _pj_tgt MATCHES "^Pj::")
         add_dependencies(pj-ios-sample-libs ${_pj_tgt})
       endif()
@@ -382,6 +385,8 @@ if(IOS AND PJ_IOS_SAMPLE_LIBS)
   unset(_pj_src)
   unset(_pj_ios_placeholder_src)
   unset(_pj_tgt)
+  unset(_pj_dep)
+  unset(_pj_used_deps)
   unset(_pj_name)
   unset(_parts)
 endif()

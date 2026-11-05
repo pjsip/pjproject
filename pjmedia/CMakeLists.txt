@@ -184,11 +184,44 @@ cmake_dependent_option(PJMEDIA_WITH_ILBC_CODEC
 # G.722 codec
 option(PJMEDIA_WITH_G722_CODEC "Enable G.722 codec" ON)
 
-# G.7221 codec
+# G.722.1 codec: off by default, as with autoconf, for licensing reasons (the
+# user must obtain a license from Poly). It is enabled with this option or, as
+# documented, with PJMEDIA_HAS_G7221_CODEC in config_site.h, which is checked on
+# every configure and must also get the library linked.
 cmake_dependent_option(PJMEDIA_WITH_G7221_CODEC
-  "Enable G.7221 codec" ON
+  "Enable G.722.1 codec (licensed by Poly)" OFF
   "TARGET Pj::Dep::G7221" OFF
 )
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+  "${PROJECT_SOURCE_DIR}/pjlib/include/pj/config_site.h"
+)
+block(SCOPE_FOR VARIABLES PROPAGATE _pj_link_g7221)
+  include(CheckSourceCompiles)
+  set(CMAKE_REQUIRED_INCLUDES "${PROJECT_SOURCE_DIR}/pjlib/include")
+  set(CMAKE_REQUIRED_DEFINITIONS -DPJ_AUTOCONF=1)
+  set(CMAKE_REQUIRED_QUIET ON)
+  unset(PJ_CONFIG_SITE_HAS_G7221 CACHE)
+  check_source_compiles(C [[
+#include <pj/config_site.h>
+#if !defined(PJMEDIA_HAS_G7221_CODEC) || !PJMEDIA_HAS_G7221_CODEC
+#  error G.722.1 not enabled
+#endif
+int main(void) { return 0; }
+]] PJ_CONFIG_SITE_HAS_G7221)
+
+  set(_pj_link_g7221 ${PJMEDIA_WITH_G7221_CODEC})
+  if(PJ_CONFIG_SITE_HAS_G7221)
+    if(TARGET Pj::Dep::G7221)
+      message(STATUS "G.722.1 codec enabled by config_site.h")
+      set(_pj_link_g7221 ON)
+    else()
+      message(SEND_ERROR
+        "config_site.h enables G.722.1 (PJMEDIA_HAS_G7221_CODEC) but there "
+        "is no G.722.1 library: PJ_DEP_G7221=${PJ_DEP_G7221}"
+      )
+    endif()
+  endif()
+endblock()
 
 # OpenCore AMR-NB Codecs
 option(PJMEDIA_WITH_OPENCORE_AMRNB_CODEC "Enable OpenCore AMR-NB codec" ON)
@@ -974,7 +1007,7 @@ target_link_libraries(pjmedia-codec
     $<$<BOOL:${PJMEDIA_WITH_GSM_CODEC}>:Pj::Dep::GSM>
     $<$<BOOL:${PJMEDIA_WITH_SPEEX_CODEC}>:Pj::Dep::Speex>
     $<$<BOOL:${PJMEDIA_WITH_ILBC_CODEC}>:Pj::Dep::iLBC>
-    $<$<BOOL:${PJMEDIA_WITH_G7221_CODEC}>:Pj::Dep::G7221>
+    $<$<BOOL:${_pj_link_g7221}>:Pj::Dep::G7221>
     $<$<BOOL:${PJMEDIA_WITH_OPENCORE_AMRNB_CODEC}>:OpenCoreAMRNB::OpenCoreAMRNB>
     $<$<BOOL:${PJMEDIA_WITH_OPENCORE_AMRWB_CODEC}>:OpenCoreAMRWB::OpenCoreAMRWB>
     $<$<BOOL:${PJMEDIA_WITH_OPENCORE_AMRWB_CODEC}>:VisualOnAMRWBEnc::VisualOnAMRWBEnc>
@@ -1299,7 +1332,7 @@ endif()
 if(PJMEDIA_WITH_ILBC_CODEC)
   list(APPEND _pj_used_deps iLBC)
 endif()
-if(PJMEDIA_WITH_G7221_CODEC)
+if(_pj_link_g7221)
   list(APPEND _pj_used_deps G7221)
 endif()
 set_property(GLOBAL PROPERTY PJ_USED_DEPS ${_pj_used_deps})
