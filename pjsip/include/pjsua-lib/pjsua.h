@@ -2466,8 +2466,10 @@ typedef struct pjsua_callback
      * or pjsip_auth_clt_async_abandon() to give up. Both may be called
      * synchronously within this callback or deferred. A deferred REGISTER
      * is not sent, and PJ_ECANCELLED is returned, if the account has sent
-     * another REGISTER since the challenge, or has dropped its registration
-     * and the deferred REGISTER is not an unregistration.
+     * or started another REGISTER since the challenge, or has dropped its
+     * registration and the deferred REGISTER is not an unregistration.
+     * Abandoning such a REGISTER doesn't report a registration failure:
+     * the newer REGISTER reports the result.
      *
      * If \a param->handled is left as PJ_FALSE (the default), the library
      * falls back to synchronous authentication using configured credentials.

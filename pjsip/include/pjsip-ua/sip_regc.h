@@ -491,8 +491,9 @@ PJ_DECL(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata);
  * Reserve the client registration for the request \a tdata, so that
  * \a tdata is the next request sent with #pjsip_regc_send(). Until it is
  * sent, any other request, including the automatic refresh and a resend
- * after a 401/407/423 response, is refused with PJSIP_EBUSY, as if a
- * transaction were pending.
+ * after a 423 response, is refused with PJSIP_EBUSY, as if a transaction
+ * were pending. The authentication of an earlier challenged request is
+ * dropped without calling the callback.
  *
  * This lets the caller claim the registration and update its own state in
  * one hold of its own lock, and send after releasing that lock. The
@@ -548,7 +549,9 @@ PJ_DECL(pj_status_t) pjsip_regc_set_auth_sess( pjsip_regc *regc,
  * registration has sent or reserved another request since the challenge,
  * or has been destroyed and the request does not have an Expires header of
  * zero. In that case, and when such a challenge is abandoned, the callback
- * is not called: the newer request reports the result.
+ * is not called: the newer request reports the result, or none after
+ * destroy. The built-in handling of a challenge drops such a request the
+ * same way.
  *
  * @param regc      The client registration structure.
  *
