@@ -153,8 +153,11 @@ deadlock:acc_check_nat_addr
 #     in regc_cb().
 #   M1 -> M0: regc_cb() / regc_tsx_cb(), as above.
 #
-# Suppressed on acc_set_registration, the sender common to all of them.
-deadlock:acc_set_registration
+# Suppressed on these callers only, so that other senders on the
+# registration path still surface.
+deadlock:pjsua_acc_update_contact_on_ip_change
+deadlock:pjsua_acc_modify
+deadlock:unreg_in_window
 #=============================================================================
 
 #=============================================================================
