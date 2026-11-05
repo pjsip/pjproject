@@ -1002,6 +1002,129 @@ on_return:
 
 
 /*****************************************************************************
+ * Sub-test 8: Built-in authentication of a superseded request - the
+ * application destroys the regc, or reserves it for a new REGISTER, in the
+ * challenge callback and leaves the challenge to the library. The
+ * authenticated request is not sent and no callback is called, except
+ * that an un-REGISTER is still sent after destroy.
+ *****************************************************************************/
+
+enum builtin_mode
+{
+    BUILTIN_REG_DESTROYED,
+    BUILTIN_UNREG_DESTROYED,
+    BUILTIN_RESERVED
+};
+
+static struct {
+    enum builtin_mode    mode;
+    pjsip_regc          *regc;
+    pjsip_tx_data       *reserved;
+    unsigned             count;
+} g_builtin;
+
+static pj_bool_t on_challenge_builtin(
+                        pjsip_auth_clt_sess *sess,
+                        void *token,
+                        const pjsip_auth_clt_async_on_chal_param *param)
+{
+    pjsip_tx_data *tdata;
+
+    PJ_UNUSED_ARG(sess);
+    PJ_UNUSED_ARG(token);
+    PJ_UNUSED_ARG(param);
+
+    if (g_builtin.count++ != 0 || !g_builtin.regc)
+        return PJ_FALSE;
+
+    if (g_builtin.mode != BUILTIN_RESERVED) {
+        pjsip_regc_destroy(g_builtin.regc);
+        g_builtin.regc = NULL;
+    } else if (pjsip_regc_register(g_builtin.regc, PJ_TRUE,
+                                   &tdata) == PJ_SUCCESS)
+    {
+        if (pjsip_regc_reserve(g_builtin.regc, tdata) == PJ_SUCCESS)
+            g_builtin.reserved = tdata;
+        else
+            pjsip_tx_data_dec_ref(tdata);
+    }
+    return PJ_FALSE;
+}
+
+static int builtin_superseded_test(const pj_str_t *registrar_uri,
+                                   enum builtin_mode mode, int err)
+{
+    static const char *title[] = {
+        "REGISTER after destroy", "un-REGISTER after destroy",
+        "REGISTER while another is reserved"
+    };
+    pjsip_regc    *regc;
+    pjsip_tx_data *tdata;
+    unsigned       i, auth_cnt;
+    int            rc = 0;
+
+    PJ_LOG(3, (THIS_FILE, "  async auth: built-in %s", title[mode]));
+
+    pj_bzero(&g_ctx, sizeof(g_ctx));
+    pj_bzero(&g_builtin, sizeof(g_builtin));
+    g_builtin.mode = mode;
+
+    if (create_regc(registrar_uri, &on_challenge_builtin, NULL,
+                    &regc) != 0)
+    {
+        return err - 1;
+    }
+    g_builtin.regc = regc;
+    auth_cnt = g_registrar.auth_count;
+
+    if ((mode == BUILTIN_UNREG_DESTROYED ?
+            pjsip_regc_unregister(regc, &tdata) :
+            pjsip_regc_register(regc, PJ_TRUE, &tdata)) != PJ_SUCCESS ||
+        pjsip_regc_send(regc, tdata) != PJ_SUCCESS)
+    {
+        rc = err - 2;
+        goto on_return;
+    }
+    for (i = 0; i < 50 && !g_builtin.count; ++i)
+        flush_events(100);
+    flush_events(500);
+
+    if (g_builtin.count != 1 ||
+        (mode == BUILTIN_RESERVED && !g_builtin.reserved))
+    {
+        rc = err - 3;
+    } else if (g_registrar.auth_count !=
+               auth_cnt + (mode == BUILTIN_UNREG_DESTROYED ? 1 : 0))
+    {
+        rc = err - 10;
+    } else if (g_ctx.done) {
+        rc = err - 20;
+    }
+
+    /* The reserved request still goes out and registers */
+    if (g_builtin.reserved) {
+        tdata = g_builtin.reserved;
+        g_builtin.reserved = NULL;
+        if (pjsip_regc_send(regc, tdata) != PJ_SUCCESS) {
+            if (!rc) rc = err - 30;
+        } else {
+            for (i = 0; i < 50 && !g_ctx.done; ++i)
+                flush_events(100);
+            if (!rc && g_ctx.reg_code != 200)
+                rc = err - 31;
+        }
+    }
+
+on_return:
+    if (g_builtin.reserved)
+        pjsip_regc_send(regc, g_builtin.reserved);
+    if (g_builtin.regc)
+        pjsip_regc_destroy(g_builtin.regc);
+    return rc;
+}
+
+
+/*****************************************************************************
  * Main entry point
  *****************************************************************************/
 int auth_async_test(void)
@@ -1084,6 +1207,18 @@ int auth_async_test(void)
 
     /* 7. Session reset before the deferred send */
     rc = reset_session_test(&registrar_uri);
+    if (rc != 0) goto on_return;
+
+    /* 8. Built-in authentication of a superseded request */
+    rc = builtin_superseded_test(&registrar_uri, BUILTIN_REG_DESTROYED,
+                                 -2050);
+    if (rc != 0) goto on_return;
+
+    rc = builtin_superseded_test(&registrar_uri, BUILTIN_UNREG_DESTROYED,
+                                 -2100);
+    if (rc != 0) goto on_return;
+
+    rc = builtin_superseded_test(&registrar_uri, BUILTIN_RESERVED, -2150);
     if (rc != 0) goto on_return;
 
 on_return:

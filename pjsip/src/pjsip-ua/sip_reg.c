@@ -1360,6 +1360,7 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
         pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;
         pjsip_tx_data *tdata;
         pj_bool_t is_unreg;
+        pj_bool_t superseded = PJ_FALSE;
         pjsip_auth_clt_async_on_chal_param chal_param = { 0 };
 
         /* Capture is_unreg but keep current_op alive so that
@@ -1480,11 +1481,11 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
                  * been incremented.
                  */
                 pj_lock_release(regc->lock);
-                status = pjsip_regc_send(regc, tdata);
+                status = regc_send(regc, tdata, PJ_TRUE, &superseded);
                 pj_lock_acquire(regc->lock);
             }
 
-            if (status != PJ_SUCCESS) {
+            if (status != PJ_SUCCESS && !superseded) {
                 /* Only call callback if application is still interested
                  * in it.
                  */
