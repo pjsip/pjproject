@@ -745,13 +745,15 @@ target_link_libraries(pjmedia
   PUBLIC
     # pjlib - PUBLIC to propagate PJ_AUTOCONF and other compile definitions
     pjlib
-    # srtp - PUBLIC to propagate shared library dependency to consumers
-    $<$<BOOL:${PJMEDIA_WITH_SRTP}>:Pj::Dep::SRTP>
     # included by the public headers
     pjlib-util pjnath
   PRIVATE
     # project
     pjlib-ssl
+
+    # srtp: used by transport_srtp.c only. Its header directory holds generic
+    # names (sha1.h, aes.h, err.h), which must not reach applications.
+    $<$<BOOL:${PJMEDIA_WITH_SRTP}>:Pj::Dep::SRTP>
 
     # resampling backend
     $<$<STREQUAL:${PJMEDIA_WITH_RESAMPLE},libresample>:Pj::Dep::Resample>
@@ -772,6 +774,11 @@ target_link_libraries(pjmedia
     $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVCODEC}>:FFMPEG::avcodec>
     $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVFORMAT}>:FFMPEG::avformat>
     $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVDEVICE}>:FFMPEG::avdevice>
+  INTERFACE
+    # ...but srtp's library must: a shared libpjmedia needs it found when an
+    # application links, and the installed package does not record where a
+    # system one is
+    $<LINK_ONLY:$<$<BOOL:${PJMEDIA_WITH_SRTP}>:Pj::Dep::SRTP>>
 )
 
 # The bundled AEC3 exports all its WebRTC OS/arch definitions, a system one
