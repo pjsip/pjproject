@@ -285,12 +285,12 @@ static void on_write_complete(pj_ioqueue_key_t *key,
     }
 
     /* for TCP, client stop transmission when number of transmitted
-     * count is done. For UDP, continue transmitting until the receiver
-     * has received enough, because packets may be dropped.
+     * count is done. For UDP, also continue until the receiver has
+     * received enough, because packets may be dropped.
      */
     counter = test->state.cnt[CLIENT];
-    if ((test->cfg.sock_type==pj_SOCK_STREAM() && counter >= test->cfg.tx_cnt) ||
-        (test->cfg.sock_type==pj_SOCK_DGRAM() &&
+    if (counter >= test->cfg.tx_cnt &&
+        (test->cfg.sock_type==pj_SOCK_STREAM() ||
          test->state.cnt[SERVER] >= test->cfg.rx_cnt))
     {
         //TRACE((THIS_FILE, "op_key:%p: TX counter reached (%d)",
