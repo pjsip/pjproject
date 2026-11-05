@@ -97,6 +97,7 @@ static struct {
     int           code;         /* response code, or 0 for 200 */
     pj_bool_t     drop;         /* don't answer */
     pj_bool_t     dropped;      /* a request was not answered */
+    pj_bool_t     challenge;    /* 401 to a request without credentials */
 } g_mock_reg = {
     {
         NULL, NULL,
@@ -190,6 +191,20 @@ static pj_bool_t mock_registrar_rx_request(pjsip_rx_data *rdata)
     }
 
     pj_list_init(&hdr_list);
+    if (g_mock_reg.challenge &&
+        !pjsip_msg_find_hdr(msg, PJSIP_H_AUTHORIZATION, NULL))
+    {
+        const pj_str_t hname = pj_str("WWW-Authenticate");
+        const pj_str_t hvalue = pj_str("Digest realm=\"test\", "
+                                       "nonce=\"testnonce\"");
+
+        pj_list_push_back(&hdr_list,
+                          pjsip_generic_string_hdr_create(
+                              rdata->tp_info.pool, &hname, &hvalue));
+        pjsip_endpt_respond_stateless(pjsua_get_pjsip_endpt(), rdata, 401,
+                                      NULL, &hdr_list, NULL);
+        return PJ_TRUE;
+    }
     pj_list_push_back(&hdr_list,
                       pjsip_expires_hdr_create(rdata->tp_info.pool,
                                                TEST_EXPIRES));
@@ -297,6 +312,25 @@ static void on_ip_change_progress(pjsua_ip_change_op op, pj_status_t status,
         g_ctx.ipc_update_cnt++;
     else if (op == PJSUA_IP_CHANGE_OP_COMPLETED)
         g_ctx.ipc_done_cnt++;
+}
+
+
+/* A challenge the application answers later */
+static struct {
+    pj_bool_t             enabled;
+    int                   pending;
+    pjsip_auth_clt_sess  *sess;
+    void                 *token;
+} g_defer;
+
+static void on_auth_challenge(pjsua_on_auth_challenge_param *param)
+{
+    if (!g_defer.enabled || g_defer.pending)
+        return;
+    g_defer.sess = param->auth_sess;
+    g_defer.token = param->token;
+    g_defer.pending = PJ_TRUE;
+    param->handled = PJ_TRUE;
 }
 
 
@@ -1049,6 +1083,154 @@ on_return:
 }
 
 
+#if PJ_HAS_THREADS
+static volatile pj_bool_t g_abandon_started;
+static pj_bool_t g_abandon_ignored;
+static pj_log_func *g_log_func;
+
+/* Tells that the abandon's callback reached pjsua and was ignored there */
+static void abandon_log_func(int level, const char *data, int len)
+{
+    if (pj_ansi_strstr(data, "error of an earlier REGISTER ignored"))
+        g_abandon_ignored = PJ_TRUE;
+    (*g_log_func)(level, data, len);
+}
+
+static int abandon_thread(void *arg)
+{
+    PJ_UNUSED_ARG(arg);
+    g_abandon_started = PJ_TRUE;
+    pjsip_auth_clt_async_abandon(g_defer.sess, g_defer.token);
+    return 0;
+}
+
+/* A deferred challenge abandoned while an IP change sends its REGISTER: the
+ * abandon's registration callback waits for PJSUA_LOCK, which the IP change
+ * holds while it claims the registration. It must not report an error or
+ * end the IP change.
+ */
+static int abandon_window_test(pjsua_transport_id tp_id, int port)
+{
+    pjsua_acc_config acc_cfg;
+    pjsua_acc_id     acc_id = PJSUA_INVALID_ID;
+    pj_thread_t     *thread = NULL;
+    char             reg_uri[64];
+    int              log_level;
+    pj_status_t      status;
+    int              rc = 0;
+
+    PJ_LOG(3, (THIS_FILE, "  pjsua acc: challenge abandoned during an IP "
+               "change"));
+
+    pj_bzero(&g_ctx, sizeof(g_ctx));
+    pj_bzero(&g_defer, sizeof(g_defer));
+    pj_ansi_snprintf(reg_uri, sizeof(reg_uri), "sip:127.0.0.1:%d", port);
+
+    pjsua_acc_config_default(&acc_cfg);
+    acc_cfg.id       = pj_str("sip:" TEST_USER "@pjsip.org");
+    acc_cfg.reg_uri  = pj_str(reg_uri);
+    acc_cfg.transport_id = tp_id;
+    acc_cfg.register_on_acc_add = PJ_FALSE;
+    acc_cfg.allow_via_rewrite = PJ_FALSE;
+    acc_cfg.reg_retry_interval = 0;
+
+    if (pjsua_acc_add(&acc_cfg, PJ_FALSE, &acc_id) != PJ_SUCCESS ||
+        pjsua_acc_set_registration(acc_id, PJ_TRUE) != PJ_SUCCESS ||
+        wait_reg(5000) != 0)
+    {
+        rc = -4101;
+        goto on_return;
+    }
+
+    /* The refresh is challenged and the challenge deferred */
+    g_mock_reg.challenge = PJ_TRUE;
+    g_defer.enabled = PJ_TRUE;
+    if (pjsua_acc_set_registration(acc_id, PJ_TRUE) != PJ_SUCCESS) {
+        rc = -4102;
+        goto on_return;
+    }
+    pump_events(5000, &g_defer.pending, PJ_TRUE);
+    g_mock_reg.challenge = PJ_FALSE;
+    if (!g_defer.pending) {
+        rc = -4103;
+        goto on_return;
+    }
+
+    /* The IP change's REGISTER stays pending */
+    g_mock_reg.drop = PJ_TRUE;
+    g_ctx.reg_code = 0;
+    g_abandon_started = PJ_FALSE;
+    g_abandon_ignored = PJ_FALSE;
+    log_level = pj_log_get_level();
+    g_log_func = pj_log_get_log_func();
+    pj_log_set_level(4);
+    pj_log_set_log_func(&abandon_log_func);
+
+    PJSUA_LOCK();
+    status = pj_thread_create(pjsua_var.pool, "acc_abandon",
+                              &abandon_thread, NULL, 0, 0, &thread);
+    if (status == PJ_SUCCESS) {
+        while (!g_abandon_started)
+            pj_thread_sleep(1);
+        /* Let the abandon reach the registration callback */
+        pj_thread_sleep(300);
+        status = ip_change();
+    }
+    PJSUA_UNLOCK();
+    if (thread) {
+        pj_thread_join(thread);
+        pj_thread_destroy(thread);
+        g_defer.pending = PJ_FALSE;
+    }
+    pj_log_set_log_func(g_log_func);
+    pj_log_set_level(log_level);
+    if (status != PJ_SUCCESS) {
+        rc = -4104;
+        goto on_return;
+    }
+
+    if (g_ctx.reg_code != 0 || g_ctx.ipc_done_cnt != 0 ||
+        pjsua_var.acc[acc_id].reg_last_code != 200)
+    {
+        PJ_LOG(3, (THIS_FILE, "    error: the abandoned challenge reported "
+                   "%d and ended the IP change %d time(s)", g_ctx.reg_code,
+                   g_ctx.ipc_done_cnt));
+        rc = -4105;
+        goto on_return;
+    }
+    if (!g_abandon_ignored) {
+        PJ_LOG(3, (THIS_FILE, "    error: the abandon did not reach the "
+                   "registration callback before the IP change"));
+        rc = -4108;
+        goto on_return;
+    }
+
+    /* The IP change's REGISTER is answered on retransmission */
+    g_mock_reg.drop = PJ_FALSE;
+    g_ctx.reg_done = PJ_FALSE;
+    if (wait_reg(10000) != 0 || g_ctx.reg_code != 200) {
+        rc = -4106;
+        goto on_return;
+    }
+    pump_events(2000, &g_ctx.ipc_done_cnt, PJ_TRUE);
+    if (g_ctx.ipc_done_cnt != 1) {
+        rc = -4107;
+    }
+
+on_return:
+    if (g_defer.pending)
+        pjsip_auth_clt_async_abandon(g_defer.sess, g_defer.token);
+    pj_bzero(&g_defer, sizeof(g_defer));
+    g_mock_reg.challenge = PJ_FALSE;
+    g_mock_reg.drop = PJ_FALSE;
+    if (acc_id != PJSUA_INVALID_ID)
+        pjsua_acc_del(acc_id);
+    pjsua_handle_events(500);
+    return rc;
+}
+#endif
+
+
 /*****************************************************************************
  * Main entry point
  *****************************************************************************/
@@ -1082,6 +1264,7 @@ int pjsua_acc_test(void)
     pjsua_config_default(&ua_cfg);
     ua_cfg.cb.on_reg_state2 = &on_reg_state2;
     ua_cfg.cb.on_ip_change_progress = &on_ip_change_progress;
+    ua_cfg.cb.on_auth_challenge = &on_auth_challenge;
     /* No worker threads: everything runs from pjsua_handle_events() so
      * the Contact can be inspected at known points.
      */
@@ -1259,6 +1442,11 @@ int pjsua_acc_test(void)
             if (rc != 0) goto on_return;
         }
     }
+
+#if PJ_HAS_THREADS
+    rc = abandon_window_test(tp_id, (int)port);
+    if (rc != 0) goto on_return;
+#endif
 
 on_return:
     if (g_fail_tx.mod.id != -1)

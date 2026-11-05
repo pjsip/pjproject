@@ -3180,10 +3180,13 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
             /* Stop keep-alive timer if any. */
             update_keep_alive(acc, PJ_FALSE, NULL);
         } else {
-            /* Another registration is in progress. */
+            /* Another registration is in progress, it reports the result */
             pj_assert(status == PJ_EBUSY);
-            pjsua_perror(THIS_FILE, "Deleting registration failed", 
-                         status);           
+            PJ_LOG(4, (THIS_FILE, "Acc %d: error of an earlier REGISTER "
+                       "ignored, another one is in progress", acc->index));
+            pj_log_pop_indent();
+            PJSUA_UNLOCK();
+            return;
         }
 
     } else if (param->code < 0 || param->code >= 300) {
