@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2011-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -457,6 +457,106 @@ on_return:
     return rc;
 }
 
+#if PJMEDIA_HAS_FFMPEG_CODEC_H264
+/* Open the ffmpeg H264 decoder with "sprop-parameter-sets" in the remote
+ * fmtp, then decode an IDR slice that carries no SPS/PPS of its own. It
+ * only decodes when the parameter sets reached the decoder as extradata.
+ */
+static int h264_sprop_test(pj_pool_t *pool)
+{
+    /* One I_16x16 macroblock, for the 16x16 baseline SPS/PPS in the fmtp */
+    static const pj_uint8_t idr[] = { 0x65, 0x88, 0x84, 0x93, 0xc0 };
+    char id[32];
+    pj_str_t codec_id;
+    const pjmedia_vid_codec_info *info;
+    unsigned cnt = 1;
+    pjmedia_vid_codec_param param;
+    pjmedia_vid_codec *codec = NULL;
+    pj_bool_t opened = PJ_FALSE;
+    pjmedia_frame pkt, out;
+    unsigned out_size;
+    int rc = 0;
+    pj_status_t status;
+
+    PJ_LOG(3, (THIS_FILE, "  H264 sprop-parameter-sets decoder test"));
+
+    pj_ansi_snprintf(id, sizeof(id), "H264/%d", PJMEDIA_RTP_PT_H264_RSV3);
+    codec_id = pj_str(id);
+    status = pjmedia_vid_codec_mgr_find_codecs_by_id(NULL, &codec_id, &cnt,
+                                                     &info, NULL);
+    if (status != PJ_SUCCESS || (info->dir & PJMEDIA_DIR_DECODING) == 0) {
+        PJ_LOG(3, (THIS_FILE, "    ffmpeg H264 decoder not available"));
+        return 0;
+    }
+
+    status = pjmedia_vid_codec_mgr_get_default_param(NULL, info, &param);
+    if (status != PJ_SUCCESS)
+        return 300;
+
+    param.dir = PJMEDIA_DIR_DECODING;
+    param.packing = PJMEDIA_VID_PACKING_PACKETS;
+    param.enc_fmtp.cnt = 2;
+    param.enc_fmtp.param[0].name = pj_str("profile-level-id");
+    param.enc_fmtp.param[0].val = pj_str("42c00a");
+    param.enc_fmtp.param[1].name = pj_str("sprop-parameter-sets");
+    param.enc_fmtp.param[1].val = pj_str("Z0LACtp5,aM44gA==");
+
+    status = pjmedia_vid_codec_mgr_alloc_codec(NULL, info, &codec);
+    if (status != PJ_SUCCESS)
+        return 310;
+
+    status = pjmedia_vid_codec_init(codec, pool);
+    if (status != PJ_SUCCESS) {
+        rc = 320; goto on_return;
+    }
+
+    /* On failure open() has already closed the codec */
+    status = pjmedia_vid_codec_open(codec, &param);
+    if (status != PJ_SUCCESS) {
+        rc = 330; goto on_return;
+    }
+    opened = PJ_TRUE;
+
+    out_size = param.dec_fmt.det.vid.size.w *
+               param.dec_fmt.det.vid.size.h * 4;
+    pj_bzero(&pkt, sizeof(pkt));
+    pkt.type = PJMEDIA_FRAME_TYPE_VIDEO;
+    pkt.buf = (void*)idr;
+    pkt.size = sizeof(idr);
+    pj_bzero(&out, sizeof(out));
+    out.buf = pj_pool_alloc(pool, out_size);
+
+    status = pjmedia_vid_codec_decode(codec, 1, &pkt, out_size, &out);
+    if (status != PJ_SUCCESS) {
+        rc = 340; goto on_return;
+    }
+    if (out.type != PJMEDIA_FRAME_TYPE_VIDEO || out.size == 0) {
+        rc = 350; goto on_return;
+    }
+
+    /* The picture size can only have come from the sprop SPS */
+    status = pjmedia_vid_codec_get_param(codec, &param);
+    if (status != PJ_SUCCESS) {
+        rc = 360; goto on_return;
+    }
+    if (param.dec_fmt.det.vid.size.w != 16 ||
+        param.dec_fmt.det.vid.size.h != 16)
+    {
+        rc = 370; goto on_return;
+    }
+
+on_return:
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(3, (THIS_FILE, status, "    error"));
+    }
+    if (opened)
+        pjmedia_vid_codec_close(codec);
+    pjmedia_vid_codec_mgr_dealloc_codec(NULL, codec);
+
+    return rc;
+}
+#endif /* PJMEDIA_HAS_FFMPEG_CODEC_H264 */
+
 int vid_codec_test(void)
 {
     pj_pool_t *pool;
@@ -505,6 +605,12 @@ int vid_codec_test(void)
     rc = enum_codecs();
     if (rc != 0)
         goto on_return;
+
+#if PJMEDIA_HAS_FFMPEG_CODEC_H264
+    rc = h264_sprop_test(pool);
+    if (rc != 0)
+        goto on_return;
+#endif
 
 #if PJMEDIA_HAS_FFMPEG_VID_CODEC
     rc = encode_decode_test(pool, "h263-1998", PJMEDIA_VID_PACKING_WHOLE);
