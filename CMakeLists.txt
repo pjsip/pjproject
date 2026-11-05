@@ -139,6 +139,15 @@ if(BUILD_SHARED_LIBS)
       "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}"
     )
   endif()
+
+  # And the directories of dependencies found outside the system ones (a
+  # <Pkg>_ROOT, CMAKE_PREFIX_PATH): without them an application cannot link
+  # or start against the installed libraries. CMake leaves the system
+  # directories out. Not when cross-compiling, where the libraries run on
+  # another machine.
+  if(NOT DEFINED CMAKE_INSTALL_RPATH_USE_LINK_PATH AND NOT CMAKE_CROSSCOMPILING)
+    set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
+  endif()
 endif()
 
 # ##############################################################################
