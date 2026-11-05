@@ -162,8 +162,10 @@ include(Pj/PkgConfig)
 # them there, and on iOS, where they cannot run on a device; an iOS consumer
 # links the libraries into an app of their own.
 # Nor does firmware for a target CMake calls Generic, with no OS or with an
-# RTOS such as Zephyr, so the applications can be left out there.
-if(ANDROID OR IOS)
+# RTOS such as Zephyr, so the applications can be left out there. Off also
+# when pjproject is built inside another project (add_subdirectory(),
+# FetchContent), which wants the libraries, as the tests are.
+if(ANDROID OR IOS OR NOT CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   set(_pj_build_apps_default OFF)
 else()
   set(_pj_build_apps_default ON)
