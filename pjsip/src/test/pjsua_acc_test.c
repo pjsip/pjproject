@@ -270,6 +270,7 @@ static struct {
     int         ipc_update_cnt; /* ACC_UPDATE_CONTACT reports */
     int         ipc_done_cnt;   /* COMPLETED reports */
     pj_bool_t   published;      /* still published after a refused unreg */
+    pj_bool_t   unpublished;    /* unpublished by a successful unreg */
 } g_ctx;
 
 static void on_reg_state2(pjsua_acc_id acc_id, pjsua_reg_info *info)
@@ -845,6 +846,7 @@ static pj_bool_t unreg_do_action(pjsua_acc_id acc_id,
     case UA_UNREG_MODIFY:
         status = pjsua_acc_set_registration(acc_id, PJ_FALSE);
         ok = status == PJ_SUCCESS && wait_reg(5000) == 0;
+        g_ctx.unpublished = !acc->cfg.publish_enabled;
         if (!ok || action == UA_UNREG)
             break;
         g_ctx.reg_done = PJ_FALSE;
@@ -962,7 +964,7 @@ static int unreg_test(pjsua_transport_id tp_id, int port,
     acc_cfg.reg_retry_interval = c->expect_reg? 0 : 1;
     acc_cfg.reg_first_retry_interval = acc_cfg.reg_retry_interval;
     acc_cfg.reg_retry_random_interval = 0;
-    if (c->action == UA_UNREG_BUSY) {
+    if (c->action == UA_UNREG_BUSY || c->action == UA_UNREG) {
         /* PUBLISH goes to the account's domain: keep it local */
         pj_ansi_snprintf(id, sizeof(id), "sip:" TEST_USER "@127.0.0.1:%d",
                          port);
@@ -990,6 +992,12 @@ static int unreg_test(pjsua_transport_id tp_id, int port,
         PJ_LOG(3, (THIS_FILE, "    error: the action did not end as "
                    "expected (code %d)", g_ctx.reg_code));
         rc = c->rc - 2;
+        goto on_return;
+    }
+    if (c->action == UA_UNREG && !g_ctx.unpublished) {
+        PJ_LOG(3, (THIS_FILE, "    error: the unregistration did not "
+                   "unpublish the presence"));
+        rc = c->rc - 7;
         goto on_return;
     }
 
