@@ -1690,6 +1690,9 @@ static void dtls_media_stop_channel(dtls_srtp *ds, unsigned idx)
     ssl_destroy(ds, idx);
     ds->nego_started[idx] = PJ_FALSE;
     ds->nego_completed[idx] = PJ_FALSE;
+    ds->rem_fprint_status[idx] = PJ_EPENDING;
+    if (idx == RTP_CHANNEL)
+        ds->got_keys = PJ_FALSE;
 }
 
 static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
@@ -2003,13 +2006,17 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
     for (i = 0; i < NUM_CHANNEL; ++i) {
         pj_status_t fp_status;
 
-        if (ds->nego_completed[i] && ds->rem_fingerprint.slen &&
+        DTLS_LOCK(ds);
+        if (ds->nego_completed[i] && ds->ossl_ssl[i] &&
+            SSL_is_init_finished(ds->ossl_ssl[i]) &&
+            ds->rem_fingerprint.slen &&
             ds->rem_fprint_status[i] == PJ_EPENDING)
         {
             ds->rem_fprint_status[i] = ssl_match_fingerprint(ds, i);
         }
-
         fp_status = ds->rem_fprint_status[i];
+        DTLS_UNLOCK(ds);
+
         if (fp_status == PJ_SUCCESS || fp_status == PJ_EPENDING)
             continue;
 
@@ -2032,9 +2039,11 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
         unsigned idx = RTP_CHANNEL;
 
         /* RTP nego may have completed after the check above */
-        if (ds->rem_fprint_status[idx] == PJ_EPENDING)
+        DTLS_LOCK(ds);
+        if (ds->got_keys && ds->rem_fprint_status[idx] == PJ_EPENDING)
             ds->rem_fprint_status[idx] = ssl_match_fingerprint(ds, idx);
         status = ds->rem_fprint_status[idx];
+        DTLS_UNLOCK(ds);
         if (status != PJ_SUCCESS) {
             pj_perror(4, ds->base.name, status,
                       "Fingerprint specified in remote SDP doesn't match "
