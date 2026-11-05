@@ -73,6 +73,11 @@ target_link_libraries(pjsua2jni PRIVATE
 if(NOT ANDROID)
   find_package(JNI REQUIRED COMPONENTS JVM)
   target_include_directories(pjsua2jni PRIVATE ${JNI_INCLUDE_DIRS})
+else()
+  # The wrapper itself calls ANativeWindow_fromSurface() (pjsua2.i), as
+  # java/Makefile links it; pjmedia-videodev only passes libandroid on when
+  # static
+  target_link_libraries(pjsua2jni PRIVATE android)
 endif()
 
 # The wrapper reads pointers out of jlong by type punning, which SWIG advises
