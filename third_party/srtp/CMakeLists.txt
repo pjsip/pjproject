@@ -47,7 +47,7 @@ endif()
 # ##############################################################################
 # Target
 
-add_library(srtp
+add_library(pj_srtp
   # main
   srtp/srtp.c
   # ciphers
@@ -72,14 +72,14 @@ add_library(srtp
 )
 
 if(SRTP_WITH_OPENSSL AND OPENSSL_HAS_GCM)
-  target_sources(srtp
+  target_sources(pj_srtp
     PRIVATE
       crypto/cipher/aes_icm_ossl.c
       crypto/cipher/aes_gcm_ossl.c
       crypto/hash/hmac_ossl.c
   )
 else()
-  target_sources(srtp
+  target_sources(pj_srtp
     PRIVATE
       crypto/cipher/aes.c
       crypto/cipher/aes_icm.c
@@ -89,7 +89,7 @@ else()
 endif()
 
 # headers
-target_sources(srtp
+target_sources(pj_srtp
   PUBLIC
     FILE_SET HEADERS
       BASE_DIRS
@@ -130,23 +130,23 @@ target_sources(srtp
 # Dependencies
 
 # pjlib - for log overrides
-target_link_libraries(srtp PRIVATE pjlib)
+target_link_libraries(pj_srtp PRIVATE pjlib)
 
 # OpenSSL
 if(SRTP_WITH_OPENSSL AND OPENSSL_HAS_GCM)
-  target_link_libraries(srtp PRIVATE OpenSSL::Crypto)
-  target_compile_definitions(srtp PRIVATE OPENSSL=1 GCM=1)
+  target_link_libraries(pj_srtp PRIVATE OpenSSL::Crypto)
+  target_compile_definitions(pj_srtp PRIVATE OPENSSL=1 GCM=1)
 endif()
 
 # ##############################################################################
 # Configuration
 
-target_include_directories(srtp BEFORE
+target_include_directories(pj_srtp BEFORE
   PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/../build/srtp"
 )
 
-target_compile_definitions(srtp PRIVATE HAVE_CONFIG_H=1)
+target_compile_definitions(pj_srtp PRIVATE HAVE_CONFIG_H=1)
 
 # For the pkg-config file: the files of the dependencies found here
 pj_pc_remember_imported_targets()

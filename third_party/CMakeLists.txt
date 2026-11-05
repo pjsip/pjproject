@@ -138,7 +138,14 @@ foreach(dep IN LISTS DEPS)
   # import dependency
   if(${dep_option_name} STREQUAL "bundled")
     add_subdirectory(${DEP_${dep}_SUBDIR} EXCLUDE_FROM_ALL)
-    set(dep_target ${DEP_${dep}_SUBDIR})
+    # A target name of our own, so that a project building pjproject inside
+    # it (add_subdirectory(), FetchContent) can have its own srtp or yuv. The
+    # library file and the installed Pj::<name> keep the plain name.
+    set(dep_target pj_${DEP_${dep}_SUBDIR})
+    set_target_properties(${dep_target} PROPERTIES
+      OUTPUT_NAME ${DEP_${dep}_SUBDIR}
+      EXPORT_NAME ${DEP_${dep}_SUBDIR}
+    )
     list(APPEND install_subdirs ${DEP_${dep}_SUBDIR})
   elseif(${dep_option_name} STREQUAL "system")
     pj_retry_on_new_root(${dep_option_name} ${DEP_${dep}_PACKAGE})
@@ -191,6 +198,7 @@ endif()
 # one it does not link is never built (EXCLUDE_FROM_ALL), so exporting it
 # would break find_package(Pj) for consumers.
 function(pj_install_bundled_dep target)
+  get_target_property(name ${target} EXPORT_NAME)
   install(TARGETS ${target}
     EXPORT PjTargets
     LIBRARY
@@ -202,7 +210,7 @@ function(pj_install_bundled_dep target)
       COMPONENT PjDevelopment
       OPTIONAL
     FILE_SET HEADERS
-      DESTINATION  "${CMAKE_INSTALL_INCLUDEDIR}/pjproject/third_party/${target}"
+      DESTINATION  "${CMAKE_INSTALL_INCLUDEDIR}/pjproject/third_party/${name}"
       COMPONENT PjDevelopment
       OPTIONAL
   )

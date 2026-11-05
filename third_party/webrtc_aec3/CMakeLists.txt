@@ -1,7 +1,7 @@
 # ##############################################################################
 # Target
 
-add_library(webrtc_aec3
+add_library(pj_webrtc_aec3
   src/absl/types/bad_optional_access.cc
   src/common_audio/audio_util.cc
   src/common_audio/third_party/ooura/fft_size_128/ooura_fft.cc
@@ -148,7 +148,7 @@ file(GLOB_RECURSE WEBRTC_AEC3_HEADERS
   "*.h"
 )
 
-target_sources(webrtc_aec3
+target_sources(pj_webrtc_aec3
   PUBLIC
     FILE_SET HEADERS
       BASE_DIRS
@@ -158,11 +158,11 @@ target_sources(webrtc_aec3
 )
 
 # require C++17 support
-target_compile_features(webrtc_aec3 PRIVATE cxx_std_17)
+target_compile_features(pj_webrtc_aec3 PRIVATE cxx_std_17)
 
 # Suppress warnings
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-  target_compile_options(webrtc_aec3
+  target_compile_options(pj_webrtc_aec3
     PRIVATE
       -Wno-return-type
       -Wno-deprecated-builtins
@@ -171,7 +171,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   )
 elseif(MSVC)
   # As third_party/build/webrtc_aec3/libwebrtc_aec3.vcxproj
-  target_compile_options(webrtc_aec3
+  target_compile_options(pj_webrtc_aec3
     PRIVATE
       /wd4005 /wd4100 /wd4127 /wd4244 /wd4267 /wd4305 /wd4311 /wd4456
       /wd4530 /wd4715
@@ -179,19 +179,19 @@ elseif(MSVC)
 endif()
 
 include(DetectWebRTCParameters)
-target_compile_options(webrtc_aec3 PRIVATE ${WEBRTC_COMPILE_OPTIONS})
+target_compile_options(pj_webrtc_aec3 PRIVATE ${WEBRTC_COMPILE_OPTIONS})
 # public: echo_webrtc_aec3.cpp includes WebRTC headers that need them
-target_compile_definitions(webrtc_aec3 PUBLIC ${WEBRTC_COMPILE_DEFINITIONS})
+target_compile_definitions(pj_webrtc_aec3 PUBLIC ${WEBRTC_COMPILE_DEFINITIONS})
 
 # Include SIMD source files
 if(WEBRTC_ARCH_SIMD STREQUAL "neon")
-  target_sources(webrtc_aec3
+  target_sources(pj_webrtc_aec3
     PRIVATE
       src/common_audio/resampler/sinc_resampler_neon.cc
       src/common_audio/third_party/ooura/fft_size_128/ooura_fft_neon.cc
   )
 elseif(WEBRTC_ARCH_SIMD STREQUAL "sse2")
-  target_sources(webrtc_aec3
+  target_sources(pj_webrtc_aec3
     PRIVATE
       src/common_audio/resampler/sinc_resampler_sse.cc
       src/common_audio/third_party/ooura/fft_size_128/ooura_fft_sse2.cc
@@ -207,7 +207,7 @@ elseif(WEBRTC_ARCH_SIMD STREQUAL "sse2")
     src/modules/audio_processing/aec3/vector_math_avx2.cc
     src/modules/audio_processing/agc2/rnn_vad/rnn_vector_math_avx2.cc
   )
-  target_sources(webrtc_aec3 PRIVATE ${WEBRTC_AEC3_AVX2_SOURCES})
+  target_sources(pj_webrtc_aec3 PRIVATE ${WEBRTC_AEC3_AVX2_SOURCES})
   if(NOT MSVC)
     set_source_files_properties(${WEBRTC_AEC3_AVX2_SOURCES}
       PROPERTIES COMPILE_OPTIONS "-mavx2;-mfma"
@@ -226,13 +226,13 @@ if (NOT (WIN32 OR CYGWIN OR MINGW))
   # not look.
   find_library(MATH_LIBRARY m)
   if(MATH_LIBRARY OR CMAKE_SYSTEM_NAME STREQUAL "Generic")
-    target_link_libraries(webrtc_aec3 PRIVATE m)
+    target_link_libraries(pj_webrtc_aec3 PRIVATE m)
   endif()
 elseif(NOT CMAKE_SYSTEM_NAME MATCHES "Windows(Store|Phone)")
-  target_link_libraries(webrtc_aec3 PRIVATE winmm)
+  target_link_libraries(pj_webrtc_aec3 PRIVATE winmm)
 endif()
 
 # logging uses __android_log_print
 if(ANDROID)
-  target_link_libraries(webrtc_aec3 PUBLIC log)
+  target_link_libraries(pj_webrtc_aec3 PUBLIC log)
 endif()
