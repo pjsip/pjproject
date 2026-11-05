@@ -1062,11 +1062,17 @@ typedef struct {
 /* Handles events until cond(arg) holds, for up to 10 seconds */
 static pj_bool_t wait_for(pj_bool_t (*cond)(const void *arg), const void *arg)
 {
-    unsigned elapsed;
+    pj_time_val t0, now;
 
-    for (elapsed = 0; elapsed < 10000 && !cond(arg); elapsed += 50)
+    pj_gettickcount(&t0);
+    while (!cond(arg)) {
+        pj_gettickcount(&now);
+        PJ_TIME_VAL_SUB(now, t0);
+        if (PJ_TIME_VAL_MSEC(now) >= 10000)
+            return PJ_FALSE;
         pjsua_handle_events(50);
-    return cond(arg);
+    }
+    return PJ_TRUE;
 }
 
 static pj_bool_t call_has_state(pjsua_call_id call_id, pjsip_inv_state state)
