@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -76,8 +76,15 @@ PJ_DEF(void) pj_push_exception_handler_(struct pj_exception_state_t *rec)
     struct pj_exception_state_t *parent_handler = NULL;
 
     if (thread_local_id == -1) {
-        pj_thread_local_alloc(&thread_local_id);
-        pj_assert(thread_local_id != -1);
+        pj_status_t status;
+
+        status = pj_thread_local_alloc(&thread_local_id);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(1, ("except.c", status,
+                          "Error allocating exception handler TLS"));
+            pj_assert(status == PJ_SUCCESS);
+            return;
+        }
         pj_atexit(&exception_cleanup);
     }
     parent_handler = (struct pj_exception_state_t *)
