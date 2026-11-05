@@ -1,10 +1,10 @@
 # ##############################################################################
 # Target
 
-add_library(resample src/resamplesubs.c)
+add_library(pj_resample src/resamplesubs.c)
 
 # headers
-target_sources(resample
+target_sources(pj_resample
   PUBLIC
     FILE_SET HEADERS
       BASE_DIRS
@@ -23,7 +23,7 @@ file(CREATE_LINK
   COPY_ON_ERROR
 )
 
-target_include_directories(resample
+target_include_directories(pj_resample
   INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
 )
@@ -31,7 +31,7 @@ target_include_directories(resample
 # ##############################################################################
 # Configuration
 
-target_include_directories(resample BEFORE
+target_include_directories(pj_resample BEFORE
   PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/../build/resample"
 )

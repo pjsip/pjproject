@@ -1,7 +1,7 @@
 # ##############################################################################
 # Target
 
-add_library(speex
+add_library(pj_speex
   libspeex/bits.c
   libspeex/cb_search.c
   libspeex/exc_10_16_table.c
@@ -44,7 +44,7 @@ add_library(speex
 )
 
 # headers
-target_sources(speex
+target_sources(pj_speex
   PUBLIC
     FILE_SET HEADERS
       BASE_DIRS
@@ -72,7 +72,7 @@ target_sources(speex
 # Dependencies
 
 # pjlib - for config & log overrides
-target_link_libraries(speex PRIVATE pjlib)
+target_link_libraries(pj_speex PRIVATE pjlib)
 
 if (NOT (WIN32 OR CYGWIN OR MINGW))
   # Speex calls libm functions (exp(), pow(), ...), a separate library
@@ -82,16 +82,16 @@ if (NOT (WIN32 OR CYGWIN OR MINGW))
   # not look.
   find_library(MATH_LIBRARY m)
   if(MATH_LIBRARY OR CMAKE_SYSTEM_NAME STREQUAL "Generic")
-    target_link_libraries(speex PUBLIC m)
+    target_link_libraries(pj_speex PUBLIC m)
   endif()
 endif()
 
 # ##############################################################################
 # Configuration
 
-target_include_directories(speex BEFORE
+target_include_directories(pj_speex BEFORE
   PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/../build/speex"
 )
 
-target_compile_definitions(speex PRIVATE HAVE_CONFIG_H=1)
+target_compile_definitions(pj_speex PRIVATE HAVE_CONFIG_H=1)

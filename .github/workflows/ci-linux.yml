@@ -946,9 +946,11 @@ jobs:
       run: |
         grep '^MATH_LIBRARY:FILEPATH=/usr/lib/arm-none-eabi/' build-cross/CMakeCache.txt
         if grep '^CMAKE_CXX_COMPILER' build-cross/CMakeCache.txt; then exit 1; fi
-        if grep -e WEBRTC_HAS_NEON -e -mfpu=neon build-cross/third_party/webrtc/CMakeFiles/webrtc.dir/flags.make; then exit 1; fi
+        flags=build-cross/third_party/webrtc/CMakeFiles/pj_webrtc.dir/flags.make
+        test -f "$flags"
+        if grep -e WEBRTC_HAS_NEON -e -mfpu=neon "$flags"; then exit 1; fi
     - name: build
-      run: cmake --build build-cross --target resample -j $(nproc)
+      run: cmake --build build-cross --target pj_resample -j $(nproc)
     - name: check target
       run: |
         arm-none-eabi-readelf -A build-cross/third_party/lib/libresample.a | grep 'Tag_CPU_name: "8-M.MAIN"'
@@ -981,7 +983,9 @@ jobs:
           -D_pj_detected_simd_ext:INTERNAL=neon \
           -D_pj_detected_simd_ext_flags:INTERNAL=-mfpu=neon \
           -D_simd_supported:INTERNAL=1
-        if grep -e WEBRTC_HAS_NEON -e -mfpu=neon build-cross-fpu/third_party/webrtc/CMakeFiles/webrtc.dir/flags.make; then exit 1; fi
+        flags=build-cross-fpu/third_party/webrtc/CMakeFiles/pj_webrtc.dir/flags.make
+        test -f "$flags"
+        if grep -e WEBRTC_HAS_NEON -e -mfpu=neon "$flags"; then exit 1; fi
     - name: configure without bundled dependencies
       run: |
         cmake -B build-cross-min --toolchain cmake/toolchains/arm-none-eabi.cmake \
