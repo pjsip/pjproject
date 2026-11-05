@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -609,8 +609,11 @@ static void call_rtp_cb(struct transport_udp *udp, pj_ssize_t bytes_read,
         pj_grp_lock_dec_ref(cb_grp_lock);
 }
 
-/* Call RTCP cb. */
-static void call_rtcp_cb(struct transport_udp *udp, pj_ssize_t bytes_read)
+/* Call RTCP cb. If src_addr is not NULL, it receives a snapshot of
+ * rtcp_src_addr taken under the lock (see call_rtp_cb()).
+ */
+static void call_rtcp_cb(struct transport_udp *udp, pj_ssize_t bytes_read,
+                         pj_sockaddr *src_addr)
 {
     void(*cb)(void*, void*, pj_ssize_t);
     void *user_data;
@@ -628,6 +631,8 @@ static void call_rtcp_cb(struct transport_udp *udp, pj_ssize_t bytes_read)
     cb_grp_lock = udp->cb_grp_lock;
     if (cb_grp_lock)
         pj_grp_lock_add_ref(cb_grp_lock);
+    if (src_addr)
+        pj_memcpy(src_addr, &udp->rtcp_src_addr, sizeof(*src_addr));
 
     if (udp->base.grp_lock)
         pj_grp_lock_release(udp->base.grp_lock);
@@ -808,6 +813,7 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
 {
     struct transport_udp *udp;
     pj_status_t status = PJ_SUCCESS;
+    pj_sockaddr src_addr;
     pj_bool_t transport_restarted = PJ_FALSE;
     unsigned num_err = 0;
     pj_status_t last_err = PJ_SUCCESS;
@@ -828,13 +834,13 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
         status = transport_restart(PJ_FALSE, udp);
         if (status != PJ_SUCCESS) {
             bytes_read = -PJ_ESOCKETSTOP;
-            call_rtcp_cb(udp, bytes_read);
+            call_rtcp_cb(udp, bytes_read, NULL);
         }
         return;
     }
 
     do {
-        call_rtcp_cb(udp, bytes_read);
+        call_rtcp_cb(udp, bytes_read, &src_addr);
 
         /* Transport may be destroyed from the callback! */
         if (!udp->rtcp_key || !udp->started)
@@ -848,14 +854,17 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
          *
          * Skip when rem_rtcp_addr is not initialized yet (sa_family==0),
          * e.g. an RTCP packet arriving before transport_attach2() or on a
-         * recycled transport: pj_sockaddr_cmp() would call
-         * pj_sockaddr_get_addr_len(), which asserts on an invalid family.
+         * recycled transport, or when the source address snapshot was
+         * zeroed by a concurrent transport_attach2(): pj_sockaddr_cmp()
+         * asserts on an invalid family.
          */
         if (bytes_read>0 &&
             (udp->options & PJMEDIA_UDP_NO_SRC_ADDR_CHECKING)==0 &&
-            udp->rem_rtcp_addr.addr.sa_family != 0)
+            udp->rem_rtcp_addr.addr.sa_family != 0 &&
+            (src_addr.addr.sa_family == PJ_AF_INET ||
+             src_addr.addr.sa_family == PJ_AF_INET6))
         {
-            if (pj_sockaddr_cmp(&udp->rem_rtcp_addr, &udp->rtcp_src_addr) == 0) {
+            if (pj_sockaddr_cmp(&udp->rem_rtcp_addr, &src_addr) == 0) {
                 /* Still receiving from rem_rtcp_addr, don't switch */
                 udp->rtcp_src_cnt = 0;
             } else {
@@ -865,12 +874,11 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
                     char addr_text[PJ_INET6_ADDRSTRLEN+10];
 
                     udp->rtcp_src_cnt = 0;
-                    pj_memcpy(&udp->rem_rtcp_addr, &udp->rtcp_src_addr,
-                              sizeof(pj_sockaddr));
+                    pj_sockaddr_cp(&udp->rem_rtcp_addr, &src_addr);
 
                     PJ_LOG(4,(udp->base.name,
                               "Remote RTCP address switched to %s",
-                              pj_sockaddr_print(&udp->rtcp_src_addr, addr_text,
+                              pj_sockaddr_print(&src_addr, addr_text,
                                                 sizeof(addr_text), 3)));
                 }
             }
@@ -888,7 +896,7 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
             if (transport_restarted && last_err == status) {
                 /* Still the same error after restart */
                 bytes_read = -PJ_ESOCKETSTOP;
-                call_rtcp_cb(udp, bytes_read);
+                call_rtcp_cb(udp, bytes_read, NULL);
                 break;
             } else if (PJMEDIA_IGNORE_RECV_ERR_CNT) {
                 if (last_err == status) {
@@ -904,7 +912,7 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
                     status = transport_restart(PJ_FALSE, udp);              
                     if (status != PJ_SUCCESS) {
                         bytes_read = -PJ_ESOCKETSTOP;
-                        call_rtcp_cb(udp, bytes_read);
+                        call_rtcp_cb(udp, bytes_read, NULL);
                         break;
                     }
                     transport_restarted = PJ_TRUE;
