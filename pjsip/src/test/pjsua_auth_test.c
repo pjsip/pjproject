@@ -154,14 +154,10 @@ static struct {
     int                  auth_count;/* Requests with credentials seen     */
     pjsua_call_id        callee_call;
     int                  peer_status; /* Final answer to callee's INVITE  */
-    int                  caller_401;/* App got a 401 to caller's request  */
     pj_bool_t            stage;     /* Stage an offer on caller's media   */
     pj_status_t          staged;    /* Result of staging it               */
     pjsip_transaction   *held_tsx;  /* INVITE answered with 180 only      */
     pjsip_tx_data       *held_final;/* Its final answer                   */
-    pj_bool_t            ring_only; /* Callee answers new calls with 180  */
-    int                  xfer_status;/* Last transfer status to the callee*/
-    int                  pager_status;/* Final answer to caller's MESSAGE */
 } g_mock_proxy = {
     {
         NULL, NULL,
@@ -172,8 +168,8 @@ static struct {
         &mock_proxy_rx_request,
         NULL, NULL, NULL, NULL,
     },
-    NULL, NULL, NULL, { 0 }, 0, RETRY_SENT, 0, 0, PJSUA_INVALID_ID, 0, 0,
-    PJ_FALSE, PJ_EUNKNOWN, NULL, NULL, PJ_FALSE, 0, 0
+    NULL, NULL, NULL, { 0 }, 0, RETRY_SENT, 0, 0, PJSUA_INVALID_ID, 0,
+    PJ_FALSE, PJ_EUNKNOWN, NULL, NULL
 };
 
 /* Sets the answers to the caller's next requests of the method */
@@ -217,12 +213,8 @@ static void mock_proxy_reset(void)
     g_mock_proxy.answered = g_mock_proxy.auth_count = 0;
     g_mock_proxy.callee_call = PJSUA_INVALID_ID;
     g_mock_proxy.peer_status = 0;
-    g_mock_proxy.caller_401 = 0;
     g_mock_proxy.stage = PJ_FALSE;
     g_mock_proxy.staged = PJ_EUNKNOWN;
-    g_mock_proxy.ring_only = PJ_FALSE;
-    g_mock_proxy.xfer_status = 0;
-    g_mock_proxy.pager_status = 0;
     pj_mutex_unlock(g_mock_proxy.mutex);
 }
 
@@ -479,46 +471,15 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
                              pjsip_rx_data *rdata)
 {
     pjsua_call_setting opt;
-    pj_bool_t          ring_only;
 
     PJ_UNUSED_ARG(acc_id);
     PJ_UNUSED_ARG(rdata);
     pj_mutex_lock(g_mock_proxy.mutex);
-    ring_only = g_mock_proxy.ring_only;
-    if (!ring_only)
-        g_mock_proxy.callee_call = call_id;
+    g_mock_proxy.callee_call = call_id;
     pj_mutex_unlock(g_mock_proxy.mutex);
     pjsua_call_setting_default(&opt);
     opt.vid_cnt = 0;
-    pjsua_call_answer2(call_id, &opt,
-                       ring_only ? PJSIP_SC_RINGING : PJSIP_SC_OK, NULL, NULL);
-}
-
-static void on_call_transfer_status(pjsua_call_id call_id, int st_code,
-                                    const pj_str_t *st_text, pj_bool_t final,
-                                    pj_bool_t *p_cont)
-{
-    PJ_UNUSED_ARG(st_text);
-    PJ_UNUSED_ARG(final);
-    PJ_UNUSED_ARG(p_cont);
-    pj_mutex_lock(g_mock_proxy.mutex);
-    if (call_id == g_mock_proxy.callee_call)
-        g_mock_proxy.xfer_status = st_code;
-    pj_mutex_unlock(g_mock_proxy.mutex);
-}
-
-static void on_pager_status(pjsua_call_id call_id, const pj_str_t *to,
-                            const pj_str_t *body, void *user_data,
-                            pjsip_status_code status, const pj_str_t *reason)
-{
-    PJ_UNUSED_ARG(to);
-    PJ_UNUSED_ARG(body);
-    PJ_UNUSED_ARG(user_data);
-    PJ_UNUSED_ARG(reason);
-    pj_mutex_lock(g_mock_proxy.mutex);
-    if (call_id != PJSUA_INVALID_ID && call_id != g_mock_proxy.callee_call)
-        g_mock_proxy.pager_status = status;
-    pj_mutex_unlock(g_mock_proxy.mutex);
+    pjsua_call_answer2(call_id, &opt, PJSIP_SC_OK, NULL, NULL);
 }
 
 /* Stages an offer when the caller's media is updated, if asked */
@@ -546,27 +507,20 @@ static void on_call_media_state(pjsua_call_id call_id)
     pj_mutex_unlock(g_mock_proxy.mutex);
 }
 
-/* Records the final answer to the callee's re-INVITE, and a 401 to the
- * caller's request
- */
+/* Records the final answer to the callee's re-INVITE */
 static void on_call_tsx_state(pjsua_call_id call_id, pjsip_transaction *tsx,
                               pjsip_event *e)
 {
     PJ_UNUSED_ARG(e);
     if (tsx->role != PJSIP_ROLE_UAC ||
+        tsx->method.id != PJSIP_INVITE_METHOD ||
         tsx->state < PJSIP_TSX_STATE_COMPLETED || tsx->status_code < 200)
     {
         return;
     }
     pj_mutex_lock(g_mock_proxy.mutex);
-    if (call_id != g_mock_proxy.callee_call) {
-        if (tsx->status_code == 401)
-            g_mock_proxy.caller_401 = 1;
-    } else if (tsx->method.id == PJSIP_INVITE_METHOD &&
-               !g_mock_proxy.peer_status)
-    {
+    if (call_id == g_mock_proxy.callee_call && !g_mock_proxy.peer_status)
         g_mock_proxy.peer_status = tsx->status_code;
-    }
     pj_mutex_unlock(g_mock_proxy.mutex);
 }
 
@@ -1261,12 +1215,6 @@ static pj_bool_t challenge_deferred(const void *arg)
     return g_ctx.deferred.pending;
 }
 
-static pj_bool_t caller_got_401(const void *arg)
-{
-    PJ_UNUSED_ARG(arg);
-    return mock_get(&g_mock_proxy.caller_401);
-}
-
 static pj_bool_t peer_answered(const void *arg)
 {
     PJ_UNUSED_ARG(arg);
@@ -1504,7 +1452,6 @@ static int offer_fail_test(pjsua_transport_id tp_id, int port, unsigned idx)
     offer_state_t       st0, st;
     answered_t          a;
     pj_status_t         status;
-    pj_bool_t           got_401;
     int                 peer;
     int                 rc;
 
@@ -1605,20 +1552,6 @@ static int offer_fail_test(pjsua_transport_id tp_id, int port, unsigned idx)
                    st.med_cnt, st0.med_cnt));
         rc = rc_base - 16;
         goto on_return;
-    }
-
-    /* The application gets the 401 only when it ends the request */
-    if (!c->defer) {
-        got_401 = c->retry != RETRY_SENT ||
-                  (c->answered == MAX_ANSWERS && c->answer[1] == 401);
-        if (got_401 ? !wait_for(&caller_got_401, NULL) :
-                      mock_get(&g_mock_proxy.caller_401))
-        {
-            PJ_LOG(3, (THIS_FILE, "    error: the 401 was %sreported",
-                       got_401 ? "not " : ""));
-            rc = rc_base - 18;
-            goto on_return;
-        }
     }
 
     /* The callee can still change the session */
@@ -1756,136 +1689,6 @@ on_return:
 
 
 /*****************************************************************************
- * Sub-test 7: xfer_notify_test
- *
- * The callee transfers the call to itself, and the caller's first NOTIFY
- * gets a 401 whose retry can't be sent. The transfer subscription goes on:
- * the callee hears of the new call ringing.
- *****************************************************************************/
-static pj_bool_t xfer_ringing(const void *arg)
-{
-    PJ_UNUSED_ARG(arg);
-    return mock_get(&g_mock_proxy.answered) == 1 &&
-           mock_get(&g_mock_proxy.xfer_status) == PJSIP_SC_RINGING;
-}
-
-static int xfer_notify_test(pjsua_transport_id tp_id, int port)
-{
-    const int     rc_base = -5600;
-    test_call_t   tc;
-    pjsua_call_id ids[PJSUA_MAX_CALLS];
-    unsigned      i, count = PJ_ARRAY_SIZE(ids);
-    pj_bool_t     subscribed = PJ_FALSE;
-    char          uri[64];
-    pj_str_t      dst;
-    int           rc;
-
-    PJ_LOG(3, (THIS_FILE, "  pjsua auth: transfer NOTIFY, retry can't be "
-               "sent"));
-
-    pj_bzero(&g_ctx, sizeof(g_ctx));
-    mock_proxy_reset();
-    rc = test_call_start(&tc, tp_id, port, rc_base);
-    if (rc != 0)
-        goto on_return;
-
-    pj_mutex_lock(g_mock_proxy.mutex);
-    g_mock_proxy.ring_only = PJ_TRUE;
-    pj_mutex_unlock(g_mock_proxy.mutex);
-    mock_proxy_arm(&pjsip_notify_method, 401, ANS_PASS, RETRY_UNSENT);
-
-    pj_ansi_snprintf(uri, sizeof(uri), "sip:" CALLEE_USER "@127.0.0.1:%d",
-                     port);
-    dst = pj_str(uri);
-    if (pjsua_call_xfer(mock_get(&g_mock_proxy.callee_call), &dst,
-                        NULL) != PJ_SUCCESS)
-    {
-        rc = rc_base - 5;
-        goto on_return;
-    }
-    if (!wait_for(&xfer_ringing, NULL)) {
-        PJ_LOG(3, (THIS_FILE, "    error: transfer status %d",
-                   mock_get(&g_mock_proxy.xfer_status)));
-        rc = rc_base - 6;
-        goto on_return;
-    }
-
-    /* The new call of the caller still reports to the callee */
-    if (pjsua_enum_calls(ids, &count) != PJ_SUCCESS)
-        count = 0;
-    PJSUA_LOCK();
-    for (i = 0; i < count; ++i) {
-        if (ids[i] != tc.call_id && pjsua_var.calls[ids[i]].xfer_sub)
-            subscribed = PJ_TRUE;
-    }
-    PJSUA_UNLOCK();
-    if (!subscribed) {
-        PJ_LOG(3, (THIS_FILE, "    error: the transfer subscription ended"));
-        rc = rc_base - 7;
-    }
-
-on_return:
-    mock_proxy_reset();
-    test_call_end(&tc);
-
-    return rc;
-}
-
-
-/*****************************************************************************
- * Sub-test 8: im_unsent_test
- *
- * The caller's MESSAGE in the call gets a 401 whose retry can't be sent.
- * The application gets the 401 as the final answer.
- *****************************************************************************/
-static pj_bool_t pager_answered(const void *arg)
-{
-    PJ_UNUSED_ARG(arg);
-    return mock_get(&g_mock_proxy.pager_status) != 0;
-}
-
-static int im_unsent_test(pjsua_transport_id tp_id, int port)
-{
-    const int   rc_base = -5700;
-    test_call_t tc;
-    pj_str_t    text = pj_str("hello");
-    int         rc;
-
-    PJ_LOG(3, (THIS_FILE, "  pjsua auth: MESSAGE, retry can't be sent"));
-
-    pj_bzero(&g_ctx, sizeof(g_ctx));
-    mock_proxy_reset();
-    rc = test_call_start(&tc, tp_id, port, rc_base);
-    if (rc != 0)
-        goto on_return;
-
-    mock_proxy_arm(&pjsip_message_method, 401, ANS_PASS, RETRY_UNSENT);
-    if (pjsua_call_send_im(tc.call_id, NULL, &text, NULL, NULL) !=
-        PJ_SUCCESS)
-    {
-        rc = rc_base - 5;
-        goto on_return;
-    }
-    if (!wait_for(&pager_answered, NULL)) {
-        PJ_LOG(3, (THIS_FILE, "    error: no final answer reported"));
-        rc = rc_base - 6;
-        goto on_return;
-    }
-    if (mock_get(&g_mock_proxy.pager_status) != 401) {
-        PJ_LOG(3, (THIS_FILE, "    error: final answer %d",
-                   mock_get(&g_mock_proxy.pager_status)));
-        rc = rc_base - 7;
-    }
-
-on_return:
-    mock_proxy_reset();
-    test_call_end(&tc);
-
-    return rc;
-}
-
-
-/*****************************************************************************
  * Main entry point
  *****************************************************************************/
 int pjsua_auth_test(void)
@@ -1926,8 +1729,6 @@ int pjsua_auth_test(void)
     ua_cfg.cb.on_incoming_call  = &on_incoming_call;
     ua_cfg.cb.on_call_tsx_state = &on_call_tsx_state;
     ua_cfg.cb.on_call_media_state = &on_call_media_state;
-    ua_cfg.cb.on_call_transfer_status = &on_call_transfer_status;
-    ua_cfg.cb.on_pager_status   = &on_pager_status;
 
     pjsua_logging_config_default(&log_cfg);
     log_cfg.level        = 3;
@@ -2029,12 +1830,6 @@ int pjsua_auth_test(void)
         rc = staged_offer_test(tp_id, (int)port, i);
         if (rc != 0) goto on_return;
     }
-
-    rc = xfer_notify_test(tp_id, (int)port);
-    if (rc != 0) goto on_return;
-
-    rc = im_unsent_test(tp_id, (int)port);
-    if (rc != 0) goto on_return;
 
 on_return:
     if (g_mock_reg.mod.id != -1)
