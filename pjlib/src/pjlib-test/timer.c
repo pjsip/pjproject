@@ -710,14 +710,14 @@ on_return:
     }
 
     for (i=0; i<ST_POLL_THREAD_COUNT; ++i) {
-        if (!poll_threads[i])
+        if (!poll_threads || !poll_threads[i])
             continue;
         pj_thread_join(poll_threads[i]);
         pj_thread_destroy(poll_threads[i]);
     }
     
     for (i=0; i<ST_CANCEL_THREAD_COUNT; ++i) {
-        if (!cancel_threads[i])
+        if (!cancel_threads || !cancel_threads[i])
             continue;
         pj_thread_join(cancel_threads[i]);
         pj_thread_destroy(cancel_threads[i]);
@@ -730,12 +730,15 @@ on_return:
     }
 
     for (i=0; i<ST_ENTRY_COUNT; ++i) {
-        count += pj_timer_heap_cancel_if_active(timer, &entries[i], 10);
-        if (entries_status)
+        if (timer && entries)
+            count += pj_timer_heap_cancel_if_active(timer, &entries[i], 10);
+        if (entries_status && entries_status[i])
             pj_atomic_destroy(entries_status[i]);
     }
 
     for (i=0; i<ST_ENTRY_GROUP_LOCK_COUNT; ++i) {
+        if (!grp_locks || !grp_locks[i])
+            continue;
         /* Ref count must be equal to 1 */
         if (pj_grp_lock_get_ref(grp_locks[i]) != 1) {
             pj_assert(!"Group lock ref count must be equal to 1");
