@@ -205,8 +205,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 }
 
 /* Callback when data has been written. The pending send made this thread
- * the owner of send_op, so increment item->bytes_sent and write the next
- * data.
+ * the owner of send_op, so consume its request and send for the rest.
  */
 static void on_write_complete(pj_ioqueue_key_t *key, 
                               pj_ioqueue_op_key_t *op_key,
@@ -221,19 +220,16 @@ static void on_write_complete(pj_ioqueue_key_t *key,
     if (item->run->quit)
         return;
 
-    if (bytes_sent <= 0) {
-        if (!IS_ERROR_SILENCED(-bytes_sent)) {
-            PJ_PERROR(3, (THIS_FILE, (pj_status_t)-bytes_sent,
-                          "...error: sending stopped. bytes_sent=%ld",
-                         -bytes_sent));
-        }
-        if (pj_atomic_dec_and_get(item->send_req) > 0)
-            send_loop(item);
-        return;
+    if (bytes_sent > 0) {
+        item->bytes_sent += bytes_sent;
+    } else if (!IS_ERROR_SILENCED(-bytes_sent)) {
+        PJ_PERROR(3, (THIS_FILE, (pj_status_t)-bytes_sent,
+                      "...error: sending stopped. bytes_sent=%ld",
+                      -bytes_sent));
     }
 
-    item->bytes_sent += bytes_sent;
-    send_loop(item);
+    if (pj_atomic_dec_and_get(item->send_req) > 0)
+        send_loop(item);
 }
 
 struct thread_arg
@@ -415,7 +411,15 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
     /* Start the thread. */
     TRACE_((THIS_FILE, "     resuming all threads.."));
     for (i=0; i<thread_cnt; ++i) {
-        PJ_TEST_SUCCESS(pj_thread_resume(thread[i]), NULL, return -100);
+        unsigned j;
+
+        /* The started workers use run, which is on this stack */
+        PJ_TEST_SUCCESS(pj_thread_resume(thread[i]), NULL, {
+            run.quit = PJ_TRUE;
+            for (j=0; j<i; ++j)
+                pj_thread_join(thread[j]);
+            return -100;
+        });
     }
 
     /* Wait for MSEC_DURATION seconds. 
