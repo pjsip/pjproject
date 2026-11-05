@@ -68,7 +68,8 @@ target_sources(pjnath
 # ##############################################################################
 # Dependencies
 
-target_link_libraries(pjnath PUBLIC pjlib PRIVATE pjlib-util)
+# PUBLIC: what the public headers include
+target_link_libraries(pjnath PUBLIC pjlib pjlib-util)
 
 # upnp
 if(PJNATH_WITH_UPNP)
