@@ -743,15 +743,19 @@ static int abandon_api_test(const pj_str_t *registrar_uri)
 
 /*****************************************************************************
  * Sub-test 6: Superseded request - pjsip_auth_clt_async_send_req() returns
- * PJ_ECANCELLED, sends nothing and calls no callback. A challenged
- * un-REGISTER is still sent after destroy.
+ * PJ_ECANCELLED, sends nothing and calls no callback, also when a newer
+ * request is only reserved. Abandoning it calls no callback either. A
+ * challenged un-REGISTER is still sent after destroy.
  *****************************************************************************/
 
 enum superseded_mode
 {
     SUPERSEDED_BY_UNREG,
     SUPERSEDED_BY_DESTROY,
-    UNREG_AFTER_DESTROY
+    UNREG_AFTER_DESTROY,
+    ABANDON_AFTER_REG,
+    SEND_WHILE_RESERVED,
+    ABANDON_WHILE_RESERVED
 };
 
 static struct {
@@ -788,10 +792,14 @@ static int superseded_test(const pj_str_t *registrar_uri,
 {
     static const char *title[] = {
         "REGISTER after un-REGISTER", "REGISTER after destroy",
-        "un-REGISTER after destroy"
+        "un-REGISTER after destroy", "abandon after a newer REGISTER",
+        "REGISTER while another is reserved",
+        "abandon while another REGISTER is reserved"
     };
     pjsip_regc    *regc = NULL;
-    pjsip_tx_data *tdata;
+    pjsip_tx_data *tdata, *reserved = NULL;
+    pj_bool_t      abandon = (mode == ABANDON_AFTER_REG ||
+                              mode == ABANDON_WHILE_RESERVED);
     unsigned       i, cnt, auth_cnt;
     pj_status_t    status;
     int            rc = 0;
@@ -818,10 +826,26 @@ static int superseded_test(const pj_str_t *registrar_uri,
         goto on_return;
     }
 
-    if (mode != SUPERSEDED_BY_UNREG) {
+    if (mode == SUPERSEDED_BY_DESTROY || mode == UNREG_AFTER_DESTROY) {
         pjsip_regc_destroy(regc);
         regc = NULL;
-    } else if (pjsip_regc_unregister(regc, &tdata) != PJ_SUCCESS ||
+    } else if (mode == SEND_WHILE_RESERVED ||
+               mode == ABANDON_WHILE_RESERVED)
+    {
+        if (pjsip_regc_register(regc, PJ_TRUE, &tdata) != PJ_SUCCESS) {
+            rc = err - 3;
+            goto on_return;
+        }
+        if (pjsip_regc_reserve(regc, tdata) != PJ_SUCCESS) {
+            pjsip_tx_data_dec_ref(tdata);
+            rc = err - 3;
+            goto on_return;
+        }
+        reserved = tdata;
+    } else if ((mode == SUPERSEDED_BY_UNREG ?
+                    pjsip_regc_unregister(regc, &tdata) :
+                    pjsip_regc_register(regc, PJ_TRUE, &tdata)) !=
+                PJ_SUCCESS ||
                pjsip_regc_send(regc, tdata) != PJ_SUCCESS)
     {
         rc = err - 3;
@@ -838,18 +862,45 @@ static int superseded_test(const pj_str_t *registrar_uri,
     g_ctx.done = PJ_FALSE;
     cnt = g_registrar.req_count;
     auth_cnt = g_registrar.auth_count;
-    status = pjsip_auth_clt_async_send_req(g_superseded.sess,
-                                           g_superseded.token,
-                                           g_superseded.tdata);
+    if (abandon) {
+        pjsip_tx_data_dec_ref(g_superseded.tdata);
+        status = pjsip_auth_clt_async_abandon(g_superseded.sess,
+                                              g_superseded.token);
+    } else {
+        status = pjsip_auth_clt_async_send_req(g_superseded.sess,
+                                               g_superseded.token,
+                                               g_superseded.tdata);
+    }
     g_superseded.tdata = NULL;
     flush_events(500);
     if (mode == UNREG_AFTER_DESTROY) {
         if (status != PJ_SUCCESS || g_registrar.auth_count != auth_cnt + 1)
             rc = err - 20;
+    } else if (abandon) {
+        if (status != PJ_SUCCESS || g_registrar.req_count != cnt ||
+            g_ctx.done)
+        {
+            rc = err - 30;
+        }
     } else if (status != PJ_ECANCELLED || g_registrar.req_count != cnt ||
                g_ctx.done)
     {
         rc = err - 10;
+    }
+
+    /* The reserved request still goes out and registers */
+    if (reserved) {
+        tdata = reserved;
+        reserved = NULL;
+        g_ctx.done = PJ_FALSE;
+        if (pjsip_regc_send(regc, tdata) != PJ_SUCCESS) {
+            if (!rc) rc = err - 40;
+        } else {
+            for (i = 0; i < 50 && !g_ctx.done; ++i)
+                flush_events(100);
+            if (!rc && g_ctx.reg_code != 200)
+                rc = err - 41;
+        }
     }
 
 on_return:
@@ -857,6 +908,8 @@ on_return:
         pjsip_tx_data_dec_ref(g_superseded.tdata);
         pjsip_auth_clt_async_abandon(g_superseded.sess, g_superseded.token);
     }
+    if (reserved)
+        pjsip_regc_send(regc, reserved);
     if (regc)
         pjsip_regc_destroy(regc);
     return rc;
@@ -1018,6 +1071,15 @@ int auth_async_test(void)
     if (rc != 0) goto on_return;
 
     rc = superseded_test(&registrar_uri, UNREG_AFTER_DESTROY, -1600);
+    if (rc != 0) goto on_return;
+
+    rc = superseded_test(&registrar_uri, ABANDON_AFTER_REG, -1900);
+    if (rc != 0) goto on_return;
+
+    rc = superseded_test(&registrar_uri, SEND_WHILE_RESERVED, -1950);
+    if (rc != 0) goto on_return;
+
+    rc = superseded_test(&registrar_uri, ABANDON_WHILE_RESERVED, -2000);
     if (rc != 0) goto on_return;
 
     /* 7. Session reset before the deferred send */

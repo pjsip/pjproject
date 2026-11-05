@@ -543,8 +543,10 @@ PJ_DECL(pj_status_t) pjsip_regc_set_auth_sess( pjsip_regc *regc,
  *
  * When the application handles a challenge asynchronously, the
  * authenticated request is not sent, and PJ_ECANCELLED is returned, if the
- * registration has sent another request since the challenge, or has been
- * destroyed and the request does not have an Expires header of zero.
+ * registration has sent or reserved another request since the challenge,
+ * or has been destroyed and the request does not have an Expires header of
+ * zero. In that case, and when such a challenge is abandoned, the callback
+ * is not called: the newer request reports the result.
  *
  * @param regc      The client registration structure.
  *

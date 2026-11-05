@@ -126,6 +126,14 @@ struct pjsip_regc
     pjsip_tx_data               *reserved_tdata;
 };
 
+/* The challenged request of a deferred authentication */
+typedef struct regc_chal
+{
+    pjsip_regc                  *regc;
+    pj_int32_t                   cseq;
+    pj_bool_t                    is_unreg;
+} regc_chal;
+
 
 static pj_status_t regc_send(pjsip_regc *regc, pjsip_tx_data *tdata,
                              pj_bool_t auth_retry, pj_bool_t *superseded);
@@ -1198,13 +1206,22 @@ static pj_uint32_t calculate_response_expiration(const pjsip_regc *regc,
 }
 
 
+/* The regc has sent or reserved another request since the one with cseq.
+ * Called with regc->lock held.
+ */
+static pj_bool_t chal_outdated(pjsip_regc *regc, pj_int32_t cseq)
+{
+    return cseq != regc->cseq_hdr->cseq || regc->reserved_tdata != NULL;
+}
+
 /* Sending authentication */
 static pj_status_t async_auth_send_impl(pjsip_auth_clt_sess *auth_sess,
                                         void *user_data,
                                         pjsip_tx_data *tdata)
 {
     pj_status_t status;
-    pjsip_regc *regc = (pjsip_regc*)user_data;
+    regc_chal *chal = (regc_chal*)user_data;
+    pjsip_regc *regc = chal->regc;
     pj_bool_t superseded = PJ_FALSE;
 
     PJ_UNUSED_ARG(auth_sess);
@@ -1213,7 +1230,6 @@ static pj_status_t async_auth_send_impl(pjsip_auth_clt_sess *auth_sess,
     status = regc_send(regc, tdata, PJ_TRUE, &superseded);
     if (status != PJ_SUCCESS && !superseded) {
         char errmsg[PJ_ERR_MSG_SIZE];
-        pj_bool_t is_unreg = (regc->current_op == REGC_UNREGISTERING);
         pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
         /* call_callback() is invoked here without holding regc->lock.
          * This function is called either from within the async challenge
@@ -1222,7 +1238,7 @@ static pj_status_t async_auth_send_impl(pjsip_auth_clt_sess *auth_sess,
          * and consistent with the rest of the codebase.
          */
         call_callback(regc, status, 0, &reason, NULL, NOEXP, 0, NULL,
-                      is_unreg);
+                      chal->is_unreg);
     }
 
     /* Release the reference the token took at creation. */
@@ -1236,18 +1252,26 @@ static pj_status_t async_auth_send_impl(pjsip_auth_clt_sess *auth_sess,
 static void async_auth_abandon_impl(pjsip_auth_clt_sess *auth_sess,
                                     void *user_data)
 {
-    pjsip_regc *regc = (pjsip_regc*)user_data;
-    pj_bool_t is_unreg = (regc->current_op == REGC_UNREGISTERING);
+    regc_chal *chal = (regc_chal*)user_data;
+    pjsip_regc *regc = chal->regc;
     pj_str_t reason = { "Authentication abandoned", 24 };
+    pj_bool_t outdated;
 
     PJ_UNUSED_ARG(auth_sess);
 
+    pj_lock_acquire(regc->lock);
+    outdated = chal_outdated(regc, chal->cseq);
+    pj_lock_release(regc->lock);
+
     /* Called without regc->lock held (same convention as send_impl). The
      * reference the token took at creation keeps the regc alive across the
-     * callback, which may destroy it.
+     * callback, which may destroy it. An outdated challenge is reported by
+     * the newer request, as in send_impl.
      */
-    call_callback(regc, PJ_ECANCELLED, PJSIP_SC_UNAUTHORIZED, &reason,
-                  NULL, NOEXP, 0, NULL, is_unreg);
+    if (!outdated) {
+        call_callback(regc, PJ_ECANCELLED, PJSIP_SC_UNAUTHORIZED, &reason,
+                      NULL, NOEXP, 0, NULL, chal->is_unreg);
+    }
 
     /* Release the reference the token took at creation. */
     pjsip_regc_dec_ref(regc);
@@ -1400,9 +1424,16 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
          */
         {
             pjsip_auth_clt_async_impl_token *auth_token;
+            regc_chal *chal;
+
+            chal = PJ_POOL_ZALLOC_T(tsx->pool, regc_chal);
+            chal->regc = regc;
+            chal->cseq = tsx->cseq;
+            chal->is_unreg = is_unreg;
+
             auth_token = PJ_POOL_ZALLOC_T(tsx->pool,
                                           pjsip_auth_clt_async_impl_token);
-            auth_token->user_data    = regc;
+            auth_token->user_data    = chal;
             auth_token->send_impl    = &async_auth_send_impl;
             auth_token->abandon_impl = &async_auth_abandon_impl;
             auth_token->grp_lock     = tsx->grp_lock;
@@ -1656,9 +1687,9 @@ static pj_bool_t req_adds_binding(const pjsip_tx_data *tdata)
 }
 
 /* With auth_retry, tdata is the authentication of a challenged request,
- * not sent if the regc has sent another request since, or has been
- * destroyed and tdata adds a binding: an un-REGISTER is still sent after
- * destroy, as in the sync path.
+ * not sent if the regc has sent or reserved another request since, or has
+ * been destroyed and tdata adds a binding: an un-REGISTER is still sent
+ * after destroy.
  */
 static pj_status_t regc_send(pjsip_regc *regc, pjsip_tx_data *tdata,
                              pj_bool_t auth_retry, pj_bool_t *superseded)
@@ -1675,7 +1706,7 @@ static pj_status_t regc_send(pjsip_regc *regc, pjsip_tx_data *tdata,
         cseq_hdr = (pjsip_cseq_hdr*)
                    pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL);
         if ((regc->_delete_flag && req_adds_binding(tdata)) ||
-            !cseq_hdr || cseq_hdr->cseq != regc->cseq_hdr->cseq)
+            !cseq_hdr || chal_outdated(regc, cseq_hdr->cseq))
         {
             PJ_LOG(4,(THIS_FILE, "Not sending the authentication of a "
                                  "superseded request"));
