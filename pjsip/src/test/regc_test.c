@@ -1068,6 +1068,132 @@ on_return:
 }
 
 
+/* A destroyed regc that is still referenced doesn't refresh */
+static int refresh_after_destroy_test(const pj_str_t *registrar_uri)
+{
+    struct registrar_cfg server_cfg =
+        /* respond  code  auth      contact  exp_prm expires more_contacts */
+        { PJ_TRUE,  200,  PJ_FALSE, EXACT,   0,      3,      {NULL, 0}};
+    const pj_str_t aor = pj_str("<sip:regc-test@pjsip.org>");
+    pj_str_t contact = pj_str("<sip:c@C>");
+    pjsip_regc *regc = NULL;
+    pjsip_tx_data *tdata;
+    unsigned cnt;
+    int ret = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  refresh after destroy test"));
+
+    pj_memcpy(&registrar.cfg, &server_cfg, sizeof(server_cfg));
+    pj_bzero(&client_result, sizeof(client_result));
+
+    if (pjsip_regc_create(endpt, &client_result, &client_cb,
+                          &regc) != PJ_SUCCESS)
+    {
+        return -900;
+    }
+    if (pjsip_regc_init(regc, registrar_uri, &aor, &aor, 1, &contact,
+                        3) != PJ_SUCCESS ||
+        pjsip_regc_register(regc, PJ_TRUE, &tdata) != PJ_SUCCESS ||
+        send_and_wait(regc, &tdata) != PJ_SUCCESS ||
+        client_result.code != 200)
+    {
+        pjsip_regc_destroy(regc);
+        return -905;
+    }
+
+    /* The refresh is due in about two seconds */
+    pjsip_regc_add_ref(regc);
+    pjsip_regc_destroy(regc);
+    cnt = registrar.response_cnt;
+    flush_events(3500);
+    if (registrar.response_cnt != cnt)
+        ret = -910;
+
+    pjsip_regc_dec_ref(regc);
+    return ret;
+}
+
+
+/* Once destroyed, a regc that is still referenced only sends an
+ * un-REGISTER, e.g. from a refresh that was already running.
+ */
+static int send_after_destroy_test(const pj_str_t *registrar_uri)
+{
+    struct registrar_cfg server_cfg =
+        /* respond  code  auth      contact  exp_prm expires more_contacts */
+        { PJ_TRUE,  200,  PJ_FALSE, EXACT,   0,      300,    {NULL, 0}};
+    const pj_str_t aor = pj_str("<sip:regc-test@pjsip.org>");
+    pj_str_t contact = pj_str("<sip:c@C>");
+    pjsip_regc *regc = NULL;
+    pjsip_tx_data *tdata;
+    pj_size_t pools;
+    unsigned cnt, i;
+    pj_status_t status;
+    int ret = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  send after destroy test"));
+
+    pj_memcpy(&registrar.cfg, &server_cfg, sizeof(server_cfg));
+    pj_bzero(&client_result, sizeof(client_result));
+
+    if (pjsip_regc_create(endpt, &client_result, &client_cb,
+                          &regc) != PJ_SUCCESS)
+    {
+        return -920;
+    }
+    if (pjsip_regc_init(regc, registrar_uri, &aor, &aor, 1, &contact,
+                        300) != PJ_SUCCESS ||
+        pjsip_regc_register(regc, PJ_TRUE, &tdata) != PJ_SUCCESS ||
+        send_and_wait(regc, &tdata) != PJ_SUCCESS ||
+        client_result.code != 200)
+    {
+        pjsip_regc_destroy(regc);
+        return -925;
+    }
+
+    pjsip_regc_add_ref(regc);
+    pjsip_regc_destroy(regc);
+    client_result.done = PJ_FALSE;
+
+    /* A REGISTER is not sent, and its request is released */
+    if (pjsip_regc_register(regc, PJ_TRUE, &tdata) != PJ_SUCCESS) {
+        ret = -930;
+        goto on_return;
+    }
+    cnt = registrar.response_cnt;
+    pools = caching_pool.used_count;
+    status = pjsip_regc_send(regc, tdata);
+    if (caching_pool.used_count + 1 != pools) {
+        ret = -935;
+        goto on_return;
+    }
+    flush_events(200);
+    if (status != PJ_ECANCELLED || registrar.response_cnt != cnt) {
+        ret = -940;
+        goto on_return;
+    }
+
+    /* An un-REGISTER is still sent, without a callback */
+    if (pjsip_regc_unregister(regc, &tdata) != PJ_SUCCESS) {
+        ret = -945;
+        goto on_return;
+    }
+    status = pjsip_regc_send(regc, tdata);
+    for (i=0; i<50 && registrar.response_cnt == cnt; ++i)
+        flush_events(100);
+    flush_events(200);
+    if (status != PJ_SUCCESS || registrar.response_cnt != cnt + 1 ||
+        client_result.done)
+    {
+        ret = -950;
+    }
+
+on_return:
+    pjsip_regc_dec_ref(regc);
+    return ret;
+}
+
+
 /************************************************************************/
 enum
 {
@@ -1527,6 +1653,14 @@ int regc_test(void)
         goto on_return;
 
     rc = reserve_test(&registrar_uri);
+    if (rc != 0)
+        goto on_return;
+
+    rc = refresh_after_destroy_test(&registrar_uri);
+    if (rc != 0)
+        goto on_return;
+
+    rc = send_after_destroy_test(&registrar_uri);
     if (rc != 0)
         goto on_return;
 

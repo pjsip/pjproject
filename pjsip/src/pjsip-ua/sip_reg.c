@@ -1706,9 +1706,7 @@ static pj_status_t regc_send(pjsip_regc *regc, pjsip_tx_data *tdata,
     if (auth_retry) {
         cseq_hdr = (pjsip_cseq_hdr*)
                    pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL);
-        if ((regc->_delete_flag && req_adds_binding(tdata)) ||
-            !cseq_hdr || chal_outdated(regc, cseq_hdr->cseq))
-        {
+        if (!cseq_hdr || chal_outdated(regc, cseq_hdr->cseq)) {
             PJ_LOG(4,(THIS_FILE, "Not sending the authentication of a "
                                  "superseded request"));
             *superseded = PJ_TRUE;
@@ -1723,16 +1721,18 @@ static pj_status_t regc_send(pjsip_regc *regc, pjsip_tx_data *tdata,
         regc->reserved_tdata = NULL;
         pjsip_tx_data_dec_ref(tdata);
         pj_atomic_dec(regc->busy_ctr);
+    }
 
-        /* Once destroyed, only an un-REGISTER is still sent */
-        if (regc->_delete_flag && req_adds_binding(tdata)) {
-            PJ_LOG(4,(THIS_FILE, "Not sending the reserved request, regc "
-                                 "has been destroyed"));
-            pjsip_tx_data_dec_ref(tdata);
-            pj_lock_release(regc->lock);
-            pjsip_regc_dec_ref(regc);
-            return PJ_ECANCELLED;
-        }
+    /* Once destroyed, only an un-REGISTER is still sent */
+    if (regc->_delete_flag && req_adds_binding(tdata)) {
+        PJ_LOG(4,(THIS_FILE, "Not sending the request, regc has been "
+                             "destroyed"));
+        if (superseded)
+            *superseded = PJ_TRUE;
+        pjsip_tx_data_dec_ref(tdata);
+        pj_lock_release(regc->lock);
+        pjsip_regc_dec_ref(regc);
+        return PJ_ECANCELLED;
     }
 
     /* Make sure we don't have pending transaction. */

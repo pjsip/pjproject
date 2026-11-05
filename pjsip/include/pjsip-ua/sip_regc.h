@@ -475,7 +475,9 @@ PJ_DECL(pj_status_t) pjsip_regc_update_expires( pjsip_regc *regc,
  * will be notified via the callback when the process completes.
  *
  * If another request is reserved with #pjsip_regc_reserve(), PJSIP_EBUSY
- * is returned.
+ * is returned. If the registration has been destroyed while a reference to
+ * it is held, only an un-REGISTER (Expires header of zero) is still sent;
+ * any other request is not sent and PJ_ECANCELLED is returned.
  *
  * @param regc      The client registration structure.
  * @param tdata     Transmit data.
