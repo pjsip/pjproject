@@ -317,13 +317,10 @@ struct conf_port
     pj_lock_t           *tx_lock;       /**< Lock to protect memory 
                                          * allocation                      */
 
-    pj_timestamp         last_timestamp;/**< last transmited packet
-                                         * timestamp. We set this when
-                                         * first time put something into
-                                         * the mix_buf.
-                                         * If this time stamp is equals to
-                                         * current frame timestamp,
-                                         * we have data to transmite       */
+    pj_uint64_t          last_tick;     /**< Bridge tick in which mix_buf
+                                         * was last filled. If it equals
+                                         * the current tick, mix_buf has
+                                         * data to transmit.               */
     unsigned             mixed_cnt;     /**<The number of transmitters 
                                          * that mixed data into this port's 
                                          * mix_buf during the current tick.*/
@@ -434,6 +431,11 @@ struct pjmedia_conf
                                            * processed by the current thread*/
     pjmedia_frame       *frame;           /**< Frame buffer for conference 
                                            * bridge at the current tick.    */
+    pj_uint64_t          tick;            /**< Tick counter, incremented by
+                                           * each get_frame(). The frame
+                                           * timestamp is not used, as it
+                                           * restarts when the clock source
+                                           * changes.                       */
     struct conf_port    *sound_port;      /**< Flag: if not NULL this port
                                            * has data in mix_buf to
                                            * return sound playback frame    */
@@ -467,7 +469,7 @@ static void  mix_and_transmit(pjmedia_conf *conf, struct conf_port *listener,
                               unsigned listener_adj_level, 
                               struct conf_port *conf_port,
                               pj_int16_t *p_in,
-                              const pj_timestamp *timestamp);
+                              pj_uint64_t tick);
 
 static void destroy_conf_port(struct conf_port *conf_port);
 
@@ -872,12 +874,11 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
     * (and probably only) frame there.
     * The criteria for "this frame is from the first transmitter"
     *  condition is:
-    * (conf_port->last_timestamp.u64 != frame->timestamp.u64)
+    * (conf_port->last_tick != conf->tick)
     * 
-    * Enforce "this frame is from the first transmitter" condition:
-    * initially we set last_timestamp to -1, so the first frame will be copied.
+    * Ticks start at 1, so the first frame will be copied.
     */
-    conf_port->last_timestamp.u64 = (pj_uint64_t)-1;
+    conf_port->last_tick = 0;
 
     if (conf->is_parallel) {
         CONF_CHECK_NOT_NULL(conf_port->rx_frame_buf = (pj_int16_t*)pj_pool_zalloc(pool, conf->rx_frame_buf_cap), 
@@ -3552,18 +3553,18 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
      * transmit NULL frame. 
      */
     else if ((cport->tx_setting == PJMEDIA_PORT_MUTE) ||
-              cport->last_timestamp.u64 != timestamp->u64)/*no data in mix_buf*/
+              cport->last_tick != conf->tick)/*no data in mix_buf*/
     {
         pjmedia_frame frame;
 
-        TRACE_EX( (THIS_FILE, "%s: Transmit heart-beat frames to port %p (%.*s, %d, transmitter_cnt=%d) last_timestamp=%llu, timestamp=%llu",
+        TRACE_EX( (THIS_FILE, "%s: Transmit heart-beat frames to port %p (%.*s, %d, transmitter_cnt=%d) last_tick=%llu, tick=%llu",
                     pj_thread_get_name( pj_thread_this() ),
                     cport,
                     (int)cport->name.slen,
                     cport->name.ptr,
                     cport->slot,
                     cport->transmitter_cnt,
-                    cport->last_timestamp.u64, timestamp->u64) );
+                    cport->last_tick, conf->tick) );
 
         /* Clear left-over samples in tx_buffer, if any, so that it won't
          * be transmitted next time we have audio signal.
@@ -3705,10 +3706,10 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
              */
             frame.timestamp = *timestamp;
 
-            TRACE_((THIS_FILE, "put_frame %.*s, count=%d, last_timestamp=%llu, timestamp=%llu",
+            TRACE_((THIS_FILE, "put_frame %.*s, count=%d, last_tick=%llu, timestamp=%llu",
                                (int)cport->name.slen, cport->name.ptr,
                                frame.size / BYTES_PER_SAMPLE,
-                               cport->last_timestamp.u64, timestamp->u64));
+                               cport->last_tick, timestamp->u64));
 
             return pjmedia_port_put_frame(cport->port, &frame);
         } else
@@ -3878,6 +3879,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
     pj_atomic_set(conf->listener_counter, conf->upper_bound_reg);
 
     conf->frame = frame;
+    ++conf->tick;
     conf->sound_port = NULL;
 
     /* Step 2-3
@@ -4320,7 +4322,7 @@ static void perform_get_frame(pjmedia_conf *conf)
                         mix_and_transmit(conf,
                                          listener, listener_slot, listener_adj_level,
                                          rx_port, rx_buf, 
-                                         &frame->timestamp);
+                                         conf->tick);
                     }
                 } while (pj_atomic_dec_and_get(listener->requests_to_mix));
             }
@@ -4391,7 +4393,7 @@ static void mix_and_transmit(pjmedia_conf *conf, struct conf_port *listener,
                              unsigned listener_adj_level, 
                              struct conf_port *conf_port,
                              pj_int16_t *p_in,
-                             const pj_timestamp *timestamp) 
+                             pj_uint64_t tick) 
 {
     pj_int16_t *p_in_conn_leveled;
     unsigned k, samples_per_frame = conf->samples_per_frame;
@@ -4440,7 +4442,7 @@ static void mix_and_transmit(pjmedia_conf *conf, struct conf_port *listener,
         pj_int32_t mix_buf_min = 0;
         pj_int32_t mix_buf_max = 0;
 
-        if (listener->last_timestamp.u64 == timestamp->u64) {
+        if (listener->last_tick == tick) {
             /* this frame is NOT from the first transmitter */
             //loop vectorized
             for (k = 0; k < samples_per_frame; ++k) {
@@ -4462,7 +4464,7 @@ static void mix_and_transmit(pjmedia_conf *conf, struct conf_port *listener,
 
         } else {
             /* this frame is from the first transmitter */
-            listener->last_timestamp = *timestamp;
+            listener->last_tick = tick;
             /* Reset auto adjustment level for mixed signal. */
             listener->mix_adj = NORMAL_LEVEL;
 
@@ -4504,14 +4506,14 @@ static void mix_and_transmit(pjmedia_conf *conf, struct conf_port *listener,
 
     } else {
         /* this frame is from the only transmitter */
-        pj_assert(listener->transmitter_cnt == 1 && listener->last_timestamp.u64 != timestamp->u64);
+        pj_assert(listener->transmitter_cnt == 1 && listener->last_tick != tick);
 
         /* Only 1 transmitter:
          * just copy the samples to the mix buffer
          * no mixing and level adjustment needed
          */
 
-        listener->last_timestamp = *timestamp;
+        listener->last_tick = tick;
         /* Reset auto adjustment level for mixed signal. */
         listener->mix_adj = NORMAL_LEVEL;
 
@@ -4520,7 +4522,7 @@ static void mix_and_transmit(pjmedia_conf *conf, struct conf_port *listener,
             mix_buf[k] = p_in_conn_leveled[k];  // here copying 16 bit value to 32 bit dst
         }
         TRACE_EX((THIS_FILE, "%s: listener %p (%.*s, %d, transmitter_cnt=%d)"
-            " get audio from the (only) port %p (%.*s, %d, listener_cnt=%d) last_timestamp=%llu, timestamp=%llu",
+            " get audio from the (only) port %p (%.*s, %d, listener_cnt=%d) last_tick=%llu, tick=%llu",
             pj_thread_get_name(pj_thread_this()),
             listener,
             (int)listener->name.slen,
@@ -4531,7 +4533,7 @@ static void mix_and_transmit(pjmedia_conf *conf, struct conf_port *listener,
             (int)conf_port->name.slen,
             conf_port->name.ptr,
             conf_port->slot, conf_port->listener_cnt,
-            listener->last_timestamp.u64, timestamp->u64));
+            listener->last_tick, tick));
 
     }
 
