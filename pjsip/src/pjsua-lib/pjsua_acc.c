@@ -3920,8 +3920,6 @@ static pj_status_t acc_set_registration(pjsua_acc_id acc_id, pj_bool_t renew,
             goto on_return;
         }
 
-        pjsua_pres_unpublish(&pjsua_var.acc[acc_id], 0);
-
         status = pjsip_regc_unregister(pjsua_var.acc[acc_id].regc, &tdata);
     }
 
@@ -3957,6 +3955,8 @@ static pj_status_t acc_set_registration(pjsua_acc_id acc_id, pj_bool_t renew,
         }
         if (by_app)
             acc->app_unreg = !renew;
+        if (!renew)
+            pjsua_pres_unpublish(acc, 0);
 
         /* Increment ref counter and release PJSUA lock here, to avoid
          * deadlock while making sure that regc won't be destroyed.

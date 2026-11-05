@@ -56,7 +56,8 @@
  *      unregistered: not on IP change, by an auto retry or by a NAT
  *      Contact rewrite, also when the unregistration failed or went out
  *      while another REGISTER was completing. A call refused with
- *      PJSIP_EBUSY changes nothing, a later registration undoes it.
+ *      PJSIP_EBUSY changes nothing, presence stays published, a later
+ *      registration undoes it.
  */
 
 #include "test.h"
@@ -114,11 +115,17 @@ static pj_bool_t mock_registrar_rx_request(pjsip_rx_data *rdata)
     pjsip_msg *msg = rdata->msg_info.msg;
     pjsip_hdr  hdr_list;
 
-    if (msg->line.req.method.id != PJSIP_REGISTER_METHOD ||
-        !is_user_equal(rdata->msg_info.from, TEST_USER))
-    {
+    if (!is_user_equal(rdata->msg_info.from, TEST_USER))
         return PJ_FALSE;
+
+    /* Accept a PUBLISH here, before pjsua's module would take it */
+    if (pjsip_method_cmp(&msg->line.req.method, &pjsip_publish_method)==0) {
+        pjsip_endpt_respond_stateless(pjsua_get_pjsip_endpt(), rdata, 200,
+                                      NULL, NULL, NULL);
+        return PJ_TRUE;
     }
+    if (msg->line.req.method.id != PJSIP_REGISTER_METHOD)
+        return PJ_FALSE;
 
     g_mock_reg.req_count++;
     if (g_mock_reg.drop) {
@@ -262,6 +269,7 @@ static struct {
     pj_bool_t   unreg_done;     /* an unregistration was answered */
     int         ipc_update_cnt; /* ACC_UPDATE_CONTACT reports */
     int         ipc_done_cnt;   /* COMPLETED reports */
+    pj_bool_t   published;      /* still published after a refused unreg */
 } g_ctx;
 
 static void on_reg_state2(pjsua_acc_id acc_id, pjsua_reg_info *info)
@@ -882,6 +890,7 @@ static pj_bool_t unreg_do_action(pjsua_acc_id acc_id,
         /* The refused request is released */
         pools = pjsua_var.cp.used_count;
         status = pjsua_acc_set_registration(acc_id, PJ_FALSE);
+        g_ctx.published = acc->publish_sess && acc->cfg.publish_enabled;
         ok = g_mock_reg.dropped && status == PJSIP_EBUSY &&
              pjsua_var.cp.used_count == pools &&
              wait_reg(5000) == 0 && acc->regc != NULL;
@@ -929,8 +938,10 @@ static int unreg_test(pjsua_transport_id tp_id, int port,
     pjsua_acc_config acc_cfg;
     pjsua_acc_id     acc_id = PJSUA_INVALID_ID;
     char             reg_uri[64];
+    char             id[80];
     unsigned         reg_count = 0;
     pj_bool_t        window = (c->action >= UA_IPC_DONE);
+    pj_bool_t        ok;
     int              rc = 0;
 
     PJ_LOG(3, (THIS_FILE, "  pjsua acc: unregistered by %s", c->title));
@@ -951,6 +962,13 @@ static int unreg_test(pjsua_transport_id tp_id, int port,
     acc_cfg.reg_retry_interval = c->expect_reg? 0 : 1;
     acc_cfg.reg_first_retry_interval = acc_cfg.reg_retry_interval;
     acc_cfg.reg_retry_random_interval = 0;
+    if (c->action == UA_UNREG_BUSY) {
+        /* PUBLISH goes to the account's domain: keep it local */
+        pj_ansi_snprintf(id, sizeof(id), "sip:" TEST_USER "@127.0.0.1:%d",
+                         port);
+        acc_cfg.id = pj_str(id);
+        acc_cfg.publish_enabled = PJ_TRUE;
+    }
 
     if (pjsua_acc_add(&acc_cfg, PJ_FALSE, &acc_id) != PJ_SUCCESS ||
         (c->action != UA_REG_FAILED &&
@@ -961,7 +979,14 @@ static int unreg_test(pjsua_transport_id tp_id, int port,
         goto on_return;
     }
 
-    if (!unreg_do_action(acc_id, &acc_cfg, c->action, &reg_count)) {
+    ok = unreg_do_action(acc_id, &acc_cfg, c->action, &reg_count);
+    if (c->action == UA_UNREG_BUSY && !g_ctx.published) {
+        PJ_LOG(3, (THIS_FILE, "    error: the refused unregistration "
+                   "unpublished the presence"));
+        rc = c->rc - 6;
+        goto on_return;
+    }
+    if (!ok) {
         PJ_LOG(3, (THIS_FILE, "    error: the action did not end as "
                    "expected (code %d)", g_ctx.reg_code));
         rc = c->rc - 2;
