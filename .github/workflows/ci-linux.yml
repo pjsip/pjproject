@@ -849,6 +849,17 @@ jobs:
         cmake --build build-consumer --verbose
         ./build-consumer/test_consumer
         ./build-consumer/test_consumer2
+    # The same consumer with pjproject built inside it, as add_subdirectory()
+    # or FetchContent does: there the headers of each library sit in their own
+    # directory, so a library a public header needs must be linked PUBLIC.
+    - name: test add_subdirectory
+      run: |
+        cmake -B build-subdir tests/cmake \
+          -DTEST_PJ_SOURCE_DIR=${{ github.workspace }} \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        cmake --build build-subdir -j $(nproc) --target test_consumer test_consumer2
+        ./build-subdir/test_consumer
+        ./build-subdir/test_consumer2
     - name: test pkg-config
       run: |
         prefix=${{ runner.temp }}/pj-install

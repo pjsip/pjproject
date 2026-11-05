@@ -537,6 +537,18 @@ foreach(target pjsua2 pjsua)
   endif()
 endforeach()
 
+# The names find_package(Pj) gives, also for a project that builds pjproject
+# itself with add_subdirectory() or FetchContent
+foreach(target IN LISTS install_targets)
+  get_target_property(_type ${target} TYPE)
+  if(_type STREQUAL "EXECUTABLE")
+    add_executable(Pj::${target} ALIAS ${target})
+  else()
+    add_library(Pj::${target} ALIAS ${target})
+  endif()
+endforeach()
+unset(_type)
+
 # set `VERSION` and `SO_VERSION`
 foreach(target IN LISTS install_targets)
   set_target_properties(${target} PROPERTIES
