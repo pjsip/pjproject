@@ -4982,8 +4982,12 @@ static pj_bool_t inv_handle_update_response( pjsip_inv_session *inv,
 
                 /* Re-send request. */
                 status = pjsip_inv_send_msg(inv, tdata);
-                if (status != PJ_SUCCESS && tsx_inv_data)
-                    tsx_inv_data->retrying = PJ_FALSE;
+                if (status != PJ_SUCCESS) {
+                    /* The challenge is the final answer to the request */
+                    tsx->last_tx->auth_retry = PJ_FALSE;
+                    if (tsx_inv_data)
+                        tsx_inv_data->retrying = PJ_FALSE;
+                }
             }
             /* If the request is not retried, the session goes on without
              * its offer: this is just a request within dialog.
@@ -5528,8 +5532,15 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
 
                 /* Re-send request. */
                 status = pjsip_inv_send_msg(inv, tdata);
-                if (status != PJ_SUCCESS && tsx_inv_data)
-                    tsx_inv_data->retrying = PJ_FALSE;
+                if (status != PJ_SUCCESS) {
+                    /* The challenge is the final answer to the request.
+                     * Not for a NOTIFY: evsub reads the flag as handled.
+                     */
+                    if (pj_strcmp2(&tsx->method.name, "NOTIFY") != 0)
+                        tsx->last_tx->auth_retry = PJ_FALSE;
+                    if (tsx_inv_data)
+                        tsx_inv_data->retrying = PJ_FALSE;
+                }
             }
             /* If the request is not retried, the session goes on without
              * its offer: this is just a request within dialog.
