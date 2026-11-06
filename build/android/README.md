@@ -65,27 +65,35 @@ backend switches itself off and the build falls back to the JNI audio device.
 ### Other libraries
 
 Android builds of OpenSSL, Opus, OpenH264 and the like are found from a
-`<Pkg>_ROOT` as on desktop, with one addition. The NDK toolchain file has
-CMake search only under `CMAKE_FIND_ROOT_PATH` (the NDK), and it moves every
-search path there, a `<Pkg>_ROOT` included. Give each root there too:
+`<Pkg>_ROOT` as on desktop:
 
 ```sh
-cmake -B build-android ... -DOPUS_ROOT=$OPUS -DCMAKE_FIND_ROOT_PATH=$OPUS
+cmake -B build-android ... -DOPUS_ROOT=$OPUS -DOPENSSL_ROOT_DIR=$OPENSSL
 ```
 
-Several roots are a list:
+The NDK toolchain file has CMake search only under `CMAKE_FIND_ROOT_PATH` (the
+NDK), and it moves every search path there, a `<Pkg>_ROOT` included. So that a
+root is still searched as given, pjproject adds each `<Pkg>_ROOT` (and
+`OPENSSL_ROOT_DIR`) to `CMAKE_FIND_ROOT_PATH` for its own configure and lists
+them ("Package roots added to CMAKE_FIND_ROOT_PATH"). Other search paths stay
+inside the NDK, and each library found is test-linked, so a host library
+reached through a wrong root is rejected rather than used.
+
+`-DPJ_USE_ROOTS_IN_FIND=OFF` keeps CMake's own behaviour: a root outside
+`CMAKE_FIND_ROOT_PATH` is not searched, and configure warns about it. Each
+root then has to be given in `CMAKE_FIND_ROOT_PATH` too, several as a list:
 
 ```sh
-cmake -B build-android ... -DOPUS_ROOT=$OPUS -DOPENSSL_ROOT_DIR=$OPENSSL \
+cmake -B build-android ... -DPJ_USE_ROOTS_IN_FIND=OFF \
+      -DOPUS_ROOT=$OPUS -DOPENSSL_ROOT_DIR=$OPENSSL \
       -DCMAKE_FIND_ROOT_PATH="$OPUS;$OPENSSL"
 ```
 
-A root left out is not searched, and configure warns about it. This is not
-specific to Android: other cross toolchains that limit searches to a sysroot
-the same way (`CMAKE_FIND_ROOT_PATH_MODE_*=ONLY`, as embedded Linux SDKs such
-as Yocto's usually do) need the same treatment. pkg-config is not
-redirected the same way, so a `Could NOT find` line may quote the version of
-the host's library; that library is not used.
+This is not specific to Android: other cross toolchains that limit searches to
+a sysroot the same way (`CMAKE_FIND_ROOT_PATH_MODE_*=ONLY`, as embedded Linux
+SDKs such as Yocto's usually do) behave the same. pkg-config is not redirected
+the same way, so a `Could NOT find` line may quote the version of the host's
+library; that library is not used.
 
 ### Java helper classes
 
@@ -138,15 +146,18 @@ separately.
 ## Finding dependencies outside the NDK
 
 The NDK toolchain file sets `CMAKE_FIND_ROOT_PATH_MODE_*` to `ONLY`, which
-confines `find_package` to the sysroot. A dependency built separately for
-Android is therefore invisible until its prefix is added to the search roots,
-and `<Package>_ROOT` alone is not enough:
+confines `find_package` to the sysroot. pjproject adds each `<Package>_ROOT`
+given to the search roots (see "Other libraries" above), so the root alone is
+enough:
 
 ```sh
 cmake -B build-android ... \
-  -DCMAKE_FIND_ROOT_PATH="$OPENSSL_PREFIX;$OPENH264_PREFIX" \
-  -DOPENSSL_ROOT_DIR="$OPENSSL_PREFIX"
+  -DOPENSSL_ROOT_DIR="$OPENSSL_PREFIX" -DOpenH264_ROOT="$OPENH264_PREFIX"
 ```
+
+A project using the installed pjproject is in the same position for its own
+`find_package(Pj)`: give the install prefix in `CMAKE_FIND_ROOT_PATH` as well
+as in `CMAKE_PREFIX_PATH`.
 
 `Oboe_ROOT` is the exception: `cmake/FindOboe.cmake` lifts the filter itself,
 because an unpacked AAR is never inside a sysroot.
@@ -154,11 +165,11 @@ because an unpacked AAR is never inside a sysroot.
 ## Things the Android build does not have
 
 - **No TLS unless you supply OpenSSL.** Android has no system OpenSSL; build
-  one for the NDK and point the search roots at it as above. Otherwise the
+  one for the NDK and give its root as above (`OPENSSL_ROOT_DIR`). Otherwise the
   build silently comes out with `PJLIB_WITH_SSL` empty.
 - **No video codecs beyond MediaCodec.** OpenH264 and VPX are not bundled and
-  have no Android packages to find. Build them for the NDK and add their
-  prefixes to `CMAKE_FIND_ROOT_PATH`.
+  have no Android packages to find. Build them for the NDK and give their
+  roots (`OpenH264_ROOT`, `VPX_ROOT`).
 
 ## Binary distribution (AAR)
 

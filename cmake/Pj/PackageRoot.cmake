@@ -169,27 +169,68 @@ function(pj_warn_outside_package_roots)
   endforeach()
 endfunction()
 
-# pj_warn_rerooted_package_roots()
-#
-# A cross toolchain (the Android NDK's, for one) sets CMAKE_FIND_ROOT_PATH and
-# CMAKE_FIND_ROOT_PATH_MODE_*=ONLY, which moves every search path under the
-# find root, <X>_ROOT included: a root outside it is never searched as given.
-# For each <X>_ROOT given for a package that was not found, warn when it lies
-# outside every find root, rather than leave a status line to say so.
-function(pj_warn_rerooted_package_roots)
-  set(_find_roots ${CMAKE_FIND_ROOT_PATH} ${CMAKE_SYSROOT})
-  if(NOT _find_roots)
+# A cross toolchain (the Android NDK's, iOS, for example) sets
+# CMAKE_FIND_ROOT_PATH and CMAKE_FIND_ROOT_PATH_MODE_*=ONLY, which moves every
+# search path under the find root, <X>_ROOT included: a root outside it is
+# never searched as given.
+function(_pj_find_root_restricts out)
+  set(${out} FALSE PARENT_SCOPE)
+  if(NOT CMAKE_FIND_ROOT_PATH AND NOT CMAKE_SYSROOT)
     return()
   endif()
-  set(_only FALSE)
   foreach(_kind IN ITEMS LIBRARY INCLUDE PACKAGE)
     if(CMAKE_FIND_ROOT_PATH_MODE_${_kind} STREQUAL "ONLY")
-      set(_only TRUE)
+      set(${out} TRUE PARENT_SCOPE)
     endif()
   endforeach()
-  if(NOT _only)
+endfunction()
+
+# pj_add_package_roots_to_find_root()
+#
+# Under such a toolchain, add every <X>_ROOT given on the command line (and
+# OPENSSL_ROOT_DIR) to CMAKE_FIND_ROOT_PATH, in the caller's scope, so that a
+# root works as it does in a native build. Other search paths stay limited to
+# the find root.
+function(pj_add_package_roots_to_find_root)
+  _pj_find_root_restricts(_restricts)
+  if(NOT _restricts)
     return()
   endif()
+  set(_PJ_ROOTS_SEARCHED TRUE PARENT_SCOPE)
+  set(_added "")
+  get_cmake_property(_vars CACHE_VARIABLES)
+  foreach(_root_var IN LISTS _vars)
+    if(NOT _root_var MATCHES "^[A-Za-z0-9][A-Za-z0-9_]*_ROOT$" AND
+       NOT _root_var STREQUAL "OPENSSL_ROOT_DIR")
+      continue()
+    endif()
+    get_property(_type CACHE "${_root_var}" PROPERTY TYPE)
+    if(_type STREQUAL "INTERNAL")
+      continue()
+    endif()
+    foreach(_root IN LISTS ${_root_var})
+      if(NOT _root IN_LIST CMAKE_FIND_ROOT_PATH AND NOT _root IN_LIST _added)
+        list(APPEND _added "${_root}")
+      endif()
+    endforeach()
+  endforeach()
+  if(_added)
+    message(STATUS "Package roots added to CMAKE_FIND_ROOT_PATH: ${_added}")
+    set(CMAKE_FIND_ROOT_PATH ${CMAKE_FIND_ROOT_PATH} ${_added} PARENT_SCOPE)
+  endif()
+endfunction()
+
+# pj_warn_rerooted_package_roots()
+#
+# For each <X>_ROOT given for a package that was not found, warn when it lies
+# outside every find root of such a toolchain, rather than leave a status line
+# to say so.
+function(pj_warn_rerooted_package_roots)
+  _pj_find_root_restricts(_restricts)
+  if(NOT _restricts)
+    return()
+  endif()
+  set(_find_roots ${CMAKE_FIND_ROOT_PATH} ${CMAKE_SYSROOT})
   set(_real_find_roots "")
   foreach(_root IN LISTS _find_roots)
     file(REAL_PATH "${_root}" _root)
@@ -235,8 +276,9 @@ function(pj_warn_rerooted_package_roots)
       message(WARNING
         "${_pkg} was not found: ${_root_var} (${_outside}) lies outside "
         "CMAKE_FIND_ROOT_PATH, and this cross toolchain searches only under "
-        "it (CMAKE_FIND_ROOT_PATH_MODE_*=ONLY). Give the root there as well, "
-        "e.g. -DCMAKE_FIND_ROOT_PATH=\"${_outside}\".")
+        "it (CMAKE_FIND_ROOT_PATH_MODE_*=ONLY). Turn PJ_USE_ROOTS_IN_FIND "
+        "on, or give the root there as well, e.g. "
+        "-DCMAKE_FIND_ROOT_PATH=\"${_outside}\".")
     endif()
   endforeach()
 endfunction()

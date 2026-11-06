@@ -240,6 +240,19 @@ if(IOS)
   set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED NO)
 endif()
 
+# A cross toolchain searches only under its sysroot, a given <X>_ROOT included.
+# An explicit root is where the user's build of that library is, so search it.
+if(CMAKE_CROSSCOMPILING)
+  option(PJ_USE_ROOTS_IN_FIND
+    "Search the given <X>_ROOT folders when the cross toolchain limits searches to its sysroot"
+    ON
+  )
+  if(PJ_USE_ROOTS_IN_FIND)
+    include(Pj/PackageRoot)
+    pj_add_package_roots_to_find_root()
+  endif()
+endif()
+
 # base library
 add_subdirectory(pjlib)
 
