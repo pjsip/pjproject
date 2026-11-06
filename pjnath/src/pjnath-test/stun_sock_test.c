@@ -239,7 +239,8 @@ static pj_bool_t stun_sock_on_rx_data(pj_stun_sock *stun_sock,
 static pj_status_t create_client(pj_stun_config *cfg,
                                  struct stun_client **p_client,
                                  pj_bool_t destroy_on_err,
-                                 pj_bool_t use_ipv6)
+                                 pj_bool_t use_ipv6,
+                                 pj_grp_lock_t *grp_lock)
 {
     pj_pool_t *pool;
     struct stun_client *client;
@@ -252,6 +253,7 @@ static pj_status_t create_client(pj_stun_config *cfg,
     client->pool = pool;
 
     pj_stun_sock_cfg_default(&sock_cfg);
+    sock_cfg.grp_lock = grp_lock;
 
     pj_bzero(&cb, sizeof(cb));
     cb.on_status = &stun_sock_on_status;
@@ -314,7 +316,7 @@ static int timeout_test(pj_stun_config *cfg, pj_bool_t destroy_on_err,
     PJ_LOG(3,(THIS_FILE, "  timeout test [%d] - (%s)", destroy_on_err, 
            (use_ipv6)?"IPv6":"IPv4"));
 
-    status =  create_client(cfg, &client, destroy_on_err, use_ipv6);
+    status =  create_client(cfg, &client, destroy_on_err, use_ipv6, NULL);
     if (status != PJ_SUCCESS)
         return -10;
 
@@ -398,7 +400,7 @@ static int missing_attr_test(pj_stun_config *cfg, pj_bool_t destroy_on_err,
     PJ_LOG(3,(THIS_FILE, "  missing attribute test [%d] - (%s)", 
            destroy_on_err, (use_ipv6)?"IPv6":"IPv4"));
 
-    status =  create_client(cfg, &client, destroy_on_err, use_ipv6);
+    status =  create_client(cfg, &client, destroy_on_err, use_ipv6, NULL);
     if (status != PJ_SUCCESS)
         return -110;
 
@@ -473,7 +475,7 @@ static int keep_alive_test(pj_stun_config *cfg, pj_bool_t use_ipv6)
     PJ_LOG(3,(THIS_FILE, "  normal operation - (%s)", 
            (use_ipv6)?"IPv6":"IPv4"));
 
-    status =  create_client(cfg, &client, PJ_TRUE, use_ipv6);
+    status =  create_client(cfg, &client, PJ_TRUE, use_ipv6, NULL);
     if (status != PJ_SUCCESS)
         return -310;
 
@@ -837,9 +839,11 @@ on_return:
 /*
  * The SRV query of the server is answered from the cache, and the socket is
  * destroyed while the DNS A query is pending: the late answer must not
- * reach the destroyed socket.
+ * reach the destroyed socket, also when its group lock is still in use
+ * (e.g. by ICE).
  */
-static int dns_pending_destroy_test(pj_stun_config *cfg)
+static int dns_pending_destroy_test(pj_stun_config *cfg,
+                                    pj_bool_t shared_lock)
 {
     pj_str_t host = pj_str("stun.example.test");
     pj_str_t srv_name = pj_str("_stun._udp.stun.example.test");
@@ -847,17 +851,27 @@ static int dns_pending_destroy_test(pj_stun_config *cfg)
     pj_dns_server *dns = NULL;
     pj_dns_resolver *res = NULL;
     struct stun_client *client = NULL;
+    pj_pool_t *pool = NULL;
+    pj_grp_lock_t *glock = NULL;
     pj_dns_parsed_rr rr;
     pj_sockaddr addr;
     pj_in_addr ip;
     pj_uint16_t port;
     int i, ret = 0;
 
-    PJ_LOG(3,(THIS_FILE, "  destroy with a pending DNS query test"));
+    PJ_LOG(3,(THIS_FILE, "  destroy with a pending DNS query test%s",
+              shared_lock ? " (shared group lock)" : ""));
+
+    pool = pj_pool_create(mem, "dnsdestroy", 512, 512, NULL);
+    if (shared_lock) {
+        PJ_TEST_SUCCESS(pj_grp_lock_create(pool, NULL, &glock), NULL,
+                        {ret = -810; goto on_return;});
+        pj_grp_lock_add_ref(glock);
+    }
 
     PJ_TEST_SUCCESS(pj_dns_server_create(mem, cfg->ioqueue, pj_AF_INET(),
                                          0, 0, &dns),
-                    NULL, return -800);
+                    NULL, {ret = -800; goto on_return;});
     PJ_TEST_SUCCESS(pj_dns_server_get_addr(dns, &addr), NULL,
                     {ret = -801; goto on_return;});
     port = pj_sockaddr_get_port(&addr);
@@ -882,8 +896,8 @@ static int dns_pending_destroy_test(pj_stun_config *cfg)
     PJ_TEST_EQ(pj_dns_resolver_get_cached_count(res), 1, NULL,
                {ret = -806; goto on_return;});
 
-    PJ_TEST_SUCCESS(create_client(cfg, &client, PJ_FALSE, PJ_FALSE), NULL,
-                    {ret = -807; goto on_return;});
+    PJ_TEST_SUCCESS(create_client(cfg, &client, PJ_FALSE, PJ_FALSE, glock),
+                    NULL, {ret = -807; goto on_return;});
     PJ_TEST_SUCCESS(pj_stun_sock_start(client->sock, &host, PJ_STUN_PORT,
                                        res),
                     NULL, {ret = -808; goto on_return;});
@@ -895,16 +909,21 @@ static int dns_pending_destroy_test(pj_stun_config *cfg)
         handle_events(cfg, 100);
     PJ_TEST_EQ(pj_dns_resolver_get_cached_count(res), 2, NULL,
                {ret = -809; goto on_return;});
+    PJ_TEST_EQ(client->on_status_cnt, 0, "callback after destroy",
+               {ret = -811; goto on_return;});
 
 on_return:
     if (client)
         destroy_client(client);
+    if (glock)
+        pj_grp_lock_dec_ref(glock);
     if (res)
         pj_dns_resolver_destroy(res, PJ_FALSE);
     if (dns)
         pj_dns_server_destroy(dns);
     for (i = 0; i < 5; ++i)
         handle_events(cfg, 50);
+    pj_pool_release(pool);
 
     return ret;
 }
@@ -936,7 +955,8 @@ int stun_sock_test(void)
 
     DO_TEST(keep_alive_test(&app_sess.stun_cfg, USE_IPV6));
 
-    DO_TEST(dns_pending_destroy_test(&app_sess.stun_cfg));
+    DO_TEST(dns_pending_destroy_test(&app_sess.stun_cfg, PJ_FALSE));
+    DO_TEST(dns_pending_destroy_test(&app_sess.stun_cfg, PJ_TRUE));
 
 on_return:
     destroy_stun_config(&app_sess);
