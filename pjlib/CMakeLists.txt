@@ -386,6 +386,45 @@ function(_pj_check_openssl_usable)
   )
 endfunction()
 
+function(_pj_check_gnutls_usable)
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(GnuTLS
+    CODE [=[
+      #include <gnutls/gnutls.h>
+      int main(void) { gnutls_global_deinit(); return 0; }
+    ]=]
+    INCLUDE_DIRS ${GNUTLS_INCLUDE_DIR}
+    LIBRARIES GnuTLS::GnuTLS
+  )
+endfunction()
+
+# Mbed TLS 4.x moved the crypto library to TF-PSA-Crypto
+function(_pj_mbedtls_libraries out)
+  if(TARGET MbedTLS::tfpsacrypto)
+    set(_crypto MbedTLS::tfpsacrypto)
+  else()
+    set(_crypto MbedTLS::mbedcrypto)
+  endif()
+  set(${out} MbedTLS::mbedtls MbedTLS::mbedx509 ${_crypto} PARENT_SCOPE)
+endfunction()
+
+function(_pj_check_mbedtls_usable)
+  include(Pj/CheckLibraryUsable)
+  _pj_mbedtls_libraries(_libs)
+  pj_check_library_usable(MbedTLS
+    CODE [=[
+      #include <mbedtls/ssl.h>
+      int main(void) {
+          mbedtls_ssl_config conf;
+          mbedtls_ssl_config_init(&conf);
+          mbedtls_ssl_config_free(&conf);
+          return 0;
+      }
+    ]=]
+    LIBRARIES ${_libs}
+  )
+endfunction()
+
 pj_retry_on_new_root(PJLIB_WITH_SSL OpenSSL)
 set(_pj_ssl "${PJLIB_WITH_SSL}")
 if(_pj_ssl STREQUAL "none")
@@ -406,10 +445,22 @@ elseif(_pj_ssl STREQUAL "auto")
   else()
     find_package(GnuTLS QUIET)
     if(GNUTLS_FOUND)
+      _pj_check_gnutls_usable()
+      if(NOT GnuTLS_USABLE)
+        message(STATUS "[!] GnuTLS was found but cannot be linked")
+      endif()
+    endif()
+    if(GNUTLS_FOUND AND GnuTLS_USABLE)
       set(_pj_ssl gnutls)
     else()
       find_package(MbedTLS CONFIG QUIET)
       if(MbedTLS_FOUND)
+        _pj_check_mbedtls_usable()
+        if(NOT MbedTLS_USABLE)
+          message(STATUS "[!] MbedTLS was found but cannot be linked")
+        endif()
+      endif()
+      if(MbedTLS_FOUND AND MbedTLS_USABLE)
         set(_pj_ssl mbedtls)
       else()
         set(_pj_ssl "")
@@ -437,21 +488,23 @@ if(_pj_ssl STREQUAL "openssl")
   endif()
 elseif(_pj_ssl STREQUAL "gnutls")
   find_package(GnuTLS REQUIRED)
+  _pj_check_gnutls_usable()
+  if(NOT GnuTLS_USABLE)
+    message(FATAL_ERROR
+      "PJLIB_WITH_SSL=gnutls: GnuTLS was found (${GNUTLS_LIBRARY}) but "
+      "cannot be linked")
+  endif()
   target_link_libraries(pjlib-ssl INTERFACE GnuTLS::GnuTLS)
 elseif(_pj_ssl STREQUAL "mbedtls")
   find_package(MbedTLS CONFIG REQUIRED)
-  # Mbed TLS 4.x moved the crypto library to TF-PSA-Crypto
-  if(TARGET MbedTLS::tfpsacrypto)
-    set(_pj_mbedtls_crypto MbedTLS::tfpsacrypto)
-  else()
-    set(_pj_mbedtls_crypto MbedTLS::mbedcrypto)
+  _pj_check_mbedtls_usable()
+  if(NOT MbedTLS_USABLE)
+    message(FATAL_ERROR
+      "PJLIB_WITH_SSL=mbedtls: MbedTLS was found (${MbedTLS_DIR}) but "
+      "cannot be linked")
   endif()
-  target_link_libraries(pjlib-ssl
-    INTERFACE
-      MbedTLS::mbedtls
-      MbedTLS::mbedx509
-      ${_pj_mbedtls_crypto}
-  )
+  _pj_mbedtls_libraries(_pj_mbedtls_libs)
+  target_link_libraries(pjlib-ssl INTERFACE ${_pj_mbedtls_libs})
 elseif(_pj_ssl STREQUAL "darwin")
   if(NOT APPLE)
     message(FATAL_ERROR "PJLIB_WITH_SSL=darwin requires an Apple platform")
