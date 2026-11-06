@@ -1365,8 +1365,8 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
 
         /* Capture is_unreg but keep current_op alive so that
          * async auth callbacks can read it if needed.  It will be
-         * reset to REGC_IDLE below (sync fallback) or by
-         * pjsip_regc_send() on the async success path.
+         * reset to REGC_IDLE below if the retry fails, or set by
+         * the request sent next.
          */
         is_unreg = (regc->current_op == REGC_UNREGISTERING);
 
@@ -1462,10 +1462,8 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
         }
         if (status != PJ_SUCCESS) {
             /* Application does not handle the authentication, so let's
-             * handle it here now.  Reset current_op now since we deferred
-             * it above for the async path.
+             * handle it here now.
              */
-            regc->current_op = REGC_IDLE;
 
             /* Reinit request with auth response. */
             status = pjsip_auth_clt_reinit_req( &regc->auth_sess,
@@ -1486,6 +1484,9 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
             }
 
             if (status != PJ_SUCCESS && !superseded) {
+                /* A sent retry or a newer request sets current_op itself */
+                regc->current_op = REGC_IDLE;
+
                 /* Only call callback if application is still interested
                  * in it.
                  */
