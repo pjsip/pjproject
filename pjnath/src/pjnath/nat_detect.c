@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -79,6 +79,7 @@ typedef struct nat_detect_session
     pj_timer_heap_t         *timer_heap;
     pj_timer_entry           timer;
     unsigned                 timer_executed;
+    pj_bool_t                ended;
 
     void                    *user_data;
     pj_stun_nat_detect_cb   *cb;
@@ -394,6 +395,13 @@ static void end_session(nat_detect_session *sess,
     char errmsg[PJ_ERR_MSG_SIZE];
     pj_time_val delay;
 
+    /* The callback must only be invoked once. Late STUN completions or
+     * socket errors may still arrive until the destroy timer fires.
+     */
+    if (sess->ended)
+        return;
+    sess->ended = PJ_TRUE;
+
     if (sess->timer.id != 0) {
         pj_timer_heap_cancel(sess->timer_heap, &sess->timer);
         sess->timer.id = 0;
@@ -434,8 +442,8 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
     pj_grp_lock_acquire(sess->grp_lock);
 
-    /* Ignore packet when STUN session has been destroyed */
-    if (!sess->stun_sess)
+    /* Ignore packet when the session has ended or been destroyed */
+    if (sess->ended || !sess->stun_sess)
         goto on_return;
 
     if (bytes_read < 0) {
@@ -454,6 +462,8 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                                   PJ_STUN_IS_DATAGRAM|PJ_STUN_CHECK_PACKET, 
                                   NULL, NULL, 
                                   &sess->src_addr, sess->src_addr_len);
+        if (sess->ended)
+            goto on_return;
     }
 
 
@@ -525,6 +535,9 @@ static void on_request_complete(pj_stun_session *stun_sess,
     sess = (nat_detect_session*) pj_stun_session_get_user_data(stun_sess);
 
     pj_grp_lock_acquire(sess->grp_lock);
+
+    if (sess->ended)
+        goto on_return;
 
     /* Find errors in the response */
     if (status == PJ_SUCCESS) {
