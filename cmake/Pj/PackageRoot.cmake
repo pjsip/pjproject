@@ -109,7 +109,9 @@ endfunction()
 #
 # A root is searched first, not only, so whatever an incomplete root lacks is
 # taken from the system. For each <X>_ROOT (or OPENSSL_ROOT_DIR) given, warn
-# about any <X>_..._INCLUDE_DIR or <X>_..._LIBRARY found outside it.
+# about any <X>_..._INCLUDE_DIR or <X>_..._LIBRARY found outside it, or the
+# <X>_DIR of a package found by its config file; when none of them is in the
+# root, warn once that the package was not found there.
 function(pj_warn_outside_package_roots)
   # Only the packages found by this run: the cache may still hold what an
   # earlier one found, e.g. before PJ_DEP_<X> was set to bundled
@@ -139,8 +141,10 @@ function(pj_warn_outside_package_roots)
       file(REAL_PATH "${_root}" _root)
       list(APPEND _roots "${_root}")
     endforeach()
+    set(_any_inside FALSE)
+    set(_outside_vars "")
     foreach(_var IN LISTS _vars)
-      if(NOT _var MATCHES "^(${_pkg}|${_upper})_([A-Za-z0-9_]+_)?(INCLUDE_DIR|LIBRARY)$")
+      if(NOT _var MATCHES "^(${_pkg}|${_upper})_(([A-Za-z0-9_]+_)?(INCLUDE_DIR|LIBRARY)|DIR)$")
         continue()
       endif()
       if(NOT EXISTS "${${_var}}")
@@ -160,12 +164,30 @@ function(pj_warn_outside_package_roots)
           set(_inside TRUE)
         endif()
       endforeach()
-      if(NOT _inside)
+      if(_inside)
+        set(_any_inside TRUE)
+      else()
+        list(APPEND _outside_vars "${_var}")
+      endif()
+    endforeach()
+    if(NOT _outside_vars)
+      continue()
+    endif()
+    if(NOT _any_inside)
+      set(_found_at "")
+      foreach(_var IN LISTS _outside_vars)
+        string(APPEND _found_at "\n  ${_var}=${${_var}}")
+      endforeach()
+      message(WARNING
+        "${_root_var} is set, but ${_pkg} was not found in it "
+        "(${${_root_var}}); a copy from outside it is used:${_found_at}")
+    else()
+      foreach(_var IN LISTS _outside_vars)
         message(WARNING
           "${_root_var} is set, but ${_var} was found outside it: "
           "${${_var}}")
-      endif()
-    endforeach()
+      endforeach()
+    endif()
   endforeach()
 endfunction()
 
