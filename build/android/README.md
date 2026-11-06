@@ -62,6 +62,31 @@ The AAR's Prefab layout is the same one `./aconfigure --with-oboe=<prefix>`
 expects, so a prefix that works for one works for the other. Without it the
 backend switches itself off and the build falls back to the JNI audio device.
 
+### Other libraries
+
+Android builds of OpenSSL, Opus, OpenH264 and the like are found from a
+`<Pkg>_ROOT` as on desktop, with one addition. The NDK toolchain file has
+CMake search only under `CMAKE_FIND_ROOT_PATH` (the NDK), and it moves every
+search path there, a `<Pkg>_ROOT` included. Give each root there too:
+
+```sh
+cmake -B build-android ... -DOPUS_ROOT=$OPUS -DCMAKE_FIND_ROOT_PATH=$OPUS
+```
+
+Several roots are a list:
+
+```sh
+cmake -B build-android ... -DOPUS_ROOT=$OPUS -DOPENSSL_ROOT_DIR=$OPENSSL \
+      -DCMAKE_FIND_ROOT_PATH="$OPUS;$OPENSSL"
+```
+
+A root left out is not searched, and configure warns about it. This is not
+specific to Android: other cross toolchains that limit searches to a sysroot
+the same way (`CMAKE_FIND_ROOT_PATH_MODE_*=ONLY`, as embedded Linux SDKs such
+as Yocto's usually do) need the same treatment. pkg-config is not
+redirected the same way, so a `Could NOT find` line may quote the version of
+the host's library; that library is not used.
+
 ### Java helper classes
 
 The camera backend and Oboe both call up into Java. Those classes live in
