@@ -1976,27 +1976,51 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_async_abandon(
 }
 
 
+/* Copy the async setting, under the parent session's lock if there is one.
+ * *p_sess receives the session that owns it.
+ */
+static pj_status_t async_get_setting(pjsip_auth_clt_sess *sess,
+                                     pjsip_auth_clt_async_setting *setting,
+                                     pjsip_auth_clt_sess **p_sess)
+{
+    DO_ON_PARENT_LOCKED(sess, async_get_setting(sess->parent, setting,
+                                                p_sess));
+
+    if (!sess->async_opt || !sess->async_opt->cb)
+        return PJ_EINVALIDOP;
+
+    *setting = *sess->async_opt;
+    *p_sess = sess;
+
+    return PJ_SUCCESS;
+}
+
+
 PJ_DEF(pj_status_t) pjsip_auth_clt_async_impl_on_challenge(
                             pjsip_auth_clt_sess* sess,
                             pjsip_auth_clt_async_impl_token *token,
                             const pjsip_auth_clt_async_on_chal_param *param)
 {
     pjsip_auth_clt_async_on_chal_param cb_param;
+    pjsip_auth_clt_async_setting setting;
+    pj_status_t status;
 
     PJ_ASSERT_RETURN(sess && token && param && param->rdata && param->tdata,
                      PJ_EINVAL);
-    DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_async_impl_on_challenge(
-                                                    sess->parent,
-                                                    token, param));
 
-    if (!sess->async_opt || !sess->async_opt->cb)
-        return PJ_EINVALIDOP;
+    status = async_get_setting(sess, &setting, &sess);
+    if (status != PJ_SUCCESS)
+        return status;
 
     pj_memcpy(token->signature, AUTH_TOKEN_SIGNATURE, 4);
 
+    /* The callback runs without the parent lock, so the application may
+     * consume the token from within it, and the owner's lock order holds
+     * (see async_consume_token()).
+     */
     cb_param           = *param;
-    cb_param.user_data = sess->async_opt->user_data;
-    if ((*sess->async_opt->cb)(sess, token, &cb_param)) {
+    cb_param.user_data = setting.user_data;
+    if ((*setting.cb)(sess, token, &cb_param)) {
         return PJ_SUCCESS;
     }
 

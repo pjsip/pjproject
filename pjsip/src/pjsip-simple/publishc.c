@@ -114,6 +114,10 @@ struct pjsip_publishc
     pj_time_val                  last_refresh;
     pj_time_val                  next_refresh;
     pj_timer_entry               timer;
+    /* Refresh timer callbacks already dispatched by the timer heap when
+     * the timer was cancelled; they still run and must skip the refresh.
+     */
+    int                          timer_cancelled;
 
     /* Pending PUBLISH request */
     pending_publish              pending_reqs;
@@ -223,6 +227,25 @@ PJ_DEF(pj_status_t) pjsip_publishc_create( pjsip_endpoint *endpt,
 }
 
 
+/* Cancel the refresh timer. Called with the mutex held. If the timer heap
+ * has already dispatched the callback, it will still run: count it as a
+ * running callback so that pubc is not freed under it, and mark it to be
+ * skipped.
+ */
+static void pubc_cancel_timer(pjsip_publishc *pubc)
+{
+    if (pubc->timer.id == 0)
+        return;
+
+    if (pj_timer_heap_cancel(pjsip_endpt_get_timer_heap(pubc->endpt),
+                             &pubc->timer) == 0)
+    {
+        ++pubc->timer_cancelled;
+        ++pubc->in_callback;
+    }
+    pubc->timer.id = 0;
+}
+
 /* Free pubc. Called without the mutex held, once nothing is outstanding. */
 static void pubc_free(pjsip_publishc *pubc)
 {
@@ -252,11 +275,7 @@ PJ_DEF(pj_status_t) pjsip_publishc_destroy(pjsip_publishc *pubc)
 
     pj_mutex_lock(pubc->mutex);
 
-    /* Cancel existing timer, if any */
-    if (pubc->timer.id != 0) {
-        pjsip_endpt_cancel_timer(pubc->endpt, &pubc->timer);
-        pubc->timer.id = 0;
-    }
+    pubc_cancel_timer(pubc);
 
     if (pubc->pending_tsx || pubc->in_callback || pubc->pending_auth_tokens) {
         pubc->_delete_flag = 1;
@@ -562,11 +581,7 @@ PJ_DEF(pj_status_t) pjsip_publishc_publish(pjsip_publishc *pubc,
             pjsip_msg_add_hdr(tdata->msg, dup);
     }
 
-    /* Cancel existing timer */
-    if (pubc->timer.id != 0) {
-        pjsip_endpt_cancel_timer(pubc->endpt, &pubc->timer);
-        pubc->timer.id = 0;
-    }
+    pubc_cancel_timer(pubc);
 
     pubc->auto_refresh = auto_refresh;
 
@@ -590,10 +605,7 @@ PJ_DEF(pj_status_t) pjsip_publishc_unpublish(pjsip_publishc *pubc,
 
     pj_mutex_lock(pubc->mutex);
 
-    if (pubc->timer.id != 0) {
-        pjsip_endpt_cancel_timer(pubc->endpt, &pubc->timer);
-        pubc->timer.id = 0;
-    }
+    pubc_cancel_timer(pubc);
 
     status = create_request(pubc, &tdata);
 
@@ -631,11 +643,15 @@ static void call_callback(pjsip_publishc *pubc, pj_status_t status,
                           pjsip_rx_data *rdata, pj_uint32_t expiration)
 {
     struct pjsip_publishc_cbparam cbparam;
+    pjsip_publishc_cb *cb;
 
     /* The callback is cleared when the app destroys the pubc while a
      * request or an async auth token is still outstanding.
      */
-    if (!pubc->cb)
+    pj_mutex_lock(pubc->mutex);
+    cb = pubc->cb;
+    pj_mutex_unlock(pubc->mutex);
+    if (!cb)
         return;
 
     cbparam.pubc = pubc;
@@ -646,7 +662,7 @@ static void call_callback(pjsip_publishc *pubc, pj_status_t status,
     cbparam.rdata = rdata;
     cbparam.expiration = expiration;
 
-    (*pubc->cb)(&cbparam);
+    (*cb)(&cbparam);
 }
 
 static void pubc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
@@ -658,18 +674,36 @@ static void pubc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
     
     PJ_UNUSED_ARG(timer_heap);
 
+    pj_mutex_lock(pubc->mutex);
+
+    /* Cancelled after the timer heap dispatched us; pubc_cancel_timer()
+     * already counted this callback.
+     */
+    if (pubc->timer_cancelled) {
+        --pubc->timer_cancelled;
+        --pubc->in_callback;
+        pubc_unlock(pubc);
+        return;
+    }
+
     entry->id = 0;
+    ++pubc->in_callback;
+    pj_mutex_unlock(pubc->mutex);
+
     status = pjsip_publishc_publish(pubc, 1, &tdata);
     if (status != PJ_SUCCESS) {
         char errmsg[PJ_ERR_MSG_SIZE];
         pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
         call_callback(pubc, status, 400, &reason, NULL,
                       PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
-        return;
+    } else {
+        /* No need to call callback as it should have been called */
+        status = pjsip_publishc_send(pubc, tdata);
     }
 
-    status = pjsip_publishc_send(pubc, tdata);
-    /* No need to call callback as it should have been called */
+    pj_mutex_lock(pubc->mutex);
+    --pubc->in_callback;
+    pubc_unlock(pubc);
 }
 
 /* Async auth send callback: resend the authenticated PUBLISH request.
@@ -847,11 +881,7 @@ static void tsx_callback(void *token, pjsip_event *event)
                                                MIN_REFRESH_MSEC % 1000};
                 pj_time_val delay = {0, 0};
 
-                /* Cancel existing timer, if any */
-                if (pubc->timer.id != 0) {
-                    pjsip_endpt_cancel_timer(pubc->endpt, &pubc->timer);
-                    pubc->timer.id = 0;
-                }
+                pubc_cancel_timer(pubc);
 
                 /* prevent underflow in case the remote answers with an unexpectedly low expiry value */
                 if (expiration > DELAY_BEFORE_REFRESH) {
@@ -908,8 +938,12 @@ static void tsx_callback(void *token, pjsip_event *event)
 
         --pubc->pending_tsx;
 
-        /* If we have pending request(s), send them now */
-        while (!pj_list_empty(&pubc->pending_reqs)) {
+        /* If we have pending request(s), send them now. A failed send
+         * runs tsx_callback() nested, or lets another thread in, either
+         * of which may have started the next transaction already.
+         */
+        while (pubc->pending_tsx == 0 && !pj_list_empty(&pubc->pending_reqs))
+        {
             pending_publish *pp = pubc->pending_reqs.next;
             pjsip_tx_data *tdata = pp->tdata;
 
