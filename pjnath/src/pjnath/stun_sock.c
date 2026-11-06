@@ -519,6 +519,12 @@ PJ_DEF(pj_status_t) pj_stun_sock_destroy(pj_stun_sock *stun_sock)
     pj_timer_heap_cancel_if_active(stun_sock->stun_cfg.timer_heap,
                                    &stun_sock->ka_timer, 0);
 
+    /* The group lock may outlive the socket and the resolver (e.g. ICE) */
+    if (stun_sock->q) {
+        pj_dns_srv_cancel_query(stun_sock->q, PJ_FALSE);
+        stun_sock->q = NULL;
+    }
+
     if (stun_sock->active_sock != NULL) {
         stun_sock->sock_fd = PJ_INVALID_SOCKET;
         pj_activesock_close(stun_sock->active_sock);

@@ -840,10 +840,17 @@ on_return:
  * The SRV query of the server is answered from the cache, and the socket is
  * destroyed while the DNS A query is pending: the late answer must not
  * reach the destroyed socket, also when its group lock is still in use
- * (e.g. by ICE).
+ * (e.g. by ICE), even after the resolver is destroyed.
  */
+enum dns_destroy_mode
+{
+    DNS_OWN_LOCK,
+    DNS_SHARED_LOCK,
+    DNS_SHARED_LOCK_NO_RESOLVER
+};
+
 static int dns_pending_destroy_test(pj_stun_config *cfg,
-                                    pj_bool_t shared_lock)
+                                    enum dns_destroy_mode mode)
 {
     pj_str_t host = pj_str("stun.example.test");
     pj_str_t srv_name = pj_str("_stun._udp.stun.example.test");
@@ -859,11 +866,11 @@ static int dns_pending_destroy_test(pj_stun_config *cfg,
     pj_uint16_t port;
     int i, ret = 0;
 
-    PJ_LOG(3,(THIS_FILE, "  destroy with a pending DNS query test%s",
-              shared_lock ? " (shared group lock)" : ""));
+    PJ_LOG(3,(THIS_FILE, "  destroy with a pending DNS query test (%d)",
+              mode));
 
     pool = pj_pool_create(mem, "dnsdestroy", 512, 512, NULL);
-    if (shared_lock) {
+    if (mode != DNS_OWN_LOCK) {
         PJ_TEST_SUCCESS(pj_grp_lock_create(pool, NULL, &glock), NULL,
                         {ret = -810; goto on_return;});
         pj_grp_lock_add_ref(glock);
@@ -903,6 +910,19 @@ static int dns_pending_destroy_test(pj_stun_config *cfg,
                     NULL, {ret = -808; goto on_return;});
     pj_stun_sock_destroy(client->sock);
     client->sock = NULL;
+
+    if (mode == DNS_SHARED_LOCK_NO_RESOLVER) {
+        /* The socket is freed only after the resolver */
+        pj_dns_resolver_destroy(res, PJ_FALSE);
+        res = NULL;
+        pj_grp_lock_dec_ref(glock);
+        glock = NULL;
+        for (i = 0; i < 10; ++i)
+            handle_events(cfg, 50);
+        PJ_TEST_EQ(client->on_status_cnt, 0, "callback after destroy",
+                   {ret = -812; goto on_return;});
+        goto on_return;
+    }
 
     /* The late answer to the DNS A query is only cached */
     for (i = 0; pj_dns_resolver_get_cached_count(res) < 2 && i < 50; ++i)
@@ -955,8 +975,10 @@ int stun_sock_test(void)
 
     DO_TEST(keep_alive_test(&app_sess.stun_cfg, USE_IPV6));
 
-    DO_TEST(dns_pending_destroy_test(&app_sess.stun_cfg, PJ_FALSE));
-    DO_TEST(dns_pending_destroy_test(&app_sess.stun_cfg, PJ_TRUE));
+    DO_TEST(dns_pending_destroy_test(&app_sess.stun_cfg, DNS_OWN_LOCK));
+    DO_TEST(dns_pending_destroy_test(&app_sess.stun_cfg, DNS_SHARED_LOCK));
+    DO_TEST(dns_pending_destroy_test(&app_sess.stun_cfg,
+                                     DNS_SHARED_LOCK_NO_RESOLVER));
 
 on_return:
     destroy_stun_config(&app_sess);
