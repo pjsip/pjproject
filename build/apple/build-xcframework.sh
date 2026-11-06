@@ -204,10 +204,10 @@ restore_site() {
     fi
 }
 
-# CMake puts the source include directory ahead of the binary one, so a
-# generated header left in the tree -- by an autotools build, or by the iOS
-# sample staging -- silently overrides the one this build generates. A
-# distribution must not inherit whatever configured the tree last.
+# A generated header left in the tree -- by an autotools build, or by the iOS
+# sample staging -- is not used by this build, which searches and stages its
+# own. Refuse it anyway: a distribution is built from a clean tree, not from
+# whatever configured the tree last.
 STALE_HEADERS="
     pjlib/include/pj/compat/os_auto.h
     pjlib/include/pj/compat/m_auto.h
