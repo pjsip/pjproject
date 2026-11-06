@@ -313,6 +313,24 @@ static void reset_outbound_rejection(pjsua_acc *acc)
     acc->outbound_rejected = PJ_FALSE;
 }
 
+/* Deinit the account's registration once its regc is destroyed */
+static void clear_regc(pjsua_acc *acc)
+{
+    acc->regc = NULL;
+    acc->contact.slen = 0;
+    acc->reg_mapped_addr.slen = 0;
+    acc->rfc5626_status = OUTBOUND_UNKNOWN;
+    acc->rfc5626_flowtmr = 0;
+    /* New regc starts with an empty route_set; reset the mirror so the
+     * next sa_sync_route_set diff re-pushes the hidden Route. Also
+     * reset the sub-pool that held the previous mirror's clones to
+     * reclaim memory. (#4964)
+     */
+    pj_list_init(&acc->sa_pushed_route);
+    if (acc->sa_mirror_pool)
+        pj_pool_reset(acc->sa_mirror_pool);
+}
+
 /*
  * Destroy account's registration and deinit.
  */
@@ -327,19 +345,7 @@ static pj_status_t destroy_regc(pjsua_acc *acc, pj_bool_t force)
             return status;
         }
     }
-    acc->regc = NULL;
-    acc->contact.slen = 0;
-    acc->reg_mapped_addr.slen = 0;
-    acc->rfc5626_status = OUTBOUND_UNKNOWN;
-    acc->rfc5626_flowtmr = 0;
-    /* New regc starts with an empty route_set; reset the mirror so the
-     * next sa_sync_route_set diff re-pushes the hidden Route. Also
-     * reset the sub-pool that held the previous mirror's clones to
-     * reclaim memory. (#4964)
-     */
-    pj_list_init(&acc->sa_pushed_route);
-    if (acc->sa_mirror_pool)
-        pj_pool_reset(acc->sa_mirror_pool);
+    clear_regc(acc);
 
     return PJ_SUCCESS;
 }
@@ -3172,18 +3178,20 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 
         /* This callback is called without holding the registration's lock,
          * so there can be a race condition with another registration
-         * process. Therefore, we must not forcefully try to destroy
-         * the registration here.
+         * process. Therefore, the registration is destroyed only if no
+         * request has been sent or reserved since this one.
          */
-        status = destroy_regc(acc, PJ_FALSE);
+        status = pjsip_regc_destroy_if_latest(acc->regc, param->cseq);
         if (status == PJ_SUCCESS) {
+            clear_regc(acc);
+
             /* Stop keep-alive timer if any. */
             update_keep_alive(acc, PJ_FALSE, NULL);
         } else {
-            /* Another registration is in progress, it reports the result */
+            /* A newer request reports the result */
             pj_assert(status == PJ_EBUSY);
             PJ_LOG(4, (THIS_FILE, "Acc %d: error of an earlier REGISTER "
-                       "ignored, another one is in progress", acc->index));
+                       "ignored, a newer one reports the result", acc->index));
             pj_log_pop_indent();
             PJSUA_UNLOCK();
             return;

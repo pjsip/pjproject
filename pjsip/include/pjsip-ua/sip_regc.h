@@ -79,6 +79,11 @@ struct pjsip_regc_cbparam
     int                  contact_cnt;/**<Number of contacts in response.    */
     pjsip_contact_hdr   *contact[PJSIP_REGC_MAX_CONTACT]; /**< Contacts.    */
     pj_bool_t            is_unreg;  /**< Expire header, if any, set to zero?*/
+
+    /** CSeq of the request this result is for, see
+     *  #pjsip_regc_destroy_if_latest().
+     */
+    pj_int32_t           cseq;
 };
 
 
@@ -172,6 +177,24 @@ PJ_DECL(pj_status_t) pjsip_regc_destroy(pjsip_regc *regc);
  * @return          PJ_SUCCESS on success, or PJ_EBUSY.
  */
 PJ_DECL(pj_status_t) pjsip_regc_destroy2(pjsip_regc *regc, pj_bool_t force);
+
+
+/**
+ * Destroy client registration structure as #pjsip_regc_destroy2() with
+ * force set to PJ_FALSE, unless the registration has sent a request since
+ * the one with the specified CSeq. Call it from the callback with the
+ * \a cseq field of #pjsip_regc_cbparam to end the registration on a
+ * failure: the check and the destroy are done at once, so a newer request,
+ * which reports its own result, keeps the registration.
+ *
+ * @param regc      The client registration structure.
+ * @param cseq      The \a cseq field of the callback parameter.
+ *
+ * @return          PJ_SUCCESS on success, or PJ_EBUSY if a request is in
+ *                  progress or reserved, or has been sent since.
+ */
+PJ_DECL(pj_status_t) pjsip_regc_destroy_if_latest(pjsip_regc *regc,
+                                                  pj_int32_t cseq);
 
 
 /**

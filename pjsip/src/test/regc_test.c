@@ -234,6 +234,7 @@ struct client
     /* Additional results */
     unsigned    interval;
     unsigned    next_reg;
+    pj_int32_t  cseq;
 };
 
 /* regc callback */
@@ -251,6 +252,7 @@ static void client_cb(struct pjsip_regc_cbparam *param)
 
     client->error = (param->status != PJ_SUCCESS);
     client->code = param->code;
+    client->cseq = param->cseq;
 
     if (client->error)
         return;
@@ -1194,6 +1196,96 @@ on_return:
 }
 
 
+/* A failure result of a request ends the regc only while no newer request
+ * has been sent or reserved.
+ */
+static int destroy_if_latest_test(const pj_str_t *registrar_uri)
+{
+    struct registrar_cfg server_cfg =
+        /* respond  code  auth      contact  exp_prm expires more_contacts */
+        { PJ_TRUE,  200,  PJ_FALSE, EXACT,   0,      300,    {NULL, 0}};
+    const pj_str_t aor = pj_str("<sip:regc-test@pjsip.org>");
+    pj_str_t contact = pj_str("<sip:c@C>");
+    pjsip_regc *regc = NULL;
+    pjsip_tx_data *tdata = NULL;
+    pj_int32_t cseq;
+    int ret = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  destroy if latest test"));
+
+    pj_memcpy(&registrar.cfg, &server_cfg, sizeof(server_cfg));
+    pj_bzero(&client_result, sizeof(client_result));
+
+    if (pjsip_regc_create(endpt, &client_result, &client_cb,
+                          &regc) != PJ_SUCCESS)
+    {
+        return -960;
+    }
+    if (pjsip_regc_init(regc, registrar_uri, &aor, &aor, 1, &contact,
+                        300) != PJ_SUCCESS ||
+        pjsip_regc_register(regc, PJ_TRUE, &tdata) != PJ_SUCCESS ||
+        send_and_wait(regc, &tdata) != PJ_SUCCESS ||
+        client_result.code != 200)
+    {
+        ret = -961;
+        goto on_return;
+    }
+    cseq = client_result.cseq;
+
+    /* The result tells the CSeq of its request */
+    if (pjsip_regc_register(regc, PJ_TRUE, &tdata) != PJ_SUCCESS ||
+        send_and_wait(regc, &tdata) != PJ_SUCCESS ||
+        client_result.code != 200 || client_result.cseq != cseq + 1)
+    {
+        ret = -962;
+        goto on_return;
+    }
+
+    /* A newer request has been sent */
+    if (pjsip_regc_destroy_if_latest(regc, cseq) != PJ_EBUSY) {
+        regc = NULL;
+        ret = -963;
+        goto on_return;
+    }
+
+    /* A request is reserved */
+    cseq = client_result.cseq;
+    if (reserve_new(regc, &tdata) != PJ_SUCCESS) {
+        ret = -964;
+        goto on_return;
+    }
+    if (pjsip_regc_destroy_if_latest(regc, cseq) != PJ_EBUSY) {
+        regc = NULL;
+        ret = -965;
+        goto on_return;
+    }
+    if (send_and_wait(regc, &tdata) != PJ_SUCCESS ||
+        client_result.code != 200)
+    {
+        ret = -966;
+        goto on_return;
+    }
+
+    if (pjsip_regc_destroy_if_latest(regc, client_result.cseq) !=
+        PJ_SUCCESS)
+    {
+        ret = -967;
+        goto on_return;
+    }
+    regc = NULL;
+
+on_return:
+    /* A reservation must end with a send */
+    if (tdata && regc)
+        pjsip_regc_send(regc, tdata);
+    else if (tdata)
+        pjsip_tx_data_dec_ref(tdata);
+    if (regc)
+        pjsip_regc_destroy(regc);
+    return ret;
+}
+
+
 /************************************************************************/
 enum
 {
@@ -1661,6 +1753,10 @@ int regc_test(void)
         goto on_return;
 
     rc = send_after_destroy_test(&registrar_uri);
+    if (rc != 0)
+        goto on_return;
+
+    rc = destroy_if_latest_test(&registrar_uri);
     if (rc != 0)
         goto on_return;
 

@@ -136,7 +136,8 @@ typedef struct regc_chal
 
 
 static pj_status_t regc_send(pjsip_regc *regc, pjsip_tx_data *tdata,
-                             pj_bool_t auth_retry, pj_bool_t *superseded);
+                             pj_bool_t auth_retry, pj_bool_t *superseded,
+                             pj_int32_t *p_cseq);
 
 /* Declaration of async auth send implementation */
 static pj_status_t async_auth_send_impl(pjsip_auth_clt_sess *auth_sess,
@@ -204,13 +205,18 @@ PJ_DEF(pj_status_t) pjsip_regc_destroy(pjsip_regc *regc)
     return pjsip_regc_destroy2(regc, PJ_TRUE);
 }
 
-PJ_DEF(pj_status_t) pjsip_regc_destroy2(pjsip_regc *regc, pj_bool_t force)
+/* Without force, refuse while busy or, when check_cseq, once a request
+ * newer than cseq has been sent.
+ */
+static pj_status_t regc_destroy(pjsip_regc *regc, pj_bool_t force,
+                                pj_bool_t check_cseq, pj_int32_t cseq)
 {
-    PJ_ASSERT_RETURN(regc, PJ_EINVAL);
-
     pj_lock_acquire(regc->lock);
 
-    if (!force && (regc->has_tsx || regc->reserved_tdata)) {
+    if (!force && (regc->has_tsx || regc->reserved_tdata ||
+                   (check_cseq && regc->cseq_hdr &&
+                    cseq != regc->cseq_hdr->cseq)))
+    {
         pj_lock_release(regc->lock);
         return PJ_EBUSY;
     }
@@ -243,6 +249,21 @@ PJ_DEF(pj_status_t) pjsip_regc_destroy2(pjsip_regc *regc, pj_bool_t force)
     }
 
     return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjsip_regc_destroy2(pjsip_regc *regc, pj_bool_t force)
+{
+    PJ_ASSERT_RETURN(regc, PJ_EINVAL);
+
+    return regc_destroy(regc, force, PJ_FALSE, 0);
+}
+
+PJ_DEF(pj_status_t) pjsip_regc_destroy_if_latest(pjsip_regc *regc,
+                                                 pj_int32_t cseq)
+{
+    PJ_ASSERT_RETURN(regc, PJ_EINVAL);
+
+    return regc_destroy(regc, PJ_FALSE, PJ_TRUE, cseq);
 }
 
 
@@ -865,7 +886,7 @@ static void cbparam_init( struct pjsip_regc_cbparam *cbparam,
                           const pj_str_t *reason,
                           pjsip_rx_data *rdata, pj_uint32_t expiration,
                           int contact_cnt, pjsip_contact_hdr *contact[],
-                          pj_bool_t is_unreg)
+                          pj_bool_t is_unreg, pj_int32_t cseq)
 {
     cbparam->regc = regc;
     cbparam->token = regc->token;
@@ -877,6 +898,7 @@ static void cbparam_init( struct pjsip_regc_cbparam *cbparam,
     cbparam->expiration = (expiration != PJSIP_REGC_EXPIRATION_NOT_SPECIFIED?
                            expiration: regc->expires_requested);
     cbparam->is_unreg = is_unreg;
+    cbparam->cseq = cseq;
     if (contact_cnt) {
         pj_memcpy( cbparam->contact, contact, 
                    contact_cnt*sizeof(pjsip_contact_hdr*));
@@ -887,7 +909,7 @@ static void call_callback(pjsip_regc *regc, pj_status_t status, int st_code,
                           const pj_str_t *reason,
                           pjsip_rx_data *rdata, pj_uint32_t expiration,
                           int contact_cnt, pjsip_contact_hdr *contact[],
-                          pj_bool_t is_unreg)
+                          pj_bool_t is_unreg, pj_int32_t cseq)
 {
     struct pjsip_regc_cbparam cbparam;
 
@@ -895,8 +917,19 @@ static void call_callback(pjsip_regc *regc, pj_status_t status, int st_code,
         return;
 
     cbparam_init(&cbparam, regc, status, st_code, reason, rdata, expiration,
-                 contact_cnt, contact, is_unreg);
+                 contact_cnt, contact, is_unreg, cseq);
     (*regc->cb)(&cbparam);
+}
+
+static pj_int32_t latest_cseq(pjsip_regc *regc)
+{
+    pj_int32_t cseq;
+
+    pj_lock_acquire(regc->lock);
+    cseq = regc->cseq_hdr->cseq;
+    pj_lock_release(regc->lock);
+
+    return cseq;
 }
 
 static void regc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
@@ -904,6 +937,7 @@ static void regc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
 {
     pjsip_regc *regc = (pjsip_regc*) entry->user_data;
     pjsip_tx_data *tdata;
+    pj_int32_t cseq;
     pj_status_t status;
     
     PJ_UNUSED_ARG(timer_heap);
@@ -914,16 +948,17 @@ static void regc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
     pjsip_regc_add_ref(regc);
 
     entry->id = 0;
+    cseq = latest_cseq(regc);
     status = pjsip_regc_register(regc, 1, &tdata);
     if (status == PJ_SUCCESS) {
-        status = pjsip_regc_send(regc, tdata);
-    } 
+        status = regc_send(regc, tdata, PJ_FALSE, NULL, &cseq);
+    }
     
     if (status != PJ_SUCCESS && regc->cb) {
         char errmsg[PJ_ERR_MSG_SIZE];
         pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
         call_callback(regc, status, 400, &reason, NULL, NOEXP, 0, NULL,
-                      PJ_FALSE);
+                      PJ_FALSE, cseq);
     }
 
     /* Delete the record if user destroy regc during the callback. */
@@ -1223,11 +1258,12 @@ static pj_status_t async_auth_send_impl(pjsip_auth_clt_sess *auth_sess,
     regc_chal *chal = (regc_chal*)user_data;
     pjsip_regc *regc = chal->regc;
     pj_bool_t superseded = PJ_FALSE;
+    pj_int32_t cseq = chal->cseq;
 
     PJ_UNUSED_ARG(auth_sess);
 
     /* A superseded request is reported by the newer one or by destroy */
-    status = regc_send(regc, tdata, PJ_TRUE, &superseded);
+    status = regc_send(regc, tdata, PJ_TRUE, &superseded, &cseq);
     if (status != PJ_SUCCESS && !superseded) {
         char errmsg[PJ_ERR_MSG_SIZE];
         pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
@@ -1238,7 +1274,7 @@ static pj_status_t async_auth_send_impl(pjsip_auth_clt_sess *auth_sess,
          * and consistent with the rest of the codebase.
          */
         call_callback(regc, status, 0, &reason, NULL, NOEXP, 0, NULL,
-                      chal->is_unreg);
+                      chal->is_unreg, cseq);
     }
 
     /* Release the reference the token took at creation. */
@@ -1270,7 +1306,7 @@ static void async_auth_abandon_impl(pjsip_auth_clt_sess *auth_sess,
      */
     if (!outdated) {
         call_callback(regc, PJ_ECANCELLED, PJSIP_SC_UNAUTHORIZED, &reason,
-                      NULL, NOEXP, 0, NULL, chal->is_unreg);
+                      NULL, NOEXP, 0, NULL, chal->is_unreg, chal->cseq);
     }
 
     /* Release the reference the token took at creation. */
@@ -1320,7 +1356,7 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
                      &tsx->status_text,
                      (event->body.tsx_state.type==PJSIP_EVENT_RX_MSG) ? 
                       event->body.tsx_state.src.rdata : NULL,
-                     NOEXP, 0, NULL, PJ_FALSE);
+                     NOEXP, 0, NULL, PJ_FALSE, tsx->cseq);
 
         /* Call regc tsx callback before handling any response */
         pj_lock_release(regc->lock);
@@ -1361,6 +1397,7 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
         pjsip_tx_data *tdata;
         pj_bool_t is_unreg;
         pj_bool_t superseded = PJ_FALSE;
+        pj_int32_t cseq;
         pjsip_auth_clt_async_on_chal_param chal_param = { 0 };
 
         /* Capture is_unreg but keep current_op alive so that
@@ -1465,6 +1502,8 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
              * handle it here now.
              */
 
+            cseq = tsx->cseq;
+
             /* Reinit request with auth response. */
             status = pjsip_auth_clt_reinit_req( &regc->auth_sess,
                                                 rdata, 
@@ -1479,13 +1518,14 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
                  * been incremented.
                  */
                 pj_lock_release(regc->lock);
-                status = regc_send(regc, tdata, PJ_TRUE, &superseded);
+                status = regc_send(regc, tdata, PJ_TRUE, &superseded, &cseq);
                 pj_lock_acquire(regc->lock);
             }
 
             if (status != PJ_SUCCESS && !superseded) {
                 /* A sent retry or a newer request sets current_op itself */
-                regc->current_op = REGC_IDLE;
+                if (cseq == regc->cseq_hdr->cseq)
+                    regc->current_op = REGC_IDLE;
 
                 /* Only call callback if application is still interested
                  * in it.
@@ -1497,7 +1537,7 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
                     pj_lock_release(regc->lock);
                     call_callback(regc, status, tsx->status_code, 
                                   &rdata->msg_info.msg->line.status.reason,
-                                  rdata, NOEXP, 0, NULL, is_unreg);
+                                  rdata, NOEXP, 0, NULL, is_unreg, cseq);
                     pj_lock_acquire(regc->lock);
                 }
             }
@@ -1526,6 +1566,7 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
         pjsip_min_expires_hdr *me_hdr;
         pjsip_tx_data *tdata;
         pj_uint32_t min_exp;
+        pj_int32_t cseq;
 
         /* reset current op */
         regc->current_op = REGC_IDLE;
@@ -1571,6 +1612,7 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
 
         set_expires(regc, min_exp);
 
+        cseq = tsx->cseq;
         status = pjsip_regc_register(regc, regc->auto_reg, &tdata);
         if (status == PJ_SUCCESS) {
             /* Need to unlock the regc temporarily while sending the message
@@ -1579,7 +1621,7 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
              * incremented.
              */
             pj_lock_release(regc->lock);
-            status = pjsip_regc_send(regc, tdata);
+            status = regc_send(regc, tdata, PJ_FALSE, NULL, &cseq);
             pj_lock_acquire(regc->lock);
         }
 
@@ -1594,7 +1636,7 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
                 pj_lock_release(regc->lock);
                 call_callback(regc, status, tsx->status_code,
                               &rdata->msg_info.msg->line.status.reason,
-                              rdata, NOEXP, 0, NULL, PJ_FALSE);
+                              rdata, NOEXP, 0, NULL, PJ_FALSE, cseq);
                 pj_lock_acquire(regc->lock);
             }
         }
@@ -1668,7 +1710,7 @@ handle_err:
                       (rdata ? &rdata->msg_info.msg->line.status.reason 
                         : &tsx->status_text),
                       rdata, expiration, 
-                      contact_cnt, contact, is_unreg);
+                      contact_cnt, contact, is_unreg, tsx->cseq);
         pj_lock_acquire(regc->lock);
     }
 
@@ -1691,10 +1733,12 @@ static pj_bool_t req_adds_binding(const pjsip_tx_data *tdata)
 /* With auth_retry, tdata is the authentication of a challenged request,
  * not sent if the regc has sent or reserved another request since, or has
  * been destroyed and tdata adds a binding: an un-REGISTER is still sent
- * after destroy.
+ * after destroy. p_cseq receives the CSeq tdata is sent with, or is left
+ * unchanged if it is not sent.
  */
 static pj_status_t regc_send(pjsip_regc *regc, pjsip_tx_data *tdata,
-                             pj_bool_t auth_retry, pj_bool_t *superseded)
+                             pj_bool_t auth_retry, pj_bool_t *superseded,
+                             pj_int32_t *p_cseq)
 {
     pj_status_t status;
     pjsip_cseq_hdr *cseq_hdr;
@@ -1758,6 +1802,8 @@ static pj_status_t regc_send(pjsip_regc *regc, pjsip_tx_data *tdata,
 
     /* Increment CSeq */
     cseq = ++regc->cseq_hdr->cseq;
+    if (p_cseq)
+        *p_cseq = cseq;
     cseq_hdr = (pjsip_cseq_hdr*)
                pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL);
     cseq_hdr->cseq = cseq;
@@ -1858,7 +1904,7 @@ PJ_DEF(pj_status_t) pjsip_regc_reserve(pjsip_regc *regc,
 
 PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
 {
-    return regc_send(regc, tdata, PJ_FALSE, NULL);
+    return regc_send(regc, tdata, PJ_FALSE, NULL, NULL);
 }
 
 PJ_DEF(pj_status_t) pjsip_regc_set_auth_sess( pjsip_regc *regc,

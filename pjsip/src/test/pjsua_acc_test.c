@@ -1106,21 +1106,24 @@ static int abandon_thread(void *arg)
 
 /* A deferred challenge abandoned while an IP change sends its REGISTER: the
  * abandon's registration callback waits for PJSUA_LOCK, which the IP change
- * holds while it claims the registration. It must not report an error or
- * end the IP change.
+ * holds while it claims the registration. With answered, the IP change's
+ * REGISTER also gets its 200 before the abandon gets the lock. The abandon
+ * must not report an error, end the IP change or end the registration.
  */
-static int abandon_window_test(pjsua_transport_id tp_id, int port)
+static int abandon_window_test(pjsua_transport_id tp_id, int port,
+                               pj_bool_t answered)
 {
     pjsua_acc_config acc_cfg;
     pjsua_acc_id     acc_id = PJSUA_INVALID_ID;
     pj_thread_t     *thread = NULL;
     char             reg_uri[64];
+    int              base = answered? -4110 : -4100;
     int              log_level;
     pj_status_t      status;
     int              rc = 0;
 
     PJ_LOG(3, (THIS_FILE, "  pjsua acc: challenge abandoned during an IP "
-               "change"));
+               "change%s", answered? ", which registers first" : ""));
 
     pj_bzero(&g_ctx, sizeof(g_ctx));
     pj_bzero(&g_defer, sizeof(g_defer));
@@ -1138,7 +1141,7 @@ static int abandon_window_test(pjsua_transport_id tp_id, int port)
         pjsua_acc_set_registration(acc_id, PJ_TRUE) != PJ_SUCCESS ||
         wait_reg(5000) != 0)
     {
-        rc = -4101;
+        rc = base - 1;
         goto on_return;
     }
 
@@ -1146,19 +1149,20 @@ static int abandon_window_test(pjsua_transport_id tp_id, int port)
     g_mock_reg.challenge = PJ_TRUE;
     g_defer.enabled = PJ_TRUE;
     if (pjsua_acc_set_registration(acc_id, PJ_TRUE) != PJ_SUCCESS) {
-        rc = -4102;
+        rc = base - 2;
         goto on_return;
     }
     pump_events(5000, &g_defer.pending, PJ_TRUE);
     g_mock_reg.challenge = PJ_FALSE;
     if (!g_defer.pending) {
-        rc = -4103;
+        rc = base - 3;
         goto on_return;
     }
 
-    /* The IP change's REGISTER stays pending */
-    g_mock_reg.drop = PJ_TRUE;
+    /* Without answered, the IP change's REGISTER stays pending */
+    g_mock_reg.drop = !answered;
     g_ctx.reg_code = 0;
+    g_ctx.reg_done = PJ_FALSE;
     g_abandon_started = PJ_FALSE;
     g_abandon_ignored = PJ_FALSE;
     log_level = pj_log_get_level();
@@ -1176,6 +1180,9 @@ static int abandon_window_test(pjsua_transport_id tp_id, int port)
         pj_thread_sleep(300);
         status = ip_change();
     }
+    /* The 200 is handled on this thread, which holds PJSUA_LOCK */
+    if (status == PJ_SUCCESS && answered)
+        pump_events(5000, &g_ctx.reg_done, PJ_TRUE);
     PJSUA_UNLOCK();
     if (thread) {
         pj_thread_join(thread);
@@ -1185,36 +1192,44 @@ static int abandon_window_test(pjsua_transport_id tp_id, int port)
     pj_log_set_log_func(g_log_func);
     pj_log_set_level(log_level);
     if (status != PJ_SUCCESS) {
-        rc = -4104;
+        rc = base - 4;
         goto on_return;
     }
+    /* The IP change ends on a timer */
+    if (answered)
+        pump_events(2000, &g_ctx.ipc_done_cnt, PJ_TRUE);
 
-    if (g_ctx.reg_code != 0 || g_ctx.ipc_done_cnt != 0 ||
+    if (g_ctx.reg_code != (answered? 200 : 0) ||
+        g_ctx.ipc_done_cnt != (answered? 1 : 0) ||
+        pjsua_var.acc[acc_id].regc == NULL ||
         pjsua_var.acc[acc_id].reg_last_code != 200)
     {
         PJ_LOG(3, (THIS_FILE, "    error: the abandoned challenge reported "
-                   "%d and ended the IP change %d time(s)", g_ctx.reg_code,
-                   g_ctx.ipc_done_cnt));
-        rc = -4105;
+                   "%d, the IP change ended %d time(s), the registration "
+                   "%s", g_ctx.reg_code, g_ctx.ipc_done_cnt,
+                   pjsua_var.acc[acc_id].regc? "remains" : "ended"));
+        rc = base - 5;
         goto on_return;
     }
+    /* Otherwise the IP change claimed the registration first, and the
+     * abandon was dropped as outdated before it reached pjsua.
+     */
     if (!g_abandon_ignored) {
-        PJ_LOG(3, (THIS_FILE, "    error: the abandon did not reach the "
-                   "registration callback before the IP change"));
-        rc = -4108;
-        goto on_return;
+        PJ_LOG(3, (THIS_FILE, "    the abandon came after the IP change, "
+                   "the window was not exercised"));
     }
+    if (answered)
+        goto on_return;
 
     /* The IP change's REGISTER is answered on retransmission */
     g_mock_reg.drop = PJ_FALSE;
-    g_ctx.reg_done = PJ_FALSE;
     if (wait_reg(10000) != 0 || g_ctx.reg_code != 200) {
-        rc = -4106;
+        rc = base - 6;
         goto on_return;
     }
     pump_events(2000, &g_ctx.ipc_done_cnt, PJ_TRUE);
     if (g_ctx.ipc_done_cnt != 1) {
-        rc = -4107;
+        rc = base - 7;
     }
 
 on_return:
@@ -1444,7 +1459,9 @@ int pjsua_acc_test(void)
     }
 
 #if PJ_HAS_THREADS
-    rc = abandon_window_test(tp_id, (int)port);
+    rc = abandon_window_test(tp_id, (int)port, PJ_FALSE);
+    if (rc != 0) goto on_return;
+    rc = abandon_window_test(tp_id, (int)port, PJ_TRUE);
     if (rc != 0) goto on_return;
 #endif
 
