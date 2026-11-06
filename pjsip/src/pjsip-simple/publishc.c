@@ -909,10 +909,21 @@ static void tsx_callback(void *token, pjsip_event *event)
                 pubc->timer.cb = &pubc_refresh_timer_cb;
                 pubc->timer.id = REFRESH_TIMER;
                 pubc->timer.user_data = pubc;
-                pjsip_endpt_schedule_timer( pubc->endpt, &pubc->timer, &delay);
-                pj_gettimeofday(&pubc->last_refresh);
-                pubc->next_refresh = pubc->last_refresh;
-                PJ_TIME_VAL_ADD(pubc->next_refresh, delay);
+                status = pjsip_endpt_schedule_timer(pubc->endpt, &pubc->timer,
+                                                    &delay);
+                if (status != PJ_SUCCESS) {
+                    /* Keep timer.id consistent with the heap, since
+                     * pubc_cancel_timer() infers a dispatched callback
+                     * from a failed cancel.
+                     */
+                    pubc->timer.id = 0;
+                    PJ_PERROR(4,(THIS_FILE, status,
+                                 "Error scheduling refresh timer"));
+                } else {
+                    pj_gettimeofday(&pubc->last_refresh);
+                    pubc->next_refresh = pubc->last_refresh;
+                    PJ_TIME_VAL_ADD(pubc->next_refresh, delay);
+                }
             }
 
         } else {
