@@ -1294,6 +1294,117 @@ on_return:
 }
 
 
+/* Results of a challenged REGISTER whose retry fails to be sent, while an
+ * un-REGISTER is sent from the callback of that failure.
+ */
+static struct
+{
+    unsigned    cnt;
+    struct {
+        pj_status_t status;
+        int         code;
+        pj_int32_t  cseq;
+        pj_bool_t   is_unreg;
+    } res[8];
+} retry_result;
+
+static void retry_cb(struct pjsip_regc_cbparam *param)
+{
+    pjsip_tx_data *tdata;
+
+    if (retry_result.cnt < PJ_ARRAY_SIZE(retry_result.res)) {
+        retry_result.res[retry_result.cnt].status = param->status;
+        retry_result.res[retry_result.cnt].code = param->code;
+        retry_result.res[retry_result.cnt].cseq = param->cseq;
+        retry_result.res[retry_result.cnt].is_unreg = param->is_unreg;
+    }
+    if (retry_result.cnt++ == 0) {
+        /* Answered at once, so no retry sets its operation again */
+        send_mod.count_before_reject = 0xFFFF;
+        registrar.cfg.authenticate = PJ_FALSE;
+        if (pjsip_regc_unregister(param->regc, &tdata) == PJ_SUCCESS)
+            pjsip_regc_send(param->regc, tdata);
+    }
+}
+
+static int retry_send_error_test(const pj_str_t *registrar_uri)
+{
+    struct registrar_cfg server_cfg =
+        /* respond  code  auth      contact  exp_prm expires more_contacts */
+        { PJ_TRUE,  200,  PJ_TRUE,  EXACT,   0,      300,    {NULL, 0}};
+    const pj_str_t aor = pj_str("<sip:regc-test@pjsip.org>");
+    pj_str_t contact = pj_str("<sip:c@C>");
+    pjsip_cred_info cred;
+    pjsip_regc *regc = NULL;
+    pjsip_tx_data *tdata;
+    unsigned i;
+    int ret = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  retry send error test"));
+
+    pj_memcpy(&registrar.cfg, &server_cfg, sizeof(server_cfg));
+    pj_bzero(&retry_result, sizeof(retry_result));
+    pj_bzero(&cred, sizeof(cred));
+    cred.realm = pj_str("*");
+    cred.scheme = pj_str("digest");
+    cred.username = pj_str("user");
+    cred.data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
+    cred.data = pj_str("password");
+
+    if (pjsip_regc_create(endpt, NULL, &retry_cb, &regc) != PJ_SUCCESS)
+        return -970;
+    if (pjsip_regc_init(regc, registrar_uri, &aor, &aor, 1, &contact,
+                        300) != PJ_SUCCESS ||
+        pjsip_regc_set_credentials(regc, 1, &cred) != PJ_SUCCESS ||
+        pjsip_regc_register(regc, PJ_TRUE, &tdata) != PJ_SUCCESS)
+    {
+        ret = -971;
+        goto on_return;
+    }
+
+    /* The retry with credentials fails to be sent */
+    send_mod.count = 0;
+    send_mod.count_before_reject = 1;
+    if (pjsip_regc_send(regc, tdata) != PJ_SUCCESS) {
+        ret = -972;
+        goto on_return;
+    }
+    for (i=0; retry_result.cnt < 3 && i<100; ++i)
+        flush_events(100);
+    flush_events(100);
+    /* The retry's failure, the challenged request's, then the un-REGISTER */
+    if (retry_result.cnt != 3 || retry_result.res[2].code != 200) {
+        PJ_LOG(3,(THIS_FILE, "    error: %u results reported",
+                             retry_result.cnt));
+        ret = -973;
+        goto on_return;
+    }
+
+    /* The failure is reported with the CSeq of the retry */
+    if (retry_result.res[1].status == PJ_SUCCESS ||
+        retry_result.res[1].cseq != retry_result.res[0].cseq)
+    {
+        PJ_LOG(3,(THIS_FILE, "    error: retry failure reported with CSeq "
+                             "%d, not %d", retry_result.res[1].cseq,
+                             retry_result.res[0].cseq));
+        ret = -974;
+        goto on_return;
+    }
+
+    /* The un-REGISTER keeps its operation */
+    if (!retry_result.res[2].is_unreg) {
+        PJ_LOG(3,(THIS_FILE, "    error: un-REGISTER reported as REGISTER"));
+        ret = -975;
+    }
+
+on_return:
+    send_mod.count_before_reject = 0xFFFF;
+    if (regc)
+        pjsip_regc_destroy(regc);
+    return ret;
+}
+
+
 /************************************************************************/
 enum
 {
@@ -1765,6 +1876,10 @@ int regc_test(void)
         goto on_return;
 
     rc = destroy_if_latest_test(&registrar_uri);
+    if (rc != 0)
+        goto on_return;
+
+    rc = retry_send_error_test(&registrar_uri);
     if (rc != 0)
         goto on_return;
 
