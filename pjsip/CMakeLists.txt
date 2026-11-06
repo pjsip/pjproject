@@ -50,8 +50,6 @@ target_sources(pjsip
       include/pjsip/sip_auth_aka.h
       include/pjsip/sip_auth_msg.h
       include/pjsip/sip_auth_parser.h
-      include/pjsip/sip_autoconf.h.cm
-      include/pjsip/sip_autoconf.h.in
       include/pjsip/sip_config.h
       include/pjsip/sip_dialog.h
       include/pjsip/sip_endpoint.h

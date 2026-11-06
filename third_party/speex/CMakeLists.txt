@@ -55,7 +55,6 @@ target_sources(pj_speex
         include/speex/speex_bits.h
         include/speex/speex_buffer.h
         include/speex/speex_callbacks.h
-        include/speex/speex_config_types.h.in
         include/speex/speex_echo.h
         include/speex/speex_header.h
         include/speex/speex_jitter.h
