@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -133,29 +133,22 @@ const pjsip_auth_algorithm pjsip_auth_algorithms[] = {
 #  define AUTH_TRACE_(expr)
 #endif
 
-#define DO_ON_PARENT_LOCKED(sess, call) \
-    do { \
-        pj_status_t on_parent = PJ_SUCCESS; \
-        pj_bool_t with_parent = PJ_FALSE; \
-        if (sess->parent) { \
-            pj_lock_acquire(sess->parent->lock); \
-            with_parent = PJ_TRUE; \
-            on_parent = call; \
-            pj_lock_release(sess->parent->lock); \
-        } \
-        if (with_parent) { \
-            return on_parent; \
-        } \
-    } while(0)
+/* A session with a parent delegates each operation to it, and a shared
+ * session (one that is a parent) serializes the operations on itself with
+ * its own lock. The lock is never held while calling into the application.
+ */
+#define LOCK_SHARED(sess) \
+    do { if ((sess)->lock) pj_lock_acquire((sess)->lock); } while (0)
+#define UNLOCK_SHARED(sess) \
+    do { if ((sess)->lock) pj_lock_release((sess)->lock); } while (0)
 
 
 /* Signature of async auth token, used to detect double-use (zeroed on
  * consumption) and provide minimal protection against invalid token pointers.
  *
- * Note: the check-then-clear of the signature in send_req/abandon is not
- * atomic, but this is safe under PJSIP's single-worker-thread model.  When
- * a parent session lock is configured (via DO_ON_PARENT_LOCKED), the lock
- * serializes concurrent access.
+ * Note: the check-then-clear of the signature in async_consume_token() is
+ * not atomic, but this is safe under PJSIP's single-worker-thread model.
+ * A shared session's lock serializes concurrent access.
  */
 #define AUTH_TOKEN_SIGNATURE    "AUTH"
 
@@ -1038,14 +1031,32 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_clone( pj_pool_t *pool,
 }
 
 
+static pj_status_t set_credentials_impl(pjsip_auth_clt_sess *sess,
+                                        int cred_cnt,
+                                        const pjsip_cred_info *c);
+
 /* Set client credentials. */
 PJ_DEF(pj_status_t) pjsip_auth_clt_set_credentials( pjsip_auth_clt_sess *sess,
                                                     int cred_cnt,
                                                     const pjsip_cred_info *c)
 {
-    PJ_ASSERT_RETURN(sess && c, PJ_EINVAL);
-    DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_set_credentials(sess->parent, cred_cnt, c));
+    pj_status_t status;
 
+    PJ_ASSERT_RETURN(sess && c, PJ_EINVAL);
+    if (sess->parent)
+        return pjsip_auth_clt_set_credentials(sess->parent, cred_cnt, c);
+
+    LOCK_SHARED(sess);
+    status = set_credentials_impl(sess, cred_cnt, c);
+    UNLOCK_SHARED(sess);
+
+    return status;
+}
+
+static pj_status_t set_credentials_impl(pjsip_auth_clt_sess *sess,
+                                        int cred_cnt,
+                                        const pjsip_cred_info *c)
+{
     if (cred_cnt == 0) {
         sess->cred_cnt = 0;
     } else {
@@ -1120,12 +1131,15 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_set_prefs(pjsip_auth_clt_sess *sess,
                                              const pjsip_auth_clt_pref *p)
 {
     PJ_ASSERT_RETURN(sess && p, PJ_EINVAL);
-    DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_set_prefs(sess->parent, p));
+    if (sess->parent)
+        return pjsip_auth_clt_set_prefs(sess->parent, p);
 
+    LOCK_SHARED(sess);
     pj_memcpy(&sess->pref, p, sizeof(*p));
     pj_strdup(sess->pool, &sess->pref.algorithm, &p->algorithm);
     //if (sess->pref.algorithm.slen == 0)
     //  sess->pref.algorithm = pj_str("MD5");
+    UNLOCK_SHARED(sess);
 
     return PJ_SUCCESS;
 }
@@ -1138,8 +1152,13 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_get_prefs(pjsip_auth_clt_sess *sess,
                                              pjsip_auth_clt_pref *p)
 {
     PJ_ASSERT_RETURN(sess && p, PJ_EINVAL);
-    DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_get_prefs(sess->parent, p));
+    if (sess->parent)
+        return pjsip_auth_clt_get_prefs(sess->parent, p);
+
+    LOCK_SHARED(sess);
     pj_memcpy(p, &sess->pref, sizeof(pjsip_auth_clt_pref));
+    UNLOCK_SHARED(sess);
+
     return PJ_SUCCESS;
 }
 
@@ -1362,21 +1381,37 @@ static pjsip_authorization_hdr* get_header_for_cred_info(
 }
 
 
+static pj_status_t init_req_impl(pjsip_auth_clt_sess *sess,
+                                 pjsip_tx_data *tdata);
+
 /* Initialize outgoing request. */
 PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
                                              pjsip_tx_data *tdata )
 {
-    const pjsip_method *method;
-    pjsip_cached_auth *auth;
-    pjsip_hdr added;
+    pj_status_t status;
 
     PJ_ASSERT_RETURN(sess && tdata, PJ_EINVAL);
     PJ_ASSERT_RETURN(sess->pool, PJSIP_ENOTINITIALIZED);
     PJ_ASSERT_RETURN(tdata->msg->type==PJSIP_REQUEST_MSG,
                      PJSIP_ENOTREQUESTMSG);
 
+    if (sess->parent)
+        return pjsip_auth_clt_init_req(sess->parent, tdata);
 
-    DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_init_req(sess->parent, tdata));
+    LOCK_SHARED(sess);
+    status = init_req_impl(sess, tdata);
+    UNLOCK_SHARED(sess);
+
+    return status;
+}
+
+static pj_status_t init_req_impl(pjsip_auth_clt_sess *sess,
+                                 pjsip_tx_data *tdata)
+{
+    const pjsip_method *method;
+    pjsip_cached_auth *auth;
+    pjsip_hdr added;
+
     /* Init list */
     pj_list_init(&added);
 
@@ -1705,17 +1740,17 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
  *  - to put the newly created Authorization/Proxy-Authorization header
  *    in cached_list.
  */
+static pj_status_t reinit_req_impl(pjsip_auth_clt_sess *sess,
+                                   const pjsip_rx_data *rdata,
+                                   pjsip_tx_data *old_request,
+                                   pjsip_tx_data **new_request);
+
 PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(  pjsip_auth_clt_sess *sess,
                                                 const pjsip_rx_data *rdata,
                                                 pjsip_tx_data *old_request,
                                                 pjsip_tx_data **new_request )
 {
-    pjsip_tx_data *tdata;
-    const pjsip_hdr *hdr;
-    unsigned chal_cnt, auth_cnt;
-    pjsip_via_hdr *via;
     pj_status_t status;
-    pj_status_t last_auth_err;
 
     PJ_ASSERT_RETURN(sess && rdata && old_request && new_request,
                      PJ_EINVAL);
@@ -1728,7 +1763,29 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(  pjsip_auth_clt_sess *sess,
                      rdata->msg_info.msg->line.status.code == 407,
                      PJSIP_EINVALIDSTATUS);
 
-    DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_reinit_req(sess->parent, rdata, old_request, new_request));
+    if (sess->parent) {
+        return pjsip_auth_clt_reinit_req(sess->parent, rdata, old_request,
+                                         new_request);
+    }
+
+    LOCK_SHARED(sess);
+    status = reinit_req_impl(sess, rdata, old_request, new_request);
+    UNLOCK_SHARED(sess);
+
+    return status;
+}
+
+static pj_status_t reinit_req_impl(pjsip_auth_clt_sess *sess,
+                                   const pjsip_rx_data *rdata,
+                                   pjsip_tx_data *old_request,
+                                   pjsip_tx_data **new_request)
+{
+    pjsip_tx_data *tdata;
+    const pjsip_hdr *hdr;
+    unsigned chal_cnt, auth_cnt;
+    pjsip_via_hdr *via;
+    pj_status_t status;
+    pj_status_t last_auth_err;
 
     tdata = old_request;
     tdata->auth_retry = PJ_FALSE;
@@ -1868,16 +1925,59 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_async_configure(
                                     const pjsip_auth_clt_async_setting *opt)
 {
     PJ_ASSERT_RETURN(sess && opt && opt->cb, PJ_EINVAL);
-    DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_async_configure(sess->parent,
-                        opt));
+    if (sess->parent)
+        return pjsip_auth_clt_async_configure(sess->parent, opt);
 
+    LOCK_SHARED(sess);
     if (!sess->async_opt) {
         sess->async_opt = PJ_POOL_ZALLOC_T(sess->pool,
                                            pjsip_auth_clt_async_setting);
     }
     *sess->async_opt = *opt;
+    UNLOCK_SHARED(sess);
 
     return PJ_SUCCESS;
+}
+
+
+/* Validate an async token and consume it: copy it to *copy and clear its
+ * signature so that it can't be used again. *p_sess receives the session
+ * that owns the token. Callers invoke the copied send_impl/abandon_impl
+ * without the session lock held, since the implementation takes its
+ * owner's lock (regc, pubc, dialog), which the owner also holds while
+ * calling into this session.
+ */
+static pj_status_t async_consume_token(pjsip_auth_clt_sess *sess,
+                                       pjsip_auth_clt_async_impl_token *token,
+                                       pj_bool_t for_send,
+                                       pjsip_auth_clt_async_impl_token *copy,
+                                       pjsip_auth_clt_sess **p_sess)
+{
+    pj_status_t status;
+
+    if (sess->parent) {
+        return async_consume_token(sess->parent, token, for_send, copy,
+                                   p_sess);
+    }
+
+    LOCK_SHARED(sess);
+    if (for_send && (!sess->async_opt || !sess->async_opt->cb)) {
+        pj_assert(!"Async authentication is not configured");
+        status = PJ_EINVALIDOP;
+    } else if ((for_send && !token->send_impl) ||
+               pj_memcmp(token->signature, AUTH_TOKEN_SIGNATURE, 4) != 0)
+    {
+        /* Best effort to verify the integrity of the token */
+        status = PJ_EINVAL;
+    } else {
+        *copy = *token;
+        pj_bzero(token->signature, 4);
+        *p_sess = sess;
+        status = PJ_SUCCESS;
+    }
+    UNLOCK_SHARED(sess);
+
+    return status;
 }
 
 
@@ -1886,38 +1986,26 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_async_send_req(
                                     void *token,
                                     pjsip_tx_data *new_request)
 {
-    pjsip_auth_clt_async_impl_token *send_token =
-                                (pjsip_auth_clt_async_impl_token*)token;
+    pjsip_auth_clt_async_impl_token send_token;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(sess && token && new_request, PJ_EINVAL);
-    DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_async_send_req(
-                                                        sess->parent,
-                                                        token, new_request));
-    PJ_ASSERT_RETURN(sess->async_opt && sess->async_opt->cb, PJ_EINVALIDOP);
 
-    /* Best effort to verify the integrity of the token */
-    if (!send_token->send_impl ||
-        pj_memcmp(send_token->signature, AUTH_TOKEN_SIGNATURE, 4) != 0)
-    {
-        return PJ_EINVAL;
-    }
-
-    /* Save grp_lock before send_impl — after dec_ref the token memory
-     * may be freed.
+    /* The token is invalidated before use: send failures are
+     * transport-level errors, not retryable with the same tdata.
      */
-    {
-        pj_grp_lock_t *grp_lock = send_token->grp_lock;
+    status = async_consume_token(sess,
+                                 (pjsip_auth_clt_async_impl_token*)token,
+                                 PJ_TRUE, &send_token, &sess);
+    if (status != PJ_SUCCESS)
+        return status;
 
-        status = (*send_token->send_impl)(sess, send_token->user_data,
-                                          new_request);
-        /* Always invalidate the token after use.  Send failures are
-         * transport-level errors — not retryable with the same tdata.
-         */
-        pj_bzero(send_token->signature, 4);
-        if (grp_lock)
-            pj_grp_lock_dec_ref(grp_lock);
-    }
+    status = (*send_token.send_impl)(sess, send_token.user_data,
+                                     new_request);
+
+    /* The token memory may be freed by this. */
+    if (send_token.grp_lock)
+        pj_grp_lock_dec_ref(send_token.grp_lock);
 
     return status;
 }
@@ -1927,36 +2015,52 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_async_abandon(
                                     pjsip_auth_clt_sess *sess,
                                     void *token)
 {
-    pjsip_auth_clt_async_impl_token *impl_token =
-                                (pjsip_auth_clt_async_impl_token*)token;
+    pjsip_auth_clt_async_impl_token impl_token;
+    pj_status_t status;
 
     PJ_ASSERT_RETURN(sess && token, PJ_EINVAL);
-    DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_async_abandon(sess->parent,
-                                                           token));
 
-    /* Best effort to verify the integrity of the token */
-    if (pj_memcmp(impl_token->signature, AUTH_TOKEN_SIGNATURE, 4) != 0)
-        return PJ_EINVAL;
-
-    /* Save grp_lock before any operation — after dec_ref the token memory
-     * may be freed.
+    /* The signature is cleared first to prevent any further use of the
+     * token, even if abandon_impl triggers destruction of the session.
      */
-    {
-        pj_grp_lock_t *grp_lock = impl_token->grp_lock;
+    status = async_consume_token(sess,
+                                 (pjsip_auth_clt_async_impl_token*)token,
+                                 PJ_FALSE, &impl_token, &sess);
+    if (status != PJ_SUCCESS)
+        return status;
 
-        /* Clear the signature FIRST to prevent any further use of the
-         * token, even if abandon_impl triggers destruction of the session.
-         */
-        pj_bzero(impl_token->signature, 4);
+    if (impl_token.abandon_impl)
+        (*impl_token.abandon_impl)(sess, impl_token.user_data);
 
-        if (impl_token->abandon_impl)
-            (*impl_token->abandon_impl)(sess, impl_token->user_data);
-
-        if (grp_lock)
-            pj_grp_lock_dec_ref(grp_lock);
-    }
+    /* The token memory may be freed by this. */
+    if (impl_token.grp_lock)
+        pj_grp_lock_dec_ref(impl_token.grp_lock);
 
     return PJ_SUCCESS;
+}
+
+
+/* Copy the async setting. *p_sess receives the session that owns it. */
+static pj_status_t async_get_setting(pjsip_auth_clt_sess *sess,
+                                     pjsip_auth_clt_async_setting *setting,
+                                     pjsip_auth_clt_sess **p_sess)
+{
+    pj_status_t status;
+
+    if (sess->parent)
+        return async_get_setting(sess->parent, setting, p_sess);
+
+    LOCK_SHARED(sess);
+    if (!sess->async_opt || !sess->async_opt->cb) {
+        status = PJ_EINVALIDOP;
+    } else {
+        *setting = *sess->async_opt;
+        *p_sess = sess;
+        status = PJ_SUCCESS;
+    }
+    UNLOCK_SHARED(sess);
+
+    return status;
 }
 
 
@@ -1966,21 +2070,25 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_async_impl_on_challenge(
                             const pjsip_auth_clt_async_on_chal_param *param)
 {
     pjsip_auth_clt_async_on_chal_param cb_param;
+    pjsip_auth_clt_async_setting setting;
+    pj_status_t status;
 
     PJ_ASSERT_RETURN(sess && token && param && param->rdata && param->tdata,
                      PJ_EINVAL);
-    DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_async_impl_on_challenge(
-                                                    sess->parent,
-                                                    token, param));
 
-    if (!sess->async_opt || !sess->async_opt->cb)
-        return PJ_EINVALIDOP;
+    status = async_get_setting(sess, &setting, &sess);
+    if (status != PJ_SUCCESS)
+        return status;
 
     pj_memcpy(token->signature, AUTH_TOKEN_SIGNATURE, 4);
 
+    /* The callback runs without the session lock, so the application may
+     * consume the token from within it, and the owner's lock order holds
+     * (see async_consume_token()).
+     */
     cb_param           = *param;
-    cb_param.user_data = sess->async_opt->user_data;
-    if ((*sess->async_opt->cb)(sess, token, &cb_param)) {
+    cb_param.user_data = setting.user_data;
+    if ((*setting.cb)(sess, token, &cb_param)) {
         return PJ_SUCCESS;
     }
 
