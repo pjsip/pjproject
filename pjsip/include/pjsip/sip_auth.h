@@ -652,7 +652,9 @@ PJ_DECL(pj_status_t) pjsip_auth_clt_set_parent(pjsip_auth_clt_sess *sess,
  *
  * Thread safety: the token may be consumed (send/abandon) from any thread,
  * provided the authentication session and its owner remain valid.  When a
- * parent session is configured, the parent's lock serializes access.
+ * parent session is configured and the token is consumed through the child
+ * session, the parent's lock makes sure that only one call consumes it. The
+ * owner then sends or abandons the request without holding that lock.
  * @{
  */
 
