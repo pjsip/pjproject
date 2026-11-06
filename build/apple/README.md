@@ -368,10 +368,14 @@ cmake --build build-ios -j
 ```
 
 For the simulator add `-DCMAKE_OSX_SYSROOT=iphonesimulator`; each target needs
-its own build directory. Any generator works, Xcode included. The applications
-and tests are off by default on iOS. Turned on (`-DPJ_BUILD_APPS=ON`,
-`-DBUILD_TESTING=ON`) they are plain unsigned executables, which run in a
-booted simulator with `xcrun simctl spawn booted <path>`.
+its own build directory. A build directory records the SDK it was configured
+with, version included, so after an Xcode update that brings a new SDK
+version, configure stops and asks for `cmake --fresh`: the paths it found in
+the old SDK no longer exist. Any generator works, Xcode included. The
+applications and tests are off by default on iOS. Turned on
+(`-DPJ_BUILD_APPS=ON`, `-DBUILD_TESTING=ON`) they are plain unsigned
+executables, which run in a booted simulator with
+`xcrun simctl spawn booted <path>`.
 
 The build also links the libraries into the sample Xcode projects under
 `pjsip-apps/src/pjsua/ios`, `pjsip-apps/src/pjsua/ios-swift` and
