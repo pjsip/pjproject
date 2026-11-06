@@ -284,6 +284,16 @@ if(IOS)
     "Link the built libraries into the iOS sample app projects" ON
   )
 
+  # The projects link static archives and embed nothing, so an app linked
+  # against shared libraries would build but not start.
+  if(PJ_IOS_SAMPLE_LIBS AND BUILD_SHARED_LIBS)
+    set(PJ_IOS_SAMPLE_LIBS OFF)
+    message(STATUS
+      "[!] the iOS sample projects need static libraries, so this shared "
+      "build is not linked into them."
+    )
+  endif()
+
   if(PJ_IOS_SAMPLE_LIBS)
     execute_process(
       COMMAND "${CMAKE_COMMAND}" -E touch
