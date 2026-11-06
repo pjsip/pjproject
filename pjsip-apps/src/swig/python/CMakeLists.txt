@@ -92,13 +92,17 @@ if(BUILD_SHARED_LIBS AND NOT IS_ABSOLUTE "${PJ_INSTALL_PYTHONDIR}"
   file(RELATIVE_PATH _pj_up "/x/${PJ_INSTALL_PYTHONDIR}"
     "/x/${CMAKE_INSTALL_LIBDIR}"
   )
+  # CMake 4 ends it with a slash
+  string(REGEX REPLACE "/$" "" _pj_up "${_pj_up}")
   if(APPLE)
-    set_property(TARGET pjsua2_python APPEND PROPERTY
-      INSTALL_RPATH "@loader_path/${_pj_up}"
+    set_property(TARGET pjsua2_python APPEND PROPERTY INSTALL_RPATH
+      "@loader_path/${_pj_up}"
+      "@loader_path/${_pj_up}/pjproject/third_party"
     )
   elseif(UNIX)
-    set_property(TARGET pjsua2_python APPEND PROPERTY
-      INSTALL_RPATH "$ORIGIN/${_pj_up}"
+    set_property(TARGET pjsua2_python APPEND PROPERTY INSTALL_RPATH
+      "$ORIGIN/${_pj_up}"
+      "$ORIGIN/${_pj_up}/pjproject/third_party"
     )
   endif()
   unset(_pj_up)

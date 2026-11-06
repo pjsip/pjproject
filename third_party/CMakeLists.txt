@@ -182,12 +182,19 @@ endforeach()
 
 # install selected sub-diriectories
 if(install_subdirs)
-  # append `$ORIGIN/pjproject/third_party` to RPATH
+  # append `$ORIGIN/pjproject/third_party` to RPATH, and the same folder seen
+  # from the bin directory for the executables
   if(BUILD_SHARED_LIBS)
     if(APPLE)
-      list(APPEND CMAKE_INSTALL_RPATH "@loader_path/pjproject/third_party")
+      list(APPEND CMAKE_INSTALL_RPATH
+        "@loader_path/pjproject/third_party"
+        "@executable_path/../${CMAKE_INSTALL_LIBDIR}/pjproject/third_party"
+      )
     elseif(UNIX)
-      list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN/pjproject/third_party")
+      list(APPEND CMAKE_INSTALL_RPATH
+        "$ORIGIN/pjproject/third_party"
+        "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}/pjproject/third_party"
+      )
     endif()
     set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} PARENT_SCOPE)
   endif()
