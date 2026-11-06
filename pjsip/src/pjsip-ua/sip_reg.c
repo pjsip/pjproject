@@ -1305,6 +1305,8 @@ static void async_auth_abandon_impl(pjsip_auth_clt_sess *auth_sess,
      * the newer request, as in send_impl.
      */
     if (!outdated) {
+        PJ_LOG(5,(THIS_FILE, "Reporting the abandoned authentication of "
+                             "CSeq %d", chal->cseq));
         call_callback(regc, PJ_ECANCELLED, PJSIP_SC_UNAUTHORIZED, &reason,
                       NULL, NOEXP, 0, NULL, chal->is_unreg, chal->cseq);
     }

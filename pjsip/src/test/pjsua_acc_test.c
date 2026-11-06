@@ -1088,22 +1088,25 @@ on_return:
 
 
 #if PJ_HAS_THREADS
-static volatile pj_bool_t g_abandon_started;
+static volatile pj_bool_t g_abandon_reported;
 static pj_bool_t g_abandon_ignored;
 static pj_log_func *g_log_func;
+static int g_log_level;
 
-/* Tells that the abandon's callback reached pjsua and was ignored there */
+/* Tells that the abandon is reported to pjsua, and that pjsua ignored it */
 static void abandon_log_func(int level, const char *data, int len)
 {
+    if (pj_ansi_strstr(data, "Reporting the abandoned authentication"))
+        g_abandon_reported = PJ_TRUE;
     if (pj_ansi_strstr(data, "of an earlier REGISTER ignored"))
         g_abandon_ignored = PJ_TRUE;
-    (*g_log_func)(level, data, len);
+    if (level <= g_log_level)
+        (*g_log_func)(level, data, len);
 }
 
 static int abandon_thread(void *arg)
 {
     PJ_UNUSED_ARG(arg);
-    g_abandon_started = PJ_TRUE;
     pjsip_auth_clt_async_abandon(g_defer.sess, g_defer.token);
     return 0;
 }
@@ -1167,21 +1170,25 @@ static int abandon_window_test(pjsua_transport_id tp_id, int port,
     g_mock_reg.drop = !answered;
     g_ctx.reg_code = 0;
     g_ctx.reg_done = PJ_FALSE;
-    g_abandon_started = PJ_FALSE;
+    g_abandon_reported = PJ_FALSE;
     g_abandon_ignored = PJ_FALSE;
     log_level = pj_log_get_level();
+    g_log_level = PJ_MAX(log_level, 4);
     g_log_func = pj_log_get_log_func();
-    pj_log_set_level(4);
+    pj_log_set_level(5);
     pj_log_set_log_func(&abandon_log_func);
 
     PJSUA_LOCK();
     status = pj_thread_create(pjsua_var.pool, "acc_abandon",
                               &abandon_thread, NULL, 0, 0, &thread);
     if (status == PJ_SUCCESS) {
-        while (!g_abandon_started)
+        unsigned i;
+
+        /* The abandon then waits for PJSUA_LOCK in the registration
+         * callback
+         */
+        for (i=0; !g_abandon_reported && i<5000; ++i)
             pj_thread_sleep(1);
-        /* Let the abandon reach the registration callback */
-        pj_thread_sleep(300);
         status = ip_change();
     }
     /* The 200 is handled on this thread, which holds PJSUA_LOCK */
@@ -1215,12 +1222,11 @@ static int abandon_window_test(pjsua_transport_id tp_id, int port,
         rc = base - 5;
         goto on_return;
     }
-    /* Otherwise the IP change claimed the registration first, and the
-     * abandon was dropped as outdated before it reached pjsua.
-     */
     if (!g_abandon_ignored) {
-        PJ_LOG(3, (THIS_FILE, "    the abandon came after the IP change, "
-                   "the window was not exercised"));
+        PJ_LOG(3, (THIS_FILE, "    error: the abandon did not reach pjsua "
+                   "during the IP change"));
+        rc = base - 8;
+        goto on_return;
     }
     if (answered)
         goto on_return;
