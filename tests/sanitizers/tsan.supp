@@ -148,9 +148,9 @@ deadlock:acc_check_nat_addr
 #     grp_lock under the caller's: handle_ip_change_on_acc(), or
 #     pjsua_acc_on_tp_state_changed(), re-registers through
 #     pjsua_acc_update_contact_on_ip_change(); pjsua_acc_modify()
-#     re-registers; the test's unreg_in_window() unregisters under
-#     PJSUA_LOCK on purpose, to send while another thread waits for it
-#     in regc_cb().
+#     re-registers; the test's unreg_in_window(), final_window_test() and
+#     abandon_window_test() send or poll under PJSUA_LOCK on purpose, while
+#     another thread waits for it in regc_cb().
 #   M1 -> M0: regc_cb() / regc_tsx_cb(), as above.
 #
 # Suppressed on these callers only, so that other senders on the
@@ -158,6 +158,8 @@ deadlock:acc_check_nat_addr
 deadlock:pjsua_acc_update_contact_on_ip_change
 deadlock:pjsua_acc_modify
 deadlock:unreg_in_window
+deadlock:final_window_test
+deadlock:abandon_window_test
 #=============================================================================
 
 #=============================================================================

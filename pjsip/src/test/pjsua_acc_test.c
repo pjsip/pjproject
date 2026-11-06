@@ -95,6 +95,7 @@ static struct {
     char          live_host[PJ_INET6_ADDRSTRLEN + 16];
     unsigned      reg_count;    /* requests that add a binding */
     int           code;         /* response code, or 0 for 200 */
+    pj_bool_t     code_once;    /* code only for the next request */
     pj_bool_t     drop;         /* don't answer */
     pj_bool_t     dropped;      /* a request was not answered */
     pj_bool_t     challenge;    /* 401 to a request without credentials */
@@ -115,6 +116,7 @@ static pj_bool_t mock_registrar_rx_request(pjsip_rx_data *rdata)
 {
     pjsip_msg *msg = rdata->msg_info.msg;
     pjsip_hdr  hdr_list;
+    int        code;
 
     if (!is_user_equal(rdata->msg_info.from, TEST_USER))
         return PJ_FALSE;
@@ -209,8 +211,10 @@ static pj_bool_t mock_registrar_rx_request(pjsip_rx_data *rdata)
                       pjsip_expires_hdr_create(rdata->tp_info.pool,
                                                TEST_EXPIRES));
 
-    pjsip_endpt_respond_stateless(pjsua_get_pjsip_endpt(), rdata,
-                                  g_mock_reg.code ? g_mock_reg.code : 200,
+    code = g_mock_reg.code ? g_mock_reg.code : 200;
+    if (g_mock_reg.code_once)
+        g_mock_reg.code = 0;
+    pjsip_endpt_respond_stateless(pjsua_get_pjsip_endpt(), rdata, code,
                                   NULL, &hdr_list, NULL);
     return PJ_TRUE;
 }
@@ -1091,7 +1095,7 @@ static pj_log_func *g_log_func;
 /* Tells that the abandon's callback reached pjsua and was ignored there */
 static void abandon_log_func(int level, const char *data, int len)
 {
-    if (pj_ansi_strstr(data, "error of an earlier REGISTER ignored"))
+    if (pj_ansi_strstr(data, "of an earlier REGISTER ignored"))
         g_abandon_ignored = PJ_TRUE;
     (*g_log_func)(level, data, len);
 }
@@ -1238,6 +1242,99 @@ on_return:
     pj_bzero(&g_defer, sizeof(g_defer));
     g_mock_reg.challenge = PJ_FALSE;
     g_mock_reg.drop = PJ_FALSE;
+    if (acc_id != PJSUA_INVALID_ID)
+        pjsua_acc_del(acc_id);
+    pjsua_handle_events(500);
+    return rc;
+}
+
+/* A REGISTER is sent while the registration callback of the request before
+ * it, which got a 503 or, with unreg, the 200 of an unregistration, waits
+ * for PJSUA_LOCK on another thread. That result must not end the
+ * registration of the newer REGISTER.
+ */
+static int final_window_test(pjsua_transport_id tp_id, int port,
+                             pj_bool_t unreg)
+{
+    pjsua_acc_config acc_cfg;
+    pjsua_acc_id     acc_id = PJSUA_INVALID_ID;
+    pj_thread_t     *thread = NULL;
+    char             reg_uri[64];
+    int              base = unreg? -4130 : -4120;
+    pj_status_t      status, reg;
+    unsigned         i;
+    int              rc = 0;
+
+    PJ_LOG(3, (THIS_FILE, "  pjsua acc: REGISTER sent while the %s of the "
+               "previous request waits", unreg? "200" : "503"));
+
+    pj_bzero(&g_ctx, sizeof(g_ctx));
+    pj_ansi_snprintf(reg_uri, sizeof(reg_uri), "sip:127.0.0.1:%d", port);
+
+    pjsua_acc_config_default(&acc_cfg);
+    acc_cfg.id       = pj_str("sip:" TEST_USER "@pjsip.org");
+    acc_cfg.reg_uri  = pj_str(reg_uri);
+    acc_cfg.transport_id = tp_id;
+    acc_cfg.register_on_acc_add = PJ_FALSE;
+    acc_cfg.allow_via_rewrite = PJ_FALSE;
+    acc_cfg.reg_retry_interval = 0;
+
+    if (pjsua_acc_add(&acc_cfg, PJ_FALSE, &acc_id) != PJ_SUCCESS ||
+        pjsua_acc_set_registration(acc_id, PJ_TRUE) != PJ_SUCCESS ||
+        wait_reg(5000) != 0)
+    {
+        rc = base - 1;
+        goto on_return;
+    }
+
+    g_ctx.reg_done = PJ_FALSE;
+    g_poll_stop = PJ_FALSE;
+    if (pj_thread_create(pjsua_var.pool, "acc_poll", &poll_thread, NULL,
+                         0, 0, &thread) != PJ_SUCCESS)
+    {
+        rc = base - 2;
+        goto on_return;
+    }
+
+    PJSUA_LOCK();
+    if (!unreg) {
+        g_mock_reg.code = PJSIP_SC_SERVICE_UNAVAILABLE;
+        g_mock_reg.code_once = PJ_TRUE;
+    }
+    status = pjsua_acc_set_registration(acc_id, !unreg);
+    /* Accepted once the final response has cleared the pending
+     * transaction
+     */
+    reg = PJSIP_EBUSY;
+    for (i=0; status == PJ_SUCCESS && reg == PJSIP_EBUSY && i<5000; ++i) {
+        if (i)
+            pj_thread_sleep(1);
+        reg = pjsua_acc_set_registration(acc_id, PJ_TRUE);
+    }
+    if (status == PJ_SUCCESS)
+        status = reg;
+    PJSUA_UNLOCK();
+
+    g_poll_stop = PJ_TRUE;
+    pj_thread_join(thread);
+    pj_thread_destroy(thread);
+    if (status != PJ_SUCCESS) {
+        rc = base - 3;
+        goto on_return;
+    }
+
+    /* The earlier result is handled first, on the polling thread */
+    if (wait_reg(5000) != 0 || pjsua_var.acc[acc_id].regc == NULL ||
+        pjsua_var.acc[acc_id].reg_last_code != 200)
+    {
+        PJ_LOG(3, (THIS_FILE, "    error: the earlier result ended the "
+                   "registration of the newer REGISTER"));
+        rc = base - 4;
+    }
+
+on_return:
+    g_mock_reg.code = 0;
+    g_mock_reg.code_once = PJ_FALSE;
     if (acc_id != PJSUA_INVALID_ID)
         pjsua_acc_del(acc_id);
     pjsua_handle_events(500);
@@ -1462,6 +1559,10 @@ int pjsua_acc_test(void)
     rc = abandon_window_test(tp_id, (int)port, PJ_FALSE);
     if (rc != 0) goto on_return;
     rc = abandon_window_test(tp_id, (int)port, PJ_TRUE);
+    if (rc != 0) goto on_return;
+    rc = final_window_test(tp_id, (int)port, PJ_FALSE);
+    if (rc != 0) goto on_return;
+    rc = final_window_test(tp_id, (int)port, PJ_TRUE);
     if (rc != 0) goto on_return;
 #endif
 

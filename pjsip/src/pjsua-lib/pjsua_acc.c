@@ -3132,6 +3132,26 @@ static void handle_call_on_ip_change_cb(void *user_data)
     pjsua_acc_handle_call_on_ip_change(acc);
 }
 
+/* End the registration with the result of its latest request. A result of
+ * an earlier request is ignored: the newer request reports its own.
+ */
+static pj_bool_t end_regc_if_latest(pjsua_acc *acc,
+                                    const struct pjsip_regc_cbparam *param)
+{
+    pj_status_t status;
+
+    status = pjsip_regc_destroy_if_latest(acc->regc, param->cseq);
+    if (status != PJ_SUCCESS) {
+        pj_assert(status == PJ_EBUSY);
+        PJ_LOG(4, (THIS_FILE, "Acc %d: result of an earlier REGISTER "
+                   "ignored, a newer one reports its own", acc->index));
+        return PJ_FALSE;
+    }
+    clear_regc(acc);
+
+    return PJ_TRUE;
+}
+
 /*
  * This callback is called by pjsip_regc when outgoing register
  * request has completed.
@@ -3165,39 +3185,26 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
      * Print registration status.
      */
     if (param->status!=PJ_SUCCESS) {
-        pj_status_t status;
-
         pjsua_perror(THIS_FILE, "SIP registration error", 
                      param->status);
-
-        if (param->status == PJSIP_EBUSY) {
-            pj_log_pop_indent();
-            PJSUA_UNLOCK();
-            return;
-        }
 
         /* This callback is called without holding the registration's lock,
          * so there can be a race condition with another registration
          * process. Therefore, the registration is destroyed only if no
          * request has been sent or reserved since this one.
          */
-        status = pjsip_regc_destroy_if_latest(acc->regc, param->cseq);
-        if (status == PJ_SUCCESS) {
-            clear_regc(acc);
-
-            /* Stop keep-alive timer if any. */
-            update_keep_alive(acc, PJ_FALSE, NULL);
-        } else {
-            /* A newer request reports the result */
-            pj_assert(status == PJ_EBUSY);
-            PJ_LOG(4, (THIS_FILE, "Acc %d: error of an earlier REGISTER "
-                       "ignored, a newer one reports the result", acc->index));
+        if (param->status == PJSIP_EBUSY || !end_regc_if_latest(acc, param)) {
             pj_log_pop_indent();
             PJSUA_UNLOCK();
             return;
         }
 
+        /* Stop keep-alive timer if any. */
+        update_keep_alive(acc, PJ_FALSE, NULL);
+
     } else if (param->code < 0 || param->code >= 300) {
+        pjsip_transport *timed_out_tp = NULL;
+
         PJ_LOG(2, (THIS_FILE, "SIP registration failed, status=%d (%.*s)", 
                    param->code, 
                    (int)param->reason.slen, param->reason.ptr));
@@ -3214,15 +3221,28 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
             if (reginfo.transport &&
                 (reginfo.transport->flag & PJSIP_TRANSPORT_RELIABLE))
             {
-                PJ_LOG(3, (THIS_FILE,
-                           "Registration timed out, shutting down transport "
-                           "%s to force a reconnect on next registration",
-                           reginfo.transport->obj_name));
-                pjsip_transport_shutdown(reginfo.transport);
+                timed_out_tp = reginfo.transport;
+                pjsip_transport_add_ref(timed_out_tp);
             }
         }
 
-        destroy_regc(acc, PJ_TRUE);
+        /* A newer request may use the same connection */
+        if (!end_regc_if_latest(acc, param)) {
+            if (timed_out_tp)
+                pjsip_transport_dec_ref(timed_out_tp);
+            pj_log_pop_indent();
+            PJSUA_UNLOCK();
+            return;
+        }
+
+        if (timed_out_tp) {
+            PJ_LOG(3, (THIS_FILE,
+                       "Registration timed out, shutting down transport "
+                       "%s to force a reconnect on next registration",
+                       timed_out_tp->obj_name));
+            pjsip_transport_shutdown(timed_out_tp);
+            pjsip_transport_dec_ref(timed_out_tp);
+        }
 
         /* Clear Service-Route header */
         update_service_route(acc, NULL);
@@ -3231,12 +3251,17 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
         update_keep_alive(acc, PJ_FALSE, NULL);
     } else if (PJSIP_IS_STATUS_IN_CLASS(param->code, 200)) {
 
+        if (param->expiration < 1 && !end_regc_if_latest(acc, param)) {
+            pj_log_pop_indent();
+            PJSUA_UNLOCK();
+            return;
+        }
+
         /* Update auto registration flag */
         acc->auto_rereg.active = PJ_FALSE;
         acc->auto_rereg.attempt_cnt = 0;
 
         if (param->expiration < 1) {
-            destroy_regc(acc, PJ_TRUE);
             /* Reset pointer to registration transport */
             //acc->auto_rereg.reg_tp = NULL;
 
