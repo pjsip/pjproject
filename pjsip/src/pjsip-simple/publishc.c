@@ -128,6 +128,7 @@ static pj_status_t pubc_async_auth_send_impl(
 static void pubc_async_auth_abandon_impl(
                                 pjsip_auth_clt_sess *auth_sess,
                                 void *user_data);
+static pj_status_t pubc_send(pjsip_publishc *pubc, pjsip_tx_data *tdata);
 
 PJ_DEF(void) pjsip_publishc_opt_default(pjsip_publishc_opt *opt)
 {
@@ -941,14 +942,13 @@ static void tsx_callback(void *token, pjsip_event *event)
                 }
             }
 
-            /* Don't hold the mutex while sending (see #1247). If another
-             * thread sent a request meanwhile, this one has been queued
-             * again and will be sent when that transaction completes.
+            /* pubc_send() claims the transaction before releasing the
+             * mutex, so a concurrent pjsip_publishc_send() queues behind
+             * this request instead of overtaking it.
              */
-            pj_mutex_unlock(pubc->mutex);
-            status = pjsip_publishc_send(pubc, tdata);
+            status = pubc_send(pubc, tdata);
             pj_mutex_lock(pubc->mutex);
-            if (status == PJ_SUCCESS || status == PJ_EPENDING)
+            if (status == PJ_SUCCESS)
                 break;
         }
     }
@@ -961,40 +961,17 @@ static void tsx_callback(void *token, pjsip_event *event)
 }
 
 
-PJ_DEF(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc, 
-                                        pjsip_tx_data *tdata)
+/* Send tdata as pubc's one outstanding transaction. Called with the mutex
+ * held and no transaction pending; the mutex is released before the request
+ * is sent (see #1247) and is not held on return.
+ */
+static pj_status_t pubc_send(pjsip_publishc *pubc, pjsip_tx_data *tdata)
 {
     pj_status_t status;
     pjsip_cseq_hdr *cseq_hdr;
     pj_uint32_t cseq;
 
-    PJ_ASSERT_RETURN(pubc && tdata, PJ_EINVAL);
-
-    /* Make sure we don't have pending transaction. */
-    pj_mutex_lock(pubc->mutex);
-    if (pubc->pending_tsx) {
-        if (pubc->opt.queue_request) {
-            pending_publish *pp = NULL;
-            if (pj_list_empty(&pubc->pending_reqs_empty)) {
-                pp = PJ_POOL_ZALLOC_T(pubc->pool, pending_publish);
-            } else {
-                pp = pubc->pending_reqs_empty.next;
-                pj_list_erase(pp);
-            }
-            pp->tdata = tdata;
-            pj_list_push_back(&pubc->pending_reqs, pp);
-            pj_mutex_unlock(pubc->mutex);
-            PJ_LOG(4,(THIS_FILE, "Request is queued, pubc has another "
-                                 "transaction pending"));
-            return PJ_EPENDING;
-        } else {
-            pjsip_tx_data_dec_ref(tdata);
-            pj_mutex_unlock(pubc->mutex);
-            PJ_LOG(4,(THIS_FILE, "Unable to send request, pubc has another "
-                                 "transaction pending"));
-            return PJ_EBUSY;
-        }
-    }
+    pj_assert(pubc->pending_tsx == 0);
 
     /* If via_addr is set, use this address for the Via header. */
     if (pubc->via_addr.host.slen > 0) {
@@ -1029,5 +1006,40 @@ PJ_DEF(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc,
     }
 
     return status;
+}
+
+
+PJ_DEF(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc, 
+                                        pjsip_tx_data *tdata)
+{
+    PJ_ASSERT_RETURN(pubc && tdata, PJ_EINVAL);
+
+    /* Make sure we don't have pending transaction. */
+    pj_mutex_lock(pubc->mutex);
+    if (pubc->pending_tsx) {
+        if (pubc->opt.queue_request) {
+            pending_publish *pp = NULL;
+            if (pj_list_empty(&pubc->pending_reqs_empty)) {
+                pp = PJ_POOL_ZALLOC_T(pubc->pool, pending_publish);
+            } else {
+                pp = pubc->pending_reqs_empty.next;
+                pj_list_erase(pp);
+            }
+            pp->tdata = tdata;
+            pj_list_push_back(&pubc->pending_reqs, pp);
+            pj_mutex_unlock(pubc->mutex);
+            PJ_LOG(4,(THIS_FILE, "Request is queued, pubc has another "
+                                 "transaction pending"));
+            return PJ_EPENDING;
+        } else {
+            pjsip_tx_data_dec_ref(tdata);
+            pj_mutex_unlock(pubc->mutex);
+            PJ_LOG(4,(THIS_FILE, "Unable to send request, pubc has another "
+                                 "transaction pending"));
+            return PJ_EBUSY;
+        }
+    }
+
+    return pubc_send(pubc, tdata);
 }
 

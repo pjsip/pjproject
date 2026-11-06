@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1881,43 +1881,67 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_async_configure(
 }
 
 
+/* Validate an async token and consume it, under the parent session's lock
+ * if there is one: copy it to *copy and clear its signature so that it
+ * can't be used again. *p_sess receives the session that owns the token.
+ * Callers invoke the copied send_impl/abandon_impl without the lock held,
+ * since the implementation takes its owner's lock (regc, pubc, dialog),
+ * which the owner also holds while calling into this session.
+ */
+static pj_status_t async_consume_token(pjsip_auth_clt_sess *sess,
+                                       pjsip_auth_clt_async_impl_token *token,
+                                       pj_bool_t for_send,
+                                       pjsip_auth_clt_async_impl_token *copy,
+                                       pjsip_auth_clt_sess **p_sess)
+{
+    DO_ON_PARENT_LOCKED(sess, async_consume_token(sess->parent, token,
+                                                  for_send, copy, p_sess));
+
+    if (for_send) {
+        PJ_ASSERT_RETURN(sess->async_opt && sess->async_opt->cb,
+                         PJ_EINVALIDOP);
+    }
+
+    /* Best effort to verify the integrity of the token */
+    if ((for_send && !token->send_impl) ||
+        pj_memcmp(token->signature, AUTH_TOKEN_SIGNATURE, 4) != 0)
+    {
+        return PJ_EINVAL;
+    }
+
+    *copy = *token;
+    pj_bzero(token->signature, 4);
+    *p_sess = sess;
+
+    return PJ_SUCCESS;
+}
+
+
 PJ_DEF(pj_status_t) pjsip_auth_clt_async_send_req(
                                     pjsip_auth_clt_sess *sess,
                                     void *token,
                                     pjsip_tx_data *new_request)
 {
-    pjsip_auth_clt_async_impl_token *send_token =
-                                (pjsip_auth_clt_async_impl_token*)token;
+    pjsip_auth_clt_async_impl_token send_token;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(sess && token && new_request, PJ_EINVAL);
-    DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_async_send_req(
-                                                        sess->parent,
-                                                        token, new_request));
-    PJ_ASSERT_RETURN(sess->async_opt && sess->async_opt->cb, PJ_EINVALIDOP);
 
-    /* Best effort to verify the integrity of the token */
-    if (!send_token->send_impl ||
-        pj_memcmp(send_token->signature, AUTH_TOKEN_SIGNATURE, 4) != 0)
-    {
-        return PJ_EINVAL;
-    }
-
-    /* Save grp_lock before send_impl — after dec_ref the token memory
-     * may be freed.
+    /* The token is invalidated before use: send failures are
+     * transport-level errors, not retryable with the same tdata.
      */
-    {
-        pj_grp_lock_t *grp_lock = send_token->grp_lock;
+    status = async_consume_token(sess,
+                                 (pjsip_auth_clt_async_impl_token*)token,
+                                 PJ_TRUE, &send_token, &sess);
+    if (status != PJ_SUCCESS)
+        return status;
 
-        status = (*send_token->send_impl)(sess, send_token->user_data,
-                                          new_request);
-        /* Always invalidate the token after use.  Send failures are
-         * transport-level errors — not retryable with the same tdata.
-         */
-        pj_bzero(send_token->signature, 4);
-        if (grp_lock)
-            pj_grp_lock_dec_ref(grp_lock);
-    }
+    status = (*send_token.send_impl)(sess, send_token.user_data,
+                                     new_request);
+
+    /* The token memory may be freed by this. */
+    if (send_token.grp_lock)
+        pj_grp_lock_dec_ref(send_token.grp_lock);
 
     return status;
 }
@@ -1927,34 +1951,26 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_async_abandon(
                                     pjsip_auth_clt_sess *sess,
                                     void *token)
 {
-    pjsip_auth_clt_async_impl_token *impl_token =
-                                (pjsip_auth_clt_async_impl_token*)token;
+    pjsip_auth_clt_async_impl_token impl_token;
+    pj_status_t status;
 
     PJ_ASSERT_RETURN(sess && token, PJ_EINVAL);
-    DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_async_abandon(sess->parent,
-                                                           token));
 
-    /* Best effort to verify the integrity of the token */
-    if (pj_memcmp(impl_token->signature, AUTH_TOKEN_SIGNATURE, 4) != 0)
-        return PJ_EINVAL;
-
-    /* Save grp_lock before any operation — after dec_ref the token memory
-     * may be freed.
+    /* The signature is cleared first to prevent any further use of the
+     * token, even if abandon_impl triggers destruction of the session.
      */
-    {
-        pj_grp_lock_t *grp_lock = impl_token->grp_lock;
+    status = async_consume_token(sess,
+                                 (pjsip_auth_clt_async_impl_token*)token,
+                                 PJ_FALSE, &impl_token, &sess);
+    if (status != PJ_SUCCESS)
+        return status;
 
-        /* Clear the signature FIRST to prevent any further use of the
-         * token, even if abandon_impl triggers destruction of the session.
-         */
-        pj_bzero(impl_token->signature, 4);
+    if (impl_token.abandon_impl)
+        (*impl_token.abandon_impl)(sess, impl_token.user_data);
 
-        if (impl_token->abandon_impl)
-            (*impl_token->abandon_impl)(sess, impl_token->user_data);
-
-        if (grp_lock)
-            pj_grp_lock_dec_ref(grp_lock);
-    }
+    /* The token memory may be freed by this. */
+    if (impl_token.grp_lock)
+        pj_grp_lock_dec_ref(impl_token.grp_lock);
 
     return PJ_SUCCESS;
 }
