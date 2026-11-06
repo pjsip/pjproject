@@ -592,8 +592,6 @@ target_sources(pjmedia
       include/pjmedia/codec.h
       include/pjmedia/conference.h
       include/pjmedia/config.h
-      include/pjmedia/config_auto.h.cm
-      include/pjmedia/config_auto.h.in
       include/pjmedia/converter.h
       include/pjmedia/delaybuf.h
       include/pjmedia/doxygen.h
@@ -877,8 +875,6 @@ target_sources(pjmedia-codec
         include/pjmedia-codec/audio_codecs.h
         include/pjmedia-codec/bcg729.h
         include/pjmedia-codec/config.h
-        include/pjmedia-codec/config_auto.h.cm
-        include/pjmedia-codec/config_auto.h.in
         include/pjmedia-codec/ffmpeg_vid_codecs.h
         include/pjmedia-codec/g722.h
         include/pjmedia-codec/g7221.h
