@@ -44,6 +44,43 @@ if(MSVC AND BUILD_SHARED_LIBS)
     "for a single DLL.")
 endif()
 
+# Configure-check results and found library paths are cached per build folder
+# and never redone, so they go stale when the target changes without a new
+# compiler (an NDK API level selects other headers and libraries, e.g.
+# getifaddrs() exists from API 24). CMake starts afresh on its own only when
+# the compiler changes; do the same for these by asking for it.
+set(_pj_target_vars
+  CMAKE_SYSROOT CMAKE_OSX_SYSROOT CMAKE_OSX_DEPLOYMENT_TARGET
+  CMAKE_OSX_ARCHITECTURES
+)
+if(ANDROID)
+  list(APPEND _pj_target_vars ANDROID_ABI ANDROID_PLATFORM)
+endif()
+foreach(_var IN LISTS _pj_target_vars)
+  set(_value "${${_var}}")
+  if(_var STREQUAL "ANDROID_PLATFORM")
+    # the level the toolchain file settled on (the legacy one sets
+    # CMAKE_SYSTEM_VERSION to 1)
+    if(DEFINED ANDROID_PLATFORM_LEVEL)
+      set(_value "android-${ANDROID_PLATFORM_LEVEL}")
+    else()
+      set(_value "android-${CMAKE_SYSTEM_VERSION}")
+    endif()
+  endif()
+  if(NOT DEFINED _PJ_CONFIGURED_${_var})
+    set(_PJ_CONFIGURED_${_var} "${_value}" CACHE INTERNAL "")
+  elseif(NOT _PJ_CONFIGURED_${_var} STREQUAL _value)
+    message(FATAL_ERROR
+      "${_var} changed from \"${_PJ_CONFIGURED_${_var}}\" to \"${_value}\" "
+      "in a build folder configured for the former; its cached configure "
+      "checks and library paths would be wrong. Reconfigure with "
+      "'cmake --fresh' or use a new build folder.")
+  endif()
+endforeach()
+unset(_pj_target_vars)
+unset(_var)
+unset(_value)
+
 # C++ is needed only by pjsua2 and a few backends (WebRTC AEC3, libyuv, Lyra,
 # OpenH264, Oboe, WASAPI, DirectShow, Android MediaCodec), by pjlib's
 # atomic_queue.cpp, which only those backends use, and by WebRTC's CPU
