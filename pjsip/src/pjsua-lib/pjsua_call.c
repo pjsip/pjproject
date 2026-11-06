@@ -4275,6 +4275,7 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold2(pjsua_call_id call_id,
     pjsip_dialog *dlg = NULL;
     pjsip_tx_data *tdata;
     pj_str_t *new_contact = NULL;
+    pjmedia_sdp_neg_state old_state;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
@@ -4340,6 +4341,8 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold2(pjsua_call_id call_id,
     }
 
     /* Create re-INVITE with new offer */
+    old_state = call->inv->neg ? pjmedia_sdp_neg_get_state(call->inv->neg) :
+                                 PJMEDIA_SDP_NEG_STATE_NULL;
     status = pjsip_inv_reinvite( call->inv, new_contact, sdp, &tdata);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Unable to create re-INVITE", status);
@@ -4349,14 +4352,10 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold2(pjsua_call_id call_id,
     /* Add additional headers etc */
     pjsua_process_msg_data( tdata, msg_data);
 
-    /* Record the tx_data to keep track the operation */
-    call->hold_msg = (void*) tdata;
-
     /* Send the request */
-    status = pjsip_inv_send_msg( call->inv, tdata);
+    status = pjsua_call_send_offer(call, tdata, old_state);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Unable to send re-INVITE", status);
-        call->hold_msg = NULL;
         goto on_return;
     }
 
@@ -4441,6 +4440,55 @@ static void cancel_created_local_offer(pjsua_call *call,
         PJ_PERROR(3,(THIS_FILE, status,
                      "Unable to cancel failed local SDP offer"));
     }
+}
+
+/* Restore the hold state and media from before our failed offer */
+static void call_offer_failed(pjsua_call *call, int reason)
+{
+    if (call->local_hold != call->offer_hold) {
+        PJ_LOG(3,(THIS_FILE, call->offer_hold ?
+                  "Error releasing hold on call %d (reason=%d)" :
+                  "Error putting call %d on hold (reason=%d)",
+                  call->index, reason));
+        call->local_hold = call->offer_hold;
+    }
+    pjsua_media_prov_revert(call->index);
+    call->offer_sent = PJ_FALSE;
+}
+
+/* Our offer has failed once the negotiator no longer waits for its answer */
+static void call_check_offer(pjsua_call *call, int reason)
+{
+    if (call->offer_sent &&
+        (!call->inv->neg ||
+         pjmedia_sdp_neg_get_state(call->inv->neg) !=
+             PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER))
+    {
+        call_offer_failed(call, reason);
+    }
+}
+
+pj_status_t pjsua_call_send_offer(pjsua_call *call, pjsip_tx_data *tdata,
+                                  pjmedia_sdp_neg_state old_state)
+{
+    pj_bool_t first = PJ_FALSE;
+    pj_status_t status;
+
+    if (!call->offer_sent && pjsip_tdata_get_sdp_info(tdata)->sdp) {
+        call->offer_sent = PJ_TRUE;
+        call->offer_hold = call->local_hold;
+        first = PJ_TRUE;
+    }
+
+    status = pjsip_inv_send_msg(call->inv, tdata);
+    if (status != PJ_SUCCESS) {
+        cancel_created_local_offer(call, old_state);
+
+        /* A send failure may have ended the call or the offer already */
+        if (first && call->inv && call->offer_sent)
+            call_offer_failed(call, 0);
+    }
+    return status;
 }
 
 static void rollback_failed_call_operation(pjsua_call *call,
@@ -4626,8 +4674,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite3(
     pjsua_process_msg_data( tdata, msg_data);
 
     /* Send the request */
-    call->med_update_success = PJ_FALSE;
-    status = pjsip_inv_send_msg( call->inv, tdata);
+    status = pjsua_call_send_offer(call, tdata, old_neg_state);
     if (status == PJ_SUCCESS &&
         ((call->opt.flag & PJSUA_CALL_UNHOLD) &&
          (call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0))
@@ -4826,8 +4873,7 @@ PJ_DEF(pj_status_t) pjsua_call_update3(
     pjsua_process_msg_data( tdata, msg_data);
 
     /* Send the request */
-    call->med_update_success = PJ_FALSE;
-    status = pjsip_inv_send_msg( call->inv, tdata);
+    status = pjsua_call_send_offer(call, tdata, old_neg_state);
     if (status == PJ_SUCCESS &&
         ((call->opt.flag & PJSUA_CALL_UNHOLD) &&
          (call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0))
@@ -5768,7 +5814,7 @@ static pj_status_t process_pending_reinvite(pjsua_call *call)
     }
 
     /* Send the UPDATE/re-INVITE request */
-    status = pjsip_inv_send_msg(inv, tdata);
+    status = pjsua_call_send_offer(call, tdata, PJMEDIA_SDP_NEG_STATE_DONE);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Error sending UPDATE/re-INVITE",
                      status);
@@ -6656,6 +6702,8 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
         goto on_return;
     }
 
+    /* Our offer, if any, has been answered */
+    call->offer_sent = PJ_FALSE;
 
     /* Get local and remote SDP */
     status = pjmedia_sdp_neg_get_active_local(call->inv->neg, &local_sdp);
@@ -6675,8 +6723,6 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
         //call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
         goto on_return;
     }
-
-    call->med_update_success = (status == PJ_SUCCESS);
 
     /* Trickle ICE tasks:
      * - Check remote SDP for trickle ICE support & start sending SIP INFO.
@@ -7884,6 +7930,17 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
         goto on_return;
     }
 
+    /* Our offer may have ended with this request, also when it was
+     * challenged: check it before the app is told.
+     */
+    if (tsx->role == PJSIP_ROLE_UAC &&
+        tsx->state >= PJSIP_TSX_STATE_COMPLETED &&
+        (tsx->method.id == PJSIP_INVITE_METHOD ||
+         pjsip_method_cmp(&tsx->method, &pjsip_update_method) == 0))
+    {
+        call_check_offer(call, tsx->status_code);
+    }
+
     /* https://github.com/pjsip/pjproject/issues/1452:
      *    If a request is retried due to 401/407 challenge, don't process the
      *    transaction first but wait until we've retried it.
@@ -8002,71 +8059,17 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
                pjsip_method_cmp(&tsx->method, pjsip_get_invite_method())==0 &&
                tsx->state >= PJSIP_TSX_STATE_COMPLETED &&
                e->body.tsx_state.prev_state < PJSIP_TSX_STATE_COMPLETED &&
-               (!PJSIP_IS_STATUS_IN_CLASS(tsx->status_code, 300) &&
-                tsx->status_code!=401 && tsx->status_code!=407 &&
-                tsx->status_code!=422))
+               tsx->status_code/100 == 2)
     {
-        if (tsx->status_code/100 == 2) {
-            /* If we have sent CANCEL and the original INVITE returns a 2xx,
-             * we then send BYE.
-             */
-            if (call->hanging_up) {
-                pj_str_t reason = pj_str("Cancelling call");
-                PJ_LOG(3,(THIS_FILE, "Unsuccessful in cancelling the original "
-                          "INVITE for call %d due to %d response, sending BYE "
-                          "instead", call->index, tsx->status_code));
-                call_disconnect(call->inv, PJSIP_SC_OK, &reason);
-            }
-        } else {
-            /* Monitor the status of call hold/unhold request */
-            if (tsx->last_tx == (pjsip_tx_data*)call->hold_msg) {
-                /* Outgoing call hold failed */
-                call->local_hold = PJ_FALSE;
-                PJ_LOG(3,(THIS_FILE, "Error putting call %d on hold "
-                          "(reason=%d)", call->index, tsx->status_code));
-            } else if (call->opt.flag & PJSUA_CALL_UNHOLD) {
-                /* Call unhold failed */
-                call->local_hold = PJ_TRUE;
-                PJ_LOG(3,(THIS_FILE, "Error releasing hold on call %d "
-                          "(reason=%d)", call->index, tsx->status_code));
-            }   
-        }
-        
-        if (tsx->last_tx == (pjsip_tx_data*)call->hold_msg) {
-            call->hold_msg = NULL;
-        }
-        
-        if (tsx->last_tx->msg->body &&
-            (tsx->status_code/100 != 2 || !call->med_update_success))
-        {
-            /* Either we get non-2xx or media update failed,
-             * revert back provisional media.
-             */
-            if (inv->invite_tsx == NULL || tsx == inv->invite_tsx) {
-                pjsua_media_prov_revert(call->index);
-            }
-            else
-            {
-                PJ_LOG(4, (THIS_FILE, "Retaining provisional media for call %d "
-                    "since this is not the active Invite",
-                    call->index));
-            }
-        }
-    } else if (tsx->role == PJSIP_ROLE_UAC &&
-               pjsip_method_cmp(&tsx->method, &pjsip_update_method)==0 &&
-               tsx->state >= PJSIP_TSX_STATE_COMPLETED &&
-               e->body.tsx_state.prev_state < PJSIP_TSX_STATE_COMPLETED &&
-               (!PJSIP_IS_STATUS_IN_CLASS(tsx->status_code, 300) &&
-                tsx->status_code!=401 && tsx->status_code!=407 &&
-                tsx->status_code!=422))
-    {
-        if (tsx->last_tx->msg->body &&
-            (tsx->status_code/100 != 2 || !call->med_update_success))
-        {
-            /* Either we get non-2xx or media update failed,
-             * revert back provisional media.
-             */
-            pjsua_media_prov_revert(call->index);
+        /* If we have sent CANCEL and the original INVITE returns a 2xx,
+         * we then send BYE.
+         */
+        if (call->hanging_up) {
+            pj_str_t reason = pj_str("Cancelling call");
+            PJ_LOG(3,(THIS_FILE, "Unsuccessful in cancelling the original "
+                      "INVITE for call %d due to %d response, sending BYE "
+                      "instead", call->index, tsx->status_code));
+            call_disconnect(call->inv, PJSIP_SC_OK, &reason);
         }
     } else if (tsx->role==PJSIP_ROLE_UAS &&
                tsx->state==PJSIP_TSX_STATE_TRYING &&
