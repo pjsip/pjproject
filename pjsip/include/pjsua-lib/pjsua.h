@@ -1912,7 +1912,8 @@ typedef struct pjsua_callback
     /**
      * Notify application when registration status has changed.
      * Application may then query the account info to get the
-     * registration details.
+     * registration details. The result of a REGISTER is not reported once
+     * the account has sent a newer one, which reports its own.
      *
      * @param acc_id        The account ID.
      */
@@ -1921,7 +1922,8 @@ typedef struct pjsua_callback
     /**
      * Notify application when registration status has changed.
      * Application may inspect the registration info to get the
-     * registration status details.
+     * registration status details. As with \a on_reg_state, the result of
+     * a REGISTER is not reported once the account has sent a newer one.
      *
      * @param acc_id        The account ID.
      * @param info          The registration info.

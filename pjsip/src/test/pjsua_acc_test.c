@@ -96,6 +96,7 @@ static struct {
     unsigned      reg_count;    /* requests that add a binding */
     int           code;         /* response code, or 0 for 200 */
     pj_bool_t     code_once;    /* code only for the next request */
+    unsigned      code_skip;    /* requests answered 200 before code */
     pj_bool_t     drop;         /* don't answer */
     pj_bool_t     dropped;      /* a request was not answered */
     pj_bool_t     challenge;    /* 401 to a request without credentials */
@@ -211,9 +212,14 @@ static pj_bool_t mock_registrar_rx_request(pjsip_rx_data *rdata)
                       pjsip_expires_hdr_create(rdata->tp_info.pool,
                                                TEST_EXPIRES));
 
-    code = g_mock_reg.code ? g_mock_reg.code : 200;
-    if (g_mock_reg.code_once)
-        g_mock_reg.code = 0;
+    if (g_mock_reg.code_skip) {
+        g_mock_reg.code_skip--;
+        code = 200;
+    } else {
+        code = g_mock_reg.code ? g_mock_reg.code : 200;
+        if (g_mock_reg.code_once)
+            g_mock_reg.code = 0;
+    }
     pjsip_endpt_respond_stateless(pjsua_get_pjsip_endpt(), rdata, code,
                                   NULL, &hdr_list, NULL);
     return PJ_TRUE;
@@ -285,6 +291,7 @@ static struct {
     pj_bool_t   reg_done;
     int         reg_code;
     unsigned    reg_ok_count;
+    pj_int32_t  reg_ok_cseq;    /* CSeq of the last 2xx reported */
     pj_bool_t   unreg_done;     /* an unregistration was answered */
     int         ipc_update_cnt; /* ACC_UPDATE_CONTACT reports */
     int         ipc_done_cnt;   /* COMPLETED reports */
@@ -301,6 +308,7 @@ static void on_reg_state2(pjsua_acc_id acc_id, pjsua_reg_info *info)
     g_ctx.reg_code = info->cbparam->code;
     if (info->cbparam->code / 100 == 2) {
         g_ctx.reg_ok_count++;
+        g_ctx.reg_ok_cseq = info->cbparam->cseq;
         g_ctx.reg_done = PJ_TRUE;
     }
 }
@@ -1254,25 +1262,36 @@ on_return:
     return rc;
 }
 
+typedef enum final_kind
+{
+    FINAL_503,      /* a REGISTER gets a 503 */
+    FINAL_UNREG,    /* an unregistration gets a 200 */
+    FINAL_REG,      /* a REGISTER gets a 200 */
+    FINAL_REG_FAIL, /* a REGISTER gets a 200, the newer one a 503 */
+} final_kind;
+
 /* A REGISTER is sent while the registration callback of the request before
- * it, which got a 503 or, with unreg, the 200 of an unregistration, waits
- * for PJSUA_LOCK on another thread. That result must not end the
- * registration of the newer REGISTER.
+ * it waits for PJSUA_LOCK on another thread. That earlier result must not
+ * be acted on: neither end the registration of the newer REGISTER nor be
+ * reported.
  */
 static int final_window_test(pjsua_transport_id tp_id, int port,
-                             pj_bool_t unreg)
+                             final_kind kind)
 {
+    static const char *title[] = { "503", "unregistration 200", "200",
+                                   "200 (the newer one fails)" };
     pjsua_acc_config acc_cfg;
     pjsua_acc_id     acc_id = PJSUA_INVALID_ID;
     pj_thread_t     *thread = NULL;
+    pjsip_regc_info  info;
     char             reg_uri[64];
-    int              base = unreg? -4130 : -4120;
+    int              base = -4120 - 10 * (int)kind;
     pj_status_t      status, reg;
     unsigned         i;
     int              rc = 0;
 
     PJ_LOG(3, (THIS_FILE, "  pjsua acc: REGISTER sent while the %s of the "
-               "previous request waits", unreg? "200" : "503"));
+               "previous request waits", title[kind]));
 
     pj_bzero(&g_ctx, sizeof(g_ctx));
     pj_ansi_snprintf(reg_uri, sizeof(reg_uri), "sip:127.0.0.1:%d", port);
@@ -1284,6 +1303,10 @@ static int final_window_test(pjsua_transport_id tp_id, int port,
     acc_cfg.register_on_acc_add = PJ_FALSE;
     acc_cfg.allow_via_rewrite = PJ_FALSE;
     acc_cfg.reg_retry_interval = 0;
+    if (kind == FINAL_REG_FAIL) {
+        acc_cfg.reg_retry_interval = 300;
+        acc_cfg.reg_first_retry_interval = 300;
+    }
 
     if (pjsua_acc_add(&acc_cfg, PJ_FALSE, &acc_id) != PJ_SUCCESS ||
         pjsua_acc_set_registration(acc_id, PJ_TRUE) != PJ_SUCCESS ||
@@ -1294,6 +1317,8 @@ static int final_window_test(pjsua_transport_id tp_id, int port,
     }
 
     g_ctx.reg_done = PJ_FALSE;
+    g_ctx.reg_code = 0;
+    g_ctx.reg_ok_count = 0;
     g_poll_stop = PJ_FALSE;
     if (pj_thread_create(pjsua_var.pool, "acc_poll", &poll_thread, NULL,
                          0, 0, &thread) != PJ_SUCCESS)
@@ -1303,11 +1328,17 @@ static int final_window_test(pjsua_transport_id tp_id, int port,
     }
 
     PJSUA_LOCK();
-    if (!unreg) {
+    if (kind == FINAL_503) {
         g_mock_reg.code = PJSIP_SC_SERVICE_UNAVAILABLE;
         g_mock_reg.code_once = PJ_TRUE;
+    } else if (kind == FINAL_REG_FAIL) {
+        /* The earlier REGISTER is a retry */
+        pjsua_var.acc[acc_id].auto_rereg.attempt_cnt = 1;
+        g_mock_reg.code = PJSIP_SC_SERVICE_UNAVAILABLE;
+        g_mock_reg.code_once = PJ_TRUE;
+        g_mock_reg.code_skip = 1;
     }
-    status = pjsua_acc_set_registration(acc_id, !unreg);
+    status = pjsua_acc_set_registration(acc_id, kind != FINAL_UNREG);
     /* Accepted once the final response has cleared the pending
      * transaction
      */
@@ -1329,18 +1360,59 @@ static int final_window_test(pjsua_transport_id tp_id, int port,
         goto on_return;
     }
 
-    /* The earlier result is handled first, on the polling thread */
-    if (wait_reg(5000) != 0 || pjsua_var.acc[acc_id].regc == NULL ||
+    /* The earlier result is handled first, on the polling thread. Then
+     * the newer REGISTER completes.
+     */
+    if (kind == FINAL_REG_FAIL) {
+        pump_events(5000, &g_ctx.reg_code, PJ_TRUE);
+        if (g_ctx.reg_code != PJSIP_SC_SERVICE_UNAVAILABLE ||
+            g_ctx.reg_ok_count != 0)
+        {
+            PJ_LOG(3, (THIS_FILE, "    error: reported %d after %u 200s",
+                       g_ctx.reg_code, g_ctx.reg_ok_count));
+            rc = base - 4;
+        } else if (pjsua_var.acc[acc_id].auto_rereg.attempt_cnt != 0) {
+            PJ_LOG(3, (THIS_FILE, "    error: the earlier 200 did not "
+                       "reset the retry count"));
+            rc = base - 6;
+        }
+        goto on_return;
+    }
+    wait_reg(5000);
+    for (i=0; pjsua_var.acc[acc_id].regc && i<500; ++i) {
+        if (pjsip_regc_get_info(pjsua_var.acc[acc_id].regc,
+                                &info) != PJ_SUCCESS || !info.is_busy)
+        {
+            break;
+        }
+        pump_events(10, NULL, PJ_TRUE);
+    }
+    if (!g_ctx.reg_done || pjsua_var.acc[acc_id].regc == NULL ||
         pjsua_var.acc[acc_id].reg_last_code != 200)
     {
         PJ_LOG(3, (THIS_FILE, "    error: the earlier result ended the "
                    "registration of the newer REGISTER"));
         rc = base - 4;
+        goto on_return;
+    }
+    if (g_ctx.reg_ok_count != 1) {
+        PJ_LOG(3, (THIS_FILE, "    error: %u registration 200s reported",
+                   g_ctx.reg_ok_count));
+        rc = base - 5;
+        goto on_return;
+    }
+    if (!pjsip_regc_is_latest(pjsua_var.acc[acc_id].regc,
+                              g_ctx.reg_ok_cseq))
+    {
+        PJ_LOG(3, (THIS_FILE, "    error: the 200 of the earlier request "
+                   "was reported"));
+        rc = base - 6;
     }
 
 on_return:
     g_mock_reg.code = 0;
     g_mock_reg.code_once = PJ_FALSE;
+    g_mock_reg.code_skip = 0;
     if (acc_id != PJSUA_INVALID_ID)
         pjsua_acc_del(acc_id);
     pjsua_handle_events(500);
@@ -1566,9 +1638,13 @@ int pjsua_acc_test(void)
     if (rc != 0) goto on_return;
     rc = abandon_window_test(tp_id, (int)port, PJ_TRUE);
     if (rc != 0) goto on_return;
-    rc = final_window_test(tp_id, (int)port, PJ_FALSE);
+    rc = final_window_test(tp_id, (int)port, FINAL_503);
     if (rc != 0) goto on_return;
-    rc = final_window_test(tp_id, (int)port, PJ_TRUE);
+    rc = final_window_test(tp_id, (int)port, FINAL_UNREG);
+    if (rc != 0) goto on_return;
+    rc = final_window_test(tp_id, (int)port, FINAL_REG);
+    if (rc != 0) goto on_return;
+    rc = final_window_test(tp_id, (int)port, FINAL_REG_FAIL);
     if (rc != 0) goto on_return;
 #endif
 

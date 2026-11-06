@@ -3132,9 +3132,16 @@ static void handle_call_on_ip_change_cb(void *user_data)
     pjsua_acc_handle_call_on_ip_change(acc);
 }
 
-/* End the registration with the result of its latest request. A result of
- * an earlier request is ignored: the newer request reports its own.
+/* A result of an earlier request is ignored: the newer request reports
+ * its own.
  */
+static void ignore_earlier_result(pjsua_acc *acc)
+{
+    PJ_LOG(4, (THIS_FILE, "Acc %d: result of an earlier REGISTER ignored, "
+               "a newer one reports its own", acc->index));
+}
+
+/* End the registration with the result of its latest request */
 static pj_bool_t end_regc_if_latest(pjsua_acc *acc,
                                     const struct pjsip_regc_cbparam *param)
 {
@@ -3143,8 +3150,7 @@ static pj_bool_t end_regc_if_latest(pjsua_acc *acc,
     status = pjsip_regc_destroy_if_latest(acc->regc, param->cseq);
     if (status != PJ_SUCCESS) {
         pj_assert(status == PJ_EBUSY);
-        PJ_LOG(4, (THIS_FILE, "Acc %d: result of an earlier REGISTER "
-                   "ignored, a newer one reports its own", acc->index));
+        ignore_earlier_result(acc);
         return PJ_FALSE;
     }
     clear_regc(acc);
@@ -3250,8 +3256,19 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
         /* Stop keep-alive timer if any. */
         update_keep_alive(acc, PJ_FALSE, NULL);
     } else if (PJSIP_IS_STATUS_IN_CLASS(param->code, 200)) {
+        pj_bool_t latest;
 
-        if (param->expiration < 1 && !end_regc_if_latest(acc, param)) {
+        /* The server accepts the account even if the result is ignored */
+        acc->auto_rereg.attempt_cnt = 0;
+
+        if (param->expiration < 1) {
+            latest = end_regc_if_latest(acc, param);
+        } else {
+            latest = pjsip_regc_is_latest(acc->regc, param->cseq);
+            if (!latest)
+                ignore_earlier_result(acc);
+        }
+        if (!latest) {
             pj_log_pop_indent();
             PJSUA_UNLOCK();
             return;
@@ -3259,7 +3276,6 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 
         /* Update auto registration flag */
         acc->auto_rereg.active = PJ_FALSE;
-        acc->auto_rereg.attempt_cnt = 0;
 
         if (param->expiration < 1) {
             /* Reset pointer to registration transport */

@@ -205,8 +205,17 @@ PJ_DEF(pj_status_t) pjsip_regc_destroy(pjsip_regc *regc)
     return pjsip_regc_destroy2(regc, PJ_TRUE);
 }
 
+/* A request newer than cseq has been sent or reserved.
+ * Called with regc->lock held.
+ */
+static pj_bool_t newer_than(pjsip_regc *regc, pj_int32_t cseq)
+{
+    return regc->reserved_tdata ||
+           (regc->cseq_hdr && cseq != regc->cseq_hdr->cseq);
+}
+
 /* Without force, refuse while busy or, when check_cseq, once a request
- * newer than cseq has been sent.
+ * newer than cseq has been sent or reserved.
  */
 static pj_status_t regc_destroy(pjsip_regc *regc, pj_bool_t force,
                                 pj_bool_t check_cseq, pj_int32_t cseq)
@@ -214,8 +223,7 @@ static pj_status_t regc_destroy(pjsip_regc *regc, pj_bool_t force,
     pj_lock_acquire(regc->lock);
 
     if (!force && (regc->has_tsx || regc->reserved_tdata ||
-                   (check_cseq && regc->cseq_hdr &&
-                    cseq != regc->cseq_hdr->cseq)))
+                   (check_cseq && newer_than(regc, cseq))))
     {
         pj_lock_release(regc->lock);
         return PJ_EBUSY;
@@ -264,6 +272,19 @@ PJ_DEF(pj_status_t) pjsip_regc_destroy_if_latest(pjsip_regc *regc,
     PJ_ASSERT_RETURN(regc, PJ_EINVAL);
 
     return regc_destroy(regc, PJ_FALSE, PJ_TRUE, cseq);
+}
+
+PJ_DEF(pj_bool_t) pjsip_regc_is_latest(pjsip_regc *regc, pj_int32_t cseq)
+{
+    pj_bool_t latest;
+
+    PJ_ASSERT_RETURN(regc, PJ_FALSE);
+
+    pj_lock_acquire(regc->lock);
+    latest = !newer_than(regc, cseq);
+    pj_lock_release(regc->lock);
+
+    return latest;
 }
 
 
@@ -1241,14 +1262,6 @@ static pj_uint32_t calculate_response_expiration(const pjsip_regc *regc,
 }
 
 
-/* The regc has sent or reserved another request since the one with cseq.
- * Called with regc->lock held.
- */
-static pj_bool_t chal_outdated(pjsip_regc *regc, pj_int32_t cseq)
-{
-    return cseq != regc->cseq_hdr->cseq || regc->reserved_tdata != NULL;
-}
-
 /* Sending authentication */
 static pj_status_t async_auth_send_impl(pjsip_auth_clt_sess *auth_sess,
                                         void *user_data,
@@ -1296,7 +1309,7 @@ static void async_auth_abandon_impl(pjsip_auth_clt_sess *auth_sess,
     PJ_UNUSED_ARG(auth_sess);
 
     pj_lock_acquire(regc->lock);
-    outdated = chal_outdated(regc, chal->cseq);
+    outdated = newer_than(regc, chal->cseq);
     pj_lock_release(regc->lock);
 
     /* Called without regc->lock held (same convention as send_impl). The
@@ -1753,7 +1766,7 @@ static pj_status_t regc_send(pjsip_regc *regc, pjsip_tx_data *tdata,
     if (auth_retry) {
         cseq_hdr = (pjsip_cseq_hdr*)
                    pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL);
-        if (!cseq_hdr || chal_outdated(regc, cseq_hdr->cseq)) {
+        if (!cseq_hdr || newer_than(regc, cseq_hdr->cseq)) {
             PJ_LOG(4,(THIS_FILE, "Not sending the authentication of a "
                                  "superseded request"));
             *superseded = PJ_TRUE;

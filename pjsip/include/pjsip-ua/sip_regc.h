@@ -80,8 +80,9 @@ struct pjsip_regc_cbparam
     pjsip_contact_hdr   *contact[PJSIP_REGC_MAX_CONTACT]; /**< Contacts.    */
     pj_bool_t            is_unreg;  /**< Expire header, if any, set to zero?*/
 
-    /** CSeq of the request this result is for, see
-     *  #pjsip_regc_destroy_if_latest().
+    /** CSeq of the request this result is for, or of the last request
+     *  sent if a refresh could not be sent. See
+     *  #pjsip_regc_destroy_if_latest() and #pjsip_regc_is_latest().
      */
     pj_int32_t           cseq;
 };
@@ -195,6 +196,20 @@ PJ_DECL(pj_status_t) pjsip_regc_destroy2(pjsip_regc *regc, pj_bool_t force);
  */
 PJ_DECL(pj_status_t) pjsip_regc_destroy_if_latest(pjsip_regc *regc,
                                                   pj_int32_t cseq);
+
+
+/**
+ * Check that the registration has not sent or reserved a request since the
+ * one with the specified CSeq, i.e. that a result with this CSeq is the
+ * latest one. Use #pjsip_regc_destroy_if_latest() instead to end the
+ * registration on the result.
+ *
+ * @param regc      The client registration structure.
+ * @param cseq      The \a cseq field of the callback parameter.
+ *
+ * @return          PJ_TRUE if no newer request has been sent or reserved.
+ */
+PJ_DECL(pj_bool_t) pjsip_regc_is_latest(pjsip_regc *regc, pj_int32_t cseq);
 
 
 /**

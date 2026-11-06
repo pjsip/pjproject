@@ -1242,6 +1242,10 @@ static int destroy_if_latest_test(const pj_str_t *registrar_uri)
     }
 
     /* A newer request has been sent */
+    if (pjsip_regc_is_latest(regc, cseq)) {
+        ret = -968;
+        goto on_return;
+    }
     if (pjsip_regc_destroy_if_latest(regc, cseq) != PJ_EBUSY) {
         regc = NULL;
         ret = -963;
@@ -1252,6 +1256,10 @@ static int destroy_if_latest_test(const pj_str_t *registrar_uri)
     cseq = client_result.cseq;
     if (reserve_new(regc, &tdata) != PJ_SUCCESS) {
         ret = -964;
+        goto on_return;
+    }
+    if (pjsip_regc_is_latest(regc, cseq)) {
+        ret = -969;
         goto on_return;
     }
     if (pjsip_regc_destroy_if_latest(regc, cseq) != PJ_EBUSY) {
