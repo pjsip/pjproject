@@ -312,6 +312,19 @@ target_link_libraries(pjsua2
 )
 endif() # PJ_BUILD_PJSUA2
 
+# The other libraries list the source include directory in their own file
+# sets, ahead of the build directory pjsip passes on, so a leftover
+# pjsip/sip_autoconf.h would shadow the generated one there too.
+foreach(_pj_tgt pjsip-simple pjsip-ua pjsua-lib pjsua2)
+  if(TARGET ${_pj_tgt})
+    target_include_directories(${_pj_tgt} BEFORE
+      PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+    )
+  endif()
+endforeach()
+unset(_pj_tgt)
+
 # ##############################################################################
 # Test application
 

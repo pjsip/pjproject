@@ -330,11 +330,10 @@ if(IOS AND PJ_IOS_SAMPLE_LIBS)
   # ./aconfigure writes to these exact paths and would otherwise write through
   # the link into the build directory.
   #
-  # Note that CMake puts the source include directory ahead of the binary one,
-  # so a generated header sitting in the source tree -- left by this step, or
-  # by an autotools build -- shadows the one the current build generated. Turn
-  # this off for a build that must not be influenced by whatever configured
-  # the tree last.
+  # The libraries search their build directory ahead of the source one, so
+  # these copies do not affect a later build from this tree. A consumer that
+  # includes from the source tree, as these projects do, gets whatever was
+  # copied last. Turn this off to leave the source tree untouched.
   cmake_dependent_option(PJ_IOS_SAMPLE_HEADERS
     "Copy the generated headers into the source tree for the iOS samples" ON
     "PJ_IOS_SAMPLE_LIBS" OFF
