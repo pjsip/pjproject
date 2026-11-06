@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -222,25 +222,48 @@ PJ_DEF(pj_status_t) pjsip_publishc_create( pjsip_endpoint *endpt,
 }
 
 
+/* Free pubc. Called without the mutex held, once nothing is outstanding. */
+static void pubc_free(pjsip_publishc *pubc)
+{
+    if (pubc->mutex)
+        pj_mutex_destroy(pubc->mutex);
+
+    pjsip_auth_clt_deinit(&pubc->auth_sess);
+    pjsip_endpt_release_pool(pubc->endpt, pubc->pool);
+}
+
+/* Release the mutex, then complete a deferred destroy if the last
+ * outstanding transaction, callback or auth token has just finished.
+ */
+static void pubc_unlock(pjsip_publishc *pubc)
+{
+    pj_bool_t can_free = pubc->_delete_flag && !pubc->pending_tsx &&
+                         !pubc->in_callback && !pubc->pending_auth_tokens;
+
+    pj_mutex_unlock(pubc->mutex);
+    if (can_free)
+        pubc_free(pubc);
+}
+
 PJ_DEF(pj_status_t) pjsip_publishc_destroy(pjsip_publishc *pubc)
 {
     PJ_ASSERT_RETURN(pubc, PJ_EINVAL);
 
+    pj_mutex_lock(pubc->mutex);
+
+    /* Cancel existing timer, if any */
+    if (pubc->timer.id != 0) {
+        pjsip_endpt_cancel_timer(pubc->endpt, &pubc->timer);
+        pubc->timer.id = 0;
+    }
+
     if (pubc->pending_tsx || pubc->in_callback || pubc->pending_auth_tokens) {
         pubc->_delete_flag = 1;
         pubc->cb = NULL;
+        pj_mutex_unlock(pubc->mutex);
     } else {
-        /* Cancel existing timer, if any */
-        if (pubc->timer.id != 0) {
-            pjsip_endpt_cancel_timer(pubc->endpt, &pubc->timer);
-            pubc->timer.id = 0;
-        }
-
-        if (pubc->mutex)
-            pj_mutex_destroy(pubc->mutex);
-
-        pjsip_auth_clt_deinit(&pubc->auth_sess);
-        pjsip_endpt_release_pool(pubc->endpt, pubc->pool);
+        pj_mutex_unlock(pubc->mutex);
+        pubc_free(pubc);
     }
 
     return PJ_SUCCESS;
@@ -329,16 +352,30 @@ PJ_DEF(pj_status_t) pjsip_publishc_set_credentials( pjsip_publishc *pubc,
                                                 int count,
                                                 const pjsip_cred_info cred[] )
 {
+    pj_status_t status;
+
     PJ_ASSERT_RETURN(pubc && count && cred, PJ_EINVAL);
-    return pjsip_auth_clt_set_credentials(&pubc->auth_sess, count, cred);
+
+    pj_mutex_lock(pubc->mutex);
+    status = pjsip_auth_clt_set_credentials(&pubc->auth_sess, count, cred);
+    pj_mutex_unlock(pubc->mutex);
+
+    return status;
 }
 
 PJ_DEF(pj_status_t) pjsip_publishc_set_auth_sess(
                                     pjsip_publishc *pubc,
                                     pjsip_auth_clt_sess *session)
 {
+    pj_status_t status;
+
     PJ_ASSERT_RETURN(pubc, PJ_EINVAL);
-    return pjsip_auth_clt_set_parent(&pubc->auth_sess, session);
+
+    pj_mutex_lock(pubc->mutex);
+    status = pjsip_auth_clt_set_parent(&pubc->auth_sess, session);
+    pj_mutex_unlock(pubc->mutex);
+
+    return status;
 }
 
 PJ_DEF(pjsip_auth_clt_sess*) pjsip_publishc_get_auth_sess(
@@ -355,6 +392,8 @@ PJ_DEF(pj_status_t) pjsip_publishc_set_route_set( pjsip_publishc *pubc,
 
     PJ_ASSERT_RETURN(pubc && route_set, PJ_EINVAL);
 
+    pj_mutex_lock(pubc->mutex);
+
     pj_list_init(&pubc->route_set);
 
     chdr = route_set->next;
@@ -362,6 +401,8 @@ PJ_DEF(pj_status_t) pjsip_publishc_set_route_set( pjsip_publishc *pubc,
         pj_list_push_back(&pubc->route_set, pjsip_hdr_clone(pubc->pool, chdr));
         chdr = chdr->next;
     }
+
+    pj_mutex_unlock(pubc->mutex);
 
     return PJ_SUCCESS;
 }
@@ -373,12 +414,16 @@ PJ_DEF(pj_status_t) pjsip_publishc_set_headers( pjsip_publishc *pubc,
 
     PJ_ASSERT_RETURN(pubc && hdr_list, PJ_EINVAL);
 
+    pj_mutex_lock(pubc->mutex);
+
     pj_list_init(&pubc->usr_hdr);
     h = hdr_list->next;
     while (h != hdr_list) {
         pj_list_push_back(&pubc->usr_hdr, pjsip_hdr_clone(pubc->pool, h));
         h = h->next;
     }
+
+    pj_mutex_unlock(pubc->mutex);
 
     return PJ_SUCCESS;
 }
@@ -389,6 +434,8 @@ PJ_DEF(pj_status_t) pjsip_publishc_set_via_sent_by(pjsip_publishc *pubc,
 {
     PJ_ASSERT_RETURN(pubc, PJ_EINVAL);
 
+    pj_mutex_lock(pubc->mutex);
+
     if (!via_addr)
         pj_bzero(&pubc->via_addr, sizeof(pubc->via_addr));
     else {
@@ -397,6 +444,8 @@ PJ_DEF(pj_status_t) pjsip_publishc_set_via_sent_by(pjsip_publishc *pubc,
         pubc->via_addr.port = via_addr->port;
     }
     pubc->via_tp = via_tp;
+
+    pj_mutex_unlock(pubc->mutex);
 
     return PJ_SUCCESS;
 }
@@ -494,9 +543,13 @@ PJ_DEF(pj_status_t) pjsip_publishc_publish(pjsip_publishc *pubc,
 
     PJ_ASSERT_RETURN(pubc && p_tdata, PJ_EINVAL);
 
+    pj_mutex_lock(pubc->mutex);
+
     status = create_request(pubc, &tdata);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+        pj_mutex_unlock(pubc->mutex);
         return status;
+    }
 
     /* Add Expires header */
     if (pubc->expires_hdr) {
@@ -516,6 +569,8 @@ PJ_DEF(pj_status_t) pjsip_publishc_publish(pjsip_publishc *pubc,
 
     pubc->auto_refresh = auto_refresh;
 
+    pj_mutex_unlock(pubc->mutex);
+
     /* Done */
     *p_tdata = tdata;
     return PJ_SUCCESS;
@@ -532,12 +587,17 @@ PJ_DEF(pj_status_t) pjsip_publishc_unpublish(pjsip_publishc *pubc,
 
     PJ_ASSERT_RETURN(pubc && p_tdata, PJ_EINVAL);
 
+    pj_mutex_lock(pubc->mutex);
+
     if (pubc->timer.id != 0) {
         pjsip_endpt_cancel_timer(pubc->endpt, &pubc->timer);
         pubc->timer.id = 0;
     }
 
     status = create_request(pubc, &tdata);
+
+    pj_mutex_unlock(pubc->mutex);
+
     if (status != PJ_SUCCESS)
         return status;
 
@@ -556,7 +616,11 @@ PJ_DEF(pj_status_t) pjsip_publishc_update_expires( pjsip_publishc *pubc,
                                                    pj_uint32_t expires )
 {
     PJ_ASSERT_RETURN(pubc, PJ_EINVAL);
+
+    pj_mutex_lock(pubc->mutex);
     set_expires( pubc, expires );
+    pj_mutex_unlock(pubc->mutex);
+
     return PJ_SUCCESS;
 }
 
@@ -616,12 +680,10 @@ static void pubc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
  */
 static void pubc_auth_token_release(pjsip_publishc *pubc)
 {
+    pj_mutex_lock(pubc->mutex);
     pj_assert(pubc->pending_auth_tokens > 0);
     --pubc->pending_auth_tokens;
-
-    /* pjsip_publishc_destroy() re-defers if anything is still outstanding. */
-    if (pubc->_delete_flag)
-        pjsip_publishc_destroy(pubc);
+    pubc_unlock(pubc);
 }
 
 static pj_status_t pubc_async_auth_send_impl(
@@ -666,7 +728,13 @@ static void tsx_callback(void *token, pjsip_event *event)
     pj_status_t status;
     pjsip_publishc *pubc = (pjsip_publishc*) token;
     pjsip_transaction *tsx = event->body.tsx_state.tsx;
-    
+
+    /* Hold the mutex for the whole callback, releasing it only around
+     * calls into the application, so that an app thread sending or
+     * destroying concurrently sees consistent state.
+     */
+    pj_mutex_lock(pubc->mutex);
+
     /* Decrement pending transaction counter. */
     pj_assert(pubc->pending_tsx > 0);
     --pubc->pending_tsx;
@@ -713,9 +781,13 @@ static void tsx_callback(void *token, pjsip_event *event)
             pj_bzero(&chal_param, sizeof(chal_param));
             chal_param.rdata = rdata;
             chal_param.tdata = tsx->last_tx;
+
+            /* May call the application's challenge callback. */
+            pj_mutex_unlock(pubc->mutex);
             status = pjsip_auth_clt_async_impl_on_challenge(
                                             &pubc->auth_sess,
                                             auth_token, &chal_param);
+            pj_mutex_lock(pubc->mutex);
             if (status != PJ_SUCCESS) {
                 pj_grp_lock_dec_ref(tsx->grp_lock);
                 --pubc->pending_auth_tokens;
@@ -725,11 +797,16 @@ static void tsx_callback(void *token, pjsip_event *event)
             status = pjsip_auth_clt_reinit_req(&pubc->auth_sess, rdata,
                                                tsx->last_tx, &tdata);
             if (status != PJ_SUCCESS) {
+                pj_mutex_unlock(pubc->mutex);
                 call_callback(pubc, status, tsx->status_code,
                               &rdata->msg_info.msg->line.status.reason,
                               rdata, PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
+                pj_mutex_lock(pubc->mutex);
             } else {
+                /* Don't hold the mutex while sending (see #1247). */
+                pj_mutex_unlock(pubc->mutex);
                 status = pjsip_publishc_send(pubc, tdata);
+                pj_mutex_lock(pubc->mutex);
             }
         }
 
@@ -821,15 +898,16 @@ static void tsx_callback(void *token, pjsip_event *event)
          */
         ++pubc->pending_tsx;
 
+        pj_mutex_unlock(pubc->mutex);
         call_callback(pubc, PJ_SUCCESS, tsx->status_code, 
                       (rdata ? &rdata->msg_info.msg->line.status.reason 
                         : pjsip_get_status_text(tsx->status_code)),
                       rdata, expiration);
+        pj_mutex_lock(pubc->mutex);
 
         --pubc->pending_tsx;
 
         /* If we have pending request(s), send them now */
-        pj_mutex_lock(pubc->mutex);
         while (!pj_list_empty(&pubc->pending_reqs)) {
             pending_publish *pp = pubc->pending_reqs.next;
             pjsip_tx_data *tdata = pp->tdata;
@@ -863,24 +941,23 @@ static void tsx_callback(void *token, pjsip_event *event)
                 }
             }
 
+            /* Don't hold the mutex while sending (see #1247). If another
+             * thread sent a request meanwhile, this one has been queued
+             * again and will be sent when that transaction completes.
+             */
+            pj_mutex_unlock(pubc->mutex);
             status = pjsip_publishc_send(pubc, tdata);
-            if (status == PJ_EPENDING) {
-                pj_assert(!"Not expected");
-                pjsip_tx_data_dec_ref(tdata);
-            } else if (status == PJ_SUCCESS) {
+            pj_mutex_lock(pubc->mutex);
+            if (status == PJ_SUCCESS || status == PJ_EPENDING)
                 break;
-            }
         }
-        pj_mutex_unlock(pubc->mutex);
     }
 
     /* No longer in callback. */
     --pubc->in_callback;
 
     /* Delete the record if user destroy pubc during the callback. */
-    if (pubc->_delete_flag && pubc->pending_tsx==0) {
-        pjsip_publishc_destroy(pubc);
-    }
+    pubc_unlock(pubc);
 }
 
 
