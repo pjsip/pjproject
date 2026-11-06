@@ -949,3 +949,5 @@ add_custom_target(uninstall
 # A <Pkg>_ROOT is searched first, not only: point out what came from elsewhere
 include(Pj/PackageRoot)
 pj_warn_outside_package_roots()
+# and when cross-compiling, a root outside the find root is not searched at all
+pj_warn_rerooted_package_roots()
