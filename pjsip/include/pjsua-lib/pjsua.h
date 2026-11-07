@@ -1921,7 +1921,8 @@ typedef struct pjsua_callback
     /**
      * Notify application when registration status has changed.
      * Application may then query the account info to get the
-     * registration details.
+     * registration details. The result of a REGISTER is not reported once
+     * the account has sent a newer one, which reports its own.
      *
      * @param acc_id        The account ID.
      */
@@ -1930,7 +1931,8 @@ typedef struct pjsua_callback
     /**
      * Notify application when registration status has changed.
      * Application may inspect the registration info to get the
-     * registration status details.
+     * registration status details. As with \a on_reg_state, the result of
+     * a REGISTER is not reported once the account has sent a newer one.
      *
      * @param acc_id        The account ID.
      * @param info          The registration info.
@@ -2473,7 +2475,12 @@ typedef struct pjsua_callback
      * \a param->handled to PJ_TRUE and later call
      * pjsip_auth_clt_async_send_req() to resend with authentication,
      * or pjsip_auth_clt_async_abandon() to give up. Both may be called
-     * synchronously within this callback or deferred.
+     * synchronously within this callback or deferred. A deferred REGISTER
+     * is not sent, and PJ_ECANCELLED is returned, if the account has sent
+     * or started another REGISTER since the challenge, or has dropped its
+     * registration and the deferred REGISTER is not an unregistration.
+     * Abandoning such a REGISTER doesn't report a registration failure:
+     * the newer REGISTER reports the result.
      *
      * If \a param->handled is left as PJ_FALSE (the default), the library
      * falls back to synchronous authentication using configured credentials.
@@ -3701,7 +3708,8 @@ PJ_DECL(void) pjsua_dump(pj_bool_t detail);
  *    configurable via \a pjsua_acc_config.ip_change_cfg.shutdown_tp).
  * 3. Update contact URI by sending re-Registration (this step is configurable 
  *    via a\ pjsua_acc_config.allow_contact_rewrite and 
- *    a\ pjsua_acc_config.contact_rewrite_method)
+ *    a\ pjsua_acc_config.contact_rewrite_method). An account unregistered
+ *    with #pjsua_acc_set_registration() is not registered again.
  * 4. Hangup active calls (this step is configurable via 
  *    a\ pjsua_acc_config.ip_change_cfg.hangup_calls) or 
  *    continue the call by sending re-INVITE 
@@ -5905,6 +5913,10 @@ PJ_DECL(pj_status_t) pjsua_acc_set_online_status2(pjsua_acc_id acc_id,
  * when the account is added with #pjsua_acc_add(). Application normally
  * only need to call this function if it wants to manually update the
  * registration or to unregister from the server.
+ *
+ * After an unregistration, pjsua doesn't register the account again by
+ * itself, e.g: on IP change or with an auto retry, until the application
+ * renews the registration or modifies the account so that it registers.
  *
  * @param acc_id        The account ID.
  * @param renew         If renew argument is zero, this will start 

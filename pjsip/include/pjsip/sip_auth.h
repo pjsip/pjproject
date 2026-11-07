@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -652,7 +652,9 @@ PJ_DECL(pj_status_t) pjsip_auth_clt_set_parent(pjsip_auth_clt_sess *sess,
  *
  * Thread safety: the token may be consumed (send/abandon) from any thread,
  * provided the authentication session and its owner remain valid.  When a
- * parent session is configured, the parent's lock serializes access.
+ * parent session is configured and the token is consumed through the child
+ * session, the parent's lock makes sure that only one call consumes it. The
+ * owner then sends or abandons the request without holding that lock.
  * @{
  */
 
@@ -760,9 +762,15 @@ PJ_DECL(pj_status_t) pjsip_auth_clt_async_configure(
  * only used when the application has configured the authentication client to
  * handle authentication manually.
  *
- * The token is single-use: after this call (regardless of success or
- * failure), the token is invalidated and any subsequent call with the same
- * token will return PJ_EINVAL.
+ * The token is single-use: once it is found to be valid, this call
+ * consumes it and the request whether it succeeds or fails, so the
+ * application must not pass the token to this function or to
+ * #pjsip_auth_clt_async_abandon() again. Its memory may already be
+ * released, e.g. when the challenged transaction has terminated.
+ *
+ * If the session has lost its asynchronous settings since the challenge,
+ * e.g. it was reset because its owner was deleted, the request is not sent
+ * and the token is abandoned as with #pjsip_auth_clt_async_abandon().
  *
  * If application sends the new request with authentication response
  * from outside the callback, application must maintain the validity of the
@@ -775,8 +783,11 @@ PJ_DECL(pj_status_t) pjsip_auth_clt_async_configure(
  * @param token         The token associated with the asynchronous request.
  * @param new_request   The new request to be sent.
  *
- * @return              PJ_SUCCESS on success, or PJ_EINVAL if the token
- *                      has already been consumed or is invalid.
+ * @return              PJ_SUCCESS on success, PJ_EINVAL if the token is
+ *                      found to be invalid, PJ_EINVALIDOP if the session
+ *                      has lost its asynchronous settings, or an error
+ *                      from the owner of the session, e.g. PJ_ECANCELLED
+ *                      when the request is no longer wanted.
  */
 PJ_DECL(pj_status_t) pjsip_auth_clt_async_send_req(
                                     pjsip_auth_clt_sess *sess,
@@ -785,9 +796,8 @@ PJ_DECL(pj_status_t) pjsip_auth_clt_async_send_req(
 
 /**
  * Inform the authentication session that the application has chosen to
- * abandon the pending authentication challenge.  The token is invalidated
- * before abandon_impl is called, so any subsequent call to
- * pjsip_auth_clt_async_send_req() with the same token will return PJ_EINVAL.
+ * abandon the pending authentication challenge.  The token is consumed, as
+ * with #pjsip_auth_clt_async_send_req(), and must not be used again.
  *
  * If the token's abandon_impl field is non-NULL it will be invoked so that
  * the SIP module can perform cleanup (e.g. terminate the SIP session or
@@ -797,8 +807,8 @@ PJ_DECL(pj_status_t) pjsip_auth_clt_async_send_req(
  * @param token         The token that was passed to the application's
  *                      challenge callback.
  *
- * @return              PJ_SUCCESS, or PJ_EINVAL if the token is no longer
- *                      valid (already used or already abandoned).
+ * @return              PJ_SUCCESS, or PJ_EINVAL if the token is found to
+ *                      be invalid.
  */
 PJ_DECL(pj_status_t) pjsip_auth_clt_async_abandon(
                                     pjsip_auth_clt_sess *sess,

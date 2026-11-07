@@ -142,6 +142,27 @@ deadlock:acc_check_nat_addr
 #=============================================================================
 
 #=============================================================================
+# The same cycle in other senders, exposed by pjsua_acc_test:
+#   M0 -> M1: acc_set_registration() releases only its own level of
+#     PJSUA_LOCK, so pjsip_regc_send() takes the new transaction's
+#     grp_lock under the caller's: handle_ip_change_on_acc(), or
+#     pjsua_acc_on_tp_state_changed(), re-registers through
+#     pjsua_acc_update_contact_on_ip_change(); pjsua_acc_modify()
+#     re-registers; the test's unreg_in_window(), final_window_test() and
+#     abandon_window_test() send or poll under PJSUA_LOCK on purpose, while
+#     another thread waits for it in regc_cb().
+#   M1 -> M0: regc_cb() / regc_tsx_cb(), as above.
+#
+# Suppressed on these callers only, so that other senders on the
+# registration path still surface.
+deadlock:pjsua_acc_update_contact_on_ip_change
+deadlock:pjsua_acc_modify
+deadlock:unreg_in_window
+deadlock:final_window_test
+deadlock:abandon_window_test
+#=============================================================================
+
+#=============================================================================
 # Lock-order-inversion between PJSUA_LOCK and a server presence
 # subscription's dialog grp_lock, exposed by pjsua_pres_test.
 #
