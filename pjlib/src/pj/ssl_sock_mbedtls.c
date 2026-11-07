@@ -512,10 +512,9 @@ static int cert_verify_cb(void *data, mbedtls_x509_crt *crt,
         PJ_LOG(5, (THIS_FILE, "Certificate info:\n%s", buf));
     }
 
-    /* Peer cert depth = 0 */
-    if (depth > 0)
-        return 0;
-
+    /* Errors of an issuer, e.g: an untrusted root sent by the peer, are
+     * flagged on the issuer, so map the flags at every depth.
+     */
     if (((*flags) & MBEDTLS_X509_BADCERT_EXPIRED) != 0) {
         PJ_LOG(3, (THIS_FILE, "Server certificate has expired!"));
         ssock->verify_status |= PJ_SSL_CERT_EVALIDITY_PERIOD;
@@ -551,7 +550,11 @@ static int cert_verify_cb(void *data, mbedtls_x509_crt *crt,
         ssock->verify_status |= PJ_SSL_CERT_EUNKNOWN;
     }
 
-    if ((*flags) == 0) {
+    /* Peer cert depth = 0, called last */
+    if (depth > 0)
+        return 0;
+
+    if (ssock->verify_status == 0) {
         PJ_LOG(5, (THIS_FILE, "Certificate verified without error flags"));
     } else {
         update_cert_info(crt, ssock->pool, &ssock->remote_cert_info);
