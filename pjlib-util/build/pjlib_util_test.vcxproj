@@ -600,6 +600,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\pjlib-util-test\dns_packet_test.c" />
     <ClCompile Include="..\src\pjlib-util-test\encryption.c" />
     <ClCompile Include="..\src\pjlib-util-test\http_client.c" />
     <ClCompile Include="..\src\pjlib-util-test\json_test.c" />

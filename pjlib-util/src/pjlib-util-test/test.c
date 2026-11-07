@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -91,6 +91,10 @@ static int test_inner(int argc, char *argv[])
 #if !PJ_HAS_THREADS
     UT_ADD_TEST(&test_app.ut_app, resolver_nothreads_test, 0);
 #endif
+#endif
+
+#if INCLUDE_DNS_PACKET_TEST
+    UT_ADD_TEST(&test_app.ut_app, dns_packet_test, 0);
 #endif
 
 #if INCLUDE_HTTP_CLIENT_TEST
