@@ -1691,8 +1691,13 @@ static void dtls_media_stop_channel(dtls_srtp *ds, unsigned idx)
     ds->nego_started[idx] = PJ_FALSE;
     ds->nego_completed[idx] = PJ_FALSE;
     ds->rem_fprint_status[idx] = PJ_EPENDING;
-    if (idx == RTP_CHANNEL)
+    if (idx == RTP_CHANNEL) {
         ds->got_keys = PJ_FALSE;
+    } else {
+        pj_lock_acquire(ds->srtp->mutex);
+        destroy_srtp_ctx(ds->srtp, &ds->srtp->srtp_rtcp);
+        pj_lock_release(ds->srtp->mutex);
+    }
 }
 
 static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
