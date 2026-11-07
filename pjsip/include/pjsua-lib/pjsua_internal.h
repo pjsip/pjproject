@@ -645,7 +645,8 @@ struct pjsua_data
     /* SIP: */
     pjsip_endpoint      *endpt;     /**< Global endpoint.               */
     pjsip_module         mod;       /**< pjsua's PJSIP module.          */
-    pjsua_transport_data tpdata[8]; /**< Array of transports.           */
+    /** Array of transports. */
+    pjsua_transport_data tpdata[PJSUA_MAX_TRANSPORTS];
     pjsip_tp_state_callback old_tp_cb; /**< Old transport callback.     */
 
     /* Threading: */
