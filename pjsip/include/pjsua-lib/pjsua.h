@@ -4124,6 +4124,20 @@ PJ_DECL(pj_status_t) pjsua_transport_lis_restart( pjsua_transport_id id,
 #   define PJSUA_MAX_ACC            8
 #endif
 
+/**
+ * Maximum number of transports that can be created with
+ * #pjsua_transport_create(). This can be overridden in config_site.h.
+ *
+ * Default: 8
+ */
+#ifndef PJSUA_MAX_TRANSPORTS
+#   define PJSUA_MAX_TRANSPORTS     8
+#endif
+
+#if PJSUA_MAX_TRANSPORTS < 1
+#   error "PJSUA_MAX_TRANSPORTS must be at least 1"
+#endif
+
 
 /**
  * Default registration interval.

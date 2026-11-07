@@ -609,7 +609,7 @@ static int setup_pjsua(const stress_opts_t *opts)
     {
         pjsua_transport_id tid;
         pjsua_transport_info tinfo;
-        pjsua_transport_id ids[8];
+        pjsua_transport_id ids[PJSUA_MAX_TRANSPORTS];
         unsigned cnt = PJ_ARRAY_SIZE(ids);
         unsigned i;
         pjsua_acc_config acc_cfg;
