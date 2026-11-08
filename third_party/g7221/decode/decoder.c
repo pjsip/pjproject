@@ -309,6 +309,14 @@ void decode_envelope(Bit_Obj *bitobj,
     {
         acca = L_add(absolute_region_power_index[region],REGION_POWER_TABLE_NUM_NEGATIVES);
         i = extract_l(acca);
+
+        /* Keep the table index in range, the frame itself is rejected
+         * later by test_4_frame_errors().
+         */
+        if (i < 0)
+            i = 0;
+        else if (i >= REGION_POWER_TABLE_SIZE)
+            i = REGION_POWER_TABLE_SIZE - 1;
         
         temp1 = sub(i,max_index);
         test();
@@ -353,6 +361,11 @@ void decode_envelope(Bit_Obj *bitobj,
     {
         acca = L_add(absolute_region_power_index[region],temp);
         i = extract_l(acca);
+
+        if (i < 0)
+            i = 0;
+        else if (i >= REGION_POWER_TABLE_SIZE)
+            i = REGION_POWER_TABLE_SIZE - 1;
         decoder_region_standard_deviation[region] = int_region_standard_deviation_table[i];
         move16();
     }
@@ -407,7 +420,11 @@ void rate_adjust_categories(Word16 categorization_control,
     {
         region = decoder_category_balances[i++];
         move16();
-        decoder_power_categories[region] = add(decoder_power_categories[region],1);
+        /* Categories above NUM_CATEGORIES-1 would leave the region's
+         * coefficients unwritten, the encoder treats them as the last one.
+         */
+        if (decoder_power_categories[region] < NUM_CATEGORIES-1)
+            decoder_power_categories[region] = add(decoder_power_categories[region],1);
         move16();
         categorization_control = sub(categorization_control,1);
     }
