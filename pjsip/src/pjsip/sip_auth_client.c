@@ -135,7 +135,9 @@ const pjsip_auth_algorithm pjsip_auth_algorithms[] = {
 
 /* A session with a parent delegates each operation to it, and a shared
  * session (one that is a parent) serializes the operations on itself with
- * its own lock. The lock is never held while calling into the application.
+ * its own lock. The lock is recursive, since the credential's AKA callback
+ * runs under it; it is never held around the async challenge callback or
+ * an owner's send_impl/abandon_impl.
  */
 #define LOCK_SHARED(sess) \
     do { if ((sess)->lock) pj_lock_acquire((sess)->lock); } while (0)
@@ -928,9 +930,9 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_set_parent(pjsip_auth_clt_sess *sess,
     PJ_ASSERT_RETURN(sess, PJ_EINVAL);
     if (parent != NULL && parent->lock == NULL) {
         pj_status_t status;
-        status = pj_lock_create_simple_mutex( parent->pool,
-                                              "auth_clt_parent_lock",
-                                              &parent->lock );
+        status = pj_lock_create_recursive_mutex(parent->pool,
+                                                "auth_clt_parent_lock",
+                                                &parent->lock);
         if (status != PJ_SUCCESS)
             return status;
     }
