@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2010-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -176,17 +176,10 @@ PJ_DEF(pj_status_t) pj_cli_console_create(pj_cli_t *cli,
 
 static void send_prompt_str(pj_cli_sess *sess)
 {
-    pj_str_t send_data;
-    char data_str[128];
     struct cli_console_fe *fe = (struct cli_console_fe *)sess->fe;
 
-    send_data.ptr = data_str;
-    send_data.slen = 0;
-
-    pj_strcat(&send_data, &fe->cfg.prompt_str);
-    send_data.ptr[send_data.slen] = 0;
-
-    printf("%s", send_data.ptr);
+    /* Print directly; the prompt may exceed any fixed-size buffer. */
+    printf("%.*s", (int)fe->cfg.prompt_str.slen, fe->cfg.prompt_str.ptr);
 }
 
 static void send_err_arg(pj_cli_sess *sess,
@@ -194,30 +187,22 @@ static void send_err_arg(pj_cli_sess *sess,
                          const pj_str_t *msg,
                          pj_bool_t with_return)
 {
-    pj_str_t send_data;
-    char data_str[256];
     pj_size_t len;
     unsigned i;
     struct cli_console_fe *fe = (struct cli_console_fe *)sess->fe;
 
-    send_data.ptr = data_str;
-    send_data.slen = 0;
-
+    /* Print directly; prompt + err_pos may exceed any fixed-size buffer. */
     if (with_return)
-        pj_strcat2(&send_data, "\r\n");
+        printf("\r\n");
 
     len = fe->cfg.prompt_str.slen + info->err_pos;
 
-    for (i=0;i<len;++i) {
-        pj_strcat2(&send_data, " ");
-    }
-    pj_strcat2(&send_data, "^");
-    pj_strcat2(&send_data, "\r\n");
-    pj_strcat(&send_data, msg);
-    pj_strcat(&send_data, &fe->cfg.prompt_str);
+    for (i=0;i<len;++i)
+        printf(" ");
 
-    send_data.ptr[send_data.slen] = 0;
-    printf("%s", send_data.ptr);
+    printf("^\r\n");
+    printf("%.*s", (int)msg->slen, msg->ptr);
+    printf("%.*s", (int)fe->cfg.prompt_str.slen, fe->cfg.prompt_str.ptr);
 }
 
 static void send_inv_arg(pj_cli_sess *sess,
@@ -236,22 +221,16 @@ static void send_too_many_arg(pj_cli_sess *sess,
     send_err_arg(sess, info, &ERR_MSG, with_return);
 }
 
-static void send_hint_arg(pj_str_t *send_data,
-                          const pj_str_t *desc,
+static void send_hint_arg(const pj_str_t *desc,
                           pj_ssize_t cmd_len,
                           pj_ssize_t max_len)
 {
     if ((desc) && (desc->slen > 0)) {
         int j;
 
-        for (j=0;j<(max_len-cmd_len);++j) {
-            pj_strcat2(send_data, " ");
-        }
-        pj_strcat2(send_data, "  ");
-        pj_strcat(send_data, desc);
-        send_data->ptr[send_data->slen] = 0;
-        printf("%s", send_data->ptr);
-        send_data->slen = 0;
+        for (j=0;j<(max_len-cmd_len);++j)
+            printf(" ");
+        printf("  %.*s", (int)desc->slen, desc->ptr);
     }
 }
 
@@ -261,8 +240,6 @@ static void send_ambi_arg(pj_cli_sess *sess,
 {
     unsigned i;
     pj_size_t len;
-    pj_str_t send_data;
-    char data[1028];
     struct cli_console_fe *fe = (struct cli_console_fe *)sess->fe;
     const pj_cli_hint_info *hint = info->hint;
     out_parse_state parse_state = OP_NORMAL;
@@ -270,18 +247,17 @@ static void send_ambi_arg(pj_cli_sess *sess,
     pj_ssize_t cmd_length = 0;
     static const pj_str_t sc_type = {"sc", 2};
     static const pj_str_t choice_type = {"choice", 6};
-    send_data.ptr = data;
-    send_data.slen = 0;
 
+    /* Print directly; the hint listing may exceed any fixed-size buffer. */
     if (with_return)
-        pj_strcat2(&send_data, "\r\n");
+        printf("\r\n");
 
     len = fe->cfg.prompt_str.slen + info->err_pos;
 
-    for (i=0;i<len;++i) {
-        pj_strcat2(&send_data, " ");
-    }
-    pj_strcat2(&send_data, "^");
+    for (i=0;i<len;++i)
+        printf(" ");
+
+    printf("^");
     /* Get the max length of the command name */
     for (i=0;i<info->hint_cnt;++i) {
         if (hint[i].type.slen > 0) {
@@ -318,36 +294,32 @@ static void send_ambi_arg(pj_cli_sess *sess,
         }
 
         if (parse_state != OP_SHORTCUT) {
-            pj_strcat2(&send_data, "\r\n  ");
+            printf("\r\n  ");
             cmd_length = hint[i].name.slen;
         }
 
         switch (parse_state) {
         case OP_CHOICE:
-            pj_strcat2(&send_data, "[");
-            pj_strcat(&send_data, &hint[i].name);
-            pj_strcat2(&send_data, "]");
+            printf("[%.*s]", (int)hint[i].name.slen, hint[i].name.ptr);
             break;
         case OP_TYPE:
-            pj_strcat2(&send_data, "<");
-            pj_strcat(&send_data, &hint[i].type);
-            pj_strcat2(&send_data, ">");
+            printf("<%.*s>", (int)hint[i].type.slen, hint[i].type.ptr);
             break;
         case OP_SHORTCUT:
             /* Format : "Command | sc |  description" */
             {
                 cmd_length += hint[i].name.slen;
                 if ((i > 0) && (!pj_stricmp(&hint[i-1].desc, &hint[i].desc))) {
-                    pj_strcat2(&send_data, " | ");
+                    printf(" | ");
                     cmd_length += 3;
                 } else {
-                    pj_strcat2(&send_data, "\r\n  ");
+                    printf("\r\n  ");
                 }
-                pj_strcat(&send_data, &hint[i].name);
+                printf("%.*s", (int)hint[i].name.slen, hint[i].name.ptr);
             }
             break;
         default:
-            pj_strcat(&send_data, &hint[i].name);
+            printf("%.*s", (int)hint[i].name.slen, hint[i].name.ptr);
             break;
         }
 
@@ -356,15 +328,12 @@ static void send_ambi_arg(pj_cli_sess *sess,
             (pj_strncmp(&hint[i].desc, &hint[i+1].desc, hint[i].desc.slen)))
         {
             /* Add description info */
-            send_hint_arg(&send_data, &hint[i].desc, cmd_length, max_length);
+            send_hint_arg(&hint[i].desc, cmd_length, max_length);
 
             cmd_length = 0;
         }
     }
-    pj_strcat2(&send_data, "\r\n");
-    pj_strcat(&send_data, &fe->cfg.prompt_str);
-    send_data.ptr[send_data.slen] = 0;
-    printf("%s", send_data.ptr);
+    printf("\r\n%.*s", (int)fe->cfg.prompt_str.slen, fe->cfg.prompt_str.ptr);
 }
 
 static pj_bool_t handle_hint(pj_cli_sess *sess)
