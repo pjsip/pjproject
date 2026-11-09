@@ -903,6 +903,8 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init(  pjsip_auth_clt_sess *sess,
     sess->parent = NULL;
     sess->async_opt = NULL;
 
+    /* Left NULL on failure, so the session can still be deinitialised. */
+    sess->lock = NULL;
     return pj_lock_create_recursive_mutex(pool, "auth_clt%p", &sess->lock);
 }
 

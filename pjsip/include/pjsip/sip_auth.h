@@ -625,7 +625,9 @@ PJ_DECL(pj_status_t) pjsip_auth_srv_init( pj_pool_t *pool,
  * dialogs.
  *
  * @param sess          Session that will be delegating the requests.
- * @param p             Parent that will be shared.
+ * @param p             Parent that will be shared. It must have been
+ *                      initialized with pjsip_auth_clt_init(), which
+ *                      creates the lock that serializes operations on it.
  *
  * @return              PJ_SUCCESS on success.
  */
