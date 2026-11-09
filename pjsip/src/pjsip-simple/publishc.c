@@ -84,6 +84,10 @@ struct pjsip_publishc
      */
     int                          pending_auth_tokens;
     pj_bool_t                    in_callback;
+    /* The response callback is running: requests sent meanwhile are
+     * queued, to be sent in order with the updated ETag afterwards.
+     */
+    pj_bool_t                    in_resp_cb;
     pj_mutex_t                  *mutex;
 
     pjsip_publishc_opt           opt;
@@ -1006,9 +1010,11 @@ static void tsx_callback(void *token, pjsip_event *event)
 
         /* Make requests sent during the callback queue behind this
          * response, so the loop below sends them in order with the
-         * updated ETag (#996). in_callback already prevents destruction.
+         * updated ETag (#996). This is kept apart from pending_tsx so
+         * that a refresh timer firing meanwhile still sees no transaction
+         * in flight. in_callback already prevents destruction.
          */
-        ++pubc->pending_tsx;
+        pubc->in_resp_cb = PJ_TRUE;
         cb = pubc->cb;
 
         pj_mutex_unlock(pubc->mutex);
@@ -1018,7 +1024,7 @@ static void tsx_callback(void *token, pjsip_event *event)
                       rdata, expiration);
         pj_mutex_lock(pubc->mutex);
 
-        --pubc->pending_tsx;
+        pubc->in_resp_cb = PJ_FALSE;
 
         /* If we have pending request(s), send them now */
         pubc_send_queued(pubc);
@@ -1116,7 +1122,9 @@ static pj_status_t pubc_send(pjsip_publishc *pubc, pjsip_tx_data *tdata)
  */
 static void pubc_send_queued(pjsip_publishc *pubc)
 {
-    while (pubc->pending_tsx == 0 && !pj_list_empty(&pubc->pending_reqs)) {
+    while (pubc->pending_tsx == 0 && !pubc->in_resp_cb &&
+           !pj_list_empty(&pubc->pending_reqs))
+    {
         pending_publish *pp = pubc->pending_reqs.next;
         pjsip_tx_data *tdata = pp->tdata;
 
@@ -1174,7 +1182,7 @@ PJ_DEF(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc,
     }
 
     /* Make sure we don't have pending transaction. */
-    if (pubc->pending_tsx) {
+    if (pubc->pending_tsx || pubc->in_resp_cb) {
         if (pubc->opt.queue_request) {
             pending_publish *pp = NULL;
             if (pj_list_empty(&pubc->pending_reqs_empty)) {
