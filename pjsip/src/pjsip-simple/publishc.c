@@ -1039,7 +1039,7 @@ static pj_status_t pubc_send(pjsip_publishc *pubc, pjsip_tx_data *tdata)
     pj_status_t status;
     pjsip_cseq_hdr *cseq_hdr;
     pj_uint32_t cseq;
-    pjsip_publishc_cb *cb = NULL;
+    pj_bool_t no_tsx = PJ_FALSE;
 
     pj_assert(pubc->pending_tsx == 0);
 
@@ -1081,20 +1081,24 @@ static pj_status_t pubc_send(pjsip_publishc *pubc, pjsip_tx_data *tdata)
          * created. If it has run, or another request has been sent since,
          * the counter or the CSeq has changed (see also #1936).
          */
-        if (pubc->pending_tsx == 1 && cseq == pubc->cseq_hdr->cseq) {
-            --pubc->pending_tsx;
-            cb = pubc->cb;
-        }
+        no_tsx = (pubc->pending_tsx == 1 && cseq == pubc->cseq_hdr->cseq);
     }
 
-    if (cb) {
+    if (no_tsx) {
         char errmsg[PJ_ERR_MSG_SIZE];
         pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
+        pjsip_publishc_cb *cb = pubc->cb;
 
+        /* Report it as tsx_callback() would, keeping the transaction
+         * claimed across the callback so that requests sent meanwhile
+         * queue behind those already queued.
+         */
         pj_mutex_unlock(pubc->mutex);
         call_callback(pubc, cb, status, 400, &reason, NULL,
                       PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
         pj_mutex_lock(pubc->mutex);
+
+        --pubc->pending_tsx;
     }
 
     return status;
