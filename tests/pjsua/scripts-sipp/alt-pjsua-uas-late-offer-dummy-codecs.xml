@@ -2,9 +2,9 @@
 <!DOCTYPE scenario SYSTEM "sipp.dtd">
 
 <!-- SIPp acts as UAC and sends an SDP-less INVITE. alt_pjsua (UAS) has no
-     offer to answer, so it inserts its own SDP offer (PCMU audio and
-     H263-1998 video) in the 200 OK. SIPp verifies both codecs are present,
-     then sends the SDP answer in the ACK before alt_pjsua hangs up with
+     offer to answer, so it inserts its own SDP offer, built from the dummy
+     audio codecs, in the 200 OK. SIPp verifies the offer and answers PCMU
+     in the ACK. It repeats this with an SDP-less re-INVITE, then sends
      BYE.
      This scenario tests the handling of late SDP offers with dummy codecs. -->
 
@@ -38,16 +38,13 @@
       <!-- Verify alt_pjsua injected its own SDP offer since the INVITE
            carried none. Check codecs only (no IP/port) so the test is
            environment-independent. search_in="msg" searches the entire SIP
-           message. The condexec nops avoid SIPp 3.7 exiting on "referenced
-           1 times" warning. -->
+           message. -->
       <ereg regexp="a=rtpmap:0 PCMU/8000" search_in="msg"
             check_it="true" assign_to="1"/>
-      <ereg regexp="a=rtpmap:96 H263-1998/90000" search_in="msg"
+      <ereg regexp="a=rtpmap:18 G729/8000" search_in="msg"
             check_it="true" assign_to="2"/>
     </action>
   </recv>
-  <nop condexec="1"></nop>
-  <nop condexec="2"></nop>
 
   <send>
     <![CDATA[
@@ -70,8 +67,6 @@ c=IN IP[media_ip_type] [media_ip]
 t=0 0
 m=audio [media_port] RTP/AVP 0
 a=rtpmap:0 PCMU/8000
-m=video [media_port+2] RTP/AVP 96
-a=rtpmap:96 H263-1998/90000
 
     ]]>
   </send>
@@ -104,12 +99,10 @@ a=rtpmap:96 H263-1998/90000
     <action>
       <ereg regexp="a=rtpmap:0 PCMU/8000" search_in="msg"
             check_it="true" assign_to="3"/>
-      <ereg regexp="a=rtpmap:96 H263-1998/90000" search_in="msg"
+      <ereg regexp="a=rtpmap:18 G729/8000" search_in="msg"
             check_it="true" assign_to="4"/>
     </action>
   </recv>
-  <nop condexec="3"></nop>
-  <nop condexec="4"></nop>
 
   <send>
     <![CDATA[
@@ -132,8 +125,6 @@ c=IN IP[media_ip_type] [media_ip]
 t=0 0
 m=audio [media_port] RTP/AVP 0
 a=rtpmap:0 PCMU/8000
-m=video [media_port+2] RTP/AVP 96
-a=rtpmap:96 H263-1998/90000
 
     ]]>
   </send>
@@ -158,6 +149,9 @@ a=rtpmap:96 H263-1998/90000
 
   <recv response="200" crlf="true">
   </recv>
+
+  <!-- The variables only carry the checks above. -->
+  <Reference variables="1,2,3,4"/>
 
   <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>
   <CallLengthRepartition value="10, 50, 100, 500, 1000, 5000, 10000"/>

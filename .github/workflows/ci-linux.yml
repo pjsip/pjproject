@@ -628,7 +628,7 @@ jobs:
     - name: get ffmpeg
       run: git clone --depth 1 --single-branch --branch release/4.2 https://github.com/FFmpeg/FFmpeg.git
     - name: configure ffmpeg
-      run: cd FFmpeg && ./configure --enable-shared --disable-static --enable-gpl --enable-libx264
+      run: cd FFmpeg && ./configure --enable-shared --disable-static --enable-gpl --enable-libx264 --disable-doc
     - name: build ffmpeg
       run: cd FFmpeg && $MAKE_FAST && sudo make install
     - name: config site

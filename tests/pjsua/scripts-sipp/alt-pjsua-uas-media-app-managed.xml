@@ -77,8 +77,7 @@ a=sendrecv
            alt_pjsua via the "custom-sdp" option, unmodified: only 2
            payload types (not reconciled against the offer's 6), and the
            answer's own fmtp params (not the offer's). search_in="msg"
-           searches the entire SIP message. The condexec nops avoid SIPp
-           3.7 exiting on "referenced 1 times" warning. -->
+           searches the entire SIP message. -->
       <ereg regexp="m=audio 56384 RTP/AVP 116 111" search_in="msg"
             check_it="true" assign_to="1"/>
       <ereg regexp="a=rtpmap:116 AMR-WB/16000" search_in="msg"
@@ -95,13 +94,6 @@ a=sendrecv
             check_it="true" assign_to="7,8"/>
     </action>
   </recv>
-  <nop condexec="1"></nop>
-  <nop condexec="2"></nop>
-  <nop condexec="3"></nop>
-  <nop condexec="4"></nop>
-  <nop condexec="5"></nop>
-  <nop condexec="6"></nop>
-  <nop condexec="7"></nop>
 
   <send>
     <![CDATA[
@@ -189,6 +181,9 @@ a=sendrecv
 
   <recv response="200" crlf="true">
   </recv>
+
+  <!-- The variables only carry the checks above. -->
+  <Reference variables="1,2,3,4,5,6,7"/>
 
   <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>
   <CallLengthRepartition value="10, 50, 100, 500, 1000, 5000, 10000"/>

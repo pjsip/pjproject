@@ -3,7 +3,9 @@
 
 <!-- SIPp acts as UAS. alt_pjsua sends an SDP-less INVITE. SIPp sends a
   PCMU and H263-1998 SDP offer in its 200 OK and verifies that the ACK
-  accepts PCMU and rejects unsupported H263-1998 before waiting for BYE. -->
+  accepts PCMU and rejects unsupported H263-1998. SIPp then sends an
+  SDP-less re-INVITE, verifies that alt_pjsua offers its custom SDP,
+  H263-1998 included, and sends BYE. -->
 
 <scenario name="alt_pjsua UAC late SDP: SIPp as UAS">
 
@@ -17,10 +19,6 @@
         check_it="true" assign_to="6,7,8"/>
     </action>
   </recv>
-  <nop condexec="1"></nop>
-  <nop condexec="4"></nop>
-  <nop condexec="5"></nop>
-  <nop condexec="6"></nop>
 
   <send>
     <![CDATA[
@@ -70,8 +68,6 @@ a=rtpmap:96 H263-1998/90000
             check_it="true" assign_to="3"/>
     </action>
   </recv>
-  <nop condexec="2"></nop>
-  <nop condexec="3"></nop>
 
   <pause milliseconds="500"/>
 
@@ -101,12 +97,10 @@ a=rtpmap:96 H263-1998/90000
   <action>
       <ereg regexp="a=rtpmap:0 PCMU/8000" search_in="msg"
             check_it="true" assign_to="rtpmap2"/>
-      <ereg regexp="m=video 0 RTP/AVP 31" search_in="msg"
+      <ereg regexp="a=rtpmap:96 H263-1998/90000" search_in="msg"
             check_it="true" assign_to="video2"/>
     </action>
   </recv>
-  <nop condexec="rtpmap2"></nop>
-  <nop condexec="video2"></nop>
 
   <send>
     <![CDATA[
@@ -154,6 +148,9 @@ a=rtpmap:96 H263-1998/90000
 
   <recv response="200" crlf="true">
   </recv>
+
+  <!-- The variables only carry the checks above. -->
+  <Reference variables="1,2,3,4,6,rtpmap2,video2"/>
 
   <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>
   <CallLengthRepartition value="10, 50, 100, 500, 1000, 5000, 10000"/>

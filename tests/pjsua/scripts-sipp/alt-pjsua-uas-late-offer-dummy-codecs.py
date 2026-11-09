@@ -24,6 +24,5 @@ PJSUA_CLI_EXPECTS = [
     [0, r"s=-", ""],
     [0, r"t=0 0", ""],
     [0, r"a=rtpmap:0 PCMU/8000", ""],
-    [0, r"a=rtpmap:96 H263-1998/90000", ""],
     [0, const.STATE_CONFIRMED, ""],
 ]
