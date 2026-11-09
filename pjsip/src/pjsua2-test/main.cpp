@@ -51,6 +51,9 @@ int main(int argc, char *argv[])
             authChallengeTests.deferredRespondWithCreds();
             authChallengeTests.deferredAbandon();
             authChallengeTests.accountDeleteWithPending();
+            authChallengeTests.deferredRespondAfterUnregister();
+            authChallengeTests.deferredRespondAfterDelete(false);
+            authChallengeTests.deferredRespondAfterDelete(true);
             authChallengeTests.digestToPj();
             authChallengeTests.credAuthOtherParam();
         }

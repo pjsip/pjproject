@@ -48,10 +48,8 @@
  * per-slot state survives detach/replace. */
 #define TEST_LEVEL  42
 
-/* Monotonic timestamp for the clock. The bridge uses the caller frame's
- * timestamp as the tick timestamp, so it must advance every tick like a real
- * clock source; a fixed timestamp makes the mixer treat successive ticks as
- * the same one. Static so it stays monotonic across all pump() calls. */
+/* Monotonic timestamp for the clock, advancing every tick like a real clock
+ * source. Static so it stays monotonic across all pump() calls. */
 static pj_uint64_t g_pump_ts;
 
 /* Drive the conference clock so queued (async) operations are processed. */
@@ -577,6 +575,102 @@ on_return:
     return rc;
 }
 
+#if PJMEDIA_CONF_BACKEND != PJMEDIA_CONF_SWITCH_BOARD_BACKEND
+/* Run one bridge tick with the given clock timestamp. */
+static pj_status_t tick_at(pjmedia_port *master, pj_uint64_t ts)
+{
+    pj_int16_t buf[SPF];
+    pjmedia_frame f;
+
+    pj_bzero(&f, sizeof(f));
+    f.type = PJMEDIA_FRAME_TYPE_AUDIO;
+    f.buf = buf;
+    f.size = sizeof(buf);
+    f.timestamp.u64 = ts;
+    return pjmedia_port_get_frame(master, &f);
+}
+
+/*
+ * A new clock source (e.g. a reopened sound or null device) restarts the
+ * frame timestamps from zero. The first frame mixed into a sink under the new
+ * clock may then carry the timestamp of the last frame mixed under the old
+ * one, and must still replace, not add to, the sink's previous mix.
+ */
+static int clock_restart_test(unsigned src_cnt)
+{
+    pj_pool_t *pool = NULL;
+    pjmedia_conf *conf = NULL;
+    pjmedia_port *master;
+    test_port *src[2], *sink;
+    unsigned slot_src[2], slot_sink, i;
+    /* tp_get_frame() fills the frame with 0x01 bytes */
+    const pj_int32_t expected = 0x0101 * (pj_int32_t)src_cnt;
+    int rc = 0;
+    pj_status_t status;
+
+    PJ_LOG(3, (THIS_FILE, "  conf clock restart with %u transmitter(s)",
+               src_cnt));
+
+    pool = pj_pool_create(mem, "conf_clk", 4000, 4000, NULL);
+    if (!pool) return -600;
+
+    status = pjmedia_conf_create(pool, 8, CLOCK_RATE, CHANNELS, SPF, BPS,
+                                 PJMEDIA_CONF_NO_DEVICE, &conf);
+    if (status != PJ_SUCCESS) { rc = -601; goto on_return; }
+    master = pjmedia_conf_get_master_port(conf);
+
+    sink = create_test_port(pool, CLOCK_RATE, SPF, PJ_TRUE);
+    if (!sink) { rc = -602; goto on_return; }
+    status = pjmedia_conf_add_port(conf, pool, &sink->base, NULL, &slot_sink);
+    if (status != PJ_SUCCESS) { rc = -603; goto on_return; }
+    for (i = 0; i < src_cnt; ++i) {
+        src[i] = create_test_port(pool, CLOCK_RATE, SPF, PJ_FALSE);
+        if (!src[i]) { rc = -604; goto on_return; }
+        status = pjmedia_conf_add_port(conf, pool, &src[i]->base, NULL,
+                                       &slot_src[i]);
+        if (status != PJ_SUCCESS) { rc = -605; goto on_return; }
+    }
+
+    /* Old clock: connect, mix once at SPF, then disconnect */
+    for (i = 0; i < src_cnt; ++i) {
+        status = pjmedia_conf_connect_port(conf, slot_src[i], slot_sink, 0);
+        if (status != PJ_SUCCESS) { rc = -606; goto on_return; }
+    }
+    if (tick_at(master, 0) != PJ_SUCCESS) { rc = -607; goto on_return; }
+    for (i = 0; i < src_cnt; ++i) {
+        status = pjmedia_conf_disconnect_port(conf, slot_src[i], slot_sink);
+        if (status != PJ_SUCCESS) { rc = -608; goto on_return; }
+    }
+    if (tick_at(master, SPF) != PJ_SUCCESS ||
+        tick_at(master, 2 * SPF) != PJ_SUCCESS)
+    {
+        rc = -609; goto on_return;
+    }
+
+    /* New clock: timestamps restart, the first mix is again at SPF */
+    for (i = 0; i < src_cnt; ++i) {
+        status = pjmedia_conf_connect_port(conf, slot_src[i], slot_sink, 0);
+        if (status != PJ_SUCCESS) { rc = -610; goto on_return; }
+    }
+    if (tick_at(master, 0) != PJ_SUCCESS) { rc = -611; goto on_return; }
+    sink->put_peak = 0;
+    if (tick_at(master, SPF) != PJ_SUCCESS) { rc = -612; goto on_return; }
+
+    if (sink->put_peak != expected) {
+        PJ_LOG(1, (THIS_FILE, "   sink level %d after clock restart, "
+                   "expected %d", sink->put_peak, expected));
+        rc = -613; goto on_return;
+    }
+
+on_return:
+    if (conf)
+        pjmedia_conf_destroy(conf);
+    if (pool)
+        pj_pool_release(pool);
+    return rc;
+}
+#endif
+
 /*
  * Verify that a parallel bridge whose worker threads are given a priority
  * still mixes correctly. Whether the priority is actually applied is platform
@@ -799,6 +893,14 @@ int conf_test(void)
     }
 
 #if PJMEDIA_CONF_BACKEND != PJMEDIA_CONF_SWITCH_BOARD_BACKEND
+    rc = clock_restart_test(1);
+    if (rc == 0)
+        rc = clock_restart_test(2);
+    if (rc != 0) {
+        PJ_LOG(1,(THIS_FILE, "  conf clock restart test failed (rc=%d)", rc));
+        return rc;
+    }
+
     rc = op_user_data_test();
     if (rc != 0) {
         PJ_LOG(1,(THIS_FILE, "  conf op user data test failed (rc=%d)", rc));

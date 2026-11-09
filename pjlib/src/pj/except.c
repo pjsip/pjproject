@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -39,10 +39,12 @@ static long thread_local_id = -1;
 #if !defined(PJ_EXCEPTION_USE_WIN32_SEH) || PJ_EXCEPTION_USE_WIN32_SEH==0
 PJ_DEF(void) pj_throw_exception_(int exception_id)
 {
-    struct pj_exception_state_t *handler;
+    struct pj_exception_state_t *handler = NULL;
 
-    handler = (struct pj_exception_state_t*) 
-              pj_thread_local_get(thread_local_id);
+    if (thread_local_id != -1) {
+        handler = (struct pj_exception_state_t*)
+                  pj_thread_local_get(thread_local_id);
+    }
     if (handler == NULL) {
         PJ_LOG(1,("except.c", "!!!FATAL: unhandled exception %s!\n", 
                    pj_exception_id_name(exception_id)));
@@ -76,8 +78,15 @@ PJ_DEF(void) pj_push_exception_handler_(struct pj_exception_state_t *rec)
     struct pj_exception_state_t *parent_handler = NULL;
 
     if (thread_local_id == -1) {
-        pj_thread_local_alloc(&thread_local_id);
-        pj_assert(thread_local_id != -1);
+        pj_status_t status;
+
+        status = pj_thread_local_alloc(&thread_local_id);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(1, ("except.c", status,
+                          "Error allocating exception handler TLS"));
+            pj_assert(status == PJ_SUCCESS);
+            return;
+        }
         pj_atexit(&exception_cleanup);
     }
     parent_handler = (struct pj_exception_state_t *)
@@ -89,6 +98,10 @@ PJ_DEF(void) pj_push_exception_handler_(struct pj_exception_state_t *rec)
 PJ_DEF(void) pj_pop_exception_handler_(struct pj_exception_state_t *rec)
 {
     struct pj_exception_state_t *handler;
+
+    /* No handler was pushed if the TLS allocation failed */
+    if (thread_local_id == -1)
+        return;
 
     handler = (struct pj_exception_state_t *)
               pj_thread_local_get(thread_local_id);

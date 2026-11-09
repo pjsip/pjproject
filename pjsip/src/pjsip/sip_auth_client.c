@@ -1931,44 +1931,57 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_async_configure(
 
 /* Validate an async token and consume it: copy it to *copy and clear its
  * signature so that it can't be used again. *p_sess receives the session
- * that owns the token. Callers invoke the copied send_impl/abandon_impl
- * without the session lock held, since the implementation takes its
- * owner's lock (regc, pubc, dialog), which the owner also holds while
- * calling into this session.
+ * that owns the token, and *async_on whether that session still has its
+ * async setting (it is reset when, e.g., its account is deleted). Callers
+ * invoke the copied send_impl/abandon_impl without the session lock held,
+ * since the implementation takes its owner's lock (regc, pubc, dialog),
+ * which the owner also holds while calling into this session.
  */
 static pj_status_t async_consume_token(pjsip_auth_clt_sess *sess,
                                        pjsip_auth_clt_async_impl_token *token,
                                        pj_bool_t for_send,
                                        pjsip_auth_clt_async_impl_token *copy,
-                                       pjsip_auth_clt_sess **p_sess)
+                                       pjsip_auth_clt_sess **p_sess,
+                                       pj_bool_t *async_on)
 {
     pj_lock_t *lock;
     pj_status_t status;
 
     if (sess->parent) {
         return async_consume_token(sess->parent, token, for_send, copy,
-                                   p_sess);
+                                   p_sess, async_on);
     }
 
     lock = sess->lock;
     LOCK_SHARED(lock);
-    if (for_send && (!sess->async_opt || !sess->async_opt->cb)) {
-        pj_assert(!"Async authentication is not configured");
-        status = PJ_EINVALIDOP;
-    } else if ((for_send && !token->send_impl) ||
-               pj_memcmp(token->signature, AUTH_TOKEN_SIGNATURE, 4) != 0)
+    /* Best effort to verify the integrity of the token */
+    if ((for_send && !token->send_impl) ||
+        pj_memcmp(token->signature, AUTH_TOKEN_SIGNATURE, 4) != 0)
     {
-        /* Best effort to verify the integrity of the token */
         status = PJ_EINVAL;
     } else {
         *copy = *token;
         pj_bzero(token->signature, 4);
         *p_sess = sess;
+        *async_on = (sess->async_opt && sess->async_opt->cb);
         status = PJ_SUCCESS;
     }
     UNLOCK_SHARED(lock);
 
     return status;
+}
+
+
+/* Consume a taken token without sending. */
+static void async_abandon_token(pjsip_auth_clt_sess *sess,
+                                const pjsip_auth_clt_async_impl_token *token)
+{
+    if (token->abandon_impl)
+        (*token->abandon_impl)(sess, token->user_data);
+
+    /* The token memory may be freed by this. */
+    if (token->grp_lock)
+        pj_grp_lock_dec_ref(token->grp_lock);
 }
 
 
@@ -1978,6 +1991,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_async_send_req(
                                     pjsip_tx_data *new_request)
 {
     pjsip_auth_clt_async_impl_token send_token;
+    pj_bool_t async_on;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(sess && token && new_request, PJ_EINVAL);
@@ -1987,9 +2001,16 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_async_send_req(
      */
     status = async_consume_token(sess,
                                  (pjsip_auth_clt_async_impl_token*)token,
-                                 PJ_TRUE, &send_token, &sess);
+                                 PJ_TRUE, &send_token, &sess, &async_on);
     if (status != PJ_SUCCESS)
         return status;
+
+    /* The session was reset after the challenge, e.g. its account deleted */
+    if (!async_on) {
+        pjsip_tx_data_dec_ref(new_request);
+        async_abandon_token(sess, &send_token);
+        return PJ_EINVALIDOP;
+    }
 
     status = (*send_token.send_impl)(sess, send_token.user_data,
                                      new_request);
@@ -2007,6 +2028,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_async_abandon(
                                     void *token)
 {
     pjsip_auth_clt_async_impl_token impl_token;
+    pj_bool_t async_on;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(sess && token, PJ_EINVAL);
@@ -2016,16 +2038,11 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_async_abandon(
      */
     status = async_consume_token(sess,
                                  (pjsip_auth_clt_async_impl_token*)token,
-                                 PJ_FALSE, &impl_token, &sess);
+                                 PJ_FALSE, &impl_token, &sess, &async_on);
     if (status != PJ_SUCCESS)
         return status;
 
-    if (impl_token.abandon_impl)
-        (*impl_token.abandon_impl)(sess, impl_token.user_data);
-
-    /* The token memory may be freed by this. */
-    if (impl_token.grp_lock)
-        pj_grp_lock_dec_ref(impl_token.grp_lock);
+    async_abandon_token(sess, &impl_token);
 
     return PJ_SUCCESS;
 }

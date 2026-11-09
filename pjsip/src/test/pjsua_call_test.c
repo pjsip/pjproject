@@ -7083,6 +7083,11 @@ static int test_late_sdp_reinvite(pj_bool_t async_answer,
     if (rc != 0)
         goto on_return;
 
+    if (caller < 0 || callee < 0) {
+        rc = -1979;
+        goto on_return;
+    }
+
     callee_streams_created = g_ctx.strm_created[callee];
     callee_streams_destroyed = g_ctx.strm_destroyed[callee];
 

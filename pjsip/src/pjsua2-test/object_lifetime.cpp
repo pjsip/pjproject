@@ -617,7 +617,7 @@ void ObjectLifetimeTests::hangupRetryWhileBusy()
 void ObjectLifetimeTests::deleteCallInOwnCallback()
 {
     TestCallPtr out, in;
-    TestCall *caller, *callee;
+    TestCall *caller;
     CallOpParam prm(true);
     unsigned elapsed = 0;
     int id;
@@ -655,10 +655,10 @@ void ObjectLifetimeTests::deleteCallInOwnCallback()
 
     /* The callee deletes itself when the ACK confirms the call */
     make_ringing_call(*callerAcc, port, out, in);
-    callee = in.release();
-    callee->deleteOnState = PJSIP_INV_STATE_CONFIRMED;
+    in->deleteOnState = PJSIP_INV_STATE_CONFIRMED;
     prm.statusCode = PJSIP_SC_OK;
-    callee->answer(prm);
+    in->answer(prm);
+    in.release();
     TEST_ASSERT(wait_state(out.get(), PJSIP_INV_STATE_DISCONNECTED));
     TEST_ASSERT(wait_no_calls());
 

@@ -36,6 +36,11 @@
  *      on_reg_complete callback with an error code, and the token must be
  *      invalidated so that any subsequent pjsip_auth_clt_async_send_req()
  *      call returns PJ_EINVAL.
+ *   6. Superseded request: the challenge is deferred, then the regc sends
+ *      an un-REGISTER or is destroyed. The deferred authentication must not
+ *      be sent, unless it is an un-REGISTER and the regc was destroyed.
+ *   7. Reset session: the deferred send on a session that lost its async
+ *      settings sends nothing and abandons the token.
  */
 
 #include "test.h"
@@ -505,7 +510,9 @@ static int double_send_test(const pj_str_t *registrar_uri)
         }
     }
 
-    /* Also verify the consumed token from the first send is rejected */
+    /* Also verify the consumed token from the first send is rejected.
+     * Its memory is still valid: the challenged transaction is in Timer K.
+     */
     rc = pjsip_regc_register(regc, PJ_TRUE, &dummy_tdata);
     if (rc == PJ_SUCCESS) {
         status = pjsip_auth_clt_async_send_req(g_double_send.sess,
@@ -735,6 +742,389 @@ static int abandon_api_test(const pj_str_t *registrar_uri)
 
 
 /*****************************************************************************
+ * Sub-test 6: Superseded request - pjsip_auth_clt_async_send_req() returns
+ * PJ_ECANCELLED, sends nothing and calls no callback, also when a newer
+ * request is only reserved. Abandoning it calls no callback either. A
+ * challenged un-REGISTER is still sent after destroy.
+ *****************************************************************************/
+
+enum superseded_mode
+{
+    SUPERSEDED_BY_UNREG,
+    SUPERSEDED_BY_DESTROY,
+    UNREG_AFTER_DESTROY,
+    ABANDON_AFTER_REG,
+    SEND_WHILE_RESERVED,
+    ABANDON_WHILE_RESERVED
+};
+
+static struct {
+    unsigned             count;
+    pjsip_auth_clt_sess *sess;
+    void                *token;
+    pjsip_tx_data       *tdata;
+} g_superseded;
+
+/* Keep the first challenge, answer the next ones at once */
+static pj_bool_t on_challenge_keep_first(
+                        pjsip_auth_clt_sess *sess,
+                        void *token,
+                        const pjsip_auth_clt_async_on_chal_param *param)
+{
+    pjsip_tx_data *tdata = NULL;
+
+    if (pjsip_auth_clt_reinit_req(sess, param->rdata, param->tdata,
+                                  &tdata) != PJ_SUCCESS)
+    {
+        pjsip_auth_clt_async_abandon(sess, token);
+    } else if (g_superseded.count++ == 0) {
+        g_superseded.sess  = sess;
+        g_superseded.token = token;
+        g_superseded.tdata = tdata;
+    } else {
+        pjsip_auth_clt_async_send_req(sess, token, tdata);
+    }
+    return PJ_TRUE;
+}
+
+static int superseded_test(const pj_str_t *registrar_uri,
+                           enum superseded_mode mode, int err)
+{
+    static const char *title[] = {
+        "REGISTER after un-REGISTER", "REGISTER after destroy",
+        "un-REGISTER after destroy", "abandon after a newer REGISTER",
+        "REGISTER while another is reserved",
+        "abandon while another REGISTER is reserved"
+    };
+    pjsip_regc    *regc = NULL;
+    pjsip_tx_data *tdata, *reserved = NULL;
+    pj_bool_t      abandon = (mode == ABANDON_AFTER_REG ||
+                              mode == ABANDON_WHILE_RESERVED);
+    unsigned       i, cnt, auth_cnt;
+    pj_status_t    status;
+    int            rc = 0;
+
+    PJ_LOG(3, (THIS_FILE, "  async auth: deferred %s", title[mode]));
+
+    pj_bzero(&g_ctx, sizeof(g_ctx));
+    pj_bzero(&g_superseded, sizeof(g_superseded));
+
+    if (create_regc(registrar_uri, &on_challenge_keep_first, NULL,
+                    &regc) != 0 ||
+        (mode == UNREG_AFTER_DESTROY ?
+            pjsip_regc_unregister(regc, &tdata) :
+            pjsip_regc_register(regc, PJ_TRUE, &tdata)) != PJ_SUCCESS ||
+        pjsip_regc_send(regc, tdata) != PJ_SUCCESS)
+    {
+        rc = err - 1;
+        goto on_return;
+    }
+    for (i = 0; i < 50 && !g_superseded.token; ++i)
+        flush_events(100);
+    if (!g_superseded.token) {
+        rc = err - 2;
+        goto on_return;
+    }
+
+    if (mode == SUPERSEDED_BY_DESTROY || mode == UNREG_AFTER_DESTROY) {
+        pjsip_regc_destroy(regc);
+        regc = NULL;
+    } else if (mode == SEND_WHILE_RESERVED ||
+               mode == ABANDON_WHILE_RESERVED)
+    {
+        if (pjsip_regc_register(regc, PJ_TRUE, &tdata) != PJ_SUCCESS) {
+            rc = err - 3;
+            goto on_return;
+        }
+        if (pjsip_regc_reserve(regc, tdata) != PJ_SUCCESS) {
+            pjsip_tx_data_dec_ref(tdata);
+            rc = err - 3;
+            goto on_return;
+        }
+        reserved = tdata;
+    } else if ((mode == SUPERSEDED_BY_UNREG ?
+                    pjsip_regc_unregister(regc, &tdata) :
+                    pjsip_regc_register(regc, PJ_TRUE, &tdata)) !=
+                PJ_SUCCESS ||
+               pjsip_regc_send(regc, tdata) != PJ_SUCCESS)
+    {
+        rc = err - 3;
+        goto on_return;
+    } else {
+        for (i = 0; i < 50 && !g_ctx.done; ++i)
+            flush_events(100);
+        if (g_ctx.reg_code != 200) {
+            rc = err - 4;
+            goto on_return;
+        }
+    }
+
+    g_ctx.done = PJ_FALSE;
+    cnt = g_registrar.req_count;
+    auth_cnt = g_registrar.auth_count;
+    if (abandon) {
+        pjsip_tx_data_dec_ref(g_superseded.tdata);
+        status = pjsip_auth_clt_async_abandon(g_superseded.sess,
+                                              g_superseded.token);
+    } else {
+        status = pjsip_auth_clt_async_send_req(g_superseded.sess,
+                                               g_superseded.token,
+                                               g_superseded.tdata);
+    }
+    g_superseded.tdata = NULL;
+    flush_events(500);
+    if (mode == UNREG_AFTER_DESTROY) {
+        if (status != PJ_SUCCESS || g_registrar.auth_count != auth_cnt + 1)
+            rc = err - 20;
+    } else if (abandon) {
+        if (status != PJ_SUCCESS || g_registrar.req_count != cnt ||
+            g_ctx.done)
+        {
+            rc = err - 30;
+        }
+    } else if (status != PJ_ECANCELLED || g_registrar.req_count != cnt ||
+               g_ctx.done)
+    {
+        rc = err - 10;
+    }
+
+    /* The reserved request still goes out and registers */
+    if (reserved) {
+        tdata = reserved;
+        reserved = NULL;
+        g_ctx.done = PJ_FALSE;
+        if (pjsip_regc_send(regc, tdata) != PJ_SUCCESS) {
+            if (!rc) rc = err - 40;
+        } else {
+            for (i = 0; i < 50 && !g_ctx.done; ++i)
+                flush_events(100);
+            if (!rc && g_ctx.reg_code != 200)
+                rc = err - 41;
+        }
+    }
+
+on_return:
+    if (g_superseded.tdata) {
+        pjsip_tx_data_dec_ref(g_superseded.tdata);
+        pjsip_auth_clt_async_abandon(g_superseded.sess, g_superseded.token);
+    }
+    if (reserved)
+        pjsip_regc_send(regc, reserved);
+    if (regc)
+        pjsip_regc_destroy(regc);
+    return rc;
+}
+
+
+/*****************************************************************************
+ * Sub-test 7: Reset session - pjsip_auth_clt_async_send_req() on a session
+ * that lost its async settings (pjsua_acc_del() zeroes the account's
+ * session) returns PJ_EINVALIDOP, sends nothing and abandons the token.
+ *****************************************************************************/
+static int reset_session_test(const pj_str_t *registrar_uri)
+{
+    pjsip_regc          *regc = NULL;
+    pjsip_tx_data       *tdata;
+    pjsip_auth_clt_sess  reset_sess;
+    pj_grp_lock_t       *tsx_lock;
+    unsigned             i, cnt;
+    int                  lock_ref, tdata_ref, lock_dec, tdata_dec;
+    pj_status_t          status, abandon_status;
+    int                  rc = 0;
+
+    PJ_LOG(3, (THIS_FILE, "  async auth: deferred send on a reset session"));
+
+    pj_bzero(&g_ctx, sizeof(g_ctx));
+    pj_bzero(&g_superseded, sizeof(g_superseded));
+
+    if (create_regc(registrar_uri, &on_challenge_keep_first, NULL,
+                    &regc) != 0 ||
+        pjsip_regc_register(regc, PJ_TRUE, &tdata) != PJ_SUCCESS ||
+        pjsip_regc_send(regc, tdata) != PJ_SUCCESS)
+    {
+        rc = -1701;
+        goto on_return;
+    }
+    for (i = 0; i < 50 && !g_superseded.token; ++i)
+        flush_events(100);
+    if (!g_superseded.token) {
+        rc = -1702;
+        goto on_return;
+    }
+
+    /* Keep the token and the request readable after the call */
+    tsx_lock = ((pjsip_auth_clt_async_impl_token*)
+                g_superseded.token)->grp_lock;
+    pj_grp_lock_add_ref(tsx_lock);
+    pjsip_tx_data_add_ref(g_superseded.tdata);
+
+    pj_bzero(&reset_sess, sizeof(reset_sess));
+    cnt = g_registrar.req_count;
+    lock_ref = pj_grp_lock_get_ref(tsx_lock);
+    tdata_ref = (int)pj_atomic_get(g_superseded.tdata->ref_cnt);
+    status = pjsip_auth_clt_async_send_req(&reset_sess, g_superseded.token,
+                                           g_superseded.tdata);
+    lock_dec = lock_ref - pj_grp_lock_get_ref(tsx_lock);
+    tdata_dec = tdata_ref - (int)pj_atomic_get(g_superseded.tdata->ref_cnt);
+
+    /* Also releases a token the send has left */
+    abandon_status = pjsip_auth_clt_async_abandon(g_superseded.sess,
+                                                  g_superseded.token);
+    if (tdata_dec == 0)
+        pjsip_tx_data_dec_ref(g_superseded.tdata);
+    pjsip_tx_data_dec_ref(g_superseded.tdata);
+    g_superseded.tdata = NULL;
+    pj_grp_lock_dec_ref(tsx_lock);
+    flush_events(500);
+
+    if (status != PJ_EINVALIDOP)
+        rc = -1710;
+    else if (g_registrar.req_count != cnt)
+        rc = -1711;
+    else if (abandon_status != PJ_EINVAL)
+        rc = -1712;
+    else if (lock_dec != 1)
+        rc = -1713;
+    else if (tdata_dec != 1)
+        rc = -1714;
+    else if (!g_ctx.done || g_ctx.reg_code != PJSIP_SC_UNAUTHORIZED)
+        rc = -1715;
+
+on_return:
+    if (g_superseded.tdata) {
+        pjsip_tx_data_dec_ref(g_superseded.tdata);
+        pjsip_auth_clt_async_abandon(g_superseded.sess, g_superseded.token);
+    }
+    if (regc)
+        pjsip_regc_destroy(regc);
+    return rc;
+}
+
+
+/*****************************************************************************
+ * Sub-test 8: Built-in authentication of a superseded request - the
+ * application destroys the regc, or reserves it for a new REGISTER, in the
+ * challenge callback and leaves the challenge to the library. The
+ * authenticated request is not sent and no callback is called, except
+ * that an un-REGISTER is still sent after destroy.
+ *****************************************************************************/
+
+enum builtin_mode
+{
+    BUILTIN_REG_DESTROYED,
+    BUILTIN_UNREG_DESTROYED,
+    BUILTIN_RESERVED
+};
+
+static struct {
+    enum builtin_mode    mode;
+    pjsip_regc          *regc;
+    pjsip_tx_data       *reserved;
+    unsigned             count;
+} g_builtin;
+
+static pj_bool_t on_challenge_builtin(
+                        pjsip_auth_clt_sess *sess,
+                        void *token,
+                        const pjsip_auth_clt_async_on_chal_param *param)
+{
+    pjsip_tx_data *tdata;
+
+    PJ_UNUSED_ARG(sess);
+    PJ_UNUSED_ARG(token);
+    PJ_UNUSED_ARG(param);
+
+    if (g_builtin.count++ != 0 || !g_builtin.regc)
+        return PJ_FALSE;
+
+    if (g_builtin.mode != BUILTIN_RESERVED) {
+        pjsip_regc_destroy(g_builtin.regc);
+        g_builtin.regc = NULL;
+    } else if (pjsip_regc_register(g_builtin.regc, PJ_TRUE,
+                                   &tdata) == PJ_SUCCESS)
+    {
+        if (pjsip_regc_reserve(g_builtin.regc, tdata) == PJ_SUCCESS)
+            g_builtin.reserved = tdata;
+        else
+            pjsip_tx_data_dec_ref(tdata);
+    }
+    return PJ_FALSE;
+}
+
+static int builtin_superseded_test(const pj_str_t *registrar_uri,
+                                   enum builtin_mode mode, int err)
+{
+    static const char *title[] = {
+        "REGISTER after destroy", "un-REGISTER after destroy",
+        "REGISTER while another is reserved"
+    };
+    pjsip_regc    *regc;
+    pjsip_tx_data *tdata;
+    unsigned       i, auth_cnt;
+    int            rc = 0;
+
+    PJ_LOG(3, (THIS_FILE, "  async auth: built-in %s", title[mode]));
+
+    pj_bzero(&g_ctx, sizeof(g_ctx));
+    pj_bzero(&g_builtin, sizeof(g_builtin));
+    g_builtin.mode = mode;
+
+    if (create_regc(registrar_uri, &on_challenge_builtin, NULL,
+                    &regc) != 0)
+    {
+        return err - 1;
+    }
+    g_builtin.regc = regc;
+    auth_cnt = g_registrar.auth_count;
+
+    if ((mode == BUILTIN_UNREG_DESTROYED ?
+            pjsip_regc_unregister(regc, &tdata) :
+            pjsip_regc_register(regc, PJ_TRUE, &tdata)) != PJ_SUCCESS ||
+        pjsip_regc_send(regc, tdata) != PJ_SUCCESS)
+    {
+        rc = err - 2;
+        goto on_return;
+    }
+    for (i = 0; i < 50 && !g_builtin.count; ++i)
+        flush_events(100);
+    flush_events(500);
+
+    if (g_builtin.count != 1 ||
+        (mode == BUILTIN_RESERVED && !g_builtin.reserved))
+    {
+        rc = err - 3;
+    } else if (g_registrar.auth_count !=
+               auth_cnt + (mode == BUILTIN_UNREG_DESTROYED ? 1 : 0))
+    {
+        rc = err - 10;
+    } else if (g_ctx.done) {
+        rc = err - 20;
+    }
+
+    /* The reserved request still goes out and registers */
+    if (g_builtin.reserved) {
+        tdata = g_builtin.reserved;
+        g_builtin.reserved = NULL;
+        if (pjsip_regc_send(regc, tdata) != PJ_SUCCESS) {
+            if (!rc) rc = err - 30;
+        } else {
+            for (i = 0; i < 50 && !g_ctx.done; ++i)
+                flush_events(100);
+            if (!rc && g_ctx.reg_code != 200)
+                rc = err - 31;
+        }
+    }
+
+on_return:
+    if (g_builtin.reserved)
+        pjsip_regc_send(regc, g_builtin.reserved);
+    if (g_builtin.regc)
+        pjsip_regc_destroy(g_builtin.regc);
+    return rc;
+}
+
+
+/*****************************************************************************
  * Main entry point
  *****************************************************************************/
 int auth_async_test(void)
@@ -794,6 +1184,41 @@ int auth_async_test(void)
 
     /* 5. Abandon API */
     rc = abandon_api_test(&registrar_uri);
+    if (rc != 0) goto on_return;
+
+    /* 6. Superseded request */
+    rc = superseded_test(&registrar_uri, SUPERSEDED_BY_UNREG, -1500);
+    if (rc != 0) goto on_return;
+
+    rc = superseded_test(&registrar_uri, SUPERSEDED_BY_DESTROY, -1550);
+    if (rc != 0) goto on_return;
+
+    rc = superseded_test(&registrar_uri, UNREG_AFTER_DESTROY, -1600);
+    if (rc != 0) goto on_return;
+
+    rc = superseded_test(&registrar_uri, ABANDON_AFTER_REG, -1900);
+    if (rc != 0) goto on_return;
+
+    rc = superseded_test(&registrar_uri, SEND_WHILE_RESERVED, -1950);
+    if (rc != 0) goto on_return;
+
+    rc = superseded_test(&registrar_uri, ABANDON_WHILE_RESERVED, -2000);
+    if (rc != 0) goto on_return;
+
+    /* 7. Session reset before the deferred send */
+    rc = reset_session_test(&registrar_uri);
+    if (rc != 0) goto on_return;
+
+    /* 8. Built-in authentication of a superseded request */
+    rc = builtin_superseded_test(&registrar_uri, BUILTIN_REG_DESTROYED,
+                                 -2050);
+    if (rc != 0) goto on_return;
+
+    rc = builtin_superseded_test(&registrar_uri, BUILTIN_UNREG_DESTROYED,
+                                 -2100);
+    if (rc != 0) goto on_return;
+
+    rc = builtin_superseded_test(&registrar_uri, BUILTIN_RESERVED, -2150);
     if (rc != 0) goto on_return;
 
 on_return:

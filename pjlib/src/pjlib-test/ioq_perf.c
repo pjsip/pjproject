@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -43,7 +43,6 @@
 #define TRACE_(expr)
 
 
-static pj_bool_t thread_quit_flag;
 static pj_status_t last_error;
 static unsigned last_error_counter;
 
@@ -63,9 +62,18 @@ static unsigned last_error_counter;
  */
 #define IS_ERROR_SILENCED(e)    ((e)==PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL))
 
+/* State of one perform_test() run, shared by its threads and callbacks.
+ * Not a global, since the perf tests may run in parallel.
+ */
+typedef struct perf_run
+{
+    pj_bool_t            quit;
+} perf_run;
+
 /* Descriptor for each producer/consumer pair. */
 typedef struct test_item
 {
+    perf_run            *run;
     const char          *type_name;
     pj_sock_t            server_fd, 
                          client_fd;
@@ -74,13 +82,45 @@ typedef struct test_item
                         *client_key;
     pj_ioqueue_op_key_t  recv_op,
                          send_op;
-    int                  has_pending_send;
+    pj_atomic_t         *send_req;      /* sends requested, incl. current */
     pj_size_t            buffer_size;
     char                *outgoing_buffer;
     char                *incoming_buffer;
     pj_size_t            bytes_sent, 
                          bytes_recv;
 } test_item;
+
+/* Both callbacks send on send_op, so only one thread at a time may own
+ * it. A thread requests a send by incrementing send_req, and the one that
+ * increments it from zero becomes the owner and sends for every request,
+ * including those made while it is sending.
+ */
+static void send_loop(test_item *item)
+{
+    do {
+        pj_ssize_t sent = item->buffer_size;
+        pj_status_t rc;
+
+        rc = pj_ioqueue_send(item->client_key, &item->send_op,
+                             item->outgoing_buffer, &sent, 0);
+        if (rc == PJ_EPENDING) {
+            /* on_write_complete() continues as the owner */
+            return;
+        }
+
+        if (rc == PJ_SUCCESS)
+            item->bytes_sent += sent;
+        else
+            app_perror("...error: write error", rc);
+
+    } while (pj_atomic_dec_and_get(item->send_req) > 0);
+}
+
+static void request_send(test_item *item)
+{
+    if (pj_atomic_inc_and_get(item->send_req) == 1)
+        send_loop(item);
+}
 
 /* Callback when data has been read.
  * Increment item->bytes_recv and ready to read the next data.
@@ -96,7 +136,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     //TRACE_((THIS_FILE, "     read complete, bytes_read=%d", bytes_read));
 
     do {
-        if (thread_quit_flag)
+        if (item->run->quit)
             return;
 
         if (bytes_read < 0) {
@@ -139,7 +179,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
          * doesn't have time to run.
          */
         if (LIMIT_TRANSFER && item->bytes_recv>item->buffer_size*LIMIT_TRANSFER)
-            thread_quit_flag = 1;
+            item->run->quit = PJ_TRUE;
 
         bytes_read = item->buffer_size;
         rc = pj_ioqueue_recv( key, op_key,
@@ -159,24 +199,13 @@ static void on_read_complete(pj_ioqueue_key_t *key,
             }
         }
 
-        if (!item->has_pending_send) {
-            pj_ssize_t sent = item->buffer_size;
-            rc = pj_ioqueue_send(item->client_key, &item->send_op,
-                                 item->outgoing_buffer, &sent, 0);
-            if (rc != PJ_SUCCESS && rc != PJ_EPENDING) {
-                app_perror("...error: write error", rc);
-            } else if (rc == PJ_SUCCESS) {
-                item->bytes_sent += sent;
-            }
-
-            item->has_pending_send = (rc==PJ_EPENDING);
-        }
+        request_send(item);
 
     } while (data_is_available);
 }
 
-/* Callback when data has been written.
- * Increment item->bytes_sent and write the next data.
+/* Callback when data has been written. The pending send made this thread
+ * the owner of send_op, so consume its request and send for the rest.
  */
 static void on_write_complete(pj_ioqueue_key_t *key, 
                               pj_ioqueue_op_key_t *op_key,
@@ -186,37 +215,27 @@ static void on_write_complete(pj_ioqueue_key_t *key,
     
     //TRACE_((THIS_FILE, "     write complete: sent = %d", bytes_sent));
 
-    if (thread_quit_flag)
+    PJ_UNUSED_ARG(op_key);
+
+    if (item->run->quit)
         return;
 
-    if (bytes_sent <= 0) {
-        if (!IS_ERROR_SILENCED(-bytes_sent)) {
-            PJ_PERROR(3, (THIS_FILE, (pj_status_t)-bytes_sent,
-                          "...error: sending stopped. bytes_sent=%ld",
-                         -bytes_sent));
-        }
-        item->has_pending_send = 0;
-    } 
-    else if (!item->has_pending_send) {
-        pj_status_t rc;
-
+    if (bytes_sent > 0) {
         item->bytes_sent += bytes_sent;
-        bytes_sent = item->buffer_size;
-        rc = pj_ioqueue_send( item->client_key, op_key,
-                              item->outgoing_buffer, &bytes_sent, 0);
-        if (rc != PJ_SUCCESS && rc != PJ_EPENDING) {
-            app_perror("...error: write error", rc);
-        } else if (rc == PJ_SUCCESS) {
-            item->bytes_sent += bytes_sent;
-        }
-
-        item->has_pending_send = (rc==PJ_EPENDING);
+    } else if (!IS_ERROR_SILENCED(-bytes_sent)) {
+        PJ_PERROR(3, (THIS_FILE, (pj_status_t)-bytes_sent,
+                      "...error: sending stopped. bytes_sent=%ld",
+                      -bytes_sent));
     }
+
+    if (pj_atomic_dec_and_get(item->send_req) > 0)
+        send_loop(item);
 }
 
 struct thread_arg
 {
     int           id;
+    perf_run     *run;
     pj_ioqueue_t *ioqueue;
     unsigned      loop_cnt,
                   err_cnt,
@@ -230,7 +249,7 @@ static int worker_thread(void *p)
     const pj_time_val timeout = {0, 100};
     int rc;
 
-    while (!thread_quit_flag) {
+    while (!arg->run->quit) {
 
         ++arg->loop_cnt;
         rc = pj_ioqueue_poll(arg->ioqueue, &timeout);
@@ -280,6 +299,7 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
     pj_size_t total_elapsed_usec, total_received;
     pj_highprec_t bandwidth;
     pj_timestamp start, stop;
+    perf_run run;
     unsigned i;
 
     TRACE_((THIS_FILE, "    starting test.."));
@@ -288,7 +308,7 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
     ioqueue_callback.on_read_complete = &on_read_complete;
     ioqueue_callback.on_write_complete = &on_write_complete;
 
-    thread_quit_flag = 0;
+    run.quit = PJ_FALSE;
 
     PJ_TEST_NOT_NULL((pool=pj_pool_create(mem, NULL, 4096, 4096, NULL)),
                      NULL, return -10);
@@ -305,6 +325,7 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
     for (i=0; i<sockpair_cnt; ++i) {
         pj_ssize_t bytes;
 
+        items[i].run = &run;
         items[i].type_name = type_name;
         items[i].ioqueue = ioqueue;
         items[i].buffer_size = buffer_size;
@@ -318,6 +339,9 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
         /* Init operation keys. */
         pj_ioqueue_op_key_init(&items[i].recv_op, sizeof(items[i].recv_op));
         pj_ioqueue_op_key_init(&items[i].send_op, sizeof(items[i].send_op));
+        /* Requested by the first send below. */
+        PJ_TEST_SUCCESS(pj_atomic_create(pool, 1, &items[i].send_req),
+                        NULL, return -17);
 
         /* Create socket pair. */
         TRACE_((THIS_FILE, "      calling socketpair.."));
@@ -360,9 +384,8 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
                      return -76);
         if (rc == PJ_SUCCESS) {
             items[i].bytes_sent += bytes;
+            pj_atomic_dec(items[i].send_req);
         }
-
-        items[i].has_pending_send = (rc==PJ_EPENDING);
     }
 
     /* Create the threads. */
@@ -371,6 +394,7 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
     for (i=0; i<thread_cnt; ++i) {
         struct thread_arg *arg = &args[i];
         arg->id = i;
+        arg->run = &run;
         arg->ioqueue = ioqueue;
 
         PJ_TEST_SUCCESS( pj_thread_create( pool, NULL, 
@@ -387,7 +411,15 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
     /* Start the thread. */
     TRACE_((THIS_FILE, "     resuming all threads.."));
     for (i=0; i<thread_cnt; ++i) {
-        PJ_TEST_SUCCESS(pj_thread_resume(thread[i]), NULL, return -100);
+        unsigned j;
+
+        /* The started workers use run, which is on this stack */
+        PJ_TEST_SUCCESS(pj_thread_resume(thread[i]), NULL, {
+            run.quit = PJ_TRUE;
+            for (j=0; j<i; ++j)
+                pj_thread_join(thread[j]);
+            return -100;
+        });
     }
 
     /* Wait for MSEC_DURATION seconds. 
@@ -402,7 +434,7 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
         /* Mark end time. */
         rc = pj_get_timestamp(&stop);
 
-        if (thread_quit_flag) {
+        if (run.quit) {
             TRACE_((THIS_FILE, "      transfer limit reached.."));
             break;
         }
@@ -416,7 +448,7 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
 
     /* Terminate all threads. */
     TRACE_((THIS_FILE, "     terminating all threads.."));
-    thread_quit_flag = 1;
+    run.quit = PJ_TRUE;
 
     for (i=0; i<thread_cnt; ++i) {
         TRACE_((THIS_FILE, "      join thread %d..", i));
@@ -431,6 +463,7 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
     for (i=0; i<sockpair_cnt; ++i) {
         pj_ioqueue_unregister(items[i].server_key);
         pj_ioqueue_unregister(items[i].client_key);
+        pj_atomic_destroy(items[i].send_req);
     }
 
     /* Destroy threads */

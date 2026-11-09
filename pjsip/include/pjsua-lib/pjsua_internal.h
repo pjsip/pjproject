@@ -447,6 +447,9 @@ typedef struct pjsua_acc
     pjsua_ip_change_op ip_change_op;/**< IP change process progress.    */
     pjsip_auth_clt_sess shared_auth_sess; /**< Share one auth session over
                                                all requests             */
+    pj_bool_t        app_unreg;     /**< Unregistered by application.   */
+    pj_bool_t        ip_change_reg_done; /**< IP change registration step
+                                              is over.                  */
 } pjsua_acc;
 
 
