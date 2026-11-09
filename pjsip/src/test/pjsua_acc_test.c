@@ -239,6 +239,7 @@ static pj_status_t fail_tx_on_tx_request(pjsip_tx_data *tdata);
 static struct {
     pjsip_module  mod;
     const char   *host;         /* Contact host to fail, or NULL */
+    unsigned      skip;         /* matching requests to send first */
 } g_fail_tx = {
     {
         NULL, NULL,
@@ -270,6 +271,10 @@ static pj_status_t fail_tx_on_tx_request(pjsip_tx_data *tdata)
                                  pjsip_uri_get_uri(hc->uri);
 
             if (pj_strcmp2(&uri->host, g_fail_tx.host) == 0) {
+                if (g_fail_tx.skip) {
+                    g_fail_tx.skip--;
+                    return PJ_SUCCESS;
+                }
                 g_fail_tx.host = NULL;
                 return PJ_ECANCELLED;
             }
@@ -1095,6 +1100,87 @@ on_return:
 }
 
 
+/* An IP change whose REGISTER fails at once, the failure being reported
+ * from inside the send: the re-REGISTER after the un-REGISTER of
+ * PJSUA_CONTACT_REWRITE_UNREGISTER, or the retry after a REGISTER still
+ * pending. The IP change ends once.
+ */
+static int ipc_send_fail_test(pjsua_transport_id tp_id, int port,
+                              pj_bool_t busy)
+{
+    static char      host[PJ_INET6_ADDRSTRLEN + 16];
+    pjsua_acc_config acc_cfg;
+    pjsua_acc_id     acc_id = PJSUA_INVALID_ID;
+    char             reg_uri[64];
+    int              base = busy? -4170 : -4160;
+    int              rc = 0;
+
+    PJ_LOG(3, (THIS_FILE, "  pjsua acc: IP change whose %s fails at once",
+               busy? "retry" : "re-REGISTER"));
+
+    pj_bzero(&g_ctx, sizeof(g_ctx));
+    pj_ansi_snprintf(reg_uri, sizeof(reg_uri), "sip:127.0.0.1:%d", port);
+
+    pjsua_acc_config_default(&acc_cfg);
+    acc_cfg.id       = pj_str("sip:" TEST_USER "@pjsip.org");
+    acc_cfg.reg_uri  = pj_str(reg_uri);
+    acc_cfg.transport_id = tp_id;
+    acc_cfg.register_on_acc_add = PJ_FALSE;
+    acc_cfg.allow_via_rewrite = PJ_FALSE;
+    if (!busy)
+        acc_cfg.contact_rewrite_method = PJSUA_CONTACT_REWRITE_UNREGISTER;
+    acc_cfg.reg_retry_interval = 0;
+
+    if (pjsua_acc_add(&acc_cfg, PJ_FALSE, &acc_id) != PJ_SUCCESS ||
+        pjsua_acc_set_registration(acc_id, PJ_TRUE) != PJ_SUCCESS ||
+        wait_reg(5000) != 0 ||
+        get_acc_contact_host(acc_id, host, sizeof(host)) != 0)
+    {
+        rc = base - 1;
+        goto on_return;
+    }
+
+    if (busy) {
+        /* The IP change finds this REGISTER pending */
+        g_mock_reg.drop = PJ_TRUE;
+        if (pjsua_acc_set_registration(acc_id, PJ_TRUE) != PJ_SUCCESS) {
+            rc = base - 2;
+            goto on_return;
+        }
+        pump_events(500, NULL, PJ_TRUE);
+    } else {
+        /* The un-REGISTER is sent, the re-REGISTER fails */
+        g_fail_tx.skip = 1;
+    }
+    g_fail_tx.host = host;
+    /* With busy, the retry fails within the call and returns the error */
+    if (ip_change() != PJ_SUCCESS && !busy) {
+        rc = base - 5;
+        goto on_return;
+    }
+    pump_events(2000, NULL, PJ_TRUE);
+    if (g_fail_tx.host != NULL) {
+        PJ_LOG(3, (THIS_FILE, "    error: the REGISTER was not failed"));
+        rc = base - 3;
+        goto on_return;
+    }
+    if (g_ctx.ipc_done_cnt != 1) {
+        PJ_LOG(3, (THIS_FILE, "    error: IP change reported %d "
+                   "completions", g_ctx.ipc_done_cnt));
+        rc = base - 4;
+    }
+
+on_return:
+    g_mock_reg.drop = PJ_FALSE;
+    g_fail_tx.host = NULL;
+    g_fail_tx.skip = 0;
+    if (acc_id != PJSUA_INVALID_ID)
+        pjsua_acc_del(acc_id);
+    pjsua_handle_events(500);
+    return rc;
+}
+
+
 #if PJ_HAS_THREADS
 static volatile pj_bool_t g_abandon_reported;
 static pj_bool_t g_abandon_ignored;
@@ -1632,6 +1718,11 @@ int pjsua_acc_test(void)
             if (rc != 0) goto on_return;
         }
     }
+
+    rc = ipc_send_fail_test(tp_id, (int)port, PJ_FALSE);
+    if (rc != 0) goto on_return;
+    rc = ipc_send_fail_test(tp_id, (int)port, PJ_TRUE);
+    if (rc != 0) goto on_return;
 
 #if PJ_HAS_THREADS
     rc = abandon_window_test(tp_id, (int)port, PJ_FALSE);

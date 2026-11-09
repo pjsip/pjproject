@@ -3519,7 +3519,12 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 
                 status = acc_set_registration(acc->index, PJ_TRUE, PJ_FALSE,
                                               PJ_FALSE);
-                if (status != PJ_SUCCESS) {
+                /* A failure the registration callback has already reported
+                 * has ended the IP change
+                 */
+                if (status != PJ_SUCCESS &&
+                    acc->ip_change_op == PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT)
+                {
                     if (pjsua_var.ua_cfg.cb.on_ip_change_progress) {
                         pjsua_ip_change_op_info ip_chg_info;
 
@@ -5874,10 +5879,13 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc)
             }
         }
 
+        /* A failure the registration callback has already reported has
+         * ended the IP change
+         */
+        if (acc->ip_change_op != PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT)
+            return status;
+
         if (pjsua_var.ua_cfg.cb.on_ip_change_progress) {
-            /* If update contact fails, notification might already been
-             * triggered from registration callback.
-             */
             pjsua_ip_change_op_info info;
 
             pj_bzero(&info, sizeof(info));

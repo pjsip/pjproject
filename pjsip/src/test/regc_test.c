@@ -1582,6 +1582,165 @@ on_return:
 }
 
 
+static unsigned reserved_reports;
+static pj_bool_t reserved_is_unreg;
+
+static void reserved_cb(struct pjsip_regc_cbparam *param)
+{
+    reserved_reports++;
+    reserved_is_unreg = param->is_unreg;
+    client_cb(param);
+}
+
+/* A reserved request whose send fails before a transaction is created,
+ * here because a transaction already has its branch, reports the failure
+ * to the callback. One that is not reserved leaves it to its caller.
+ */
+static int reserved_send_fail_test(const pj_str_t *registrar_uri)
+{
+    struct registrar_cfg server_cfg =
+        /* respond  code  auth      contact  exp_prm expires more_contacts */
+        { PJ_TRUE,  200,  PJ_FALSE, EXACT,   0,      300,    {NULL, 0}};
+    const pj_str_t aor = pj_str("<sip:regc-test@pjsip.org>");
+    const pj_str_t branch = pj_str(PJSIP_RFC3261_BRANCH_ID "-regc-dup");
+    pj_str_t contact = pj_str("<sip:c@C>");
+    pjsip_regc *regc = NULL;
+    pjsip_transaction *tsx = NULL;
+    pjsip_tx_data *tdata = NULL;
+    pjsip_via_hdr *via;
+    pj_status_t status;
+    pj_int32_t cseq;
+    int i, ret = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  reserved request fails to be sent"));
+
+    pj_memcpy(&registrar.cfg, &server_cfg, sizeof(server_cfg));
+    pj_bzero(&client_result, sizeof(client_result));
+
+    if (pjsip_regc_create(endpt, &client_result, &reserved_cb,
+                          &regc) != PJ_SUCCESS)
+    {
+        return -1000;
+    }
+    if (pjsip_regc_init(regc, registrar_uri, &aor, &aor, 1, &contact,
+                        300) != PJ_SUCCESS ||
+        pjsip_regc_register(regc, PJ_TRUE, &tdata) != PJ_SUCCESS ||
+        send_and_wait(regc, &tdata) != PJ_SUCCESS ||
+        client_result.code != 200)
+    {
+        ret = -1001;
+        goto on_return;
+    }
+    cseq = client_result.cseq;
+
+    for (i=0; i<3; ++i) {
+        if (pjsip_regc_register(regc, PJ_TRUE, &tdata) != PJ_SUCCESS) {
+            ret = -1002;
+            goto on_return;
+        }
+        via = pjsip_via_hdr_create(tdata->pool);
+        via->branch_param = branch;
+        pjsip_msg_insert_first_hdr(tdata->msg, (pjsip_hdr*)via);
+        if (i == 0) {
+            status = pjsip_tsx_create_uac(&registrar.mod, tdata, &tsx);
+            pjsip_tx_data_dec_ref(tdata);
+            tdata = NULL;
+            if (status != PJ_SUCCESS) {
+                tsx = NULL;
+                ret = -1003;
+                goto on_return;
+            }
+        } else if (i == 1) {
+            reserved_reports = 0;
+            status = pjsip_regc_send(regc, tdata);
+            tdata = NULL;
+            flush_events(200);
+            if (status == PJ_SUCCESS || reserved_reports != 0) {
+                PJ_LOG(3,(THIS_FILE, "    error: a request not reserved "
+                                     "is reported"));
+                ret = -1011;
+                goto on_return;
+            }
+        }
+    }
+    if (pjsip_regc_reserve(regc, tdata) != PJ_SUCCESS) {
+        ret = -1004;
+        goto on_return;
+    }
+
+    client_result.done = PJ_FALSE;
+    reserved_reports = 0;
+    if (pjsip_regc_send(regc, tdata) == PJ_SUCCESS) {
+        tdata = NULL;
+        ret = -1005;
+        goto on_return;
+    }
+    tdata = NULL;
+    flush_events(200);
+    if (reserved_reports != 1 || !client_result.error ||
+        client_result.code != PJSIP_SC_TSX_TRANSPORT_ERROR ||
+        client_result.cseq != cseq + 2 ||
+        !pjsip_regc_is_latest(regc, client_result.cseq))
+    {
+        PJ_LOG(3,(THIS_FILE, "    error: the failure is not reported with "
+                             "the CSeq of the request"));
+        ret = -1006;
+        goto on_return;
+    }
+
+    /* One that fails inside its transaction is reported once, by it */
+    if (reserve_new(regc, &tdata) != PJ_SUCCESS) {
+        ret = -1007;
+        goto on_return;
+    }
+    reserved_reports = 0;
+    send_mod.count = 0;
+    send_mod.count_before_reject = 0;
+    status = pjsip_regc_send(regc, tdata);
+    tdata = NULL;
+    send_mod.count_before_reject = 0xFFFF;
+    flush_events(200);
+    if (status == PJ_SUCCESS || reserved_reports != 1) {
+        PJ_LOG(3,(THIS_FILE, "    error: %u reports of a failure inside "
+                             "the transaction", reserved_reports));
+        ret = -1008;
+        goto on_return;
+    }
+
+    /* An un-REGISTER is reported as one */
+    if (pjsip_regc_unregister(regc, &tdata) != PJ_SUCCESS) {
+        ret = -1009;
+        goto on_return;
+    }
+    via = pjsip_via_hdr_create(tdata->pool);
+    via->branch_param = branch;
+    pjsip_msg_insert_first_hdr(tdata->msg, (pjsip_hdr*)via);
+    if (pjsip_regc_reserve(regc, tdata) != PJ_SUCCESS) {
+        ret = -1009;
+        goto on_return;
+    }
+    reserved_reports = 0;
+    status = pjsip_regc_send(regc, tdata);
+    tdata = NULL;
+    flush_events(200);
+    if (status == PJ_SUCCESS || reserved_reports != 1 || !reserved_is_unreg) {
+        PJ_LOG(3,(THIS_FILE, "    error: a failed un-REGISTER is not "
+                             "reported as one"));
+        ret = -1010;
+    }
+
+on_return:
+    send_mod.count_before_reject = 0xFFFF;
+    if (tdata)
+        pjsip_tx_data_dec_ref(tdata);
+    if (tsx)
+        pjsip_tsx_terminate(tsx, PJSIP_SC_REQUEST_TERMINATED);
+    if (regc)
+        pjsip_regc_destroy(regc);
+    return ret;
+}
+
+
 /************************************************************************/
 enum
 {
@@ -2069,6 +2228,10 @@ int regc_test(void)
         goto on_return;
 
     rc = window_test(&registrar_uri, WINDOW_REG_AFTER_423);
+    if (rc != 0)
+        goto on_return;
+
+    rc = reserved_send_fail_test(&registrar_uri);
     if (rc != 0)
         goto on_return;
 

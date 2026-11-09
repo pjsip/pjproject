@@ -544,7 +544,10 @@ PJ_DECL(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata);
  * \a tdata is still sent if it is an un-REGISTER (Expires header of zero),
  * without calling the callback on its response. Otherwise it is not sent
  * and #pjsip_regc_send() returns PJ_ECANCELLED. The reservation holds a
- * reference to the registration and to \a tdata until then.
+ * reference to the registration and to \a tdata until then. If the send
+ * fails before a transaction is created, the failure is also reported to
+ * the callback, since the result of an earlier request may have been left
+ * to this one.
  *
  * @param regc      The client registration structure.
  * @param tdata     The request created with #pjsip_regc_register(),

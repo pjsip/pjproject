@@ -1774,6 +1774,9 @@ static pj_status_t regc_send(pjsip_regc *regc, pjsip_tx_data *tdata,
     pjsip_cseq_hdr *cseq_hdr;
     pjsip_expires_hdr *expires_hdr;
     pj_int32_t cseq;
+    pj_bool_t reserved = PJ_FALSE;
+    pj_bool_t report = PJ_FALSE;
+    pj_bool_t is_unreg = PJ_FALSE;
 
     pjsip_regc_add_ref(regc);
     pj_lock_acquire(regc->lock);
@@ -1793,6 +1796,7 @@ static pj_status_t regc_send(pjsip_regc *regc, pjsip_tx_data *tdata,
     }
 
     if (regc->reserved_tdata == tdata) {
+        reserved = PJ_TRUE;
         regc->reserved_tdata = NULL;
         pjsip_tx_data_dec_ref(tdata);
         pj_atomic_dec(regc->busy_ctr);
@@ -1899,6 +1903,9 @@ static pj_status_t regc_send(pjsip_regc *regc, pjsip_tx_data *tdata,
          * above, so there can be a race with another registration send.
          */
         if (cseq == regc->cseq_hdr->cseq) {
+            /* No transaction reports the result of a reserved request */
+            report = reserved && regc->has_tsx && !regc->_delete_flag;
+            is_unreg = (regc->current_op == REGC_UNREGISTERING);
             regc->has_tsx = PJ_FALSE;
             if (regc->pending_tdata == tdata) {
                 pjsip_tx_data_dec_ref(tdata);
@@ -1910,6 +1917,14 @@ static pj_status_t regc_send(pjsip_regc *regc, pjsip_tx_data *tdata,
     }
 
     pj_lock_release(regc->lock);
+
+    if (report && regc->cb) {
+        char errmsg[PJ_ERR_MSG_SIZE];
+        pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
+        /* Reported with the code of a failed send */
+        call_callback(regc, status, PJSIP_SC_TSX_TRANSPORT_ERROR, &reason,
+                      NULL, NOEXP, 0, NULL, is_unreg, cseq);
+    }
 
     /* Delete the record if user destroy regc during the callback. */
     pjsip_regc_dec_ref(regc);
