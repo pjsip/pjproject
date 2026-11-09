@@ -860,6 +860,8 @@ static int dns_pending_destroy_test(pj_stun_config *cfg,
     struct stun_client *client = NULL;
     pj_pool_t *pool = NULL;
     pj_grp_lock_t *glock = NULL;
+    pj_dns_parsed_packet pkt;
+    pj_dns_parsed_query question;
     pj_dns_parsed_rr rr;
     pj_sockaddr addr;
     pj_in_addr ip;
@@ -893,13 +895,17 @@ static int dns_pending_destroy_test(pj_stun_config *cfg,
     PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(res, 1, &ns, &port), NULL,
                     {ret = -804; goto on_return;});
 
-    /* No SRV record: the negative answer of the server is cached */
-    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &srv_name,
-                                                PJ_DNS_TYPE_SRV, 0, NULL,
-                                                NULL, NULL),
-                    NULL, {ret = -805; goto on_return;});
-    for (i = 0; pj_dns_resolver_get_cached_count(res) < 1 && i < 50; ++i)
-        handle_events(cfg, 100);
+    /* No SRV record, cached even if PJ_DNS_RESOLVER_INVALID_TTL is 0 */
+    pj_bzero(&pkt, sizeof(pkt));
+    pj_bzero(&question, sizeof(question));
+    pkt.hdr.flags = PJ_DNS_SET_QR(1) | PJ_DNS_SET_RCODE(PJ_DNS_RCODE_NXDOMAIN);
+    pkt.hdr.qdcount = 1;
+    pkt.q = &question;
+    question.name = srv_name;
+    question.type = PJ_DNS_TYPE_SRV;
+    question.dnsclass = 1;
+    PJ_TEST_SUCCESS(pj_dns_resolver_add_entry(res, &pkt, PJ_FALSE), NULL,
+                    {ret = -805; goto on_return;});
     PJ_TEST_EQ(pj_dns_resolver_get_cached_count(res), 1, NULL,
                {ret = -806; goto on_return;});
 

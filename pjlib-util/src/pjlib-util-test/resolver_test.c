@@ -6150,6 +6150,7 @@ static int srv_resolver_cached_cancel_test(void)
     pj_dns_settings lset;
     pj_dns_srv_async_query *srv_q;
     pj_dns_parsed_packet pkt;
+    pj_dns_parsed_query question;
     pj_dns_parsed_rr ans;
     unsigned sent;
     int rc = 0;
@@ -6173,13 +6174,20 @@ static int srv_resolver_cached_cancel_test(void)
     PJ_TEST_SUCCESS(pj_dns_resolver_set_settings(res, &lset), NULL,
                     {rc = -2728; goto on_return;});
 
-    /* The negative answer of the server to the SRV query is cached */
-    g_server[0].action = PJ_DNS_RCODE_NXDOMAIN;
-    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &srv_name,
-                                                PJ_DNS_TYPE_SRV, 0, NULL,
-                                                NULL, NULL),
-                    NULL, {rc = -2703; goto on_return;});
-    PJ_TEST_EQ(wait_cached_count(res, 1), 0, NULL,
+    /* A negative answer to the SRV query, added without TTL so that it is
+     * cached even if PJ_DNS_RESOLVER_INVALID_TTL is 0
+     */
+    pj_bzero(&pkt, sizeof(pkt));
+    pj_bzero(&question, sizeof(question));
+    pkt.hdr.flags = PJ_DNS_SET_QR(1) | PJ_DNS_SET_RCODE(PJ_DNS_RCODE_NXDOMAIN);
+    pkt.hdr.qdcount = 1;
+    pkt.q = &question;
+    question.name = srv_name;
+    question.type = PJ_DNS_TYPE_SRV;
+    question.dnsclass = 1;
+    PJ_TEST_SUCCESS(pj_dns_resolver_add_entry(res, &pkt, PJ_FALSE), NULL,
+                    {rc = -2703; goto on_return;});
+    PJ_TEST_EQ(pj_dns_resolver_get_cached_count(res), 1, NULL,
                {rc = -2704; goto on_return;});
 
     g_server[0].action = ACTION_CB;
