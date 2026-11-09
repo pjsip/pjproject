@@ -1144,6 +1144,9 @@ PJ_DEF(pj_status_t) pjsua_acc_del2(pjsua_acc_id acc_id,
     /* Delete server presence subscription */
     pjsua_pres_delete_acc(acc_id, 0);
 
+    /* The shared auth session's lock lives in acc->pool. */
+    pjsip_auth_clt_deinit(&acc->shared_auth_sess);
+
     /* Release & wipe account pool */
     if (acc->sa_mirror_pool) {
         pj_pool_release(acc->sa_mirror_pool);

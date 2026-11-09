@@ -135,14 +135,15 @@ const pjsip_auth_algorithm pjsip_auth_algorithms[] = {
 
 /* A session with a parent delegates each operation to it, and a shared
  * session (one that is a parent) serializes the operations on itself with
- * its own lock. The lock is recursive, since the credential's AKA callback
- * runs under it; it is never held around the async challenge callback or
- * an owner's send_impl/abandon_impl.
+ * its own lock. Callers read the lock pointer once, since
+ * pjsip_auth_clt_set_parent() creates it lazily. The lock is recursive,
+ * since the credential's AKA callback runs under it; it is never held
+ * around the async challenge callback or an owner's send_impl/abandon_impl.
  */
-#define LOCK_SHARED(sess) \
-    do { if ((sess)->lock) pj_lock_acquire((sess)->lock); } while (0)
-#define UNLOCK_SHARED(sess) \
-    do { if ((sess)->lock) pj_lock_release((sess)->lock); } while (0)
+#define LOCK_SHARED(lock) \
+    do { if (lock) pj_lock_acquire(lock); } while (0)
+#define UNLOCK_SHARED(lock) \
+    do { if (lock) pj_lock_release(lock); } while (0)
 
 
 /* Signature of async auth token, used to detect double-use (zeroed on
@@ -811,16 +812,7 @@ static pjsip_cached_auth *find_cached_auth( pjsip_auth_clt_sess *sess,
                                             const pj_str_t *realm,
                                             pjsip_auth_algorithm_type algorithm_type)
 {
-    pjsip_cached_auth *auth, *pauth = NULL;
-
-    if (sess->parent) {
-        pj_lock_acquire(sess->parent->lock);
-        pauth = find_cached_auth(sess->parent, realm, algorithm_type);
-        pj_lock_release(sess->parent->lock);
-    }
-    if (pauth != NULL) {
-        return pauth;
-    }
+    pjsip_cached_auth *auth;
 
     auth = sess->cached_auth.next;
     while (auth != &sess->cached_auth) {
@@ -843,18 +835,8 @@ static const pjsip_cred_info* auth_find_cred( const pjsip_auth_clt_sess *sess,
 {
     unsigned i;
     int wildcard = -1;
-    const pjsip_cred_info * ptr = NULL;
 
     PJ_UNUSED_ARG(auth_scheme);
-
-    if (sess->parent) {
-        pj_lock_acquire(sess->parent->lock);
-        ptr = auth_find_cred(sess->parent, realm, auth_scheme, algorithm_type);
-        pj_lock_release(sess->parent->lock);
-    }
-    if (ptr != NULL) {
-        return ptr;
-    }
 
     for (i=0; i<sess->cred_cnt; ++i) {
         switch(sess->cred_info[i].data_type) {
@@ -956,7 +938,9 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_deinit(pjsip_auth_clt_sess *sess)
 
     sess->parent = NULL;
     if (sess->lock) {
-        return pj_lock_destroy(sess->lock);
+        pj_lock_t *lock = sess->lock;
+        sess->lock = NULL;
+        return pj_lock_destroy(lock);
     } else {
         return PJ_SUCCESS;
     }
@@ -1035,34 +1019,15 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_clone( pj_pool_t *pool,
 
 static pj_status_t set_credentials_impl(pjsip_auth_clt_sess *sess,
                                         int cred_cnt,
-                                        const pjsip_cred_info *c);
-
-/* Set client credentials. */
-PJ_DEF(pj_status_t) pjsip_auth_clt_set_credentials( pjsip_auth_clt_sess *sess,
-                                                    int cred_cnt,
-                                                    const pjsip_cred_info *c)
-{
-    pj_status_t status;
-
-    PJ_ASSERT_RETURN(sess && c, PJ_EINVAL);
-    if (sess->parent)
-        return pjsip_auth_clt_set_credentials(sess->parent, cred_cnt, c);
-
-    LOCK_SHARED(sess);
-    status = set_credentials_impl(sess, cred_cnt, c);
-    UNLOCK_SHARED(sess);
-
-    return status;
-}
-
-static pj_status_t set_credentials_impl(pjsip_auth_clt_sess *sess,
-                                        int cred_cnt,
                                         const pjsip_cred_info *c)
 {
     if (cred_cnt == 0) {
         sess->cred_cnt = 0;
     } else {
         int i;
+
+        /* Validation below may fail part way through the new array. */
+        sess->cred_cnt = 0;
         sess->cred_info = (pjsip_cred_info*)
                           pj_pool_alloc(sess->pool, cred_cnt * sizeof(*c));
         for (i=0; i<cred_cnt; ++i) {
@@ -1125,6 +1090,26 @@ static pj_status_t set_credentials_impl(pjsip_auth_clt_sess *sess,
     return PJ_SUCCESS;
 }
 
+/* Set client credentials. */
+PJ_DEF(pj_status_t) pjsip_auth_clt_set_credentials( pjsip_auth_clt_sess *sess,
+                                                    int cred_cnt,
+                                                    const pjsip_cred_info *c)
+{
+    pj_lock_t *lock;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(sess && c, PJ_EINVAL);
+    if (sess->parent)
+        return pjsip_auth_clt_set_credentials(sess->parent, cred_cnt, c);
+
+    lock = sess->lock;
+    LOCK_SHARED(lock);
+    status = set_credentials_impl(sess, cred_cnt, c);
+    UNLOCK_SHARED(lock);
+
+    return status;
+}
+
 
 /*
  * Set the preference for the client authentication session.
@@ -1132,16 +1117,19 @@ static pj_status_t set_credentials_impl(pjsip_auth_clt_sess *sess,
 PJ_DEF(pj_status_t) pjsip_auth_clt_set_prefs(pjsip_auth_clt_sess *sess,
                                              const pjsip_auth_clt_pref *p)
 {
+    pj_lock_t *lock;
+
     PJ_ASSERT_RETURN(sess && p, PJ_EINVAL);
     if (sess->parent)
         return pjsip_auth_clt_set_prefs(sess->parent, p);
 
-    LOCK_SHARED(sess);
+    lock = sess->lock;
+    LOCK_SHARED(lock);
     pj_memcpy(&sess->pref, p, sizeof(*p));
     pj_strdup(sess->pool, &sess->pref.algorithm, &p->algorithm);
     //if (sess->pref.algorithm.slen == 0)
     //  sess->pref.algorithm = pj_str("MD5");
-    UNLOCK_SHARED(sess);
+    UNLOCK_SHARED(lock);
 
     return PJ_SUCCESS;
 }
@@ -1153,13 +1141,16 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_set_prefs(pjsip_auth_clt_sess *sess,
 PJ_DEF(pj_status_t) pjsip_auth_clt_get_prefs(pjsip_auth_clt_sess *sess,
                                              pjsip_auth_clt_pref *p)
 {
+    pj_lock_t *lock;
+
     PJ_ASSERT_RETURN(sess && p, PJ_EINVAL);
     if (sess->parent)
         return pjsip_auth_clt_get_prefs(sess->parent, p);
 
-    LOCK_SHARED(sess);
+    lock = sess->lock;
+    LOCK_SHARED(lock);
     pj_memcpy(p, &sess->pref, sizeof(pjsip_auth_clt_pref));
-    UNLOCK_SHARED(sess);
+    UNLOCK_SHARED(lock);
 
     return PJ_SUCCESS;
 }
@@ -1384,30 +1375,6 @@ static pjsip_authorization_hdr* get_header_for_cred_info(
 
 
 static pj_status_t init_req_impl(pjsip_auth_clt_sess *sess,
-                                 pjsip_tx_data *tdata);
-
-/* Initialize outgoing request. */
-PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
-                                             pjsip_tx_data *tdata )
-{
-    pj_status_t status;
-
-    PJ_ASSERT_RETURN(sess && tdata, PJ_EINVAL);
-    PJ_ASSERT_RETURN(sess->pool, PJSIP_ENOTINITIALIZED);
-    PJ_ASSERT_RETURN(tdata->msg->type==PJSIP_REQUEST_MSG,
-                     PJSIP_ENOTREQUESTMSG);
-
-    if (sess->parent)
-        return pjsip_auth_clt_init_req(sess->parent, tdata);
-
-    LOCK_SHARED(sess);
-    status = init_req_impl(sess, tdata);
-    UNLOCK_SHARED(sess);
-
-    return status;
-}
-
-static pj_status_t init_req_impl(pjsip_auth_clt_sess *sess,
                                  pjsip_tx_data *tdata)
 {
     const pjsip_method *method;
@@ -1563,6 +1530,29 @@ static pj_status_t init_req_impl(pjsip_auth_clt_sess *sess,
     }
 
     return PJ_SUCCESS;
+}
+
+/* Initialize outgoing request. */
+PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
+                                             pjsip_tx_data *tdata )
+{
+    pj_lock_t *lock;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(sess && tdata, PJ_EINVAL);
+    PJ_ASSERT_RETURN(sess->pool, PJSIP_ENOTINITIALIZED);
+    PJ_ASSERT_RETURN(tdata->msg->type==PJSIP_REQUEST_MSG,
+                     PJSIP_ENOTREQUESTMSG);
+
+    if (sess->parent)
+        return pjsip_auth_clt_init_req(sess->parent, tdata);
+
+    lock = sess->lock;
+    LOCK_SHARED(lock);
+    status = init_req_impl(sess, tdata);
+    UNLOCK_SHARED(lock);
+
+    return status;
 }
 
 
@@ -1736,47 +1726,6 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
 }
 
 
-/* Reinitialize outgoing request after 401/407 response is received.
- * The purpose of this function is:
- *  - to add a Authorization/Proxy-Authorization header.
- *  - to put the newly created Authorization/Proxy-Authorization header
- *    in cached_list.
- */
-static pj_status_t reinit_req_impl(pjsip_auth_clt_sess *sess,
-                                   const pjsip_rx_data *rdata,
-                                   pjsip_tx_data *old_request,
-                                   pjsip_tx_data **new_request);
-
-PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(  pjsip_auth_clt_sess *sess,
-                                                const pjsip_rx_data *rdata,
-                                                pjsip_tx_data *old_request,
-                                                pjsip_tx_data **new_request )
-{
-    pj_status_t status;
-
-    PJ_ASSERT_RETURN(sess && rdata && old_request && new_request,
-                     PJ_EINVAL);
-    PJ_ASSERT_RETURN(sess->pool, PJSIP_ENOTINITIALIZED);
-    PJ_ASSERT_RETURN(rdata->msg_info.msg->type == PJSIP_RESPONSE_MSG,
-                     PJSIP_ENOTRESPONSEMSG);
-    PJ_ASSERT_RETURN(old_request->msg->type == PJSIP_REQUEST_MSG,
-                     PJSIP_ENOTREQUESTMSG);
-    PJ_ASSERT_RETURN(rdata->msg_info.msg->line.status.code == 401 ||
-                     rdata->msg_info.msg->line.status.code == 407,
-                     PJSIP_EINVALIDSTATUS);
-
-    if (sess->parent) {
-        return pjsip_auth_clt_reinit_req(sess->parent, rdata, old_request,
-                                         new_request);
-    }
-
-    LOCK_SHARED(sess);
-    status = reinit_req_impl(sess, rdata, old_request, new_request);
-    UNLOCK_SHARED(sess);
-
-    return status;
-}
-
 static pj_status_t reinit_req_impl(pjsip_auth_clt_sess *sess,
                                    const pjsip_rx_data *rdata,
                                    pjsip_tx_data *old_request,
@@ -1921,22 +1870,63 @@ static pj_status_t reinit_req_impl(pjsip_auth_clt_sess *sess,
 
 }
 
+/* Reinitialize outgoing request after 401/407 response is received.
+ * The purpose of this function is:
+ *  - to add a Authorization/Proxy-Authorization header.
+ *  - to put the newly created Authorization/Proxy-Authorization header
+ *    in cached_list.
+ */
+PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(  pjsip_auth_clt_sess *sess,
+                                                const pjsip_rx_data *rdata,
+                                                pjsip_tx_data *old_request,
+                                                pjsip_tx_data **new_request )
+{
+    pj_lock_t *lock;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(sess && rdata && old_request && new_request,
+                     PJ_EINVAL);
+    PJ_ASSERT_RETURN(sess->pool, PJSIP_ENOTINITIALIZED);
+    PJ_ASSERT_RETURN(rdata->msg_info.msg->type == PJSIP_RESPONSE_MSG,
+                     PJSIP_ENOTRESPONSEMSG);
+    PJ_ASSERT_RETURN(old_request->msg->type == PJSIP_REQUEST_MSG,
+                     PJSIP_ENOTREQUESTMSG);
+    PJ_ASSERT_RETURN(rdata->msg_info.msg->line.status.code == 401 ||
+                     rdata->msg_info.msg->line.status.code == 407,
+                     PJSIP_EINVALIDSTATUS);
+
+    if (sess->parent) {
+        return pjsip_auth_clt_reinit_req(sess->parent, rdata, old_request,
+                                         new_request);
+    }
+
+    lock = sess->lock;
+    LOCK_SHARED(lock);
+    status = reinit_req_impl(sess, rdata, old_request, new_request);
+    UNLOCK_SHARED(lock);
+
+    return status;
+}
+
 
 PJ_DEF(pj_status_t) pjsip_auth_clt_async_configure(
                                     pjsip_auth_clt_sess *sess,
                                     const pjsip_auth_clt_async_setting *opt)
 {
+    pj_lock_t *lock;
+
     PJ_ASSERT_RETURN(sess && opt && opt->cb, PJ_EINVAL);
     if (sess->parent)
         return pjsip_auth_clt_async_configure(sess->parent, opt);
 
-    LOCK_SHARED(sess);
+    lock = sess->lock;
+    LOCK_SHARED(lock);
     if (!sess->async_opt) {
         sess->async_opt = PJ_POOL_ZALLOC_T(sess->pool,
                                            pjsip_auth_clt_async_setting);
     }
     *sess->async_opt = *opt;
-    UNLOCK_SHARED(sess);
+    UNLOCK_SHARED(lock);
 
     return PJ_SUCCESS;
 }
@@ -1955,6 +1945,7 @@ static pj_status_t async_consume_token(pjsip_auth_clt_sess *sess,
                                        pjsip_auth_clt_async_impl_token *copy,
                                        pjsip_auth_clt_sess **p_sess)
 {
+    pj_lock_t *lock;
     pj_status_t status;
 
     if (sess->parent) {
@@ -1962,7 +1953,8 @@ static pj_status_t async_consume_token(pjsip_auth_clt_sess *sess,
                                    p_sess);
     }
 
-    LOCK_SHARED(sess);
+    lock = sess->lock;
+    LOCK_SHARED(lock);
     if (for_send && (!sess->async_opt || !sess->async_opt->cb)) {
         pj_assert(!"Async authentication is not configured");
         status = PJ_EINVALIDOP;
@@ -1977,7 +1969,7 @@ static pj_status_t async_consume_token(pjsip_auth_clt_sess *sess,
         *p_sess = sess;
         status = PJ_SUCCESS;
     }
-    UNLOCK_SHARED(sess);
+    UNLOCK_SHARED(lock);
 
     return status;
 }
@@ -2047,12 +2039,14 @@ static pj_status_t async_get_setting(pjsip_auth_clt_sess *sess,
                                      pjsip_auth_clt_async_setting *setting,
                                      pjsip_auth_clt_sess **p_sess)
 {
+    pj_lock_t *lock;
     pj_status_t status;
 
     if (sess->parent)
         return async_get_setting(sess->parent, setting, p_sess);
 
-    LOCK_SHARED(sess);
+    lock = sess->lock;
+    LOCK_SHARED(lock);
     if (!sess->async_opt || !sess->async_opt->cb) {
         status = PJ_EINVALIDOP;
     } else {
@@ -2060,7 +2054,7 @@ static pj_status_t async_get_setting(pjsip_auth_clt_sess *sess,
         *p_sess = sess;
         status = PJ_SUCCESS;
     }
-    UNLOCK_SHARED(sess);
+    UNLOCK_SHARED(lock);
 
     return status;
 }
