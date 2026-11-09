@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -348,10 +348,10 @@ typedef struct pjsip_auth_clt_sess
     unsigned             cred_cnt;      /**< Number of credentials.         */
     pjsip_cred_info     *cred_info;     /**< Array of credential information*/
     pjsip_cached_auth    cached_auth;   /**< Cached authorization info.     */
-    pj_lock_t           *lock;          /**< Prevent concurrent usage when
-                                             using a shared parent. Is only
-                                             used in parent. Set up by
-                                             pjsip_auth_clt_set_parent      */
+    pj_lock_t           *lock;          /**< Serializes operations on this
+                                             session, which matters when it
+                                             is shared as a parent. Set up
+                                             by pjsip_auth_clt_init()      */
     struct pjsip_auth_clt_sess *parent; /**< Allow a common parent
                                              for multiple sessions.         */
 

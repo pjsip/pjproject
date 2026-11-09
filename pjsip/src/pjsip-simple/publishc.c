@@ -133,6 +133,7 @@ static void pubc_async_auth_abandon_impl(
                                 pjsip_auth_clt_sess *auth_sess,
                                 void *user_data);
 static pj_status_t pubc_send(pjsip_publishc *pubc, pjsip_tx_data *tdata);
+static void pubc_send_queued(pjsip_publishc *pubc);
 
 PJ_DEF(void) pjsip_publishc_opt_default(pjsip_publishc_opt *opt)
 {
@@ -567,6 +568,34 @@ static pj_status_t create_request(pjsip_publishc *pubc,
 }
 
 
+/* Create a PUBLISH request with the current Expires. Called with the
+ * mutex held.
+ */
+static pj_status_t pubc_create_publish(pjsip_publishc *pubc,
+                                       pjsip_tx_data **p_tdata)
+{
+    pj_status_t status;
+    pjsip_tx_data *tdata;
+
+    status = create_request(pubc, &tdata);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    /* Add Expires header */
+    if (pubc->expires_hdr) {
+        pjsip_hdr *dup;
+
+        dup = (pjsip_hdr*)
+              pjsip_hdr_shallow_clone(tdata->pool, pubc->expires_hdr);
+        if (dup)
+            pjsip_msg_add_hdr(tdata->msg, dup);
+    }
+
+    *p_tdata = tdata;
+    return PJ_SUCCESS;
+}
+
+
 PJ_DEF(pj_status_t) pjsip_publishc_publish(pjsip_publishc *pubc, 
                                            pj_bool_t auto_refresh,
                                            pjsip_tx_data **p_tdata)
@@ -578,20 +607,10 @@ PJ_DEF(pj_status_t) pjsip_publishc_publish(pjsip_publishc *pubc,
 
     pj_mutex_lock(pubc->mutex);
 
-    status = create_request(pubc, &tdata);
+    status = pubc_create_publish(pubc, &tdata);
     if (status != PJ_SUCCESS) {
         pj_mutex_unlock(pubc->mutex);
         return status;
-    }
-
-    /* Add Expires header */
-    if (pubc->expires_hdr) {
-        pjsip_hdr *dup;
-
-        dup = (pjsip_hdr*)
-              pjsip_hdr_shallow_clone(tdata->pool, pubc->expires_hdr);
-        if (dup)
-            pjsip_msg_add_hdr(tdata->msg, dup);
     }
 
     pubc_cancel_timer(pubc);
@@ -713,22 +732,28 @@ static void pubc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
 
     entry->id = 0;
     ++pubc->in_callback;
-    pj_mutex_unlock(pubc->mutex);
 
-    status = pjsip_publishc_publish(pubc, 1, &tdata);
-    if (status != PJ_SUCCESS) {
-        char errmsg[PJ_ERR_MSG_SIZE];
-        pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
-        call_callback(pubc, pubc_get_cb(pubc), status, 400, &reason, NULL,
-                      PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
-    } else {
-        /* On failure the callback has been called, except for PJ_EBUSY,
-         * which just means the app's own request is in flight.
-         */
-        pjsip_publishc_send(pubc, tdata);
+    /* Build and claim the refresh without releasing the mutex, so that a
+     * concurrent publish(), unpublish() or destroy() either cancels this
+     * timer first or runs after the refresh is in flight. If the app's own
+     * request is in flight, its 2xx re-arms the timer instead.
+     */
+    if (pubc->pending_tsx == 0) {
+        status = pubc_create_publish(pubc, &tdata);
+        if (status != PJ_SUCCESS) {
+            char errmsg[PJ_ERR_MSG_SIZE];
+            pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
+            pjsip_publishc_cb *cb = pubc->cb;
+
+            pj_mutex_unlock(pubc->mutex);
+            call_callback(pubc, cb, status, 400, &reason, NULL,
+                          PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
+            pj_mutex_lock(pubc->mutex);
+        } else {
+            pubc_send(pubc, tdata);
+        }
     }
 
-    pj_mutex_lock(pubc->mutex);
     --pubc->in_callback;
     pubc_unlock(pubc);
 }
@@ -990,53 +1015,8 @@ static void tsx_callback(void *token, pjsip_event *event)
 
         --pubc->pending_tsx;
 
-        /* If we have pending request(s), send them now. A failed send
-         * runs tsx_callback() nested, or lets another thread in, either
-         * of which may have started the next transaction already.
-         */
-        while (pubc->pending_tsx == 0 && !pj_list_empty(&pubc->pending_reqs))
-        {
-            pending_publish *pp = pubc->pending_reqs.next;
-            pjsip_tx_data *tdata = pp->tdata;
-
-            /* Remove the request from pending request list,
-             * and keep the unused entry into pending_reqs_empty pool.
-             */
-            pj_list_erase(pp);
-            pj_list_push_back(&pubc->pending_reqs_empty, pp);
-
-            /* Add SIP-If-Match if we have etag and the request doesn't have
-             * one (https://github.com/pjsip/pjproject/issues/996)
-             */
-            if (pubc->etag.slen) {
-                const pj_str_t STR_HNAME = { "SIP-If-Match", 12 };
-                pjsip_generic_string_hdr *sim_hdr;
-
-                sim_hdr = (pjsip_generic_string_hdr*)
-                          pjsip_msg_find_hdr_by_name(tdata->msg, &STR_HNAME, NULL);
-                if (!sim_hdr) {
-                    /* Create the header */
-                    sim_hdr = pjsip_generic_string_hdr_create(tdata->pool,
-                                                              &STR_HNAME,
-                                                              &pubc->etag);
-                    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)sim_hdr);
-
-                } else {
-                    /* Update */
-                    if (pj_strcmp(&pubc->etag, &sim_hdr->hvalue))
-                        pj_strdup(tdata->pool, &sim_hdr->hvalue, &pubc->etag);
-                }
-            }
-
-            /* pubc_send() claims the transaction before releasing the
-             * mutex, so a concurrent pjsip_publishc_send() queues behind
-             * this request instead of overtaking it.
-             */
-            status = pubc_send(pubc, tdata);
-            pj_mutex_lock(pubc->mutex);
-            if (status == PJ_SUCCESS)
-                break;
-        }
+        /* If we have pending request(s), send them now */
+        pubc_send_queued(pubc);
     }
 
     /* No longer in callback. */
@@ -1048,8 +1028,10 @@ static void tsx_callback(void *token, pjsip_event *event)
 
 
 /* Send tdata as pubc's one outstanding transaction. Called with the mutex
- * held and no transaction pending; the mutex is released before the request
- * is sent (see #1247) and is not held on return. On failure the callback
+ * held, no transaction pending, and a hold on pubc (in_callback or an auth
+ * token), since tsx_callback() may run before send_request() returns and
+ * complete a deferred destroy. The mutex is released around the transport
+ * send (see #1247) and is held again on return. On failure the callback
  * has been called, except when the pubc has been destroyed (PJ_EGONE).
  */
 static pj_status_t pubc_send(pjsip_publishc *pubc, pjsip_tx_data *tdata)
@@ -1063,7 +1045,6 @@ static pj_status_t pubc_send(pjsip_publishc *pubc, pjsip_tx_data *tdata)
 
     if (pubc->_delete_flag) {
         pjsip_tx_data_dec_ref(tdata);
-        pj_mutex_unlock(pubc->mutex);
         return PJ_EGONE;
     }
 
@@ -1087,11 +1068,6 @@ static pj_status_t pubc_send(pjsip_publishc *pubc, pjsip_tx_data *tdata)
      */
     ++pubc->pending_tsx;
 
-    /* Hold pubc across the send: tsx_callback() may run before
-     * send_request() returns and complete a deferred destroy.
-     */
-    ++pubc->in_callback;
-
     pj_mutex_unlock(pubc->mutex);
 
     status = pjsip_endpt_send_request(pubc->endpt, tdata, -1, pubc, 
@@ -1110,27 +1086,74 @@ static pj_status_t pubc_send(pjsip_publishc *pubc, pjsip_tx_data *tdata)
             cb = pubc->cb;
         }
     }
-    pj_mutex_unlock(pubc->mutex);
 
     if (cb) {
         char errmsg[PJ_ERR_MSG_SIZE];
         pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
 
+        pj_mutex_unlock(pubc->mutex);
         call_callback(pubc, cb, status, 400, &reason, NULL,
                       PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
+        pj_mutex_lock(pubc->mutex);
     }
 
-    pj_mutex_lock(pubc->mutex);
-    --pubc->in_callback;
-    pubc_unlock(pubc);
-
     return status;
+}
+
+/* Send the queued requests, oldest first, until one is in flight. Called
+ * like pubc_send(): with the mutex held and a hold on pubc; the mutex is
+ * held on return. A failed send may run tsx_callback() nested or let
+ * another thread in, so the transaction count is rechecked each round.
+ */
+static void pubc_send_queued(pjsip_publishc *pubc)
+{
+    while (pubc->pending_tsx == 0 && !pj_list_empty(&pubc->pending_reqs)) {
+        pending_publish *pp = pubc->pending_reqs.next;
+        pjsip_tx_data *tdata = pp->tdata;
+
+        /* Remove the request from pending request list,
+         * and keep the unused entry into pending_reqs_empty pool.
+         */
+        pj_list_erase(pp);
+        pj_list_push_back(&pubc->pending_reqs_empty, pp);
+
+        /* Add SIP-If-Match if we have etag and the request doesn't have
+         * one (https://github.com/pjsip/pjproject/issues/996)
+         */
+        if (pubc->etag.slen) {
+            const pj_str_t STR_HNAME = { "SIP-If-Match", 12 };
+            pjsip_generic_string_hdr *sim_hdr;
+
+            sim_hdr = (pjsip_generic_string_hdr*)
+                      pjsip_msg_find_hdr_by_name(tdata->msg, &STR_HNAME, NULL);
+            if (!sim_hdr) {
+                /* Create the header */
+                sim_hdr = pjsip_generic_string_hdr_create(tdata->pool,
+                                                          &STR_HNAME,
+                                                          &pubc->etag);
+                pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)sim_hdr);
+
+            } else {
+                /* Update */
+                if (pj_strcmp(&pubc->etag, &sim_hdr->hvalue))
+                    pj_strdup(tdata->pool, &sim_hdr->hvalue, &pubc->etag);
+            }
+        }
+
+        /* pubc_send() claims the transaction before releasing the mutex,
+         * so a concurrent pjsip_publishc_send() queues behind this request
+         * instead of overtaking it.
+         */
+        pubc_send(pubc, tdata);
+    }
 }
 
 
 PJ_DEF(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc, 
                                         pjsip_tx_data *tdata)
 {
+    pj_status_t status;
+
     PJ_ASSERT_RETURN(pubc && tdata, PJ_EINVAL);
 
     pj_mutex_lock(pubc->mutex);
@@ -1166,6 +1189,18 @@ PJ_DEF(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc,
         }
     }
 
-    return pubc_send(pubc, tdata);
+    ++pubc->in_callback;
+
+    status = pubc_send(pubc, tdata);
+
+    /* A failure that created no transaction leaves nothing in flight, so
+     * send what was queued meanwhile.
+     */
+    pubc_send_queued(pubc);
+
+    --pubc->in_callback;
+    pubc_unlock(pubc);
+
+    return status;
 }
 

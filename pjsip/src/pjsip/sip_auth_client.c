@@ -133,10 +133,10 @@ const pjsip_auth_algorithm pjsip_auth_algorithms[] = {
 #  define AUTH_TRACE_(expr)
 #endif
 
-/* A session with a parent delegates each operation to it, and a shared
- * session (one that is a parent) serializes the operations on itself with
- * its own lock. Callers read the lock pointer once, since
- * pjsip_auth_clt_set_parent() creates it lazily. The lock is recursive,
+/* A session with a parent delegates each operation to it, and a session
+ * serializes the operations on itself with its own lock, which matters once
+ * it is shared as a parent. pjsip_auth_clt_init() creates the lock, so no
+ * operation can run unlocked while a child attaches. The lock is recursive,
  * since the credential's AKA callback runs under it; it is never held
  * around the async challenge callback or an owner's send_impl/abandon_impl.
  */
@@ -901,23 +901,18 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init(  pjsip_auth_clt_sess *sess,
     pj_bzero(&sess->pref, sizeof(sess->pref));
 
     sess->parent = NULL;
-    sess->lock = NULL;
     sess->async_opt = NULL;
-    return PJ_SUCCESS;
+
+    return pj_lock_create_recursive_mutex(pool, "auth_clt%p", &sess->lock);
 }
 
 PJ_DEF(pj_status_t) pjsip_auth_clt_set_parent(pjsip_auth_clt_sess *sess,
                                               pjsip_auth_clt_sess *parent)
 {
     PJ_ASSERT_RETURN(sess, PJ_EINVAL);
-    if (parent != NULL && parent->lock == NULL) {
-        pj_status_t status;
-        status = pj_lock_create_recursive_mutex(parent->pool,
-                                                "auth_clt_parent_lock",
-                                                &parent->lock);
-        if (status != PJ_SUCCESS)
-            return status;
-    }
+    /* The parent must have been set up by pjsip_auth_clt_init(). */
+    PJ_ASSERT_RETURN(parent == NULL || parent->lock, PJ_EINVALIDOP);
+
     sess->parent = parent;
     return PJ_SUCCESS;
 }
