@@ -495,9 +495,9 @@ PJ_DECL(pj_status_t) pjsip_auth_clt_deinit( pjsip_auth_clt_sess *sess);
  * session of the original, if any.
  *
  * @param pool          Pool to use.
- * @param sess          Structure to put the duplicated session. It must
- *                      be either zero-filled or initialized with
- *                      pjsip_auth_clt_init(); its lock is kept.
+ * @param sess          Structure to put the duplicated session. It is
+ *                      initialized here; a session initialized earlier
+ *                      must be deinitialized first, or its lock leaks.
  * @param rhs           The client session to be cloned.
  *
  * @return              PJ_SUCCESS on success;

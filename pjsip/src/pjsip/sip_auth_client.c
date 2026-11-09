@@ -886,11 +886,13 @@ static const pjsip_cred_info* auth_find_cred( const pjsip_auth_clt_sess *sess,
 
 
 /* Init client session. */
-/* Reset every field except the lock. */
-static void auth_clt_reset(pjsip_auth_clt_sess *sess,
-                           pjsip_endpoint *endpt,
-                           pj_pool_t *pool)
+PJ_DEF(pj_status_t) pjsip_auth_clt_init(  pjsip_auth_clt_sess *sess,
+                                          pjsip_endpoint *endpt,
+                                          pj_pool_t *pool,
+                                          unsigned options)
 {
+    PJ_ASSERT_RETURN(sess && endpt && pool && (options==0), PJ_EINVAL);
+
     sess->pool = pool;
     sess->endpt = endpt;
     sess->cred_cnt = 0;
@@ -900,16 +902,6 @@ static void auth_clt_reset(pjsip_auth_clt_sess *sess,
 
     sess->parent = NULL;
     sess->async_opt = NULL;
-}
-
-PJ_DEF(pj_status_t) pjsip_auth_clt_init(  pjsip_auth_clt_sess *sess,
-                                          pjsip_endpoint *endpt,
-                                          pj_pool_t *pool,
-                                          unsigned options)
-{
-    PJ_ASSERT_RETURN(sess && endpt && pool && (options==0), PJ_EINVAL);
-
-    auth_clt_reset(sess, endpt, pool);
 
     /* Left NULL on failure, so the session can still be deinitialised. */
     sess->lock = NULL;
@@ -959,20 +951,13 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_clone( pj_pool_t *pool,
 {
     unsigned i;
 
+    pj_status_t status;
+
     PJ_ASSERT_RETURN(pool && sess && rhs, PJ_EINVAL);
 
-    /* sess is either initialised already (a forked dialog's) or zeroed;
-     * keep its lock rather than leaking it under a new one.
-     */
-    auth_clt_reset(sess, (pjsip_endpoint*)rhs->endpt, pool);
-    if (sess->lock == NULL) {
-        pj_status_t status;
-
-        status = pj_lock_create_recursive_mutex(pool, "auth_clt%p",
-                                                &sess->lock);
-        if (status != PJ_SUCCESS)
-            return status;
-    }
+    status = pjsip_auth_clt_init(sess, (pjsip_endpoint*)rhs->endpt, pool, 0);
+    if (status != PJ_SUCCESS)
+        return status;
 
     sess->cred_cnt = rhs->cred_cnt;
     sess->cred_info = (pjsip_cred_info*)

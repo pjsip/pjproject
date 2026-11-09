@@ -84,10 +84,11 @@ struct pjsip_publishc
      */
     int                          pending_auth_tokens;
     pj_bool_t                    in_callback;
-    /* The response callback is running: requests sent meanwhile are
-     * queued, to be sent in order with the updated ETag afterwards.
+    /* Response callbacks running: requests sent meanwhile are queued, to
+     * be sent in order with the updated ETag afterwards. A count, since a
+     * refresh may complete on another thread while a callback runs.
      */
-    pj_bool_t                    in_resp_cb;
+    int                          in_resp_cb;
     pj_mutex_t                  *mutex;
 
     pjsip_publishc_opt           opt;
@@ -1014,7 +1015,7 @@ static void tsx_callback(void *token, pjsip_event *event)
          * that a refresh timer firing meanwhile still sees no transaction
          * in flight. in_callback already prevents destruction.
          */
-        pubc->in_resp_cb = PJ_TRUE;
+        ++pubc->in_resp_cb;
         cb = pubc->cb;
 
         pj_mutex_unlock(pubc->mutex);
@@ -1024,7 +1025,7 @@ static void tsx_callback(void *token, pjsip_event *event)
                       rdata, expiration);
         pj_mutex_lock(pubc->mutex);
 
-        pubc->in_resp_cb = PJ_FALSE;
+        --pubc->in_resp_cb;
 
         /* If we have pending request(s), send them now */
         pubc_send_queued(pubc);

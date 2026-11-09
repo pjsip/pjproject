@@ -874,7 +874,10 @@ PJ_DEF(pj_status_t) pjsip_dlg_fork( const pjsip_dialog *first_dlg,
 
     //dlg->route_set_frozen = PJ_TRUE;
 
-    /* Clone client authentication session. */
+    /* Clone client authentication session, replacing the empty one that
+     * create_dialog() initialized.
+     */
+    pjsip_auth_clt_deinit(&dlg->auth_sess);
     status = pjsip_auth_clt_clone(dlg->pool, &dlg->auth_sess,
                                   &first_dlg->auth_sess);
     if (status != PJ_SUCCESS)
