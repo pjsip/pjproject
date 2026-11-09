@@ -120,6 +120,7 @@ struct test_server
     /* RFC 6062 Connect/ConnectionBind, see conn_bind_test() */
     pj_bool_t            turn_respond_connect;
     pj_bool_t            turn_accept_conn_bind;
+    pj_bool_t            turn_stale_conn_bind;
     pj_activesock_t     *data_conn_sock;
     pj_ioqueue_op_key_t  data_conn_send_key;
 
@@ -127,6 +128,7 @@ struct test_server
         unsigned         rx_allocate_cnt;
         unsigned         rx_refresh_cnt;
         unsigned         rx_send_ind_cnt;
+        unsigned         rx_conn_bind_cnt;
     } turn_stat;
 
     pj_str_t             domain;
