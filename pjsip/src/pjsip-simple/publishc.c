@@ -754,6 +754,11 @@ static void pubc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
         }
     }
 
+    /* A request queued while the mutex was released for the send stays
+     * queued if that send created no transaction, so send it now.
+     */
+    pubc_send_queued(pubc);
+
     --pubc->in_callback;
     pubc_unlock(pubc);
 }
