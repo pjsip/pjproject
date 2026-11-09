@@ -1405,6 +1405,183 @@ on_return:
 }
 
 
+/* A request sent while the result of the REGISTER before it is handled:
+ * an un-REGISTER sent from the transaction callback of a 200, or created
+ * there and sent from the callback, or a REGISTER sent from the
+ * transaction callback of a 423. The earlier result must not leave its
+ * refresh, its 423 retry or its state to the newer request.
+ */
+typedef enum window_kind
+{
+    WINDOW_UNREG_SENT,
+    WINDOW_UNREG_CREATED,
+    WINDOW_REG_AFTER_423,
+} window_kind;
+
+static struct
+{
+    window_kind     kind;
+    pj_bool_t       created;
+    pjsip_tx_data  *unreg;
+    unsigned        cnt;
+    struct {
+        pj_status_t status;
+        int         code;
+        pj_bool_t   is_unreg;
+        pj_uint32_t expiration;
+        pj_uint32_t interval;
+    } res[4];
+} window_result;
+
+static void window_tsx_cb(struct pjsip_regc_tsx_cb_param *param)
+{
+    pjsip_regc *regc = param->cbparam.regc;
+    pjsip_tx_data *tdata;
+    pj_status_t status;
+
+    if (window_result.created)
+        return;
+    if (window_result.kind == WINDOW_REG_AFTER_423)
+        status = pjsip_regc_register(regc, PJ_TRUE, &tdata);
+    else
+        status = pjsip_regc_unregister(regc, &tdata);
+    if (status != PJ_SUCCESS)
+        return;
+
+    window_result.created = PJ_TRUE;
+    registrar.cfg.status_code = 200;
+    if (window_result.kind == WINDOW_UNREG_CREATED)
+        window_result.unreg = tdata;
+    else
+        pjsip_regc_send(regc, tdata);
+}
+
+static void window_cb(struct pjsip_regc_cbparam *param)
+{
+    pjsip_tx_data *tdata = window_result.unreg;
+    pjsip_regc_info info;
+
+    if (window_result.cnt < PJ_ARRAY_SIZE(window_result.res) &&
+        pjsip_regc_get_info(param->regc, &info) == PJ_SUCCESS)
+    {
+        window_result.res[window_result.cnt].interval = info.interval;
+        window_result.res[window_result.cnt].status = param->status;
+        window_result.res[window_result.cnt].code = param->code;
+        window_result.res[window_result.cnt].is_unreg = param->is_unreg;
+        window_result.res[window_result.cnt].expiration = param->expiration;
+    }
+    window_result.cnt++;
+    if (tdata) {
+        window_result.unreg = NULL;
+        pjsip_regc_send(param->regc, tdata);
+    }
+}
+
+static int window_test(const pj_str_t *registrar_uri, window_kind kind)
+{
+    static const char *title[] = {
+        "un-REGISTER sent while a 200",
+        "un-REGISTER created while a 200",
+        "REGISTER sent while a 423" };
+    /* A refresh left by the 200 would be sent after a second */
+    struct registrar_cfg server_cfg =
+        /* respond  code  auth      contact  exp_prm expires more_contacts */
+        { PJ_TRUE,  200,  PJ_FALSE, EXACT,   0,      2,      {NULL, 0}};
+    const pj_str_t aor = pj_str("<sip:regc-test@pjsip.org>");
+    pj_str_t contact = pj_str("<sip:c@C>");
+    pjsip_regc *regc = NULL;
+    pjsip_regc_info info;
+    pjsip_tx_data *tdata;
+    pj_bool_t reg = (kind == WINDOW_REG_AFTER_423);
+    pj_uint32_t interval;
+    unsigned i, responses;
+    int base = -980 - 5 * (int)kind;
+    int ret = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  %s is handled", title[kind]));
+
+    pj_memcpy(&registrar.cfg, &server_cfg, sizeof(server_cfg));
+    /* Differs from the Expires header, which a wrong result falls back to */
+    if (kind == WINDOW_UNREG_SENT)
+        registrar.cfg.expires_param = 3;
+    if (reg) {
+        registrar.cfg.status_code = PJSIP_SC_INTERVAL_TOO_BRIEF;
+        registrar.cfg.expires = 300;
+    }
+    pj_bzero(&window_result, sizeof(window_result));
+    window_result.kind = kind;
+    responses = registrar.response_cnt;
+
+    if (pjsip_regc_create(endpt, NULL, &window_cb, &regc) != PJ_SUCCESS)
+        return base;
+    if (pjsip_regc_set_reg_tsx_cb(regc, &window_tsx_cb) != PJ_SUCCESS ||
+        pjsip_regc_init(regc, registrar_uri, &aor, &aor, 1, &contact,
+                        300) != PJ_SUCCESS ||
+        pjsip_regc_get_info(regc, &info) != PJ_SUCCESS ||
+        pjsip_regc_register(regc, PJ_TRUE, &tdata) != PJ_SUCCESS ||
+        pjsip_regc_send(regc, tdata) != PJ_SUCCESS)
+    {
+        ret = base - 1;
+        goto on_return;
+    }
+    /* Only an earlier result handled before the newer request is sent
+     * updates the registration
+     */
+    interval = (kind == WINDOW_UNREG_CREATED)? 2 : info.interval;
+
+    for (i=0; window_result.cnt < 2 && i<100; ++i)
+        flush_events(100);
+    /* Past the refresh, if one was left */
+    flush_events(2500);
+    if (window_result.cnt < 2 ||
+        window_result.res[0].status != PJ_SUCCESS ||
+        window_result.res[0].code != (reg? 423 : 200) ||
+        window_result.res[0].is_unreg ||
+        window_result.res[0].interval != interval ||
+        (kind == WINDOW_UNREG_SENT && window_result.res[0].expiration != 3) ||
+        window_result.res[1].code != 200)
+    {
+        PJ_LOG(3,(THIS_FILE, "    error: the earlier result is reported "
+                             "as %d, status %d, expiration %u, interval %u",
+                             window_result.res[0].code,
+                             window_result.res[0].status,
+                             window_result.res[0].expiration,
+                             window_result.res[0].interval));
+        ret = base - 2;
+        goto on_return;
+    }
+
+    /* The newer request is handled as itself */
+    if (window_result.res[1].is_unreg == reg ||
+        window_result.res[1].expiration != (reg? 300 : 0))
+    {
+        PJ_LOG(3,(THIS_FILE, "    error: the newer request is reported as "
+                             "%s of %u s",
+                             window_result.res[1].is_unreg?
+                                "an unregistration" : "a registration",
+                             window_result.res[1].expiration));
+        ret = base - 3;
+        goto on_return;
+    }
+    if (window_result.cnt != 2 ||
+        registrar.response_cnt - responses != 2)
+    {
+        PJ_LOG(3,(THIS_FILE, "    error: %u results reported, %u requests "
+                             "answered", window_result.cnt,
+                             registrar.response_cnt - responses));
+        ret = base - 4;
+    }
+
+on_return:
+    registrar.cfg.status_code = 200;
+    if (window_result.unreg)
+        pjsip_tx_data_dec_ref(window_result.unreg);
+    if (regc)
+        pjsip_regc_destroy(regc);
+    return ret;
+}
+
+
 /************************************************************************/
 enum
 {
@@ -1880,6 +2057,18 @@ int regc_test(void)
         goto on_return;
 
     rc = retry_send_error_test(&registrar_uri);
+    if (rc != 0)
+        goto on_return;
+
+    rc = window_test(&registrar_uri, WINDOW_UNREG_SENT);
+    if (rc != 0)
+        goto on_return;
+
+    rc = window_test(&registrar_uri, WINDOW_UNREG_CREATED);
+    if (rc != 0)
+        goto on_return;
+
+    rc = window_test(&registrar_uri, WINDOW_REG_AFTER_423);
     if (rc != 0)
         goto on_return;
 

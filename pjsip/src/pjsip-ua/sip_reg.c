@@ -214,6 +214,16 @@ static pj_bool_t newer_than(pjsip_regc *regc, pj_int32_t cseq)
            (regc->cseq_hdr && cseq != regc->cseq_hdr->cseq);
 }
 
+/* Not an un-REGISTER, by the same rule as current_op */
+static pj_bool_t req_adds_binding(const pjsip_tx_data *tdata)
+{
+    const pjsip_expires_hdr *expires_hdr;
+
+    expires_hdr = (const pjsip_expires_hdr*)
+                  pjsip_msg_find_hdr(tdata->msg, PJSIP_H_EXPIRES, NULL);
+    return !expires_hdr || expires_hdr->ivalue != 0;
+}
+
 /* Without force, refuse while busy or, when check_cseq, once a request
  * newer than cseq has been sent or reserved.
  */
@@ -1087,6 +1097,7 @@ pjsip_regc_set_delay_before_refresh( pjsip_regc *regc,
 
 
 static pj_uint32_t calculate_response_expiration(const pjsip_regc *regc,
+                                                 pj_bool_t registering,
                                                  const pjsip_rx_data *rdata,
                                                  unsigned *contact_cnt,
                                                  unsigned max_contact,
@@ -1115,7 +1126,7 @@ static pj_uint32_t calculate_response_expiration(const pjsip_regc *regc,
         }
     }
 
-    if (regc->current_op == REGC_REGISTERING) {
+    if (registering) {
         pj_bool_t has_our_contact = PJ_FALSE;
         const pjsip_expires_hdr *expires;
 
@@ -1568,7 +1579,8 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
         regc->current_op = REGC_IDLE;
 
     } else if (tsx->status_code == PJSIP_SC_INTERVAL_TOO_BRIEF &&
-               regc->current_op == REGC_REGISTERING)
+               regc->current_op == REGC_REGISTERING &&
+               !newer_than(regc, tsx->cseq))
     {
         /* Handle 423 response automatically:
          *  - set requested expiration to Min-Expires header, ONLY IF
@@ -1666,20 +1678,31 @@ handle_err:
         pj_uint32_t expiration = NOEXP;
         unsigned contact_cnt = 0;
         pjsip_contact_hdr *contact[PJSIP_REGC_MAX_CONTACT];
-        pj_bool_t is_unreg;
+        pj_bool_t is_unreg, registering;
+        pj_bool_t outdated;
+
+        /* Once a newer request is sent or reserved, the state is its own */
+        outdated = newer_than(regc, tsx->cseq);
+        if (outdated) {
+            is_unreg = tsx->last_tx && !req_adds_binding(tsx->last_tx);
+            registering = !is_unreg;
+        } else {
+            is_unreg = (regc->current_op == REGC_UNREGISTERING);
+            registering = (regc->current_op == REGC_REGISTERING);
+        }
 
         if (tsx->status_code/100 == 2) {
 
             rdata = event->body.tsx_state.src.rdata;
 
             /* Calculate expiration */
-            expiration = calculate_response_expiration(regc, rdata, 
-                                                       &contact_cnt,
+            expiration = calculate_response_expiration(regc, registering,
+                                                       rdata, &contact_cnt,
                                                        PJSIP_REGC_MAX_CONTACT,
                                                        contact);
 
 #if PJSIP_REGISTER_ALLOW_EXP_REFRESH
-            if (expiration == 0 && regc->current_op != REGC_UNREGISTERING) {
+            if (expiration == 0 && !is_unreg) {
                 /* Response contain expires contact param 0, allow client to
                  * continue refresh registration.
                  * Refer to: https://github.com/pjsip/pjproject/pull/2809
@@ -1701,20 +1724,22 @@ handle_err:
             }
 #endif
             /* Schedule next registration */
-            schedule_registration(regc, expiration);
+            if (!outdated)
+                schedule_registration(regc, expiration);
 
         } else {
             rdata = (event->body.tsx_state.type==PJSIP_EVENT_RX_MSG) ? 
                         event->body.tsx_state.src.rdata : NULL;
         }
 
-        /* Update registration */
-        // if (expiration==NOEXP) expiration=-1;
-        regc->expires = expiration;
+        if (!outdated) {
+            /* Update registration */
+            // if (expiration==NOEXP) expiration=-1;
+            regc->expires = expiration;
 
-        /* Mark operation as complete */
-        is_unreg = (regc->current_op == REGC_UNREGISTERING);
-        regc->current_op = REGC_IDLE;
+            /* Mark operation as complete */
+            regc->current_op = REGC_IDLE;
+        }
 
         /* Call callback. */
         /* Should be safe to release the lock temporarily.
@@ -1733,16 +1758,6 @@ handle_err:
 
     /* Delete the record if user destroy regc during the callback. */
     pjsip_regc_dec_ref(regc);
-}
-
-/* Not an un-REGISTER, by the same rule as current_op */
-static pj_bool_t req_adds_binding(const pjsip_tx_data *tdata)
-{
-    const pjsip_expires_hdr *expires_hdr;
-
-    expires_hdr = (const pjsip_expires_hdr*)
-                  pjsip_msg_find_hdr(tdata->msg, PJSIP_H_EXPIRES, NULL);
-    return !expires_hdr || expires_hdr->ivalue != 0;
 }
 
 /* With auth_retry, tdata is the authentication of a challenged request,
@@ -1836,10 +1851,17 @@ static pj_status_t regc_send(pjsip_regc *regc, pjsip_tx_data *tdata,
     regc->has_tsx = PJ_TRUE;
 
     /* Set current operation based on the value of Expires header */
-    if (expires_hdr && expires_hdr->ivalue==0)
+    if (expires_hdr && expires_hdr->ivalue==0) {
         regc->current_op = REGC_UNREGISTERING;
-    else
+
+        /* An earlier result may have scheduled a refresh since
+         * pjsip_regc_unregister()
+         */
+        pj_timer_heap_cancel_if_active(pjsip_endpt_get_timer_heap(regc->endpt),
+                                       &regc->timer, 0);
+    } else {
         regc->current_op = REGC_REGISTERING;
+    }
     
     if (expires_hdr && expires_hdr->ivalue)
         regc->expires_requested = expires_hdr->ivalue;
