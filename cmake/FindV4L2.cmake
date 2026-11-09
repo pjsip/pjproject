@@ -27,11 +27,30 @@ find_library(V4L2_LIBRARY
 )
 mark_as_advanced(V4L2_LIBRARY)
 
+if(V4L2_INCLUDE_DIR AND V4L2_LIBRARY)
+  set(_v4l2_check_libs "${V4L2_LIBRARY}")
+  if(V4L2_LIBRARY MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$" AND UNIX)
+    # A static libv4l2 needs pthread
+    find_package(Threads QUIET)
+    if(TARGET Threads::Threads)
+      list(APPEND _v4l2_check_libs Threads::Threads)
+    endif()
+  endif()
+
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(V4L2
+    FUNCTION v4l2_open
+    LIBRARIES ${_v4l2_check_libs}
+  )
+  unset(_v4l2_check_libs)
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(V4L2
   REQUIRED_VARS
     V4L2_INCLUDE_DIR
     V4L2_LIBRARY
+    V4L2_USABLE
 )
 
 if(V4L2_FOUND)

@@ -22,11 +22,22 @@ find_library(YUV_LIBRARY
     ${PC_YUV_LIBRARY_DIRS}
 )
 
+if(YUV_INCLUDE_DIR AND YUV_LIBRARY)
+  # libyuv is C++ (a static one needs the C++ runtime), with a C API
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(YUV
+    LANGUAGE CXX
+    FUNCTION I420Scale
+    LIBRARIES "${YUV_LIBRARY}"
+  )
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(YUV
   REQUIRED_VARS
     YUV_LIBRARY
     YUV_INCLUDE_DIR
+    YUV_USABLE
   VERSION_VAR
     YUV_VERSION
 )

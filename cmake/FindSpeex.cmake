@@ -23,6 +23,21 @@ find_library(Speex_LIBRARY
 )
 mark_as_advanced(Speex_LIBRARY)
 
+if(Speex_INCLUDE_DIR AND Speex_LIBRARY)
+  set(_speex_check_libs "${Speex_LIBRARY}")
+  if(Speex_LIBRARY MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$" AND UNIX AND NOT APPLE)
+    # A static libspeex needs libm
+    list(APPEND _speex_check_libs m)
+  endif()
+
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(Speex
+    FUNCTION speex_encoder_init
+    LIBRARIES ${_speex_check_libs}
+  )
+  unset(_speex_check_libs)
+endif()
+
 # Only pkg-config gives the version: speex.h has none, its
 # SPEEX_LIB_GET_*_VERSION are speex_lib_ctl() request codes
 if(DEFINED PC_Speex_VERSION AND NOT PC_Speex_VERSION STREQUAL "")
@@ -35,6 +50,7 @@ find_package_handle_standard_args(Speex
   REQUIRED_VARS
     Speex_INCLUDE_DIR
     Speex_LIBRARY
+    Speex_USABLE
   VERSION_VAR
     Speex_VERSION
 )

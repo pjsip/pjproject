@@ -26,11 +26,27 @@ find_library(Resample_LIBRARY
 )
 mark_as_advanced(Resample_LIBRARY)
 
+if(Resample_INCLUDE_DIR AND Resample_LIBRARY)
+  set(_resample_check_libs "${Resample_LIBRARY}")
+  if(Resample_LIBRARY MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$" AND UNIX AND NOT APPLE)
+    # A static libresample needs libm
+    list(APPEND _resample_check_libs m)
+  endif()
+
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(Resample
+    FUNCTION res_Resample
+    LIBRARIES ${_resample_check_libs}
+  )
+  unset(_resample_check_libs)
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Resample
   REQUIRED_VARS
     Resample_INCLUDE_DIR
     Resample_LIBRARY
+    Resample_USABLE
   VERSION_VAR
     Resample_VERSION
 )

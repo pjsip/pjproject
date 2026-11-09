@@ -23,11 +23,27 @@ find_library(SpeexDSP_LIBRARY
 )
 mark_as_advanced(SpeexDSP_LIBRARY)
 
+if(SpeexDSP_INCLUDE_DIR AND SpeexDSP_LIBRARY)
+  set(_speexdsp_check_libs "${SpeexDSP_LIBRARY}")
+  if(SpeexDSP_LIBRARY MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$" AND UNIX AND NOT APPLE)
+    # A static libspeexdsp needs libm
+    list(APPEND _speexdsp_check_libs m)
+  endif()
+
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(SpeexDSP
+    FUNCTION speex_echo_state_init
+    LIBRARIES ${_speexdsp_check_libs}
+  )
+  unset(_speexdsp_check_libs)
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(SpeexDSP
   REQUIRED_VARS
     SpeexDSP_INCLUDE_DIR
     SpeexDSP_LIBRARY
+    SpeexDSP_USABLE
   VERSION_VAR
     SpeexDSP_VERSION
 )
