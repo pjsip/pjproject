@@ -522,7 +522,6 @@ PJ_DEF(pj_status_t) pj_stun_sock_destroy(pj_stun_sock *stun_sock)
     /* The group lock may outlive the socket and the resolver (e.g. ICE) */
     if (stun_sock->q) {
         pj_dns_srv_cancel_query(stun_sock->q, PJ_FALSE);
-        stun_sock->q = NULL;
     }
 
     if (stun_sock->active_sock != NULL) {
