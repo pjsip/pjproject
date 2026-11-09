@@ -15,7 +15,11 @@ menuconfig PJPROJECT
 
 	  These options cover what the build has to know. Everything else
 	  about pjproject, codecs, logging, pool and queue sizes, is set in
-	  config_site.h as on every other platform; see PJPROJECT_CONFIG_SITE.
+	  pjlib/include/pj/config_site.h as on every other platform. On
+	  Zephyr that file must select the PJ_CONFIG_ZEPHYR preset:
+	    #define PJ_CONFIG_ZEPHYR 1
+	    #include <pj/config_site_sample.h>
+	  See README_Zephyr.md.
 
 if PJPROJECT
 
@@ -55,19 +59,5 @@ config PJPROJECT_FLOATING_POINT
 	  Off, PJLIB avoids floating point arithmetic, which saves the
 	  soft-float helpers on a core without an FPU. The G.711 and G.722
 	  codecs use integers only.
-
-config PJPROJECT_CONFIG_SITE
-	string "Path to a custom config_site.h"
-	help
-	  Empty, the generated pj/config_site.h selects the PJ_CONFIG_ZEPHYR
-	  preset in pj/config_site_sample.h: G.711 only, SDES-SRTP, no
-	  resampling, full logging, 16 sockets per I/O queue. To change any of that,
-	  give the path of your own file (absolute, or relative to the
-	  application), which defines what it wants to differ and then
-	  does
-	    #define PJ_CONFIG_ZEPHYR 1
-	    #include <pj/config_site_sample.h>
-	  libsrtp and libresample are always built; an application that
-	  does not use them does not link them.
 
 endif # PJPROJECT

@@ -721,7 +721,7 @@
  * every thread its own thread-local storage; on Zephyr that is
  * CONFIG_THREAD_LOCAL_STORAGE, which os_core_unix.c checks.
  *
- * Default: 0 (pthread keys). The PJ_CONFIG_ZEPHYR preset sets it to 1.
+ * Default: 0 (pthread keys). os_zephyr.h sets it to 1.
  */
 #ifndef PJ_THREAD_LOCAL_USE_COMPILER_TLS
 #  define PJ_THREAD_LOCAL_USE_COMPILER_TLS    0

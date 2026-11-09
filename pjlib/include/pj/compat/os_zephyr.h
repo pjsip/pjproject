@@ -118,17 +118,21 @@
 #define PJ_BLOCKING_ERROR_VAL       EAGAIN
 #define PJ_BLOCKING_CONNECT_ERROR_VAL   EINPROGRESS
 
-/* Threads follow the pthread option. Note that Zephyr's thread-specific
- * storage works only on threads created with pthread_create(), so in a
- * threaded build the application must call PJLIB from such a thread, not
- * from Zephyr's main thread.
- */
+/* Threads follow the pthread option. */
 #ifndef PJ_HAS_THREADS
 #   if defined(CONFIG_POSIX_THREADS)
 #       define PJ_HAS_THREADS       1
 #   else
 #       define PJ_HAS_THREADS       0
 #   endif
+#endif
+
+/* Zephyr keeps pthread key values only for threads made by
+ * pthread_create(), not for its main thread; compiler TLS covers every
+ * thread. Needs CONFIG_THREAD_LOCAL_STORAGE, which zephyr/Kconfig selects.
+ */
+#ifndef PJ_THREAD_LOCAL_USE_COMPILER_TLS
+#   define PJ_THREAD_LOCAL_USE_COMPILER_TLS 1
 #endif
 
 #ifndef PJ_HAS_SCHED_YIELD

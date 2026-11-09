@@ -23,9 +23,9 @@ As an indication of the footprint, these are the sizes of the whole AN521 image,
 
 Most of the RAM is what the configuration sets aside rather than pjproject's own data: a 256 KB heap arena for pjlib's pools (320 KB with TLS), the kernel heap the thread stacks come from in the threaded build, and the network buffers. The sample is built for up to four concurrent calls, and the image size is the same however many are active, since calls draw on the heap arena at run time; the tests so far ran one call at a time, and what four take from the arena is part of the footprint measurement still to come, which will also separate pjproject's share from Zephyr's.
 
-## 1. Install Zephyr
+## 1. Install Zephyr and get pjproject
 
-If you already have a working Zephyr workspace and SDK, skip to section 2. Otherwise follow the [Zephyr Getting Started Guide](https://docs.zephyrproject.org/latest/develop/getting_started/index.html); the steps below are its Ubuntu version, condensed.
+If you already have a working Zephyr workspace and SDK, skip to "Get pjproject" at the end of this section. Otherwise follow the [Zephyr Getting Started Guide](https://docs.zephyrproject.org/latest/develop/getting_started/index.html); the steps below are its Ubuntu version, condensed.
 
 Install the host tools (Ubuntu 24.04 or later):
 
@@ -67,7 +67,7 @@ Every time you open a new terminal to work with Zephyr, activate the virtual env
 source ~/zephyrproject/.venv/bin/activate
 ```
 
-## 2. Get pjproject
+### Get pjproject
 
 Clone pjproject anywhere; it does not need to be inside the Zephyr workspace:
 
@@ -76,6 +76,29 @@ git clone https://github.com/pjsip/pjproject.git ~/pjproject
 ```
 
 The rest of this guide writes `~/pjproject` for that location. No `./configure` or `make` is needed: the Zephyr build compiles pjproject from source as part of the application.
+
+## 2. Configure
+
+Two kinds of settings shape a build. pjproject's own compile-time settings, which codecs, how much logging, pool and queue sizes, are in `config_site.h` as on every other platform. Zephyr, the sample and the few things the build has to know about pjproject (threads, TLS, floating point) are Kconfig options. Section 8 is the reference for both; this section is what you need before the first build.
+
+### config_site.h
+
+pjproject's compile-time settings are in `pjlib/include/pj/config_site.h` in the pjproject tree. The file is not part of the repository: create it, and for Zephyr it must select the Zephyr preset:
+
+```sh
+cat > ~/pjproject/pjlib/include/pj/config_site.h <<'EOF'
+#define PJ_CONFIG_ZEPHYR 1
+#include <pj/config_site_sample.h>
+EOF
+```
+
+This is enough for the sample. The build stops with a message if the file is missing or does not define `PJ_CONFIG_ZEPHYR`. The preset in `config_site_sample.h` builds G.711 only, SDES-SRTP, no sample rate conversion, full logging and 16 sockets per I/O queue; section 8 says how to change any of that in the same file.
+
+### Kconfig
+
+Kconfig configures Zephyr, the sample and the pjproject module, like any Zephyr application. The sample's `prj.conf` is a complete, commented configuration that works as is; the overlays `overlay-threads.conf` and `overlay-tls.conf` in the same directory add threads and TLS, applied with `-DEXTRA_CONF_FILE=`. Any option can also be given on the `west build` command line after `--`, as the examples in the next section do; everything after `--` goes to CMake.
+
+Once a build directory exists, `west build -d <build dir> -t menuconfig` opens the whole tree as a menu, or `-t guiconfig` as a window. pjproject's options are under "Modules" then "pjproject", as "PJSIP (pjproject)": threads, TLS and floating point. The sample's own options are in the "embedded_ua" menu at the top level: the SIP server, account and registration, the codec, SRTP, the transport and the media thread. Zephyr's networking, stack and heap sizes are in their usual places. What menuconfig saves goes into the build directory's `.config` only, and a pristine build (`-p always`) starts from `prj.conf` again; to keep a setting, put it in `prj.conf` or give it after `--`.
 
 ## 3. Build and run the sample on native_sim
 
@@ -108,7 +131,7 @@ The sample is set up to register with a SIP server at 192.0.2.2, the host side o
 west build -p always -b native_sim/native/64 -d build-native ~/pjproject/zephyr/samples/embedded_ua -- -DCONFIG_EMBUA_USE_REGISTRATION=0
 ```
 
-Everything after `--` goes to CMake; this is how any Kconfig option is set from the command line.
+Everything after `--` goes to CMake; this is how any Kconfig option is set from the command line (section 2).
 
 ### Run
 
@@ -276,7 +299,9 @@ CONFIG_COMMON_LIBC_MALLOC_ARENA_SIZE=262144
 CONFIG_ENTROPY_GENERATOR=y
 ```
 
-The sample's `zephyr/samples/embedded_ua/prj.conf` is a complete, commented example and the best starting point; copy it and remove what you do not need. Two of its settings deserve a word. `CONFIG_NET_IPV4_FRAGMENT=y` is there because a SIP INVITE with SDP is usually larger than the Ethernet MTU and arrives as IP fragments. `CONFIG_ZVFS_OPEN_MAX` bounds the file descriptors `select()` can watch and must be at least `CONFIG_PJPROJECT_IOQUEUE_MAX_HANDLES`; the build checks this with a static assertion.
+The sample's `zephyr/samples/embedded_ua/prj.conf` is a complete, commented example and the best starting point; copy it and remove what you do not need. Two of its settings deserve a word. `CONFIG_NET_IPV4_FRAGMENT=y` is there because a SIP INVITE with SDP is usually larger than the Ethernet MTU and arrives as IP fragments. `CONFIG_ZVFS_OPEN_MAX` bounds the file descriptors `select()` can watch and must be at least `PJ_IOQUEUE_MAX_HANDLES`; the build checks this with a static assertion.
+
+The pjproject tree needs the `config_site.h` of section 2. The module is compiled with that one file's settings, so two applications in a workspace that want different pjproject settings use two pjproject checkouts, as they would on any other platform.
 
 For SIP over TLS add the options of the sample's `overlay-tls.conf`: `CONFIG_PJPROJECT_TLS`, TCP, and Mbed TLS with at least one ciphersuite, certificate parsing and record buffers; then start a TLS transport with `pjsip_tls_transport_start2()` as the sample does. A threaded application also needs the sample's `psa_user_config.h`, or its own, as `CONFIG_TF_PSA_CRYPTO_USER_CONFIG_FILE`.
 
@@ -286,7 +311,7 @@ The application code is ordinary pjsip code. `embedded_ua.c` in `pjsip-apps/src/
 
 ### Kconfig options
 
-The Kconfig options cover what the build has to know: whether to build pjproject at all, with threads, with TLS, with floating point, and where a custom `config_site.h` is. Everything else about pjproject, which codecs, how much logging, how many sockets an I/O queue watches, is set in `config_site.h` as on every other platform, so that each setting has one place. The options live under "PJSIP (pjproject)" in `west build -t menuconfig`, or in `prj.conf`:
+The Kconfig options cover what the build has to know: whether to build pjproject at all, with threads, with TLS and with floating point. Everything else about pjproject, which codecs, how much logging, how many sockets an I/O queue watches, is set in `config_site.h` as on every other platform, so that each setting has one place. The options live under "PJSIP (pjproject)" in `west build -t menuconfig`, or in `prj.conf`:
 
 | Option | Default | What it does |
 |---|---|---|
@@ -294,24 +319,23 @@ The Kconfig options cover what the build has to know: whether to build pjproject
 | `CONFIG_PJPROJECT_THREADS` | n | Build PJLIB with threads over pthreads. Off, PJLIB is single threaded and no pthread function is linked. See the note below. |
 | `CONFIG_PJPROJECT_TLS` | n | SIP over TLS with Zephyr's Mbed TLS. Requires `MBEDTLS` and `NET_TCP`; the sample's `overlay-tls.conf` has the Mbed TLS options a TLS client needs. |
 | `CONFIG_PJPROJECT_FLOATING_POINT` | follows `FPU` | Floating point arithmetic in PJLIB. Off saves the soft-float helpers on a core without an FPU. |
-| `CONFIG_PJPROJECT_CONFIG_SITE` | empty | Path to a custom `config_site.h`, see below. |
 
 The module always builds the bundled libsrtp and libresample, and G.711, G.722 and L16 need no library; they are static archives, so an application that does not use one of them does not link it. The other codecs (Opus, Speex, iLBC, GSM, G.722.1, AMR), video, the echo cancellers and the sound device backends are not built. The sample does not need a sound device: media comes from the network and goes back to it.
 
-A note on threads. The sample runs single threaded by default, which needs nothing special and is the smallest build. Build it with `-DEXTRA_CONF_FILE=overlay-threads.conf` and pjsip runs in one pthread and the media clock and RTP in another. The overlay shows what a threaded build needs besides `CONFIG_PJPROJECT_THREADS`: `CONFIG_DYNAMIC_THREAD` with heap-allocated stacks, since pjlib creates threads at run time; `CONFIG_DYNAMIC_THREAD_STACK_SIZE` raised to 16 KB, because a thread pjlib creates with stack size 0 gets that default and Zephyr's 1 KB is far too small; and more mutexes and condition variables than Zephyr's default of 5 each. A thread created with an explicit stack size gets a stack of that size from the same heap; Zephyr frees it only when the thread's attributes are destroyed after it has ended, which pjlib does in `pj_thread_join()` or `pj_thread_destroy()`, so join or destroy threads you create to get their stacks back. Zephyr keeps pthread key values only for threads created with `pthread_create()`, not for its main thread, so on Zephyr pjlib keeps its per-thread data in compiler thread-local storage instead (`PJ_THREAD_LOCAL_USE_COMPILER_TLS` in the preset, `CONFIG_THREAD_LOCAL_STORAGE` selected by `CONFIG_PJPROJECT_THREADS`). The application can therefore use pjlib from `main()` as on any other platform. Zephyr takes that storage off the top of every thread's stack, kernel threads included, so each stack loses pjlib's share of about 270 bytes: the overlay raises `CONFIG_IDLE_STACK_SIZE` from its default of 256 bytes, which is smaller than that, and the net stack's small kernel stacks were checked to still have room.
+A note on threads. The sample runs single threaded by default, which needs nothing special and is the smallest build. Build it with `-DEXTRA_CONF_FILE=overlay-threads.conf` and pjsip runs in one pthread and the media clock and RTP in another. The overlay shows what a threaded build needs besides `CONFIG_PJPROJECT_THREADS`: `CONFIG_DYNAMIC_THREAD` with heap-allocated stacks, since pjlib creates threads at run time; `CONFIG_DYNAMIC_THREAD_STACK_SIZE` raised to 16 KB, because a thread pjlib creates with stack size 0 gets that default and Zephyr's 1 KB is far too small; and more mutexes and condition variables than Zephyr's default of 5 each. A thread created with an explicit stack size gets a stack of that size from the same heap; Zephyr frees it only when the thread's attributes are destroyed after it has ended, which pjlib does in `pj_thread_join()` or `pj_thread_destroy()`, so join or destroy threads you create to get their stacks back. Zephyr keeps pthread key values only for threads created with `pthread_create()`, not for its main thread, so on Zephyr pjlib keeps its per-thread data in compiler thread-local storage instead (`PJ_THREAD_LOCAL_USE_COMPILER_TLS` in `os_zephyr.h`, `CONFIG_THREAD_LOCAL_STORAGE` selected by `CONFIG_PJPROJECT_THREADS`). The application can therefore use pjlib from `main()` as on any other platform. Zephyr takes that storage off the top of every thread's stack, kernel threads included, so each stack loses pjlib's share of about 270 bytes: the overlay raises `CONFIG_IDLE_STACK_SIZE` from its default of 256 bytes, which is smaller than that, and the net stack's small kernel stacks were checked to still have room.
 
 ### config_site.h
 
-pjproject's compile-time settings beyond Kconfig are in `config_site.h`. The Zephyr module generates one that reads:
+pjproject's compile-time settings beyond Kconfig are in `pjlib/include/pj/config_site.h` in the pjproject tree, the file every pjproject build uses and section 2 had you create. Nothing is generated: the Zephyr build reads that file as the Linux, Windows and macOS builds do. On Zephyr it must select the Zephyr preset, at minimum:
 
 ```c
 #define PJ_CONFIG_ZEPHYR 1
 #include <pj/config_site_sample.h>
 ```
 
-The `PJ_CONFIG_ZEPHYR` preset in `pjlib/include/pj/config_site_sample.h` holds the Zephyr settings: G.711 only, SDES-only SRTP, no sample rate conversion, full logging, 16 sockets per I/O queue, 31 transactions and dialogs, no socket buffer tuning (Zephyr has no `SO_SNDBUF`), G.711 computed instead of table driven, no video, no echo canceller, and the null sound device. Read it to see exactly what is set.
+The `PJ_CONFIG_ZEPHYR` preset in `pjlib/include/pj/config_site_sample.h` holds the Zephyr settings: G.711 only, SDES-only SRTP, no sample rate conversion, full logging, 16 sockets per I/O queue, 31 transactions and dialogs, no socket buffer tuning (the buffers are Zephyr's `net_buf` pools), G.711 computed instead of table driven, no video, no echo canceller, and the null sound device. Read it to see exactly what is set. What is a fact of the platform rather than a choice, such as pjlib keeping its per-thread data in compiler thread-local storage, is in `os_zephyr.h` and applies whatever `config_site.h` says.
 
-To change any of this, write your own `config_site.h` and point `CONFIG_PJPROJECT_CONFIG_SITE` at it (an absolute path, or relative to the application directory). The codec, logging, I/O queue, SRTP and resampling settings take whatever is defined before the preset is included; the rest is overridden after it:
+To change any of this, add to the same file. The codec, logging, I/O queue, SRTP and resampling settings take whatever is defined before the preset is included; the rest is overridden after it:
 
 ```c
 #define PJMEDIA_HAS_G722_CODEC 1    /* G.722 as well as G.711 */
@@ -327,7 +351,9 @@ To change any of this, write your own `config_site.h` and point `CONFIG_PJPROJEC
 #define PJSIP_MAX_TSX_COUNT 15
 ```
 
-The pjlib test application in `zephyr/tests/pjlib` does exactly this to get a 64-socket I/O queue; its `config_site.h` is a three-line example.
+A tree that also serves host builds can keep the Zephyr lines behind `#ifdef __ZEPHYR__`, which the Zephyr toolchain defines, so that the same `config_site.h` configures both.
+
+The pjlib test application in `zephyr/tests/pjlib` needs a 64-socket I/O queue and gets it from a compile definition in its `CMakeLists.txt`, so that it builds with the plain preset above and leaves the tree's `config_site.h` to the user.
 
 ### The sample's own options
 
@@ -339,11 +365,11 @@ The Zephyr-specific parts are few, and this is where to look when something need
 
 - `zephyr/module.yml`: tells Zephyr this tree is a module and where its Kconfig and CMake are.
 - `zephyr/Kconfig`: the `CONFIG_PJPROJECT_*` options above.
-- `zephyr/CMakeLists.txt`: when `CONFIG_PJPROJECT` is set, drives pjproject's own per-library `CMakeLists.txt` files with options derived from Kconfig, generates `config_site.h`, gives every library Zephyr's include paths and flags, and defines the `pjproject` link target.
+- `zephyr/CMakeLists.txt`: when `CONFIG_PJPROJECT` is set, checks that `config_site.h` selects the Zephyr preset, drives pjproject's own per-library `CMakeLists.txt` files with options derived from Kconfig, gives every library Zephyr's include paths and flags, and defines the `pjproject` link target.
 - `zephyr/cmake/MbedTLSConfig.cmake`: lets pjlib's Mbed TLS backend find Zephyr's Mbed TLS.
-- `pjlib/include/pj/compat/os_zephyr.h`: the platform description (which headers and socket functions exist, threads, TCP and TLS from Kconfig, no IPv6). `pj/config.h` selects it when `__ZEPHYR__` is defined.
+- `pjlib/include/pj/compat/os_zephyr.h`: the platform description (which headers and socket functions exist, threads, TCP and TLS from Kconfig, no IPv6). `pj/config.h` selects it when `__ZEPHYR__` is defined. One of its settings, `PJ_THREAD_LOCAL_USE_COMPILER_TLS`, makes pjlib's thread-local storage use the compiler's `__thread` rather than pthread keys, which Zephyr does not provide to its main thread.
 - `pjlib/src/pj/ip_helper_zephyr.c`: network interface and route enumeration through Zephyr's `net_if` API, since Zephyr has no `getifaddrs()`. This is how pjsip learns the address to put in Via and Contact headers.
-- The `PJ_CONFIG_ZEPHYR` preset in `pjlib/include/pj/config_site_sample.h`. One of its settings, `PJ_THREAD_LOCAL_USE_COMPILER_TLS`, makes pjlib's thread-local storage use the compiler's `__thread` rather than pthread keys, which Zephyr does not provide to its main thread.
+- The `PJ_CONFIG_ZEPHYR` preset in `pjlib/include/pj/config_site_sample.h`, which sizes pjsip and pjmedia for a small endpoint; `config_site.h` selects it.
 - `zephyr/tests/pjlib`: the pjlib-test application of section 5, with the `testcase.yaml` that twister runs. Its sources are pjlib's own in `pjlib/src/pjlib-test`.
 - `zephyr/samples/embedded_ua`: the sample's `CMakeLists.txt`, `Kconfig`, `prj.conf`, board overlay and `run-qemu.sh`. The source is `pjsip-apps/src/samples/embedded_ua.c`, the same file that builds on Linux, Windows and macOS; on Zephyr it reads its settings from the `CONFIG_EMBUA_*` options.
 
@@ -363,6 +389,7 @@ Random numbers come from Zephyr's `sys_rand32_get()` rather than the C library's
 - "no Zephyr build in ..." from `run-qemu.sh`: give it the build directory you passed to `west build -d`.
 - The guest never gets a response: check `ip addr show zeth` shows 192.0.2.2 and the interface is UP, and that no firewall drops traffic on it. On QEMU, check the MTU is 1400.
 - A registrar answers the second REGISTER with 400 or "invalid CSeq": on native_sim, you forgot `-seed-random`; on QEMU, `CONFIG_TIMER_RANDOM_GENERATOR` is missing from the build.
+- The build stops with "config_site.h is missing or does not select the Zephyr preset": create `pjlib/include/pj/config_site.h` in the pjproject tree as in section 2.
 - The build stops with `PJ_IOQUEUE_MAX_HANDLES_must_not_exceed_FD_SETSIZE`: `FD_SETSIZE` on Zephyr is `CONFIG_ZVFS_OPEN_MAX`; raise it to at least `PJ_IOQUEUE_MAX_HANDLES` (16 in the preset).
 - The image does not fit: in `config_site.h` lower `PJ_LOG_MAX_LEVEL`; in `prj.conf` shrink `CONFIG_COMMON_LIBC_MALLOC_ARENA_SIZE`.
 - A SIP INVITE arrives in the host log but never in the guest: `CONFIG_NET_IPV4_FRAGMENT` is off, or the fragment buffers (`CONFIG_NET_IPV4_FRAGMENT_MAX_PKT`, `CONFIG_NET_BUF_RX_COUNT`) are too few.

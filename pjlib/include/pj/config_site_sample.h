@@ -36,9 +36,8 @@
  *   Windows Mobile, useful for testing purposes only.
  *
  * #define PJ_CONFIG_ZEPHYR
- *   Settings for a small SIP endpoint on Zephyr RTOS. When pjproject is
- *   built as a Zephyr module, the generated config_site.h defines this
- *   automatically.
+ *   Settings for a small SIP endpoint on Zephyr RTOS. The Zephyr build
+ *   requires config_site.h to define this; see README_Zephyr.md.
  */
 
 
@@ -507,13 +506,6 @@
 
     #define PJ_CRC32_HAS_TABLES                 0
 
-    /* Zephyr keeps pthread key values only for threads made by
-     * pthread_create(), not for its main thread; compiler TLS covers every
-     * thread. Needs CONFIG_THREAD_LOCAL_STORAGE, which zephyr/Kconfig
-     * selects.
-     */
-    #define PJ_THREAD_LOCAL_USE_COMPILER_TLS    1
-
     /*
      * PJSIP settings.
      */
@@ -522,8 +514,9 @@
     #define PJSIP_MAX_TSX_COUNT                 31
     #define PJSIP_MAX_DIALOG_COUNT              31
 
-    /* Zephyr has no SO_SNDBUF/SO_RCVBUF; its buffers are the net_buf pools
-     * sized in prj.conf. 0 skips setting them.
+    /* Zephyr's socket buffers are the net_buf pools sized in prj.conf, and
+     * SO_SNDBUF/SO_RCVBUF exist only with CONFIG_NET_CONTEXT_SNDBUF/RCVBUF.
+     * 0 skips setting them.
      */
     #define PJSIP_UDP_SO_SNDBUF_SIZE            0
     #define PJSIP_UDP_SO_RCVBUF_SIZE            0
