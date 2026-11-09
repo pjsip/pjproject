@@ -2031,10 +2031,16 @@ public:
     /**
      * Respond to the authentication challenge by building and sending
      * an authenticated request. Uses credentials currently configured
-     * on the auth session.
+     * on the auth session. A deferred REGISTER is not sent, and
+     * PJ_ECANCELLED is returned, if the account has sent or started
+     * another REGISTER since the challenge, or has dropped its
+     * registration and the deferred REGISTER is not an unregistration.
+     * The challenge is consumed whatever the result.
      *
-     * @return          PJ_SUCCESS on success, or PJ_EINVALIDOP if already
-     *                  consumed by a prior respond()/abandon()/defer() call.
+     * @return          PJ_SUCCESS on success, PJ_EINVALIDOP if already
+     *                  consumed by a prior respond()/abandon()/defer() call
+     *                  or if the account has been deleted, or the error of
+     *                  building or sending the request.
      */
     pj_status_t respond();
 
@@ -2045,13 +2051,16 @@ public:
      * affecting all subsequent authentication for the account.
      *
      * @param creds     Credentials to set on the auth session.
-     * @return          PJ_SUCCESS on success.
+     * @return          Same as respond(), or the error of setting the
+     *                  credentials.
      */
     pj_status_t respond(const AuthCredInfoVector &creds);
 
     /**
      * Abandon the authentication challenge. The pending request will
-     * not be resent.
+     * not be resent. Abandoning a deferred REGISTER that the account has
+     * superseded doesn't report a registration failure: the newer
+     * REGISTER reports the result.
      *
      * @return          PJ_SUCCESS on success, or PJ_EINVALIDOP if already
      *                  consumed by a prior respond()/abandon()/defer() call.
@@ -2440,6 +2449,11 @@ public:
      * only needs to call this function if it wants to manually update the
      * registration or to unregister from the server.
      *
+     * After an unregistration, the library doesn't register the account
+     * again by itself, e.g: on IP change or with an auto retry, until the
+     * application renews the registration or modifies the account so that
+     * it registers.
+     *
      * @param renew             If False, this will start unregistration
      *                          process.
      */
@@ -2585,7 +2599,8 @@ public:
     /**
      * Notify application when registration status has changed.
      * Application may then query the account info to get the
-     * registration details.
+     * registration details. The result of a REGISTER is not reported once
+     * the account has sent a newer one, which reports its own.
      *
      * @param prm           Callback parameter.
      */
