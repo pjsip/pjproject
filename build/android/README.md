@@ -59,8 +59,24 @@ cmake -B build-android ... -DOboe_ROOT=$PWD/oboe
 ```
 
 The AAR's Prefab layout is the same one `./aconfigure --with-oboe=<prefix>`
-expects, so a prefix that works for one works for the other. Without it the
-backend switches itself off and the build falls back to the JNI audio device.
+expects, so a prefix that works for one works for the other. Oboe found in
+CMake's default search paths is used too. If it is not found, or cannot be
+linked (e.g. it was built for another ABI), the backend switches itself off
+and the build falls back to the JNI audio device.
+
+`cmake/FindOboe.cmake` looks for `oboe/Oboe.h` and `liboboe` for the ABI being
+built in three layouts:
+
+| Layout | Header | Library |
+|---|---|---|
+| Unpacked AAR (Prefab) | `prefab/modules/oboe/include` | `prefab/modules/oboe/libs/android.<abi>` |
+| Oboe built and installed from source | `include` | `lib/<abi>` |
+| Plain prefix | `include` | `lib` |
+
+Instead of `Oboe_ROOT`, the prefix can come from `CMAKE_PREFIX_PATH`, or the
+files can be named directly with `-DOboe_INCLUDE_DIR=...` and
+`-DOboe_LIBRARY=...`. The NDK sysroot is not searched for Oboe, and the
+`oboeConfig.cmake` package that Gradle's Prefab support generates is not used.
 
 ### Other libraries
 
