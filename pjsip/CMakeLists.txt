@@ -293,6 +293,9 @@ target_sources(pjsua2
 
 )
 
+# the public headers use C++11
+target_compile_features(pjsua2 PUBLIC cxx_std_11)
+
 # dependencies
 target_link_libraries(pjsua2
   PUBLIC
