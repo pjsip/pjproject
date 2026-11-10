@@ -836,6 +836,11 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
 
     PJ_ASSERT_RETURN(cfg, PJ_EINVAL);
     PJ_ASSERT_RETURN(cfg->proxy_cnt <= PJSUA_ACC_MAX_PROXIES, PJ_EINVAL);
+    PJ_ASSERT_RETURN(cfg->transport_id == PJSUA_INVALID_ID ||
+                     (cfg->transport_id >= 0 &&
+                      cfg->transport_id <
+                          (int)PJ_ARRAY_SIZE(pjsua_var.tpdata)),
+                     PJ_EINVAL);
 
     if (pjsua_var.acc_cnt >= PJ_ARRAY_SIZE(pjsua_var.acc))
         return PJ_ETOOMANY;
@@ -1294,6 +1299,11 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
                      PJ_EINVAL);
     PJ_ASSERT_RETURN(cfg && cfg->proxy_cnt <= PJSUA_ACC_MAX_PROXIES,
+                     PJ_EINVAL);
+    PJ_ASSERT_RETURN(cfg->transport_id == PJSUA_INVALID_ID ||
+                     (cfg->transport_id >= 0 &&
+                      cfg->transport_id <
+                          (int)PJ_ARRAY_SIZE(pjsua_var.tpdata)),
                      PJ_EINVAL);
 
 #if !PJ_HAS_IPV6
@@ -5174,7 +5184,10 @@ PJ_DEF(pj_status_t) pjsua_acc_set_transport( pjsua_acc_id acc_id,
     PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
     acc = &pjsua_var.acc[acc_id];
 
-    PJ_ASSERT_RETURN(tp_id < (int)PJ_ARRAY_SIZE(pjsua_var.tpdata), PJ_EINVAL);
+    PJ_ASSERT_RETURN(tp_id == PJSUA_INVALID_ID ||
+                     (tp_id >= 0 &&
+                      tp_id < (int)PJ_ARRAY_SIZE(pjsua_var.tpdata)),
+                     PJ_EINVAL);
 
     if (acc->cfg.transport_id == tp_id)
         return PJ_SUCCESS;
