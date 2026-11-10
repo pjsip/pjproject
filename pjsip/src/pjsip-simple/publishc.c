@@ -947,9 +947,14 @@ static void tsx_callback(void *token, pjsip_event *event)
 
             if (pubc->auto_refresh && expires)
                 expiration = expires->ivalue;
-            
-            if (pubc->auto_refresh && expiration!=0 &&
-                expiration!=PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED)
+
+            if (expiration == 0) {
+                /* The publication is gone: a refresh re-armed by an
+                 * earlier response must not go out.
+                 */
+                pubc_cancel_timer(pubc);
+            } else if (pubc->auto_refresh &&
+                       expiration!=PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED)
             {
                 const pj_time_val min_delay = {MIN_REFRESH_MSEC / 1000,
                                                MIN_REFRESH_MSEC % 1000};
@@ -1106,8 +1111,8 @@ static pj_status_t pubc_send(pjsip_publishc *pubc, pjsip_tx_data *tdata)
          * queue behind those already queued.
          */
         pj_mutex_unlock(pubc->mutex);
-        call_callback(pubc, cb, status, 400, &reason, NULL,
-                      PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
+        call_callback(pubc, cb, status, PJSIP_SC_TSX_TRANSPORT_ERROR,
+                      &reason, NULL, PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
         pj_mutex_lock(pubc->mutex);
 
         --pubc->pending_tsx;

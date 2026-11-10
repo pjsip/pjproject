@@ -918,6 +918,11 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
     status = initialize_acc(id);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Error adding account", status);
+        /* The shared auth session's lock lives in acc->pool, if it got
+         * that far.
+         */
+        if (acc->shared_auth_sess.endpt)
+            pjsip_auth_clt_deinit(&acc->shared_auth_sess);
         pj_pool_release(acc->pool);
         acc->pool = NULL;
         PJSUA_UNLOCK();

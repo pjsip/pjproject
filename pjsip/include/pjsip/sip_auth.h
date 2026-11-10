@@ -467,6 +467,10 @@ typedef struct pjsip_auth_srv
  * session to use pool for its subsequent memory allocation. The argument 
  * options should be set to zero for this PJSIP version.
  *
+ * The session owns a lock created here and released by
+ * pjsip_auth_clt_deinit(), so a session must be deinitialized before it
+ * is initialized again.
+ *
  * @param sess          The client authentication session.
  * @param endpt         Endpoint where this session belongs.
  * @param pool          Pool to use.

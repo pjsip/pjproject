@@ -927,9 +927,13 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_deinit(pjsip_auth_clt_sess *sess)
     
     PJ_ASSERT_RETURN(sess && sess->endpt, PJ_EINVAL);
     
+    /* Released directly rather than through the endpoint, so that a
+     * session can be deinitialized after the endpoint has been destroyed
+     * (pjsua does this for the accounts' shared sessions).
+     */
     auth = sess->cached_auth.next;
     while (auth != &sess->cached_auth) {
-        pjsip_endpt_release_pool(sess->endpt, auth->pool);
+        pj_pool_release(auth->pool);
         auth = auth->next;
     }
 

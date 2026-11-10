@@ -356,7 +356,10 @@ PJ_DECL(pj_status_t) pjsip_publishc_update_expires(pjsip_publishc *pubc,
  *                  - PJ_EBUSY if request is rejected because another PUBLISH
  *                    request is in progress, or
  *                  - PJ_EGONE if the pubc has been destroyed, or
- *                  - other status code to indicate the error.
+ *                  - other status code to indicate the error. The
+ *                    callback has then already been called to report
+ *                    it, so the application must not handle the
+ *                    failure a second time.
  */
 PJ_DECL(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc, 
                                          pjsip_tx_data *tdata);
