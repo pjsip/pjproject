@@ -17,6 +17,45 @@ function(pj_package_roots package out)
   set(${out} "${_roots}" PARENT_SCOPE)
 endfunction()
 
+# pj_package_owns_var(<package> <variable> <out-var>)
+#
+# Whether cache entry <variable> is one of <package>'s: named <package>_...
+# in either case, and not one of a package whose name starts with
+# "<package>_" (WebRTC_AEC3_LIBRARY is not WebRTC's). The packages are those
+# with a Find module beside this one.
+function(pj_package_owns_var package variable out)
+  string(TOUPPER "${package}" _pkg)
+  string(TOUPPER "${variable}" _var)
+  string(FIND "${_var}" "${_pkg}_" _pos)
+  if(NOT _pos EQUAL 0 AND NOT _var STREQUAL _pkg)
+    set(${out} FALSE PARENT_SCOPE)
+    return()
+  endif()
+  get_property(_names GLOBAL PROPERTY _PJ_FIND_MODULE_NAMES)
+  if(NOT _names)
+    file(GLOB _modules "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../Find*.cmake")
+    foreach(_module IN LISTS _modules)
+      cmake_path(GET _module STEM _name)
+      string(REGEX REPLACE "^Find" "" _name "${_name}")
+      string(TOUPPER "${_name}" _name)
+      list(APPEND _names "${_name}")
+    endforeach()
+    set_property(GLOBAL PROPERTY _PJ_FIND_MODULE_NAMES "${_names}")
+  endif()
+  foreach(_other IN LISTS _names)
+    string(FIND "${_other}" "${_pkg}_" _pos)
+    if(NOT _pos EQUAL 0)
+      continue()
+    endif()
+    string(FIND "${_var}" "${_other}_" _pos)
+    if(_pos EQUAL 0 OR _var STREQUAL _other)
+      set(${out} FALSE PARENT_SCOPE)
+      return()
+    endif()
+  endforeach()
+  set(${out} TRUE PARENT_SCOPE)
+endfunction()
+
 # pj_package_root_given(<package> <out-var>)
 #
 # TRUE when a root is given for <package>, i.e. the user named where
