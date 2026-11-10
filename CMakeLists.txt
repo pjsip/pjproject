@@ -697,9 +697,15 @@ set(PJ_CMAKE_CONFIG_FILE         "PjConfig.cmake")
 set(PJ_CMAKE_CONFIG_VERSION_FILE "PjConfigVersion.cmake")
 
 # Whether the bundled srtp links OpenSSL, set by it only. Once a cache entry,
-# which outlived a switch to the system srtp.
+# which outlived a switch to the system srtp. Only when pjmedia links srtp at
+# all: with PJMEDIA_WITH_SRTP off it is neither linked nor installed.
 unset(PJ_SRTP_WITH_OPENSSL CACHE)
 get_property(PJ_SRTP_WITH_OPENSSL GLOBAL PROPERTY PJ_SRTP_WITH_OPENSSL)
+get_property(_pj_used_deps GLOBAL PROPERTY PJ_USED_DEPS)
+if(NOT "SRTP" IN_LIST _pj_used_deps)
+  set(PJ_SRTP_WITH_OPENSSL OFF)
+endif()
+unset(_pj_used_deps)
 
 # install exports
 install(
