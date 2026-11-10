@@ -965,19 +965,22 @@ pj_generate_pkgconfig(
 )
 
 # ##############################################################################
-# Convenience targets, as make's
+# Convenience targets, as make's. Only in a build of pjproject itself: inside
+# another project (add_subdirectory(), FetchContent) these global names could
+# clash with the parent's own, and its install manifest is the parent's.
+if(pjproject_IS_TOP_LEVEL)
+  # lib: the libraries only, without the applications and tests
+  add_custom_target(lib DEPENDS ${_pj_pc_libs})
 
-# lib: the libraries only, without the applications and tests
-add_custom_target(lib DEPENDS ${_pj_pc_libs})
+  # uninstall: remove what `cmake --install` installed
+  add_custom_target(uninstall
+    COMMAND "${CMAKE_COMMAND}"
+      "-DPJ_INSTALL_MANIFEST=${CMAKE_CURRENT_BINARY_DIR}/install_manifest.txt"
+      -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/Uninstall.cmake"
+    VERBATIM
+  )
+endif()
 unset(_pj_pc_libs)
-
-# uninstall: remove what `cmake --install` installed
-add_custom_target(uninstall
-  COMMAND "${CMAKE_COMMAND}"
-    "-DPJ_INSTALL_MANIFEST=${CMAKE_CURRENT_BINARY_DIR}/install_manifest.txt"
-    -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/Uninstall.cmake"
-  VERBATIM
-)
 
 # A <Pkg>_ROOT is searched first, not only: point out what came from elsewhere
 include(Pj/PackageRoot)
