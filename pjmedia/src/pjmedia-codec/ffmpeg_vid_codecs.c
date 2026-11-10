@@ -1488,7 +1488,12 @@ static pj_status_t ffmpeg_codec_open( pjmedia_vid_codec *codec,
         ff->enc_buf = pj_pool_alloc(ff->pool, ff->enc_buf_size);
 
         ff->dec_buf_size = PJ_MAX((unsigned)ff->dec_vafp.framebytes, ff->dec_buf_size);
-        ff->dec_buf = pj_pool_alloc(ff->pool, ff->dec_buf_size);
+        /* Over-allocate by the ffmpeg input padding, as decoding zeroes that
+         * many bytes past the reassembled bitstream (which may reach exactly
+         * dec_buf_size).
+         */
+        ff->dec_buf = pj_pool_alloc(ff->pool, ff->dec_buf_size +
+                                              AV_INPUT_BUFFER_PADDING_SIZE);
     }
 
     /* Update codec attributes, e.g: encoding format may be changed by
@@ -1837,7 +1842,11 @@ static pj_status_t check_decode_result(pjmedia_vid_codec *codec,
                        (unsigned)ff->dec_buf_size,
                        (unsigned)ff->dec_vafp.framebytes));
             ff->dec_buf_size = (unsigned)ff->dec_vafp.framebytes;
-            ff->dec_buf = pj_pool_alloc(ff->pool, ff->dec_buf_size);
+            /* Over-allocate by the ffmpeg input padding, see the comment at
+             * the initial dec_buf allocation.
+             */
+            ff->dec_buf = pj_pool_alloc(ff->pool, ff->dec_buf_size +
+                                                  AV_INPUT_BUFFER_PADDING_SIZE);
         }
 
         /* Broadcast format changed event */
