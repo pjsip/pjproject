@@ -13,13 +13,7 @@ if(_pj_doc MATCHES "\\(not found\\)$")
 endif()
 unset(_pj_doc)
 option(PJNATH_WITH_UPNP "Enable UPnP support" ON)
-pj_retry_on_new_root(PJNATH_WITH_UPNP UPNP)
-if(PJNATH_WITH_UPNP)
-  find_package(UPNP)
-  if(NOT UPNP_FOUND)
-    pj_force_set(PJNATH_WITH_UPNP OFF "UPnP not found")
-  endif()
-endif()
+pj_find_optional(PJNATH_WITH_UPNP OFF UPNP)
 
 # ##############################################################################
 # Target

@@ -92,7 +92,12 @@ function(_ffmpeg_find_component component)
     list(APPEND _ffmpeg_check_libs "FFMPEG::${dep}")
   endforeach()
   include(Pj/CheckLibraryUsable)
-  pj_check_library_usable(FFMPEG_${component}
+  if(FFMPEG_FIND_QUIETLY)
+    set(_ffmpeg_quiet QUIET)
+  else()
+    set(_ffmpeg_quiet "")
+  endif()
+  pj_check_library_usable(FFMPEG_${component} ${_ffmpeg_quiet}
     FUNCTION ${component}_version
     LIBRARIES ${_ffmpeg_check_libs}
   )

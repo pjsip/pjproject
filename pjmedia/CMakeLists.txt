@@ -6,20 +6,6 @@ list(APPEND CMAKE_MESSAGE_CONTEXT "pjmedia")
 include(Pj/Option)
 include(CMakeDependentOption)
 
-macro(import_if_or_set opt failure_value package)
-  pj_retry_on_new_root(${opt} ${package})
-  if(${opt})
-    message(CHECK_START "Checking if ${package} is available")
-    find_package(${package} ${ARGN})
-    if(NOT ${package}_FOUND)
-      message(CHECK_FAIL "no")
-      pj_force_set(${opt} ${failure_value} "${package} was not found")
-    else()
-      message(CHECK_PASS "yes")
-    endif()
-  endif()
-endmacro()
-
 #
 # General features
 #
@@ -85,7 +71,7 @@ cmake_dependent_option(PJMEDIA_WITH_SPEEX_AEC
 if(PJMEDIA_WITH_SPEEX_AEC)
   get_target_property(_pj_speex_provider Pj::Dep::Speex PJ_DEP_PROVIDER)
   if(_pj_speex_provider STREQUAL "system")
-    import_if_or_set(PJMEDIA_WITH_SPEEX_AEC OFF SpeexDSP)
+    pj_find_optional(PJMEDIA_WITH_SPEEX_AEC OFF SpeexDSP)
     set(_pj_speex_aec_needs_speexdsp ${PJMEDIA_WITH_SPEEX_AEC})
   endif()
   unset(_pj_speex_provider)
@@ -137,7 +123,7 @@ cmake_dependent_option(PJMEDIA_WITH_FFMPEG
 set(ffmpeg_libs_required avutil)
 set(ffmpeg_libs_optional swscale avcodec avformat avdevice)
 
-import_if_or_set(PJMEDIA_WITH_FFMPEG OFF
+pj_find_optional(PJMEDIA_WITH_FFMPEG OFF
   FFMPEG
     COMPONENTS ${ffmpeg_libs_required}
     OPTIONAL_COMPONENTS ${ffmpeg_libs_optional}
@@ -225,67 +211,67 @@ endblock()
 
 # OpenCore AMR-NB Codecs
 option(PJMEDIA_WITH_OPENCORE_AMRNB_CODEC "Enable OpenCore AMR-NB codec" ON)
-import_if_or_set(PJMEDIA_WITH_OPENCORE_AMRNB_CODEC OFF OpenCoreAMRNB)
+pj_find_optional(PJMEDIA_WITH_OPENCORE_AMRNB_CODEC OFF OpenCoreAMRNB)
 
 # OpenCore AMR-WB Codecs
 option(PJMEDIA_WITH_OPENCORE_AMRWB_CODEC "Enable OpenCore AMR-WB codec" ON)
 # Re-enabling the option must also re-import OpenCoreAMRWB
 pj_retry_on_new_root(PJMEDIA_WITH_OPENCORE_AMRWB_CODEC VisualOnAMRWBEnc)
-import_if_or_set(PJMEDIA_WITH_OPENCORE_AMRWB_CODEC OFF OpenCoreAMRWB)
-import_if_or_set(PJMEDIA_WITH_OPENCORE_AMRWB_CODEC OFF VisualOnAMRWBEnc)
+pj_find_optional(PJMEDIA_WITH_OPENCORE_AMRWB_CODEC OFF OpenCoreAMRWB)
+pj_find_optional(PJMEDIA_WITH_OPENCORE_AMRWB_CODEC OFF VisualOnAMRWBEnc)
 
 # Silk codec
 option(PJMEDIA_WITH_SILK_CODEC "Enable Skype Silk" ON)
-import_if_or_set(PJMEDIA_WITH_SILK_CODEC OFF Silk)
+pj_find_optional(PJMEDIA_WITH_SILK_CODEC OFF Silk)
 
 # OPUS codec
 option(PJMEDIA_WITH_OPUS_CODEC "Enable OPUS codec" ON)
-import_if_or_set(PJMEDIA_WITH_OPUS_CODEC OFF OPUS)
+pj_find_optional(PJMEDIA_WITH_OPUS_CODEC OFF OPUS)
 
 # BCG729 codec
 option(PJMEDIA_WITH_BCG729_CODEC "Enable BCG729 codec" ON)
-import_if_or_set(PJMEDIA_WITH_BCG729_CODEC OFF BCG729)
+pj_find_optional(PJMEDIA_WITH_BCG729_CODEC OFF BCG729)
 
 # Intel IPP codecs, as autoconf --enable-ipp: this only links IPP and its
 # speech codec samples, the codecs are enabled with PJMEDIA_HAS_INTEL_IPP in
 # config_site.h. See cmake/FindIPP.cmake for where to point the build.
 option(PJMEDIA_WITH_INTEL_IPP "Link the Intel IPP codec libraries" OFF)
-import_if_or_set(PJMEDIA_WITH_INTEL_IPP OFF IPP)
+pj_find_optional(PJMEDIA_WITH_INTEL_IPP OFF IPP)
 
 # Lyra codec
 cmake_dependent_option(PJMEDIA_WITH_LYRA_CODEC
   "Enable Lyra codec" ON
   "PJ_WITH_CXX" OFF
 )
-import_if_or_set(PJMEDIA_WITH_LYRA_CODEC OFF Lyra)
+pj_find_optional(PJMEDIA_WITH_LYRA_CODEC OFF Lyra)
 
 # Android MediaCodec codecs
 cmake_dependent_option(PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC
   "Enable Android MediaCodec codecs" ON
   "ANDROID;PJ_WITH_CXX" OFF
 )
-import_if_or_set(PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC OFF MediaNDK)
+pj_find_optional(PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC OFF MediaNDK)
 
 # Google VP8/VP9 codecs
 cmake_dependent_option(PJMEDIA_WITH_VPX_CODEC
   "Enable VPX codecs support" ON
   "PJMEDIA_WITH_VIDEO" OFF
 )
-import_if_or_set(PJMEDIA_WITH_VPX_CODEC OFF VPX)
+pj_find_optional(PJMEDIA_WITH_VPX_CODEC OFF VPX)
 
 # VideoToolbox H.264 codec
 cmake_dependent_option(PJMEDIA_WITH_VID_TOOLBOX_CODEC
   "Enable VideoToolbox H.264 codec" ON
   "PJMEDIA_WITH_VIDEO;APPLE" OFF
 )
-import_if_or_set(PJMEDIA_WITH_VID_TOOLBOX_CODEC OFF VideoToolbox)
+pj_find_optional(PJMEDIA_WITH_VID_TOOLBOX_CODEC OFF VideoToolbox)
 
 # OpenH264 codecs
 cmake_dependent_option(PJMEDIA_WITH_OPEN_H264_CODEC
   "Enable OpenH264 codecs support" ON
   "PJMEDIA_WITH_VIDEO;PJ_WITH_CXX" OFF
 )
-import_if_or_set(PJMEDIA_WITH_OPEN_H264_CODEC OFF OpenH264)
+pj_find_optional(PJMEDIA_WITH_OPEN_H264_CODEC OFF OpenH264)
 
 #
 # Audio device
@@ -317,14 +303,14 @@ cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_OBOE
   "Enable OBOE audio device backend" ON
   "PJMEDIA_WITH_AUDIODEV;ANDROID;PJ_WITH_CXX" OFF
 )
-import_if_or_set(PJMEDIA_WITH_AUDIODEV_OBOE OFF Oboe)
+pj_find_optional(PJMEDIA_WITH_AUDIODEV_OBOE OFF Oboe)
 
 # macOS/iOS CoreAudio backend
 cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_COREAUDIO
   "Enable CoreAudio audio device backend" ON
   "PJMEDIA_WITH_AUDIODEV;APPLE" OFF
 )
-import_if_or_set(PJMEDIA_WITH_AUDIODEV_COREAUDIO OFF CoreAudio)
+pj_find_optional(PJMEDIA_WITH_AUDIODEV_COREAUDIO OFF CoreAudio)
 
 # Advanced Linux Sound Architecture (ALSA) backend, looked for on any Unix
 # without a native backend, as autoconf
@@ -332,7 +318,7 @@ cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_ALSA
   "Enable ALSA audio device backend" ON
   "PJMEDIA_WITH_AUDIODEV;UNIX;NOT APPLE;NOT ANDROID;NOT CYGWIN" OFF
 )
-import_if_or_set(PJMEDIA_WITH_AUDIODEV_ALSA OFF ALSA)
+pj_find_optional(PJMEDIA_WITH_AUDIODEV_ALSA OFF ALSA)
 
 # Windows MultiMedia Extensions (WMME) backend
 cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_WMME
@@ -355,14 +341,14 @@ cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_WASAPI
   "Enable WASAPI audio device backend" OFF
   "PJMEDIA_WITH_AUDIODEV;WIN32 OR CYGWIN OR MINGW;PJ_WITH_CXX" OFF
 )
-import_if_or_set(PJMEDIA_WITH_AUDIODEV_WASAPI OFF WASAPI)
+pj_find_optional(PJMEDIA_WITH_AUDIODEV_WASAPI OFF WASAPI)
 
 # PortAudio backend, opt-in as autoconf --with-external-pa
 cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_PORTAUDIO
   "Enable PortAudio audio device backend" OFF
   "PJMEDIA_WITH_AUDIODEV" OFF
 )
-import_if_or_set(PJMEDIA_WITH_AUDIODEV_PORTAUDIO OFF PortAudio)
+pj_find_optional(PJMEDIA_WITH_AUDIODEV_PORTAUDIO OFF PortAudio)
 
 #
 # Video device
@@ -396,10 +382,10 @@ cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_OPENGL
 # visible outside this directory.
 if(IOS OR ANDROID)
   set(PJ_OPENGL_PACKAGE OpenGLES CACHE INTERNAL "OpenGL package to find")
-  import_if_or_set(PJMEDIA_WITH_VIDEODEV_OPENGL OFF OpenGLES)
+  pj_find_optional(PJMEDIA_WITH_VIDEODEV_OPENGL OFF OpenGLES)
 else()
   set(PJ_OPENGL_PACKAGE OpenGL CACHE INTERNAL "OpenGL package to find")
-  import_if_or_set(PJMEDIA_WITH_VIDEODEV_OPENGL OFF OpenGL COMPONENTS GLES2)
+  pj_find_optional(PJMEDIA_WITH_VIDEODEV_OPENGL OFF OpenGL COMPONENTS GLES2)
 endif()
 
 if(PJ_OPENGL_PACKAGE STREQUAL OpenGLES)
@@ -425,12 +411,12 @@ cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_SDL
   "Enable SDL video device backend" ON
   "PJMEDIA_WITH_VIDEODEV" OFF
 )
-import_if_or_set(PJMEDIA_WITH_VIDEODEV_SDL OFF SDL2 QUIET)
+pj_find_optional(PJMEDIA_WITH_VIDEODEV_SDL OFF SDL2 QUIET)
 # SDL's own package does no link test; reject a library built for another
 # target, e.g. the host's in a cross build
 if(PJMEDIA_WITH_VIDEODEV_SDL)
   include(Pj/CheckLibraryUsable)
-  pj_check_library_usable(SDL2
+  pj_check_library_usable(SDL2 ${PJ_FIND_QUIET}
     LIBRARIES SDL2::SDL2
     CODE [=[
       #define SDL_MAIN_HANDLED
@@ -448,14 +434,14 @@ cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_DARWIN
   "Enable AVFoundation video capture backend" ON
   "PJMEDIA_WITH_VIDEODEV;APPLE" OFF
 )
-import_if_or_set(PJMEDIA_WITH_VIDEODEV_DARWIN OFF AVFoundation)
+pj_find_optional(PJMEDIA_WITH_VIDEODEV_DARWIN OFF AVFoundation)
 
 # Metal backend, used whenever the frameworks are found, as autoconf
 cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_METAL
   "Enable Metal video device backend" ON
   "PJMEDIA_WITH_VIDEODEV;APPLE" OFF
 )
-import_if_or_set(PJMEDIA_WITH_VIDEODEV_METAL OFF Metal)
+pj_find_optional(PJMEDIA_WITH_VIDEODEV_METAL OFF Metal)
 
 # QT backend
 cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_QT
@@ -468,7 +454,7 @@ cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_V4L2
   "Enable V4L2 video device backend" ON
   "PJMEDIA_WITH_VIDEODEV;UNIX;NOT APPLE;NOT ANDROID" OFF
 )
-import_if_or_set(PJMEDIA_WITH_VIDEODEV_V4L2 OFF V4L2)
+pj_find_optional(PJMEDIA_WITH_VIDEODEV_V4L2 OFF V4L2)
 
 # DirectShow backend, the Windows camera capture: on by default on Windows, as
 # autoconf does for MinGW with video
@@ -988,7 +974,7 @@ target_include_directories(pjmedia-codec BEFORE
 #
 
 if(APPLE AND PJMEDIA_WITH_ILBC_CODEC)
-  find_package(AudioToolbox)
+  pj_find_package(AudioToolbox)
 endif()
 
 target_link_libraries(pjmedia-codec

@@ -118,3 +118,41 @@ function(pj_retry_on_new_root option package)
     message(STATUS "${package} root changed, retrying ${option}")
   endif()
 endfunction()
+
+
+# pj_find_package(<package> [<find_package args>...])
+#
+# find_package() for a library that has no option of its own, printing one
+# "Checking if <package> is available - yes/no" line. What the search tried
+# and found shows with --log-level=VERBOSE (PJ_FIND_QUIET).
+macro(pj_find_package package)
+  message(VERBOSE "Checking if ${package} is available")
+  find_package(${package} ${PJ_FIND_QUIET} ${ARGN})
+  if(${package}_FOUND)
+    message(STATUS "Checking if ${package} is available - yes")
+  else()
+    message(STATUS "Checking if ${package} is available - no")
+  endif()
+endmacro()
+
+
+# pj_find_optional(<option> <failure_value> <package> [<find_package args>...])
+#
+# When <option> is on, look for <package> and print one "Checking if <package>
+# is available - yes/no" line naming <option>. When it is not found, set
+# <option> to <failure_value>, shown on the same line. What the search tried
+# and found shows with --log-level=VERBOSE (PJ_FIND_QUIET).
+macro(pj_find_optional opt failure_value package)
+  pj_retry_on_new_root(${opt} ${package})
+  if(${opt})
+    message(VERBOSE "Checking if ${package} is available")
+    find_package(${package} ${PJ_FIND_QUIET} ${ARGN})
+    if(${package}_FOUND)
+      message(STATUS "Checking if ${package} is available - yes (${opt})")
+    else()
+      message(STATUS
+        "Checking if ${package} is available - no (${opt} ${failure_value})")
+      pj_force_set(${opt} ${failure_value})
+    endif()
+  endif()
+endmacro()

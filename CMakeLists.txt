@@ -32,6 +32,17 @@ project(pjproject
   LANGUAGES C
 )
 
+# By default each optional library prints one line, "Checking if <X> is
+# available - yes/no". --log-level=VERBOSE (or CMAKE_MESSAGE_LOG_LEVEL) adds
+# what each search found and its link test.
+cmake_language(GET_MESSAGE_LOG_LEVEL _pj_log_level)
+if(_pj_log_level MATCHES "^(VERBOSE|DEBUG|TRACE)$")
+  set(PJ_FIND_QUIET "")
+else()
+  set(PJ_FIND_QUIET QUIET)
+endif()
+unset(_pj_log_level)
+
 # The libraries mark nothing for export, which GNU ld's automatic export
 # covers for MinGW but MSVC has no equivalent of: its DLLs would export
 # nothing and get no import library. No pjproject build makes MSVC DLLs of

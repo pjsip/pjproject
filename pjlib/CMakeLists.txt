@@ -286,7 +286,7 @@ if(APPLE)
   # Through an imported target rather than the paths find_library() returns:
   # those carry the SDK version of the machine that built the package, so an
   # installed Pj would not relocate to another Xcode.
-  find_package(AppleFoundation)
+  pj_find_package(AppleFoundation)
   if(AppleFoundation_FOUND)
     target_link_libraries(pjlib PUBLIC AppleFoundation::AppleFoundation)
   endif()
@@ -315,7 +315,7 @@ endif()
 
 # threading library
 if(PJLIB_WITH_THREADS)
-  find_package(Threads)
+  pj_find_package(Threads)
   if(Threads_FOUND)
     target_link_libraries(pjlib PRIVATE Threads::Threads)
   endif()
@@ -358,12 +358,11 @@ endif()
 # uuid
 pj_retry_on_new_root(PJLIB_WITH_LIBUUID UUID)
 if(PJLIB_WITH_LIBUUID)
-  find_package(UUID)
-  if(UUID_FOUND)
+  pj_find_optional(PJLIB_WITH_LIBUUID OFF UUID)
+  if(PJLIB_WITH_LIBUUID)
     target_link_libraries(pjlib PRIVATE UUID::UUID)
     target_sources(pjlib PRIVATE src/pj/guid_uuid.c)
   else()
-    pj_force_set(PJLIB_WITH_LIBUUID OFF "libuuid not found")
     target_sources(pjlib PRIVATE src/pj/guid_simple.c)
   endif()
 endif()
@@ -375,7 +374,7 @@ add_library(pjlib-ssl INTERFACE) # a target to expose SSL deps
 # linked, e.g. built for another architecture, as autoconf's AC_CHECK_LIB does
 function(_pj_check_openssl_usable)
   include(Pj/CheckLibraryUsable)
-  pj_check_library_usable(OpenSSL
+  pj_check_library_usable(OpenSSL ${PJ_FIND_QUIET}
     CODE [=[
       #include <openssl/err.h>
       #include <openssl/ssl.h>
@@ -388,7 +387,7 @@ endfunction()
 
 function(_pj_check_gnutls_usable)
   include(Pj/CheckLibraryUsable)
-  pj_check_library_usable(GnuTLS
+  pj_check_library_usable(GnuTLS ${PJ_FIND_QUIET}
     CODE [=[
       #include <gnutls/gnutls.h>
       int main(void) { gnutls_global_deinit(); return 0; }
@@ -411,7 +410,7 @@ endfunction()
 function(_pj_check_mbedtls_usable)
   include(Pj/CheckLibraryUsable)
   _pj_mbedtls_libraries(_libs)
-  pj_check_library_usable(MbedTLS
+  pj_check_library_usable(MbedTLS ${PJ_FIND_QUIET}
     CODE [=[
       #include <mbedtls/ssl.h>
       int main(void) {
@@ -470,9 +469,9 @@ elseif(_pj_ssl STREQUAL "auto")
   endif()
 endif()
 if(_pj_ssl STREQUAL "openssl")
-  find_package(OpenSSL COMPONENTS Crypto SSL MODULE)
+  find_package(OpenSSL COMPONENTS Crypto SSL MODULE ${PJ_FIND_QUIET})
   if(NOT OPENSSL_FOUND)
-    find_package(OpenSSL COMPONENTS Crypto SSL CONFIG)
+    find_package(OpenSSL COMPONENTS Crypto SSL CONFIG ${PJ_FIND_QUIET})
   endif()
   if(OPENSSL_FOUND)
     _pj_check_openssl_usable()

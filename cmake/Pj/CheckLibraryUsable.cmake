@@ -3,7 +3,7 @@ include_guard(GLOBAL)
 include(CheckSourceCompiles)
 include(CMakePushCheckState)
 
-# pj_check_library_usable(<package>
+# pj_check_library_usable(<package> [QUIET]
 #   <CODE <source> | FUNCTION <name>>
 #   [LANGUAGE <C|CXX>]
 #   [INCLUDE_DIRS <dir>...]
@@ -19,9 +19,10 @@ include(CMakePushCheckState)
 # find_package_handle_standard_args() as a REQUIRED_VARS entry. The check is
 # re-run whenever its inputs change. If LANGUAGE (default C) is not enabled in
 # the calling project, the check is skipped and the library assumed usable.
+# The check prints nothing with QUIET or when <package> was searched QUIET.
 function(pj_check_library_usable package)
   cmake_parse_arguments(PARSE_ARGV 1 arg
-    "" "CODE;FUNCTION;LANGUAGE" "INCLUDE_DIRS;LIBRARIES;DEFINITIONS")
+    "QUIET" "CODE;FUNCTION;LANGUAGE" "INCLUDE_DIRS;LIBRARIES;DEFINITIONS")
   if(arg_FUNCTION AND NOT arg_CODE)
     set(arg_CODE "
 #ifdef __cplusplus
@@ -50,11 +51,16 @@ int main(void) { return ${arg_FUNCTION}(); }
     set(_PJ_${package}_USABLE_INPUTS "${_inputs}" CACHE INTERNAL "")
   endif()
 
+  if(arg_QUIET OR ${package}_FIND_QUIETLY)
+    set(_quiet TRUE)
+  else()
+    set(_quiet FALSE)
+  endif()
   cmake_push_check_state(RESET)
     set(CMAKE_REQUIRED_INCLUDES ${arg_INCLUDE_DIRS})
     set(CMAKE_REQUIRED_LIBRARIES ${arg_LIBRARIES})
     set(CMAKE_REQUIRED_DEFINITIONS ${arg_DEFINITIONS})
-    set(CMAKE_REQUIRED_QUIET ${${package}_FIND_QUIETLY})
+    set(CMAKE_REQUIRED_QUIET ${_quiet})
     check_source_compiles(${arg_LANGUAGE} "${arg_CODE}" ${package}_USABLE)
   cmake_pop_check_state()
 endfunction()
