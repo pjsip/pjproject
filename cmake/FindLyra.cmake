@@ -75,6 +75,7 @@ if(Lyra_INCLUDE_DIR AND Lyra_LIBRARY AND Lyra_ABSL_INCLUDE_DIR
     if(APPLE)
       list(APPEND _lyra_check_libs "-framework CoreFoundation")
     elseif(UNIX)
+      find_package(Threads QUIET)
       list(APPEND _lyra_check_libs m ${CMAKE_DL_LIBS})
       if(TARGET Threads::Threads)
         list(APPEND _lyra_check_libs Threads::Threads)
