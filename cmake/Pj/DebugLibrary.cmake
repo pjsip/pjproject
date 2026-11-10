@@ -8,11 +8,17 @@ include_guard(GLOBAL)
 # cache entry holding the library the imported <target> links. Look for its
 # Debug build where vcpkg puts it, <prefix>/debug/lib under the same name, or
 # beside it with a "d" suffix, and import it for the Debug configuration. The
-# result is cached as <variable>_DEBUG, which can also be set by hand. Only on
-# MSVC; elsewhere the one library serves every configuration.
+# result is cached as <variable>_DEBUG, which can also be set by hand, and is
+# looked for again when <variable> changes unless it was. Only on MSVC;
+# elsewhere the one library serves every configuration.
 function(pj_import_debug_library target variable)
   if(NOT MSVC OR NOT ${variable})
     return()
+  endif()
+  if(DEFINED CACHE{_PJ_${variable}_DEBUG_FOR}
+     AND NOT "$CACHE{_PJ_${variable}_DEBUG_FOR}" STREQUAL "${${variable}}"
+     AND "${${variable}_DEBUG}" STREQUAL "$CACHE{_PJ_${variable}_DEBUG_FOUND}")
+    unset(${variable}_DEBUG CACHE)
   endif()
   if(NOT ${variable}_DEBUG)
     cmake_path(GET ${variable} PARENT_PATH dir)
@@ -29,6 +35,9 @@ function(pj_import_debug_library target variable)
     set(${variable}_DEBUG "${found}" CACHE FILEPATH
       "Debug build of ${variable}" FORCE)
     mark_as_advanced(${variable}_DEBUG)
+    # what it was derived from and found, to tell a hand-set value apart
+    set(_PJ_${variable}_DEBUG_FOR "${${variable}}" CACHE INTERNAL "")
+    set(_PJ_${variable}_DEBUG_FOUND "${found}" CACHE INTERNAL "")
   endif()
   if(${variable}_DEBUG)
     set_target_properties(${target} PROPERTIES
