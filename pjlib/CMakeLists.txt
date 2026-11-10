@@ -232,7 +232,9 @@ if(APPLE)
   )
 endif()
 
-# UUID
+# UUID: the system's own, else libuuid, else a simple generator. libuuid is
+# looked for before choosing, as a new UUID_ROOT can turn it back on.
+pj_find_optional(PJLIB_WITH_LIBUUID OFF UUID)
 if(ANDROID)
   target_sources(pjlib PRIVATE src/pj/guid_android.c)
 elseif(APPLE)
@@ -241,7 +243,10 @@ elseif(BSD)
   target_sources(pjlib PRIVATE src/pj/guid_bsd.c)
 elseif(WIN32 OR CYGWIN OR MINGW)
   target_sources(pjlib PRIVATE src/pj/file_access_win32.c)
-elseif(NOT PJLIB_WITH_LIBUUID)
+elseif(PJLIB_WITH_LIBUUID)
+  target_link_libraries(pjlib PRIVATE UUID::UUID)
+  target_sources(pjlib PRIVATE src/pj/guid_uuid.c)
+else()
   target_sources(pjlib PRIVATE src/pj/guid_simple.c)
 endif()
 
@@ -352,18 +357,6 @@ if(UNIX)
     if(PJ_LIBRT_HAS_CLOCK_GETTIME)
       target_link_libraries(pjlib PUBLIC rt)
     endif()
-  endif()
-endif()
-
-# uuid
-pj_retry_on_new_root(PJLIB_WITH_LIBUUID UUID)
-if(PJLIB_WITH_LIBUUID)
-  pj_find_optional(PJLIB_WITH_LIBUUID OFF UUID)
-  if(PJLIB_WITH_LIBUUID)
-    target_link_libraries(pjlib PRIVATE UUID::UUID)
-    target_sources(pjlib PRIVATE src/pj/guid_uuid.c)
-  else()
-    target_sources(pjlib PRIVATE src/pj/guid_simple.c)
   endif()
 endif()
 
