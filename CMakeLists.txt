@@ -46,13 +46,22 @@ unset(_pj_log_level)
 # The libraries mark nothing for export, which GNU ld's automatic export
 # covers for MinGW but MSVC has no equivalent of: its DLLs would export
 # nothing and get no import library. No pjproject build makes MSVC DLLs of
-# them; the SWIG bindings link them statically into one DLL instead.
+# them; the SWIG bindings link them statically into one DLL instead. Inside
+# another project, whose own libraries may well be shared, build pjproject's
+# static rather than stop.
 if(MSVC AND BUILD_SHARED_LIBS)
-  message(FATAL_ERROR
-    "BUILD_SHARED_LIBS=ON is not supported with MSVC: the pjproject libraries "
-    "export no symbols. Build them static (the default), or use the SWIG "
-    "bindings (PJ_BUILD_SWIG_CSHARP, PJ_BUILD_SWIG_JAVA, PJ_BUILD_SWIG_PYTHON) "
-    "for a single DLL.")
+  if(NOT pjproject_IS_TOP_LEVEL)
+    set(BUILD_SHARED_LIBS OFF)
+    message(STATUS
+      "[!] MSVC: pjproject's libraries are built static; they export no "
+      "symbols for a DLL")
+  else()
+    message(FATAL_ERROR
+      "BUILD_SHARED_LIBS=ON is not supported with MSVC: the pjproject "
+      "libraries export no symbols. Build them static (the default), or use "
+      "the SWIG bindings (PJ_BUILD_SWIG_CSHARP, PJ_BUILD_SWIG_JAVA, "
+      "PJ_BUILD_SWIG_PYTHON) for a single DLL.")
+  endif()
 endif()
 
 # Configure-check results and found library paths are cached per build folder
