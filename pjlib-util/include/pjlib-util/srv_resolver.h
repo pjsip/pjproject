@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -182,7 +182,9 @@ typedef void pj_dns_srv_resolver_cb(void *user_data,
  *                      notification when the resolution process completes.
  * @param p_query       Optional pointer to receive the query object, if one
  *                      was started. If this pointer is specified, a NULL will
- *                      be returned if response cache is available immediately.
+ *                      be returned if the resolution has completed
+ *                      synchronously in this function, e.g. when all the
+ *                      responses are available in the cache.
  *
  * @return              PJ_SUCCESS on success, or the appropriate error code.
  */

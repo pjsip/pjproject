@@ -6029,6 +6029,213 @@ on_return:
 #endif  /* PJ_HAS_IPV6 && PJ_HAS_THREADS */
 
 
+////////////////////////////////////////////////////////////////////////////
+/* Cancelling a resolution whose SRV query is answered from the cache */
+#define DOMAIN4     "srvcached.test"
+#define TARGET4     "target.srvcached.test"
+
+static pj_sem_t *hold_sem;
+static volatile pj_bool_t hold_armed;
+static volatile int hold_passed;
+static int srv_cached_cb_count;
+
+/* Answers the DNS A query, the first one only once the test lets it */
+static void action4_hold(const pj_dns_parsed_packet *pkt,
+                         pj_dns_parsed_packet **p_res)
+{
+    pj_dns_parsed_packet *res;
+
+    if (hold_armed) {
+        hold_armed = PJ_FALSE;
+        pj_sem_wait(hold_sem);
+        hold_passed++;
+    }
+
+    lock();
+    res = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_packet);
+    res->q = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_query);
+    res->ans = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_rr);
+    unlock();
+
+    res->hdr.flags = PJ_DNS_SET_QR(1);
+    res->hdr.qdcount = 1;
+    res->q->type = pkt->q[0].type;
+    res->q->dnsclass = pkt->q[0].dnsclass;
+    res->q->name = pkt->q[0].name;
+    res->hdr.anscount = 1;
+    res->ans->name = pkt->q[0].name;
+    res->ans->type = PJ_DNS_TYPE_A;
+    res->ans->dnsclass = 1;
+    res->ans->ttl = 60;
+    res->ans->rdata.a.ip_addr.s_addr = IP_ADDR4;
+
+    *p_res = res;
+}
+
+static void srv_cached_cb(void *user_data, pj_status_t status,
+                          const pj_dns_srv_record *rec)
+{
+    PJ_UNUSED_ARG(user_data);
+    PJ_UNUSED_ARG(status);
+    PJ_UNUSED_ARG(rec);
+
+    srv_cached_cb_count++;
+}
+
+/* Starts the resolution while the server holds the DNS A query, cancels it
+ * and lets the answer through. The answer is cached after the callback.
+ */
+static int srv_cancel_held(pj_dns_resolver *res, const pj_str_t *domain,
+                           unsigned cached)
+{
+    pj_str_t res_name = pj_str("_stun._udp.");
+    pj_dns_srv_async_query *srv_q = NULL;
+    unsigned i, sent;
+    int rc = 0;
+
+    hold_armed = PJ_TRUE;
+    sent = g_server[0].pkt_count;
+    PJ_TEST_SUCCESS(pj_dns_srv_resolve(domain, &res_name, 3478, pool, res,
+                                       PJ_DNS_SRV_FALLBACK_A, NULL,
+                                       &srv_cached_cb, &srv_q),
+                    NULL, {rc = -2720; goto on_return;});
+    for (i = 0; g_server[0].pkt_count == sent && i < 500; ++i)
+        pj_thread_sleep(10);
+    PJ_TEST_EQ(g_server[0].pkt_count, sent + 1, NULL,
+               {rc = -2721; goto on_return;});
+    PJ_TEST_NOT_NULL(srv_q, NULL, {rc = -2722; goto on_return;});
+    PJ_TEST_SUCCESS(pj_dns_srv_cancel_query(srv_q, PJ_FALSE), NULL,
+                    {rc = -2723; goto on_return;});
+
+on_return:
+    /* The server takes the query after its simulated RTT */
+    for (i = 0; hold_armed && g_server[0].pkt_count != sent && i < 500; ++i)
+        pj_thread_sleep(10);
+    if (hold_armed) {
+        /* The query never reached the server */
+        hold_armed = PJ_FALSE;
+        return rc ? rc : -2724;
+    }
+    pj_sem_post(hold_sem);
+    for (i = 0; !hold_passed && i < 500; ++i)
+        pj_thread_sleep(10);
+    hold_passed = 0;
+    if (rc)
+        return rc;
+
+    PJ_TEST_EQ(wait_cached_count(res, cached + 1), 0, NULL, return -2725);
+    PJ_TEST_EQ(pj_dns_resolver_get_cached_count(res), cached + 1, NULL,
+               return -2726);
+    PJ_TEST_EQ(srv_cached_cb_count, 0, NULL, return -2727);
+    return 0;
+}
+
+/* The SRV query is answered from the cache, by a negative answer or by a
+ * record whose target is not cached, while the DNS A query of the target
+ * is pending: the resolution is returned so that it can be cancelled, and
+ * the callback is not called. With all the answers cached, it completes
+ * synchronously and none is returned.
+ */
+static int srv_resolver_cached_cancel_test(void)
+{
+    pj_str_t domain = pj_str(DOMAIN4);
+    pj_str_t domain_rec = pj_str("rec." DOMAIN4);
+    pj_str_t res_name = pj_str("_stun._udp.");
+    pj_str_t srv_name = pj_str("_stun._udp." DOMAIN4);
+    pj_str_t srv_rec_name = pj_str("_stun._udp.rec." DOMAIN4);
+    pj_str_t target = pj_str(TARGET4);
+    pj_str_t ns = pj_str("127.0.0.1");
+    pj_uint16_t port = g_server[0].port;
+    pj_dns_resolver *res = NULL;
+    pj_dns_settings lset;
+    pj_dns_srv_async_query *srv_q;
+    pj_dns_parsed_packet pkt;
+    pj_dns_parsed_query question;
+    pj_dns_parsed_rr ans;
+    unsigned sent;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  srv_resolve(): cancel with the SRV answer "
+                         "cached"));
+
+    srv_cached_cb_count = 0;
+    hold_armed = PJ_FALSE;
+    hold_passed = 0;
+    PJ_TEST_SUCCESS(pj_sem_create(pool, NULL, 0, 1, &hold_sem), NULL,
+                    return -2700);
+    PJ_TEST_SUCCESS(pj_dns_resolver_create(mem, NULL, 0, timer_heap,
+                                           ioqueue, &res),
+                    NULL, {rc = -2701; goto on_return;});
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(res, 1, &ns, &port), NULL,
+                    {rc = -2702; goto on_return;});
+    /* No retransmission while the server holds a query */
+    pj_dns_resolver_get_settings(res, &lset);
+    lset.qretr_delay = 10000;
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_settings(res, &lset), NULL,
+                    {rc = -2728; goto on_return;});
+
+    /* A negative answer to the SRV query, added without TTL so that it is
+     * cached even if PJ_DNS_RESOLVER_INVALID_TTL is 0
+     */
+    pj_bzero(&pkt, sizeof(pkt));
+    pj_bzero(&question, sizeof(question));
+    pkt.hdr.flags = PJ_DNS_SET_QR(1) | PJ_DNS_SET_RCODE(PJ_DNS_RCODE_NXDOMAIN);
+    pkt.hdr.qdcount = 1;
+    pkt.q = &question;
+    question.name = srv_name;
+    question.type = PJ_DNS_TYPE_SRV;
+    question.dnsclass = 1;
+    PJ_TEST_SUCCESS(pj_dns_resolver_add_entry(res, &pkt, PJ_FALSE), NULL,
+                    {rc = -2703; goto on_return;});
+    PJ_TEST_EQ(pj_dns_resolver_get_cached_count(res), 1, NULL,
+               {rc = -2704; goto on_return;});
+
+    g_server[0].action = ACTION_CB;
+    g_server[0].action_cb = &action4_hold;
+    rc = srv_cancel_held(res, &domain, 1);
+    if (rc)
+        goto on_return;
+
+    /* All the answers cached: completed synchronously, none returned.
+     * Start from a non-NULL value to see that the call clears it.
+     */
+    srv_q = (pj_dns_srv_async_query*)&rc;
+    sent = g_server[0].pkt_count;
+    PJ_TEST_SUCCESS(pj_dns_srv_resolve(&domain, &res_name, 3478, pool, res,
+                                       PJ_DNS_SRV_FALLBACK_A, NULL,
+                                       &srv_cached_cb, &srv_q),
+                    NULL, {rc = -2705; goto on_return;});
+    PJ_TEST_EQ(srv_cached_cb_count, 1, NULL, {rc = -2706; goto on_return;});
+    PJ_TEST_EQ(srv_q, NULL, NULL, {rc = -2707; goto on_return;});
+    PJ_TEST_EQ(g_server[0].pkt_count, sent, NULL,
+               {rc = -2708; goto on_return;});
+
+    /* A cached SRV record whose target is not cached */
+    srv_cached_cb_count = 0;
+    pj_bzero(&pkt, sizeof(pkt));
+    pj_bzero(&ans, sizeof(ans));
+    pkt.hdr.flags = PJ_DNS_SET_QR(1);
+    pkt.hdr.anscount = 1;
+    pkt.ans = &ans;
+    ans.name = srv_rec_name;
+    ans.type = PJ_DNS_TYPE_SRV;
+    ans.dnsclass = 1;
+    ans.ttl = 60;
+    ans.rdata.srv.port = 3479;
+    ans.rdata.srv.target = target;
+    PJ_TEST_SUCCESS(pj_dns_resolver_add_entry(res, &pkt, PJ_TRUE), NULL,
+                    {rc = -2709; goto on_return;});
+    rc = srv_cancel_held(res, &domain_rec, 3);
+
+on_return:
+    if (res)
+        pj_dns_resolver_destroy(res, PJ_FALSE);
+    pj_sem_destroy(hold_sem);
+    hold_sem = NULL;
+    return rc;
+}
+
+
 int resolver_test(void)
 {
     int rc;
@@ -6085,6 +6292,11 @@ int resolver_test(void)
 
     PJ_LOG(3,(THIS_FILE, "srv_resolver_many_test"));
     rc = srv_resolver_many_test();
+    if (rc != 0)
+        goto on_error;
+
+    PJ_LOG(3,(THIS_FILE, "srv_resolver_cached_cancel_test"));
+    rc = srv_resolver_cached_cancel_test();
     if (rc != 0)
         goto on_error;
 

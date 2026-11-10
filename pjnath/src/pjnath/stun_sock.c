@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -519,6 +519,11 @@ PJ_DEF(pj_status_t) pj_stun_sock_destroy(pj_stun_sock *stun_sock)
     pj_timer_heap_cancel_if_active(stun_sock->stun_cfg.timer_heap,
                                    &stun_sock->ka_timer, 0);
 
+    /* The group lock may outlive the socket and the resolver (e.g. ICE) */
+    if (stun_sock->q) {
+        pj_dns_srv_cancel_query(stun_sock->q, PJ_FALSE);
+    }
+
     if (stun_sock->active_sock != NULL) {
         stun_sock->sock_fd = PJ_INVALID_SOCKET;
         pj_activesock_close(stun_sock->active_sock);
@@ -586,6 +591,11 @@ static void dns_srv_resolver_cb(void *user_data,
 
     /* Clear query */
     stun_sock->q = NULL;
+
+    if (stun_sock->is_destroying) {
+        pj_grp_lock_release(stun_sock->grp_lock);
+        return;
+    }
 
     /* Handle error */
     if (status != PJ_SUCCESS) {
