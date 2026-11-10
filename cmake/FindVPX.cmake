@@ -44,7 +44,7 @@ if(VPX_INCLUDE_DIR AND VPX_LIBRARY)
     CODE [=[
       #include <vpx/vpx_encoder.h>
       #include <vpx/vp8cx.h>
-      int main() { vpx_codec_iface_t *(*enc_if)() = &vpx_codec_vp8_cx; }
+      int main(void) { return vpx_codec_vp8_cx() == 0; }
     ]=]
   )
   unset(_vpx_check_libs)

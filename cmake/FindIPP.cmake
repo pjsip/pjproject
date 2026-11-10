@@ -118,7 +118,12 @@ if(IPP_INCLUDE_DIR AND IPP_USC_INCLUDE_DIR AND IPP_USC_LIBRARY
       #include <ippcore.h>
       #include <usc.h>
       extern USC_Fxns USC_G729AFP_Fxns;
-      int main(void) { ippStaticInit(); return 0; }
+      int main(void) {
+        /* volatile, so that the reference stays at any optimisation */
+        void *volatile fxns = &USC_G729AFP_Fxns;
+        ippStaticInit();
+        return fxns == 0;
+      }
     ]=]
   )
 endif()
