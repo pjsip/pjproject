@@ -121,6 +121,11 @@ G_EXE = G_EXE.rstrip("\n\r \t")
 # assuming a particular build system's generated header layout.
 inc.G_EXE = G_EXE
 
+def shell_cmd(cmd):
+    """On Unix, exec the command, so that the process is pjsua itself and
+    not the shell, which matters when it has to be killed."""
+    return "exec " + cmd if G_INUNIX else cmd
+
 ###################################
 # Poor man's 'expect'-like class
 class Expect(threading.Thread):
@@ -150,11 +155,7 @@ class Expect(threading.Thread):
         if self.use_telnet:
             fullcmd = G_EXE + " " + self.inst_param.arg + " --use-cli --no-cli-console --cli-telnet-port=%d" % (self.inst_param.telnet_port)
             self.trace("Popen " + fullcmd)
-            # exec, so that proc is pjsua itself and not the shell, which
-            # matters when it has to be killed
-            if G_INUNIX:
-                fullcmd = "exec " + fullcmd
-            self.proc = subprocess.Popen(fullcmd, shell=G_INUNIX)
+            self.proc = subprocess.Popen(shell_cmd(fullcmd), shell=G_INUNIX)
             
             # start telnet-ing to pjsua, raise exception if telnet fails after 5s
             t0 = time.time()
@@ -196,7 +197,7 @@ class Expect(threading.Thread):
             if not self.inst_param.enable_buffer:
                 fullcmd = fullcmd + " --stdout-no-buf"
             self.trace("Popen " + fullcmd)
-            self.proc = subprocess.Popen(fullcmd, shell=G_INUNIX, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=False)
+            self.proc = subprocess.Popen(shell_cmd(fullcmd), shell=G_INUNIX, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=False)
             self.running = True
             while self.proc.poll() is None:
                 line = self.proc.stdout.readline()
@@ -331,7 +332,8 @@ def handle_error(errmsg, t, close_processes = True):
                 is_err = True
             if is_err and p.proc.poll() is None:
                 if sys.hexversion >= 0x02060000:
-                    p.proc.terminate()
+                    # not terminate(), SDL in pjsua catches SIGTERM
+                    p.proc.kill()
                 else:
                     p.wait()
             else:
