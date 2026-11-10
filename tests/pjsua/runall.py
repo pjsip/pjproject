@@ -4,8 +4,43 @@ import time
 import re
 import shutil
 import platform
+import signal
+import subprocess
 
 PYTHON = os.path.basename(sys.executable)
+
+
+def kill_test(p):
+    if sys.platform == 'win32':
+        subprocess.call("taskkill /F /T /PID %d" % p.pid,
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    else:
+        try:
+            os.killpg(p.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+    p.wait()
+
+
+def run_test(cmdline, timeout):
+    """Run cmdline in a shell. Kill it, with the pjsua and SIPp it started,
+    if it runs longer than timeout seconds (0 means no limit).
+    Return the exit status, or None on timeout."""
+    if timeout <= 0:
+        return os.system(cmdline)
+    if sys.platform == 'win32':
+        p = subprocess.Popen(cmdline, shell=True)
+    else:
+        # In its own process group, so its children can be killed too
+        p = subprocess.Popen(cmdline, shell=True, start_new_session=True)
+    try:
+        return p.wait(timeout)
+    except subprocess.TimeoutExpired:
+        kill_test(p)
+        return None
+    except KeyboardInterrupt:
+        kill_test(p)
+        raise
 
 # Usage:
 #  runall.py [test-to-resume]
@@ -106,6 +141,7 @@ resume_script=""
 retry_num=0
 shell_cmd=""
 with_log=True
+test_timeout=600
 
 # Parse arguments
 sys.argv.pop(0)
@@ -127,6 +163,9 @@ while len(sys.argv):
         print("  --retry,-t RETRY_NUM")
         print("    Retry a specific test RETRY_NUM times before marking it as failed.")
         print("    Default is 0 (no retry).")
+        print("  --timeout SECS")
+        print("    Kill a test that runs longer than SECS seconds and mark it as")
+        print("    failed. Default is 600, 0 disables the limit.")
         print("  --shell,-s SHELL")
         print("    Run the tests with the specified SHELL cmd. This can also be")
         print("    used to run the test with ccdash. Example:")
@@ -149,6 +188,15 @@ while len(sys.argv):
     elif sys.argv[0] == '-t' or sys.argv[0] == '--retry':
         if len(sys.argv) > 1:
             retry_num=int(sys.argv[1])
+            sys.argv.pop(0)
+            sys.argv.pop(0)
+        else:
+            sys.argv.pop(0)
+            sys.stderr.write("Error: argument value required")
+            sys.exit(1)
+    elif sys.argv[0] == '--timeout':
+        if len(sys.argv) > 1:
+            test_timeout=int(sys.argv[1])
             sys.argv.pop(0)
             sys.argv.pop(0)
         else:
@@ -234,11 +282,14 @@ for t in tests:
             logname = "logs/" + logname
         else:
             logname = os.devnull
-        ret = os.system(cmdline + " > " + logname)
+        ret = run_test(cmdline + " > " + logname, test_timeout)
         t1 = time.time()
         if ret != 0:
             dur = int(t1 - t0)
-            print(" failed!! [" + str(dur) + "s]")
+            if ret is None:
+                print(" timed out!! [" + str(dur) + "s]")
+            else:
+                print(" failed!! [" + str(dur) + "s]")
             if (i < retry_num + 1):
                 continue
             if with_log:
