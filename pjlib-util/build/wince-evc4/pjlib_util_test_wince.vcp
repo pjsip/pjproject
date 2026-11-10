@@ -885,6 +885,10 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
+SOURCE="..\..\src\pjlib-util-test\dns_packet_test.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\..\src\pjlib-util-test\encryption.c"
 
 !IF  "$(CFG)" == "pjlib_util_test_wince - Win32 (WCE MIPSII_FP) Release"

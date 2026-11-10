@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -30,6 +30,7 @@
 #define INCLUDE_ENCRYPTION_TEST     1
 #define INCLUDE_STUN_TEST           1
 #define INCLUDE_RESOLVER_TEST       1
+#define INCLUDE_DNS_PACKET_TEST     1
 #define INCLUDE_HTTP_CLIENT_TEST    PJ_HAS_TCP
 #define INCLUDE_WEBSOCK_TEST        PJ_HAS_TCP
 #define INCLUDE_WEBSOCK_ONLINE_TEST 0
@@ -42,6 +43,7 @@ extern int stun_test();
 extern int test_main(int argc, char *argv[]);
 extern int resolver_test(void);
 extern int resolver_nothreads_test(void);
+extern int dns_packet_test(void);
 extern int http_client_test();
 extern int websock_test(void);
 

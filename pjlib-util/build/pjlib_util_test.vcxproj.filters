@@ -15,6 +15,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\pjlib-util-test\dns_packet_test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\pjlib-util-test\encryption.c">
       <Filter>Source Files</Filter>
     </ClCompile>

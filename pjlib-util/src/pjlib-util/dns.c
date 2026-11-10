@@ -25,6 +25,261 @@
 #include <pj/string.h>
 
 
+/* Maximum number of DNS name compression pointers to follow.
+ * RFC 1035 compression in practice never exceeds 2-3 levels.
+ */
+#define MAX_NAME_POINTER_HOPS  5
+
+/* Maximum length of an expanded dotted name without a trailing dot */
+#define MAX_DNS_NAME_LENGTH  253
+
+/* Invariant: pos <= end <= packet_size.
+ * packet_size bounds compression targets, while end may restrict reads at
+ * the original location to a query or RDATA extent.
+ */
+typedef struct dns_cursor
+{
+    const pj_uint8_t *packet;
+    pj_size_t packet_size;
+    pj_size_t pos;
+    pj_size_t end;
+} dns_cursor;
+
+static pj_size_t cursor_remaining(const dns_cursor *cursor)
+{
+    return cursor->end - cursor->pos;
+}
+
+static pj_status_t cursor_take(dns_cursor *cursor, pj_size_t size,
+                               const pj_uint8_t **data)
+{
+    if (cursor->pos > cursor->end || size > cursor->end - cursor->pos)
+        return PJLIB_UTIL_EDNSINSIZE;
+
+    if (data)
+        *data = cursor->packet + cursor->pos;
+    cursor->pos += size;
+    return PJ_SUCCESS;
+}
+
+static pj_status_t cursor_read8(dns_cursor *cursor, pj_uint8_t *value)
+{
+    const pj_uint8_t *data;
+    pj_status_t status;
+
+    status = cursor_take(cursor, 1, &data);
+    if (status != PJ_SUCCESS)
+        return status;
+    *value = data[0];
+    return PJ_SUCCESS;
+}
+
+static pj_status_t cursor_read16(dns_cursor *cursor, pj_uint16_t *value)
+{
+    const pj_uint8_t *data;
+    pj_status_t status;
+
+    status = cursor_take(cursor, 2, &data);
+    if (status != PJ_SUCCESS)
+        return status;
+    *value = (pj_uint16_t)((data[0] << 8) | data[1]);
+    return PJ_SUCCESS;
+}
+
+static pj_status_t cursor_read32(dns_cursor *cursor, pj_uint32_t *value)
+{
+    const pj_uint8_t *data;
+    pj_status_t status;
+
+    status = cursor_take(cursor, 4, &data);
+    if (status != PJ_SUCCESS)
+        return status;
+    *value = ((pj_uint32_t)data[0] << 24) |
+             ((pj_uint32_t)data[1] << 16) |
+             ((pj_uint32_t)data[2] << 8) | data[3];
+    return PJ_SUCCESS;
+}
+
+static pj_status_t cursor_read_header(dns_cursor *cursor, pj_dns_hdr *header)
+{
+    const pj_uint8_t *data;
+    pj_status_t status;
+
+    status = cursor_take(cursor, sizeof(*header), &data);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    pj_memcpy(header, data, sizeof(*header));
+    header->id = pj_ntohs(header->id);
+    header->flags = pj_ntohs(header->flags);
+    header->qdcount = pj_ntohs(header->qdcount);
+    header->anscount = pj_ntohs(header->anscount);
+    header->nscount = pj_ntohs(header->nscount);
+    header->arcount = pj_ntohs(header->arcount);
+    return PJ_SUCCESS;
+}
+
+static pj_status_t cursor_read(dns_cursor *cursor, void *dst, pj_size_t size)
+{
+    const pj_uint8_t *data;
+    pj_status_t status;
+
+    status = cursor_take(cursor, size, &data);
+    if (status != PJ_SUCCESS)
+        return status;
+    if (size)
+        pj_memcpy(dst, data, size);
+    return PJ_SUCCESS;
+}
+
+static pj_status_t cursor_child(dns_cursor *cursor, pj_size_t size,
+                                dns_cursor *child)
+{
+    if (cursor->pos > cursor->end || size > cursor->end - cursor->pos)
+        return PJLIB_UTIL_EDNSINSIZE;
+
+    *child = *cursor;
+    child->end = child->pos + size;
+    cursor->pos += size;
+    return PJ_SUCCESS;
+}
+
+static pj_status_t emit_name(char *dst, pj_size_t capacity,
+                             pj_size_t *length, const pj_uint8_t *data,
+                             pj_size_t size)
+{
+    if (size > capacity - *length)
+        return PJ_ENAMETOOLONG;
+
+    if (dst && size)
+        pj_memcpy(dst + *length, data, size);
+    *length += size;
+    return PJ_SUCCESS;
+}
+
+/* Decode a name for both measurement and bounded copying. Only bytes encoded
+ * at the origin advance origin; compression targets use packet-wide bounds.
+ */
+static pj_status_t decode_name(dns_cursor *origin, char *dst,
+                               pj_size_t capacity, pj_size_t *name_len)
+{
+    dns_cursor scan = *origin;
+    pj_bool_t at_origin = PJ_TRUE;
+    unsigned pointer_count = 0;
+    pj_size_t length = 0;
+
+    for (;;) {
+        const pj_uint8_t *label;
+        pj_uint8_t octet;
+        pj_status_t status;
+
+        status = cursor_read8(&scan, &octet);
+        if (status != PJ_SUCCESS)
+            return PJLIB_UTIL_EDNSINNAMEPTR;
+        if (at_origin)
+            origin->pos = scan.pos;
+
+        if (octet == 0)
+            break;
+
+        if ((octet & 0xc0) == 0xc0) {
+            pj_uint8_t low;
+            pj_size_t offset;
+
+            /* Compression is found, consume both bytes at the origin */
+            status = cursor_read8(&scan, &low);
+            if (status != PJ_SUCCESS)
+                return PJLIB_UTIL_EDNSINNAMEPTR;
+            if (at_origin)
+                origin->pos = scan.pos;
+
+            /* Get the 14-bit offset and validate it against the packet */
+            offset = ((pj_size_t)(octet & 0x3f) << 8) | low;
+            /* Limit the number of compression pointers followed */
+            if (offset >= scan.packet_size ||
+                ++pointer_count > MAX_NAME_POINTER_HOPS)
+            {
+                return PJLIB_UTIL_EDNSINNAMEPTR;
+            }
+
+            scan.pos = offset;
+            scan.end = scan.packet_size;
+            at_origin = PJ_FALSE;
+            continue;
+        }
+
+        /* The remaining reserved prefixes are not valid label lengths. */
+        if (octet > 63)
+            return PJLIB_UTIL_EDNSINNAMEPTR;
+
+        /* Check that label length is valid.
+         * Each label consists of an octet length (of size 1) followed
+         * by the octet of the specified length (octet). Then it must be
+         * followed by either another label's octet length or a zero length
+         * octet (that terminates the sequence).
+         */
+        if ((pj_size_t)octet >= cursor_remaining(&scan))
+            return PJLIB_UTIL_EDNSINNAMEPTR;
+
+        status = cursor_take(&scan, octet, &label);
+        if (status != PJ_SUCCESS)
+            return PJLIB_UTIL_EDNSINNAMEPTR;
+        if (at_origin)
+            origin->pos = scan.pos;
+
+        /* Add separators only between labels; a pointer may resolve to root */
+        if (length != 0) {
+            static const pj_uint8_t dot = '.';
+
+            status = emit_name(dst, capacity, &length, &dot, 1);
+            if (status != PJ_SUCCESS)
+                return status;
+        }
+
+        status = emit_name(dst, capacity, &length, label, octet);
+        if (status != PJ_SUCCESS)
+            return status;
+    }
+
+    *name_len = length;
+    return PJ_SUCCESS;
+}
+
+static pj_status_t parse_name(dns_cursor *cursor, pj_pool_t *pool,
+                              pj_str_t *name)
+{
+    dns_cursor measure = *cursor;
+    pj_size_t measured_len;
+    pj_size_t copied_len;
+    pj_status_t status;
+
+    /* Get the length of the name using the same traversal used for copying */
+    status = decode_name(&measure, NULL, MAX_DNS_NAME_LENGTH, &measured_len);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    /* Allocate memory for the name and copy it with an explicit capacity */
+    name->ptr = (char*)pj_pool_alloc(pool, measured_len + 1);
+    status = decode_name(cursor, name->ptr, measured_len, &copied_len);
+    if (status != PJ_SUCCESS)
+        return status;
+    if (copied_len != measured_len)
+        return PJ_EBUG;
+
+    name->ptr[copied_len] = '\0';
+    name->slen = (pj_ssize_t)copied_len;
+    return PJ_SUCCESS;
+}
+
+
+/* Reject trailing bytes in known resource data */
+static pj_status_t cursor_require_empty(const dns_cursor *cursor)
+{
+    return cursor_remaining(cursor) == 0 ? PJ_SUCCESS :
+           PJLIB_UTIL_EDNSINSIZE;
+}
+
+
 PJ_DEF(const char *) pj_dns_get_type_name(int type)
 {
     switch (type) {
@@ -114,243 +369,45 @@ PJ_DEF(pj_status_t) pj_dns_make_query( void *packet,
 }
 
 
-/* Maximum recursion depth for DNS name compression pointers.
- * RFC 1035 compression in practice never exceeds 2-3 levels.
- */
-#define MAX_NAME_RECURSION  5
-
-/* Get a name length (note: name consists of multiple labels and
- * it may contain pointers when name compression is applied)
- */
-static pj_status_t get_name_len(int rec_counter, const pj_uint8_t *pkt, 
-                                const pj_uint8_t *start, const pj_uint8_t *max, 
-                                int *parsed_len, int *name_len)
-{
-    const pj_uint8_t *p;
-    pj_status_t status;
-
-    /* Limit the number of recursion */
-    if (rec_counter > MAX_NAME_RECURSION) {
-        /* Too many name recursion */
-        return PJLIB_UTIL_EDNSINNAMEPTR;
-    }
-
-    if (start >= max)
-        return PJLIB_UTIL_EDNSINNAMEPTR;
-
-    *name_len = *parsed_len = 0;
-    p = start;
-    while (p < max && *p) {
-        if ((*p & 0xc0) == 0xc0) {
-            /* Compression is found! */
-            int ptr_len = 0;
-            int dummy;
-            pj_uint16_t offset;
-
-            if (p + 1 >= max)
-                return PJLIB_UTIL_EDNSINNAMEPTR;
-
-            /* Get the 14bit offset */
-            pj_memcpy(&offset, p, 2);
-            offset ^= pj_htons((pj_uint16_t)(0xc0 << 8));
-            offset = pj_ntohs(offset);
-
-            /* Check that offset is valid */
-            if (offset >= max - pkt)
-                return PJLIB_UTIL_EDNSINNAMEPTR;
-
-            /* Get the name length from that offset. */
-            status = get_name_len(rec_counter+1, pkt, pkt + offset, max, 
-                                  &dummy, &ptr_len);
-            if (status != PJ_SUCCESS)
-                return status;
-
-            *parsed_len += 2;
-            *name_len += ptr_len;
-
-            return PJ_SUCCESS;
-        } else {
-            unsigned label_len = *p;
-
-            /* Check that label length is valid.
-             * Each label consists of an octet length (of size 1) followed
-             * by the octet of the specified length (label_len). Then it
-             * must be followed by either another label's octet length or
-             * a zero length octet (that terminates the sequence).
-             */
-            if (p+1+label_len+1 > max)
-                return PJLIB_UTIL_EDNSINNAMEPTR;
-
-            p += (label_len + 1);
-            *parsed_len += (label_len + 1);
-
-            if (*p != 0)
-                ++label_len;
-            
-            *name_len += label_len;
-        }
-    }
-    ++p;
-    (*parsed_len)++;
-
-    return PJ_SUCCESS;
-}
-
-
-/* Parse and copy name (note: name consists of multiple labels and
- * it may contain pointers when compression is applied).
- */
-static pj_status_t get_name(int rec_counter, const pj_uint8_t *pkt, 
-                            const pj_uint8_t *start, const pj_uint8_t *max,
-                            pj_str_t *name)
-{
-    const pj_uint8_t *p;
-    pj_status_t status;
-
-    /* Limit the number of recursion */
-    if (rec_counter > MAX_NAME_RECURSION) {
-        /* Too many name recursion */
-        return PJLIB_UTIL_EDNSINNAMEPTR;
-    }
-
-    if (start >= max)
-        return PJLIB_UTIL_EDNSINNAMEPTR;
-
-    p = start;
-    while (p < max && *p) {
-        if ((*p & 0xc0) == 0xc0) {
-            /* Compression is found! */
-            pj_uint16_t offset;
-
-            if (p + 1 >= max)
-                return PJLIB_UTIL_EDNSINNAMEPTR;
-
-            /* Get the 14bit offset */
-            pj_memcpy(&offset, p, 2);
-            offset ^= pj_htons((pj_uint16_t)(0xc0 << 8));
-            offset = pj_ntohs(offset);
-
-            /* Check that offset is valid */
-            if (offset >= max - pkt)
-                return PJLIB_UTIL_EDNSINNAMEPTR;
-
-            /* Retrieve the name from that offset. */
-            status = get_name(rec_counter+1, pkt, pkt + offset, max, name);
-            if (status != PJ_SUCCESS)
-                return status;
-
-            return PJ_SUCCESS;
-        } else {
-            unsigned label_len = *p;
-
-            /* Check that label length is valid.
-             * Each label consists of an octet length (of size 1) followed
-             * by the octet of the specified length (label_len). Then it
-             * must be followed by either another label's octet length or
-             * a zero length octet (that terminates the sequence).
-             */
-            if (p+1+label_len+1 > max)
-                return PJLIB_UTIL_EDNSINNAMEPTR;
-
-            pj_memcpy(name->ptr + name->slen, p+1, label_len);
-            name->slen += label_len;
-
-            p += label_len + 1;
-            if (*p != 0) {
-                *(name->ptr + name->slen) = '.';
-                ++name->slen;
-            }
-        }
-    }
-
-    return PJ_SUCCESS;
-}
-
-
 /* Parse query records. */
 static pj_status_t parse_query(pj_dns_parsed_query *q, pj_pool_t *pool,
-                               const pj_uint8_t *pkt, const pj_uint8_t *start,
-                               const pj_uint8_t *max, int *parsed_len)
+                               dns_cursor *cursor)
 {
-    const pj_uint8_t *p = start;
-    int name_len, name_part_len;
     pj_status_t status;
 
-    /* Get the length of the name */
-    status = get_name_len(0, pkt, start, max, &name_part_len, &name_len);
+    /* Parse, allocate, and copy the query name */
+    status = parse_name(cursor, pool, &q->name);
     if (status != PJ_SUCCESS)
         return status;
 
-    /* Allocate memory for the name */
-    q->name.ptr = (char*) pj_pool_alloc(pool, name_len+4);
-    q->name.slen = 0;
-
-    /* Get the name */
-    status = get_name(0, pkt, start, max, &q->name);
+    /* Get the type and class */
+    status = cursor_read16(cursor, &q->type);
     if (status != PJ_SUCCESS)
         return status;
-
-    p = (start + name_part_len);
-
-    /* Check the size can accomodate next few fields. */
-    if (p + 4 > max)
-        return PJLIB_UTIL_EDNSINSIZE;
-
-    /* Get the type */
-    pj_memcpy(&q->type, p, 2);
-    q->type = pj_ntohs(q->type);
-    p += 2;
-
-    /* Get the class */
-    pj_memcpy(&q->dnsclass, p, 2);
-    q->dnsclass = pj_ntohs(q->dnsclass);
-    p += 2;
-
-    *parsed_len = (int)(p - start);
-
-    return PJ_SUCCESS;
+    return cursor_read16(cursor, &q->dnsclass);
 }
 
 
 /* Parse RR records */
 static pj_status_t parse_rr(pj_dns_parsed_rr *rr, pj_pool_t *pool,
-                            const pj_uint8_t *pkt,
-                            const pj_uint8_t *start, const pj_uint8_t *max,
-                            int *parsed_len)
+                            dns_cursor *cursor)
 {
-    const pj_uint8_t *p = start;
-    int name_len, name_part_len;
+    dns_cursor rdata;
     pj_status_t status;
 
-    /* Get the length of the name */
-    status = get_name_len(0, pkt, start, max, &name_part_len, &name_len);
+    /* Parse, allocate, and copy the owner name */
+    status = parse_name(cursor, pool, &rr->name);
     if (status != PJ_SUCCESS)
         return status;
 
-    /* Allocate memory for the name */
-    rr->name.ptr = (char*) pj_pool_alloc(pool, name_len+4);
-    rr->name.slen = 0;
-
-    /* Get the name */
-    status = get_name(0, pkt, start, max, &rr->name);
+    /* Get the type and class */
+    status = cursor_read16(cursor, &rr->type);
     if (status != PJ_SUCCESS)
         return status;
 
-    p = (start + name_part_len);
-
-    /* Check the size can accomodate next few fields. */
-    if (p+10 > max)
-        return PJLIB_UTIL_EDNSINSIZE;
-
-    /* Get the type */
-    pj_memcpy(&rr->type, p, 2);
-    rr->type = pj_ntohs(rr->type);
-    p += 2;
-    
-    /* Get the class */
-    pj_memcpy(&rr->dnsclass, p, 2);
-    rr->dnsclass = pj_ntohs(rr->dnsclass);
-    p += 2;
+    status = cursor_read16(cursor, &rr->dnsclass);
+    if (status != PJ_SUCCESS)
+        return status;
 
     /* Class MUST be IN */
     if (rr->dnsclass != 1) {
@@ -363,98 +420,57 @@ static pj_status_t parse_rr(pj_dns_parsed_rr *rr, pj_pool_t *pool,
         }
     }
 
-    /* Get TTL */
-    pj_memcpy(&rr->ttl, p, 4);
-    rr->ttl = pj_ntohl(rr->ttl);
-    p += 4;
-
-    /* Get rdlength */
-    pj_memcpy(&rr->rdlength, p, 2);
-    rr->rdlength = pj_ntohs(rr->rdlength);
-    p += 2;
-
-    /* Check that length is valid */
-    if (p + rr->rdlength > max)
-        return PJLIB_UTIL_EDNSINSIZE;
+    /* Get TTL and RDATA length */
+    status = cursor_read32(cursor, &rr->ttl);
+    if (status != PJ_SUCCESS)
+        return status;
+    status = cursor_read16(cursor, &rr->rdlength);
+    if (status != PJ_SUCCESS)
+        return status;
+    /* Restrict origin reads to the declared RDATA extent */
+    status = cursor_child(cursor, rr->rdlength, &rdata);
+    if (status != PJ_SUCCESS)
+        return status;
 
     /* Parse some well known records */
     if (rr->type == PJ_DNS_TYPE_A) {
-        if (p + 4 > max)
-            return PJLIB_UTIL_EDNSINSIZE;
-        pj_memcpy(&rr->rdata.a.ip_addr, p, 4);
-        p += 4;
+        status = cursor_read(&rdata, &rr->rdata.a.ip_addr, 4);
 
     } else if (rr->type == PJ_DNS_TYPE_AAAA) {
-        if (p + 16 > max)
-            return PJLIB_UTIL_EDNSINSIZE;
-        pj_memcpy(&rr->rdata.aaaa.ip_addr, p, 16);
-        p += 16;
+        status = cursor_read(&rdata, &rr->rdata.aaaa.ip_addr, 16);
 
     } else if (rr->type == PJ_DNS_TYPE_CNAME ||
                rr->type == PJ_DNS_TYPE_NS ||
-               rr->type == PJ_DNS_TYPE_PTR) 
+               rr->type == PJ_DNS_TYPE_PTR)
     {
-
-        /* Get the length of the target name */
-        status = get_name_len(0, pkt, p, max, &name_part_len, &name_len);
-        if (status != PJ_SUCCESS)
-            return status;
-
-        /* Allocate memory for the name */
-        rr->rdata.cname.name.ptr = (char*) pj_pool_alloc(pool, name_len);
-        rr->rdata.cname.name.slen = 0;
-
-        /* Get the name */
-        status = get_name(0, pkt, p, max, &rr->rdata.cname.name);
-        if (status != PJ_SUCCESS)
-            return status;
-
-        p += name_part_len;
+        /* Get the target name */
+        status = parse_name(&rdata, pool, &rr->rdata.cname.name);
 
     } else if (rr->type == PJ_DNS_TYPE_SRV) {
-        if (p + 6 > max)
-            return PJLIB_UTIL_EDNSINSIZE;
-
         /* Priority */
-        pj_memcpy(&rr->rdata.srv.prio, p, 2);
-        rr->rdata.srv.prio = pj_ntohs(rr->rdata.srv.prio);
-        p += 2;
-
+        status = cursor_read16(&rdata, &rr->rdata.srv.prio);
+        if (status != PJ_SUCCESS)
+            return status;
         /* Weight */
-        pj_memcpy(&rr->rdata.srv.weight, p, 2);
-        rr->rdata.srv.weight = pj_ntohs(rr->rdata.srv.weight);
-        p += 2;
-
+        status = cursor_read16(&rdata, &rr->rdata.srv.weight);
+        if (status != PJ_SUCCESS)
+            return status;
         /* Port */
-        pj_memcpy(&rr->rdata.srv.port, p, 2);
-        rr->rdata.srv.port = pj_ntohs(rr->rdata.srv.port);
-        p += 2;
-        
-        /* Get the length of the target name */
-        status = get_name_len(0, pkt, p, max, &name_part_len, &name_len);
+        status = cursor_read16(&rdata, &rr->rdata.srv.port);
         if (status != PJ_SUCCESS)
             return status;
-
-        /* Allocate memory for the name */
-        rr->rdata.srv.target.ptr = (char*) pj_pool_alloc(pool, name_len);
-        rr->rdata.srv.target.slen = 0;
-
-        /* Get the name */
-        status = get_name(0, pkt, p, max, &rr->rdata.srv.target);
-        if (status != PJ_SUCCESS)
-            return status;
-        p += name_part_len;
+        /* Get the target name */
+        status = parse_name(&rdata, pool, &rr->rdata.srv.target);
 
     } else {
         /* Copy the raw data */
         rr->data = pj_pool_alloc(pool, rr->rdlength);
-        pj_memcpy(rr->data, p, rr->rdlength);
-
-        p += rr->rdlength;
+        status = cursor_read(&rdata, rr->data, rr->rdlength);
     }
 
-    *parsed_len = (int)(p - start);
-    return PJ_SUCCESS;
+    if (status != PJ_SUCCESS)
+        return status;
+    return cursor_require_empty(&rdata);
 }
 
 
@@ -467,28 +483,28 @@ PJ_DEF(pj_status_t) pj_dns_parse_packet( pj_pool_t *pool,
                                          pj_dns_parsed_packet **p_res)
 {
     pj_dns_parsed_packet *res;
-    const pj_uint8_t *start, *end;
+    pj_dns_hdr header;
+    dns_cursor cursor;
     pj_status_t status;
     unsigned i;
 
     /* Sanity checks */
     PJ_ASSERT_RETURN(pool && packet && size && p_res, PJ_EINVAL);
 
-    /* Packet size must be at least as big as the header */
-    if (size < sizeof(pj_dns_hdr))
-        return PJLIB_UTIL_EDNSINSIZE;
+    /* Mark the packet-wide bounds used by the top-level cursor */
+    cursor.packet = (const pj_uint8_t*)packet;
+    cursor.packet_size = size;
+    cursor.pos = 0;
+    cursor.end = size;
+
+    /* Read the DNS header and convert it to host byte order */
+    status = cursor_read_header(&cursor, &header);
+    if (status != PJ_SUCCESS)
+        return status;
 
     /* Create the structure */
     res = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_packet);
-
-    /* Copy the DNS header, and convert endianness to host byte order */
-    pj_memcpy(&res->hdr, packet, sizeof(pj_dns_hdr));
-    res->hdr.id       = pj_ntohs(res->hdr.id);
-    res->hdr.flags    = pj_ntohs(res->hdr.flags);
-    res->hdr.qdcount  = pj_ntohs(res->hdr.qdcount);
-    res->hdr.anscount = pj_ntohs(res->hdr.anscount);
-    res->hdr.nscount  = pj_ntohs(res->hdr.nscount);
-    res->hdr.arcount  = pj_ntohs(res->hdr.arcount);
+    res->hdr = header;
 
     /* Sanity check section counts to prevent excessive allocation from
      * malicious packets.
@@ -501,10 +517,6 @@ PJ_DEF(pj_status_t) pj_dns_parse_packet( pj_pool_t *pool,
         return PJ_ETOOMANY;
     }
 
-    /* Mark start and end of payload */
-    start = ((const pj_uint8_t*)packet) + sizeof(pj_dns_hdr);
-    end = ((const pj_uint8_t*)packet) + size;
-
     /* Parse query records (if any).
      */
     if (res->hdr.qdcount) {
@@ -512,14 +524,9 @@ PJ_DEF(pj_status_t) pj_dns_parse_packet( pj_pool_t *pool,
                  pj_pool_zalloc(pool, res->hdr.qdcount *
                                       sizeof(pj_dns_parsed_query));
         for (i=0; i<res->hdr.qdcount; ++i) {
-            int parsed_len = 0;
-            
-            status = parse_query(&res->q[i], pool, (const pj_uint8_t*)packet, 
-                                 start, end, &parsed_len);
+            status = parse_query(&res->q[i], pool, &cursor);
             if (status != PJ_SUCCESS)
                 return status;
-
-            start += parsed_len;
         }
     }
 
@@ -530,14 +537,9 @@ PJ_DEF(pj_status_t) pj_dns_parse_packet( pj_pool_t *pool,
                                         sizeof(pj_dns_parsed_rr));
 
         for (i=0; i<res->hdr.anscount; ++i) {
-            int parsed_len;
-
-            status = parse_rr(&res->ans[i], pool, (const pj_uint8_t*)packet, 
-                              start, end, &parsed_len);
+            status = parse_rr(&res->ans[i], pool, &cursor);
             if (status != PJ_SUCCESS)
                 return status;
-
-            start += parsed_len;
         }
     }
 
@@ -548,14 +550,9 @@ PJ_DEF(pj_status_t) pj_dns_parse_packet( pj_pool_t *pool,
                                        sizeof(pj_dns_parsed_rr));
 
         for (i=0; i<res->hdr.nscount; ++i) {
-            int parsed_len;
-
-            status = parse_rr(&res->ns[i], pool, (const pj_uint8_t*)packet, 
-                              start, end, &parsed_len);
+            status = parse_rr(&res->ns[i], pool, &cursor);
             if (status != PJ_SUCCESS)
                 return status;
-
-            start += parsed_len;
         }
     }
 
@@ -566,14 +563,9 @@ PJ_DEF(pj_status_t) pj_dns_parse_packet( pj_pool_t *pool,
                                         sizeof(pj_dns_parsed_rr));
 
         for (i=0; i<res->hdr.arcount; ++i) {
-            int parsed_len;
-
-            status = parse_rr(&res->arr[i], pool, (const pj_uint8_t*)packet, 
-                              start, end, &parsed_len);
+            status = parse_rr(&res->arr[i], pool, &cursor);
             if (status != PJ_SUCCESS)
                 return status;
-
-            start += parsed_len;
         }
     }
 

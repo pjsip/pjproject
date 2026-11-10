@@ -81,6 +81,7 @@ if(BUILD_TESTING)
     src/pjlib-util-test/encryption.c
     src/pjlib-util-test/stun.c
     src/pjlib-util-test/resolver_test.c
+    src/pjlib-util-test/dns_packet_test.c
     src/pjlib-util-test/test.c
     src/pjlib-util-test/json_test.c
     src/pjlib-util-test/http_client.c
