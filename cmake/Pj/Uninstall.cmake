@@ -1,7 +1,8 @@
 # Run by the uninstall target: remove every file `cmake --install` recorded in
 # install_manifest.txt, then the directories that leaves empty below the
 # install prefix (the deepest directory common to all the files), as make
-# uninstall removes lib/ and include/ when empty.
+# uninstall removes lib/ and include/ when empty. Files with no common
+# directory below a root (another drive on Windows) leave the directories.
 #
 #   cmake -DPJ_INSTALL_MANIFEST=<build>/install_manifest.txt -P Uninstall.cmake
 
@@ -12,6 +13,7 @@ endif()
 file(STRINGS "${PJ_INSTALL_MANIFEST}" _files)
 set(_dirs)
 set(_prefix)
+set(_no_prefix FALSE)
 foreach(_file IN LISTS _files)
   set(_file "$ENV{DESTDIR}${_file}")
   if(EXISTS "${_file}" OR IS_SYMLINK "${_file}")
@@ -20,6 +22,9 @@ foreach(_file IN LISTS _files)
   endif()
   cmake_path(GET _file PARENT_PATH _dir)
   list(APPEND _dirs "${_dir}")
+  if(_no_prefix)
+    continue()
+  endif()
   if(NOT DEFINED _prefix OR _prefix STREQUAL "")
     set(_prefix "${_dir}")
   endif()
@@ -28,9 +33,25 @@ foreach(_file IN LISTS _files)
     if(_under)
       break()
     endif()
-    cmake_path(GET _prefix PARENT_PATH _prefix)
+    cmake_path(GET _prefix PARENT_PATH _parent)
+    # a root is its own parent
+    if(_parent STREQUAL _prefix OR _parent STREQUAL "")
+      set(_no_prefix TRUE)
+      break()
+    endif()
+    set(_prefix "${_parent}")
   endwhile()
 endforeach()
+if(NOT _no_prefix AND DEFINED _prefix AND NOT _prefix STREQUAL "")
+  cmake_path(GET _prefix PARENT_PATH _parent)
+  if(_parent STREQUAL _prefix)
+    set(_no_prefix TRUE)
+  endif()
+endif()
+if(_no_prefix)
+  message(STATUS "The installed files share no directory; leaving directories")
+  return()
+endif()
 
 # Deepest first, so a parent is tried after its children
 list(REMOVE_DUPLICATES _dirs)
