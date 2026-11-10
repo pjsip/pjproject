@@ -12,16 +12,13 @@
     <action>
       <!-- Verify the INVITE carries the custom SDP injected by alt_pjsua.
            Check codecs only (no IP/port) so the test is environment-independent.
-           search_in="msg" searches the entire SIP message. The condexec nops
-           avoid SIPp 3.7 exiting on "referenced 1 times" warning. -->
+           search_in="msg" searches the entire SIP message. -->
       <ereg regexp="a=rtpmap:0 PCMU/8000" search_in="msg"
             check_it="true" assign_to="1"/>
       <ereg regexp="a=rtpmap:96 H263-1998/90000" search_in="msg"
             check_it="true" assign_to="2"/>
     </action>
   </recv>
-  <nop condexec="1"></nop>
-  <nop condexec="2"></nop>
 
   <send>
     <![CDATA[
@@ -82,6 +79,9 @@ a=rtpmap:96 H263-1998/90000
 
     ]]>
   </send>
+
+  <!-- The variables only carry the checks above. -->
+  <Reference variables="1,2"/>
 
   <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>
   <CallLengthRepartition value="10, 50, 100, 500, 1000, 5000, 10000"/>

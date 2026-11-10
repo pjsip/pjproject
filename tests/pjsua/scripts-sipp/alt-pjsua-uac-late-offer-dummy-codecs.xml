@@ -18,10 +18,6 @@
         check_it="true" assign_to="6,7,8"/>
     </action>
   </recv>
-  <nop condexec="1"></nop>
-  <nop condexec="4"></nop>
-  <nop condexec="5"></nop>
-  <nop condexec="6"></nop>
 
   <send>
     <![CDATA[
@@ -71,8 +67,6 @@ a=rtpmap:96 H263-1998/90000
             check_it="true" assign_to="3"/>
     </action>
   </recv>
-  <nop condexec="2"></nop>
-  <nop condexec="3"></nop>
 
   <pause milliseconds="500"/>
 
@@ -106,8 +100,6 @@ a=rtpmap:96 H263-1998/90000
             check_it="true" assign_to="video2"/>
     </action>
   </recv>
-  <nop condexec="rtpmap2"></nop>
-  <nop condexec="video2"></nop>
 
   <send>
     <![CDATA[
@@ -155,6 +147,9 @@ a=rtpmap:96 H263-1998/90000
 
   <recv response="200" crlf="true">
   </recv>
+
+  <!-- The variables only carry the checks above. -->
+  <Reference variables="1,2,3,4,6,rtpmap2,video2"/>
 
   <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>
   <CallLengthRepartition value="10, 50, 100, 500, 1000, 5000, 10000"/>

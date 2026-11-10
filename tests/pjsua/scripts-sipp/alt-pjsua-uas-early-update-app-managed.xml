@@ -59,7 +59,6 @@
             assign_to="1"/>
     </action>
   </recv>
-  <nop condexec="1"/>
 
   <send retrans="500">
     <![CDATA[
@@ -95,6 +94,9 @@
 
     ]]>
   </send>
+
+  <!-- The variables only carry the checks above. -->
+  <Reference variables="1"/>
 
   <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>
   <CallLengthRepartition value="10, 50, 100, 500, 1000, 5000, 10000"/>
