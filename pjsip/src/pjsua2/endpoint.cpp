@@ -1202,12 +1202,13 @@ AuthChallenge::~AuthChallenge()
         /* Abandon unconditionally, so the token's group lock reference and
          * the reference it holds on its owner (regc/pubc) are released.
          *
-         * This is safe even after the account has been deleted: no
-         * abandon_impl() reads the auth session, the only field
-         * async_abandon() itself touches is sess->parent -- always NULL for
-         * the account's shared session -- and the token's own group lock
-         * reference keeps its memory readable.  No PJSUA_LOCK is needed,
-         * which also removes any lock-order inversion.
+         * This is safe after the account has been deleted: pjsua
+         * deinitialises the shared auth session before releasing the
+         * account, leaving its parent and lock NULL, no abandon_impl()
+         * reads the auth session, and the token's own group lock
+         * reference keeps its memory readable. Deleting the account
+         * concurrently with this call is not supported. No PJSUA_LOCK is
+         * needed, which also removes any lock-order inversion.
          */
         pjsip_auth_clt_async_abandon(auth_sess_, token_);
     }
@@ -1345,11 +1346,11 @@ pj_status_t AuthChallenge::abandon()
     pjsip_auth_clt_sess *sess;
     void *tok;
     if (deferred_) {
-        /* Safe without PJSUA_LOCK and without checking the account: the
-         * token holds a reference on its owner, no abandon_impl() reads
-         * the auth session, and taking PJSUA_LOCK here would risk
-         * lock-order inversion since abandon_impl may run regc/inv
-         * callbacks that acquire the tsx group lock.
+        /* Safe without PJSUA_LOCK and without checking the account (see
+         * ~AuthChallenge): the token holds a reference on its owner, no
+         * abandon_impl() reads the auth session, and taking PJSUA_LOCK
+         * here would risk lock-order inversion since abandon_impl may run
+         * regc/inv callbacks that acquire the tsx group lock.
          */
         sess = auth_sess_;  tok = token_;
     } else {

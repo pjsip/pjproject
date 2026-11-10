@@ -348,10 +348,10 @@ typedef struct pjsip_auth_clt_sess
     unsigned             cred_cnt;      /**< Number of credentials.         */
     pjsip_cred_info     *cred_info;     /**< Array of credential information*/
     pjsip_cached_auth    cached_auth;   /**< Cached authorization info.     */
-    pj_lock_t           *lock;          /**< Prevent concurrent usage when
-                                             using a shared parent. Is only
-                                             used in parent. Set up by
-                                             pjsip_auth_clt_set_parent      */
+    pj_lock_t           *lock;          /**< Serializes operations on this
+                                             session, which matters when it
+                                             is shared as a parent. Set up
+                                             by pjsip_auth_clt_init()      */
     struct pjsip_auth_clt_sess *parent; /**< Allow a common parent
                                              for multiple sessions.         */
 
@@ -467,6 +467,10 @@ typedef struct pjsip_auth_srv
  * session to use pool for its subsequent memory allocation. The argument 
  * options should be set to zero for this PJSIP version.
  *
+ * The session owns a lock created here and released by
+ * pjsip_auth_clt_deinit(), so a session must be deinitialized before it
+ * is initialized again.
+ *
  * @param sess          The client authentication session.
  * @param endpt         Endpoint where this session belongs.
  * @param pool          Pool to use.
@@ -491,10 +495,13 @@ PJ_DECL(pj_status_t) pjsip_auth_clt_deinit( pjsip_auth_clt_sess *sess);
 
 
 /**
- * Clone client initialization session. 
+ * Clone client initialization session. The clone shares the parent
+ * session of the original, if any.
  *
  * @param pool          Pool to use.
- * @param sess          Structure to put the duplicated session.
+ * @param sess          Structure to put the duplicated session. It is
+ *                      initialized here; a session initialized earlier
+ *                      must be deinitialized first, or its lock leaks.
  * @param rhs           The client session to be cloned.
  *
  * @return              PJ_SUCCESS on success;
@@ -625,7 +632,9 @@ PJ_DECL(pj_status_t) pjsip_auth_srv_init( pj_pool_t *pool,
  * dialogs.
  *
  * @param sess          Session that will be delegating the requests.
- * @param p             Parent that will be shared.
+ * @param p             Parent that will be shared. It must have been
+ *                      initialized with pjsip_auth_clt_init(), which
+ *                      creates the lock that serializes operations on it.
  *
  * @return              PJ_SUCCESS on success.
  */

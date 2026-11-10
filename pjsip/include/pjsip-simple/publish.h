@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -147,7 +147,10 @@ PJ_DECL(pj_status_t) pjsip_publishc_create( pjsip_endpoint *endpt,
 /**
  * Destroy client publication structure. If a publication transaction is
  * in progress, then the structure will be deleted only after a final response
- * has been received, and in this case, the callback won't be called.
+ * has been received, and in this case, the callback won't be called. A
+ * callback that is already being delivered on another thread still
+ * completes, so the token must stay valid until it returns. Queued requests
+ * are released without being sent.
  *
  * @param pubc      The client publication structure.
  *
@@ -352,7 +355,11 @@ PJ_DECL(pj_status_t) pjsip_publishc_update_expires(pjsip_publishc *pubc,
  *                  - PJ_EPENDING if request is queued, or
  *                  - PJ_EBUSY if request is rejected because another PUBLISH
  *                    request is in progress, or
- *                  - other status code to indicate the error.
+ *                  - PJ_EGONE if the pubc has been destroyed, or
+ *                  - other status code to indicate the error. The
+ *                    callback has then already been called to report
+ *                    it, so the application must not handle the
+ *                    failure a second time.
  */
 PJ_DECL(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc, 
                                          pjsip_tx_data *tdata);

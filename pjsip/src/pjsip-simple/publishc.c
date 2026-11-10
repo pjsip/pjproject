@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -84,6 +84,11 @@ struct pjsip_publishc
      */
     int                          pending_auth_tokens;
     pj_bool_t                    in_callback;
+    /* Response callbacks running: requests sent meanwhile are queued, to
+     * be sent in order with the updated ETag afterwards. A count, since a
+     * refresh may complete on another thread while a callback runs.
+     */
+    int                          in_resp_cb;
     pj_mutex_t                  *mutex;
 
     pjsip_publishc_opt           opt;
@@ -114,6 +119,10 @@ struct pjsip_publishc
     pj_time_val                  last_refresh;
     pj_time_val                  next_refresh;
     pj_timer_entry               timer;
+    /* Refresh timer callbacks already dispatched by the timer heap when
+     * the timer was cancelled; they still run and must skip the refresh.
+     */
+    int                          timer_cancelled;
 
     /* Pending PUBLISH request */
     pending_publish              pending_reqs;
@@ -128,6 +137,8 @@ static pj_status_t pubc_async_auth_send_impl(
 static void pubc_async_auth_abandon_impl(
                                 pjsip_auth_clt_sess *auth_sess,
                                 void *user_data);
+static pj_status_t pubc_send(pjsip_publishc *pubc, pjsip_tx_data *tdata);
+static void pubc_send_queued(pjsip_publishc *pubc);
 
 PJ_DEF(void) pjsip_publishc_opt_default(pjsip_publishc_opt *opt)
 {
@@ -222,25 +233,76 @@ PJ_DEF(pj_status_t) pjsip_publishc_create( pjsip_endpoint *endpt,
 }
 
 
+/* Cancel the refresh timer. Called with the mutex held. If the timer heap
+ * has already dispatched the callback, it will still run: count it as a
+ * running callback so that pubc is not freed under it, and mark it to be
+ * skipped.
+ */
+static void pubc_cancel_timer(pjsip_publishc *pubc)
+{
+    if (pubc->timer.id == 0)
+        return;
+
+    if (pj_timer_heap_cancel(pjsip_endpt_get_timer_heap(pubc->endpt),
+                             &pubc->timer) == 0)
+    {
+        ++pubc->timer_cancelled;
+        ++pubc->in_callback;
+    }
+    pubc->timer.id = 0;
+}
+
+/* Release queued requests. Called with the mutex held. */
+static void pubc_flush_queue(pjsip_publishc *pubc)
+{
+    while (!pj_list_empty(&pubc->pending_reqs)) {
+        pending_publish *pp = pubc->pending_reqs.next;
+
+        pj_list_erase(pp);
+        pj_list_push_back(&pubc->pending_reqs_empty, pp);
+        pjsip_tx_data_dec_ref(pp->tdata);
+    }
+}
+
+/* Free pubc. Called without the mutex held, once nothing is outstanding. */
+static void pubc_free(pjsip_publishc *pubc)
+{
+    if (pubc->mutex)
+        pj_mutex_destroy(pubc->mutex);
+
+    pjsip_auth_clt_deinit(&pubc->auth_sess);
+    pjsip_endpt_release_pool(pubc->endpt, pubc->pool);
+}
+
+/* Release the mutex, then complete a deferred destroy if the last
+ * outstanding transaction, callback or auth token has just finished.
+ */
+static void pubc_unlock(pjsip_publishc *pubc)
+{
+    pj_bool_t can_free = pubc->_delete_flag && !pubc->pending_tsx &&
+                         !pubc->in_callback && !pubc->pending_auth_tokens;
+
+    pj_mutex_unlock(pubc->mutex);
+    if (can_free)
+        pubc_free(pubc);
+}
+
 PJ_DEF(pj_status_t) pjsip_publishc_destroy(pjsip_publishc *pubc)
 {
     PJ_ASSERT_RETURN(pubc, PJ_EINVAL);
 
+    pj_mutex_lock(pubc->mutex);
+
+    pubc_cancel_timer(pubc);
+    pubc_flush_queue(pubc);
+
     if (pubc->pending_tsx || pubc->in_callback || pubc->pending_auth_tokens) {
         pubc->_delete_flag = 1;
         pubc->cb = NULL;
+        pj_mutex_unlock(pubc->mutex);
     } else {
-        /* Cancel existing timer, if any */
-        if (pubc->timer.id != 0) {
-            pjsip_endpt_cancel_timer(pubc->endpt, &pubc->timer);
-            pubc->timer.id = 0;
-        }
-
-        if (pubc->mutex)
-            pj_mutex_destroy(pubc->mutex);
-
-        pjsip_auth_clt_deinit(&pubc->auth_sess);
-        pjsip_endpt_release_pool(pubc->endpt, pubc->pool);
+        pj_mutex_unlock(pubc->mutex);
+        pubc_free(pubc);
     }
 
     return PJ_SUCCESS;
@@ -329,16 +391,30 @@ PJ_DEF(pj_status_t) pjsip_publishc_set_credentials( pjsip_publishc *pubc,
                                                 int count,
                                                 const pjsip_cred_info cred[] )
 {
+    pj_status_t status;
+
     PJ_ASSERT_RETURN(pubc && count && cred, PJ_EINVAL);
-    return pjsip_auth_clt_set_credentials(&pubc->auth_sess, count, cred);
+
+    pj_mutex_lock(pubc->mutex);
+    status = pjsip_auth_clt_set_credentials(&pubc->auth_sess, count, cred);
+    pj_mutex_unlock(pubc->mutex);
+
+    return status;
 }
 
 PJ_DEF(pj_status_t) pjsip_publishc_set_auth_sess(
                                     pjsip_publishc *pubc,
                                     pjsip_auth_clt_sess *session)
 {
+    pj_status_t status;
+
     PJ_ASSERT_RETURN(pubc, PJ_EINVAL);
-    return pjsip_auth_clt_set_parent(&pubc->auth_sess, session);
+
+    pj_mutex_lock(pubc->mutex);
+    status = pjsip_auth_clt_set_parent(&pubc->auth_sess, session);
+    pj_mutex_unlock(pubc->mutex);
+
+    return status;
 }
 
 PJ_DEF(pjsip_auth_clt_sess*) pjsip_publishc_get_auth_sess(
@@ -355,6 +431,8 @@ PJ_DEF(pj_status_t) pjsip_publishc_set_route_set( pjsip_publishc *pubc,
 
     PJ_ASSERT_RETURN(pubc && route_set, PJ_EINVAL);
 
+    pj_mutex_lock(pubc->mutex);
+
     pj_list_init(&pubc->route_set);
 
     chdr = route_set->next;
@@ -362,6 +440,8 @@ PJ_DEF(pj_status_t) pjsip_publishc_set_route_set( pjsip_publishc *pubc,
         pj_list_push_back(&pubc->route_set, pjsip_hdr_clone(pubc->pool, chdr));
         chdr = chdr->next;
     }
+
+    pj_mutex_unlock(pubc->mutex);
 
     return PJ_SUCCESS;
 }
@@ -373,12 +453,16 @@ PJ_DEF(pj_status_t) pjsip_publishc_set_headers( pjsip_publishc *pubc,
 
     PJ_ASSERT_RETURN(pubc && hdr_list, PJ_EINVAL);
 
+    pj_mutex_lock(pubc->mutex);
+
     pj_list_init(&pubc->usr_hdr);
     h = hdr_list->next;
     while (h != hdr_list) {
         pj_list_push_back(&pubc->usr_hdr, pjsip_hdr_clone(pubc->pool, h));
         h = h->next;
     }
+
+    pj_mutex_unlock(pubc->mutex);
 
     return PJ_SUCCESS;
 }
@@ -389,6 +473,8 @@ PJ_DEF(pj_status_t) pjsip_publishc_set_via_sent_by(pjsip_publishc *pubc,
 {
     PJ_ASSERT_RETURN(pubc, PJ_EINVAL);
 
+    pj_mutex_lock(pubc->mutex);
+
     if (!via_addr)
         pj_bzero(&pubc->via_addr, sizeof(pubc->via_addr));
     else {
@@ -397,6 +483,8 @@ PJ_DEF(pj_status_t) pjsip_publishc_set_via_sent_by(pjsip_publishc *pubc,
         pubc->via_addr.port = via_addr->port;
     }
     pubc->via_tp = via_tp;
+
+    pj_mutex_unlock(pubc->mutex);
 
     return PJ_SUCCESS;
 }
@@ -485,14 +573,14 @@ static pj_status_t create_request(pjsip_publishc *pubc,
 }
 
 
-PJ_DEF(pj_status_t) pjsip_publishc_publish(pjsip_publishc *pubc, 
-                                           pj_bool_t auto_refresh,
-                                           pjsip_tx_data **p_tdata)
+/* Create a PUBLISH request with the current Expires. Called with the
+ * mutex held.
+ */
+static pj_status_t pubc_create_publish(pjsip_publishc *pubc,
+                                       pjsip_tx_data **p_tdata)
 {
     pj_status_t status;
     pjsip_tx_data *tdata;
-
-    PJ_ASSERT_RETURN(pubc && p_tdata, PJ_EINVAL);
 
     status = create_request(pubc, &tdata);
     if (status != PJ_SUCCESS)
@@ -508,13 +596,33 @@ PJ_DEF(pj_status_t) pjsip_publishc_publish(pjsip_publishc *pubc,
             pjsip_msg_add_hdr(tdata->msg, dup);
     }
 
-    /* Cancel existing timer */
-    if (pubc->timer.id != 0) {
-        pjsip_endpt_cancel_timer(pubc->endpt, &pubc->timer);
-        pubc->timer.id = 0;
+    *p_tdata = tdata;
+    return PJ_SUCCESS;
+}
+
+
+PJ_DEF(pj_status_t) pjsip_publishc_publish(pjsip_publishc *pubc, 
+                                           pj_bool_t auto_refresh,
+                                           pjsip_tx_data **p_tdata)
+{
+    pj_status_t status;
+    pjsip_tx_data *tdata;
+
+    PJ_ASSERT_RETURN(pubc && p_tdata, PJ_EINVAL);
+
+    pj_mutex_lock(pubc->mutex);
+
+    status = pubc_create_publish(pubc, &tdata);
+    if (status != PJ_SUCCESS) {
+        pj_mutex_unlock(pubc->mutex);
+        return status;
     }
 
+    pubc_cancel_timer(pubc);
+
     pubc->auto_refresh = auto_refresh;
+
+    pj_mutex_unlock(pubc->mutex);
 
     /* Done */
     *p_tdata = tdata;
@@ -532,12 +640,14 @@ PJ_DEF(pj_status_t) pjsip_publishc_unpublish(pjsip_publishc *pubc,
 
     PJ_ASSERT_RETURN(pubc && p_tdata, PJ_EINVAL);
 
-    if (pubc->timer.id != 0) {
-        pjsip_endpt_cancel_timer(pubc->endpt, &pubc->timer);
-        pubc->timer.id = 0;
-    }
+    pj_mutex_lock(pubc->mutex);
+
+    pubc_cancel_timer(pubc);
 
     status = create_request(pubc, &tdata);
+
+    pj_mutex_unlock(pubc->mutex);
+
     if (status != PJ_SUCCESS)
         return status;
 
@@ -556,21 +666,41 @@ PJ_DEF(pj_status_t) pjsip_publishc_update_expires( pjsip_publishc *pubc,
                                                    pj_uint32_t expires )
 {
     PJ_ASSERT_RETURN(pubc, PJ_EINVAL);
+
+    pj_mutex_lock(pubc->mutex);
     set_expires( pubc, expires );
+    pj_mutex_unlock(pubc->mutex);
+
     return PJ_SUCCESS;
 }
 
 
-static void call_callback(pjsip_publishc *pubc, pj_status_t status, 
-                          int st_code, const pj_str_t *reason,
-                          pjsip_rx_data *rdata, pj_uint32_t expiration)
+/* Snapshot the callback under the mutex. It is cleared when the app
+ * destroys the pubc while a request or an async auth token is still
+ * outstanding.
+ */
+static pjsip_publishc_cb *pubc_get_cb(pjsip_publishc *pubc)
+{
+    pjsip_publishc_cb *cb;
+
+    pj_mutex_lock(pubc->mutex);
+    cb = pubc->cb;
+    pj_mutex_unlock(pubc->mutex);
+
+    return cb;
+}
+
+/* Invoke cb, a snapshot of pubc->cb taken under the mutex, without the
+ * mutex held. The caller keeps pubc alive across the call.
+ */
+static void call_callback(pjsip_publishc *pubc, pjsip_publishc_cb *cb,
+                          pj_status_t status, int st_code,
+                          const pj_str_t *reason, pjsip_rx_data *rdata,
+                          pj_uint32_t expiration)
 {
     struct pjsip_publishc_cbparam cbparam;
 
-    /* The callback is cleared when the app destroys the pubc while a
-     * request or an async auth token is still outstanding.
-     */
-    if (!pubc->cb)
+    if (!cb)
         return;
 
     cbparam.pubc = pubc;
@@ -581,7 +711,7 @@ static void call_callback(pjsip_publishc *pubc, pj_status_t status,
     cbparam.rdata = rdata;
     cbparam.expiration = expiration;
 
-    (*pubc->cb)(&cbparam);
+    (*cb)(&cbparam);
 }
 
 static void pubc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
@@ -593,37 +723,66 @@ static void pubc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
     
     PJ_UNUSED_ARG(timer_heap);
 
-    entry->id = 0;
-    status = pjsip_publishc_publish(pubc, 1, &tdata);
-    if (status != PJ_SUCCESS) {
-        char errmsg[PJ_ERR_MSG_SIZE];
-        pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
-        call_callback(pubc, status, 400, &reason, NULL,
-                      PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
+    pj_mutex_lock(pubc->mutex);
+
+    /* Cancelled after the timer heap dispatched us; pubc_cancel_timer()
+     * already counted this callback.
+     */
+    if (pubc->timer_cancelled) {
+        --pubc->timer_cancelled;
+        --pubc->in_callback;
+        pubc_unlock(pubc);
         return;
     }
 
-    status = pjsip_publishc_send(pubc, tdata);
-    /* No need to call callback as it should have been called */
+    entry->id = 0;
+    ++pubc->in_callback;
+
+    /* Build and claim the refresh without releasing the mutex, so that a
+     * concurrent publish(), unpublish() or destroy() either cancels this
+     * timer first or runs after the refresh is in flight. If the app's own
+     * request is in flight, its 2xx re-arms the timer instead.
+     */
+    if (pubc->pending_tsx == 0) {
+        status = pubc_create_publish(pubc, &tdata);
+        if (status != PJ_SUCCESS) {
+            char errmsg[PJ_ERR_MSG_SIZE];
+            pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
+            pjsip_publishc_cb *cb = pubc->cb;
+
+            pj_mutex_unlock(pubc->mutex);
+            call_callback(pubc, cb, status, 400, &reason, NULL,
+                          PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
+            pj_mutex_lock(pubc->mutex);
+        } else {
+            pubc_send(pubc, tdata);
+        }
+    }
+
+    /* A request queued while the mutex was released for the send stays
+     * queued if that send created no transaction, so send it now.
+     */
+    pubc_send_queued(pubc);
+
+    --pubc->in_callback;
+    pubc_unlock(pubc);
 }
 
-/* Async auth send callback: resend the authenticated PUBLISH request.
- * user_data points to pjsip_publishc*.  No lock is held by the caller
- * (publishc does not use dialog-based locking).
- */
 /* Release the hold an async auth token took on pubc at creation,
  * completing a destroy that was deferred while the token was outstanding.
  */
 static void pubc_auth_token_release(pjsip_publishc *pubc)
 {
+    pj_mutex_lock(pubc->mutex);
     pj_assert(pubc->pending_auth_tokens > 0);
     --pubc->pending_auth_tokens;
-
-    /* pjsip_publishc_destroy() re-defers if anything is still outstanding. */
-    if (pubc->_delete_flag)
-        pjsip_publishc_destroy(pubc);
+    pubc_unlock(pubc);
 }
 
+/* Async auth send callback: send the authenticated PUBLISH request.
+ * user_data points to pjsip_publishc*. No auth lock is held: the auth
+ * client releases it before send_impl.
+ */
 static pj_status_t pubc_async_auth_send_impl(
                                 pjsip_auth_clt_sess *auth_sess,
                                 void *user_data,
@@ -655,8 +814,9 @@ static void pubc_async_auth_abandon_impl(pjsip_auth_clt_sess *auth_sess,
     /* The hold the token took at creation keeps pubc alive across the
      * callback, which may destroy it.
      */
-    call_callback(pubc, PJ_ECANCELLED, PJSIP_SC_UNAUTHORIZED, &reason,
-                  NULL, PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
+    call_callback(pubc, pubc_get_cb(pubc), PJ_ECANCELLED,
+                  PJSIP_SC_UNAUTHORIZED, &reason, NULL,
+                  PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
 
     pubc_auth_token_release(pubc);
 }
@@ -666,7 +826,14 @@ static void tsx_callback(void *token, pjsip_event *event)
     pj_status_t status;
     pjsip_publishc *pubc = (pjsip_publishc*) token;
     pjsip_transaction *tsx = event->body.tsx_state.tsx;
-    
+    pjsip_publishc_cb *cb;
+
+    /* Hold the mutex for the whole callback, releasing it only around
+     * calls into the application, so that an app thread sending or
+     * destroying concurrently sees consistent state.
+     */
+    pj_mutex_lock(pubc->mutex);
+
     /* Decrement pending transaction counter. */
     pj_assert(pubc->pending_tsx > 0);
     --pubc->pending_tsx;
@@ -691,8 +858,6 @@ static void tsx_callback(void *token, pjsip_event *event)
 
         /* Per-challenge token allocated from tsx->pool, kept alive
          * by the grp_lock ref until consumed (send or abandon).
-         * No lock is held here — publishc uses endpoint-level
-         * send_request, not dialog-based locking.
          */
         {
             pjsip_auth_clt_async_impl_token *auth_token;
@@ -713,9 +878,13 @@ static void tsx_callback(void *token, pjsip_event *event)
             pj_bzero(&chal_param, sizeof(chal_param));
             chal_param.rdata = rdata;
             chal_param.tdata = tsx->last_tx;
+
+            /* May call the application's challenge callback. */
+            pj_mutex_unlock(pubc->mutex);
             status = pjsip_auth_clt_async_impl_on_challenge(
                                             &pubc->auth_sess,
                                             auth_token, &chal_param);
+            pj_mutex_lock(pubc->mutex);
             if (status != PJ_SUCCESS) {
                 pj_grp_lock_dec_ref(tsx->grp_lock);
                 --pubc->pending_auth_tokens;
@@ -725,11 +894,28 @@ static void tsx_callback(void *token, pjsip_event *event)
             status = pjsip_auth_clt_reinit_req(&pubc->auth_sess, rdata,
                                                tsx->last_tx, &tdata);
             if (status != PJ_SUCCESS) {
-                call_callback(pubc, status, tsx->status_code,
+                cb = pubc->cb;
+                pj_mutex_unlock(pubc->mutex);
+                call_callback(pubc, cb, status, tsx->status_code,
                               &rdata->msg_info.msg->line.status.reason,
                               rdata, PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
+                pj_mutex_lock(pubc->mutex);
             } else {
+                /* Don't hold the mutex while sending (see #1247). */
+                pj_mutex_unlock(pubc->mutex);
                 status = pjsip_publishc_send(pubc, tdata);
+                if (status == PJ_EBUSY) {
+                    /* Another request got in during the challenge
+                     * callback and queueing is off, so the challenged
+                     * request is dropped. pubc_send() reports every
+                     * other failure itself.
+                     */
+                    call_callback(pubc, pubc_get_cb(pubc), status,
+                                  tsx->status_code,
+                                  &rdata->msg_info.msg->line.status.reason,
+                                  rdata, PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
+                }
+                pj_mutex_lock(pubc->mutex);
             }
         }
 
@@ -761,19 +947,20 @@ static void tsx_callback(void *token, pjsip_event *event)
 
             if (pubc->auto_refresh && expires)
                 expiration = expires->ivalue;
-            
-            if (pubc->auto_refresh && expiration!=0 &&
-                expiration!=PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED)
+
+            if (expiration == 0) {
+                /* The publication is gone: a refresh re-armed by an
+                 * earlier response must not go out.
+                 */
+                pubc_cancel_timer(pubc);
+            } else if (pubc->auto_refresh &&
+                       expiration!=PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED)
             {
                 const pj_time_val min_delay = {MIN_REFRESH_MSEC / 1000,
                                                MIN_REFRESH_MSEC % 1000};
                 pj_time_val delay = {0, 0};
 
-                /* Cancel existing timer, if any */
-                if (pubc->timer.id != 0) {
-                    pjsip_endpt_cancel_timer(pubc->endpt, &pubc->timer);
-                    pubc->timer.id = 0;
-                }
+                pubc_cancel_timer(pubc);
 
                 /* prevent underflow in case the remote answers with an unexpectedly low expiry value */
                 if (expiration > DELAY_BEFORE_REFRESH) {
@@ -801,10 +988,21 @@ static void tsx_callback(void *token, pjsip_event *event)
                 pubc->timer.cb = &pubc_refresh_timer_cb;
                 pubc->timer.id = REFRESH_TIMER;
                 pubc->timer.user_data = pubc;
-                pjsip_endpt_schedule_timer( pubc->endpt, &pubc->timer, &delay);
-                pj_gettimeofday(&pubc->last_refresh);
-                pubc->next_refresh = pubc->last_refresh;
-                PJ_TIME_VAL_ADD(pubc->next_refresh, delay);
+                status = pjsip_endpt_schedule_timer(pubc->endpt, &pubc->timer,
+                                                    &delay);
+                if (status != PJ_SUCCESS) {
+                    /* Keep timer.id consistent with the heap, since
+                     * pubc_cancel_timer() infers a dispatched callback
+                     * from a failed cancel.
+                     */
+                    pubc->timer.id = 0;
+                    PJ_PERROR(4,(THIS_FILE, status,
+                                 "Error scheduling refresh timer"));
+                } else {
+                    pj_gettimeofday(&pubc->last_refresh);
+                    pubc->next_refresh = pubc->last_refresh;
+                    PJ_TIME_VAL_ADD(pubc->next_refresh, delay);
+                }
             }
 
         } else {
@@ -816,107 +1014,55 @@ static void tsx_callback(void *token, pjsip_event *event)
         /* Call callback. */
         // if (expiration == 0xFFFF) expiration = -1;
 
-        /* Temporarily increment pending_tsx to prevent callback from
-         * destroying pubc.
+        /* Make requests sent during the callback queue behind this
+         * response, so the loop below sends them in order with the
+         * updated ETag (#996). This is kept apart from pending_tsx so
+         * that a refresh timer firing meanwhile still sees no transaction
+         * in flight. in_callback already prevents destruction.
          */
-        ++pubc->pending_tsx;
+        ++pubc->in_resp_cb;
+        cb = pubc->cb;
 
-        call_callback(pubc, PJ_SUCCESS, tsx->status_code, 
+        pj_mutex_unlock(pubc->mutex);
+        call_callback(pubc, cb, PJ_SUCCESS, tsx->status_code, 
                       (rdata ? &rdata->msg_info.msg->line.status.reason 
                         : pjsip_get_status_text(tsx->status_code)),
                       rdata, expiration);
+        pj_mutex_lock(pubc->mutex);
 
-        --pubc->pending_tsx;
+        --pubc->in_resp_cb;
 
         /* If we have pending request(s), send them now */
-        pj_mutex_lock(pubc->mutex);
-        while (!pj_list_empty(&pubc->pending_reqs)) {
-            pending_publish *pp = pubc->pending_reqs.next;
-            pjsip_tx_data *tdata = pp->tdata;
-
-            /* Remove the request from pending request list,
-             * and keep the unused entry into pending_reqs_empty pool.
-             */
-            pj_list_erase(pp);
-            pj_list_push_back(&pubc->pending_reqs_empty, pp);
-
-            /* Add SIP-If-Match if we have etag and the request doesn't have
-             * one (https://github.com/pjsip/pjproject/issues/996)
-             */
-            if (pubc->etag.slen) {
-                const pj_str_t STR_HNAME = { "SIP-If-Match", 12 };
-                pjsip_generic_string_hdr *sim_hdr;
-
-                sim_hdr = (pjsip_generic_string_hdr*)
-                          pjsip_msg_find_hdr_by_name(tdata->msg, &STR_HNAME, NULL);
-                if (!sim_hdr) {
-                    /* Create the header */
-                    sim_hdr = pjsip_generic_string_hdr_create(tdata->pool,
-                                                              &STR_HNAME,
-                                                              &pubc->etag);
-                    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)sim_hdr);
-
-                } else {
-                    /* Update */
-                    if (pj_strcmp(&pubc->etag, &sim_hdr->hvalue))
-                        pj_strdup(tdata->pool, &sim_hdr->hvalue, &pubc->etag);
-                }
-            }
-
-            status = pjsip_publishc_send(pubc, tdata);
-            if (status == PJ_EPENDING) {
-                pj_assert(!"Not expected");
-                pjsip_tx_data_dec_ref(tdata);
-            } else if (status == PJ_SUCCESS) {
-                break;
-            }
-        }
-        pj_mutex_unlock(pubc->mutex);
+        pubc_send_queued(pubc);
     }
 
     /* No longer in callback. */
     --pubc->in_callback;
 
     /* Delete the record if user destroy pubc during the callback. */
-    if (pubc->_delete_flag && pubc->pending_tsx==0) {
-        pjsip_publishc_destroy(pubc);
-    }
+    pubc_unlock(pubc);
 }
 
 
-PJ_DEF(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc, 
-                                        pjsip_tx_data *tdata)
+/* Send tdata as pubc's one outstanding transaction. Called with the mutex
+ * held, no transaction pending, and a hold on pubc (in_callback or an auth
+ * token), since tsx_callback() may run before send_request() returns and
+ * complete a deferred destroy. The mutex is released around the transport
+ * send (see #1247) and is held again on return. On failure the callback
+ * has been called, except when the pubc has been destroyed (PJ_EGONE).
+ */
+static pj_status_t pubc_send(pjsip_publishc *pubc, pjsip_tx_data *tdata)
 {
     pj_status_t status;
     pjsip_cseq_hdr *cseq_hdr;
     pj_uint32_t cseq;
+    pj_bool_t no_tsx = PJ_FALSE;
 
-    PJ_ASSERT_RETURN(pubc && tdata, PJ_EINVAL);
+    pj_assert(pubc->pending_tsx == 0);
 
-    /* Make sure we don't have pending transaction. */
-    pj_mutex_lock(pubc->mutex);
-    if (pubc->pending_tsx) {
-        if (pubc->opt.queue_request) {
-            pending_publish *pp = NULL;
-            if (pj_list_empty(&pubc->pending_reqs_empty)) {
-                pp = PJ_POOL_ZALLOC_T(pubc->pool, pending_publish);
-            } else {
-                pp = pubc->pending_reqs_empty.next;
-                pj_list_erase(pp);
-            }
-            pp->tdata = tdata;
-            pj_list_push_back(&pubc->pending_reqs, pp);
-            pj_mutex_unlock(pubc->mutex);
-            PJ_LOG(4,(THIS_FILE, "Request is queued, pubc has another "
-                                 "transaction pending"));
-            return PJ_EPENDING;
-        } else {
-            pjsip_tx_data_dec_ref(tdata);
-            pj_mutex_unlock(pubc->mutex);
-            PJ_LOG(4,(THIS_FILE, "Unable to send request, pubc has another "
-                                 "transaction pending"));
-            return PJ_EBUSY;
-        }
+    if (pubc->_delete_flag) {
+        pjsip_tx_data_dec_ref(tdata);
+        return PJ_EGONE;
     }
 
     /* If via_addr is set, use this address for the Via header. */
@@ -943,13 +1089,140 @@ PJ_DEF(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc,
 
     status = pjsip_endpt_send_request(pubc->endpt, tdata, -1, pubc, 
                                       &tsx_callback);
-    if (status!=PJ_SUCCESS) {
-        // no need to decrement, callback has been called and it should
-        // already decremented pending_tsx. Decrementing this here may 
-        // cause accessing freed memory location.
-        //--pubc->pending_tsx;
+
+    pj_mutex_lock(pubc->mutex);
+    if (status != PJ_SUCCESS) {
         PJ_PERROR(4,(THIS_FILE, status, "Error sending request"));
+
+        /* tsx_callback() is not called when the transaction could not be
+         * created. If it has run, or another request has been sent since,
+         * the counter or the CSeq has changed (see also #1936).
+         */
+        no_tsx = (pubc->pending_tsx == 1 && cseq == pubc->cseq_hdr->cseq);
     }
+
+    if (no_tsx) {
+        char errmsg[PJ_ERR_MSG_SIZE];
+        pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
+        pjsip_publishc_cb *cb = pubc->cb;
+
+        /* Report it as tsx_callback() would, keeping the transaction
+         * claimed across the callback so that requests sent meanwhile
+         * queue behind those already queued.
+         */
+        pj_mutex_unlock(pubc->mutex);
+        call_callback(pubc, cb, status, PJSIP_SC_TSX_TRANSPORT_ERROR,
+                      &reason, NULL, PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
+        pj_mutex_lock(pubc->mutex);
+
+        --pubc->pending_tsx;
+    }
+
+    return status;
+}
+
+/* Send the queued requests, oldest first, until one is in flight. Called
+ * like pubc_send(): with the mutex held and a hold on pubc; the mutex is
+ * held on return. A failed send may run tsx_callback() nested or let
+ * another thread in, so the transaction count is rechecked each round.
+ */
+static void pubc_send_queued(pjsip_publishc *pubc)
+{
+    while (pubc->pending_tsx == 0 && !pubc->in_resp_cb &&
+           !pj_list_empty(&pubc->pending_reqs))
+    {
+        pending_publish *pp = pubc->pending_reqs.next;
+        pjsip_tx_data *tdata = pp->tdata;
+
+        /* Remove the request from pending request list,
+         * and keep the unused entry into pending_reqs_empty pool.
+         */
+        pj_list_erase(pp);
+        pj_list_push_back(&pubc->pending_reqs_empty, pp);
+
+        /* Add SIP-If-Match if we have etag and the request doesn't have
+         * one (https://github.com/pjsip/pjproject/issues/996)
+         */
+        if (pubc->etag.slen) {
+            const pj_str_t STR_HNAME = { "SIP-If-Match", 12 };
+            pjsip_generic_string_hdr *sim_hdr;
+
+            sim_hdr = (pjsip_generic_string_hdr*)
+                      pjsip_msg_find_hdr_by_name(tdata->msg, &STR_HNAME, NULL);
+            if (!sim_hdr) {
+                /* Create the header */
+                sim_hdr = pjsip_generic_string_hdr_create(tdata->pool,
+                                                          &STR_HNAME,
+                                                          &pubc->etag);
+                pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)sim_hdr);
+
+            } else {
+                /* Update */
+                if (pj_strcmp(&pubc->etag, &sim_hdr->hvalue))
+                    pj_strdup(tdata->pool, &sim_hdr->hvalue, &pubc->etag);
+            }
+        }
+
+        /* pubc_send() claims the transaction before releasing the mutex,
+         * so a concurrent pjsip_publishc_send() queues behind this request
+         * instead of overtaking it.
+         */
+        pubc_send(pubc, tdata);
+    }
+}
+
+
+PJ_DEF(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc, 
+                                        pjsip_tx_data *tdata)
+{
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(pubc && tdata, PJ_EINVAL);
+
+    pj_mutex_lock(pubc->mutex);
+
+    if (pubc->_delete_flag) {
+        pjsip_tx_data_dec_ref(tdata);
+        pj_mutex_unlock(pubc->mutex);
+        return PJ_EGONE;
+    }
+
+    /* Make sure we don't have pending transaction. */
+    if (pubc->pending_tsx || pubc->in_resp_cb) {
+        if (pubc->opt.queue_request) {
+            pending_publish *pp = NULL;
+            if (pj_list_empty(&pubc->pending_reqs_empty)) {
+                pp = PJ_POOL_ZALLOC_T(pubc->pool, pending_publish);
+            } else {
+                pp = pubc->pending_reqs_empty.next;
+                pj_list_erase(pp);
+            }
+            pp->tdata = tdata;
+            pj_list_push_back(&pubc->pending_reqs, pp);
+            pj_mutex_unlock(pubc->mutex);
+            PJ_LOG(4,(THIS_FILE, "Request is queued, pubc has another "
+                                 "transaction pending"));
+            return PJ_EPENDING;
+        } else {
+            pjsip_tx_data_dec_ref(tdata);
+            pj_mutex_unlock(pubc->mutex);
+            PJ_LOG(4,(THIS_FILE, "Unable to send request, pubc has another "
+                                 "transaction pending"));
+            return PJ_EBUSY;
+        }
+    }
+
+    ++pubc->in_callback;
+
+    status = pubc_send(pubc, tdata);
+
+    /* A failure that created no transaction leaves nothing in flight, so
+     * send what was queued meanwhile.
+     */
+    pubc_send_queued(pubc);
+
+    --pubc->in_callback;
+    pubc_unlock(pubc);
 
     return status;
 }
