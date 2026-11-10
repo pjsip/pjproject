@@ -18,7 +18,7 @@ find_library(OpenCoreAMRNB_LIBRARY
   NAMES
     opencore-amrnb
   HINTS
-    ${PC_OpenCoreAMRNB_LIBDIRS}
+    ${PC_OpenCoreAMRNB_LIBDIR}
     ${PC_OpenCoreAMRNB_LIBRARY_DIRS}
 )
 mark_as_advanced(OpenCoreAMRNB_LIBRARY)

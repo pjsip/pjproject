@@ -58,11 +58,12 @@ endfunction()
 
 # pj_package_root_given(<package> <out-var>)
 #
-# TRUE when a root is given for <package>, i.e. the user named where
-# find_package() should look.
+# TRUE when a root is given for <package> as a CMake variable, i.e. the user
+# named where find_package() should look. A root in the environment may be
+# meant for another project, so it does not count.
 function(pj_package_root_given package out)
-  pj_package_roots(${package} _roots)
-  if(_roots)
+  string(TOUPPER "${package}" _upper)
+  if(${package}_ROOT OR ${_upper}_ROOT)
     set(${out} TRUE PARENT_SCOPE)
   else()
     set(${out} FALSE PARENT_SCOPE)
