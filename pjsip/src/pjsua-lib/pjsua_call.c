@@ -5774,8 +5774,8 @@ static pj_status_t process_pending_reinvite(pjsua_call *call)
                 conn = m->conn;
                 if (!conn)
                     conn = cur_sdp->conn;
-                if (pj_strcmp2(&conn->addr, "0.0.0.0")==0 ||
-                    pj_strcmp2(&conn->addr, "0")==0)
+                if (conn && (pj_strcmp2(&conn->addr, "0.0.0.0")==0 ||
+                             pj_strcmp2(&conn->addr, "0")==0))
                 {
                     if (!new_m->conn) {
                         new_m->conn = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_conn);
@@ -7040,8 +7040,9 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
         if (!conn)
             conn = offer->conn;
 
-        if (pj_strcmp2(&conn->addr, "0.0.0.0")==0 ||
-            pj_strcmp2(&conn->addr, "0")==0)
+        /* Disabled media may have no connection info */
+        if (conn && (pj_strcmp2(&conn->addr, "0.0.0.0")==0 ||
+                     pj_strcmp2(&conn->addr, "0")==0))
         {
             pjmedia_sdp_conn *a_conn = answer->media[i]->conn;
 

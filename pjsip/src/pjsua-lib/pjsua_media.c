@@ -284,7 +284,8 @@ static int get_media_ip_version(pjsua_call_media *call_med,
         m = rem_sdp->media[call_med->idx];
         c = m->conn? m->conn : rem_sdp->conn;
 
-        if (pj_stricmp(&c->addr_type, &ID_IP6) == 0 &&
+        /* Disabled media may have no connection info */
+        if (c && pj_stricmp(&c->addr_type, &ID_IP6) == 0 &&
             ipv6_use != PJSUA_IPV6_DISABLED)
         {
             /* Use IPv6. */
@@ -1696,9 +1697,9 @@ static void sort_media(const pjmedia_sdp_session *sdp,
         if (m->desc.port == 0)
             score[i] -= 10;
 
-        /* Is media inactive? */
+        /* Is media inactive? Disabled media may have no connection info */
         if (pjmedia_sdp_media_find_attr2(m, "inactive", NULL) ||
-            pj_strcmp2(&c->addr, "0.0.0.0") == 0)
+            (c && pj_strcmp2(&c->addr, "0.0.0.0") == 0))
         {
             //score[i] -= 10;
             score[i] -= 1;
