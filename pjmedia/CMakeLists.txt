@@ -29,6 +29,11 @@ pj_option(PJMEDIA_WITH_RESAMPLE "Enable resampling implementation"
   ALLOWED_VALUES none libresample libsamplerate speex
 )
 
+# The resampler searches without pj_find_optional(), and before the Speex
+# AEC's search for SpeexDSP, so a changed root is followed from here
+pj_retry_on_new_root(PJMEDIA_WITH_RESAMPLE SampleRate)
+pj_retry_on_new_root(PJMEDIA_WITH_SPEEX_AEC SpeexDSP)
+
 if(PJMEDIA_WITH_RESAMPLE STREQUAL "libresample")
   if(NOT TARGET Pj::Dep::Resample)
     pj_force_set(PJMEDIA_WITH_RESAMPLE "none" "libresample not found")

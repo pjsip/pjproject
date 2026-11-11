@@ -419,6 +419,8 @@ function(_pj_check_mbedtls_usable)
 endfunction()
 
 pj_retry_on_new_root(PJLIB_WITH_SSL OpenSSL)
+pj_retry_on_new_root(PJLIB_WITH_SSL GnuTLS)
+pj_retry_on_new_root(PJLIB_WITH_SSL MbedTLS)
 set(_pj_ssl "${PJLIB_WITH_SSL}")
 if(_pj_ssl STREQUAL "none")
   set(_pj_ssl "")
