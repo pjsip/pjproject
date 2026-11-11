@@ -2757,7 +2757,7 @@ TransportId Endpoint::transportCreate(pjsip_transport_type_e type,
 
 IntVector Endpoint::transportEnum() const PJSUA2_THROW(Error)
 {
-    pjsua_transport_id tids[32];
+    pjsua_transport_id tids[PJSUA_MAX_TRANSPORTS];
     unsigned count = PJ_ARRAY_SIZE(tids);
 
     PJSUA2_CHECK_EXPR( pjsua_enum_transports(tids, &count) );

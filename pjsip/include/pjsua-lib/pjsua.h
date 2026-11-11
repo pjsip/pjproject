@@ -4132,6 +4132,27 @@ PJ_DECL(pj_status_t) pjsua_transport_lis_restart( pjsua_transport_id id,
 #   define PJSUA_MAX_ACC            8
 #endif
 
+/**
+ * Maximum number of transports, i.e. those created with
+ * #pjsua_transport_create() or registered with #pjsua_transport_register()
+ * or #pjsua_tpfactory_register(). This can be overridden in config_site.h.
+ *
+ * Each transport takes a handle from the SIP endpoint's ioqueue, which is
+ * created with PJSIP_MAX_TRANSPORTS (PJ_IOQUEUE_MAX_HANDLES, 64 by default)
+ * handles and is shared with TCP/TLS connections and the DNS resolver.
+ * Raising this setting beyond a few dozen therefore also requires raising
+ * PJ_IOQUEUE_MAX_HANDLES.
+ *
+ * Default: 8
+ */
+#ifndef PJSUA_MAX_TRANSPORTS
+#   define PJSUA_MAX_TRANSPORTS     8
+#endif
+
+#if PJSUA_MAX_TRANSPORTS < 1
+#   error "PJSUA_MAX_TRANSPORTS must be at least 1"
+#endif
+
 
 /**
  * Default registration interval.
