@@ -70,7 +70,8 @@ if(PJ_WITH_CXX)
   # compiles with MinGW (autoconf fails the same way); a system one may.
   # A root makes it system by default.
   elseif(PJMEDIA_WITH_WEBRTC_AEC3 AND MINGW AND NOT _pj_aec3_root
-         AND (NOT PJ_DEP_WEBRTC_AEC3 OR PJ_DEP_WEBRTC_AEC3 STREQUAL "bundled"))
+         AND (NOT PJ_DEP_WEBRTC_AEC3
+              OR PJ_DEP_WEBRTC_AEC3 MATCHES "^(auto|bundled)$"))
     message(STATUS "[!] The bundled WebRTC AEC3 cannot be built with MinGW. "
       "leaving it out")
   elseif(PJMEDIA_WITH_WEBRTC_AEC3)
@@ -114,29 +115,39 @@ foreach(dep IN LISTS DEPS)
 
   # add option
   string(TOUPPER "PJ_DEP_${dep}" dep_option_name)
-  list(GET dep_providers 0 dep_option_default)
-  # a root for the package means the installed library is wanted
-  if(DEP_${dep}_PACKAGE)
-    pj_package_root_given(${DEP_${dep}_PACKAGE} _root_given)
-    if(_root_given)
-      set(dep_option_default "system")
+  # A build folder from before "auto" stored the default it had written; a
+  # value still equal to it was not chosen by the user
+  if(DEFINED CACHE{_PJ_${dep_option_name}_DEFAULT})
+    if("$CACHE{${dep_option_name}}" STREQUAL
+       "$CACHE{_PJ_${dep_option_name}_DEFAULT}")
+      set_property(CACHE ${dep_option_name} PROPERTY VALUE auto)
     endif()
+    unset(_PJ_${dep_option_name}_DEFAULT CACHE)
   endif()
-  # follow a changed default unless the user picked another value
-  if(DEFINED CACHE{_PJ_${dep_option_name}_DEFAULT}
-     AND "${${dep_option_name}}" STREQUAL "$CACHE{_PJ_${dep_option_name}_DEFAULT}"
-     AND NOT dep_option_default STREQUAL "$CACHE{_PJ_${dep_option_name}_DEFAULT}")
-    set_property(CACHE ${dep_option_name} PROPERTY VALUE "${dep_option_default}")
-  endif()
-  set(_PJ_${dep_option_name}_DEFAULT "${dep_option_default}" CACHE INTERNAL "")
-
   pj_option(${dep_option_name} "${DEP_${dep}_HELP}"
-    DEFAULT ${dep_option_default}
-    ALLOWED_VALUES ${dep_providers}
+    DEFAULT auto
+    ALLOWED_VALUES auto ${dep_providers}
   )
 
+  # auto: the installed library when a root is given for it, as that names
+  # the library wanted; the bundled one otherwise. Decided on every configure,
+  # so adding or removing a root is followed, while a value the user set is
+  # never changed.
+  set(dep_provider "${${dep_option_name}}")
+  if(dep_provider STREQUAL "auto")
+    list(GET dep_providers 0 dep_provider)
+    if(DEP_${dep}_PACKAGE)
+      pj_package_root_given(${DEP_${dep}_PACKAGE} _root_given)
+      if(_root_given)
+        set(dep_provider "system")
+        message(STATUS "${dep}: the installed library, as its root is given "
+          "(${dep_option_name}=auto)")
+      endif()
+    endif()
+  endif()
+
   # import dependency
-  if(${dep_option_name} STREQUAL "bundled")
+  if(dep_provider STREQUAL "bundled")
     add_subdirectory(${DEP_${dep}_SUBDIR} EXCLUDE_FROM_ALL)
     # A target name of our own, so that a project building pjproject inside
     # it (add_subdirectory(), FetchContent) can have its own srtp or yuv. The
@@ -147,7 +158,7 @@ foreach(dep IN LISTS DEPS)
       EXPORT_NAME ${DEP_${dep}_SUBDIR}
     )
     list(APPEND install_subdirs ${DEP_${dep}_SUBDIR})
-  elseif(${dep_option_name} STREQUAL "system")
+  elseif(dep_provider STREQUAL "system")
     pj_retry_on_new_root(${dep_option_name} ${DEP_${dep}_PACKAGE})
     find_package(${DEP_${dep}_PACKAGE} REQUIRED)
     if(${DEP_${dep}_PACKAGE}_FOUND)
@@ -172,7 +183,7 @@ foreach(dep IN LISTS DEPS)
   # set provider property on target
   if(dep_target)
     set_target_properties(${dep_target} PROPERTIES
-      PJ_DEP_PROVIDER ${${dep_option_name}}
+      PJ_DEP_PROVIDER ${dep_provider}
     )
     add_library(Pj::Dep::${dep} ALIAS ${dep_target})
   endif()

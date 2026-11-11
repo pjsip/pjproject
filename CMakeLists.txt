@@ -885,8 +885,7 @@ foreach(_fm IN LISTS _pj_find_modules)
   list(APPEND _pj_found_pkgs ${_pkg})
 endforeach()
 # and the ones CMake's own modules find
-if(PJ_SSL_BACKEND STREQUAL "openssl"
-   OR (PJ_SRTP_WITH_OPENSSL AND PJ_DEP_SRTP STREQUAL "bundled"))
+if(PJ_SSL_BACKEND STREQUAL "openssl" OR PJ_SRTP_WITH_OPENSSL)
   list(APPEND _pj_found_pkgs OpenSSL)
   # On Windows FindOpenSSL keeps its libraries in LIB_EAY and SSL_EAY
   # (MinGW), or LIB_EAY_* and SSL_EAY_* (MSVC)
