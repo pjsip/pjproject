@@ -84,7 +84,8 @@
  *  - Portable ANSI C in a single source file.
  *
  *  Development
- *  - Controlled by SIP MESSAGE: "call <uri>", "mem" (pool usage, needs
+ *  - Controlled by SIP MESSAGE: "call <uri>", "mem" (pool usage, and the
+ *    C heap on Zephyr with CONFIG_SYS_HEAP_RUNTIME_STATS; needs
  *    PJ_LOG_MAX_LEVEL >= 3) and "quit".
  *  - Full SIP message trace.
  *  - A startup failure exits with a code identifying the failing step.
@@ -443,6 +444,29 @@ static void log_printk(int level, const char *data, int len)
     printk("%s", data);
 }
 #endif
+
+/* The C heap the pools (and the libraries' own allocations) come from.
+ * Zephyr's libc keeps statistics when CONFIG_SYS_HEAP_RUNTIME_STATS is set;
+ * the getter is not declared in any header.
+ */
+#if defined(__ZEPHYR__) && defined(CONFIG_SYS_HEAP_RUNTIME_STATS)
+#include <zephyr/sys/mem_stats.h>
+int malloc_runtime_stats_get(struct sys_memory_stats *stats);
+#endif
+
+static void dump_heap(void)
+{
+#if defined(__ZEPHYR__) && defined(CONFIG_SYS_HEAP_RUNTIME_STATS)
+    struct sys_memory_stats st;
+
+    if (malloc_runtime_stats_get(&st) == 0) {
+        PJ_LOG(3,(THIS_FILE, "C heap: %u used, %u peak, %u free",
+                  (unsigned)st.allocated_bytes,
+                  (unsigned)st.max_allocated_bytes,
+                  (unsigned)st.free_bytes));
+    }
+#endif
+}
 
 static void deinit(void)
 {
@@ -1280,11 +1304,12 @@ static void handle_message(pjsip_rx_data *rdata)
     }
 
     /* "mem": dump the caching pool, i.e. every live pool with its used size
-     * and capacity. Needs PJ_LOG_MAX_LEVEL >= 3, since cpool_dump_status()
-     * compiles to nothing below that.
+     * and capacity, and the C heap where known. Needs PJ_LOG_MAX_LEVEL >= 3,
+     * since cpool_dump_status() compiles to nothing below that.
      */
     if (pj_stricmp(&text, &CMD_MEM) == 0) {
         pj_pool_factory_dump(&g.cp.factory, PJ_TRUE);
+        dump_heap();
         return;
     }
 

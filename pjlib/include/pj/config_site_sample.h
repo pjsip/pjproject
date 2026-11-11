@@ -506,13 +506,55 @@
 
     #define PJ_CRC32_HAS_TABLES                 0
 
+    /* pjlib's cipher table is filled from the suites Mbed TLS enables, a
+     * handful at most; the stock 256 entries are 4 KB of static RAM.
+     */
+    #ifndef PJ_SSL_SOCK_MAX_CIPHERS
+    #   define PJ_SSL_SOCK_MAX_CIPHERS          32
+    #endif
+
     /*
      * PJSIP settings.
      */
 
-    /* A handful of calls; these size the hash tables and the timer heap. */
-    #define PJSIP_MAX_TSX_COUNT                 31
-    #define PJSIP_MAX_DIALOG_COUNT              31
+    /* A handful of calls. These are hash table sizes, not limits. They also
+     * size the timer heap by default, 2*tsx + 2*dialog entries; it grows by
+     * itself if ever needed, so it starts small.
+     */
+    #define PJSIP_MAX_TSX_COUNT                 15
+    #define PJSIP_MAX_DIALOG_COUNT              15
+    #define PJSIP_MAX_TIMER_COUNT               32
+
+    /* Largest SIP message. An INVITE with a long SDP from a desktop UA,
+     * through a proxy, is about 2 KB. The stock 4000 is the size of every
+     * message buffer, of which there is one per transaction and transport.
+     */
+    #ifndef PJSIP_MAX_PKT_LEN
+    #   define PJSIP_MAX_PKT_LEN                2500
+    #endif
+
+    /* Pools sized to what they hold. The caching pool rounds an initial size
+     * up to its next class (..., 2048, 4096, 8192, 12288, 16384, ...), so
+     * each is a class, with a small increment for whatever does not fit.
+     */
+    #define PJSIP_POOL_LEN_ENDPT                8192
+    #define PJSIP_POOL_INC_ENDPT                1024
+    #define PJSIP_POOL_LEN_TDATA                4096
+    #define PJSIP_POOL_INC_TDATA                1024
+    #define PJSIP_POOL_RDATA_LEN                4096
+    #define PJSIP_POOL_RDATA_INC                1024
+    #define PJSIP_POOL_LEN_DIALOG               4096
+    #define PJSIP_POOL_INC_DIALOG               1024
+    #define PJSIP_POOL_TSX_LEN                  1024
+    #define PJSIP_POOL_TSX_INC                  256
+
+    /* The TLS listener stays (PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER 0)
+     * although a client without a certificate cannot accept a connection:
+     * tested against Kamailio, requests to a registered client arrive over
+     * its registration connection only while the client has a listener;
+     * without one Kamailio opens a new connection to the Contact, which
+     * fails.
+     */
 
     /* Zephyr's socket buffers are the net_buf pools sized in prj.conf, and
      * SO_SNDBUF/SO_RCVBUF exist only with CONFIG_NET_CONTEXT_SNDBUF/RCVBUF.
@@ -559,6 +601,59 @@
      * little CPU, which is not the constraint here.
      */
     #define PJMEDIA_HAS_ALAW_ULAW_TABLE         0
+
+    /* RTP sizing. PJMEDIA_MAX_MTU is the largest RTP or RTCP packet sent:
+     * a 20 ms G.711 or G.722 frame with SRTP is under 200 bytes, so 512
+     * leaves room for 40 ms. It sizes four pending-write buffers in the UDP
+     * transport, two in SRTP and two in the stream, per call.
+     * PJMEDIA_MAX_MRU is the largest packet received.
+     */
+    #ifndef PJMEDIA_MAX_MTU
+    #   define PJMEDIA_MAX_MTU                  512
+    #endif
+    #ifndef PJMEDIA_MAX_MRU
+    #   define PJMEDIA_MAX_MRU                  1000
+    #endif
+
+    /* SDP sizing. Every SDP session and media line has fixed arrays of
+     * these sizes, and a call keeps several copies, in the negotiator, the
+     * invite session and the application. Formats and attributes past the
+     * limit are ignored with a log message; 16 formats hold a desktop UA's
+     * full offer.
+     */
+    #ifndef PJMEDIA_MAX_SDP_FMT
+    #   define PJMEDIA_MAX_SDP_FMT              16
+    #endif
+    #ifndef PJMEDIA_MAX_SDP_MEDIA
+    #   define PJMEDIA_MAX_SDP_MEDIA            4
+    #endif
+
+    /* fmtp parameters per codec, in every copy of the codec parameters;
+     * G.711, G.722 and telephone-event use one.
+     */
+    #define PJMEDIA_CODEC_MAX_FMTP_CNT          4
+
+    /* Transport-specific info slots: UDP and SRTP take one each. */
+    #define PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXCNT 2
+
+    /* Pools sized to what they hold, as the PJSIP pools above. The stream
+     * pool holds the stream and its jitter buffer. The media endpoint pool
+     * holds an ioqueue only when the endpoint has its own, as in the
+     * sample's threaded build.
+     */
+    #define PJMEDIA_STREAM_SIZE                 8192
+    #define PJMEDIA_STREAM_INC                  1024
+    #if PJ_HAS_THREADS
+    #   define PJMEDIA_POOL_LEN_ENDPT           12288
+    #else
+    #   define PJMEDIA_POOL_LEN_ENDPT           4096
+    #endif
+    #define PJMEDIA_POOL_INC_ENDPT              1024
+
+    /* The lighter WSOLA for the jitter buffer: less RAM and CPU per stream,
+     * a little less quality under loss.
+     */
+    #define PJMEDIA_WSOLA_IMP                   PJMEDIA_WSOLA_IMP_WSOLA_LITE
 
     /* No video, no echo canceller */
     #define PJMEDIA_HAS_VIDEO                   0

@@ -61,8 +61,9 @@ Behaviour changes that existing code should not notice, listed for review:
 - `pj_thread_create()` initialises pthread attributes only when a stack size or address is given, and keeps them for the thread's lifetime (Zephyr frees the stack when the attributes are destroyed, which it refuses while the thread runs). A thread with the default stack is created with a null attribute pointer.
 - Thread-local storage in the slot-array implementation (the no-threads build, and the new compiler-TLS option) now behaves like pthread keys: a slot that is freed and allocated again reads NULL in every thread, where the stale value used to remain.
 - The test suites: every suite's `test.h` includes the new `test_profile.h`, which gives `PJ_EXCLUDE_BENCHMARK_TESTS` a default (1 on a Zephyr board with less than 2 MB of RAM or where the clock stands still while the CPU is busy, 0 elsewhere); a build that defines it still wins. pjlib-test's sources are a new CMake INTERFACE target, `pjlib-test-sources`; the `pjlib-test` executable is unchanged.
+- `sip_config.h`: the dialog and user-agent pool sizes (`PJSIP_POOL_LEN_DIALOG`, `PJSIP_POOL_INC_DIALOG`, `PJSIP_POOL_LEN_USER_AGENT`, `PJSIP_POOL_INC_USER_AGENT`) gained `#ifndef` guards, so that `config_site.h` can set them like the other pools. Defaults unchanged.
 - Additions with no effect unless used: the `PJ_THREAD_LOCAL` keyword macro in the compiler headers, the `PJ_THREAD_LOCAL_USE_COMPILER_TLS` option (default 0), `pj/compat/os_zephyr.h` selected only when `__ZEPHYR__` is defined, the `PJ_CONFIG_ZEPHYR` preset, and the Mbed TLS backend no longer requiring `MBEDTLS_VERSION_C`.
 
 ### Not in this PR
 
-Footprint figures for the final configuration, and the IPv6 socket address layout. These follow in separate PRs.
+Further footprint reduction, which needs code changes (hard-coded pool sizes in the invite session and SRTP transport, the stream's copy of its info, fixed SDP arrays), and the IPv6 socket address layout. These follow in separate PRs. README_Zephyr.md has the measured RAM per call with the preset's sizing.
