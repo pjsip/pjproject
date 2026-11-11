@@ -5,11 +5,16 @@
 # survived in the cache and leaked into the second.
 #
 #   tests/cmake/reconfigure.sh <source dir> <work dir>
+#
+# Needs a Makefile generator and diff. On MSYS2, whose CMake defaults to
+# Ninja: CMAKE_GENERATOR="MSYS Makefiles" and the diffutils package.
 
 set -e
-src=$(cd "$1" && pwd)
+command -v diff > /dev/null || { echo "diff not found" >&2; exit 2; }
+# MSYS2: pwd -W gives C:/..., the spelling CMake writes
+src=$(cd "$1" && { pwd -W 2> /dev/null || pwd; })
 mkdir -p "$2"
-work=$(cd "$2" && pwd)
+work=$(cd "$2" && { pwd -W 2> /dev/null || pwd; })
 common="-DPJ_SKIP_EXPERIMENTAL_NOTICE=ON"
 
 # Two copies of the installed libsrtp2 as package roots, for the pairs that
@@ -39,6 +44,11 @@ fi
 # the generated headers, every target's flags and link line, the target list.
 snapshot() {
     dir=$1; out=$2
+    # MSYS Makefiles also writes C:/x as /C/x
+    case $dir in
+    ?:/*) msysdir=/${dir%%:*}${dir#?:} ;;
+    *) msysdir=$dir ;;
+    esac
     rm -rf "$out"; mkdir -p "$out"
     cmake --build "$dir" --target help | sort > "$out/targets"
     for f in $(cd "$dir" && find . \( -name flags.make -o -name link.txt \
@@ -55,7 +65,7 @@ snapshot() {
             ;;
         esac
         mkdir -p "$out/$(dirname "$f")"
-        sed "s#$dir#BUILD#g" "$dir/$f" > "$out/$f"
+        sed -e "s#$dir#BUILD#g" -e "s#$msysdir#BUILD#g" "$dir/$f" > "$out/$f"
     done
 }
 
@@ -76,6 +86,12 @@ while IFS= read -r pair; do
     echo "### $first -> $second"
     rm -rf "$work/fresh" "$work/reconf"
     cmake -S "$src" -B "$work/fresh" $common $second > /dev/null
+    # the snapshot reads flags.make and link.txt
+    if ! grep -q '^CMAKE_GENERATOR:INTERNAL=.*Makefiles$' \
+            "$work/fresh/CMakeCache.txt"; then
+        echo "needs a Makefile generator (set CMAKE_GENERATOR)" >&2
+        exit 2
+    fi
     cmake -S "$src" -B "$work/reconf" $common $first > /dev/null
     cmake -S "$src" -B "$work/reconf" $second > /dev/null
     snapshot "$work/fresh" "$work/fresh.snap"
