@@ -273,21 +273,27 @@ if(CMAKE_CROSSCOMPILING)
   endif()
 endif()
 
+# pj_add_subdirectory(): an option a subdirectory switches off, for a library
+# not found or not usable, is then seen as off by the directories after it
+# and by the package files below, also when pjproject is built inside
+# another project
+include(Pj/Option)
+
 # base library
-add_subdirectory(pjlib)
+pj_add_subdirectory(pjlib)
 
 # third-party libraries
-add_subdirectory(third_party)
+pj_add_subdirectory(third_party)
 
 # remaning libraries
-add_subdirectory(pjlib-util)
-add_subdirectory(pjnath)
-add_subdirectory(pjmedia)
-add_subdirectory(pjsip)
+pj_add_subdirectory(pjlib-util)
+pj_add_subdirectory(pjnath)
+pj_add_subdirectory(pjmedia)
+pj_add_subdirectory(pjsip)
 
 # Always added: besides the applications, it holds the pjsua2 JNI bindings,
 # which make builds in a step of their own regardless of the applications.
-add_subdirectory(pjsip-apps)
+pj_add_subdirectory(pjsip-apps)
 
 # The iOS sample applications are Xcode projects rather than CMake targets,
 # and they link the static libraries from beside their own sources under the

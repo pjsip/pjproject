@@ -44,6 +44,12 @@ function(pj_option variable help_text)
 endfunction()
 
 function(pj_force_set variable value)
+  # A normal variable of that name, e.g. set by a parent project before
+  # add_subdirectory(), would hide the cache entry from the caller; other
+  # directories get the value through pj_add_subdirectory()
+  set(${variable} "${value}" PARENT_SCOPE)
+  set_property(GLOBAL APPEND PROPERTY PJ_FORCED_VARIABLES ${variable})
+
   # If not a cache variable, set a new internal value
   if(NOT DEFINED CACHE{${variable}})
     set(${variable} "${value}" CACHE INTERNAL "(forced)")
@@ -69,6 +75,25 @@ function(pj_force_set variable value)
     message(STATUS "[!] ${ARGV2}. setting ${variable} to ${value}")
   endif()
 endfunction()
+
+# pj_add_subdirectory(<dir> [<add_subdirectory args>...])
+#
+# add_subdirectory(), then set in the calling directory's scope every option
+# pj_force_set() has changed so far, e.g. PJNATH_WITH_UPNP to OFF when libupnp
+# is not found. A normal variable of the same name in the calling scope, such
+# as one a parent project sets before add_subdirectory(pjproject), would
+# otherwise still hold the old value for the directories added after <dir>
+# and for the package files written at the top level. A macro, so that it
+# sets them in the caller's scope.
+macro(pj_add_subdirectory dir)
+  add_subdirectory(${dir} ${ARGN})
+  get_property(_pj_forced GLOBAL PROPERTY PJ_FORCED_VARIABLES)
+  foreach(_pj_var IN LISTS _pj_forced)
+    set(${_pj_var} "$CACHE{${_pj_var}}")
+  endforeach()
+  unset(_pj_forced)
+  unset(_pj_var)
+endmacro()
 
 # pj_retry_on_new_root(<option> <package>)
 #
