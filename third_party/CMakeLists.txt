@@ -41,10 +41,22 @@ list(APPEND DEPS SRTP)
 # cannot build them.
 list(LENGTH CMAKE_OSX_ARCHITECTURES _pj_osx_arch_count)
 
+# A provider asked for by name cannot be honoured then. Reading the option
+# also keeps CMake from reporting a -D<option>=none as unused.
+function(_pj_check_multi_arch_provider option)
+  if("${${option}}" MATCHES "^(bundled|system)$")
+    message(FATAL_ERROR "${option}=${${option}} cannot be used when "
+      "building for several architectures at once "
+      "(CMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}). "
+      "Set it to auto or none, or build one architecture.")
+  endif()
+endfunction()
+
 # WebRTC is C, except its x86 CPU feature detection (cpu_features.cc)
 include(Pj/DetectArch)
 pj_detect_arch(_pj_arch)
 if(_pj_osx_arch_count GREATER 1)
+  _pj_check_multi_arch_provider(PJ_DEP_WEBRTC)
   message(STATUS
     "[!] WebRTC cannot be built for several architectures at once. leaving it out")
 elseif(PJ_WITH_CXX OR NOT _pj_arch MATCHES "^(i386|x86_64|x64)$")
@@ -64,6 +76,7 @@ if(PJ_WITH_CXX)
     "Enable WebRTC Acoustic Echo Cancellation 3 (WebRTC AEC3) support" OFF)
   pj_package_root_given(WebRTC_AEC3 _pj_aec3_root)
   if(PJMEDIA_WITH_WEBRTC_AEC3 AND _pj_osx_arch_count GREATER 1)
+    _pj_check_multi_arch_provider(PJ_DEP_WEBRTC_AEC3)
     message(STATUS "[!] WebRTC AEC3 cannot be built for several "
       "architectures at once. leaving it out")
     set_property(GLOBAL PROPERTY PJ_WEBRTC_AEC3_LEFT_OUT TRUE)
