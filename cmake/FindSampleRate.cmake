@@ -25,18 +25,12 @@ find_library(SampleRate_LIBRARY
 mark_as_advanced(SampleRate_LIBRARY)
 
 if(SampleRate_INCLUDE_DIR AND SampleRate_LIBRARY)
-  set(_samplerate_check_libs "${SampleRate_LIBRARY}")
-  if(SampleRate_LIBRARY MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$" AND UNIX AND NOT APPLE)
-    # A static libsamplerate needs libm
-    list(APPEND _samplerate_check_libs m)
-  endif()
-
   include(Pj/CheckLibraryUsable)
   pj_check_library_usable(SampleRate
     FUNCTION src_new
-    LIBRARIES ${_samplerate_check_libs}
+    LIBRARIES "${SampleRate_LIBRARY}"
+    STATIC_LIBS m
   )
-  unset(_samplerate_check_libs)
 endif()
 
 include(FindPackageHandleStandardArgs)

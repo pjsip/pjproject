@@ -20,12 +20,6 @@ find_library(WebRTC_LIBRARY
 mark_as_advanced(WebRTC_LIBRARY)
 
 if(WebRTC_INCLUDE_DIR AND WebRTC_LIBRARY)
-  set(_webrtc_check_libs "${WebRTC_LIBRARY}")
-  if(WebRTC_LIBRARY MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$" AND UNIX AND NOT APPLE)
-    # A static libwebrtc needs libm
-    list(APPEND _webrtc_check_libs m)
-  endif()
-
   include(Pj/CheckLibraryUsable)
   pj_check_library_usable(WebRTC
     CODE "
@@ -34,9 +28,9 @@ if(WebRTC_INCLUDE_DIR AND WebRTC_LIBRARY)
 int main(void) { void *aec = WebRtcAec_Create(); WebRtcAec_Free(aec); return 0; }
 "
     INCLUDE_DIRS ${WebRTC_INCLUDE_DIR}
-    LIBRARIES ${_webrtc_check_libs}
+    LIBRARIES "${WebRTC_LIBRARY}"
+    STATIC_LIBS m
   )
-  unset(_webrtc_check_libs)
 endif()
 
 include(FindPackageHandleStandardArgs)

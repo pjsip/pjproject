@@ -8,6 +8,7 @@ include(CMakePushCheckState)
 #   [LANGUAGE <C|CXX>]
 #   [INCLUDE_DIRS <dir>...]
 #   [LIBRARIES <lib>...]
+#   [STATIC_LIBS <lib>...]
 #   [DEFINITIONS <flag>...]
 # )
 #
@@ -15,6 +16,11 @@ include(CMakePushCheckState)
 # reject one that is present but unusable (e.g. built for another target).
 # FUNCTION <name> instead links a call to that C function without its header,
 # like autoconf's AC_CHECK_LIB.
+# STATIC_LIBS are what the library needs when it is a static archive, which
+# does not record its dependencies: they are linked too when the first of
+# LIBRARIES is one, on a Unix-like target (on Windows a .lib may be an import
+# library). "m" is left out on Apple, where libSystem has it, and
+# Threads::Threads is looked up as needed.
 # Sets the cache variable <package>_USABLE; pass it to
 # find_package_handle_standard_args() as a REQUIRED_VARS entry. The check is
 # re-run whenever its inputs change. If LANGUAGE (default C) is not enabled in
@@ -22,7 +28,8 @@ include(CMakePushCheckState)
 # The check prints nothing with QUIET or when <package> was searched QUIET.
 function(pj_check_library_usable package)
   cmake_parse_arguments(PARSE_ARGV 1 arg
-    "QUIET" "CODE;FUNCTION;LANGUAGE" "INCLUDE_DIRS;LIBRARIES;DEFINITIONS")
+    "QUIET" "CODE;FUNCTION;LANGUAGE"
+    "INCLUDE_DIRS;LIBRARIES;STATIC_LIBS;DEFINITIONS")
   if(arg_FUNCTION AND NOT arg_CODE)
     set(arg_CODE "
 #ifdef __cplusplus
@@ -43,6 +50,26 @@ int main(void) { return ${arg_FUNCTION}(); }
   if(NOT arg_LANGUAGE IN_LIST _languages)
     set(${package}_USABLE TRUE PARENT_SCOPE)
     return()
+  endif()
+
+  set(_library "")
+  if(arg_LIBRARIES)
+    list(GET arg_LIBRARIES 0 _library)
+  endif()
+  if(arg_STATIC_LIBS AND UNIX
+     AND _library MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$")
+    foreach(_lib IN LISTS arg_STATIC_LIBS)
+      if(_lib STREQUAL "m" AND APPLE)
+        continue()
+      endif()
+      if(_lib STREQUAL "Threads::Threads")
+        find_package(Threads QUIET)
+        if(NOT TARGET Threads::Threads)
+          continue()
+        endif()
+      endif()
+      list(APPEND arg_LIBRARIES "${_lib}")
+    endforeach()
   endif()
 
   string(SHA1 _inputs "${arg_LANGUAGE}|${arg_INCLUDE_DIRS}|${arg_LIBRARIES}|${arg_DEFINITIONS}|${arg_CODE}")

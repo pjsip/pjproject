@@ -26,20 +26,11 @@ find_library(VPX_LIBRARY
 mark_as_advanced(VPX_LIBRARY)
 
 if(VPX_INCLUDE_DIR AND VPX_LIBRARY)
-  set(_vpx_check_libs "${VPX_LIBRARY}")
-  if(VPX_LIBRARY MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$" AND UNIX AND NOT APPLE)
-    # A static libvpx needs libm and pthread
-    find_package(Threads QUIET)
-    list(APPEND _vpx_check_libs m)
-    if(TARGET Threads::Threads)
-      list(APPEND _vpx_check_libs Threads::Threads)
-    endif()
-  endif()
-
   include(Pj/CheckLibraryUsable)
   pj_check_library_usable(VPX
     INCLUDE_DIRS "${VPX_INCLUDE_DIR}"
-    LIBRARIES ${_vpx_check_libs}
+    LIBRARIES "${VPX_LIBRARY}"
+    STATIC_LIBS m Threads::Threads
     DEFINITIONS ${PC_VPX_CFLAGS_OTHER}
     CODE [=[
       #include <vpx/vpx_encoder.h>
@@ -47,7 +38,6 @@ if(VPX_INCLUDE_DIR AND VPX_LIBRARY)
       int main(void) { return vpx_codec_vp8_cx() == 0; }
     ]=]
   )
-  unset(_vpx_check_libs)
 endif()
 
 include(FindPackageHandleStandardArgs)

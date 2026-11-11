@@ -493,7 +493,10 @@ unset(_pj_subdirs)
 # pjproject's own Visual Studio projects do. Left alone: targets given an
 # output directory already, by a parent project's CMAKE_*_OUTPUT_DIRECTORY or
 # in their own CMakeLists (SWIG modules, cmp_wav), and the SWIG modules, whose
-# names their language loads them by.
+# names their language loads them by. A pass over the targets rather than
+# CMAKE_<KIND>_OUTPUT_DIRECTORY set per module: on Windows a DLL is a RUNTIME
+# output like a program, so a variable cannot put programs in bin and DLLs in
+# lib, where make puts them.
 get_property(_pj_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 foreach(_pj_dir IN LISTS _pj_all_dirs)
   file(RELATIVE_PATH _pj_rel "${PROJECT_SOURCE_DIR}" "${_pj_dir}")

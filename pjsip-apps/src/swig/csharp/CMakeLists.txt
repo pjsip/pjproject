@@ -21,6 +21,7 @@
 
 find_package(SWIG 4.0 REQUIRED COMPONENTS csharp)
 include(UseSWIG)
+include(Pj/Swig)
 
 # The default is what the MAUI project uses
 set(PJSUA2_CSHARP_NAMESPACE "libpjsua2.maui" CACHE STRING
@@ -64,19 +65,8 @@ target_link_libraries(pjsua2_csharp PRIVATE
   pjsua2 pjsua-lib pjsip pjmedia pjnath pjlib-util pjlib
 )
 
-# SWIG parses the headers itself; see the same in ../CMakeLists.txt
-set_property(TARGET pjsua2_csharp
-  PROPERTY SWIG_USE_TARGET_INCLUDE_DIRECTORIES TRUE
-)
-target_include_directories(pjsua2_csharp PRIVATE
-  $<TARGET_PROPERTY:pjlib,INTERFACE_INCLUDE_DIRECTORIES>
-  $<TARGET_PROPERTY:pjlib-util,INTERFACE_INCLUDE_DIRECTORIES>
-  $<TARGET_PROPERTY:pjnath,INTERFACE_INCLUDE_DIRECTORIES>
-  $<TARGET_PROPERTY:pjmedia,INTERFACE_INCLUDE_DIRECTORIES>
-  $<TARGET_PROPERTY:pjsip,INTERFACE_INCLUDE_DIRECTORIES>
-  $<TARGET_PROPERTY:pjsua-lib,INTERFACE_INCLUDE_DIRECTORIES>
-  $<TARGET_PROPERTY:pjsua2,INTERFACE_INCLUDE_DIRECTORIES>
-)
+# SWIG parses the headers itself, see Pj/Swig.cmake
+pj_swig_include_pj_headers(pjsua2_csharp)
 
 if(NOT IOS)
   # pjsua2.dll on Windows, MinGW too: .NET adds no "lib" there
@@ -189,30 +179,7 @@ if(ANDROID)
     list(APPEND _pj_native_files "${_pj_lib_dir}/libc++_shared.so")
   endif()
 
-  set(_pj_helper_srcs "")
-  if(PJMEDIA_WITH_VIDEODEV_ANDROID)
-    list(APPEND _pj_helper_srcs
-      pjmedia/src/pjmedia-videodev/android/PjCamera.java
-      pjmedia/src/pjmedia-videodev/android/PjCamera2.java
-      pjmedia/src/pjmedia-videodev/android/PjCameraInfo.java
-      pjmedia/src/pjmedia-videodev/android/PjCameraInfo2.java
-    )
-  endif()
-  if(PJMEDIA_WITH_AUDIODEV_OBOE)
-    list(APPEND _pj_helper_srcs
-      pjmedia/src/pjmedia-audiodev/android/PjAudioDevInfo.java
-    )
-  endif()
-  foreach(_pj_src IN LISTS _pj_helper_srcs)
-    cmake_path(GET _pj_src FILENAME _pj_name)
-    configure_file("${PROJECT_SOURCE_DIR}/${_pj_src}"
-      "${_pj_java_dir}/org/pjsip/${_pj_name}" COPYONLY
-    )
-    list(APPEND _pj_helpers "${_pj_java_dir}/org/pjsip/${_pj_name}")
-  endforeach()
-  unset(_pj_helper_srcs)
-  unset(_pj_src)
-  unset(_pj_name)
+  pj_android_java_helpers("${_pj_java_dir}" _pj_helpers)
 endif()
 
 # ##############################################################################
@@ -282,27 +249,9 @@ set(PJ_INSTALL_CSHARPDIR "${CMAKE_INSTALL_LIBDIR}/pjproject/csharp" CACHE PATH
   "Directory the pjsua2 C# bindings are installed to"
 )
 
-# With shared libraries, the native library finds them in the libdir, the
-# bundled ones in pjproject/third_party there
-if(BUILD_SHARED_LIBS AND NOT IOS AND NOT IS_ABSOLUTE "${PJ_INSTALL_CSHARPDIR}"
-   AND NOT IS_ABSOLUTE "${CMAKE_INSTALL_LIBDIR}")
-  file(RELATIVE_PATH _pj_up "/x/${PJ_INSTALL_CSHARPDIR}/lib"
-    "/x/${CMAKE_INSTALL_LIBDIR}"
-  )
-  # CMake 4 ends it with a slash
-  string(REGEX REPLACE "/$" "" _pj_up "${_pj_up}")
-  if(APPLE)
-    set_property(TARGET pjsua2_csharp APPEND PROPERTY INSTALL_RPATH
-      "@loader_path/${_pj_up}"
-      "@loader_path/${_pj_up}/pjproject/third_party"
-    )
-  elseif(UNIX)
-    set_property(TARGET pjsua2_csharp APPEND PROPERTY INSTALL_RPATH
-      "$ORIGIN/${_pj_up}"
-      "$ORIGIN/${_pj_up}/pjproject/third_party"
-    )
-  endif()
-  unset(_pj_up)
+# With shared libraries, the native library finds them in the libdir
+if(NOT IOS)
+  pj_swig_install_rpath(pjsua2_csharp "${PJ_INSTALL_CSHARPDIR}/lib")
 endif()
 
 install(DIRECTORY "${_pj_cs_dir}/"

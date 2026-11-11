@@ -69,18 +69,11 @@ if(Lyra_INCLUDE_DIR AND Lyra_LIBRARY AND Lyra_ABSL_INCLUDE_DIR
     list(APPEND _lyra_check_definitions "-D${_def}")
   endforeach()
 
-  set(_lyra_check_libs "${Lyra_LIBRARY}")
-  if(Lyra_LIBRARY MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$")
-    # A static liblyra bundles abseil and TFLite, which need these
-    if(APPLE)
-      list(APPEND _lyra_check_libs "-framework CoreFoundation")
-    elseif(UNIX)
-      find_package(Threads QUIET)
-      list(APPEND _lyra_check_libs m ${CMAKE_DL_LIBS})
-      if(TARGET Threads::Threads)
-        list(APPEND _lyra_check_libs Threads::Threads)
-      endif()
-    endif()
+  # A static liblyra bundles abseil and TFLite, which need these
+  if(APPLE)
+    set(_lyra_static_libs "-framework CoreFoundation")
+  else()
+    set(_lyra_static_libs m ${CMAKE_DL_LIBS} Threads::Threads)
   endif()
 
   # Lyra needs C++17
@@ -105,7 +98,8 @@ int main() {
       ${Lyra_ABSL_INCLUDE_DIR}
       ${Lyra_FILESYSTEM_INCLUDE_DIR}
       ${Lyra_GLOG_INCLUDE_DIR}
-    LIBRARIES ${_lyra_check_libs}
+    LIBRARIES "${Lyra_LIBRARY}"
+    STATIC_LIBS ${_lyra_static_libs}
     DEFINITIONS ${_lyra_check_definitions}
   )
 
@@ -116,7 +110,7 @@ int main() {
   endif()
   unset(_lyra_saved_cxx_standard)
   unset(_lyra_check_definitions)
-  unset(_lyra_check_libs)
+  unset(_lyra_static_libs)
 endif()
 
 include(FindPackageHandleStandardArgs)

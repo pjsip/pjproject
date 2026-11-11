@@ -14,6 +14,7 @@
 find_package(SWIG 4.0 REQUIRED COMPONENTS python)
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
 include(UseSWIG)
+include(Pj/Swig)
 
 set(_pj_swig_i "${CMAKE_CURRENT_SOURCE_DIR}/../pjsua2.i")
 set_property(SOURCE "${_pj_swig_i}" PROPERTY CPLUSPLUS ON)
@@ -53,19 +54,8 @@ unset(_pj_suffix)
 
 target_link_libraries(pjsua2_python PRIVATE pjsua2 Python3::Module)
 
-# SWIG parses the headers itself; see the same in ../CMakeLists.txt
-set_property(TARGET pjsua2_python
-  PROPERTY SWIG_USE_TARGET_INCLUDE_DIRECTORIES TRUE
-)
-target_include_directories(pjsua2_python PRIVATE
-  $<TARGET_PROPERTY:pjlib,INTERFACE_INCLUDE_DIRECTORIES>
-  $<TARGET_PROPERTY:pjlib-util,INTERFACE_INCLUDE_DIRECTORIES>
-  $<TARGET_PROPERTY:pjnath,INTERFACE_INCLUDE_DIRECTORIES>
-  $<TARGET_PROPERTY:pjmedia,INTERFACE_INCLUDE_DIRECTORIES>
-  $<TARGET_PROPERTY:pjsip,INTERFACE_INCLUDE_DIRECTORIES>
-  $<TARGET_PROPERTY:pjsua-lib,INTERFACE_INCLUDE_DIRECTORIES>
-  $<TARGET_PROPERTY:pjsua2,INTERFACE_INCLUDE_DIRECTORIES>
-)
+# SWIG parses the headers itself, see Pj/Swig.cmake
+pj_swig_include_pj_headers(pjsua2_python)
 
 # ##############################################################################
 # Installation
@@ -87,26 +77,7 @@ set(PJ_INSTALL_PYTHONDIR "${_pj_pythondir}" CACHE PATH
 unset(_pj_pythondir)
 
 # With shared libraries, the module finds them in the libdir
-if(BUILD_SHARED_LIBS AND NOT IS_ABSOLUTE "${PJ_INSTALL_PYTHONDIR}"
-   AND NOT IS_ABSOLUTE "${CMAKE_INSTALL_LIBDIR}")
-  file(RELATIVE_PATH _pj_up "/x/${PJ_INSTALL_PYTHONDIR}"
-    "/x/${CMAKE_INSTALL_LIBDIR}"
-  )
-  # CMake 4 ends it with a slash
-  string(REGEX REPLACE "/$" "" _pj_up "${_pj_up}")
-  if(APPLE)
-    set_property(TARGET pjsua2_python APPEND PROPERTY INSTALL_RPATH
-      "@loader_path/${_pj_up}"
-      "@loader_path/${_pj_up}/pjproject/third_party"
-    )
-  elseif(UNIX)
-    set_property(TARGET pjsua2_python APPEND PROPERTY INSTALL_RPATH
-      "$ORIGIN/${_pj_up}"
-      "$ORIGIN/${_pj_up}/pjproject/third_party"
-    )
-  endif()
-  unset(_pj_up)
-endif()
+pj_swig_install_rpath(pjsua2_python "${PJ_INSTALL_PYTHONDIR}")
 
 install(TARGETS pjsua2_python
   LIBRARY DESTINATION "${PJ_INSTALL_PYTHONDIR}" COMPONENT PjPython

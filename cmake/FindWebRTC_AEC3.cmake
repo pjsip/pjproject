@@ -34,20 +34,15 @@ if(WebRTC_AEC3_INCLUDE_DIR AND WebRTC_AEC3_LIBRARY)
   endforeach()
 
   set(_aec3_check_libs "${WebRTC_AEC3_LIBRARY}")
-  if(WebRTC_AEC3_LIBRARY MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$")
-    # A static libwebrtc_aec3 needs these
-    if(WIN32 AND NOT CMAKE_SYSTEM_NAME MATCHES "Windows(Store|Phone)")
-      list(APPEND _aec3_check_libs winmm)
-    elseif(UNIX AND NOT APPLE)
-      find_package(Threads QUIET)
-      list(APPEND _aec3_check_libs m)
-      if(TARGET Threads::Threads)
-        list(APPEND _aec3_check_libs Threads::Threads)
-      endif()
-    endif()
-    if(ANDROID)
-      list(APPEND _aec3_check_libs log)
-    endif()
+  # A static libwebrtc_aec3 needs these; on Windows a .lib may be an import
+  # library, so winmm is added whenever it is a .lib (it is harmless then)
+  if(WIN32 AND NOT CMAKE_SYSTEM_NAME MATCHES "Windows(Store|Phone)"
+     AND WebRTC_AEC3_LIBRARY MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$")
+    list(APPEND _aec3_check_libs winmm)
+  endif()
+  set(_aec3_static_libs m Threads::Threads)
+  if(ANDROID)
+    list(APPEND _aec3_static_libs log)
   endif()
 
   # AEC3 needs C++17
@@ -68,6 +63,7 @@ int main() {
 "
     INCLUDE_DIRS ${WebRTC_AEC3_INCLUDE_DIR}
     LIBRARIES ${_aec3_check_libs}
+    STATIC_LIBS ${_aec3_static_libs}
     DEFINITIONS ${_aec3_check_definitions}
   )
 
@@ -78,6 +74,7 @@ int main() {
   endif()
   unset(_aec3_saved_cxx_standard)
   unset(_aec3_check_libs)
+  unset(_aec3_static_libs)
   unset(_aec3_check_definitions)
 endif()
 

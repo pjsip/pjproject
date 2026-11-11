@@ -20,6 +20,7 @@
 
 find_package(SWIG 4.0 REQUIRED COMPONENTS java)
 include(UseSWIG)
+include(Pj/Swig)
 
 # Where the generated .java is written.
 #
@@ -99,63 +100,17 @@ if(ANDROID)
   unset(_pjsua2jni_map)
 endif()
 
-# SWIG parses the headers itself, so it needs its own -I list. Two things are
-# needed for that:
-#
-#  - Linking does not populate INCLUDE_DIRECTORIES: usage requirements reach
-#    the compiler without ever being written to that property. So name each
-#    library's interface directories here. This also picks up the generated
-#    headers (os_auto.h, config_auto.h, sip_autoconf.h), which live in the
-#    build tree rather than beside the sources.
-#  - UseSWIG ignores the target's INCLUDE_DIRECTORIES unless it is told to
-#    forward them, which is what SWIG_USE_TARGET_INCLUDE_DIRECTORIES does.
-#    Without it SWIG runs with no -I at all and cannot find pjsua2/types.hpp.
-set_property(TARGET pjsua2jni PROPERTY SWIG_USE_TARGET_INCLUDE_DIRECTORIES TRUE)
-target_include_directories(pjsua2jni PRIVATE
-  $<TARGET_PROPERTY:pjlib,INTERFACE_INCLUDE_DIRECTORIES>
-  $<TARGET_PROPERTY:pjlib-util,INTERFACE_INCLUDE_DIRECTORIES>
-  $<TARGET_PROPERTY:pjnath,INTERFACE_INCLUDE_DIRECTORIES>
-  $<TARGET_PROPERTY:pjmedia,INTERFACE_INCLUDE_DIRECTORIES>
-  $<TARGET_PROPERTY:pjsip,INTERFACE_INCLUDE_DIRECTORIES>
-  $<TARGET_PROPERTY:pjsua-lib,INTERFACE_INCLUDE_DIRECTORIES>
-  $<TARGET_PROPERTY:pjsua2,INTERFACE_INCLUDE_DIRECTORIES>
-)
+# SWIG parses the headers itself, see Pj/Swig.cmake
+pj_swig_include_pj_headers(pjsua2jni)
 
 # ##############################################################################
 # Java helper classes
 #
-# The Android capture and audio device backends call up into Java. These
-# classes belong to the binding rather than to any sample app, so they ship
+# These belong to the binding rather than to any sample app, so they ship
 # beside the generated sources -- the android_helpers target in the SWIG
-# Makefile does the same. configure_file(COPYONLY) rather than a build rule so
-# that editing one of them re-runs CMake and refreshes the copy.
+# Makefile does the same. See Pj/Swig.cmake.
 
-set(_pjsua2_helpers)
-if(PJMEDIA_WITH_VIDEODEV_ANDROID)
-  list(APPEND _pjsua2_helpers
-    pjmedia/src/pjmedia-videodev/android/PjCamera.java
-    pjmedia/src/pjmedia-videodev/android/PjCamera2.java
-    pjmedia/src/pjmedia-videodev/android/PjCameraInfo.java
-    pjmedia/src/pjmedia-videodev/android/PjCameraInfo2.java
-  )
-endif()
-if(PJMEDIA_WITH_AUDIODEV_OBOE)
-  list(APPEND _pjsua2_helpers
-    pjmedia/src/pjmedia-audiodev/android/PjAudioDevInfo.java
-  )
-endif()
-
-foreach(_helper IN LISTS _pjsua2_helpers)
-  cmake_path(GET _helper FILENAME _helper_name)
-  configure_file(
-    "${PROJECT_SOURCE_DIR}/${_helper}"
-    # package org.pjsip, one level above the generated bindings
-    "${PJSUA2_JAVA_OUTPUT_DIR}/org/pjsip/${_helper_name}"
-    COPYONLY
-  )
-endforeach()
-unset(_helper)
-unset(_helper_name)
+pj_android_java_helpers("${PJSUA2_JAVA_OUTPUT_DIR}" _pjsua2_helpers)
 unset(_pjsua2_helpers)
 
 if(ANDROID)
@@ -220,26 +175,7 @@ set(PJ_INSTALL_JAVADIR "${CMAKE_INSTALL_LIBDIR}/pjproject/java" CACHE PATH
 )
 
 # With shared libraries, the JNI library finds them in the libdir
-if(BUILD_SHARED_LIBS AND NOT IS_ABSOLUTE "${PJ_INSTALL_JAVADIR}"
-   AND NOT IS_ABSOLUTE "${CMAKE_INSTALL_LIBDIR}")
-  file(RELATIVE_PATH _pj_up "/x/${PJ_INSTALL_JAVADIR}"
-    "/x/${CMAKE_INSTALL_LIBDIR}"
-  )
-  # CMake 4 ends it with a slash
-  string(REGEX REPLACE "/$" "" _pj_up "${_pj_up}")
-  if(APPLE)
-    set_property(TARGET pjsua2jni APPEND PROPERTY INSTALL_RPATH
-      "@loader_path/${_pj_up}"
-      "@loader_path/${_pj_up}/pjproject/third_party"
-    )
-  elseif(UNIX)
-    set_property(TARGET pjsua2jni APPEND PROPERTY INSTALL_RPATH
-      "$ORIGIN/${_pj_up}"
-      "$ORIGIN/${_pj_up}/pjproject/third_party"
-    )
-  endif()
-  unset(_pj_up)
-endif()
+pj_swig_install_rpath(pjsua2jni "${PJ_INSTALL_JAVADIR}")
 
 install(TARGETS pjsua2jni
   LIBRARY DESTINATION "${PJ_INSTALL_JAVADIR}" COMPONENT PjJava

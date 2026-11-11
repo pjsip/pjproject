@@ -31,18 +31,12 @@ find_library(Silk_LIBRARY
 mark_as_advanced(Silk_LIBRARY)
 
 if(Silk_INCLUDE_DIR AND Silk_LIBRARY)
-  set(_silk_check_libs "${Silk_LIBRARY}")
-  if(Silk_LIBRARY MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$" AND UNIX AND NOT APPLE)
-    # A static SILK library needs libm
-    list(APPEND _silk_check_libs m)
-  endif()
-
   include(Pj/CheckLibraryUsable)
   pj_check_library_usable(Silk
     FUNCTION SKP_Silk_SDK_get_version
-    LIBRARIES ${_silk_check_libs}
+    LIBRARIES "${Silk_LIBRARY}"
+    STATIC_LIBS m
   )
-  unset(_silk_check_libs)
 endif()
 
 include(FindPackageHandleStandardArgs)
