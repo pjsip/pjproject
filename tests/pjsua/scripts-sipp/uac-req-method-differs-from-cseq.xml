@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+
+<!-- Requests whose method differs from the method in the CSeq header,  -->
+<!-- sent with the branch of a rejected and ACK-ed INVITE.              -->
+
+<scenario name="Request method differs from CSeq method">
+  <send retrans="500">
+    <![CDATA[
+
+      INVITE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bK-inv-[call_number]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+      To: sut <sip:[service]@[remote_ip]:[remote_port]>
+      Call-ID: [call_id]
+      CSeq: 1 INVITE
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+      v=0
+      o=- 1 1 IN IP4 [local_ip]
+      s=-
+      c=IN IP4 [local_ip]
+      t=0 0
+      m=audio 4000 RTP/AVP 0
+
+    ]]>
+  </send>
+
+  <recv response="100" optional="true">
+  </recv>
+
+  <recv response="180" optional="true">
+  </recv>
+
+  <recv response="486">
+  </recv>
+
+  <send>
+    <![CDATA[
+
+      ACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bK-inv-[call_number]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+      To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 1 ACK
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <pause milliseconds="500"/>
+
+  <send>
+    <![CDATA[
+
+      BYE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bK-inv-[call_number]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+      To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 1 INVITE
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv response="400">
+  </recv>
+
+  <send>
+    <![CDATA[
+
+      OPTIONS sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bK-inv-[call_number]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+      To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 1 ACK
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv response="400">
+  </recv>
+
+  <!-- A proper request is still served -->
+  <send retrans="500">
+    <![CDATA[
+
+      OPTIONS sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bK-opt-[call_number]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+      To: sut <sip:[service]@[remote_ip]:[remote_port]>
+      Call-ID: [call_id]
+      CSeq: 2 OPTIONS
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv response="200">
+  </recv>
+
+</scenario>

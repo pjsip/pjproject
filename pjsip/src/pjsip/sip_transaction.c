@@ -942,6 +942,7 @@ static pj_bool_t mod_tsx_layer_on_rx_request(pjsip_rx_data *rdata)
     pj_str_t key;
     pj_uint32_t hval = 0;
     pjsip_transaction *tsx;
+    pj_str_t warn_text = {NULL, 0};
 
     pjsip_tsx_create_key(rdata->tp_info.pool, &key, PJSIP_ROLE_UAS,
                          &rdata->msg_info.cseq->method, rdata);
@@ -984,11 +985,25 @@ static pj_bool_t mod_tsx_layer_on_rx_request(pjsip_rx_data *rdata)
     if (rdata->msg_info.msg->line.req.method.id == tsx->method.id &&
         rdata->msg_info.cseq->cseq != tsx->cseq)
     {
+        warn_text = pj_str("Retransmission with different CSeq");
+    }
+    /* The transaction is looked up with the method in the CSeq header. A
+     * request with another method in the request line (see also
+     * pjsip_tsx_create_uas()) is not for this transaction, except ACK
+     * which is checked by the transaction.
+     */
+    else if (rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD &&
+             pjsip_method_cmp(&rdata->msg_info.msg->line.req.method,
+                              &rdata->msg_info.cseq->method) != 0)
+    {
+        warn_text = pj_str("CSeq method differs from request method");
+    }
+
+    if (warn_text.slen) {
         pjsip_endpoint* endpt = mod_tsx_layer.endpt;
         pj_mutex_unlock( mod_tsx_layer.mutex);
         if (endpt) {
             pj_str_t hdr_name = pj_str("Warning");
-            pj_str_t warn_text = pj_str("Retransmission with different CSeq");
             pjsip_hdr hdr;
             pjsip_generic_string_hdr warn_hdr;
 
@@ -3983,9 +3998,9 @@ static pj_status_t tsx_on_state_confirmed( pjsip_transaction *tsx,
         if (msg->type != PJSIP_REQUEST_MSG)
             return PJSIP_ENOTREQUESTMSG;
 
-        /* Must be an ACK request or a late INVITE retransmission. */
-        pj_assert(msg->line.req.method.id == PJSIP_ACK_METHOD || 
-                  msg->line.req.method.id == PJSIP_INVITE_METHOD);
+        /* ACK request or late INVITE retransmission, nothing to do. Any
+         * other request is ignored too.
+         */
 
     } else if (event->type == PJSIP_EVENT_TIMER) {
         /* Ignore overlapped retransmit timer.
