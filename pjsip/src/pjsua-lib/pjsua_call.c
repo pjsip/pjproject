@@ -8121,7 +8121,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
                 pj_ssize_t found_idx;
 
                 delim = pj_str("\r\n");
-                input = pj_str(rdata->msg_info.msg->body->data);
+                pj_strset(&input, (char*)body->data, body->len);
                 found_idx = pj_strtok(&input, &delim, &token, 0);
                 if (found_idx != input.slen) {
                     /* Get signal/digit */
@@ -8147,9 +8147,9 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
                             PJ_LOG(2, (THIS_FILE, "Invalid dtmf-relay format"));
                         }
 
-                        /* Get duration */
-                        input.ptr += token.slen + 2;
-                        input.slen -= (token.slen + 2);
+                        /* Get duration, from the rest after the first line */
+                        input.slen -= (token.ptr + token.slen - input.ptr);
+                        input.ptr = token.ptr + token.slen;
 
                         val = pj_strstr(&input, &STR_DURATION);
                         if (val && is_handled) {
