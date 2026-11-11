@@ -960,17 +960,22 @@ void Endpoint::on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
     prm.callId = call_id;
     prm.rdata.fromPj(*rdata);
 
+    /* Take over the cloned rdata, the call may be gone after the callback
+     * (e.g. hung up by the application).
+     */
+    pjsip_rx_data *cloned_rdata = call->incoming_data;
+    call->incoming_data = NULL;
+
     acc->onIncomingCall(prm);
 
     /* Free cloned rdata. */
-    pjsip_rx_data_free_cloned(call->incoming_data);
-    call->incoming_data = NULL;
+    pjsip_rx_data_free_cloned(cloned_rdata);
 
     /* disconnect if callback doesn't handle the call */
     pjsua_call_info ci;
 
-    pjsua_call_get_info(call_id, &ci);
-    if (!pjsua_call_get_user_data(call_id) &&
+    if (pjsua_call_get_info(call_id, &ci) == PJ_SUCCESS &&
+        !pjsua_call_get_user_data(call_id) &&
         ci.state != PJSIP_INV_STATE_DISCONNECTED)
     {
         pjsua_call_hangup(call_id, PJSIP_SC_INTERNAL_SERVER_ERROR, NULL, NULL);
