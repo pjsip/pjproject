@@ -92,12 +92,15 @@ cmake_dependent_option(PJMEDIA_WITH_WEBRTC_AEC
 
 # PJMEDIA_WITH_WEBRTC_AEC3 is declared in third_party/CMakeLists.txt, which
 # imports the library only when it is ON. Keep the option visible when its
-# provider is none or C++ is off.
+# provider is none or C++ is off. third_party already said why when it left
+# the library out.
 if(NOT TARGET Pj::Dep::WebRTC_AEC3)
-  if(PJMEDIA_WITH_WEBRTC_AEC3)
+  get_property(_pj_aec3_left_out GLOBAL PROPERTY PJ_WEBRTC_AEC3_LEFT_OUT)
+  if(PJMEDIA_WITH_WEBRTC_AEC3 AND NOT _pj_aec3_left_out)
     message(STATUS
       "[!] WebRTC AEC3 needs PJ_WITH_CXX and a provider. leaving it out")
   endif()
+  unset(_pj_aec3_left_out)
   set(PJMEDIA_WITH_WEBRTC_AEC3 OFF)
 endif()
 

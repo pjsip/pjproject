@@ -66,6 +66,7 @@ if(PJ_WITH_CXX)
   if(PJMEDIA_WITH_WEBRTC_AEC3 AND _pj_osx_arch_count GREATER 1)
     message(STATUS "[!] WebRTC AEC3 cannot be built for several "
       "architectures at once. leaving it out")
+    set_property(GLOBAL PROPERTY PJ_WEBRTC_AEC3_LEFT_OUT TRUE)
   # The bundled sources take MSVC's or POSIX threading paths, and neither
   # compiles with MinGW (autoconf fails the same way); a system one may.
   # A root makes it system by default.
@@ -74,6 +75,7 @@ if(PJ_WITH_CXX)
               OR PJ_DEP_WEBRTC_AEC3 MATCHES "^(auto|bundled)$"))
     message(STATUS "[!] The bundled WebRTC AEC3 cannot be built with MinGW. "
       "leaving it out")
+    set_property(GLOBAL PROPERTY PJ_WEBRTC_AEC3_LEFT_OUT TRUE)
   elseif(PJMEDIA_WITH_WEBRTC_AEC3)
     set(DEP_WebRTC_AEC3_HELP   "WebRTC AEC3 implementation provider")
     set(DEP_WebRTC_AEC3_SUBDIR "webrtc_aec3")
