@@ -207,7 +207,8 @@ struct pjsua_call
     int                  secure_level;/**< Signaling security level.        */
     pjsua_call_hold_type call_hold_type; /**< How to do call hold.          */
     pj_bool_t            local_hold;/**< Flag for call-hold by local.       */
-    void                *hold_msg;  /**< Outgoing hold tx_data.             */
+    pj_bool_t            offer_sent;/**< Our offer awaits its answer.       */
+    pj_bool_t            offer_hold;/**< local_hold before that offer.      */
     pj_str_t             cname;     /**< RTCP CNAME.                        */
     char                 cname_buf[16];/**< cname buffer.                   */
 
@@ -216,8 +217,6 @@ struct pjsua_call
     unsigned             med_prov_cnt;/**< Number of provisional media.     */
     pjsua_call_media     media_prov[PJSUA_MAX_CALL_MEDIA];
                                     /**< Array of provisional media.        */
-    pj_bool_t            med_update_success;
-                                    /**< Is media update successful?        */
     pj_bool_t            hanging_up;/**< Is call in the process of hangup?  */
 
     int                  audio_idx; /**< First active audio media.          */
@@ -1218,6 +1217,12 @@ pj_status_t pjsua_txt_channel_update(pjsua_call_media *call_med,
  * Schedule check for the need of re-INVITE/UPDATE after media update
  */
 void pjsua_call_schedule_reinvite_check(pjsua_call *call, unsigned delay_ms);
+
+/*
+ * Send a request of the call, recording the SDP offer it carries.
+ */
+pj_status_t pjsua_call_send_offer(pjsua_call *call, pjsip_tx_data *tdata,
+                                  pjmedia_sdp_neg_state old_state);
 
 /*
  * Update contact per account on IP change process.

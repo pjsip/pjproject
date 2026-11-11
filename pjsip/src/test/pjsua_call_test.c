@@ -6929,8 +6929,6 @@ static int test_initial_late_sdp_offer(pj_bool_t async_answer,
         pjsua_var.calls[callee].answer_sdp != NULL ||
         pjsua_var.calls[callee].med_cnt == 0 ||
         pjsua_var.calls[caller].med_cnt == 0 ||
-        !pjsua_var.calls[callee].med_update_success ||
-        !pjsua_var.calls[caller].med_update_success ||
         pjmedia_sdp_neg_get_state(pjsua_var.calls[callee].inv->neg) !=
             PJMEDIA_SDP_NEG_STATE_DONE ||
         pjmedia_sdp_neg_get_state(pjsua_var.calls[caller].inv->neg) !=

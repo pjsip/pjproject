@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2011-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2011-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2193,6 +2193,7 @@ static pj_status_t call_reoffer_sdp(pjsua_call_id call_id,
     pjsua_call *call;
     pjsip_tx_data *tdata;
     pjsip_dialog *dlg;
+    pjmedia_sdp_neg_state old_state;
     pj_status_t status;
 
     status = acquire_call("call_reoffer_sdp()", call_id, &call, &dlg);
@@ -2213,6 +2214,8 @@ static pj_status_t call_reoffer_sdp(pjsua_call_id call_id,
     }
 
     /* Create re-INVITE with new offer */
+    old_state = call->inv->neg ? pjmedia_sdp_neg_get_state(call->inv->neg) :
+                                 PJMEDIA_SDP_NEG_STATE_NULL;
     status = pjsip_inv_reinvite( call->inv, NULL, sdp, &tdata);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Unable to create re-INVITE", status);
@@ -2221,7 +2224,7 @@ static pj_status_t call_reoffer_sdp(pjsua_call_id call_id,
     }
 
     /* Send the request */
-    status = pjsip_inv_send_msg( call->inv, tdata);
+    status = pjsua_call_send_offer(call, tdata, old_state);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Unable to send re-INVITE", status);
         pjsip_dlg_dec_lock(dlg);
