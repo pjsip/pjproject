@@ -892,12 +892,8 @@ foreach(_fm IN LISTS _pj_find_modules)
 endforeach()
 # and the ones CMake's own modules find
 if(PJ_SSL_BACKEND STREQUAL "openssl" OR PJ_SRTP_WITH_OPENSSL)
+  # with LIB_EAY* and SSL_EAY* on Windows, see pj_package_owns_var()
   list(APPEND _pj_found_pkgs OpenSSL)
-  # On Windows FindOpenSSL keeps its libraries in LIB_EAY and SSL_EAY
-  # (MinGW), or LIB_EAY_* and SSL_EAY_* (MSVC)
-  if(WIN32)
-    list(APPEND _pj_found_pkgs LIB_EAY SSL_EAY)
-  endif()
 elseif(PJ_SSL_BACKEND STREQUAL "gnutls")
   list(APPEND _pj_found_pkgs GnuTLS)
 elseif(PJ_SSL_BACKEND STREQUAL "mbedtls")

@@ -22,10 +22,17 @@ endfunction()
 # Whether cache entry <variable> is one of <package>'s: named <package>_...
 # in either case, and not one of a package whose name starts with
 # "<package>_" (WebRTC_AEC3_LIBRARY is not WebRTC's). The packages are those
-# with a Find module beside this one.
+# with a Find module beside this one. On Windows, OpenSSL also owns LIB_EAY
+# and SSL_EAY (MinGW) and LIB_EAY_* and SSL_EAY_* (MSVC), the names CMake's
+# FindOpenSSL gives its libraries there.
 function(pj_package_owns_var package variable out)
   string(TOUPPER "${package}" _pkg)
   string(TOUPPER "${variable}" _var)
+  if(WIN32 AND _pkg STREQUAL "OPENSSL"
+     AND _var MATCHES "^(LIB|SSL)_EAY(_|$)")
+    set(${out} TRUE PARENT_SCOPE)
+    return()
+  endif()
   string(FIND "${_var}" "${_pkg}_" _pos)
   if(NOT _pos EQUAL 0 AND NOT _var STREQUAL _pkg)
     set(${out} FALSE PARENT_SCOPE)
