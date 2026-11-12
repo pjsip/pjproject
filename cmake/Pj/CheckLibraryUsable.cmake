@@ -25,6 +25,8 @@ include(CMakePushCheckState)
 # find_package_handle_standard_args() as a REQUIRED_VARS entry. The check is
 # re-run whenever its inputs change. If LANGUAGE (default C) is not enabled in
 # the calling project, the check is skipped and the library assumed usable.
+# With CMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY (bare-metal toolchains)
+# nothing is linked, so only the compile is checked.
 # The check prints nothing with QUIET or when <package> was searched QUIET.
 function(pj_check_library_usable package)
   cmake_parse_arguments(PARSE_ARGV 1 arg

@@ -43,6 +43,14 @@ else()
 endif()
 unset(_pj_log_level)
 
+# Set by toolchains whose programs cannot be linked without the application's
+# startup code, e.g. cmake/toolchains/arm-none-eabi.cmake
+if(CMAKE_TRY_COMPILE_TARGET_TYPE STREQUAL "STATIC_LIBRARY")
+  message(STATUS "[!] CMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY: the "
+    "library link tests only compile, so a library found may still fail to "
+    "link")
+endif()
+
 # The libraries mark nothing for export, which GNU ld's automatic export
 # covers for MinGW but MSVC has no equivalent of: its DLLs would export
 # nothing and get no import library. No pjproject build makes MSVC DLLs of
