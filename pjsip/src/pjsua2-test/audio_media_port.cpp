@@ -25,6 +25,8 @@
 #include <iostream>
 #include <thread>
 
+#if PJ_HAS_THREADS
+
 /* Fail also in release builds, including stalled worker threads. */
 #define CHECK(expr) \
     do { \
@@ -177,3 +179,13 @@ void audioMediaPortTest()
     ep.libDestroy();
     std::cout << "AudioMediaPort callback fence tests passed" << std::endl;
 }
+
+#else
+
+void audioMediaPortTest()
+{
+    std::cout << "AudioMediaPort callback fence tests skipped (no threads)"
+              << std::endl;
+}
+
+#endif  /* PJ_HAS_THREADS */
