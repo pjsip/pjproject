@@ -36,27 +36,26 @@ set(DEP_SRTP_SUBDIR  "srtp")
 set(DEP_SRTP_PACKAGE "SRTP")
 list(APPEND DEPS SRTP)
 
+# A provider asked for by name that cannot be used stops the configure, see
+# pj_dep_fail_if_asked(); auto and none leave the library out
+include(Pj/Option)
+
 # Both WebRTC libraries pick their SIMD sources and flags for a single
 # architecture, so an Apple build for several at once (e.g. arm64;x86_64)
 # cannot build them.
 list(LENGTH CMAKE_OSX_ARCHITECTURES _pj_osx_arch_count)
+string(CONCAT _pj_multi_arch_reason
+  "it cannot be built for several architectures at once "
+  "(CMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}), only for one")
 
-# A provider asked for by name cannot be honoured then. Reading the option
-# also keeps CMake from reporting a -D<option>=none as unused.
-function(_pj_check_multi_arch_provider option)
-  if("${${option}}" MATCHES "^(bundled|system)$")
-    message(FATAL_ERROR "${option}=${${option}} cannot be used when "
-      "building for several architectures at once "
-      "(CMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}). "
-      "Set it to auto or none, or build one architecture.")
-  endif()
-endfunction()
-
-# WebRTC is C, except its x86 CPU feature detection (cpu_features.cc)
+# WebRTC is C, except the bundled sources' x86 CPU feature detection
+# (cpu_features.cc); pjmedia's code that calls it is C
 include(Pj/DetectArch)
 pj_detect_arch(_pj_arch)
+pj_dep_choice(PJ_DEP_WEBRTC WebRTC _pj_choice)
 if(_pj_osx_arch_count GREATER 1)
-  _pj_check_multi_arch_provider(PJ_DEP_WEBRTC)
+  pj_dep_fail_if_asked(PJ_DEP_WEBRTC WebRTC "bundled;system"
+    "${_pj_multi_arch_reason}")
   message(STATUS
     "[!] WebRTC cannot be built for several architectures at once. leaving it out")
 elseif(PJ_WITH_CXX OR NOT _pj_arch MATCHES "^(i386|x86_64|x64)$")
@@ -64,7 +63,14 @@ elseif(PJ_WITH_CXX OR NOT _pj_arch MATCHES "^(i386|x86_64|x64)$")
   set(DEP_WebRTC_SUBDIR "webrtc")
   set(DEP_WebRTC_PACKAGE "WebRTC")
   list(APPEND DEPS WebRTC)
+# x86 without C++: only an installed WebRTC, asked for or picked by a root
+elseif(_pj_choice STREQUAL "system")
+  set(DEP_WebRTC_HELP  "WebRTC implementation provider")
+  set(DEP_WebRTC_PACKAGE "WebRTC")
+  list(APPEND DEPS WebRTC)
 else()
+  pj_dep_fail_if_asked(PJ_DEP_WEBRTC "" "bundled"
+    "the bundled WebRTC needs C++ on x86 (PJ_WITH_CXX)")
   message(STATUS "[!] WebRTC needs C++ on x86. leaving it out")
 endif()
 unset(_pj_arch)
@@ -74,31 +80,40 @@ unset(_pj_arch)
 if(PJ_WITH_CXX)
   option(PJMEDIA_WITH_WEBRTC_AEC3
     "Enable WebRTC Acoustic Echo Cancellation 3 (WebRTC AEC3) support" OFF)
-  pj_package_root_given(WebRTC_AEC3 _pj_aec3_root)
-  if(PJMEDIA_WITH_WEBRTC_AEC3 AND _pj_osx_arch_count GREATER 1)
-    _pj_check_multi_arch_provider(PJ_DEP_WEBRTC_AEC3)
-    message(STATUS "[!] WebRTC AEC3 cannot be built for several "
-      "architectures at once. leaving it out")
-    set_property(GLOBAL PROPERTY PJ_WEBRTC_AEC3_LEFT_OUT TRUE)
-  # The bundled sources take MSVC's or POSIX threading paths, and neither
-  # compiles with MinGW (autoconf fails the same way); a system one may.
-  # A root makes it system by default.
-  elseif(PJMEDIA_WITH_WEBRTC_AEC3 AND MINGW AND NOT _pj_aec3_root
-         AND (NOT PJ_DEP_WEBRTC_AEC3
-              OR PJ_DEP_WEBRTC_AEC3 MATCHES "^(auto|bundled)$"))
-    message(STATUS "[!] The bundled WebRTC AEC3 cannot be built with MinGW. "
-      "leaving it out")
-    set_property(GLOBAL PROPERTY PJ_WEBRTC_AEC3_LEFT_OUT TRUE)
-  elseif(PJMEDIA_WITH_WEBRTC_AEC3)
-    set(DEP_WebRTC_AEC3_HELP   "WebRTC AEC3 implementation provider")
-    set(DEP_WebRTC_AEC3_SUBDIR "webrtc_aec3")
-    set(DEP_WebRTC_AEC3_PACKAGE "WebRTC_AEC3")
-    list(APPEND DEPS WebRTC_AEC3)
-  endif()
-  unset(_pj_aec3_root)
+endif()
+pj_dep_choice(PJ_DEP_WEBRTC_AEC3 WebRTC_AEC3 _pj_choice)
+if(NOT PJMEDIA_WITH_WEBRTC_AEC3)
+  # a provider alone does not enable it, as --with-external-webrtc-aec3
+  pj_dep_fail_if_asked(PJ_DEP_WEBRTC_AEC3 "" "bundled;system"
+    "WebRTC AEC3 is off; enable it with -DPJMEDIA_WITH_WEBRTC_AEC3=ON")
+elseif(NOT PJ_WITH_CXX)
+  # pjmedia's AEC3 code is C++ too, so no provider can be used
+  pj_dep_fail_if_asked(PJ_DEP_WEBRTC_AEC3 WebRTC_AEC3 "bundled;system"
+    "WebRTC AEC3 needs C++ (PJ_WITH_CXX)")
+elseif(_pj_osx_arch_count GREATER 1)
+  pj_dep_fail_if_asked(PJ_DEP_WEBRTC_AEC3 WebRTC_AEC3 "bundled;system"
+    "${_pj_multi_arch_reason}")
+  message(STATUS "[!] WebRTC AEC3 cannot be built for several "
+    "architectures at once. leaving it out")
+  set_property(GLOBAL PROPERTY PJ_WEBRTC_AEC3_LEFT_OUT TRUE)
+# The bundled sources take MSVC's or POSIX threading paths, and neither
+# compiles with MinGW (autoconf fails the same way); a system one may.
+elseif(MINGW AND _pj_choice MATCHES "^(auto|bundled)$")
+  pj_dep_fail_if_asked(PJ_DEP_WEBRTC_AEC3 "" "bundled"
+    "the bundled WebRTC AEC3 cannot be built with MinGW")
+  message(STATUS "[!] The bundled WebRTC AEC3 cannot be built with MinGW. "
+    "leaving it out")
+  set_property(GLOBAL PROPERTY PJ_WEBRTC_AEC3_LEFT_OUT TRUE)
+else()
+  set(DEP_WebRTC_AEC3_HELP   "WebRTC AEC3 implementation provider")
+  set(DEP_WebRTC_AEC3_SUBDIR "webrtc_aec3")
+  set(DEP_WebRTC_AEC3_PACKAGE "WebRTC_AEC3")
+  list(APPEND DEPS WebRTC_AEC3)
 endif()
 
+unset(_pj_choice)
 unset(_pj_osx_arch_count)
+unset(_pj_multi_arch_reason)
 
 # YUV (C++)
 if(PJ_WITH_CXX)
@@ -106,6 +121,10 @@ if(PJ_WITH_CXX)
   set(DEP_YUV_SUBDIR  "yuv")
   set(DEP_YUV_PACKAGE "YUV")
   list(APPEND DEPS YUV)
+else()
+  # its link test is C++ too, so an installed one cannot be checked either
+  pj_dep_fail_if_asked(PJ_DEP_YUV YUV "bundled;system"
+    "libyuv needs C++ (PJ_WITH_CXX)")
 endif()
 
 # imports dependencies

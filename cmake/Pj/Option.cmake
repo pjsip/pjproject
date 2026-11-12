@@ -182,3 +182,64 @@ macro(pj_find_optional opt failure_value package)
     endif()
   endif()
 endmacro()
+
+# pj_dep_choice(<option> <package> <out-var>)
+#
+# The provider a PJ_DEP_<X> <option> asks for: bundled, system or none as
+# set; for auto (or unset) system when a root of <package> is given to CMake,
+# auto otherwise. A value a build folder from before auto stored as its
+# default (_PJ_<option>_DEFAULT) was not set by the user and counts as auto.
+# With an empty <package> a root decides nothing.
+function(pj_dep_choice option package out)
+  set(_value "${${option}}")
+  if(_value STREQUAL "" OR (DEFINED CACHE{_PJ_${option}_DEFAULT}
+     AND _value STREQUAL "$CACHE{_PJ_${option}_DEFAULT}"))
+    set(_value auto)
+  endif()
+  if(_value STREQUAL "auto" AND package)
+    include(Pj/PackageRoot)
+    pj_package_root_given(${package} _root)
+    if(_root)
+      set(_value system)
+    endif()
+  endif()
+  set(${out} ${_value} PARENT_SCOPE)
+endfunction()
+
+# pj_dep_fail_if_asked(<option> <package> <providers> <reason>...)
+#
+# For a library this build leaves out: stop when the provider <option> asks
+# for (pj_dep_choice()) is one of <providers>, which cannot be used, with
+# <reason> (the strings joined) and the values that can be set instead. auto
+# and none leave the library out. Reading the option also keeps CMake from
+# reporting a -D<option>=none as unused.
+function(pj_dep_fail_if_asked option package providers)
+  pj_dep_choice(${option} "${package}" _choice)
+  if(NOT _choice IN_LIST providers)
+    return()
+  endif()
+  set(_reason "")
+  math(EXPR _last "${ARGC} - 1")
+  foreach(_i RANGE 3 ${_last})
+    string(APPEND _reason "${ARGV${_i}}")
+  endforeach()
+  get_property(_values CACHE ${option} PROPERTY STRINGS)
+  if(NOT _values)
+    set(_values auto bundled system none)
+  endif()
+  list(REMOVE_ITEM _values ${providers})
+  if(_choice STREQUAL "${${option}}")
+    set(_asked "${option}=${_choice}")
+  else()
+    set(_asked "${option}=auto, with a ${package} root given,")
+    list(REMOVE_ITEM _values auto)
+    list(APPEND _values "auto without the root")
+  endif()
+  list(POP_BACK _values _last_value)
+  list(JOIN _values ", " _set)
+  if(_set)
+    string(APPEND _set " or ")
+  endif()
+  message(FATAL_ERROR "${_asked} cannot be used: ${_reason}. "
+    "Set ${option} to ${_set}${_last_value}.")
+endfunction()

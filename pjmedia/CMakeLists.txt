@@ -216,6 +216,12 @@ int main(void) { return 0; }
     endif()
   endif()
 endblock()
+# a provider alone does not enable it
+if(NOT _pj_link_g7221)
+  pj_dep_fail_if_asked(PJ_DEP_G7221 "" "bundled"
+    "G.722.1 is off; enable it with -DPJMEDIA_WITH_G7221_CODEC=ON or "
+    "PJMEDIA_HAS_G7221_CODEC in config_site.h")
+endif()
 
 # OpenCore AMR-NB Codecs
 option(PJMEDIA_WITH_OPENCORE_AMRNB_CODEC "Enable OpenCore AMR-NB codec" ON)
