@@ -2011,14 +2011,21 @@
  *
  * RFC 6184 defines the default as "42000A" (Baseline profile, Level 1.0),
  * whose maximum frame size is QCIF (176x144). Some endpoints omit the
- * parameter yet send larger frames (e.g. CIF or VGA). With the Level 1.0
- * default those frames do not fit the negotiated level, and no video is
- * rendered although the RTP stream itself is healthy.
+ * parameter yet send larger frames (e.g. CIF or VGA). Those frames do not
+ * fit the negotiated level, and a decoder that sizes itself from that
+ * level (e.g. Android MediaCodec) may render no video although the RTP
+ * stream itself is healthy.
  *
  * Set this to e.g. "42E01E" (Constrained Baseline, Level 3.0, up to
  * 720x576), the value that PJMEDIA's own H.264 codecs advertise, to
  * interoperate with such endpoints. An explicit profile-level-id from the
  * remote is always used as is.
+ *
+ * The value applies to both directions: the encoder also limits its frame
+ * size and rate to this level when sending to such a remote. With
+ * "42E01E", a remote that omits profile-level-id is sent up to Level 3.0
+ * instead of QCIF, which is too much for an endpoint that really only
+ * supports Level 1.0.
  *
  * Default: "42000A" (as specified by RFC 6184)
  */
