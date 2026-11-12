@@ -27,7 +27,8 @@ include(CMakePushCheckState)
 # the calling project, the check is skipped and the library assumed usable.
 # With CMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY (bare-metal toolchains)
 # nothing is linked, so only the compile is checked.
-# The check prints nothing with QUIET or when <package> was searched QUIET.
+# The check prints nothing with QUIET, when <package> was searched QUIET, or
+# in pjproject's own configure unless --log-level=VERBOSE (PJ_FIND_QUIET).
 function(pj_check_library_usable package)
   cmake_parse_arguments(PARSE_ARGV 1 arg
     "QUIET" "CODE;FUNCTION;LANGUAGE"
@@ -80,7 +81,8 @@ int main(void) { return ${arg_FUNCTION}(); }
     set(_PJ_${package}_USABLE_INPUTS "${_inputs}" CACHE INTERNAL "")
   endif()
 
-  if(arg_QUIET OR ${package}_FIND_QUIETLY)
+  # PJ_FIND_QUIET: quiet in pjproject's own configure unless it is verbose
+  if(arg_QUIET OR ${package}_FIND_QUIETLY OR PJ_FIND_QUIET)
     set(_quiet TRUE)
   else()
     set(_quiet FALSE)

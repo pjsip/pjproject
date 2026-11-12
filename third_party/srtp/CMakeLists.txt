@@ -17,6 +17,9 @@ if(SRTP_WITH_OPENSSL)
     include(CMakePushCheckState)
 
     cmake_push_check_state(RESET)
+      if(PJ_FIND_QUIET)
+        set(CMAKE_REQUIRED_QUIET ON)
+      endif()
       set(CMAKE_REQUIRED_LIBRARIES OpenSSL::Crypto)
       check_c_source_compiles([=[
         #include <openssl/evp.h>

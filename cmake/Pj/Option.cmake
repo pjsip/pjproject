@@ -72,6 +72,9 @@ function(pj_force_set variable value)
 
   # show warning
   if(ARGC GREATER 2)
+    if(value STREQUAL "")
+      set(value [[""]])
+    endif()
     message(STATUS "[!] ${ARGV2}. setting ${variable} to ${value}")
   endif()
 endfunction()
@@ -162,18 +165,35 @@ macro(pj_find_package package)
 endmacro()
 
 
-# pj_find_optional(<option> <failure_value> <package> [<find_package args>...])
+# pj_find_optional(<option> <failure_value> <package> [<find_package args>...]
+#                  [LINK_FUNCTION <function> [LINK_LIBRARIES <lib>...]])
 #
 # When <option> is on, look for <package> and print one "Checking if <package>
 # is available - yes/no" line naming <option>. When it is not found, set
 # <option> to <failure_value>, shown on the same line. What the search tried
-# and found shows with --log-level=VERBOSE (PJ_FIND_QUIET).
+# and found shows with --log-level=VERBOSE (PJ_FIND_QUIET). LINK_FUNCTION is
+# for a package without a link test of its own, e.g. CMake's FindALSA or a
+# package's config file: <package> then also counts as found only when
+# <function> links against LINK_LIBRARIES (default <package>_LIBRARIES).
 macro(pj_find_optional opt failure_value package)
+  cmake_parse_arguments(_pj_fo "" "LINK_FUNCTION" "LINK_LIBRARIES" ${ARGN})
   pj_retry_on_new_root(${opt} ${package})
   if(${opt})
     message(VERBOSE "Checking if ${package} is available")
-    find_package(${package} ${PJ_FIND_QUIET} ${ARGN})
-    if(${package}_FOUND)
+    find_package(${package} ${PJ_FIND_QUIET} ${_pj_fo_UNPARSED_ARGUMENTS})
+    set(_pj_fo_found ${${package}_FOUND})
+    if(_pj_fo_found AND _pj_fo_LINK_FUNCTION)
+      if(NOT _pj_fo_LINK_LIBRARIES)
+        set(_pj_fo_LINK_LIBRARIES ${${package}_LIBRARIES})
+      endif()
+      include(Pj/CheckLibraryUsable)
+      pj_check_library_usable(${package}
+        FUNCTION ${_pj_fo_LINK_FUNCTION}
+        LIBRARIES ${_pj_fo_LINK_LIBRARIES}
+      )
+      set(_pj_fo_found ${${package}_USABLE})
+    endif()
+    if(_pj_fo_found)
       message(STATUS "Checking if ${package} is available - yes (${opt})")
     else()
       message(STATUS
@@ -181,6 +201,11 @@ macro(pj_find_optional opt failure_value package)
       pj_force_set(${opt} ${failure_value})
     endif()
   endif()
+  unset(_pj_fo_LINK_FUNCTION)
+  unset(_pj_fo_LINK_LIBRARIES)
+  unset(_pj_fo_UNPARSED_ARGUMENTS)
+  unset(_pj_fo_KEYWORDS_MISSING_VALUES)
+  unset(_pj_fo_found)
 endmacro()
 
 # pj_dep_choice(<option> <package> <out-var>)

@@ -339,19 +339,8 @@ cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_ALSA
   "Enable ALSA audio device backend" ON
   "PJMEDIA_WITH_AUDIODEV;UNIX;NOT APPLE;NOT ANDROID;NOT CYGWIN" OFF
 )
-pj_find_optional(PJMEDIA_WITH_AUDIODEV_ALSA OFF ALSA)
-# CMake's FindALSA has no link test
-if(PJMEDIA_WITH_AUDIODEV_ALSA)
-  include(Pj/CheckLibraryUsable)
-  pj_check_library_usable(ALSA QUIET
-    FUNCTION snd_pcm_open
-    LIBRARIES ${ALSA_LIBRARIES}
-  )
-  if(NOT ALSA_USABLE)
-    pj_force_set(PJMEDIA_WITH_AUDIODEV_ALSA OFF
-      "ALSA was found but cannot be linked")
-  endif()
-endif()
+# CMake's FindALSA has no link test of its own
+pj_find_optional(PJMEDIA_WITH_AUDIODEV_ALSA OFF ALSA LINK_FUNCTION snd_pcm_open)
 
 # Windows MultiMedia Extensions (WMME) backend
 cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_WMME
@@ -444,23 +433,10 @@ cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_SDL
   "Enable SDL video device backend" ON
   "PJMEDIA_WITH_VIDEODEV" OFF
 )
-pj_find_optional(PJMEDIA_WITH_VIDEODEV_SDL OFF SDL2 QUIET)
 # SDL's own package does no link test; reject a library built for another
 # target, e.g. the host's in a cross build
-if(PJMEDIA_WITH_VIDEODEV_SDL)
-  include(Pj/CheckLibraryUsable)
-  pj_check_library_usable(SDL2 ${PJ_FIND_QUIET}
-    LIBRARIES SDL2::SDL2
-    CODE [=[
-      #define SDL_MAIN_HANDLED
-      #include <SDL.h>
-      int main(void) { return SDL_Init(0); }
-    ]=]
-  )
-  if(NOT SDL2_USABLE)
-    pj_force_set(PJMEDIA_WITH_VIDEODEV_SDL OFF "SDL2 was found but cannot be linked")
-  endif()
-endif()
+pj_find_optional(PJMEDIA_WITH_VIDEODEV_SDL OFF SDL2 QUIET
+  LINK_FUNCTION SDL_Init LINK_LIBRARIES SDL2::SDL2)
 
 # Darwin (AVFoundation) capture backend
 cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_DARWIN
