@@ -109,6 +109,19 @@ unset(_pj_target_vars)
 unset(_var)
 unset(_value)
 
+# A package installed with only Debug and Release builds (vcpkg's SDL2 found
+# through CMAKE_PREFIX_PATH) would give MinSizeRel and RelWithDebInfo its
+# Debug library and C runtime. Use the Release one, as vcpkg's toolchain file
+# does. Set before any package is searched; a value given is kept.
+if(MSVC)
+  foreach(_cfg MINSIZEREL RELWITHDEBINFO)
+    if(NOT DEFINED CMAKE_MAP_IMPORTED_CONFIG_${_cfg})
+      set(CMAKE_MAP_IMPORTED_CONFIG_${_cfg} Release "")
+    endif()
+  endforeach()
+  unset(_cfg)
+endif()
+
 # C++ is needed only by pjsua2 and a few backends (WebRTC AEC3, libyuv, Lyra,
 # OpenH264, Oboe, WASAPI, DirectShow, Android MediaCodec), by pjlib's
 # atomic_queue.cpp, which only those backends use, and by WebRTC's CPU

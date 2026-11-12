@@ -64,5 +64,17 @@ if(VPX_FOUND)
     )
     include(Pj/DebugLibrary)
     pj_import_debug_library(VPX::VPX VPX_LIBRARY)
+    # A static vpx.lib built with /GL (vcpkg's) makes MSVC link with /LTCG
+    # and warn that RelWithDebInfo's /INCREMENTAL is ignored (LNK4075). An
+    # import library names its DLL's import descriptor near its start.
+    if(MSVC)
+      file(STRINGS "${VPX_LIBRARY}" _vpx_import
+        REGEX "__IMPORT_DESCRIPTOR_" LIMIT_INPUT 65536 LIMIT_COUNT 1)
+      if(NOT _vpx_import)
+        set_property(TARGET VPX::VPX APPEND PROPERTY INTERFACE_LINK_OPTIONS
+          "$<$<CONFIG:RelWithDebInfo>:/INCREMENTAL:NO>")
+      endif()
+      unset(_vpx_import)
+    endif()
   endif()
 endif()
