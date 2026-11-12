@@ -7,18 +7,7 @@ menuconfig PJPROJECT
 	select REQUIRES_FULL_LIBC
 	help
 	  Build PJSIP for this application: pjlib, pjlib-util, pjnath,
-	  pjmedia, pjmedia-codec, pjsip, pjsip-simple and pjsip-ua. PJLIB
-	  runs on the POSIX layer (sockets, select, clock_gettime, and
-	  pthreads when PJPROJECT_THREADS is set), so the application must
-	  enable POSIX_API and networking. Link the application against the
-	  "pjproject" CMake target.
-
-	  These options cover what the build has to know. Everything else
-	  about pjproject, codecs, logging, pool and queue sizes, is set in
-	  pjlib/include/pj/config_site.h as on every other platform. On
-	  Zephyr that file must select the PJ_CONFIG_ZEPHYR preset:
-	    #define PJ_CONFIG_ZEPHYR 1
-	    #include <pj/config_site_sample.h>
+	  pjmedia, pjmedia-codec, pjsip, pjsip-simple and pjsip-ua.
 	  See README_Zephyr.md.
 
 if PJPROJECT
