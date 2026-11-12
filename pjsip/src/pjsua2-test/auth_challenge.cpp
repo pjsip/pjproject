@@ -62,6 +62,7 @@ using namespace pj;
  *
  *   - First REGISTER without Authorization -> 401 + WWW-Authenticate
  *   - REGISTER with Authorization present  -> 200 OK
+ *   - Any REGISTER while disabled          -> 200 OK, no challenge
  *****************************************************************************/
 
 static unsigned g_mock_req_count;
@@ -79,11 +80,17 @@ static pj_bool_t mock_registrar_on_rx_request(pjsip_rx_data *rdata)
     pjsip_authorization_hdr *hauth;
     int        code;
 
-    if (!g_mock_enabled)
-        return PJ_FALSE;
-
     if (msg->line.req.method.id != PJSIP_REGISTER_METHOD)
         return PJ_FALSE;
+
+    /* Accept without a challenge, so that the unregistration of a deleted
+     * account completes instead of being retransmitted into later tests.
+     */
+    if (!g_mock_enabled) {
+        pjsip_endpt_respond_stateless(pjsua_get_pjsip_endpt(), rdata,
+                                       200, NULL, NULL, NULL);
+        return PJ_TRUE;
+    }
 
     /* Filter by From user */
     {
