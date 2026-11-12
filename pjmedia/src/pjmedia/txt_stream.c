@@ -1050,6 +1050,18 @@ static pj_status_t encode_red(pjmedia_txt_stream *stream, unsigned pt,
     return PJ_SUCCESS;
 }
 
+/* Keep the sequence and timestamp of the last RTP packet sent, as the audio
+ * and video streams do, so a stream recreated by pjsua continues them (see
+ * pjsua_txt_stop_stream()). Must be called with jb_mutex held.
+ */
+static void update_tx_stat(pjmedia_txt_stream *stream, const void *rtphdr)
+{
+    const pjmedia_rtp_hdr *hdr = (const pjmedia_rtp_hdr *) rtphdr;
+
+    stream->base.rtcp.stat.rtp_tx_last_ts = pj_ntohl(hdr->ts);
+    stream->base.rtcp.stat.rtp_tx_last_seq = pj_ntohs(hdr->seq);
+}
+
 static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
                                     unsigned rtp_ts_len)
 {
@@ -1138,6 +1150,7 @@ static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
         pj_memcpy(channel->buf, rtphdr, sizeof(pjmedia_rtp_hdr));
         stream->tx_buf[0].timestamp =
             pj_ntohl(((pjmedia_rtp_hdr *) rtphdr)->ts);
+        update_tx_stat(stream, rtphdr);
 
         if (stream->is_idle && !is_keepalive) {
             stream->is_idle = PJ_FALSE;
@@ -1279,8 +1292,10 @@ static void check_start_ka(pjmedia_txt_stream *stream)
     pj_mutex_lock(c_strm->jb_mutex);
     status = pjmedia_rtp_encode_rtp(&channel->rtp, channel->pt, 0, 1, 0,
                                     &rtphdr, &hdrlen);
-    if (status == PJ_SUCCESS)
+    if (status == PJ_SUCCESS) {
         pj_memcpy(&hdr, rtphdr, sizeof(hdr));
+        update_tx_stat(stream, rtphdr);
+    }
     pj_mutex_unlock(c_strm->jb_mutex);
     if (status != PJ_SUCCESS)
         return;
