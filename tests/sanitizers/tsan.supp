@@ -151,12 +151,19 @@ deadlock:acc_check_nat_addr
 #     re-registers; the test's unreg_in_window(), final_window_test() and
 #     abandon_window_test() send or poll under PJSUA_LOCK on purpose, while
 #     another thread waits for it in regc_cb().
+#     pjsua_acc_del2() unregisters the account it deletes (pjsua2-test).
 #   M1 -> M0: regc_cb() / regc_tsx_cb(), as above.
+#
+# Both orders can be on the same transaction (the request sent under
+# PJSUA_LOCK, then its response), but the sender takes that lock only
+# before and during the send, i.e. before another thread can hold it,
+# and not again afterwards, so the two cannot wait for each other.
 #
 # Suppressed on these callers only, so that other senders on the
 # registration path still surface.
 deadlock:pjsua_acc_update_contact_on_ip_change
 deadlock:pjsua_acc_modify
+deadlock:pjsua_acc_del2
 deadlock:unreg_in_window
 deadlock:final_window_test
 deadlock:abandon_window_test
@@ -202,4 +209,22 @@ deadlock:pres_evsub_on_srv_state
 # topology to make the worker drop both locks before the callback (and
 # reorder publish's locking) would require a separate, broader change.
 deadlock:event_mgr_distribute_events
+#=============================================================================
+
+#=============================================================================
+# Lock-order-inversion between PJSUA_LOCK and a new call's dialog
+# grp_lock when the media transport is created asynchronously (e.g. ICE).
+#
+#   M0 -> M1: pjsua_call_make_call2() holds PJSUA_LOCK and creates the
+#     dialog (pjsip_dlg_create_uac), taking its grp_lock.
+#   M1 -> M0: on_make_call_med_tp_complete() runs with the dialog
+#     grp_lock held (from acquire_call(), which takes both locks by
+#     trylock and then releases PJSUA_LOCK) and takes PJSUA_LOCK.
+#
+# make_call takes the dialog lock only while the dialog is not yet
+# reachable by another thread, so the two cannot wait for each other.
+#
+# Suppressed on on_make_call_med_tp_complete because that frame is
+# unique to this cycle.
+deadlock:on_make_call_med_tp_complete
 #=============================================================================

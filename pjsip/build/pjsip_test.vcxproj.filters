@@ -96,6 +96,15 @@
     <ClCompile Include="..\src\test\pjsua_call_test.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\test\pjsua_acc_test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\test\pjsua_pres_test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\test\pjsua_stress.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\test\test.h">

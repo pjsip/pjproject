@@ -595,10 +595,12 @@ jobs:
         make pjmedia-test
     - name: pjsip-test serial
       # when using no worker thread, pjsip_endpt is safe without suppression
+      # Run the binary rather than "make pjsip-test", which also runs
+      # pjsua2-test: once is enough, and it needs the suppression below.
       run: |
         export CI_ARGS="-w 0 --shuffle --stdout-buf 1 tsx_basic_test tsx_uac_test tsx_uas_test"
         export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp"
-        make pjsip-test
+        cd pjsip/build && $CI_RUNNER ../bin/pjsip-test-`make -s -C ../.. infotarget` $CI_ARGS $CI_MODE
     - name: pjsip-test parallel
       # when using multiple worker threads, add pjsip_endpt suppression
       run: |

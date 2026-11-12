@@ -17,6 +17,7 @@
  */
 
 #include <pjsua2/endpoint.hpp>
+#include <iostream>
 #include "instant_messaging.hpp"
 #include "auth_challenge.hpp"
 #include "object_lifetime.hpp"
@@ -29,6 +30,12 @@ void callTransferCustomCallIdTest();
 
 int main(int argc, char *argv[])
 {
+#if !PJ_HAS_THREADS
+    /* Most of the tests need the library's worker or media threads */
+    std::cout << "pjsua2-test skipped: no threads" << std::endl;
+    return 0;
+#endif
+
     try {
         audioMediaPortTest();
         callReplaceRejectReasonTest();

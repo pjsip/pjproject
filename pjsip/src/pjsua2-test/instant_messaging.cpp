@@ -19,10 +19,13 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
-#include <cassert>
 #include <memory>
 
 #include "instant_messaging.hpp"
+
+/* Keep the checks in release builds (MSVC Release defines NDEBUG) */
+#undef NDEBUG
+#include <cassert>
 
 #define THIS_FILE "instant_messaging.cpp"
 

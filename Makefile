@@ -139,6 +139,9 @@ pjmedia-test: pjmedia/bin/pjmedia-test-$(TARGET_NAME)
 
 pjsip-test: pjsip/bin/pjsip-test-$(TARGET_NAME)
 	cd pjsip/build && $(CI_RUNNER) ../bin/pjsip-test-$(TARGET_NAME) $(CI_ARGS) $(CI_MODE)
+ifneq ($(PJ_EXCLUDE_PJSUA2),1)
+	cd pjsip/build && $(CI_RUNNER) ../bin/pjsua2-test-$(TARGET_NAME)
+endif
 
 pjsua-test: cmp_wav
 	cd tests/pjsua && python runall.py -t 2

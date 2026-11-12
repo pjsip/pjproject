@@ -908,8 +908,6 @@ on_return:
         pjsip_tx_data_dec_ref(g_superseded.tdata);
         pjsip_auth_clt_async_abandon(g_superseded.sess, g_superseded.token);
     }
-    if (reserved)
-        pjsip_regc_send(regc, reserved);
     if (regc)
         pjsip_regc_destroy(regc);
     return rc;
