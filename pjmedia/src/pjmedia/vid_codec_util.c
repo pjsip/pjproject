@@ -20,6 +20,7 @@
 #include <pjmedia/errno.h>
 #include <pjmedia/stream_common.h>
 #include <pjlib-util/base64.h>
+#include <pj/assert.h>
 #include <pj/ctype.h>
 #include <pj/math.h>
 
@@ -28,6 +29,12 @@
 
 
 #define THIS_FILE   "vid_codec_util.c"
+
+/* PJMEDIA_H264_DEFAULT_PROFILE_LEVEL_ID must be a string literal of six
+ * hex digits; the level itself is only checked at run time.
+ */
+PJ_STATIC_ASSERT(sizeof(PJMEDIA_H264_DEFAULT_PROFILE_LEVEL_ID) == 7,
+                 h264_default_profile_level_id_must_be_6_hex_digits);
 
 /* If this is set to non-zero, H.264 custom negotiation will require
  * "profile-level-id" and "packetization-mode" to be exact match to
@@ -469,10 +476,12 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_parse_fmtp(
      * (RFC 6184 default "42000A", see PJMEDIA_H264_DEFAULT_PROFILE_LEVEL_ID).
      */
     if (h264_fmtp->profile_idc == 0) {
-        pj_str_t def_profile;
+        const pj_str_t DEF_PROFILE = {
+            PJMEDIA_H264_DEFAULT_PROFILE_LEVEL_ID,
+            sizeof(PJMEDIA_H264_DEFAULT_PROFILE_LEVEL_ID) - 1
+        };
 
-        def_profile = pj_str((char*)PJMEDIA_H264_DEFAULT_PROFILE_LEVEL_ID);
-        status = init_h264_profile(&def_profile, h264_fmtp);
+        status = init_h264_profile(&DEF_PROFILE, h264_fmtp);
         if (status != PJ_SUCCESS)
             return status;
     }
