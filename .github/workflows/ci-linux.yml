@@ -598,13 +598,15 @@ jobs:
       run: |
         export CI_ARGS="-w 0 --shuffle --stdout-buf 1 tsx_basic_test tsx_uac_test tsx_uas_test"
         export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp"
-        make pjsip-test
+        cd pjsip/build && $CI_RUNNER ../bin/pjsip-test-`make -s -C ../.. infotarget` $CI_ARGS $CI_MODE
     - name: pjsip-test parallel
       # when using multiple worker threads, add pjsip_endpt suppression
+      # Run the binary rather than "make pjsip-test", which also runs
+      # pjsua2-test: TSan reports lock-order inversions in pjsua2-test.
       run: |
         echo "deadlock:pj_rwmutex_lock_read" >> tests/sanitizers/tsan.supp
         export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp"
-        make pjsip-test
+        cd pjsip/build && $CI_RUNNER ../bin/pjsip-test-`make -s -C ../.. infotarget` $CI_ARGS $CI_MODE
     - name: upload artifacts on failure
       if: ${{ failure() }}
       uses: actions/upload-artifact@v4
