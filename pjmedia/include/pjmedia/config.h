@@ -2006,6 +2006,44 @@
 
 
 /**
+ * H.264 profile-level-id assumed when an H.264 fmtp, typically the
+ * remote's, has no profile-level-id parameter. This includes an fmtp that
+ * carries other parameters only (e.g. just packetization-mode or max-fs),
+ * and a local codec fmtp from which the application has removed
+ * profile-level-id.
+ *
+ * The value must be a string literal of exactly six hex digits, and its
+ * last two digits must be a level known to PJMEDIA (e.g. 0A, 1E, 1F).
+ * A wrong length is caught at compile time. An unknown level is not: it
+ * makes H.264 negotiation fail with PJMEDIA_SDP_EINFMTP for every fmtp
+ * that lacks profile-level-id, while peers that send one keep working.
+ *
+ * RFC 6184 defines the default as "42000A" (Baseline profile, Level 1.0),
+ * whose maximum frame size is QCIF (176x144). Some endpoints omit the
+ * parameter yet send larger frames (e.g. CIF or VGA). Those frames do not
+ * fit the negotiated level, and a decoder that sizes itself from that
+ * level (e.g. Android MediaCodec) may render no video although the RTP
+ * stream itself is healthy.
+ *
+ * Set this to e.g. "42E01E" (Constrained Baseline, Level 3.0, up to
+ * 720x576), the value that PJMEDIA's own H.264 codecs advertise, to
+ * interoperate with such endpoints. An explicit profile-level-id is always
+ * used as is.
+ *
+ * The value applies to both directions: the encoder also limits its frame
+ * size and rate to this level when sending to such a remote. With
+ * "42E01E", a remote that omits profile-level-id is sent up to Level 3.0
+ * instead of QCIF, which is too much for an endpoint that really only
+ * supports Level 1.0.
+ *
+ * Default: "42000A" (as specified by RFC 6184)
+ */
+#ifndef PJMEDIA_H264_DEFAULT_PROFILE_LEVEL_ID
+#   define PJMEDIA_H264_DEFAULT_PROFILE_LEVEL_ID    "42000A"
+#endif
+
+
+/**
  * Maximum tolerable presentation lag from the earliest to the latest media,
  * in milliseconds, in inter-media synchronization. When the delay is
  * higher than this setting, the media synchronizer will request the slower

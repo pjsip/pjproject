@@ -19,6 +19,7 @@
 #include <pjmedia-codec.h>
 #include <pjmedia-videodev/videodev.h>
 #include <pjmedia/vid_codec.h>
+#include <pjmedia/vid_codec_util.h>
 #include <pjmedia/port.h>
 
 
@@ -557,6 +558,53 @@ on_return:
 }
 #endif /* PJMEDIA_HAS_FFMPEG_CODEC_H264 */
 
+/* An fmtp without profile-level-id must parse the same as one that carries
+ * PJMEDIA_H264_DEFAULT_PROFILE_LEVEL_ID, and an explicit profile-level-id
+ * must still win over the default.
+ */
+static int h264_default_profile_test(void)
+{
+    pjmedia_codec_fmtp fmtp;
+    pjmedia_vid_codec_h264_fmtp parsed, expected;
+    pj_status_t status;
+
+    PJ_LOG(3, (THIS_FILE, "  H264 default profile-level-id test (%s)",
+               PJMEDIA_H264_DEFAULT_PROFILE_LEVEL_ID));
+
+    pj_bzero(&fmtp, sizeof(fmtp));
+    fmtp.cnt = 1;
+    fmtp.param[0].name = pj_str("profile-level-id");
+    fmtp.param[0].val = pj_str((char*)PJMEDIA_H264_DEFAULT_PROFILE_LEVEL_ID);
+    status = pjmedia_vid_codec_h264_parse_fmtp(&fmtp, &expected);
+    if (status != PJ_SUCCESS)
+        return -500;
+
+    /* No profile-level-id at all */
+    pj_bzero(&fmtp, sizeof(fmtp));
+    status = pjmedia_vid_codec_h264_parse_fmtp(&fmtp, &parsed);
+    if (status != PJ_SUCCESS)
+        return -510;
+    if (parsed.profile_idc != expected.profile_idc ||
+        parsed.profile_iop != expected.profile_iop ||
+        parsed.level != expected.level ||
+        parsed.max_fs != expected.max_fs)
+    {
+        return -520;
+    }
+
+    /* An explicit profile-level-id (Level 3.1) overrides the default */
+    fmtp.cnt = 1;
+    fmtp.param[0].name = pj_str("profile-level-id");
+    fmtp.param[0].val = pj_str("42E01F");
+    status = pjmedia_vid_codec_h264_parse_fmtp(&fmtp, &parsed);
+    if (status != PJ_SUCCESS)
+        return -530;
+    if (parsed.profile_idc != 0x42 || parsed.level != 31)
+        return -540;
+
+    return 0;
+}
+
 int vid_codec_test(void)
 {
     pj_pool_t *pool;
@@ -603,6 +651,10 @@ int vid_codec_test(void)
 #endif
 
     rc = enum_codecs();
+    if (rc != 0)
+        goto on_return;
+
+    rc = h264_default_profile_test();
     if (rc != 0)
         goto on_return;
 
