@@ -2006,6 +2006,28 @@
 
 
 /**
+ * H.264 profile-level-id assumed when the remote SDP omits the
+ * profile-level-id fmtp parameter, as a string of six hex digits.
+ *
+ * RFC 6184 defines the default as "42000A" (Baseline profile, Level 1.0),
+ * whose maximum frame size is QCIF (176x144). Some endpoints omit the
+ * parameter yet send larger frames (e.g. CIF or VGA). With the Level 1.0
+ * default those frames do not fit the negotiated level, and no video is
+ * rendered although the RTP stream itself is healthy.
+ *
+ * Set this to e.g. "42E01E" (Constrained Baseline, Level 3.0, up to
+ * 720x576), the value that PJMEDIA's own H.264 codecs advertise, to
+ * interoperate with such endpoints. An explicit profile-level-id from the
+ * remote is always used as is.
+ *
+ * Default: "42000A" (as specified by RFC 6184)
+ */
+#ifndef PJMEDIA_H264_DEFAULT_PROFILE_LEVEL_ID
+#   define PJMEDIA_H264_DEFAULT_PROFILE_LEVEL_ID    "42000A"
+#endif
+
+
+/**
  * Maximum tolerable presentation lag from the earliest to the latest media,
  * in milliseconds, in inter-media synchronization. When the delay is
  * higher than this setting, the media synchronizer will request the slower

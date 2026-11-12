@@ -465,11 +465,14 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_parse_fmtp(
         }
     }
 
-    /* When profile-level-id is not specified, use default value "42000A" */
+    /* When profile-level-id is not specified, use the configured default
+     * (RFC 6184 default "42000A", see PJMEDIA_H264_DEFAULT_PROFILE_LEVEL_ID).
+     */
     if (h264_fmtp->profile_idc == 0) {
-        const pj_str_t DEF_PROFILE = {"42000A", 6};
+        pj_str_t def_profile;
 
-        status = init_h264_profile(&DEF_PROFILE, h264_fmtp);
+        def_profile = pj_str((char*)PJMEDIA_H264_DEFAULT_PROFILE_LEVEL_ID);
+        status = init_h264_profile(&def_profile, h264_fmtp);
         if (status != PJ_SUCCESS)
             return status;
     }
