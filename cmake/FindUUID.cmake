@@ -24,11 +24,20 @@ find_library(UUID_LIBRARY
 )
 mark_as_advanced(UUID_LIBRARY)
 
+if(UUID_INCLUDE_DIR AND UUID_LIBRARY)
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(UUID
+    FUNCTION uuid_generate
+    LIBRARIES "${UUID_LIBRARY}"
+  )
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(UUID
   REQUIRED_VARS
     UUID_INCLUDE_DIR
     UUID_LIBRARY
+    UUID_USABLE
   VERSION_VAR
     UUID_VERSION
 )

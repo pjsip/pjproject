@@ -29,7 +29,8 @@ cmake_dependent_option(PJLIB_WITH_LIBUUID
 
 # Enable SSL support with the selected implementation backend. auto takes the
 # first of OpenSSL, GnuTLS and MbedTLS found, as autoconf; none (or empty)
-# disables SSL, as --disable-ssl.
+# disables SSL, as --disable-ssl. A library backend that is not found or
+# cannot be linked is left out, building without SSL, as autoconf.
 pj_option(PJLIB_WITH_SSL "Enable SSL support"
   DEFAULT auto
   ALLOWED_VALUES auto none openssl gnutls mbedtls darwin apple schannel
@@ -487,27 +488,37 @@ if(_pj_ssl STREQUAL "openssl")
   endif()
 elseif(_pj_ssl STREQUAL "gnutls")
   if(NOT GNUTLS_FOUND)
-    find_package(GnuTLS REQUIRED)
+    find_package(GnuTLS ${PJ_FIND_QUIET})
   endif()
-  _pj_check_gnutls_usable()
-  if(NOT GnuTLS_USABLE)
-    message(FATAL_ERROR
-      "PJLIB_WITH_SSL=gnutls: GnuTLS was found (${GNUTLS_LIBRARY}) but "
-      "cannot be linked")
+  if(GNUTLS_FOUND)
+    _pj_check_gnutls_usable()
   endif()
-  target_link_libraries(pjlib-ssl INTERFACE GnuTLS::GnuTLS)
+  if(GNUTLS_FOUND AND GnuTLS_USABLE)
+    target_link_libraries(pjlib-ssl INTERFACE GnuTLS::GnuTLS)
+  elseif(GNUTLS_FOUND)
+    pj_force_set(PJLIB_WITH_SSL "" "GnuTLS found but cannot be linked")
+    set(_pj_ssl "")
+  else()
+    pj_force_set(PJLIB_WITH_SSL "" "GnuTLS not found")
+    set(_pj_ssl "")
+  endif()
 elseif(_pj_ssl STREQUAL "mbedtls")
   if(NOT MbedTLS_FOUND)
-    find_package(MbedTLS CONFIG REQUIRED)
+    find_package(MbedTLS CONFIG ${PJ_FIND_QUIET})
   endif()
-  _pj_check_mbedtls_usable()
-  if(NOT MbedTLS_USABLE)
-    message(FATAL_ERROR
-      "PJLIB_WITH_SSL=mbedtls: MbedTLS was found (${MbedTLS_DIR}) but "
-      "cannot be linked")
+  if(MbedTLS_FOUND)
+    _pj_check_mbedtls_usable()
   endif()
-  _pj_mbedtls_libraries(_pj_mbedtls_libs)
-  target_link_libraries(pjlib-ssl INTERFACE ${_pj_mbedtls_libs})
+  if(MbedTLS_FOUND AND MbedTLS_USABLE)
+    _pj_mbedtls_libraries(_pj_mbedtls_libs)
+    target_link_libraries(pjlib-ssl INTERFACE ${_pj_mbedtls_libs})
+  elseif(MbedTLS_FOUND)
+    pj_force_set(PJLIB_WITH_SSL "" "MbedTLS found but cannot be linked")
+    set(_pj_ssl "")
+  else()
+    pj_force_set(PJLIB_WITH_SSL "" "MbedTLS not found")
+    set(_pj_ssl "")
+  endif()
 elseif(_pj_ssl STREQUAL "darwin")
   if(NOT APPLE)
     message(FATAL_ERROR "PJLIB_WITH_SSL=darwin requires an Apple platform")

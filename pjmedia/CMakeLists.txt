@@ -17,10 +17,13 @@ cmake_dependent_option(PJMEDIA_WITH_SRTP
 )
 
 # Include resampling implementation
-# an earlier configure forced this to none when libresample was left out
+# an earlier configure forced this to none when libresample was left out;
+# libsamplerate, when unusable, waits for a new root as the other libraries
 get_property(_pj_doc CACHE PJMEDIA_WITH_RESAMPLE PROPERTY HELPSTRING)
-if(_pj_doc MATCHES "\\(forced\\)$")
+if(_pj_doc MATCHES "\\(forced\\)$" AND
+   NOT "$CACHE{_PJ_PJMEDIA_WITH_RESAMPLE_UNFORCED}" STREQUAL "libsamplerate")
   unset(PJMEDIA_WITH_RESAMPLE CACHE)
+  unset(_PJ_PJMEDIA_WITH_RESAMPLE_UNFORCED CACHE)
 endif()
 unset(_pj_doc)
 pj_option(PJMEDIA_WITH_RESAMPLE "Enable resampling implementation"
@@ -39,7 +42,11 @@ if(PJMEDIA_WITH_RESAMPLE STREQUAL "libresample")
     pj_force_set(PJMEDIA_WITH_RESAMPLE "none" "libresample not found")
   endif()
 elseif(PJMEDIA_WITH_RESAMPLE STREQUAL "libsamplerate")
-  find_package(SampleRate REQUIRED)
+  find_package(SampleRate ${PJ_FIND_QUIET})
+  if(NOT SampleRate_FOUND)
+    pj_force_set(PJMEDIA_WITH_RESAMPLE "none"
+      "libsamplerate not found or cannot be linked")
+  endif()
 elseif(PJMEDIA_WITH_RESAMPLE STREQUAL "speex")
   if(NOT TARGET Pj::Dep::Speex)
     message(FATAL_ERROR "Resampling backend cannot be set to `speex`, \
@@ -333,6 +340,18 @@ cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_ALSA
   "PJMEDIA_WITH_AUDIODEV;UNIX;NOT APPLE;NOT ANDROID;NOT CYGWIN" OFF
 )
 pj_find_optional(PJMEDIA_WITH_AUDIODEV_ALSA OFF ALSA)
+# CMake's FindALSA has no link test
+if(PJMEDIA_WITH_AUDIODEV_ALSA)
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(ALSA QUIET
+    FUNCTION snd_pcm_open
+    LIBRARIES ${ALSA_LIBRARIES}
+  )
+  if(NOT ALSA_USABLE)
+    pj_force_set(PJMEDIA_WITH_AUDIODEV_ALSA OFF
+      "ALSA was found but cannot be linked")
+  endif()
+endif()
 
 # Windows MultiMedia Extensions (WMME) backend
 cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_WMME
