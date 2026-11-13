@@ -15,11 +15,13 @@ This guide takes you from a clean machine to a SIP call running on [Zephyr RTOS]
 
 Current status:
 
+- Registration and four concurrent calls
 - SIP transport: UDP or TLS
 - Audio codec: G.711 or G.722
 - SDES-SRTP
 - Single threaded or pjsip and the media on two pthreads
-- The standard pjsip and pjmedia feature set are working: RFC 3261, registration refresh, digest authentication (RFC 2617), rport (RFC 3581), SDP offer/answer (RFC 3264) with the RTCP (RFC 3605), re-INVITE and UPDATE (RFC 3311), PRACK (RFC 3262), call hold and resume, mid-call codec change, SIP MESSAGE (RFC 3428), RTCP reports and quality statistics, DTMF (RFC 4733), adaptive jitter buffer (up to 500 ms by default), packet loss concealment, VAD with silence suppression, symmetric RTP and ptime negotiation. The rest of the libraries compiles too, among them SUBSCRIBE/NOTIFY and PUBLISH, session timers, REFER, ICE, STUN and TURN, the conference bridge and the WAV ports, but has not been exercised on Zephyr, and there is no Zephyr sound device backend.
+- The standard pjsip and pjmedia feature set are working: RFC 3261, registration refresh, digest authentication (RFC 2617), rport (RFC 3581), SDP offer/answer (RFC 3264) with the RTCP (RFC 3605), re-INVITE and UPDATE (RFC 3311), PRACK (RFC 3262), call hold and resume, mid-call codec change, SIP MESSAGE (RFC 3428), RTCP reports and quality statistics, DTMF (RFC 4733), adaptive jitter buffer (up to 500 ms by default), packet loss concealment, VAD with silence suppression, symmetric RTP and ptime negotiation.
+- The rest of the libraries compiles too, among them SUBSCRIBE/NOTIFY and PUBLISH, session timers, REFER, ICE, STUN and TURN, the conference bridge and the WAV ports, but *has not been exercised on Zephyr*, and there is no Zephyr sound device backend.
 
 The preset builds G.711 only; G.722 and the resampler are a `config_site.h` setting away.
 

@@ -39,6 +39,7 @@ Table of contents:
   - [Mac/Linux/Unix](https://docs.pjsip.org/en/latest/get-started/posix/index.html)
   - [Windows](https://docs.pjsip.org/en/latest/get-started/windows/index.html)
   - [Windows Phone](https://docs.pjsip.org/en/latest/get-started/windows-phone/index.html)
+  - [Zephyr RTOS](README_Zephyr.md)
 - PJSUA2 - High level API guide
   - [Introduction](https://docs.pjsip.org/en/latest/pjsua2/intro.html)
   - [Building PJSUA2](https://docs.pjsip.org/en/latest/pjsua2/building.html)
@@ -66,3 +67,4 @@ Table of contents:
   - [PJNATH](https://docs.pjsip.org/en/latest/api/pjnath/index.html) - NAT traversal helper
   - [PJLIB-UTIL](https://docs.pjsip.org/en/latest/api/pjlib-util/index.html) - utilities
   - [PJLIB](https://docs.pjsip.org/en/latest/api/pjlib/index.html) - portable library
+
