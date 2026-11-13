@@ -101,6 +101,7 @@ static float compute_energy(pj_int16_t *samples, int nsamples)
  * Verified at runtime in pjmedia_tone_detector_port_create(). */
 struct tone_detector_port {
     pjmedia_port     base;
+    pj_pool_t       *pool;
     pj_bool_t        subscribed;
     pj_bool_t        cb_called;
     unsigned         consecutive_hits;
@@ -140,7 +141,7 @@ static pj_status_t tone_detector_on_event(pjmedia_event *event, void *user_data)
  * Create tone detector port.
  */
 PJ_DEF(pj_status_t) pjmedia_tone_detector_port_create(
-                                pj_pool_t *pool,
+                                pj_pool_t *pool_,
                                 unsigned sampling_rate,
                                 unsigned channel_count,
                                 unsigned samples_per_frame,
@@ -154,10 +155,11 @@ PJ_DEF(pj_status_t) pjmedia_tone_detector_port_create(
                                 void *cb_user_data)
 {
     struct tone_detector_port *td_port;
+    pj_pool_t *pool;
     pj_str_t name = pj_str((char*)TONE_DET_PORT_NAME);
     unsigned i;
 
-    PJ_ASSERT_RETURN(pool && p_port && freqs && cb, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pool_ && p_port && freqs && cb, PJ_EINVAL);
     PJ_ASSERT_RETURN(bits_per_sample == 16, PJ_EINVAL);
     PJ_ASSERT_RETURN(n_freqs >= 1 && n_freqs <= PJMEDIA_TONE_DETECT_MAX_FREQS,
                      PJ_EINVAL);
@@ -170,8 +172,14 @@ PJ_DEF(pj_status_t) pjmedia_tone_detector_port_create(
      * mono — pjmedia_conf_add_port() will downmix a stereo bridge for us. */
     channel_count = 1;
 
+    /* Own pool, released in on_destroy: the conference bridge may still
+     * reference the port after the caller releases its pool. */
+    pool = pj_pool_create(pool_->factory, TONE_DET_PORT_NAME, 512, 512, NULL);
+    PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
+
     td_port = PJ_POOL_ZALLOC_T(pool, struct tone_detector_port);
-    PJ_ASSERT_RETURN(td_port != NULL, PJ_ENOMEM);
+    PJ_ASSERT_ON_FAIL(td_port, {pj_pool_release(pool); return PJ_ENOMEM;});
+    td_port->pool = pool;
 
     pjmedia_port_info_init(&td_port->base.info, &name, SIGNATURE,
                            sampling_rate, channel_count, bits_per_sample,
@@ -199,6 +207,7 @@ PJ_DEF(pj_status_t) pjmedia_tone_detector_port_create(
         if (status != PJ_SUCCESS) {
             PJ_PERROR(2,(THIS_FILE, status,
                          "Failed to subscribe to pjmedia events"));
+            pj_pool_release(pool);
             return status;
         }
         td_port->subscribed = PJ_TRUE;
@@ -296,5 +305,6 @@ static pj_status_t tone_detector_on_destroy(pjmedia_port *this_port)
         td_port->subscribed = PJ_FALSE;
     }
     PJ_LOG(4,(THIS_FILE, "tone detector destroyed"));
+    pj_pool_safe_release(&td_port->pool);
     return PJ_SUCCESS;
 }
