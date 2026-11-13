@@ -85,7 +85,8 @@ typedef struct pjmedia_tone_detect_event
  * The port consumes frames (put_frame) but does not produce them; it can be
  * connected to a conference bridge as a sink in place of a recorder.
  *
- * @param pool              Pool to allocate the port from.
+ * @param pool              Pool whose factory creates the port's own pool.
+ *                          Destroy the port with pjmedia_port_destroy().
  * @param clock_rate        The sampling rate (Hz).
  * @param channel_count     Conf bridge channel count, accepted but ignored:
  *                          the detector always runs as mono internally and
