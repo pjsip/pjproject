@@ -5,3 +5,5 @@ name: pjproject
 build:
   cmake: zephyr
   kconfig: zephyr/Kconfig
+  settings:
+    snippet_root: zephyr

@@ -1,0 +1,16 @@
+# Makes the emulated boards stand in for the hardware pjproject is sized
+# for, a Cortex-M33 with 640 KB of RAM: the memory limit and the QEMU and
+# native_sim quirks that every application needs there, in one place.
+# Applied by the sample and the test; add -S pjproject-sim, or
+# set(SNIPPET pjproject-sim) before find_package(Zephyr), to your own.
+# It changes nothing on other boards.
+name: pjproject-sim
+description: QEMU's AN521 and native_sim as stand-ins for a 640 KB Cortex-M33 target
+boards:
+  mps2/an521/cpu0:
+    append:
+      EXTRA_CONF_FILE: boards/mps2_an521_cpu0.conf
+      EXTRA_DTC_OVERLAY_FILE: boards/mps2_an521_cpu0.overlay
+  native_sim/native/64:
+    append:
+      EXTRA_CONF_FILE: boards/native_sim_native_64.conf

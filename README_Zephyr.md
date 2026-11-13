@@ -1,18 +1,32 @@
 # PJSIP on Zephyr RTOS
 
-This guide takes you from a clean machine to a SIP call running on [Zephyr RTOS](https://www.zephyrproject.org/): first on [`native_sim`](https://docs.zephyrproject.org/latest/boards/native/native_sim/doc/index.html), which runs Zephyr as an ordinary Linux process, then on a [Cortex-M33](https://developer.arm.com/Processors/Cortex-M33) emulated by QEMU, and from there to your own application and board. It is the reference for the Zephyr port; docs.pjsip.org links to or copies this file.
+This guide takes you from a clean machine to a SIP call running on [Zephyr RTOS](https://www.zephyrproject.org/): first on [`native_sim`](https://docs.zephyrproject.org/latest/boards/native/native_sim/doc/index.html), which runs Zephyr as an ordinary Linux process, then on a [Cortex-M33](https://developer.arm.com/Processors/Cortex-M33) emulated by QEMU, and from there to your own application and board. It is the reference for the Zephyr port; [docs.pjsip.org](https://docs.pjsip.org) links to or copies this file.
 
 ## What the port provides
 
 - pjproject is a [Zephyr module](https://docs.zephyrproject.org/latest/develop/modules.html). Add this source tree to a Zephyr application and PJLIB, PJLIB-UTIL, PJNATH, PJMEDIA and PJSIP are built with the application, configured through Kconfig like any other part of Zephyr.
 - The port runs on Zephyr's POSIX layer: BSD sockets, `select()`, `clock_gettime()` and, optionally, pthreads. There is one Zephyr-specific source file in PJLIB (network interface enumeration) and one platform header. Everything else is the same code that runs on Linux.
-- `embedded_ua`, a complete headless SIP user agent on pjsip and pjmedia without pjsua-lib, builds as a Zephyr sample. It registers to a SIP server (or not), supports TLS via Mbed TLS, answers calls with audio loopback, speaks SDES-SRTP, and is driven by SIP MESSAGE requests. It is the bring-up and reference application of the port.
-- Tested targets: `native_sim/native/64` and `mps2/an521/cpu0` (Cortex-M33 under QEMU, limited to 640 KB of RAM to match an STM32H563). Both register and complete calls with zero packet loss.
+- [`embedded_ua.c`](pjsip-apps/src/samples/embedded_ua.c), a complete headless SIP user agent on pjsip and pjmedia without pjsua-lib, builds as a Zephyr sample. It registers to a SIP server (or not), supports TLS via [Mbed TLS](https://www.trustedfirmware.org/projects/mbed-tls/), answers calls with audio loopback, speaks SDES-SRTP, and is driven by SIP MESSAGE requests. It is the bring-up and reference application of the port.
+- Tested targets:
+
+  - `native_sim/native/64`
+  - `mps2/an521/cpu0` (Cortex-M33 under QEMU, limited to 640 KB of RAM to match an STM32H563). Both register and complete calls with zero packet loss.
 - pjlib-test, PJLIB's own test suite, runs on both targets through twister, single threaded and with threads.
 
-Current status: SIP over UDP and over TLS, G.711, G.722 and SDES-SRTP are working, single threaded and with pjsip and the media on two pthreads. The preset builds G.711 only; G.722 and the resampler are a `config_site.h` setting away.
+Current status:
 
-As an indication of the footprint, these are the sizes of the whole AN521 image, Zephyr and its network stack included, for the four ways the sample builds. The sample is built as it ships: G.711 with SDES-SRTP, and room for four concurrent calls (`MAX_CALLS` 4, with the 320 KB heap arena that holds them, 384 KB with TLS):
+- SIP transport: UDP or TLS
+- Audio codec: G.711 or G.722
+- SDES-SRTP
+- Single threaded or pjsip and the media on two pthreads
+- The standard pjsip and pjmedia feature set are working: RFC 3261, registration refresh, digest authentication (RFC 2617), rport (RFC 3581), SDP offer/answer (RFC 3264) with the RTCP (RFC 3605), re-INVITE and UPDATE (RFC 3311), PRACK (RFC 3262), call hold and resume, mid-call codec change, SIP MESSAGE (RFC 3428), RTCP reports and quality statistics, DTMF (RFC 4733), adaptive jitter buffer (up to 500 ms by default), packet loss concealment, VAD with silence suppression, symmetric RTP and ptime negotiation. The rest of the libraries compiles too, among them SUBSCRIBE/NOTIFY and PUBLISH, session timers, REFER, ICE, STUN and TURN, the conference bridge and the WAV ports, but has not been exercised on Zephyr, and there is no Zephyr sound device backend.
+
+The preset builds G.711 only; G.722 and the resampler are a `config_site.h` setting away.
+
+
+## Footprint
+
+As an indication of the footprint, these are the sizes of the whole AN521 image, Zephyr and its network stack included, for the four ways the sample builds. The sample is built as it ships: G.711 with SDES-SRTP, and room for four concurrent calls (`MAX_CALLS` 4, with the 320 KB heap arena that holds them, 384 KB with TLS). The figures are the FLASH and RAM lines of the memory usage summary that `west build` prints at the end of the link, rounded to KB. RAM is the static allocation, data and BSS including the heap arena, the kernel heap and the thread stacks, not the run-time use. pjproject's pools and libsrtp's allocations come out of the heap arena, so they are inside this number, not on top of it; what they take at run time is the next table:
 
 | Build | Flash | RAM |
 |---|---|---|
@@ -88,7 +102,7 @@ The rest of this guide refers to that location as `$PJ_DIR`; set the variable in
 
 ## 2. Configure
 
-Two kinds of settings shape a build. pjproject's own compile-time settings, which codecs, how much logging, pool and queue sizes, are in `config_site.h` as on every other platform. Zephyr, the sample and the few things the build has to know about pjproject (threads, TLS, floating point) are Kconfig options. Section 8 is the reference for both; this section is what you need before the first build.
+Two kinds of settings shape a build. pjproject's own compile-time settings, which codecs, how much logging, pool and queue sizes, are in `config_site.h` as on every other platform. Zephyr, the sample and the few things the build has to know about pjproject (threads, TLS, floating point) are [Kconfig](https://docs.zephyrproject.org/latest/build/kconfig/index.html) options. Section 8 is the reference for both; this section is what you need before the first build.
 
 ### config_site.h
 
@@ -101,11 +115,11 @@ cat > $PJ_DIR/pjlib/include/pj/config_site.h <<'EOF'
 EOF
 ```
 
-This is enough for the sample. The build stops with a message if the file is missing or does not define `PJ_CONFIG_ZEPHYR`. The preset in `config_site_sample.h` builds G.711 only, SDES-SRTP, no sample rate conversion, full logging and 16 sockets per I/O queue; section 8 says how to change any of that in the same file.
+This is enough for the sample. The preset in [`config_site_sample.h`](pjlib/include/pj/config_site_sample.h) builds G.711 only, SDES-SRTP, no sample rate conversion, full logging and 16 sockets per I/O queue; section 8 says how to change any of that in the same file. The build stops with a message if the `config_site.h` is missing or does not define `PJ_CONFIG_ZEPHYR`. 
 
 ### Kconfig
 
-Kconfig configures Zephyr, the sample and the pjproject module, like any Zephyr application. The sample's `prj.conf` is a complete, commented configuration that works as is; the overlays `overlay-threads.conf` and `overlay-tls.conf` in the same directory add threads and TLS, applied with `-DEXTRA_CONF_FILE=`. Any option can also be given on the `west build` command line after `--`, as the examples in the next section do; everything after `--` goes to CMake.
+[Kconfig](https://docs.zephyrproject.org/latest/build/kconfig/index.html) configures Zephyr, the sample and the pjproject module, like any Zephyr application. The sample's [`prj.conf`](zephyr/samples/embedded_ua/prj.conf) is a complete, commented configuration that works as is; the overlays [`overlay-threads.conf`](zephyr/samples/embedded_ua/overlay-threads.conf) and [`overlay-tls.conf`](zephyr/samples/embedded_ua/overlay-tls.conf) in the same directory add threads and TLS, applied with `-DEXTRA_CONF_FILE=`. Any option can also be given on the `west build` command line after `--`, as the examples in the next section do; everything after `--` goes to CMake.
 
 The examples that register with a SIP server take its address from a shell variable. Set it once, to the address of your server:
 
@@ -113,26 +127,28 @@ The examples that register with a SIP server take its address from a shell varia
 export SIP_SERVER=192.168.1.19
 ```
 
-The interactive menu needs a build directory. The first `west build` creates one from the sample's source directory and the board, and that is the only time they have to be given: the directory remembers both, and every later `west build -d build-native` reuses them, together with whatever the menu saved.
+The interactive menu needs a build directory. The first `west build` creates one from the sample's source directory and the board, and that is the only time they have to be given: the directory remembers both, and `west build` run inside it reuses them, together with whatever the menu saved. Keep the build directories in a folder of their own inside the workspace, so that they stay apart from Zephyr's; `west` works from any directory under the workspace:
 
 ```sh
-cd ~/zephyrproject
+mkdir -p ~/zephyrproject/mypjproject
+cd ~/zephyrproject/mypjproject
 west build -b native_sim/native/64 -d build-native $PJ_DIR/zephyr/samples/embedded_ua -t menuconfig
 ```
 
-This configures the build directory and opens the whole tree as a menu (`-t guiconfig` opens a window instead).
+This configures the `build-native` build directory and opens the whole config tree as a menu (`-t guiconfig` opens a window instead).
 
-Once the directory exists, this command is enough:
+Once the directory exists, work from inside it (or use `-d` to work from outside it), and the same command serve every build directory in this guide:
 
 ```sh
-west build -d build-native -t menuconfig
+cd build-native
+west build -t menuconfig
 ```
 
 pjproject's options are under "Modules" then "pjproject". The sample's own options are in the "embedded_ua" menu at the top level. Zephyr's networking, stack and heap sizes are in their usual places. What menuconfig saves goes into the build directory's `.config` only, and a pristine build (`-p always`) starts from `prj.conf` again; to keep a setting, put it in `prj.conf` or give it after `--`.
 
 ## 3. Build and run the sample on native_sim
 
-`native_sim` is a Zephyr board that is a Linux executable. It runs the real Zephyr kernel, network stack and POSIX layer, talks to the host through a TAP interface, and can be debugged with gdb. It is the fastest way to see the port working.
+[`native_sim`](https://docs.zephyrproject.org/latest/boards/native/native_sim/doc/index.html) is a Zephyr board that is a Linux executable. It runs the real Zephyr kernel, network stack and POSIX layer, talks to the host through a TAP interface, and can be debugged with gdb. It is the fastest way to see the port working.
 
 ### Create the TAP interface
 
@@ -144,40 +160,44 @@ sudo ip addr add 192.0.2.2/24 dev zeth
 sudo ip link set zeth mtu 1400 up
 ```
 
-The host is 192.0.2.2 and the Zephyr side is 192.0.2.1; both addresses are in the sample's `prj.conf`. The MTU of 1400 is a workaround for a QEMU driver bug described under Known limitations; it does no harm to native_sim. Zephyr's own `tools/net-tools/net-setup.sh` creates the same interface, if you prefer it.
+The host is 192.0.2.2 and the Zephyr side is 192.0.2.1; both addresses are in the sample's [`prj.conf`](zephyr/samples/embedded_ua/prj.conf). The MTU of 1400 is a workaround for a QEMU driver bug described under Known limitations; it does no harm to native_sim. Zephyr's own `tools/net-tools/net-setup.sh` creates the same interface, if you prefer it.
 
 ### Build
 
-If section 2 left you with a configured `build-native`, build it; the board, the source directory and the settings saved there are reused:
+If Section 2 left you with a configured `build-native`, build it from inside; the board, the source directory and the settings saved there are reused:
 
 ```sh
-cd ~/zephyrproject
-west build -d build-native
+cd ~/zephyrproject/mypjproject/build-native
+west build
 ```
 
 Otherwise, or to start over from `prj.conf`, give the board and the source directory:
 
 ```sh
+cd ~/zephyrproject/mypjproject
 west build -p always -b native_sim/native/64 -d build-native $PJ_DIR/zephyr/samples/embedded_ua
+cd build-native
 ```
 
-`-p always` empties the build directory first, so the board and source directory have to come with it; `-b` is the board, `-d` the build directory. The first build compiles all of pjproject and takes a few minutes; later builds are incremental.
+`-p always` empties the build directory first, so the board and source directory have to come with it; `-b` is the board, `-d` the build directory. `-d` is only needed while the directory does not exist: run inside an existing build directory, `west build` uses it.
+
+The rest of this section runs inside `build-native`. The first build compiles all of pjproject and takes a few minutes; later builds are incremental.
 
 The sample is set up to register with a SIP server at 192.0.2.2, the host side of the TAP interface. For a first run without any server, build it without registration instead:
 
 ```sh
-west build -d build-native -- -DCONFIG_EMBUA_USE_REGISTRATION=0
+west build -- -DCONFIG_EMBUA_USE_REGISTRATION=0
 ```
 
-Everything after `--` goes to CMake; this is how any Kconfig option is set from the command line (section 2). A setting given this way stays in the build directory for later builds, until a pristine build.
+Everything after `--` goes to CMake; this is how any Kconfig option is set from the command line. A setting given this way stays in the build directory for later builds, until a pristine build.
 
 ### Run
 
 ```sh
-build-native/zephyr/zephyr.exe -seed-random
+zephyr/zephyr.exe
 ```
 
-You will see Zephyr boot, the network interface come up, and pjsip start its UDP transport on 192.0.2.1:55060. Leave it running. `-seed-random` matters: native_sim's fake entropy source otherwise starts from the same seed each run, so every run would have the same Call-ID and CSeq, which a SIP registrar rejects as a replay. Stop it with Ctrl-C.
+You will see Zephyr boot, the network interface come up, and pjsip start its UDP transport on 192.0.2.1:55060. Leave it running. The "not safe entropy source" warning at the top is expected: native_sim's test entropy source starts from a fixed seed, so every run would have the same Call-ID and CSeq, which a SIP registrar rejects as a replay; the `pjproject-sim` snippet (section 9) therefore bakes in the `-seed-random` argument through `CONFIG_NATIVE_EXTRA_CMDLINE_ARGS`, which seeds it from the host at every start. Stop it with Ctrl-C.
 
 ### Make a call to it
 
@@ -195,20 +215,39 @@ At the pjsua prompt type `m`, then the URI `sip:bob@192.0.2.1:55060`. The sample
 With registration enabled (the default), the sample registers as `bob` with password `secret` to the server in `CONFIG_EMBUA_SIP_SERVER_IP`. These are Kconfig options in the sample's "embedded_ua" menu, so they can be set with menuconfig (section 2) or from the command line. Point it at your server, and turn registration back on if the build directory still has the no-registration setting from above:
 
 ```sh
-west build -d build-native -- -DCONFIG_EMBUA_SIP_SERVER_IP=\"$SIP_SERVER\" -DCONFIG_EMBUA_USE_REGISTRATION=1
+west build -- -DCONFIG_EMBUA_SIP_SERVER_IP=\"$SIP_SERVER\" -DCONFIG_EMBUA_USE_REGISTRATION=1
 ```
 
 The server can be anywhere the host can reach: the host forwards packets from the TAP interface as it does for any other network, and a server on the host itself answers directly. The port was developed against Kamailio; any registrar that does digest authentication will do. Create an account `bob`/`secret` on it, or change `CONFIG_EMBUA_USERNAME` and `CONFIG_EMBUA_PASSWORD`. The log shows the REGISTER, the 401 challenge, the authenticated REGISTER and the 200 OK; after that the sample is reachable by calling `bob` through the server.
 
-### Over TLS
+### With the media on its own thread
 
-Build with the TLS overlay and the sample registers over TLS instead, to port 5061 of the server, and listens for TLS on 55061. The server address is needed here too unless the build directory already has it from the previous step; the default is the TAP address, where nothing listens on 5061, and the REGISTER fails with "Connection refused":
+So far the sample has run single threaded: one loop polls the SIP endpoint and paces the media, and no pthread function is linked. Build with the threads overlay and pjsip keeps the main thread while the media clock and RTP move to a pthread of their own, so that neither waits for SIP work:
 
 ```sh
-west build -d build-native -- -DCONFIG_EMBUA_SIP_SERVER_IP=\"$SIP_SERVER\" -DEXTRA_CONF_FILE=overlay-tls.conf
+west build -- -DEXTRA_CONF_FILE=overlay-threads.conf
 ```
 
-For the threaded build give both overlays, `-DEXTRA_CONF_FILE="overlay-threads.conf;overlay-tls.conf"`. Like a `-DCONFIG_...` value, the overlay list stays with the build directory, so to go back to UDP build pristine with `-p always`. The overlay turns on `CONFIG_PJPROJECT_TLS` and TCP, and configures Zephyr's Mbed TLS as a TLS 1.2 client with one ciphersuite (ECDHE-RSA with AES-128-GCM), PEM parsing for the certificates an application may give pjsip, a 16 KB incoming and 4 KB outgoing record buffer, and 64 KB more heap arena, since Mbed TLS allocates its contexts from the same C library heap as pjlib's pools. pjlib drives Mbed TLS directly over a TCP socket; Zephyr's own TLS socket option is not involved. The server certificate is not verified, as in the sample everywhere else. The TLS transport also takes a few more pthread mutexes than UDP, which the threads overlay's `CONFIG_MAX_PTHREAD_MUTEX_COUNT` allows for. With threads, PSA Crypto is called from both of the sample's threads and needs Mbed TLS's threading layer; Zephyr has no Kconfig option for that, so the overlay names `psa_user_config.h` in the sample directory as the TF-PSA-Crypto user configuration, which defines `MBEDTLS_THREADING_C` and `MBEDTLS_THREADING_PTHREAD` when `CONFIG_PJPROJECT_THREADS` is set.
+The server address stays from the previous step. The [`overlay-threads.conf`](zephyr/samples/embedded_ua/overlay-threads.conf) overlay sets `CONFIG_PJPROJECT_THREADS`, which builds pjlib with threads, and the sample's `CONFIG_EMBUA_USE_MEDIA_THREAD` then defaults to 1. 
+
+### Over TLS
+
+Build with the [`overlay-tls.conf`](zephyr/samples/embedded_ua/overlay-tls.conf) overlay and the sample registers over TLS instead, to port 5061 of the server, and listens for TLS on 55061. The server address is needed here too unless the build directory already has it from the previous step; the default is the TAP address, where if nothing listens on 5061, the REGISTER will fail with "Connection refused":
+
+```sh
+west build -- -DCONFIG_EMBUA_SIP_SERVER_IP=\"$SIP_SERVER\" -DEXTRA_CONF_FILE=overlay-tls.conf
+```
+
+For TLS with the media thread give both overlays, as new `-DEXTRA_CONF_FILE` replaces the list the build directory had rather than adding to it:
+
+
+```sh
+west build -- -DCONFIG_EMBUA_SIP_SERVER_IP=\"$SIP_SERVER\" -DEXTRA_CONF_FILE="overlay-threads.conf;overlay-tls.conf"
+```
+
+Like a `-DCONFIG_...` value, the overlay list stays with the build directory, so to go back to UDP build pristine with `-p always`, giving the board and source directory again (inside the directory, `-d` is still not needed). 
+
+What [`overlay-tls.conf`](zephyr/samples/embedded_ua/overlay-tls.conf) sets, and why, is commented in the file itself. The server certificate is not verified, as in the sample everywhere else.
 
 The sample has no certificate of its own, so it cannot accept TLS connections: the server has to send requests back down the connection the sample opened to register, which SIP servers do for TLS clients behind NAT. Kamailio does it with `set_contact_alias()` on the REGISTER and `handle_ruri_alias()` plus `set_forward_no_connect()` before relaying, and its `tls.cfg` needs `method = TLSv1.2+`. The caller can stay on UDP; the server bridges the two.
 
@@ -218,12 +257,12 @@ embedded_ua has no console input. Send it a SIP MESSAGE (in pjsua: add it as a b
 
 ## 4. Run on a Cortex-M33 under QEMU
 
-The MPS2 AN521 is an Arm development board that QEMU emulates, with a Cortex-M33 and a LAN9118 Ethernet controller. The sample limits it to 640 KB of RAM, the size of the STM32H563, so that an image that would not fit the real part fails to link here.
+The MPS2 AN521 is an Arm development board that QEMU emulates, with a Cortex-M33 and a LAN9118 Ethernet controller. The `pjproject-sim` snippet (section 9) limits it to 640 KB of RAM, the size of the STM32H563, so that an image that would not fit the real part fails to link here, and sets the clock to what QEMU's model runs.
 
 Build, giving the address of your SIP server as in section 3; without it the sample registers to 192.0.2.2, the host side of the TAP, where nothing answers:
 
 ```sh
-cd ~/zephyrproject
+cd ~/zephyrproject/mypjproject
 west build -p always -b mps2/an521/cpu0 -d build-an521 $PJ_DIR/zephyr/samples/embedded_ua -- -DCONFIG_EMBUA_SIP_SERVER_IP=\"$SIP_SERVER\"
 ```
 
@@ -251,18 +290,19 @@ Run it with the launcher that comes with the sample, giving it the build directo
 $PJ_DIR/zephyr/samples/embedded_ua/run-qemu.sh build-an521
 ```
 
+The usual way to run a Zephyr image in QEMU, `west build -t run`, does not work for the MPS2 boards: their Ethernet controller is part of the machine, Zephyr nevertheless adds it as a pluggable `-device lan9118`, and QEMU refuses. Hence the script.
+
 The script finds QEMU in the SDK, attaches the board's Ethernet to the TAP interface named in `CONFIG_EMBUA_HOST_TAP_IFACE` (`zeth` by default) and boots the image. Extra arguments are passed to QEMU. From the host's point of view the board is at 192.0.2.1 exactly like native_sim, so the calls in section 3 work unchanged.
 
 To stop QEMU press Ctrl-A, release it, then X. The terminal is the board's serial console, so Ctrl-C goes to the guest and does nothing. If the sequence does not reach QEMU, `pkill qemu-system-arm` from another terminal ends it.
 
-`west build -t run`, the usual way to run a Zephyr image in QEMU, does not work for the MPS2 boards: their Ethernet controller is part of the machine, Zephyr nevertheless adds it as a pluggable `-device lan9118`, and QEMU refuses. Hence the script.
 
 ## 5. Run the pjlib test suite
 
 pjlib-test, PJLIB's own test suite, builds as a Zephyr test application in `zephyr/tests/pjlib`. It exercises the OS abstraction that a port touches most: pools, threads and thread-local storage, mutexes, timers, sockets over loopback, select and the ioqueue. Its `testcase.yaml` lets twister build and run it on native_sim, single threaded and with threads, checking the console for the suite's final line, and build it for the AN521:
 
 ```sh
-cd ~/zephyrproject
+cd ~/zephyrproject/mypjproject
 west twister -T $PJ_DIR/zephyr/tests/pjlib -p native_sim/native/64 -p mps2/an521/cpu0 -v
 ```
 
@@ -270,7 +310,7 @@ A run takes a few minutes per configuration. To build and run one configuration 
 
 ```sh
 west build -p always -b native_sim/native/64 -d build-test $PJ_DIR/zephyr/tests/pjlib -- -DEXTRA_CONF_FILE=overlay-threads.conf
-build-test/zephyr/zephyr.exe -seed-random
+build-test/zephyr/zephyr.exe
 ```
 
 On the AN521 twister only builds the image, for the reason given in section 4: Zephyr puts the board's Ethernet controller on the QEMU command line in a form QEMU rejects, and that happens for every image with networking enabled. Run it with the sample's launcher, telling QEMU to attach no network since the tests only use loopback:
@@ -280,14 +320,17 @@ west build -p always -b mps2/an521/cpu0 -d build-test-an521 $PJ_DIR/zephyr/tests
 $PJ_DIR/zephyr/samples/embedded_ua/run-qemu.sh build-test-an521 -nic none
 ```
 
-The suite runs with `--ci-mode`, which widens its timing tolerances for emulators, and with `-w 0`, so that the tests run one at a time and a board only needs memory for one test's threads. What differs from a desktop run follows from the test profile in `pjlib/src/pjlib-test/test_profile.h`, which selects `PJTEST_SMALL_FOOTPRINT` on any Zephyr board with less than 2 MB of RAM, and from the test application's `prj.conf`:
+The test setup is in these places:
 
-- The benchmarks (pool, socket and ioqueue performance) are excluded in the small profile, where they would need far more memory than 640 KB, and on native_sim, where they would measure a clock that stands still while the CPU is busy.
-- In the small profile the timer test runs at an eighth of its size (`PJTEST_TIMER_LOOP`): 500 entries and 2 stress threads rather than 4000 and 20, so that its pools fit in the heap arena. native_sim runs it in full.
-- The file test is skipped, since the application mounts no file system.
-- The SSL socket tests are not built, as the test application does not enable `CONFIG_PJPROJECT_TLS`.
-- Zephyr's `socketpair()` only supports AF_UNIX stream sockets, so the datagram variant of that test reports itself as skipped.
-- On native_sim only, the timestamp test, the ioqueue unregistration test and the parts of the thread test that keep threads spinning are skipped: native_sim's simulated clock stands still while the CPU is busy, so a test that busy-waits on the clock, or polls a socket that is never idle, never reaches its end time. They run on the AN521 and on every real board.
+- In [`pjlib/src/pjlib-test/main.c`](pjlib/src/pjlib-test/main.c) directory:
+
+  - [`main.c`](pjlib/src/pjlib-test/main.c) sets `--ci-mode` and `-w 0`, so the tests run one at a time.
+  - [`test_profile.h`](pjlib/src/pjlib-test/test_profile.h) selects the small footprint profile on any Zephyr board with less than 2 MB of RAM and records that native_sim's clock stands still while the CPU is busy
+  - [`test.h`](pjlib/src/pjlib-test/test.h) derives the test sizes and which tests are built from that profile, and says why each one is left out.
+
+- In [`zephyr/tests/pjlib/`](zephyr/tests/pjlib/) directory:
+
+  - [`prj.conf`](zephyr/tests/pjlib/prj.conf) and [`boards/`](zephyr/tests/pjlib/boards/) files size the network stack, heap and stacks for the tests, with the reason for each setting.
 
 The AN521 configuration enables `CONFIG_HW_STACK_PROTECTION`, so a stack overflow faults instead of corrupting memory silently. It caught two: the activesock test keeps 100 operation keys on the main thread's stack, so the suite needs a 32 KB main stack, and Zephyr's `poll()` keeps one event per possible descriptor on the stack, which with `CONFIG_ZVFS_POLL_MAX` at 88 outgrows the 1200-byte default stack of the socket service thread the DNS resolver uses. Keep both in mind when sizing an application: pjlib itself needs neither.
 
@@ -302,7 +345,7 @@ west build -p always -b <your board> $PJ_DIR/zephyr/samples/embedded_ua
 west flash
 ```
 
-Things to adjust in the sample for a real board, in a `boards/<your board>.conf` file next to the sample's or in your own copy of `prj.conf`:
+Things to adjust in the sample for a real board, in a `boards/<your board>.conf` file in the sample directory (Zephyr merges it after `prj.conf` when building for that board) or in your own copy of `prj.conf`:
 
 - Addressing. The sample uses a static address on the TAP link. On a real network, drop the `CONFIG_NET_CONFIG_MY_IPV4_*` lines and enable `CONFIG_NET_DHCPV4=y`.
 - Random numbers. Remove `CONFIG_TEST_RANDOM_GENERATOR` and let the board's hardware RNG serve `CONFIG_ENTROPY_GENERATOR`. SIP Call-IDs, tags and SRTP keys all come from it.
@@ -348,6 +391,8 @@ CONFIG_ENTROPY_GENERATOR=y
 ```
 
 The sample's `zephyr/samples/embedded_ua/prj.conf` is a complete, commented example and the best starting point; copy it and remove what you do not need. Two of its settings deserve a word. `CONFIG_NET_IPV4_FRAGMENT=y` is there because a SIP INVITE with SDP is usually larger than the Ethernet MTU and arrives as IP fragments. `CONFIG_ZVFS_OPEN_MAX` bounds the file descriptors `select()` can watch and must be at least `PJ_IOQUEUE_MAX_HANDLES`; the build checks this with a static assertion.
+
+To build your application for QEMU's AN521 or for native_sim as the stand-ins for the hardware, add the `pjproject-sim` snippet of section 9 with `set(SNIPPET pjproject-sim)` before `find_package(Zephyr)`, as the sample does, or with `-S pjproject-sim` on the command line. It limits the AN521 to 640 KB, corrects its clock and seeds native_sim's entropy source, and does nothing on other boards.
 
 The pjproject tree needs the `config_site.h` of section 2. The module is compiled with that one file's settings, so two applications in a workspace that want different pjproject settings use two pjproject checkouts, as they would on any other platform.
 
@@ -418,8 +463,9 @@ The Zephyr-specific parts are few, and this is where to look when something need
 - `pjlib/include/pj/compat/os_zephyr.h`: the platform description (which headers and socket functions exist, threads, TCP and TLS from Kconfig, no IPv6). `pj/config.h` selects it when `__ZEPHYR__` is defined. One of its settings, `PJ_THREAD_LOCAL_USE_COMPILER_TLS`, makes pjlib's thread-local storage use the compiler's `__thread` rather than pthread keys, which Zephyr does not provide to its main thread.
 - `pjlib/src/pj/ip_helper_zephyr.c`: network interface and route enumeration through Zephyr's `net_if` API, since Zephyr has no `getifaddrs()`. This is how pjsip learns the address to put in Via and Contact headers.
 - The `PJ_CONFIG_ZEPHYR` preset in `pjlib/include/pj/config_site_sample.h`, which sizes pjsip and pjmedia for a small endpoint; `config_site.h` selects it.
-- `zephyr/tests/pjlib`: the pjlib-test application of section 5, with the `testcase.yaml` that twister runs. Its sources are pjlib's own in `pjlib/src/pjlib-test`.
-- `zephyr/samples/embedded_ua`: the sample's `CMakeLists.txt`, `Kconfig`, `prj.conf`, the AN521 board files in `boards/` (the 640 KB RAM limit, the test random generator and QEMU's 20 MHz SysTick) and `run-qemu.sh`. The source is `pjsip-apps/src/samples/embedded_ua.c`, the same file that builds on Linux, Windows and macOS; on Zephyr it reads its settings from the `CONFIG_EMBUA_*` options.
+- `zephyr/tests/pjlib`: the pjlib-test application of section 5, with the `testcase.yaml` that twister runs and, in `boards/`, the heap and stack sizes its tests need on each board. Its sources are pjlib's own in `pjlib/src/pjlib-test`.
+- `zephyr/snippets/pjproject-sim`: a [snippet](https://docs.zephyrproject.org/latest/build/snippets/index.html) that makes the emulated boards stand in for the 640 KB Cortex-M33 target: a devicetree overlay that limits the AN521's RAM to 640 KB, the 20 MHz SysTick of QEMU's model, and the host-seeded entropy source on native_sim. The sample and the test select it in their `CMakeLists.txt`; a `-S` on the command line replaces that selection, so give `-S pjproject-sim` too when adding another snippet. It is registered through `snippet_root` in `module.yml` and so available to any application that uses the module.
+- `zephyr/samples/embedded_ua`: the sample's `CMakeLists.txt`, `Kconfig`, `prj.conf` and `run-qemu.sh`. The source is `pjsip-apps/src/samples/embedded_ua.c`, the same file that builds on Linux, Windows and macOS; on Zephyr it reads its settings from the `CONFIG_EMBUA_*` options.
 
 Random numbers come from Zephyr's `sys_rand32_get()` rather than the C library's `rand()`, which is unseeded on Zephyr. Zephyr's `sockaddr_in` is 8 bytes rather than 16, which pjlib accommodates. Zephyr's `sockaddr_in6` differs from the BSD layout in ways pjlib does not yet accommodate, which is why IPv6 is off.
 
@@ -429,7 +475,7 @@ Random numbers come from Zephyr's `sys_rand32_get()` rather than the C library's
 - QEMU's MPS2 boards drop full-size Ethernet frames: Zephyr's `smsc911x` driver rounds the frame length up before subtracting the checksum, asks for a buffer two bytes larger than the network stack allows for a 1514-byte frame, and the frame is lost. The first fragment of a SIP INVITE is such a frame. Until the driver is fixed, keep the host side of the TAP at MTU 1400 so that every frame is smaller. Real hardware and native_sim are not affected.
 - QEMU's LAN9118 model stops delivering usable frames once the driver has skipped one. When Zephyr's `smsc911x` driver cannot get a receive buffer it tells the controller to skip the frame, and the model's FIFO accounting does not follow (the `RX_DP_CTRL` handler in QEMU's `hw/net/lan9118.c` leaves the packet size and the used count stale), so every later frame is misframed and dropped as a processing error while the host keeps sending. On QEMU the receive pools must therefore never run dry. Four INVITEs arriving together while the sample logs every SIP message at level 5 keep the main thread busy long enough for the RTP of the first calls to exhaust the default pools; the four-call measurement in "What the port provides" was made with `PJ_LOG_MAX_LEVEL` 3, `CONFIG_NET_PKT_RX_COUNT=96` and `CONFIG_NET_BUF_RX_COUNT=384`. Real hardware drops the frame and carries on.
 - The QEMU boards have no entropy device, so the sample uses Zephyr's test random generator, seeded from the timer so that each boot differs. It is not a secure source; a real board must use its hardware RNG.
-- QEMU's AN521 model clocks SysTick at 20 MHz, while Zephyr's board files declare the real board's 25 MHz. Left alone, the guest's clock runs at 80% of real time: the sample sends 40 RTP packets a second instead of 50, the audio from it breaks up, and pjsua reports RTTs of half a second. The sample's `boards/mps2_an521_cpu0.conf` therefore sets `CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC=20000000`; an application of your own needs the same line for QEMU, and must not have it on the hardware. The AN385 model and native_sim are not affected.
+- QEMU's AN521 model clocks SysTick at 20 MHz, while Zephyr's board files declare the real board's 25 MHz. Left alone, the guest's clock runs at 80% of real time: the sample sends 40 RTP packets a second instead of 50, the audio from it breaks up, and pjsua reports RTTs of half a second. The `pjproject-sim` snippet therefore sets `CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC=20000000` for that board; an application of your own gets it from the snippet, and must not have it on the hardware. The AN385 model and native_sim are not affected.
 - Even with the SysTick rate corrected, the AN521 guest's clock runs slightly slow under QEMU and the guest logs "Frame lost, recovered!" about once a second during a call, with an occasional "Internal RTCP NTP clock skew detected". Nothing is lost: pjsua reports zero loss and the jitter buffer's summary at the end of the call shows `discard=0`. The guest reads frames a little slower than they arrive, so the jitter buffer discards one now and then to keep its latency down and conceals the gap with PLC, which is what the message reports. The cause is QEMU's timer model losing time when the host deschedules the emulator, and it goes away with periodic kernel ticks (`CONFIG_TICKLESS_KERNEL=n` and `CONFIG_SYS_CLOCK_TICKS_PER_SEC=1000`); the sample does not set these because real hardware runs tickless, and the messages are harmless.
 - Logging at a `PJ_LOG_MAX_LEVEL` below 5 produces a few unused-variable warnings in pjproject's own code. They are harmless.
 - The sample's TLS transport has no certificate, so it cannot take inbound TLS connections; requests to it must arrive on the connection it registered over (section 3). That is the sample's choice, not the port's: with a certificate and key in `pjsip_tls_setting` the listener works as on any platform. The listener is nevertheless created: built with `PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER` the sample registers, but Kamailio then opens a new connection to the Contact for every request instead of reusing the registration's, and that connection fails; with the listener present the requests arrive over the registration's connection.
@@ -439,7 +485,7 @@ Random numbers come from Zephyr's `sys_rand32_get()` rather than the C library's
 
 - "no Zephyr build in ..." from `run-qemu.sh`: give it the build directory you passed to `west build -d`.
 - The guest never gets a response: check `ip addr show zeth` shows 192.0.2.2 and the interface is UP, and that no firewall drops traffic on it. On QEMU, check the MTU is 1400.
-- A registrar answers the second REGISTER with 400 or "invalid CSeq": on native_sim, you forgot `-seed-random`; on QEMU, `CONFIG_TIMER_RANDOM_GENERATOR` is missing from the build.
+- A registrar answers the second REGISTER with 400 or "invalid CSeq": the random numbers repeat from one run to the next. On native_sim `CONFIG_NATIVE_EXTRA_CMDLINE_ARGS="-seed-random"` is missing from the build, which the `pjproject-sim` snippet provides; on QEMU, `CONFIG_TEST_RANDOM_GENERATOR` is missing from `prj.conf`.
 - Audio from the QEMU guest breaks up, pjsua shows RTTs of hundreds of milliseconds and the guest logs "Frame lost, recovered!" throughout a call: the guest's clock is slow; see the SysTick entry in section 10. One "Frame lost, recovered!" a second with good audio and zero loss in pjsua is the harmless case described there.
 - The build stops with "config_site.h is missing or does not select the Zephyr preset": create `pjlib/include/pj/config_site.h` in the pjproject tree as in section 2.
 - The build stops with `PJ_IOQUEUE_MAX_HANDLES_must_not_exceed_FD_SETSIZE`: `FD_SETSIZE` on Zephyr is `CONFIG_ZVFS_OPEN_MAX`; raise it to at least `PJ_IOQUEUE_MAX_HANDLES` (16 in the preset).

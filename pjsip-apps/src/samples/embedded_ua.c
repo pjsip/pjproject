@@ -1516,6 +1516,9 @@ static int media_thread_proc(void *arg)
 
     PJ_UNUSED_ARG(arg);
 
+    PJ_LOG(3,(THIS_FILE, "Media thread started, polling every %d ms when idle",
+              MEDIA_IDLE_POLL_MSEC));
+
     while (!g.media_quit) {
         pj_time_val timeout;
 
