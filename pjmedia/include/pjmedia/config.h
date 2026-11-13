@@ -1521,6 +1521,12 @@
  * Specify the keep-alive interval of PJMEDIA_STREAM_ENABLE_KA
  * mechanism, in seconds.
  *
+ * Text streams also send keep-alives at this interval until the first text
+ * is sent, even when PJMEDIA_STREAM_ENABLE_KA is disabled; set this to 0 to
+ * turn that off. When PJMEDIA_STREAM_ENABLE_KA is enabled, the stream's
+ * use_ka and ka_cfg settings apply instead. In both cases they are skipped
+ * when ICE is active.
+ *
  * Default: 5 seconds
  */
 #ifndef PJMEDIA_STREAM_KA_INTERVAL
