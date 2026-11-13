@@ -207,6 +207,13 @@
 #  define CONFIG_EMBUA_USE_REGISTRATION     1
 #endif
 
+/* Jitter buffer size in milliseconds, the most audio it holds. Its memory
+ * comes out of each call's stream pool; pjmedia's own default is 500 ms.
+ */
+#ifndef CONFIG_EMBUA_JB_SIZE
+#  define CONFIG_EMBUA_JB_SIZE              200
+#endif
+
 /* The SIP server and the account, as quoted strings. */
 #ifndef CONFIG_EMBUA_SIP_SERVER_IP
 #  define CONFIG_EMBUA_SIP_SERVER_IP        "192.168.0.7"
@@ -1595,6 +1602,8 @@ static void call_on_media_update( pjsip_inv_session *inv,
         app_perror(THIS_FILE,"pjmedia_stream_info_from_sdp() error",status);
         goto on_error;
     }
+
+    stream_info.jb_max = CONFIG_EMBUA_JB_SIZE;
 
     /* The loopback buffer holds one 20 ms frame. A remote a=ptime above
      * that would enlarge the stream's frame past it, so cap the frames per

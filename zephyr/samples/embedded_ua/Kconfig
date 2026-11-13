@@ -31,6 +31,15 @@ config EMBUA_USE_MEDIA_THREAD
 	default 1 if PJPROJECT_THREADS
 	default 0
 
+config EMBUA_JB_SIZE
+	int "Jitter buffer size, in milliseconds"
+	range 40 2000
+	default 200
+	help
+	  The most audio the receive jitter buffer holds; its memory, about
+	  14 bytes per millisecond, comes out of each call's stream pool.
+	  200 ms suits a LAN; pjmedia's own default is 500 ms.
+
 config EMBUA_SIP_SERVER_IP
 	string "SIP server (registrar and proxy) IP address"
 	default "192.0.2.2"
