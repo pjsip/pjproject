@@ -1,7 +1,18 @@
 cmake_minimum_required(VERSION 3.16)
 project(pj_find_package_test C)
 
-find_package(Pj REQUIRED)
+# TEST_PJ_SOURCE_DIR (test only) builds pjproject as part of this project, as
+# add_subdirectory() or FetchContent does; otherwise the installed package is
+# used. The targets are the same Pj:: names either way.
+if(TEST_PJ_SOURCE_DIR)
+  # A parent's own targets of these common names must not clash with
+  # pjproject's convenience targets
+  add_custom_target(lib)
+  add_custom_target(uninstall)
+  add_subdirectory("${TEST_PJ_SOURCE_DIR}" pjproject)
+else()
+  find_package(Pj REQUIRED)
+endif()
 
 # C consumer: exercise pjsua-lib (C API) and the full dependency chain
 # (pjsua-lib -> pjsip -> pjmedia -> Pj::Dep::SRTP etc.)

@@ -1,17 +1,16 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_search_module(PC_UPNP QUIET upnp libupnp)
+  pj_pkg_search_module(PC_UPNP QUIET upnp libupnp)
 endif()
 
+# The directory holding upnp/, as the sources include <upnp/upnp.h>
 find_path(UPNP_INCLUDE_DIR
   NAMES
-    "upnp.h"
+    "upnp/upnp.h"
   HINTS
     ${PC_UPNP_INCLUDEDIR}
-    ${PC_UPNP_INCLUDE_DIRS}
     ${UPNP_ROOT}
-  PATH_SUFFIXES
-    upnp
 )
 mark_as_advanced(UPNP_INCLUDE_DIR)
 
@@ -38,7 +37,7 @@ mark_as_advanced(UPNP_IXML_LIBRARY)
 if(DEFINED PC_UPNP_VERSION AND NOT PC_UPNP_VERSION STREQUAL "")
   set(UPNP_VERSION "${PC_UPNP_VERSION}")
 elseif(UPNP_INCLUDE_DIR)
-  cmake_path(APPEND _upnp_config_header "${UPNP_INCLUDE_DIR}" upnpconfig.h)
+  cmake_path(APPEND _upnp_config_header "${UPNP_INCLUDE_DIR}" upnp upnpconfig.h)
 
   if(EXISTS "${_upnp_config_header}")
     include(Pj/GetMacroValue)
@@ -57,18 +56,41 @@ elseif(UPNP_INCLUDE_DIR)
   unset(_upnp_config_header)
 endif()
 
+if(UPNP_INCLUDE_DIR AND UPNP_UPNP_LIBRARY)
+  set(_upnp_check_libs "${UPNP_UPNP_LIBRARY}")
+  if(UPNP_IXML_LIBRARY)
+    list(APPEND _upnp_check_libs "${UPNP_IXML_LIBRARY}")
+  endif()
+
+  # As autoconf: rejects a library built for another target
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(UPNP
+    INCLUDE_DIRS "${UPNP_INCLUDE_DIR}" "${UPNP_INCLUDE_DIR}/upnp"
+    LIBRARIES ${_upnp_check_libs}
+    STATIC_LIBS Threads::Threads
+    DEFINITIONS ${PC_UPNP_CFLAGS_OTHER}
+    CODE [=[
+      #include <upnp/upnp.h>
+      int main(void) { return UpnpInit2(NULL, 0); }
+    ]=]
+  )
+  unset(_upnp_check_libs)
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(UPNP
   REQUIRED_VARS
     UPNP_UPNP_LIBRARY
     UPNP_INCLUDE_DIR
+    UPNP_USABLE
   VERSION_VAR
     UPNP_VERSION
 )
 
 if(UPNP_FOUND)
   set(UPNP_LIBRARIES ${UPNP_UPNP_LIBRARY})
-  set(UPNP_INCLUDE_DIRS ${UPNP_INCLUDE_DIR})
+  # upnp/ itself too, for code including <upnp.h>
+  set(UPNP_INCLUDE_DIRS "${UPNP_INCLUDE_DIR}" "${UPNP_INCLUDE_DIR}/upnp")
   set(UPNP_DEFINITIONS ${PC_UPNP_CFLAGS_OTHER})
 
   if(NOT TARGET UPNP::UPNP)
@@ -79,6 +101,8 @@ if(UPNP_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${UPNP_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${UPNP_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(UPNP::UPNP UPNP_UPNP_LIBRARY)
     if(UPNP_IXML_LIBRARY)
       set_target_properties(UPNP::UPNP PROPERTIES
         INTERFACE_LINK_LIBRARIES "${UPNP_IXML_LIBRARY}"

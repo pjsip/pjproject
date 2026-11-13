@@ -1,3 +1,5 @@
+list(APPEND CMAKE_MESSAGE_CONTEXT "pjlib")
+
 # ##############################################################################
 # Options
 
@@ -18,16 +20,20 @@ pj_option(PJLIB_WITH_IOQUEUE "I/O Queue implementation backend"
   ALLOWED_VALUES select kqueue epoll iocp
 )
 
-# Use `libuuid` for `UUID` handling implementation
+# Use `libuuid` for `UUID` handling implementation where the OS has no
+# native one, as autoconf
 cmake_dependent_option(PJLIB_WITH_LIBUUID
-  "Enable libuuid (Linux only)" ON
-  "LINUX" OFF
+  "Enable libuuid" ON
+  "UNIX;NOT APPLE;NOT ANDROID;NOT BSD;NOT CYGWIN" OFF
 )
 
-# Enable SSL support with the selected implementation backend
+# Enable SSL support with the selected implementation backend. auto takes the
+# first of OpenSSL, GnuTLS and MbedTLS found, as autoconf; none (or empty)
+# disables SSL, as --disable-ssl. A library backend asked for by name that is
+# not found or cannot be linked stops the configure.
 pj_option(PJLIB_WITH_SSL "Enable SSL support"
-  DEFAULT openssl
-  ALLOWED_VALUES openssl gnutls mbedtls darwin apple schannel
+  DEFAULT auto
+  ALLOWED_VALUES auto none openssl gnutls mbedtls darwin apple schannel
 )
 
 # ##############################################################################
@@ -80,6 +86,9 @@ add_library(pjlib
   src/pj/types.c
   src/pj/unittest.c
 )
+
+# libpj, as make names it, so a shared build keeps make's libpj.so.2
+set_target_properties(pjlib PROPERTIES OUTPUT_NAME pj)
 
 # Ensure generated headers are found before source headers
 target_include_directories(pjlib
@@ -180,6 +189,7 @@ target_sources(pjlib
 # atomic_queue is C++, used by the Android audio and codec backends only
 if(PJ_WITH_CXX)
   target_sources(pjlib PRIVATE src/pj/atomic_queue.cpp)
+  target_compile_features(pjlib PRIVATE cxx_std_11)
   set(PJ_HAS_ATOMIC_QUEUE 1)
 else()
   set(PJ_HAS_ATOMIC_QUEUE 0)
@@ -224,7 +234,9 @@ if(APPLE)
   )
 endif()
 
-# UUID
+# UUID: the system's own, else libuuid, else a simple generator. libuuid is
+# looked for before choosing, as a new UUID_ROOT can turn it back on.
+pj_find_optional(PJLIB_WITH_LIBUUID OFF UUID)
 if(ANDROID)
   target_sources(pjlib PRIVATE src/pj/guid_android.c)
 elseif(APPLE)
@@ -233,7 +245,10 @@ elseif(BSD)
   target_sources(pjlib PRIVATE src/pj/guid_bsd.c)
 elseif(WIN32 OR CYGWIN OR MINGW)
   target_sources(pjlib PRIVATE src/pj/file_access_win32.c)
-elseif(NOT PJLIB_WITH_LIBUUID)
+elseif(PJLIB_WITH_LIBUUID)
+  target_link_libraries(pjlib PRIVATE UUID::UUID)
+  target_sources(pjlib PRIVATE src/pj/guid_uuid.c)
+else()
   target_sources(pjlib PRIVATE src/pj/guid_simple.c)
 endif()
 
@@ -258,10 +273,13 @@ if(WIN32 OR CYGWIN OR MINGW)
   if(PJ_HAS_MSWSOCK_H)
     target_link_libraries(pjlib PRIVATE mswsock)
   endif()
+  # Public: pjlib's headers bring in Winsock, and code using them, e.g. the
+  # bundled srtp, calls it directly. A shared pjlib does not pass on a
+  # private one; autoconf links it into everything.
   if(PJ_HAS_WINSOCK2_H)
-    target_link_libraries(pjlib PRIVATE ws2_32)
+    target_link_libraries(pjlib PUBLIC ws2_32)
   elseif(PJ_HAS_WINSOCK_H)
-    target_link_libraries(pjlib PRIVATE wsock32)
+    target_link_libraries(pjlib PUBLIC wsock32)
   endif()
 endif()
 
@@ -275,7 +293,7 @@ if(APPLE)
   # Through an imported target rather than the paths find_library() returns:
   # those carry the SDK version of the machine that built the package, so an
   # installed Pj would not relocate to another Xcode.
-  find_package(AppleFoundation)
+  pj_find_package(AppleFoundation)
   if(AppleFoundation_FOUND)
     target_link_libraries(pjlib PUBLIC AppleFoundation::AppleFoundation)
   endif()
@@ -304,7 +322,7 @@ endif()
 
 # threading library
 if(PJLIB_WITH_THREADS)
-  find_package(Threads)
+  pj_find_package(Threads)
   if(Threads_FOUND)
     target_link_libraries(pjlib PRIVATE Threads::Threads)
   endif()
@@ -312,54 +330,201 @@ else()
   target_compile_definitions(pjlib PUBLIC PJ_HAS_THREADS=0)
 endif()
 
-# uuid
-if(PJLIB_WITH_LIBUUID)
-  find_package(UUID)
-  if(UUID_FOUND)
-    target_link_libraries(pjlib PRIVATE UUID::UUID)
-    target_sources(pjlib PRIVATE src/pj/guid_uuid.c)
-  else()
-    pj_force_set(PJLIB_WITH_LIBUUID OFF "libuuid not found")
-    target_sources(pjlib PRIVATE src/pj/guid_simple.c)
+# Functions libc may not hold, as autoconf: socket() and gethostbyname() are
+# in libsocket and libnsl on Solaris, clock_gettime() in librt before glibc
+# 2.17. Each library is linked only when the function needs it.
+if(UNIX)
+  include(CheckSymbolExists)
+  include(CheckLibraryExists)
+
+  check_symbol_exists(socket "sys/types.h;sys/socket.h" PJ_LIBC_HAS_SOCKET)
+  if(NOT PJ_LIBC_HAS_SOCKET)
+    check_library_exists(socket socket "" PJ_LIBSOCKET_HAS_SOCKET)
+    if(PJ_LIBSOCKET_HAS_SOCKET)
+      target_link_libraries(pjlib PUBLIC socket)
+    endif()
+  endif()
+
+  check_symbol_exists(gethostbyname "netdb.h" PJ_LIBC_HAS_GETHOSTBYNAME)
+  if(NOT PJ_LIBC_HAS_GETHOSTBYNAME)
+    check_library_exists(nsl gethostbyname "" PJ_LIBNSL_HAS_GETHOSTBYNAME)
+    if(PJ_LIBNSL_HAS_GETHOSTBYNAME)
+      target_link_libraries(pjlib PUBLIC nsl)
+    endif()
+  endif()
+
+  check_symbol_exists(clock_gettime "time.h" PJ_LIBC_HAS_CLOCK_GETTIME)
+  if(NOT PJ_LIBC_HAS_CLOCK_GETTIME)
+    check_library_exists(rt clock_gettime "" PJ_LIBRT_HAS_CLOCK_GETTIME)
+    if(PJ_LIBRT_HAS_CLOCK_GETTIME)
+      target_link_libraries(pjlib PUBLIC rt)
+    endif()
   endif()
 endif()
 
 # ssl
 add_library(pjlib-ssl INTERFACE) # a target to expose SSL deps
-if(PJLIB_WITH_SSL STREQUAL "openssl")
-  find_package(OpenSSL COMPONENTS Crypto SSL MODULE)
+
+# FindOpenSSL does no link test; reject an OpenSSL that is found but cannot be
+# linked, e.g. built for another architecture, as autoconf's AC_CHECK_LIB does
+function(_pj_check_openssl_usable)
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(OpenSSL ${PJ_FIND_QUIET}
+    CODE [=[
+      #include <openssl/err.h>
+      #include <openssl/ssl.h>
+      int main(void) { SSL_CTX_free(0); ERR_clear_error(); return 0; }
+    ]=]
+    INCLUDE_DIRS ${OPENSSL_INCLUDE_DIR}
+    LIBRARIES OpenSSL::SSL OpenSSL::Crypto
+  )
+endfunction()
+
+function(_pj_check_gnutls_usable)
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(GnuTLS ${PJ_FIND_QUIET}
+    CODE [=[
+      #include <gnutls/gnutls.h>
+      int main(void) { gnutls_global_deinit(); return 0; }
+    ]=]
+    INCLUDE_DIRS ${GNUTLS_INCLUDE_DIR}
+    LIBRARIES GnuTLS::GnuTLS
+  )
+endfunction()
+
+# Mbed TLS 4.x moved the crypto library to TF-PSA-Crypto
+function(_pj_mbedtls_libraries out)
+  if(TARGET MbedTLS::tfpsacrypto)
+    set(_crypto MbedTLS::tfpsacrypto)
+  else()
+    set(_crypto MbedTLS::mbedcrypto)
+  endif()
+  set(${out} MbedTLS::mbedtls MbedTLS::mbedx509 ${_crypto} PARENT_SCOPE)
+endfunction()
+
+function(_pj_check_mbedtls_usable)
+  include(Pj/CheckLibraryUsable)
+  _pj_mbedtls_libraries(_libs)
+  pj_check_library_usable(MbedTLS ${PJ_FIND_QUIET}
+    CODE [=[
+      #include <mbedtls/ssl.h>
+      int main(void) {
+          mbedtls_ssl_config conf;
+          mbedtls_ssl_config_init(&conf);
+          mbedtls_ssl_config_free(&conf);
+          return 0;
+      }
+    ]=]
+    LIBRARIES ${_libs}
+  )
+endfunction()
+
+function(_pj_ssl_fail reason)
+  message(FATAL_ERROR "PJLIB_WITH_SSL=${PJLIB_WITH_SSL} cannot be used: "
+    "${reason}. Set PJLIB_WITH_SSL to auto, none or another backend.")
+endfunction()
+
+pj_retry_on_new_root(PJLIB_WITH_SSL OpenSSL)
+pj_retry_on_new_root(PJLIB_WITH_SSL GnuTLS)
+pj_retry_on_new_root(PJLIB_WITH_SSL MbedTLS)
+set(_pj_ssl "${PJLIB_WITH_SSL}")
+if(_pj_ssl STREQUAL "none")
+  set(_pj_ssl "")
+elseif(_pj_ssl STREQUAL "auto")
+  find_package(OpenSSL COMPONENTS Crypto SSL MODULE QUIET)
   if(NOT OPENSSL_FOUND)
-    find_package(OpenSSL COMPONENTS Crypto SSL CONFIG)
+    find_package(OpenSSL COMPONENTS Crypto SSL CONFIG QUIET)
   endif()
   if(OPENSSL_FOUND)
+    _pj_check_openssl_usable()
+    if(NOT OpenSSL_USABLE)
+      message(STATUS "[!] OpenSSL was found but cannot be linked")
+    endif()
+  endif()
+  if(OPENSSL_FOUND AND OpenSSL_USABLE)
+    set(_pj_ssl openssl)
+  else()
+    find_package(GnuTLS QUIET)
+    if(GNUTLS_FOUND)
+      _pj_check_gnutls_usable()
+      if(NOT GnuTLS_USABLE)
+        message(STATUS "[!] GnuTLS was found but cannot be linked")
+      endif()
+    endif()
+    if(GNUTLS_FOUND AND GnuTLS_USABLE)
+      set(_pj_ssl gnutls)
+    else()
+      find_package(MbedTLS CONFIG QUIET)
+      if(MbedTLS_FOUND)
+        _pj_check_mbedtls_usable()
+        if(NOT MbedTLS_USABLE)
+          message(STATUS "[!] MbedTLS was found but cannot be linked")
+        endif()
+      endif()
+      if(MbedTLS_FOUND AND MbedTLS_USABLE)
+        set(_pj_ssl mbedtls)
+      else()
+        set(_pj_ssl "")
+        message(STATUS "[!] No usable OpenSSL, GnuTLS or MbedTLS found. building without SSL")
+      endif()
+    endif()
+  endif()
+endif()
+# Each backend is searched here unless it already was, by auto above or by a
+# parent project
+if(_pj_ssl STREQUAL "openssl")
+  if(NOT OPENSSL_FOUND)
+    find_package(OpenSSL COMPONENTS Crypto SSL MODULE ${PJ_FIND_QUIET})
+  endif()
+  if(NOT OPENSSL_FOUND)
+    find_package(OpenSSL COMPONENTS Crypto SSL CONFIG ${PJ_FIND_QUIET})
+  endif()
+  if(OPENSSL_FOUND)
+    _pj_check_openssl_usable()
+  endif()
+  if(OPENSSL_FOUND AND OpenSSL_USABLE)
     target_link_libraries(pjlib-ssl INTERFACE OpenSSL::Crypto OpenSSL::SSL)
+  elseif(OPENSSL_FOUND)
+    _pj_ssl_fail("OpenSSL found but cannot be linked")
   else()
-    pj_force_set(PJLIB_WITH_SSL "" "OpenSSL not found")
+    _pj_ssl_fail("OpenSSL not found")
   endif()
-elseif(PJLIB_WITH_SSL STREQUAL "gnutls")
-  find_package(GnuTLS REQUIRED)
-  target_link_libraries(pjlib-ssl INTERFACE GnuTLS::GnuTLS)
-elseif(PJLIB_WITH_SSL STREQUAL "mbedtls")
-  find_package(MbedTLS CONFIG REQUIRED)
-  # Mbed TLS 4.x moved the crypto library to TF-PSA-Crypto
-  if(TARGET MbedTLS::tfpsacrypto)
-    set(_pj_mbedtls_crypto MbedTLS::tfpsacrypto)
+elseif(_pj_ssl STREQUAL "gnutls")
+  if(NOT GNUTLS_FOUND)
+    find_package(GnuTLS ${PJ_FIND_QUIET})
+  endif()
+  if(GNUTLS_FOUND)
+    _pj_check_gnutls_usable()
+  endif()
+  if(GNUTLS_FOUND AND GnuTLS_USABLE)
+    target_link_libraries(pjlib-ssl INTERFACE GnuTLS::GnuTLS)
+  elseif(GNUTLS_FOUND)
+    _pj_ssl_fail("GnuTLS found but cannot be linked")
   else()
-    set(_pj_mbedtls_crypto MbedTLS::mbedcrypto)
+    _pj_ssl_fail("GnuTLS not found")
   endif()
-  target_link_libraries(pjlib-ssl
-    INTERFACE
-      MbedTLS::mbedtls
-      MbedTLS::mbedx509
-      ${_pj_mbedtls_crypto}
-  )
-elseif(PJLIB_WITH_SSL STREQUAL "darwin")
+elseif(_pj_ssl STREQUAL "mbedtls")
+  if(NOT MbedTLS_FOUND)
+    find_package(MbedTLS CONFIG ${PJ_FIND_QUIET})
+  endif()
+  if(MbedTLS_FOUND)
+    _pj_check_mbedtls_usable()
+  endif()
+  if(MbedTLS_FOUND AND MbedTLS_USABLE)
+    _pj_mbedtls_libraries(_pj_mbedtls_libs)
+    target_link_libraries(pjlib-ssl INTERFACE ${_pj_mbedtls_libs})
+  elseif(MbedTLS_FOUND)
+    _pj_ssl_fail("MbedTLS found but cannot be linked")
+  else()
+    _pj_ssl_fail("MbedTLS not found")
+  endif()
+elseif(_pj_ssl STREQUAL "darwin")
   if(NOT APPLE)
     message(FATAL_ERROR "PJLIB_WITH_SSL=darwin requires an Apple platform")
   endif()
   find_library(Security_LIBRARY Security REQUIRED)
   target_link_libraries(pjlib-ssl INTERFACE "${Security_LIBRARY}")
-elseif(PJLIB_WITH_SSL STREQUAL "apple")
+elseif(_pj_ssl STREQUAL "apple")
   if(NOT APPLE)
     message(FATAL_ERROR "PJLIB_WITH_SSL=apple requires an Apple platform")
   endif()
@@ -383,7 +548,7 @@ elseif(PJLIB_WITH_SSL STREQUAL "apple")
       "${Network_LIBRARY}"
       "${Foundation_LIBRARY}"
   )
-elseif(PJLIB_WITH_SSL STREQUAL "schannel")
+elseif(_pj_ssl STREQUAL "schannel")
   # ssl_sock_schannel.c compiles to nothing on other Windows compilers
   if(NOT MSVC)
     message(FATAL_ERROR "PJLIB_WITH_SSL=schannel requires MSVC")
@@ -391,6 +556,15 @@ elseif(PJLIB_WITH_SSL STREQUAL "schannel")
   target_link_libraries(pjlib-ssl INTERFACE secur32 crypt32 bcrypt shlwapi)
 endif()
 target_link_libraries(pjlib PRIVATE pjlib-ssl)
+
+# The backend in use, for the configured header, pjsip and PjConfig.cmake.in
+if(_pj_ssl)
+  message(STATUS "SSL backend: ${_pj_ssl}")
+else()
+  message(STATUS "SSL backend: none")
+endif()
+set(PJ_SSL_BACKEND "${_pj_ssl}" CACHE INTERNAL "SSL backend in use")
+unset(_pj_ssl)
 
 # ##############################################################################
 # Configuration
@@ -458,8 +632,8 @@ block(SCOPE_FOR VARIABLES)
     set(WIN32_LEAN_AND_MEAN 1)
     set(NOMINMAX 1)
 
-    if(CMAKE_SYSTEM_NAME MATCHES "_64-w64-mingw"
-      OR CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "AMD64")
+    # the target's, not the build machine's: it sizes pj_ssize_t
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
       set(PJ_WIN64 1)
     endif()
   elseif(APPLE)
@@ -470,10 +644,9 @@ block(SCOPE_FOR VARIABLES)
     set(PJ_BSD 1)
   else()
     # manual system name checks
-    string(TOLOWER "${CMAKE_SYSTEM_NAME}" _system_name_lower)
     if(PJ_OS_NAME MATCHES "rtems")
       set(PJ_RTEMS 1)
-    elseif(PJ_OS_NAME STREQUAL "sunos|solaris")
+    elseif(PJ_OS_NAME MATCHES "sunos|solaris")
       set(PJ_SUNOS 1)
     endif()
   endif()
@@ -667,16 +840,26 @@ block(SCOPE_FOR VARIABLES)
     ]=] _has_pthread_rwlock)
 
     # if rwmutex is not detected, check again but this time with
-    # _POSIX_READER_WRITER_LOCKS defined (newlib needs this)
+    # _POSIX_READER_WRITER_LOCKS defined (newlib needs this), and build with
+    # it if that works, as autoconf
     if(NOT _has_pthread_rwlock)
       check_source_compiles(C [=[
+        #define _POSIX_READER_WRITER_LOCKS
         #include <pthread.h>
 
         int main(void) {
             pthread_rwlock_t *x;
             return 0;
         }
-      ]=] _has_pthread_rwlock)
+      ]=] _has_pthread_rwlock_posix)
+      if(_has_pthread_rwlock_posix)
+        set(_has_pthread_rwlock 1)
+        target_compile_definitions(pjlib
+          PUBLIC
+            _POSIX_THREADS
+            _POSIX_READER_WRITER_LOCKS
+        )
+      endif()
     endif()
 
     if(_has_pthread_rwlock)
@@ -793,9 +976,9 @@ block(SCOPE_FOR VARIABLES)
   endif()
 
   # ssl
-  if(NOT PJLIB_WITH_SSL STREQUAL "")
+  if(NOT PJ_SSL_BACKEND STREQUAL "")
     set(PJ_HAS_SSL_SOCK 1)
-    string(TOUPPER "PJ_SSL_SOCK_IMP_${PJLIB_WITH_SSL}" PJ_SSL_SOCK_IMP)
+    string(TOUPPER "PJ_SSL_SOCK_IMP_${PJ_SSL_BACKEND}" PJ_SSL_SOCK_IMP)
   else()
     set(PJ_HAS_SSL_SOCK 0)
     set(PJ_SSL_SOCK_IMP "PJ_SSL_SOCK_IMP_NONE")
@@ -888,7 +1071,12 @@ if(BUILD_TESTING)
       "${Security_LIBRARY}" "${CoreFoundation_LIBRARY}")
   endif()
 
-  add_test(NAME pjlib-test COMMAND pjlib-test)
+  # The test certificates are found relative to pjlib/build, where make
+  # runs it
+  add_test(NAME pjlib-test
+    COMMAND pjlib-test
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build"
+  )
 endif()
 
 # ##############################################################################

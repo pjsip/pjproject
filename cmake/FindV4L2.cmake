@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_search_module(PC_V4L2 QUIET libv4l2 v4l2)
+  pj_pkg_search_module(PC_V4L2 QUIET libv4l2 v4l2)
   set(V4L2_VERSION ${PC_V4L2_VERSION})
 endif()
 
@@ -26,11 +27,21 @@ find_library(V4L2_LIBRARY
 )
 mark_as_advanced(V4L2_LIBRARY)
 
+if(V4L2_INCLUDE_DIR AND V4L2_LIBRARY)
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(V4L2
+    FUNCTION v4l2_open
+    LIBRARIES "${V4L2_LIBRARY}"
+    STATIC_LIBS Threads::Threads
+  )
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(V4L2
   REQUIRED_VARS
     V4L2_INCLUDE_DIR
     V4L2_LIBRARY
+    V4L2_USABLE
 )
 
 if(V4L2_FOUND)

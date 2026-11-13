@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_check_modules(PC_OpenH264 QUIET openh264)
+  pj_pkg_search_module(PC_OpenH264 QUIET openh264)
   set(OpenH264_VERSION ${PC_OpenH264_VERSION})
 endif()
 
@@ -25,11 +26,28 @@ find_library(OpenH264_LIBRARY
 )
 mark_as_advanced(OpenH264_LIBRARY)
 
+if(OpenH264_INCLUDE_DIR AND OpenH264_LIBRARY)
+  # C++: a static libopenh264 needs the C++ runtime to link
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(OpenH264
+    LANGUAGE CXX
+    INCLUDE_DIRS "${OpenH264_INCLUDE_DIR}"
+    LIBRARIES "${OpenH264_LIBRARY}"
+    STATIC_LIBS m Threads::Threads
+    DEFINITIONS ${PC_OpenH264_CFLAGS_OTHER}
+    CODE [=[
+      #include <wels/codec_api.h>
+      int main() { ISVCEncoder *enc; return WelsCreateSVCEncoder(&enc); }
+    ]=]
+  )
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(OpenH264
   REQUIRED_VARS
     OpenH264_INCLUDE_DIR
     OpenH264_LIBRARY
+    OpenH264_USABLE
   VERSION_VAR
     OpenH264_VERSION
 )
@@ -46,5 +64,7 @@ if(OpenH264_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${OpenH264_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${OpenH264_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(OpenH264::OpenH264 OpenH264_LIBRARY)
   endif()
 endif()

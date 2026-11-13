@@ -641,16 +641,16 @@ jobs:
       run: cmake --build build-debug -j $(sysctl -n hw.ncpu)
     - name: check Debug
       run: |
-        file build-debug/pjsip-apps/pjsua
-        otool -L build-debug/pjsip-apps/pjsua
+        file build-debug/pjsip-apps/bin/pjsua
+        otool -L build-debug/pjsip-apps/bin/pjsua
     - name: configure Release
       run: cmake -B build-release -DCMAKE_BUILD_TYPE=Release
     - name: build Release
       run: cmake --build build-release -j $(sysctl -n hw.ncpu)
     - name: check Release
       run: |
-        file build-release/pjsip-apps/pjsua
-        otool -L build-release/pjsip-apps/pjsua
+        file build-release/pjsip-apps/bin/pjsua
+        otool -L build-release/pjsip-apps/bin/pjsua
     - name: install Release
       run: cmake --install build-release --prefix ${{ runner.temp }}/pj-install
     - name: test find_package
@@ -664,7 +664,7 @@ jobs:
     - name: test pkg-config
       run: |
         prefix=${{ runner.temp }}/pj-install
-        test -f "$prefix/lib/libpjlib.a" && test ! -e "$prefix/bin/libpjlib.a"
+        test -f "$prefix/lib/libpj.a" && test ! -e "$prefix/bin/libpj.a"
         export PKG_CONFIG_PATH="$prefix/lib/pkgconfig"
         cat "$PKG_CONFIG_PATH/libpjproject.pc"
         cc tests/cmake/test_consumer.c -o pc_consumer \

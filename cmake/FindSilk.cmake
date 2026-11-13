@@ -1,15 +1,21 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_check_modules(PC_Silk QUIET SKP_SILK_SDK)
+  pj_pkg_search_module(PC_Silk QUIET SKP_SILK_SDK)
   set(Silk_VERSION ${PC_Silk_VERSION})
 endif()
 
+# The SILK SDK keeps its headers in <sdk>/interface and the library in <sdk>
 find_path(Silk_INCLUDE_DIR
   NAMES
     "SKP_Silk_SDK_API.h"
   HINTS
     ${PC_Silk_INCLUDEDIR}
     ${PC_Silk_INCLUDE_DIRS}
+    ${Silk_ROOT}
+    ${SILK_ROOT}
+  PATH_SUFFIXES
+    interface
 )
 mark_as_advanced(Silk_INCLUDE_DIR)
 
@@ -19,14 +25,26 @@ find_library(Silk_LIBRARY
   HINTS
     ${PC_Silk_LIBDIR}
     ${PC_Silk_LIBRARY_DIRS}
+    ${Silk_ROOT}
+    ${SILK_ROOT}
 )
 mark_as_advanced(Silk_LIBRARY)
+
+if(Silk_INCLUDE_DIR AND Silk_LIBRARY)
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(Silk
+    FUNCTION SKP_Silk_SDK_get_version
+    LIBRARIES "${Silk_LIBRARY}"
+    STATIC_LIBS m
+  )
+endif()
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Silk
   REQUIRED_VARS
     Silk_LIBRARY
     Silk_INCLUDE_DIR
+    Silk_USABLE
   VERSION_VAR
     Silk_VERSION
 )
@@ -43,5 +61,7 @@ if(Silk_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${Silk_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${Silk_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(Silk::Silk Silk_LIBRARY)
   endif()
 endif()

@@ -1,7 +1,7 @@
 # ##############################################################################
 # Target
 
-add_library(gsm
+add_library(pj_gsm
   src/add.c
   src/code.c
   src/decode.c
@@ -21,7 +21,7 @@ add_library(gsm
 )
 
 # headers
-target_sources(gsm
+target_sources(pj_gsm
   PUBLIC
     FILE_SET HEADERS
       BASE_DIRS
@@ -38,12 +38,12 @@ target_sources(gsm
 # ##############################################################################
 # Configuration
 
-target_include_directories(gsm BEFORE
+target_include_directories(pj_gsm BEFORE
   PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/../build/gsm"
 )
 
-target_compile_definitions(gsm
+target_compile_definitions(pj_gsm
   PRIVATE
     SASR=1
     WAV49=1
@@ -51,5 +51,5 @@ target_compile_definitions(gsm
 )
 
 if(MSVC)
-  target_compile_options(gsm PRIVATE /FIconfig.h)
+  target_compile_options(pj_gsm PRIVATE /FIconfig.h)
 endif()

@@ -61,6 +61,27 @@ find_library(Oboe_LIBRARY_OpenSLES OpenSLES)
 find_library(Oboe_LIBRARY_log log)
 mark_as_advanced(Oboe_LIBRARY_OpenSLES Oboe_LIBRARY_log)
 
+if(Oboe_INCLUDE_DIR AND Oboe_LIBRARY AND Oboe_LIBRARY_OpenSLES
+   AND Oboe_LIBRARY_log)
+  # Rejects an Oboe for another ABI. openStream() is the call oboe_dev.cpp
+  # makes and is not inline, so the program references the library.
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(Oboe
+    LANGUAGE CXX
+    CODE "
+#include <oboe/Oboe.h>
+int main() {
+  oboe::AudioStreamBuilder sb;
+  oboe::AudioStream *stream = 0;
+  return sb.openStream(&stream) != oboe::Result::OK;
+}
+"
+    INCLUDE_DIRS "${Oboe_INCLUDE_DIR}"
+    LIBRARIES
+      "${Oboe_LIBRARY}" "${Oboe_LIBRARY_OpenSLES}" "${Oboe_LIBRARY_log}"
+  )
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Oboe
   REQUIRED_VARS
@@ -68,6 +89,7 @@ find_package_handle_standard_args(Oboe
     Oboe_LIBRARY
     Oboe_LIBRARY_OpenSLES
     Oboe_LIBRARY_log
+    Oboe_USABLE
 )
 
 if(Oboe_FOUND)

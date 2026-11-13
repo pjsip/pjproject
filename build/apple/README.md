@@ -6,7 +6,8 @@ distribute it.
 
 This directory produces a **distribution**, not a build of the library for local
 use. If you are building PJSIP to develop against it, use `configure-iphone` and
-`make`, or CMake directly; nothing here is needed.
+`make`, or CMake directly (see "Plain CMake builds" at the end); nothing else
+here is needed.
 
 The distribution is built with CMake. The configuration lives in
 build-xcframework.sh as CMake options, with `config_site.h` carrying only the
@@ -54,7 +55,8 @@ and iLBC via CoreAudio's implementation.
 
 Echo cancellation comes from CoreAudio, which has its own. Neither the Speex
 nor the WebRTC canceller is built: Speex is switched off deliberately, and the
-WebRTC one is unavailable because the CMake build has no WebRTC on Apple.
+WebRTC one is left out (`PJ_DEP_WEBRTC=none`): it is not needed, and the
+bundled WebRTC cannot be built for both architectures of a slice at once.
 `webrtc_aec3` does not compile on macOS, where `PlatformThreadId` is undefined,
 and the NEON flags break the x86_64 half of a simulator build.
 
@@ -174,10 +176,11 @@ The build is out of tree. Nothing in the working tree is touched except
 `pjlib/include/pj/config_site.h`, which is backed up and restored on exit.
 
 It refuses to start if the five generated headers (`os_auto.h`, `m_auto.h`, the
-two `config_auto.h`, `sip_autoconf.h`) are present in the source tree, because
-CMake puts the source include directory ahead of the binary one and they would
-shadow the ones this build generates. An autotools build leaves them there by
-design; `make distclean` removes them.
+two `config_auto.h`, `sip_autoconf.h`) are present in the source tree. The build
+would not use them, but a distribution is built from a clean tree rather than
+from whatever configured it last. An autotools build leaves them there by
+design, and so does an iOS CMake build for the sample projects (see "Plain CMake
+builds"); `make distclean` removes them.
 
 Each slice is configured and built once, with both of its architectures in the
 same pass. The configuration is passed as CMake options — the script is the
@@ -353,3 +356,68 @@ and is reachable only from Objective-C++ or C++ sources.
 - **pjsua2 is not usable from Swift.**
 - **Compile-time configuration is fixed**; an app needing different values must
   build from source.
+
+## Plain CMake builds
+
+To build the libraries for development, CMake's own iOS support is enough; no
+toolchain file is needed:
+
+```sh
+cmake -B build-ios -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0
+cmake --build build-ios -j
+```
+
+For the simulator add `-DCMAKE_OSX_SYSROOT=iphonesimulator`; each target needs
+its own build directory. A build directory records the SDK it was configured
+with, version included, so after an Xcode update that brings a new SDK
+version, configure stops and asks for `cmake --fresh`: the paths it found in
+the old SDK no longer exist. Any generator works, Xcode included. The
+applications and tests are off by default on iOS. Turned on
+(`-DPJ_BUILD_APPS=ON`, `-DBUILD_TESTING=ON`) they are plain unsigned
+executables, which run in a booted simulator with
+`xcrun simctl spawn booted <path>`.
+
+The build also links the libraries into the sample Xcode projects under
+`pjsip-apps/src/pjsua/ios`, `pjsip-apps/src/pjsua/ios-swift` and
+`pjsip-apps/src/pjsua2/ios-swift-pjsua2`, and copies the generated headers they
+include into the source tree. `-DPJ_IOS_SAMPLE_LIBS=OFF` leaves the source tree
+alone.
+
+### Other libraries
+
+iOS builds of Opus, OpenSSL and the like are found from a `<Pkg>_ROOT` as on
+macOS:
+
+```sh
+cmake -B build-ios ... -DOPUS_ROOT=$OPUS -DOPENSSL_ROOT_DIR=$OPENSSL
+```
+
+CMake searches only inside the SDK for iOS (`CMAKE_FIND_ROOT_PATH` and
+`CMAKE_FIND_ROOT_PATH_MODE_*=ONLY`), a `<Pkg>_ROOT` included. So that a root is
+still searched as given, pjproject adds each `<Pkg>_ROOT` (and
+`OPENSSL_ROOT_DIR`) to `CMAKE_FIND_ROOT_PATH` for its own configure and lists
+them ("Package roots added to CMAKE_FIND_ROOT_PATH"). Other search paths stay
+inside the SDK, and each library found is test-linked, so a macOS library
+reached through a wrong root is rejected rather than used.
+
+`-DPJ_USE_ROOTS_IN_FIND=OFF` keeps CMake's own behaviour: a root outside
+`CMAKE_FIND_ROOT_PATH` is not searched, and configure warns about it. Each root
+then has to be given in `CMAKE_FIND_ROOT_PATH` too, several as a list:
+
+```sh
+cmake -B build-ios ... -DPJ_USE_ROOTS_IN_FIND=OFF \
+      -DOPUS_ROOT=$OPUS -DOPENSSL_ROOT_DIR=$OPENSSL \
+      -DCMAKE_FIND_ROOT_PATH="$OPUS;$OPENSSL"
+```
+
+### Using the installed libraries
+
+`find_package(Pj)` runs in your project, where the same SDK restriction
+applies, so give the install prefix in `CMAKE_FIND_ROOT_PATH` as well as in
+`CMAKE_PREFIX_PATH`:
+
+```sh
+cmake --install build-ios --prefix $PJ
+cmake -B build-app -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 \
+      -DCMAKE_PREFIX_PATH=$PJ -DCMAKE_FIND_ROOT_PATH=$PJ
+```

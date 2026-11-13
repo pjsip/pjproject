@@ -72,8 +72,8 @@
 #endif
 
 /* Macros the build passes on the command line, frozen per slice. */
-/* The WebRTC AEC is not available on Apple in the CMake build, and CoreAudio
- * provides echo cancellation of its own, so the distribution does without it.
+/* The WebRTC AEC is left out of the distribution (PJ_DEP_WEBRTC=none): CoreAudio
+ * provides echo cancellation of its own.
  * Asserted rather than ignored: if it ever appears, the headers and the
  * binary must still agree about it. */
 #if PJMEDIA_HAS_WEBRTC_AEC != 0

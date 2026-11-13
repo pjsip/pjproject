@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_search_module(PC_VisualOnAMRWBEnc QUIET vo-amrwbenc libvo-amrwbenc)
+  pj_pkg_search_module(PC_VisualOnAMRWBEnc QUIET vo-amrwbenc libvo-amrwbenc)
   set(VisualOnAMRWBEnc_VERSION ${PC_VisualOnAMRWBEnc_VERSION})
 endif()
 
@@ -27,11 +28,21 @@ find_library(VisualOnAMRWBEnc_LIBRARY
 )
 mark_as_advanced(VisualOnAMRWBEnc_LIBRARY)
 
+if(VisualOnAMRWBEnc_INCLUDE_DIR AND VisualOnAMRWBEnc_LIBRARY)
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(VisualOnAMRWBEnc
+    FUNCTION E_IF_init
+    LIBRARIES "${VisualOnAMRWBEnc_LIBRARY}"
+    STATIC_LIBS m
+  )
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(VisualOnAMRWBEnc
   REQUIRED_VARS
     VisualOnAMRWBEnc_INCLUDE_DIR
     VisualOnAMRWBEnc_LIBRARY
+    VisualOnAMRWBEnc_USABLE
   VERSION_VAR
     VisualOnAMRWBEnc_VERSION
 )
@@ -48,5 +59,7 @@ if(VisualOnAMRWBEnc_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${VisualOnAMRWBEnc_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${VisualOnAMRWBEnc_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(VisualOnAMRWBEnc::VisualOnAMRWBEnc VisualOnAMRWBEnc_LIBRARY)
   endif()
 endif()

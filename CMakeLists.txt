@@ -1,7 +1,11 @@
 cmake_minimum_required(VERSION 3.28...4.0)
 
+# Prefix each message() with the module it comes from, e.g. "[pjmedia] "
+set(CMAKE_MESSAGE_CONTEXT_SHOW TRUE)
+
 # Read version from version.mak
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/version.mak" _version_lines)
+set(PJ_VERSION_SUFFIX "")
 foreach(_line IN LISTS _version_lines)
   if(_line MATCHES "^export PJ_VERSION_MAJOR[ \t]*:=[ \t]*([0-9]+)")
     set(_pj_ver_major "${CMAKE_MATCH_1}")
@@ -9,6 +13,9 @@ foreach(_line IN LISTS _version_lines)
     set(_pj_ver_minor "${CMAKE_MATCH_1}")
   elseif(_line MATCHES "^export PJ_VERSION_REV[ \t]*:=[ \t]*([0-9]+)")
     set(_pj_ver_rev "${CMAKE_MATCH_1}")
+  elseif(_line MATCHES "^export PJ_VERSION_SUFFIX[ \t]*:=[ \t]*([^ \t]+)")
+    # e.g. -dev, for the pkg-config Version, as make
+    set(PJ_VERSION_SUFFIX "${CMAKE_MATCH_1}")
   endif()
 endforeach()
 # CMake VERSION field only accepts numeric components
@@ -25,6 +32,96 @@ project(pjproject
   LANGUAGES C
 )
 
+# By default each optional library prints one line, "Checking if <X> is
+# available - yes/no". --log-level=VERBOSE (or CMAKE_MESSAGE_LOG_LEVEL) adds
+# what each search found and its link test.
+cmake_language(GET_MESSAGE_LOG_LEVEL _pj_log_level)
+if(_pj_log_level MATCHES "^(VERBOSE|DEBUG|TRACE)$")
+  set(PJ_FIND_QUIET "")
+else()
+  set(PJ_FIND_QUIET QUIET)
+endif()
+unset(_pj_log_level)
+
+# Set by toolchains whose programs cannot be linked without the application's
+# startup code, e.g. cmake/toolchains/arm-none-eabi.cmake
+if(CMAKE_TRY_COMPILE_TARGET_TYPE STREQUAL "STATIC_LIBRARY")
+  message(STATUS "[!] CMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY: the "
+    "library link tests only compile, so a library found may still fail to "
+    "link")
+endif()
+
+# The libraries mark nothing for export, which GNU ld's automatic export
+# covers for MinGW but MSVC has no equivalent of: its DLLs would export
+# nothing and get no import library. No pjproject build makes MSVC DLLs of
+# them; the SWIG bindings link them statically into one DLL instead. Inside
+# another project, whose own libraries may well be shared, build pjproject's
+# static rather than stop.
+if(MSVC AND BUILD_SHARED_LIBS)
+  if(NOT pjproject_IS_TOP_LEVEL)
+    set(BUILD_SHARED_LIBS OFF)
+    message(STATUS
+      "[!] MSVC: pjproject's libraries are built static; they export no "
+      "symbols for a DLL")
+  else()
+    message(FATAL_ERROR
+      "BUILD_SHARED_LIBS=ON is not supported with MSVC: the pjproject "
+      "libraries export no symbols. Build them static (the default), or use "
+      "the SWIG bindings (PJ_BUILD_SWIG_CSHARP, PJ_BUILD_SWIG_JAVA, "
+      "PJ_BUILD_SWIG_PYTHON) for a single DLL.")
+  endif()
+endif()
+
+# Configure-check results and found library paths are cached per build folder
+# and never redone, so they go stale when the target changes without a new
+# compiler (an NDK API level selects other headers and libraries, e.g.
+# getifaddrs() exists from API 24). CMake starts afresh on its own only when
+# the compiler changes; do the same for these by asking for it.
+set(_pj_target_vars
+  CMAKE_SYSROOT CMAKE_OSX_SYSROOT CMAKE_OSX_DEPLOYMENT_TARGET
+  CMAKE_OSX_ARCHITECTURES
+)
+if(ANDROID)
+  list(APPEND _pj_target_vars ANDROID_ABI ANDROID_PLATFORM)
+endif()
+foreach(_var IN LISTS _pj_target_vars)
+  set(_value "${${_var}}")
+  if(_var STREQUAL "ANDROID_PLATFORM")
+    # the level the toolchain file settled on (the legacy one sets
+    # CMAKE_SYSTEM_VERSION to 1)
+    if(DEFINED ANDROID_PLATFORM_LEVEL)
+      set(_value "android-${ANDROID_PLATFORM_LEVEL}")
+    else()
+      set(_value "android-${CMAKE_SYSTEM_VERSION}")
+    endif()
+  endif()
+  if(NOT DEFINED _PJ_CONFIGURED_${_var})
+    set(_PJ_CONFIGURED_${_var} "${_value}" CACHE INTERNAL "")
+  elseif(NOT _PJ_CONFIGURED_${_var} STREQUAL _value)
+    message(FATAL_ERROR
+      "${_var} changed from \"${_PJ_CONFIGURED_${_var}}\" to \"${_value}\" "
+      "in a build folder configured for the former; its cached configure "
+      "checks and library paths would be wrong. Reconfigure with "
+      "'cmake --fresh' or use a new build folder.")
+  endif()
+endforeach()
+unset(_pj_target_vars)
+unset(_var)
+unset(_value)
+
+# A package installed with only Debug and Release builds (vcpkg's SDL2 found
+# through CMAKE_PREFIX_PATH) would give MinSizeRel and RelWithDebInfo its
+# Debug library and C runtime. Use the Release one, as vcpkg's toolchain file
+# does. Set before any package is searched; a value given is kept.
+if(MSVC)
+  foreach(_cfg MINSIZEREL RELWITHDEBINFO)
+    if(NOT DEFINED CMAKE_MAP_IMPORTED_CONFIG_${_cfg})
+      set(CMAKE_MAP_IMPORTED_CONFIG_${_cfg} Release "")
+    endif()
+  endforeach()
+  unset(_cfg)
+endif()
+
 # C++ is needed only by pjsua2 and a few backends (WebRTC AEC3, libyuv, Lyra,
 # OpenH264, Oboe, WASAPI, DirectShow, Android MediaCodec), by pjlib's
 # atomic_queue.cpp, which only those backends use, and by WebRTC's CPU
@@ -34,6 +131,30 @@ option(PJ_WITH_CXX "Build the C++ components (pjsua2 and C++ backends)" ON)
 if(PJ_WITH_CXX)
   enable_language(CXX)
 endif()
+
+# pjsua2 alone, keeping the C++ backends: autoconf's --disable-pjsua2
+include(CMakeDependentOption)
+cmake_dependent_option(PJ_BUILD_PJSUA2 "Build the pjsua2 C++ library" ON
+  "PJ_WITH_CXX" OFF
+)
+
+# As autoconf: -Wall everywhere, and -O2 when neither a build type nor an -O
+# flag is given. Not a CMake build type, as those define NDEBUG, which would
+# turn off pj_assert() and PJ_DEBUG. MSVC is left alone (clang-cl reads -Wall
+# as -Weverything).
+get_property(_pj_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+foreach(_lang C CXX)
+  if(NOT CMAKE_${_lang}_COMPILER_LOADED OR MSVC
+     OR NOT CMAKE_${_lang}_COMPILER_ID MATCHES "GNU|Clang")
+    continue()
+  endif()
+  add_compile_options($<$<COMPILE_LANGUAGE:${_lang}>:-Wall>)
+  if(NOT _pj_multi_config AND NOT CMAKE_BUILD_TYPE
+     AND NOT CMAKE_${_lang}_FLAGS MATCHES "(^| )-O")
+    add_compile_options($<$<COMPILE_LANGUAGE:${_lang}>:-O2>)
+  endif()
+endforeach()
+unset(_pj_multi_config)
 
 # project modules
 list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -62,6 +183,11 @@ endif()
 # Testing support
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+  # make builds no executable on Android, the test programs included. Off on
+  # iOS too, where a command line program cannot run on a device.
+  if(ANDROID OR IOS)
+    option(BUILD_TESTING "Build the testing tree." OFF)
+  endif()
   include(CTest)
 endif()
 
@@ -100,27 +226,94 @@ endif()
 # dependencies call for the pkg-config file
 include(Pj/PkgConfig)
 
+# The sample applications are command line executables: pjsip-apps, and the
+# TURN client and server in pjnath. Off by default on Android, as make excludes
+# them there, and on iOS, where they cannot run on a device; an iOS consumer
+# links the libraries into an app of their own.
+# Nor does firmware for a target CMake calls Generic, with no OS or with an
+# RTOS such as Zephyr, so the applications can be left out there. Off also
+# when pjproject is built inside another project (add_subdirectory(),
+# FetchContent), which wants the libraries, as the tests are.
+if(ANDROID OR IOS OR NOT CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+  set(_pj_build_apps_default OFF)
+else()
+  set(_pj_build_apps_default ON)
+endif()
+option(PJ_BUILD_APPS "Build pjsua and the sample applications"
+  ${_pj_build_apps_default})
+unset(_pj_build_apps_default)
+
+# The pjsua2 SWIG bindings, see pjsip-apps/src/swig. Off by default, as they
+# need SWIG (and a JDK or the Python headers); Gradle turns Java on. Defined
+# here, before the libraries, because the bindings link them into a shared
+# library, so they must be built position independent.
+cmake_dependent_option(PJ_BUILD_SWIG_JAVA
+  "Build the pjsua2 Java bindings with SWIG" OFF
+  "PJ_BUILD_PJSUA2;NOT IOS" OFF
+)
+cmake_dependent_option(PJ_BUILD_SWIG_PYTHON
+  "Build the pjsua2 Python module with SWIG" OFF
+  "PJ_BUILD_PJSUA2;NOT ANDROID;NOT IOS" OFF
+)
+cmake_dependent_option(PJ_BUILD_SWIG_CSHARP
+  "Build the pjsua2 C# bindings with SWIG" OFF
+  "PJ_BUILD_PJSUA2" OFF
+)
+# iOS apps reach the C# bindings with DllImport("__Internal"), so the app links
+# them and every library they need from one static libpjsua2.a
+if(IOS AND PJ_BUILD_SWIG_CSHARP AND BUILD_SHARED_LIBS)
+  message(FATAL_ERROR
+    "PJ_BUILD_SWIG_CSHARP on iOS needs static libraries: the app links the "
+    "bindings and the pjproject libraries statically, from libpjsua2.a. Set "
+    "BUILD_SHARED_LIBS=OFF, or PJ_BUILD_SWIG_CSHARP=OFF.")
+endif()
+if(PJ_BUILD_SWIG_JAVA OR PJ_BUILD_SWIG_PYTHON OR PJ_BUILD_SWIG_CSHARP)
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
+# On iOS, build the executables (applications and tests, when turned on) as
+# plain command line programs, as make does, runnable in the Simulator with
+# `xcrun simctl spawn`. CMake would otherwise make each an app bundle, which
+# needs an install destination and a signing team.
+if(IOS)
+  set(CMAKE_MACOSX_BUNDLE OFF)
+  set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED NO)
+endif()
+
+# A cross toolchain searches only under its sysroot, a given <X>_ROOT included.
+# An explicit root is where the user's build of that library is, so search it.
+if(CMAKE_CROSSCOMPILING)
+  option(PJ_USE_ROOTS_IN_FIND
+    "Search the given <X>_ROOT folders when the cross toolchain limits searches to its sysroot"
+    ON
+  )
+  if(PJ_USE_ROOTS_IN_FIND)
+    include(Pj/PackageRoot)
+    pj_add_package_roots_to_find_root()
+  endif()
+endif()
+
+# pj_add_subdirectory(): an option a subdirectory switches off, for a library
+# not found or not usable, is then seen as off by the directories after it
+# and by the package files below, also when pjproject is built inside
+# another project
+include(Pj/Option)
+
 # base library
-add_subdirectory(pjlib)
+pj_add_subdirectory(pjlib)
 
 # third-party libraries
-add_subdirectory(third_party)
+pj_add_subdirectory(third_party)
 
 # remaning libraries
-add_subdirectory(pjlib-util)
-add_subdirectory(pjnath)
-add_subdirectory(pjmedia)
-add_subdirectory(pjsip)
-# The sample applications are command line executables. iOS has no place to
-# run one, and CMake would make each a bundle needing a destination and a
-# signing identity, so the iOS build stops at the libraries -- which is what
-# an iOS consumer links into an app of their own anyway.
-# Nor does firmware for a target CMake calls Generic, with no OS or with an
-# RTOS such as Zephyr, so the applications can be left out there.
-option(PJ_BUILD_APPS "Build pjsua and the sample applications" ON)
-if(PJ_BUILD_APPS AND NOT IOS)
-  add_subdirectory(pjsip-apps)
-endif()
+pj_add_subdirectory(pjlib-util)
+pj_add_subdirectory(pjnath)
+pj_add_subdirectory(pjmedia)
+pj_add_subdirectory(pjsip)
+
+# Always added: besides the applications, it holds the pjsua2 JNI bindings,
+# which make builds in a step of their own regardless of the applications.
+pj_add_subdirectory(pjsip-apps)
 
 # The iOS sample applications are Xcode projects rather than CMake targets,
 # and they link the static libraries from beside their own sources under the
@@ -136,6 +329,16 @@ if(IOS)
   option(PJ_IOS_SAMPLE_LIBS
     "Link the built libraries into the iOS sample app projects" ON
   )
+
+  # The projects link static archives and embed nothing, so an app linked
+  # against shared libraries would build but not start.
+  if(PJ_IOS_SAMPLE_LIBS AND BUILD_SHARED_LIBS)
+    set(PJ_IOS_SAMPLE_LIBS OFF)
+    message(STATUS
+      "[!] the iOS sample projects need static libraries, so this shared "
+      "build is not linked into them."
+    )
+  endif()
 
   if(PJ_IOS_SAMPLE_LIBS)
     execute_process(
@@ -196,11 +399,10 @@ if(IOS AND PJ_IOS_SAMPLE_LIBS)
   # ./aconfigure writes to these exact paths and would otherwise write through
   # the link into the build directory.
   #
-  # Note that CMake puts the source include directory ahead of the binary one,
-  # so a generated header sitting in the source tree -- left by this step, or
-  # by an autotools build -- shadows the one the current build generated. Turn
-  # this off for a build that must not be influenced by whatever configured
-  # the tree last.
+  # The libraries search their build directory ahead of the source one, so
+  # these copies do not affect a later build from this tree. A consumer that
+  # includes from the source tree, as these projects do, gets whatever was
+  # copied last. Turn this off to leave the source tree untouched.
   cmake_dependent_option(PJ_IOS_SAMPLE_HEADERS
     "Copy the generated headers into the source tree for the iOS samples" ON
     "PJ_IOS_SAMPLE_LIBS" OFF
@@ -215,10 +417,10 @@ if(IOS AND PJ_IOS_SAMPLE_LIBS)
   )
 
   # The Xcode projects link a fixed list of archives, including ones this
-  # configuration may not build -- WebRTC has no Apple support here, and any
-  # codec can be switched off. The matching feature is compiled out of the
-  # headers too, so nothing references those symbols and an empty archive
-  # satisfies the link. Without it the projects fail with "library not found".
+  # configuration may not build -- any codec or WebRTC can be switched off.
+  # The matching feature is compiled out of the headers too, so nothing
+  # references those symbols and an empty archive satisfies the link. Without
+  # it the projects fail with "library not found".
   set(_pj_ios_placeholder_src "${PROJECT_BINARY_DIR}/pj_ios_placeholder.c")
   file(WRITE "${_pj_ios_placeholder_src}"
     "/* Stands in for a library this configuration does not build.\n"
@@ -247,6 +449,7 @@ if(IOS AND PJ_IOS_SAMPLE_LIBS)
     )
   endforeach()
 
+  get_property(_pj_used_deps GLOBAL PROPERTY PJ_USED_DEPS)
   foreach(_entry IN LISTS _pj_ios_sample_libs)
     string(REPLACE "|" ";" _parts "${_entry}")
     list(GET _parts 0 _pj_tgt)
@@ -254,10 +457,12 @@ if(IOS AND PJ_IOS_SAMPLE_LIBS)
 
     # The third-party entries are the provider-agnostic Pj::Dep:: aliases, so
     # a system provider is staged as readily as a bundled one. Only a library
-    # this configuration genuinely does not have falls back to the
-    # placeholder, and it says so rather than leaving the sample to fail with
-    # unresolved symbols later.
-    if(TARGET ${_pj_tgt})
+    # this configuration genuinely does not have, or does not link and so does
+    # not build, falls back to the placeholder, and it says so rather than
+    # leaving the sample to fail with unresolved symbols later.
+    string(REGEX REPLACE "^Pj::Dep::" "" _pj_dep "${_pj_tgt}")
+    if(TARGET ${_pj_tgt} AND
+       (_pj_dep STREQUAL _pj_tgt OR _pj_dep IN_LIST _pj_used_deps))
       if(NOT _pj_tgt MATCHES "^Pj::")
         add_dependencies(pj-ios-sample-libs ${_pj_tgt})
       endif()
@@ -285,9 +490,151 @@ if(IOS AND PJ_IOS_SAMPLE_LIBS)
   unset(_pj_src)
   unset(_pj_ios_placeholder_src)
   unset(_pj_tgt)
+  unset(_pj_dep)
+  unset(_pj_used_deps)
   unset(_pj_name)
   unset(_parts)
 endif()
+
+# ##############################################################################
+# Output directories
+
+# Every directory of the build, for the output directories and the
+# Windows DLL path below
+set(_pj_all_dirs "")
+set(_pj_dirs "${PROJECT_SOURCE_DIR}")
+while(_pj_dirs)
+  list(POP_FRONT _pj_dirs _pj_dir)
+  list(APPEND _pj_all_dirs "${_pj_dir}")
+  get_property(_pj_subdirs DIRECTORY "${_pj_dir}" PROPERTY SUBDIRECTORIES)
+  list(APPEND _pj_dirs ${_pj_subdirs})
+endwhile()
+unset(_pj_dirs)
+unset(_pj_subdirs)
+
+# Each module's programs in <build>/<module>/bin and its libraries (DLLs too)
+# in <build>/<module>/lib, the layout make uses in the source tree. A
+# multi-config generator (Visual Studio, Xcode) puts every configuration in the
+# same folders, with the configuration in the file name (libpj-Debug.lib), as
+# pjproject's own Visual Studio projects do. Left alone: targets given an
+# output directory already, by a parent project's CMAKE_*_OUTPUT_DIRECTORY or
+# in their own CMakeLists (SWIG modules, cmp_wav), and the SWIG modules, whose
+# names their language loads them by. A pass over the targets rather than
+# CMAKE_<KIND>_OUTPUT_DIRECTORY set per module: on Windows a DLL is a RUNTIME
+# output like a program, so a variable cannot put programs in bin and DLLs in
+# lib, where make puts them.
+get_property(_pj_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+foreach(_pj_dir IN LISTS _pj_all_dirs)
+  file(RELATIVE_PATH _pj_rel "${PROJECT_SOURCE_DIR}" "${_pj_dir}")
+  if(_pj_rel STREQUAL "" OR _pj_rel MATCHES "^pjsip-apps/src/swig(/|$)")
+    continue()
+  endif()
+  string(REGEX REPLACE "/.*" "" _pj_module "${_pj_rel}")
+  set(_pj_bin "${PROJECT_BINARY_DIR}/${_pj_module}/bin")
+  set(_pj_lib "${PROJECT_BINARY_DIR}/${_pj_module}/lib")
+
+  get_property(_pj_targets DIRECTORY "${_pj_dir}" PROPERTY BUILDSYSTEM_TARGETS)
+  foreach(_pj_tgt IN LISTS _pj_targets)
+    get_target_property(_pj_type ${_pj_tgt} TYPE)
+    if(NOT _pj_type MATCHES "^(EXECUTABLE|STATIC_LIBRARY|SHARED_LIBRARY|MODULE_LIBRARY)$")
+      continue()
+    endif()
+    set(_pj_set FALSE)
+    foreach(_pj_kind RUNTIME LIBRARY ARCHIVE)
+      get_target_property(_pj_out ${_pj_tgt} ${_pj_kind}_OUTPUT_DIRECTORY)
+      if(_pj_out)
+        set(_pj_set TRUE)
+      endif()
+    endforeach()
+    if(_pj_set)
+      continue()
+    endif()
+
+    if(_pj_type STREQUAL "EXECUTABLE")
+      get_target_property(_pj_sub ${_pj_tgt} PJ_OUTPUT_SUBDIR)
+      if(_pj_sub)
+        set(_pj_out "${_pj_bin}/${_pj_sub}")
+      else()
+        set(_pj_out "${_pj_bin}")
+      endif()
+    else()
+      set(_pj_out "${_pj_lib}")
+    endif()
+    # A generator expression keeps a multi-config generator from adding a
+    # per-configuration subdirectory
+    if(_pj_multi_config)
+      set(_pj_out "$<1:${_pj_out}>")
+      foreach(_pj_cfg IN LISTS CMAKE_CONFIGURATION_TYPES)
+        string(TOUPPER "${_pj_cfg}" _pj_cfg_upper)
+        set_target_properties(${_pj_tgt} PROPERTIES
+          ${_pj_cfg_upper}_POSTFIX "-${_pj_cfg}"
+        )
+      endforeach()
+      set_target_properties(${_pj_tgt} PROPERTIES PJ_CONFIG_POSTFIX TRUE)
+    endif()
+    set_target_properties(${_pj_tgt} PROPERTIES
+      RUNTIME_OUTPUT_DIRECTORY "${_pj_out}"
+      LIBRARY_OUTPUT_DIRECTORY "${_pj_out}"
+      ARCHIVE_OUTPUT_DIRECTORY "${_pj_out}"
+    )
+  endforeach()
+endforeach()
+unset(_pj_multi_config)
+unset(_pj_dir)
+unset(_pj_rel)
+unset(_pj_module)
+unset(_pj_bin)
+unset(_pj_lib)
+unset(_pj_targets)
+unset(_pj_tgt)
+unset(_pj_type)
+unset(_pj_set)
+unset(_pj_kind)
+unset(_pj_out)
+unset(_pj_sub)
+unset(_pj_cfg)
+unset(_pj_cfg_upper)
+
+# A Windows program finds its DLLs only beside it or on PATH, and each
+# module's DLLs are in its own lib folder: give the tests those folders
+if(WIN32 OR CYGWIN)
+  set(_pj_dll_path "")
+  set(_pj_tests "")
+  foreach(_pj_dir IN LISTS _pj_all_dirs)
+    get_property(_pj_targets DIRECTORY "${_pj_dir}" PROPERTY BUILDSYSTEM_TARGETS)
+    foreach(_pj_tgt IN LISTS _pj_targets)
+      get_target_property(_pj_type ${_pj_tgt} TYPE)
+      if(_pj_type STREQUAL "SHARED_LIBRARY")
+        list(APPEND _pj_dll_path
+          "PATH=path_list_prepend:$<TARGET_FILE_DIR:${_pj_tgt}>")
+      endif()
+    endforeach()
+    get_property(_pj_dir_tests DIRECTORY "${_pj_dir}" PROPERTY TESTS)
+    foreach(_pj_test IN LISTS _pj_dir_tests)
+      list(APPEND _pj_tests "${_pj_dir}|${_pj_test}")
+    endforeach()
+  endforeach()
+  if(_pj_dll_path)
+    foreach(_pj_entry IN LISTS _pj_tests)
+      string(REPLACE "|" ";" _pj_entry "${_pj_entry}")
+      list(GET _pj_entry 0 _pj_dir)
+      list(GET _pj_entry 1 _pj_test)
+      set_property(TEST "${_pj_test}" DIRECTORY "${_pj_dir}"
+        APPEND PROPERTY ENVIRONMENT_MODIFICATION ${_pj_dll_path}
+      )
+    endforeach()
+  endif()
+  unset(_pj_dll_path)
+  unset(_pj_tests)
+  unset(_pj_dir)
+  unset(_pj_targets)
+  unset(_pj_tgt)
+  unset(_pj_type)
+  unset(_pj_dir_tests)
+  unset(_pj_test)
+  unset(_pj_entry)
+endif()
+unset(_pj_all_dirs)
 
 # ##############################################################################
 # Installation
@@ -308,12 +655,24 @@ set(install_targets
   pjsua-lib
 )
 
-# optional targets: pjsua2 needs PJ_WITH_CXX, pjsua PJ_BUILD_APPS and not iOS
+# optional targets: pjsua2 needs PJ_BUILD_PJSUA2, pjsua PJ_BUILD_APPS
 foreach(target pjsua2 pjsua)
   if(TARGET ${target})
     list(APPEND install_targets ${target})
   endif()
 endforeach()
+
+# The names find_package(Pj) gives, also for a project that builds pjproject
+# itself with add_subdirectory() or FetchContent
+foreach(target IN LISTS install_targets)
+  get_target_property(_type ${target} TYPE)
+  if(_type STREQUAL "EXECUTABLE")
+    add_executable(Pj::${target} ALIAS ${target})
+  else()
+    add_library(Pj::${target} ALIAS ${target})
+  endif()
+endforeach()
+unset(_type)
 
 # set `VERSION` and `SO_VERSION`
 foreach(target IN LISTS install_targets)
@@ -322,6 +681,17 @@ foreach(target IN LISTS install_targets)
     SOVERSION ${PROJECT_VERSION_MAJOR}
   )
 endforeach()
+
+# lib<name> on MSVC too (libpj.lib, libpj.dll), as on every other platform
+if(MSVC)
+  foreach(target IN LISTS install_targets)
+    get_target_property(_pj_type ${target} TYPE)
+    if(_pj_type MATCHES "^(STATIC|SHARED)_LIBRARY$")
+      set_target_properties(${target} PROPERTIES PREFIX lib IMPORT_PREFIX lib)
+    endif()
+  endforeach()
+  unset(_pj_type)
+endif()
 
 # install targets
 install(
@@ -356,6 +726,17 @@ set(PJ_CMAKE_TARGETS_FILE        "PjTargets.cmake")
 set(PJ_CMAKE_CONFIG_FILE         "PjConfig.cmake")
 set(PJ_CMAKE_CONFIG_VERSION_FILE "PjConfigVersion.cmake")
 
+# Whether the bundled srtp links OpenSSL, set by it only. Once a cache entry,
+# which outlived a switch to the system srtp. Only when pjmedia links srtp at
+# all: with PJMEDIA_WITH_SRTP off it is neither linked nor installed.
+unset(PJ_SRTP_WITH_OPENSSL CACHE)
+get_property(PJ_SRTP_WITH_OPENSSL GLOBAL PROPERTY PJ_SRTP_WITH_OPENSSL)
+get_property(_pj_used_deps GLOBAL PROPERTY PJ_USED_DEPS)
+if(NOT "SRTP" IN_LIST _pj_used_deps)
+  set(PJ_SRTP_WITH_OPENSSL OFF)
+endif()
+unset(_pj_used_deps)
+
 # install exports
 install(
   EXPORT      PjTargets
@@ -373,6 +754,15 @@ if(APPLE)
 else()
   set(PJ_APPLE 0)
 endif()
+
+# The FFmpeg components pjmedia links, for PjConfig.cmake.in to require
+set(PJ_FFMPEG_COMPONENTS)
+foreach(_lib avutil swscale avcodec avformat avdevice)
+  string(TOUPPER "${_lib}" _lib_upper)
+  if(PJMEDIA_WITH_FFMPEG_${_lib_upper})
+    list(APPEND PJ_FFMPEG_COMPONENTS ${_lib})
+  endif()
+endforeach()
 
 # write package config
 configure_package_config_file(
@@ -393,24 +783,27 @@ write_basic_package_version_file(
 set(PJ_BUNDLED_DEPS "")
 set(PJ_SYSTEM_DEPS "")
 
-set(_pj_all_deps G7221 GSM iLBC Resample Speex SRTP YUV)
-if(NOT (APPLE OR MINGW OR CYGWIN))
-  list(APPEND _pj_all_deps WebRTC WebRTC_AEC3)
-endif()
+set(_pj_all_deps G7221 GSM iLBC Resample Speex SRTP YUV WebRTC WebRTC_AEC3)
 
 # Go by the target rather than the PJ_DEP_<X> cache entry, which outlives a
-# dependency that a later configure (PJ_WITH_CXX=OFF, provider none) left out.
+# dependency that a later configure (PJ_WITH_CXX=OFF, provider none) left out,
+# and only for what pjmedia links: a bundled library it does not is not built.
+get_property(_pj_used_deps GLOBAL PROPERTY PJ_USED_DEPS)
 foreach(_dep IN LISTS _pj_all_deps)
-  if(TARGET Pj::Dep::${_dep})
+  if(TARGET Pj::Dep::${_dep} AND _dep IN_LIST _pj_used_deps)
     get_target_property(_dep_provider Pj::Dep::${_dep} PJ_DEP_PROVIDER)
     if(_dep_provider STREQUAL "bundled")
       list(APPEND PJ_BUNDLED_DEPS "${_dep}")
+      get_target_property(_dep_target Pj::Dep::${_dep} ALIASED_TARGET)
+      pj_install_bundled_dep(${_dep_target})
     elseif(_dep_provider STREQUAL "system")
       list(APPEND PJ_SYSTEM_DEPS "${_dep}")
     endif()
   endif()
 endforeach()
 unset(_dep_provider)
+unset(_dep_target)
+unset(_pj_used_deps)
 unset(_pj_all_deps)
 
 list(JOIN PJ_BUNDLED_DEPS ";" PJ_BUNDLED_DEPS_STR)
@@ -445,6 +838,8 @@ set(_pj_pkg_Resample "Resample")
 set(_pj_pkg_Speex    "Speex")
 set(_pj_pkg_SRTP     "SRTP")
 set(_pj_pkg_YUV      "YUV")
+set(_pj_pkg_WebRTC   "WebRTC")
+set(_pj_pkg_WebRTC_AEC3 "WebRTC_AEC3")
 foreach(_dep IN LISTS PJ_SYSTEM_DEPS)
   if(DEFINED _pj_pkg_${_dep})
     _pj_collect_find_module(TRUE ${_pj_pkg_${_dep}})
@@ -457,6 +852,7 @@ _pj_collect_find_module(PJNATH_WITH_UPNP                 UPNP)
 _pj_collect_find_module(PJMEDIA_WITH_AUDIODEV_COREAUDIO   CoreAudio)
 _pj_collect_find_module(PJMEDIA_WITH_AUDIODEV_OBOE        Oboe)
 _pj_collect_find_module(PJMEDIA_WITH_AUDIODEV_WASAPI      WASAPI)
+_pj_collect_find_module(PJMEDIA_WITH_AUDIODEV_PORTAUDIO   PortAudio)
 _pj_collect_find_module(PJMEDIA_WITH_VIDEODEV_V4L2        V4L2)
 # PJ_OPENGL_PACKAGE is the name PjConfig.cmake.in calls find_dependency with,
 # so keying off it keeps the two from drifting apart. Only the OpenGLES module
@@ -480,6 +876,7 @@ _pj_collect_find_module(PJMEDIA_WITH_OPENCORE_AMRWB_CODEC VisualOnAMRWBEnc)
 _pj_collect_find_module(PJMEDIA_WITH_SILK_CODEC           Silk)
 _pj_collect_find_module(PJMEDIA_WITH_OPUS_CODEC           OPUS)
 _pj_collect_find_module(PJMEDIA_WITH_BCG729_CODEC         BCG729)
+_pj_collect_find_module(PJMEDIA_WITH_INTEL_IPP            IPP)
 _pj_collect_find_module(PJMEDIA_WITH_LYRA_CODEC           Lyra)
 _pj_collect_find_module(PJMEDIA_WITH_VPX_CODEC            VPX)
 _pj_collect_find_module(PJMEDIA_WITH_OPEN_H264_CODEC      OpenH264)
@@ -491,12 +888,144 @@ if(_pj_find_modules)
     DESTINATION "${PJ_CMAKE_INSTALL_DIR}"
     COMPONENT PjDevelopment
   )
+  # Helpers the Find modules include as Pj/<name>
+  install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/CheckLibraryUsable.cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/DebugLibrary.cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/GetMacroValue.cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/PackageRoot.cmake"
+    DESTINATION "${PJ_CMAKE_INSTALL_DIR}/Pj"
+    COMPONENT PjDevelopment
+  )
 endif()
+
+# What each dependency PjConfig.cmake looks up was found as here: the
+# <Pkg>_LIBRARY, <Pkg>_INCLUDE_DIR, <Pkg>_DIR, ... cache entries. PjConfig.cmake
+# hands them to the consumer's search, which would otherwise start afresh and
+# could settle on another copy, e.g. the shared library beside the static one
+# given with -D<Pkg>_LIBRARY.
+set(_pj_found_pkgs)
+foreach(_fm IN LISTS _pj_find_modules)
+  cmake_path(GET _fm STEM _pkg)
+  string(REGEX REPLACE "^Find" "" _pkg "${_pkg}")
+  list(APPEND _pj_found_pkgs ${_pkg})
+endforeach()
+# and the ones CMake's own modules find
+if(PJ_SSL_BACKEND STREQUAL "openssl" OR PJ_SRTP_WITH_OPENSSL)
+  # with LIB_EAY* and SSL_EAY* on Windows, see pj_package_owns_var()
+  list(APPEND _pj_found_pkgs OpenSSL)
+elseif(PJ_SSL_BACKEND STREQUAL "gnutls")
+  list(APPEND _pj_found_pkgs GnuTLS)
+elseif(PJ_SSL_BACKEND STREQUAL "mbedtls")
+  list(APPEND _pj_found_pkgs MbedTLS)
+endif()
+if(PJMEDIA_WITH_AUDIODEV_ALSA)
+  list(APPEND _pj_found_pkgs ALSA)
+endif()
+if(PJMEDIA_WITH_VIDEODEV_OPENGL AND PJ_OPENGL_PACKAGE STREQUAL "OpenGL")
+  list(APPEND _pj_found_pkgs OpenGL)
+endif()
+if(PJMEDIA_WITH_VIDEODEV_SDL)
+  list(APPEND _pj_found_pkgs SDL2)
+endif()
+
+include(Pj/PackageRoot)
+
+# CMake leaves the folders of dependencies out of the installed libraries'
+# RPATH, so a dependency taken from a root is not found there unless asked
+if(BUILD_SHARED_LIBS AND UNIX AND NOT CMAKE_CROSSCOMPILING
+   AND NOT DEFINED CMAKE_INSTALL_RPATH_USE_LINK_PATH)
+  set(_pj_rooted "")
+  foreach(_pkg IN LISTS _pj_found_pkgs)
+    pj_package_root_given(${_pkg} _root)
+    if(_root OR (_pkg STREQUAL "OpenSSL" AND OPENSSL_ROOT_DIR))
+      list(APPEND _pj_rooted ${_pkg})
+    endif()
+  endforeach()
+  if(CMAKE_PREFIX_PATH)
+    list(APPEND _pj_rooted "CMAKE_PREFIX_PATH")
+  endif()
+  if(_pj_rooted)
+    list(JOIN _pj_rooted ", " _pj_rooted)
+    message(STATUS "[!] The installed shared libraries will not find the "
+      "dependencies from a root (${_pj_rooted}); "
+      "set CMAKE_INSTALL_RPATH_USE_LINK_PATH=ON to record their folders")
+  endif()
+  unset(_pj_rooted)
+  unset(_root)
+endif()
+
+set(_pj_found_paths "")
+get_cmake_property(_pj_cache_vars CACHE_VARIABLES)
+foreach(_var IN LISTS _pj_cache_vars)
+  get_property(_type CACHE ${_var} PROPERTY TYPE)
+  get_property(_value CACHE ${_var} PROPERTY VALUE)
+  if(NOT _type MATCHES "^(FILEPATH|PATH)$" OR _value STREQUAL ""
+     OR _value MATCHES "-NOTFOUND$")
+    continue()
+  endif()
+  # Not what the toolchain provides (Apple SDK frameworks, the NDK or a cross
+  # sysroot): there is one of each, and the consumer may build with another SDK
+  set(_in_sysroot FALSE)
+  if(CMAKE_SYSROOT)
+    cmake_path(IS_PREFIX CMAKE_SYSROOT "${_value}" NORMALIZE _in_sysroot)
+  endif()
+  if(_in_sysroot OR _value MATCHES "/System/Library/Frameworks/")
+    continue()
+  endif()
+  # FindFFMPEG finds more components than pjmedia links
+  if(_var MATCHES "^FFMPEG_([A-Za-z0-9]+)_"
+     AND NOT CMAKE_MATCH_1 IN_LIST PJ_FFMPEG_COMPONENTS)
+    continue()
+  endif()
+  # Find modules name their entries in either case: OPUS_LIBRARY, UUID_...
+  foreach(_pkg IN LISTS _pj_found_pkgs)
+    pj_package_owns_var(${_pkg} ${_var} _owns)
+    if(_owns)
+      # A bracket the value cannot close
+      set(_eq "=")
+      string(FIND "${_value}]" "]${_eq}]" _pos)
+      while(NOT _pos EQUAL -1)
+        string(APPEND _eq "=")
+        string(FIND "${_value}]" "]${_eq}]" _pos)
+      endwhile()
+      string(APPEND _pj_found_paths
+        "_pj_use_found(${_var} [${_eq}[${_value}]${_eq}])\n"
+      )
+      break()
+    endif()
+  endforeach()
+endforeach()
+# Written as it is (a substitution pass could alter a path with "@" in it),
+# and only when changed
+set(_pj_found_paths
+  "# Generated by the pjproject build; see PjConfig.cmake\n${_pj_found_paths}")
+set(_pj_found_paths_file "${CMAKE_CURRENT_BINARY_DIR}/PjFoundPaths.cmake")
+set(_previous "")
+if(EXISTS "${_pj_found_paths_file}")
+  file(READ "${_pj_found_paths_file}" _previous)
+endif()
+if(NOT _pj_found_paths STREQUAL _previous)
+  file(WRITE "${_pj_found_paths_file}" "${_pj_found_paths}")
+endif()
+unset(_previous)
+unset(_pj_found_paths_file)
+unset(_pj_found_paths)
+unset(_pj_found_pkgs)
+unset(_pj_cache_vars)
+unset(_owns)
+unset(_in_sysroot)
+unset(_type)
+unset(_value)
+unset(_pkg)
+unset(_eq)
+unset(_pos)
 
 install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/${PJ_CMAKE_CONFIG_FILE}"
   "${CMAKE_CURRENT_BINARY_DIR}/${PJ_CMAKE_CONFIG_VERSION_FILE}"
   "${CMAKE_CURRENT_BINARY_DIR}/PjDeps.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/PjFoundPaths.cmake"
 
   DESTINATION "${PJ_CMAKE_INSTALL_DIR}"
   COMPONENT PjDevelopment
@@ -505,7 +1034,7 @@ install(FILES
 # ##############################################################################
 # pkg-config file
 
-# The libraries in link order; pjsua2 needs PJ_WITH_CXX
+# The libraries in link order; pjsua2 needs PJ_BUILD_PJSUA2
 set(_pj_pc_libs
   pjsua-lib pjsip-ua pjsip-simple pjsip
   pjmedia-codec pjmedia-videodev pjmedia-audiodev pjmedia
@@ -519,4 +1048,27 @@ pj_generate_pkgconfig(
   "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
   ${_pj_pc_libs}
 )
+
+# ##############################################################################
+# Convenience targets, as make's. Only in a build of pjproject itself: inside
+# another project (add_subdirectory(), FetchContent) these global names could
+# clash with the parent's own, and its install manifest is the parent's.
+if(pjproject_IS_TOP_LEVEL)
+  # lib: the libraries only, without the applications and tests
+  add_custom_target(lib DEPENDS ${_pj_pc_libs})
+
+  # uninstall: remove what `cmake --install` installed
+  add_custom_target(uninstall
+    COMMAND "${CMAKE_COMMAND}"
+      "-DPJ_INSTALL_MANIFEST=${CMAKE_CURRENT_BINARY_DIR}/install_manifest.txt"
+      -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/Uninstall.cmake"
+    VERBATIM
+  )
+endif()
 unset(_pj_pc_libs)
+
+# A <Pkg>_ROOT is searched first, not only: point out what came from elsewhere
+include(Pj/PackageRoot)
+pj_warn_outside_package_roots()
+# and when cross-compiling, a root outside the find root is not searched at all
+pj_warn_rerooted_package_roots()

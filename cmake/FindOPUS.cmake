@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_check_modules(PC_OPUS QUIET opus)
+  pj_pkg_search_module(PC_OPUS QUIET opus)
   set(OPUS_VERSION ${PC_OPUS_VERSION})
 endif()
 
@@ -22,11 +23,21 @@ find_library(OPUS_LIBRARY
 )
 mark_as_advanced(OPUS_LIBRARY)
 
+if(OPUS_INCLUDE_DIR AND OPUS_LIBRARY)
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(OPUS
+    FUNCTION opus_repacketizer_get_size
+    LIBRARIES "${OPUS_LIBRARY}"
+    STATIC_LIBS m
+  )
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(OPUS
   REQUIRED_VARS
     OPUS_LIBRARY
     OPUS_INCLUDE_DIR
+    OPUS_USABLE
   VERSION_VAR
     OPUS_VERSION
 )
@@ -43,6 +54,8 @@ if(OPUS_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${OPUS_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${OPUS_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(OPUS::OPUS OPUS_LIBRARY)
   endif()
 endif()
 

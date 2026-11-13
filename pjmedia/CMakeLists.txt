@@ -1,17 +1,10 @@
+list(APPEND CMAKE_MESSAGE_CONTEXT "pjmedia")
+
 # ##############################################################################
 # Module options
 
 include(Pj/Option)
 include(CMakeDependentOption)
-
-macro(import_if_or_set opt failure_value package)
-  if(${opt})
-    find_package(${package} ${ARGN})
-    if(NOT ${package}_FOUND)
-      pj_force_set(${opt} ${failure_value} "${package} was not found")
-    endif()
-  endif()
-endmacro()
 
 #
 # General features
@@ -24,10 +17,13 @@ cmake_dependent_option(PJMEDIA_WITH_SRTP
 )
 
 # Include resampling implementation
-# an earlier configure forced this to none when libresample was left out
+# an earlier configure forced this to none when libresample was left out;
+# libsamplerate, when unusable, waits for a new root as the other libraries
 get_property(_pj_doc CACHE PJMEDIA_WITH_RESAMPLE PROPERTY HELPSTRING)
-if(_pj_doc MATCHES "\\(forced\\)$")
+if(_pj_doc MATCHES "\\(forced\\)$" AND
+   NOT "$CACHE{_PJ_PJMEDIA_WITH_RESAMPLE_UNFORCED}" STREQUAL "libsamplerate")
   unset(PJMEDIA_WITH_RESAMPLE CACHE)
+  unset(_PJ_PJMEDIA_WITH_RESAMPLE_UNFORCED CACHE)
 endif()
 unset(_pj_doc)
 pj_option(PJMEDIA_WITH_RESAMPLE "Enable resampling implementation"
@@ -36,12 +32,21 @@ pj_option(PJMEDIA_WITH_RESAMPLE "Enable resampling implementation"
   ALLOWED_VALUES none libresample libsamplerate speex
 )
 
+# The resampler searches without pj_find_optional(), and before the Speex
+# AEC's search for SpeexDSP, so a changed root is followed from here
+pj_retry_on_new_root(PJMEDIA_WITH_RESAMPLE SampleRate)
+pj_retry_on_new_root(PJMEDIA_WITH_SPEEX_AEC SpeexDSP)
+
 if(PJMEDIA_WITH_RESAMPLE STREQUAL "libresample")
   if(NOT TARGET Pj::Dep::Resample)
     pj_force_set(PJMEDIA_WITH_RESAMPLE "none" "libresample not found")
   endif()
 elseif(PJMEDIA_WITH_RESAMPLE STREQUAL "libsamplerate")
-  find_package(SampleRate REQUIRED)
+  find_package(SampleRate ${PJ_FIND_QUIET})
+  if(NOT SampleRate_FOUND)
+    pj_force_set(PJMEDIA_WITH_RESAMPLE "none"
+      "libsamplerate not found or cannot be linked")
+  endif()
 elseif(PJMEDIA_WITH_RESAMPLE STREQUAL "speex")
   if(NOT TARGET Pj::Dep::Speex)
     message(FATAL_ERROR "Resampling backend cannot be set to `speex`, \
@@ -78,7 +83,7 @@ cmake_dependent_option(PJMEDIA_WITH_SPEEX_AEC
 if(PJMEDIA_WITH_SPEEX_AEC)
   get_target_property(_pj_speex_provider Pj::Dep::Speex PJ_DEP_PROVIDER)
   if(_pj_speex_provider STREQUAL "system")
-    import_if_or_set(PJMEDIA_WITH_SPEEX_AEC OFF SpeexDSP)
+    pj_find_optional(PJMEDIA_WITH_SPEEX_AEC OFF SpeexDSP)
     set(_pj_speex_aec_needs_speexdsp ${PJMEDIA_WITH_SPEEX_AEC})
   endif()
   unset(_pj_speex_provider)
@@ -97,15 +102,25 @@ cmake_dependent_option(PJMEDIA_WITH_WEBRTC_AEC
   "TARGET Pj::Dep::WebRTC" OFF
 )
 
-cmake_dependent_option(PJMEDIA_WITH_WEBRTC_AEC3
-  "Enable WebRTC Acoustic Echo Cancellation 3 (WebRTC AEC3) support" ON
-  "TARGET Pj::Dep::WebRTC_AEC3" OFF
-)
+# PJMEDIA_WITH_WEBRTC_AEC3 is declared in third_party/CMakeLists.txt, which
+# imports the library only when it is ON. Keep the option visible when its
+# provider is none or C++ is off. third_party already said why when it left
+# the library out.
+if(NOT TARGET Pj::Dep::WebRTC_AEC3)
+  get_property(_pj_aec3_left_out GLOBAL PROPERTY PJ_WEBRTC_AEC3_LEFT_OUT)
+  if(PJMEDIA_WITH_WEBRTC_AEC3 AND NOT _pj_aec3_left_out)
+    message(STATUS
+      "[!] WebRTC AEC3 needs PJ_WITH_CXX and a provider. leaving it out")
+  endif()
+  unset(_pj_aec3_left_out)
+  set(PJMEDIA_WITH_WEBRTC_AEC3 OFF)
+endif()
 
 #
 # Video support
 #
 
+# The default for PJMEDIA_HAS_VIDEO, which config_site.h can override
 option(PJMEDIA_WITH_VIDEO "Enable video support" ON)
 
 # libyuv
@@ -123,7 +138,7 @@ cmake_dependent_option(PJMEDIA_WITH_FFMPEG
 set(ffmpeg_libs_required avutil)
 set(ffmpeg_libs_optional swscale avcodec avformat avdevice)
 
-import_if_or_set(PJMEDIA_WITH_FFMPEG OFF
+pj_find_optional(PJMEDIA_WITH_FFMPEG OFF
   FFMPEG
     COMPONENTS ${ffmpeg_libs_required}
     OPTIONAL_COMPONENTS ${ffmpeg_libs_optional}
@@ -170,67 +185,114 @@ cmake_dependent_option(PJMEDIA_WITH_ILBC_CODEC
 # G.722 codec
 option(PJMEDIA_WITH_G722_CODEC "Enable G.722 codec" ON)
 
-# G.7221 codec
+# G.722.1 codec: off by default, as with autoconf, for licensing reasons (the
+# user must obtain a license from Poly). It is enabled with this option or, as
+# documented, with PJMEDIA_HAS_G7221_CODEC in config_site.h, which is checked on
+# every configure and must also get the library linked.
 cmake_dependent_option(PJMEDIA_WITH_G7221_CODEC
-  "Enable G.7221 codec" ON
+  "Enable G.722.1 codec (licensed by Poly)" OFF
   "TARGET Pj::Dep::G7221" OFF
 )
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+  "${PROJECT_SOURCE_DIR}/pjlib/include/pj/config_site.h"
+)
+block(SCOPE_FOR VARIABLES PROPAGATE _pj_link_g7221)
+  include(CheckSourceCompiles)
+  set(CMAKE_REQUIRED_INCLUDES "${PROJECT_SOURCE_DIR}/pjlib/include")
+  set(CMAKE_REQUIRED_DEFINITIONS -DPJ_AUTOCONF=1)
+  set(CMAKE_REQUIRED_QUIET ON)
+  unset(PJ_CONFIG_SITE_HAS_G7221 CACHE)
+  check_source_compiles(C [[
+#include <pj/config_site.h>
+#if !defined(PJMEDIA_HAS_G7221_CODEC) || !PJMEDIA_HAS_G7221_CODEC
+#  error G.722.1 not enabled
+#endif
+int main(void) { return 0; }
+]] PJ_CONFIG_SITE_HAS_G7221)
+
+  set(_pj_link_g7221 ${PJMEDIA_WITH_G7221_CODEC})
+  if(PJ_CONFIG_SITE_HAS_G7221)
+    if(TARGET Pj::Dep::G7221)
+      message(STATUS "G.722.1 codec enabled by config_site.h")
+      set(_pj_link_g7221 ON)
+    else()
+      message(SEND_ERROR
+        "config_site.h enables G.722.1 (PJMEDIA_HAS_G7221_CODEC) but there "
+        "is no G.722.1 library: PJ_DEP_G7221=${PJ_DEP_G7221}"
+      )
+    endif()
+  endif()
+endblock()
+# a provider alone does not enable it
+if(NOT _pj_link_g7221)
+  pj_dep_fail_if_asked(PJ_DEP_G7221 "" "bundled"
+    "G.722.1 is off; enable it with -DPJMEDIA_WITH_G7221_CODEC=ON or "
+    "PJMEDIA_HAS_G7221_CODEC in config_site.h")
+endif()
 
 # OpenCore AMR-NB Codecs
 option(PJMEDIA_WITH_OPENCORE_AMRNB_CODEC "Enable OpenCore AMR-NB codec" ON)
-import_if_or_set(PJMEDIA_WITH_OPENCORE_AMRNB_CODEC OFF OpenCoreAMRNB)
+pj_find_optional(PJMEDIA_WITH_OPENCORE_AMRNB_CODEC OFF OpenCoreAMRNB)
 
 # OpenCore AMR-WB Codecs
 option(PJMEDIA_WITH_OPENCORE_AMRWB_CODEC "Enable OpenCore AMR-WB codec" ON)
-import_if_or_set(PJMEDIA_WITH_OPENCORE_AMRWB_CODEC OFF OpenCoreAMRWB)
-import_if_or_set(PJMEDIA_WITH_OPENCORE_AMRWB_CODEC OFF VisualOnAMRWBEnc)
+# Re-enabling the option must also re-import OpenCoreAMRWB
+pj_retry_on_new_root(PJMEDIA_WITH_OPENCORE_AMRWB_CODEC VisualOnAMRWBEnc)
+pj_find_optional(PJMEDIA_WITH_OPENCORE_AMRWB_CODEC OFF OpenCoreAMRWB)
+pj_find_optional(PJMEDIA_WITH_OPENCORE_AMRWB_CODEC OFF VisualOnAMRWBEnc)
 
 # Silk codec
 option(PJMEDIA_WITH_SILK_CODEC "Enable Skype Silk" ON)
-import_if_or_set(PJMEDIA_WITH_SILK_CODEC OFF Silk)
+pj_find_optional(PJMEDIA_WITH_SILK_CODEC OFF Silk)
 
 # OPUS codec
 option(PJMEDIA_WITH_OPUS_CODEC "Enable OPUS codec" ON)
-import_if_or_set(PJMEDIA_WITH_OPUS_CODEC OFF OPUS)
+pj_find_optional(PJMEDIA_WITH_OPUS_CODEC OFF OPUS)
 
 # BCG729 codec
 option(PJMEDIA_WITH_BCG729_CODEC "Enable BCG729 codec" ON)
-import_if_or_set(PJMEDIA_WITH_BCG729_CODEC OFF BCG729)
+pj_find_optional(PJMEDIA_WITH_BCG729_CODEC OFF BCG729)
+
+# Intel IPP codecs, as autoconf --enable-ipp: this only links IPP and its
+# speech codec samples, the codecs are enabled with PJMEDIA_HAS_INTEL_IPP in
+# config_site.h. See cmake/FindIPP.cmake for where to point the build.
+option(PJMEDIA_WITH_INTEL_IPP "Link the Intel IPP codec libraries" OFF)
+pj_find_optional(PJMEDIA_WITH_INTEL_IPP OFF IPP)
 
 # Lyra codec
 cmake_dependent_option(PJMEDIA_WITH_LYRA_CODEC
   "Enable Lyra codec" ON
   "PJ_WITH_CXX" OFF
 )
-import_if_or_set(PJMEDIA_WITH_LYRA_CODEC OFF Lyra)
+pj_find_optional(PJMEDIA_WITH_LYRA_CODEC OFF Lyra)
 
 # Android MediaCodec codecs
 cmake_dependent_option(PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC
   "Enable Android MediaCodec codecs" ON
   "ANDROID;PJ_WITH_CXX" OFF
 )
-import_if_or_set(PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC OFF MediaNDK)
+pj_find_optional(PJMEDIA_WITH_ANDROID_MEDIACODEC_CODEC OFF MediaNDK)
 
 # Google VP8/VP9 codecs
 cmake_dependent_option(PJMEDIA_WITH_VPX_CODEC
   "Enable VPX codecs support" ON
   "PJMEDIA_WITH_VIDEO" OFF
 )
-import_if_or_set(PJMEDIA_WITH_VPX_CODEC OFF VPX)
+pj_find_optional(PJMEDIA_WITH_VPX_CODEC OFF VPX)
 
 # VideoToolbox H.264 codec
 cmake_dependent_option(PJMEDIA_WITH_VID_TOOLBOX_CODEC
   "Enable VideoToolbox H.264 codec" ON
   "PJMEDIA_WITH_VIDEO;APPLE" OFF
 )
-import_if_or_set(PJMEDIA_WITH_VID_TOOLBOX_CODEC OFF VideoToolbox)
+pj_find_optional(PJMEDIA_WITH_VID_TOOLBOX_CODEC OFF VideoToolbox)
 
 # OpenH264 codecs
 cmake_dependent_option(PJMEDIA_WITH_OPEN_H264_CODEC
   "Enable OpenH264 codecs support" ON
   "PJMEDIA_WITH_VIDEO;PJ_WITH_CXX" OFF
 )
-import_if_or_set(PJMEDIA_WITH_OPEN_H264_CODEC OFF OpenH264)
+pj_find_optional(PJMEDIA_WITH_OPEN_H264_CODEC OFF OpenH264)
 
 #
 # Audio device
@@ -262,21 +324,23 @@ cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_OBOE
   "Enable OBOE audio device backend" ON
   "PJMEDIA_WITH_AUDIODEV;ANDROID;PJ_WITH_CXX" OFF
 )
-import_if_or_set(PJMEDIA_WITH_AUDIODEV_OBOE OFF Oboe)
+pj_find_optional(PJMEDIA_WITH_AUDIODEV_OBOE OFF Oboe)
 
 # macOS/iOS CoreAudio backend
 cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_COREAUDIO
   "Enable CoreAudio audio device backend" ON
   "PJMEDIA_WITH_AUDIODEV;APPLE" OFF
 )
-import_if_or_set(PJMEDIA_WITH_AUDIODEV_COREAUDIO OFF CoreAudio)
+pj_find_optional(PJMEDIA_WITH_AUDIODEV_COREAUDIO OFF CoreAudio)
 
-# Advanced Linux Sound Architecture (ALSA) backend
+# Advanced Linux Sound Architecture (ALSA) backend, looked for on any Unix
+# without a native backend, as autoconf
 cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_ALSA
   "Enable ALSA audio device backend" ON
-  "PJMEDIA_WITH_AUDIODEV;LINUX" OFF
+  "PJMEDIA_WITH_AUDIODEV;UNIX;NOT APPLE;NOT ANDROID;NOT CYGWIN" OFF
 )
-import_if_or_set(PJMEDIA_WITH_AUDIODEV_ALSA OFF ALSA)
+# CMake's FindALSA has no link test of its own
+pj_find_optional(PJMEDIA_WITH_AUDIODEV_ALSA OFF ALSA LINK_FUNCTION snd_pcm_open)
 
 # Windows MultiMedia Extensions (WMME) backend
 cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_WMME
@@ -299,7 +363,14 @@ cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_WASAPI
   "Enable WASAPI audio device backend" OFF
   "PJMEDIA_WITH_AUDIODEV;WIN32 OR CYGWIN OR MINGW;PJ_WITH_CXX" OFF
 )
-import_if_or_set(PJMEDIA_WITH_AUDIODEV_WASAPI OFF WASAPI)
+pj_find_optional(PJMEDIA_WITH_AUDIODEV_WASAPI OFF WASAPI)
+
+# PortAudio backend, opt-in as autoconf --with-external-pa
+cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_PORTAUDIO
+  "Enable PortAudio audio device backend" OFF
+  "PJMEDIA_WITH_AUDIODEV" OFF
+)
+pj_find_optional(PJMEDIA_WITH_AUDIODEV_PORTAUDIO OFF PortAudio)
 
 #
 # Video device
@@ -333,10 +404,10 @@ cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_OPENGL
 # visible outside this directory.
 if(IOS OR ANDROID)
   set(PJ_OPENGL_PACKAGE OpenGLES CACHE INTERNAL "OpenGL package to find")
-  import_if_or_set(PJMEDIA_WITH_VIDEODEV_OPENGL OFF OpenGLES)
+  pj_find_optional(PJMEDIA_WITH_VIDEODEV_OPENGL OFF OpenGLES)
 else()
   set(PJ_OPENGL_PACKAGE OpenGL CACHE INTERNAL "OpenGL package to find")
-  import_if_or_set(PJMEDIA_WITH_VIDEODEV_OPENGL OFF OpenGL COMPONENTS GLES2)
+  pj_find_optional(PJMEDIA_WITH_VIDEODEV_OPENGL OFF OpenGL COMPONENTS GLES2)
 endif()
 
 if(PJ_OPENGL_PACKAGE STREQUAL OpenGLES)
@@ -362,21 +433,24 @@ cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_SDL
   "Enable SDL video device backend" ON
   "PJMEDIA_WITH_VIDEODEV" OFF
 )
-import_if_or_set(PJMEDIA_WITH_VIDEODEV_SDL OFF SDL2)
+# SDL's own package does no link test; reject a library built for another
+# target, e.g. the host's in a cross build
+pj_find_optional(PJMEDIA_WITH_VIDEODEV_SDL OFF SDL2 QUIET
+  LINK_FUNCTION SDL_Init LINK_LIBRARIES SDL2::SDL2)
 
 # Darwin (AVFoundation) capture backend
 cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_DARWIN
   "Enable AVFoundation video capture backend" ON
   "PJMEDIA_WITH_VIDEODEV;APPLE" OFF
 )
-import_if_or_set(PJMEDIA_WITH_VIDEODEV_DARWIN OFF AVFoundation)
+pj_find_optional(PJMEDIA_WITH_VIDEODEV_DARWIN OFF AVFoundation)
 
-# Metal backend
+# Metal backend, used whenever the frameworks are found, as autoconf
 cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_METAL
-  "Enable Metal video device backend" OFF
+  "Enable Metal video device backend" ON
   "PJMEDIA_WITH_VIDEODEV;APPLE" OFF
 )
-import_if_or_set(PJMEDIA_WITH_VIDEODEV_METAL OFF Metal)
+pj_find_optional(PJMEDIA_WITH_VIDEODEV_METAL OFF Metal)
 
 # QT backend
 cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_QT
@@ -384,18 +458,25 @@ cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_QT
   "PJMEDIA_WITH_VIDEODEV;APPLE" OFF
 )
 
-# V4L2 backend
+# V4L2 backend, also available on the BSDs through libv4l2
 cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_V4L2
   "Enable V4L2 video device backend" ON
-  "PJMEDIA_WITH_VIDEODEV;LINUX" OFF
+  "PJMEDIA_WITH_VIDEODEV;UNIX;NOT APPLE;NOT ANDROID" OFF
 )
-import_if_or_set(PJMEDIA_WITH_VIDEODEV_V4L2 OFF V4L2)
+pj_find_optional(PJMEDIA_WITH_VIDEODEV_V4L2 OFF V4L2)
 
-# DirectShow backend
+# DirectShow backend, the Windows camera capture: on by default on Windows, as
+# autoconf does for MinGW with video
+if(WIN32)
+  set(_pj_dshow_default ON)
+else()
+  set(_pj_dshow_default OFF)
+endif()
 cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_DSHOW
-  "Enable DirectShow video device backend" OFF
+  "Enable DirectShow video device backend" ${_pj_dshow_default}
   "PJMEDIA_WITH_VIDEODEV;WIN32 OR CYGWIN OR MINGW;PJ_WITH_CXX" OFF
 )
+unset(_pj_dshow_default)
 
 # The top-level directory writes these into PjConfig.cmake. An option whose
 # cmake_dependent_option() condition turned false on a reconfigure is OFF in
@@ -512,8 +593,6 @@ target_sources(pjmedia
       include/pjmedia/codec.h
       include/pjmedia/conference.h
       include/pjmedia/config.h
-      include/pjmedia/config_auto.h.cm
-      include/pjmedia/config_auto.h.in
       include/pjmedia/converter.h
       include/pjmedia/delaybuf.h
       include/pjmedia/doxygen.h
@@ -576,32 +655,19 @@ target_sources(pjmedia
 #
 
 # compile definitions
+# Only what autoconf always passes on the command line too; SRTP, the Speex
+# AEC and FFmpeg are written into pjmedia/config_auto.h, see below
 target_compile_definitions(pjmedia
   PUBLIC
-    # srtp
-    PJMEDIA_HAS_SRTP=$<BOOL:${PJMEDIA_WITH_SRTP}>
-
-    # the null audio device changes what RTCP-XR reports (rtcp_xr.c)
-    PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO=$<BOOL:${PJMEDIA_WITH_AUDIODEV_NULL}>
-
     # resampling backend
     PJMEDIA_RESAMPLE_IMP=PJMEDIA_RESAMPLE_$<UPPER_CASE:${PJMEDIA_WITH_RESAMPLE}>
 
     # aec
-    PJMEDIA_HAS_SPEEX_AEC=$<BOOL:${PJMEDIA_WITH_SPEEX_AEC}>
     PJMEDIA_HAS_WEBRTC_AEC=$<BOOL:${PJMEDIA_WITH_WEBRTC_AEC}>
-    PJMEDIA_WEBRTC_AEC_USE_MOBILE=$<OR:$<BOOL:${ANDROID}>,$<BOOL:${WINDOWS_PHONE}>>
     PJMEDIA_HAS_WEBRTC_AEC3=$<BOOL:${PJMEDIA_WITH_WEBRTC_AEC3}>
 
     # video
-    PJMEDIA_HAS_VIDEO=$<BOOL:${PJMEDIA_WITH_VIDEO}>
     PJMEDIA_HAS_LIBYUV=$<BOOL:${PJMEDIA_WITH_LIBYUV}>
-    PJMEDIA_HAS_FFMPEG=$<BOOL:${PJMEDIA_WITH_FFMPEG}>
-    PJMEDIA_HAS_LIBAVUTIL=$<BOOL:${PJMEDIA_WITH_FFMPEG_AVUTIL}>
-    PJMEDIA_HAS_LIBSWSCALE=$<BOOL:${PJMEDIA_WITH_FFMPEG_SWSCALE}>
-    PJMEDIA_HAS_LIBAVCODEC=$<BOOL:${PJMEDIA_WITH_FFMPEG_AVCODEC}>
-    PJMEDIA_HAS_LIBAVFORMAT=$<BOOL:${PJMEDIA_WITH_FFMPEG_AVFORMAT}>
-    PJMEDIA_HAS_LIBAVDEVICE=$<BOOL:${PJMEDIA_WITH_FFMPEG_AVDEVICE}>
 )
 
 # external srtp values
@@ -625,6 +691,50 @@ endif()
 block(SCOPE_FOR VARIABLES)
   # G711 codec
   set(PJMEDIA_HAS_G711_CODEC ${PJMEDIA_WITH_G711_CODEC})
+
+  # srtp
+  set(PJMEDIA_HAS_SRTP ${PJMEDIA_WITH_SRTP})
+
+  # aec
+  set(PJMEDIA_HAS_SPEEX_AEC ${PJMEDIA_WITH_SPEEX_AEC})
+
+  # video
+  set(PJMEDIA_HAS_VIDEO ${PJMEDIA_WITH_VIDEO})
+  set(PJMEDIA_HAS_FFMPEG ${PJMEDIA_WITH_FFMPEG})
+  set(PJMEDIA_HAS_LIBAVUTIL ${PJMEDIA_WITH_FFMPEG_AVUTIL})
+  set(PJMEDIA_HAS_LIBSWSCALE ${PJMEDIA_WITH_FFMPEG_SWSCALE})
+  set(PJMEDIA_HAS_LIBAVCODEC ${PJMEDIA_WITH_FFMPEG_AVCODEC})
+  set(PJMEDIA_HAS_LIBAVFORMAT ${PJMEDIA_WITH_FFMPEG_AVFORMAT})
+  set(PJMEDIA_HAS_LIBAVDEVICE ${PJMEDIA_WITH_FFMPEG_AVDEVICE})
+
+  # audio device backends, read by pjmedia-audiodev/config.h; the null
+  # device also changes what RTCP-XR reports (rtcp_xr.c)
+  set(PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO ${PJMEDIA_WITH_AUDIODEV_NULL})
+  set(PJMEDIA_AUDIO_DEV_HAS_ANDROID_JNI ${PJMEDIA_WITH_AUDIODEV_JNI})
+  set(PJMEDIA_AUDIO_DEV_HAS_OPENSL ${PJMEDIA_WITH_AUDIODEV_OPENSL})
+  set(PJMEDIA_AUDIO_DEV_HAS_OBOE ${PJMEDIA_WITH_AUDIODEV_OBOE})
+  set(PJMEDIA_AUDIO_DEV_HAS_COREAUDIO ${PJMEDIA_WITH_AUDIODEV_COREAUDIO})
+  set(PJMEDIA_AUDIO_DEV_HAS_ALSA ${PJMEDIA_WITH_AUDIODEV_ALSA})
+  set(PJMEDIA_AUDIO_DEV_HAS_WASAPI ${PJMEDIA_WITH_AUDIODEV_WASAPI})
+
+  # video device backends, read by pjmedia-videodev/config.h
+  set(PJMEDIA_VIDEO_DEV_HAS_AVI ${PJMEDIA_WITH_VIDEODEV_AVI})
+  set(PJMEDIA_VIDEO_DEV_HAS_OPENGL ${PJMEDIA_WITH_VIDEODEV_OPENGL})
+  set(PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES ${PJMEDIA_WITH_VIDEODEV_OPENGL})
+  set(PJMEDIA_VIDEO_DEV_HAS_FFMPEG ${PJMEDIA_WITH_VIDEODEV_FFMPEG})
+  set(PJMEDIA_VIDEO_DEV_HAS_SDL ${PJMEDIA_WITH_VIDEODEV_SDL})
+  set(PJMEDIA_VIDEO_DEV_HAS_DARWIN ${PJMEDIA_WITH_VIDEODEV_DARWIN})
+  set(PJMEDIA_VIDEO_DEV_HAS_METAL ${PJMEDIA_WITH_VIDEODEV_METAL})
+  set(PJMEDIA_VIDEO_DEV_HAS_QT ${PJMEDIA_WITH_VIDEODEV_QT})
+  set(PJMEDIA_VIDEO_DEV_HAS_V4L2 ${PJMEDIA_WITH_VIDEODEV_V4L2})
+  set(PJMEDIA_VIDEO_DEV_HAS_DSHOW ${PJMEDIA_WITH_VIDEODEV_DSHOW})
+  set(PJMEDIA_VIDEO_DEV_HAS_ANDROID ${PJMEDIA_WITH_VIDEODEV_ANDROID})
+  set(PJMEDIA_VIDEO_DEV_HAS_ANDROID_OPENGL 0)
+  set(PJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL 0)
+  if(PJMEDIA_WITH_VIDEODEV_OPENGL)
+    set(PJMEDIA_VIDEO_DEV_HAS_ANDROID_OPENGL ${ANDROID})
+    set(PJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL ${IOS})
+  endif()
 
   # write configured header
   configure_file(
@@ -661,11 +771,15 @@ target_link_libraries(pjmedia
   PUBLIC
     # pjlib - PUBLIC to propagate PJ_AUTOCONF and other compile definitions
     pjlib
-    # srtp - PUBLIC to propagate shared library dependency to consumers
-    $<$<BOOL:${PJMEDIA_WITH_SRTP}>:Pj::Dep::SRTP>
+    # included by the public headers
+    pjlib-util pjnath
   PRIVATE
     # project
-    pjlib-ssl pjlib-util pjnath
+    pjlib-ssl
+
+    # srtp: used by transport_srtp.c only. Its header directory holds generic
+    # names (sha1.h, aes.h, err.h), which must not reach applications.
+    $<$<BOOL:${PJMEDIA_WITH_SRTP}>:Pj::Dep::SRTP>
 
     # resampling backend
     $<$<STREQUAL:${PJMEDIA_WITH_RESAMPLE},libresample>:Pj::Dep::Resample>
@@ -686,7 +800,23 @@ target_link_libraries(pjmedia
     $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVCODEC}>:FFMPEG::avcodec>
     $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVFORMAT}>:FFMPEG::avformat>
     $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVDEVICE}>:FFMPEG::avdevice>
+  INTERFACE
+    # ...but srtp's library must: a shared libpjmedia needs it found when an
+    # application links, and the installed package does not record where a
+    # system one is
+    $<LINK_ONLY:$<$<BOOL:${PJMEDIA_WITH_SRTP}>:Pj::Dep::SRTP>>
 )
+
+# The bundled AEC3 exports all its WebRTC OS/arch definitions, a system one
+# only those its headers require; add the rest, as the make build does.
+if(PJMEDIA_WITH_WEBRTC_AEC3)
+  get_target_property(_pj_aec3_provider Pj::Dep::WebRTC_AEC3 PJ_DEP_PROVIDER)
+  if(_pj_aec3_provider STREQUAL "system")
+    include(DetectWebRTCParameters)
+    target_compile_definitions(pjmedia PRIVATE ${WEBRTC_COMPILE_DEFINITIONS})
+  endif()
+  unset(_pj_aec3_provider)
+endif()
 
 if (NOT (WIN32 OR CYGWIN OR MINGW))
   # pjmedia calls libm functions (sin(), cos(), ...), a separate library on
@@ -718,6 +848,7 @@ add_library(pjmedia-codec
   src/pjmedia-codec/h263_packetizer.c
   src/pjmedia-codec/h264_packetizer.c
   src/pjmedia-codec/ilbc.c
+  src/pjmedia-codec/ipp_codecs.c
   src/pjmedia-codec/l16.c
   $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-codec/lyra.cpp>
   src/pjmedia-codec/opencore_amr.c
@@ -725,6 +856,7 @@ add_library(pjmedia-codec
   $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-codec/openh264.cpp>
   $<$<BOOL:${PJMEDIA_WITH_VID_TOOLBOX_CODEC}>:src/pjmedia-codec/vid_toolbox.m>
   src/pjmedia-codec/opus.c
+  src/pjmedia-codec/passthrough.c
   src/pjmedia-codec/silk.c
   src/pjmedia-codec/vpx_packetizer.c
   src/pjmedia-codec/vpx.c
@@ -745,8 +877,6 @@ target_sources(pjmedia-codec
         include/pjmedia-codec/audio_codecs.h
         include/pjmedia-codec/bcg729.h
         include/pjmedia-codec/config.h
-        include/pjmedia-codec/config_auto.h.cm
-        include/pjmedia-codec/config_auto.h.in
         include/pjmedia-codec/ffmpeg_vid_codecs.h
         include/pjmedia-codec/g722.h
         include/pjmedia-codec/g7221.h
@@ -775,13 +905,12 @@ target_sources(pjmedia-codec
 #
 
 # lyra codec models path
-if(PJMEDIA_WITH_LYRA)
-  get_target_property(lyra_model_path Lyra::Lyra LYRA_PREFIX)
+if(PJMEDIA_WITH_LYRA_CODEC)
+  get_target_property(lyra_model_path Lyra::Lyra LYRA_MODEL_PATH)
   if(lyra_model_path)
-    cmake_path(APPEND lyra_model_path "model_coeffs")
     target_compile_definitions(pjmedia-codec
       PRIVATE
-        "PJMEDIA_CODEC_LYRA_DEFAULT_MODEL_PATH=${lyra_model_path}"
+        "PJMEDIA_CODEC_LYRA_DEFAULT_MODEL_PATH=\"${lyra_model_path}\""
     )
   endif()
 endif()
@@ -802,10 +931,18 @@ block(SCOPE_FOR VARIABLES)
   set(PJMEDIA_HAS_BCG729 ${PJMEDIA_WITH_BCG729_CODEC})
   set(PJMEDIA_HAS_LYRA_CODEC ${PJMEDIA_WITH_LYRA_CODEC})
 
-  # Always treat `GSM` as external (even if bundled is used), to
-  # prevent using relative path include.
+  # A system GSM is used via <gsm.h> (FindGSM covers the gsm/ subdir), as
+  # autoconf --with-external-gsm; the bundled one via its relative path.
+  set(PJMEDIA_EXTERNAL_GSM_CODEC 0)
+  if(PJMEDIA_WITH_GSM_CODEC)
+    get_target_property(_pj_gsm_provider Pj::Dep::GSM PJ_DEP_PROVIDER)
+    if(_pj_gsm_provider STREQUAL "system")
+      set(PJMEDIA_EXTERNAL_GSM_CODEC 1)
+    endif()
+    unset(_pj_gsm_provider)
+  endif()
   set(PJMEDIA_EXTERNAL_GSM_GSM_H 0)
-  set(PJMEDIA_EXTERNAL_GSM_H 1)
+  set(PJMEDIA_EXTERNAL_GSM_H ${PJMEDIA_EXTERNAL_GSM_CODEC})
 
   # video codecs
   set(PJMEDIA_HAS_VPX_CODEC ${PJMEDIA_WITH_VPX_CODEC})
@@ -846,27 +983,29 @@ target_include_directories(pjmedia-codec BEFORE
 #
 
 if(APPLE AND PJMEDIA_WITH_ILBC_CODEC)
-  find_package(AudioToolbox)
+  pj_find_package(AudioToolbox)
 endif()
 
 target_link_libraries(pjmedia-codec
   PUBLIC
-    pjlib
+    # pjmedia: included by the public headers
+    pjlib pjmedia
   PRIVATE
     # project
-    pjlib-util pjmedia
+    pjlib-util
 
     # audio codecs
     $<$<BOOL:${PJMEDIA_WITH_GSM_CODEC}>:Pj::Dep::GSM>
     $<$<BOOL:${PJMEDIA_WITH_SPEEX_CODEC}>:Pj::Dep::Speex>
     $<$<BOOL:${PJMEDIA_WITH_ILBC_CODEC}>:Pj::Dep::iLBC>
-    $<$<BOOL:${PJMEDIA_WITH_G7221_CODEC}>:Pj::Dep::G7221>
+    $<$<BOOL:${_pj_link_g7221}>:Pj::Dep::G7221>
     $<$<BOOL:${PJMEDIA_WITH_OPENCORE_AMRNB_CODEC}>:OpenCoreAMRNB::OpenCoreAMRNB>
     $<$<BOOL:${PJMEDIA_WITH_OPENCORE_AMRWB_CODEC}>:OpenCoreAMRWB::OpenCoreAMRWB>
     $<$<BOOL:${PJMEDIA_WITH_OPENCORE_AMRWB_CODEC}>:VisualOnAMRWBEnc::VisualOnAMRWBEnc>
     $<$<BOOL:${PJMEDIA_WITH_SILK_CODEC}>:Silk::Silk>
     $<$<BOOL:${PJMEDIA_WITH_OPUS_CODEC}>:OPUS::OPUS>
     $<$<BOOL:${PJMEDIA_WITH_BCG729_CODEC}>:BCG729::BCG729>
+    $<$<BOOL:${PJMEDIA_WITH_INTEL_IPP}>:IPP::IPP>
     $<$<BOOL:${PJMEDIA_WITH_LYRA_CODEC}>:Lyra::Lyra>
 
     # video codecs
@@ -893,10 +1032,14 @@ add_library(pjmedia-audiodev
   src/pjmedia-audiodev/audiodev.c
   src/pjmedia-audiodev/audiotest.c
   src/pjmedia-audiodev/android_jni_dev.c
+  src/pjmedia-audiodev/bb10_dev.c
+  src/pjmedia-audiodev/bdimad_dev.c
   src/pjmedia-audiodev/errno.c
+  src/pjmedia-audiodev/legacy_dev.c
   src/pjmedia-audiodev/null_dev.c
-  src/pjmedia-audiodev/opensl_dev.c
   $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-audiodev/oboe_dev.cpp>
+  src/pjmedia-audiodev/opensl_dev.c
+  src/pjmedia-audiodev/pa_dev.c
   $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-audiodev/wasapi_dev.cpp>
   $<$<BOOL:${PJ_WITH_CXX}>:src/pjmedia-audiodev/wasapi_dev_win.cpp>
   src/pjmedia-audiodev/wmme_dev.c
@@ -921,6 +1064,13 @@ target_sources(pjmedia-audiodev
       include/pjmedia-audiodev/wasapi.h
 )
 
+# Reads pjmedia/config_auto.h too, so it needs the build directory first as
+# well, see pjmedia above
+target_include_directories(pjmedia-audiodev BEFORE
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+)
+
 #
 # pjmedia-audiodev - configuration
 #
@@ -928,21 +1078,10 @@ target_sources(pjmedia-audiodev
 # compile definitions
 target_compile_definitions(pjmedia-audiodev
   PUBLIC
-    PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO=$<BOOL:${PJMEDIA_WITH_AUDIODEV_NULL}>
-    PJMEDIA_AUDIO_DEV_HAS_ANDROID_JNI=$<BOOL:${PJMEDIA_WITH_AUDIODEV_JNI}>
-    PJMEDIA_AUDIO_DEV_HAS_OPENSL=$<BOOL:${PJMEDIA_WITH_AUDIODEV_OPENSL}>
-    PJMEDIA_AUDIO_DEV_HAS_OBOE=$<BOOL:${PJMEDIA_WITH_AUDIODEV_OBOE}>
-    PJMEDIA_AUDIO_DEV_HAS_COREAUDIO=$<BOOL:${PJMEDIA_WITH_AUDIODEV_COREAUDIO}>
-    PJMEDIA_AUDIO_DEV_HAS_ALSA=$<BOOL:${PJMEDIA_WITH_AUDIODEV_ALSA}>
+    # Always passed by autoconf too; the other backends are written into
+    # pjmedia/config_auto.h, see above
     PJMEDIA_AUDIO_DEV_HAS_WMME=$<BOOL:${PJMEDIA_WITH_AUDIODEV_WMME}>
-    PJMEDIA_AUDIO_DEV_HAS_WASAPI=$<BOOL:${PJMEDIA_WITH_AUDIODEV_WASAPI}>
-
-    # unsupported backends
-    PJMEDIA_AUDIO_DEV_HAS_BDIMAD=0
-    PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=0
-    PJMEDIA_AUDIO_DEV_HAS_BB10=0
-    PJMEDIA_AUDIO_DEV_HAS_SYMB_APS=0
-    PJMEDIA_AUDIO_DEV_HAS_LEGACY_DEVICE=0
+    PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=$<BOOL:${PJMEDIA_WITH_AUDIODEV_PORTAUDIO}>
 )
 
 #
@@ -951,18 +1090,24 @@ target_compile_definitions(pjmedia-audiodev
 
 target_link_libraries(pjmedia-audiodev
   PUBLIC
-    pjlib
+    # pjmedia: included by the public headers
+    pjlib pjmedia
   PRIVATE
     # project
-    pjlib-util pjmedia
+    pjlib-util
 
     # audio backends
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_ALSA}>:ALSA::ALSA>
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_COREAUDIO}>:CoreAudio::CoreAudio>
-    $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_OPENSL}>:OpenSLES>
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_OBOE}>:Oboe::Oboe>
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_WASAPI}>:WASAPI::WASAPI>
-    # TODO: add remaining APIs' dependencies
+    $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_PORTAUDIO}>:PortAudio::PortAudio>
+    # pjlib links winmm privately, which a shared pjlib does not pass on
+    $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_WMME}>:winmm>
+
+    # OpenSL ES, for opensl_dev.c (on with PJMEDIA_WITH_AUDIODEV_OPENSL or
+    # config_site.h) and Oboe; autoconf links it on Android too
+    $<$<BOOL:${ANDROID}>:OpenSLES>
 )
 
 # ##############################################################################
@@ -1008,34 +1153,18 @@ target_sources(pjmedia-videodev
         include/pjmedia-videodev/videodev_imp.h
 )
 
+# Reads pjmedia/config_auto.h too, so it needs the build directory first as
+# well, see pjmedia above
+target_include_directories(pjmedia-videodev BEFORE
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+)
+
 #
 # pjmedia-videodev - configuration
 #
 
-# compile definitions
-target_compile_definitions(pjmedia-videodev
-  PUBLIC
-    PJMEDIA_VIDEO_DEV_HAS_AVI=$<BOOL:${PJMEDIA_WITH_VIDEODEV_AVI}>
-    PJMEDIA_VIDEO_DEV_HAS_OPENGL=$<BOOL:${PJMEDIA_WITH_VIDEODEV_OPENGL}>
-    PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES=$<BOOL:${PJMEDIA_WITH_VIDEODEV_OPENGL}>
-    PJMEDIA_VIDEO_DEV_HAS_FFMPEG=$<BOOL:${PJMEDIA_WITH_VIDEODEV_FFMPEG}>
-    PJMEDIA_VIDEO_DEV_HAS_SDL=$<BOOL:${PJMEDIA_WITH_VIDEODEV_SDL}>
-    PJMEDIA_VIDEO_DEV_HAS_DARWIN=$<BOOL:${PJMEDIA_WITH_VIDEODEV_DARWIN}>
-    PJMEDIA_VIDEO_DEV_HAS_METAL=$<BOOL:${PJMEDIA_WITH_VIDEODEV_METAL}>
-    PJMEDIA_VIDEO_DEV_HAS_QT=$<BOOL:${PJMEDIA_WITH_VIDEODEV_QT}>
-    PJMEDIA_VIDEO_DEV_HAS_V4L2=$<BOOL:${PJMEDIA_WITH_VIDEODEV_V4L2}>
-    PJMEDIA_VIDEO_DEV_HAS_DSHOW=$<BOOL:${PJMEDIA_WITH_VIDEODEV_DSHOW}>
-    PJMEDIA_VIDEO_DEV_HAS_ANDROID=$<BOOL:${PJMEDIA_WITH_VIDEODEV_ANDROID}>
-)
-
-# os-specific opengl
-if(PJMEDIA_WITH_VIDEODEV_OPENGL)
-  target_compile_definitions(pjmedia-videodev
-    PUBLIC
-      PJMEDIA_VIDEO_DEV_HAS_ANDROID_OPENGL=$<BOOL:${ANDROID}>
-      PJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL=$<BOOL:${IOS}>
-  )
-endif()
+# The backends are written into pjmedia/config_auto.h, see above
 
 #
 # pjmedia-videodev - dependencies
@@ -1043,10 +1172,11 @@ endif()
 
 target_link_libraries(pjmedia-videodev
   PUBLIC
-    pjlib
+    # pjmedia: included by the public headers
+    pjlib pjmedia
   PRIVATE
     # project
-    pjlib-util pjmedia
+    pjlib-util
 
     # video backends
     $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_OPENGL}>:${PJ_OPENGL_LINK_TARGETS}>
@@ -1060,6 +1190,26 @@ target_link_libraries(pjmedia-videodev
     # transitive deps
     $<$<BOOL:${PJMEDIA_WITH_LIBYUV}>:Pj::Dep::YUV>
 )
+
+# sdl_dev.c asks MSVC to link "sdl2.lib" with #pragma comment(lib); name the
+# file actually linked instead, which differs per configuration (SDL2d.lib in
+# a vcpkg Debug build)
+if(MSVC AND PJMEDIA_WITH_VIDEODEV_SDL)
+  set(_pj_sdl_target SDL2::SDL2)
+  get_target_property(_pj_sdl_aliased SDL2::SDL2 ALIASED_TARGET)
+  if(_pj_sdl_aliased)
+    set(_pj_sdl_target ${_pj_sdl_aliased})
+  endif()
+  get_target_property(_pj_sdl_type ${_pj_sdl_target} TYPE)
+  if(NOT _pj_sdl_type STREQUAL "INTERFACE_LIBRARY")
+    target_compile_definitions(pjmedia-videodev PRIVATE
+      "PJMEDIA_SDL_LIB=\"$<TARGET_LINKER_FILE_NAME:${_pj_sdl_target}>\""
+    )
+  endif()
+  unset(_pj_sdl_target)
+  unset(_pj_sdl_aliased)
+  unset(_pj_sdl_type)
+endif()
 
 # DirectShow capture is the only user of the bundled BaseClasses, so they are
 # compiled in here rather than built and installed as a library of their own.
@@ -1078,7 +1228,10 @@ if(PJMEDIA_WITH_VIDEODEV_DSHOW)
     ${_baseclasses}/wxutil.cpp
   )
   target_sources(pjmedia-videodev PRIVATE ${_baseclasses_sources})
-  target_include_directories(pjmedia-videodev
+  # SYSTEM, and -w below: Microsoft's sample code is not ours to clean up,
+  # and under GCC's -Wall its headers would bury the warnings of the code
+  # including them (dshowclasses.cpp)
+  target_include_directories(pjmedia-videodev SYSTEM
     PRIVATE
       $<BUILD_INTERFACE:${_baseclasses}>
   )
@@ -1092,7 +1245,7 @@ if(PJMEDIA_WITH_VIDEODEV_DSHOW)
     set_source_files_properties(${_baseclasses_sources}
       TARGET_DIRECTORY pjmedia-videodev
       PROPERTIES
-        COMPILE_OPTIONS "-fpermissive"
+        COMPILE_OPTIONS "-fpermissive;-w"
         COMPILE_DEFINITIONS "__STRSAFE__NO_INLINE=1"
     )
     target_link_libraries(pjmedia-videodev PRIVATE oleaut32 uuid)
@@ -1135,8 +1288,46 @@ if(BUILD_TESTING)
       pjmedia-videodev
   )
 
-  add_test(NAME pjmedia-test COMMAND pjmedia-test)
+  # The test data is found relative to pjmedia/build, where make runs it
+  add_test(NAME pjmedia-test
+    COMMAND pjmedia-test
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build"
+  )
 endif()
+
+# The third-party libraries linked above, under the same conditions: the
+# top-level CMakeLists.txt installs and exports only these
+set(_pj_used_deps)
+if(PJMEDIA_WITH_SRTP)
+  list(APPEND _pj_used_deps SRTP)
+endif()
+if(PJMEDIA_WITH_RESAMPLE STREQUAL "libresample")
+  list(APPEND _pj_used_deps Resample)
+endif()
+if(PJMEDIA_WITH_RESAMPLE STREQUAL "speex" OR PJMEDIA_WITH_SPEEX_AEC
+   OR PJMEDIA_WITH_SPEEX_CODEC)
+  list(APPEND _pj_used_deps Speex)
+endif()
+if(PJMEDIA_WITH_WEBRTC_AEC)
+  list(APPEND _pj_used_deps WebRTC)
+endif()
+if(PJMEDIA_WITH_WEBRTC_AEC3)
+  list(APPEND _pj_used_deps WebRTC_AEC3)
+endif()
+if(PJMEDIA_WITH_LIBYUV)
+  list(APPEND _pj_used_deps YUV)
+endif()
+if(PJMEDIA_WITH_GSM_CODEC)
+  list(APPEND _pj_used_deps GSM)
+endif()
+if(PJMEDIA_WITH_ILBC_CODEC)
+  list(APPEND _pj_used_deps iLBC)
+endif()
+if(_pj_link_g7221)
+  list(APPEND _pj_used_deps G7221)
+endif()
+set_property(GLOBAL PROPERTY PJ_USED_DEPS ${_pj_used_deps})
+unset(_pj_used_deps)
 
 # For the pkg-config file: the files of the dependencies found here
 pj_pc_remember_imported_targets()

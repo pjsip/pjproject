@@ -367,6 +367,7 @@ build_abi() {
         -DBUILD_TESTING=OFF \
         -DPJ_BUILD_SWIG_JAVA=ON \
         -DPJSUA2_JAVA_OUTPUT_DIR="$STAGE/java" \
+        -DPJLIB_WITH_SSL=openssl \
         \
         -DCMAKE_FIND_ROOT_PATH="$prefix" \
         -DOPENSSL_ROOT_DIR="$prefix" \

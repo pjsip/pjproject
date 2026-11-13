@@ -6,6 +6,19 @@ include(CMakeFindDependencyMacro)
 set(_pj_saved_module_path "${CMAKE_MODULE_PATH}")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
 
+# Search for each dependency where pjproject found it, unless the consumer
+# already chose, or that file is gone, e.g. this install was copied to
+# another machine. Normal variables, unset after the searches below, so that
+# nothing is left in the consumer's cache for its own find_package() calls.
+set(_pj_found_vars "")
+function(_pj_use_found var value)
+  if(NOT DEFINED ${var} AND EXISTS "${value}")
+    set(${var} "${value}" PARENT_SCOPE)
+    set(_pj_found_vars ${_pj_found_vars} ${var} PARENT_SCOPE)
+  endif()
+endfunction()
+include("${CMAKE_CURRENT_LIST_DIR}/PjFoundPaths.cmake")
+
 # Threading: not needed when pjlib was built with PJLIB_WITH_THREADS=OFF
 if(@PJLIB_WITH_THREADS@)
   find_dependency(Threads)
@@ -16,16 +29,21 @@ if(@PJ_APPLE@)
   find_dependency(AppleFoundation)
 endif()
 
-# SSL/TLS backend (mutually exclusive). OpenSSL is also needed by the bundled
-# srtp, for AES-GCM, whichever backend pjlib uses.
-set(_pj_ssl_backend "@PJLIB_WITH_SSL@")
-if(_pj_ssl_backend STREQUAL "openssl" OR
-   ("@PJ_SRTP_WITH_OPENSSL@" AND "@PJ_DEP_SRTP@" STREQUAL "bundled"))
-  find_package(OpenSSL COMPONENTS Crypto SSL MODULE QUIET)
+# SSL/TLS backend (mutually exclusive). OpenSSL's libcrypto is also needed by
+# the bundled srtp, for AES-GCM, whichever backend pjlib uses.
+set(_pj_ssl_backend "@PJ_SSL_BACKEND@")
+if(_pj_ssl_backend STREQUAL "openssl")
+  set(_pj_openssl_components Crypto SSL)
+elseif("@PJ_SRTP_WITH_OPENSSL@")
+  set(_pj_openssl_components Crypto)
+endif()
+if(_pj_openssl_components)
+  find_package(OpenSSL COMPONENTS ${_pj_openssl_components} MODULE QUIET)
   if(NOT OpenSSL_FOUND AND NOT OPENSSL_FOUND)
-    find_dependency(OpenSSL COMPONENTS Crypto SSL)
+    find_dependency(OpenSSL COMPONENTS ${_pj_openssl_components})
   endif()
 endif()
+unset(_pj_openssl_components)
 if(_pj_ssl_backend STREQUAL "gnutls")
   find_dependency(GnuTLS)
 elseif(_pj_ssl_backend STREQUAL "mbedtls")
@@ -55,6 +73,9 @@ if(@PJMEDIA_WITH_AUDIODEV_OBOE@)
 endif()
 if(@PJMEDIA_WITH_AUDIODEV_WASAPI@)
   find_dependency(WASAPI)
+endif()
+if(@PJMEDIA_WITH_AUDIODEV_PORTAUDIO@)
+  find_dependency(PortAudio)
 endif()
 
 # Video device backends
@@ -90,7 +111,7 @@ unset(_pj_resample)
 
 # FFMPEG
 if(@PJMEDIA_WITH_FFMPEG@)
-  find_dependency(FFMPEG)
+  find_dependency(FFMPEG COMPONENTS @PJ_FFMPEG_COMPONENTS@)
 endif()
 
 # Audio/video codecs
@@ -109,6 +130,9 @@ if(@PJMEDIA_WITH_OPUS_CODEC@)
 endif()
 if(@PJMEDIA_WITH_BCG729_CODEC@)
   find_dependency(BCG729)
+endif()
+if(@PJMEDIA_WITH_INTEL_IPP@)
+  find_dependency(IPP)
 endif()
 if(@PJMEDIA_WITH_LYRA_CODEC@)
   find_dependency(Lyra)
@@ -137,3 +161,9 @@ include("${CMAKE_CURRENT_LIST_DIR}/@PJ_CMAKE_TARGETS_FILE@")
 
 # Recreate Pj::Dep::* alias targets for bundled/system dependencies
 include("${CMAKE_CURRENT_LIST_DIR}/PjDeps.cmake")
+
+foreach(_pj_var IN LISTS _pj_found_vars)
+  unset(${_pj_var})
+endforeach()
+unset(_pj_var)
+unset(_pj_found_vars)

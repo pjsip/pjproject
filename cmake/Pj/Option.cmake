@@ -1,3 +1,5 @@
+include(Pj/PackageRoot)
+
 function(pj_option variable help_text)
   # parse options
   set(options REQUIRED)
@@ -42,10 +44,21 @@ function(pj_option variable help_text)
 endfunction()
 
 function(pj_force_set variable value)
+  # A normal variable of that name, e.g. set by a parent project before
+  # add_subdirectory(), would hide the cache entry from the caller; other
+  # directories get the value through pj_add_subdirectory()
+  set(${variable} "${value}" PARENT_SCOPE)
+  set_property(GLOBAL APPEND PROPERTY PJ_FORCED_VARIABLES ${variable})
+
   # If not a cache variable, set a new internal value
   if(NOT DEFINED CACHE{${variable}})
     set(${variable} "${value}" CACHE INTERNAL "(forced)")
     return()
+  endif()
+
+  # remember the value before the first forcing, for pj_retry_on_new_root()
+  if(NOT DEFINED CACHE{_PJ_${variable}_UNFORCED})
+    set(_PJ_${variable}_UNFORCED "${${variable}}" CACHE INTERNAL "")
   endif()
 
   # update value
@@ -59,6 +72,199 @@ function(pj_force_set variable value)
 
   # show warning
   if(ARGC GREATER 2)
+    if(value STREQUAL "")
+      set(value [[""]])
+    endif()
     message(STATUS "[!] ${ARGV2}. setting ${variable} to ${value}")
   endif()
+endfunction()
+
+# pj_add_subdirectory(<dir> [<add_subdirectory args>...])
+#
+# add_subdirectory(), then set in the calling directory's scope every option
+# pj_force_set() has changed so far, e.g. PJNATH_WITH_UPNP to OFF when libupnp
+# is not found. A normal variable of the same name in the calling scope, such
+# as one a parent project sets before add_subdirectory(pjproject), would
+# otherwise still hold the old value for the directories added after <dir>
+# and for the package files written at the top level. A macro, so that it
+# sets them in the caller's scope.
+macro(pj_add_subdirectory dir)
+  add_subdirectory(${dir} ${ARGN})
+  get_property(_pj_forced GLOBAL PROPERTY PJ_FORCED_VARIABLES)
+  foreach(_pj_var IN LISTS _pj_forced)
+    set(${_pj_var} "$CACHE{${_pj_var}}")
+  endforeach()
+  unset(_pj_forced)
+  unset(_pj_var)
+endmacro()
+
+# pj_retry_on_new_root(<option> <package>)
+#
+# When <package>_ROOT or <PACKAGE>_ROOT (variable or environment), or
+# <PACKAGE>_ROOT_DIR as CMake's FindOpenSSL takes it, differs from the previous
+# configure, drop the cached search results of <package> and restore <option>
+# if pj_force_set() turned it off, so find_package() searches the new root,
+# like re-running configure with --with-<package>=DIR.
+function(pj_retry_on_new_root option package)
+  string(TOUPPER "${package}" _upper)
+  set(_root "${${package}_ROOT}|${${_upper}_ROOT}|$ENV{${package}_ROOT}|$ENV{${_upper}_ROOT}")
+  # only when set, so the value recorded for other packages does not change
+  if(${_upper}_ROOT_DIR OR DEFINED ENV{${_upper}_ROOT_DIR})
+    string(APPEND _root "|${${_upper}_ROOT_DIR}|$ENV{${_upper}_ROOT_DIR}")
+  endif()
+  # whether a cross build searches the root at all (PJ_USE_ROOTS_IN_FIND)
+  if(_root MATCHES "[^|]")
+    string(APPEND _root "|${_PJ_ROOTS_SEARCHED}")
+  endif()
+
+  if(NOT DEFINED CACHE{_PJ_${package}_ROOT})
+    set(_PJ_${package}_ROOT "${_root}" CACHE INTERNAL "")
+    return()
+  endif()
+  if(_root STREQUAL "$CACHE{_PJ_${package}_ROOT}")
+    return()
+  endif()
+  set(_PJ_${package}_ROOT "${_root}" CACHE INTERNAL "")
+
+  get_cmake_property(_vars CACHE_VARIABLES)
+  foreach(_var IN LISTS _vars)
+    pj_package_owns_var(${package} ${_var} _owns)
+    if(_owns AND NOT _var MATCHES "_ROOT(_DIR)?$")
+      get_property(_type CACHE ${_var} PROPERTY TYPE)
+      if(_type MATCHES "^(FILE)?PATH$")
+        unset(${_var} CACHE)
+      endif()
+    endif()
+  endforeach()
+  unset(${package}_USABLE CACHE)
+
+  if(DEFINED CACHE{_PJ_${option}_UNFORCED})
+    set_property(CACHE ${option} PROPERTY VALUE "$CACHE{_PJ_${option}_UNFORCED}")
+    get_property(_doc CACHE ${option} PROPERTY HELPSTRING)
+    string(REGEX REPLACE " ?\\(forced\\)$" "" _doc "${_doc}")
+    set_property(CACHE ${option} PROPERTY HELPSTRING "${_doc}")
+    unset(_PJ_${option}_UNFORCED CACHE)
+    message(STATUS "${package} root changed, retrying ${option}")
+  endif()
+endfunction()
+
+
+# pj_find_package(<package> [<find_package args>...])
+#
+# find_package() for a library that has no option of its own, printing one
+# "Checking if <package> is available - yes/no" line. What the search tried
+# and found shows with --log-level=VERBOSE (PJ_FIND_QUIET).
+macro(pj_find_package package)
+  message(VERBOSE "Checking if ${package} is available")
+  find_package(${package} ${PJ_FIND_QUIET} ${ARGN})
+  if(${package}_FOUND)
+    message(STATUS "Checking if ${package} is available - yes")
+  else()
+    message(STATUS "Checking if ${package} is available - no")
+  endif()
+endmacro()
+
+
+# pj_find_optional(<option> <failure_value> <package> [<find_package args>...]
+#                  [LINK_FUNCTION <function> [LINK_LIBRARIES <lib>...]])
+#
+# When <option> is on, look for <package> and print one "Checking if <package>
+# is available - yes/no" line naming <option>. When it is not found, set
+# <option> to <failure_value>, shown on the same line. What the search tried
+# and found shows with --log-level=VERBOSE (PJ_FIND_QUIET). LINK_FUNCTION is
+# for a package without a link test of its own, e.g. CMake's FindALSA or a
+# package's config file: <package> then also counts as found only when
+# <function> links against LINK_LIBRARIES (default <package>_LIBRARIES).
+macro(pj_find_optional opt failure_value package)
+  cmake_parse_arguments(_pj_fo "" "LINK_FUNCTION" "LINK_LIBRARIES" ${ARGN})
+  pj_retry_on_new_root(${opt} ${package})
+  if(${opt})
+    message(VERBOSE "Checking if ${package} is available")
+    find_package(${package} ${PJ_FIND_QUIET} ${_pj_fo_UNPARSED_ARGUMENTS})
+    set(_pj_fo_found ${${package}_FOUND})
+    if(_pj_fo_found AND _pj_fo_LINK_FUNCTION)
+      if(NOT _pj_fo_LINK_LIBRARIES)
+        set(_pj_fo_LINK_LIBRARIES ${${package}_LIBRARIES})
+      endif()
+      include(Pj/CheckLibraryUsable)
+      pj_check_library_usable(${package}
+        FUNCTION ${_pj_fo_LINK_FUNCTION}
+        LIBRARIES ${_pj_fo_LINK_LIBRARIES}
+      )
+      set(_pj_fo_found ${${package}_USABLE})
+    endif()
+    if(_pj_fo_found)
+      message(STATUS "Checking if ${package} is available - yes (${opt})")
+    else()
+      message(STATUS
+        "Checking if ${package} is available - no (${opt} ${failure_value})")
+      pj_force_set(${opt} ${failure_value})
+    endif()
+  endif()
+  unset(_pj_fo_LINK_FUNCTION)
+  unset(_pj_fo_LINK_LIBRARIES)
+  unset(_pj_fo_UNPARSED_ARGUMENTS)
+  unset(_pj_fo_KEYWORDS_MISSING_VALUES)
+  unset(_pj_fo_found)
+endmacro()
+
+# pj_dep_choice(<option> <package> <out-var>)
+#
+# The provider a PJ_DEP_<X> <option> asks for: bundled, system or none as
+# set; for auto (or unset) system when a root of <package> is given to CMake,
+# auto otherwise. A value a build folder from before auto stored as its
+# default (_PJ_<option>_DEFAULT) was not set by the user and counts as auto.
+# With an empty <package> a root decides nothing.
+function(pj_dep_choice option package out)
+  set(_value "${${option}}")
+  if(_value STREQUAL "" OR (DEFINED CACHE{_PJ_${option}_DEFAULT}
+     AND _value STREQUAL "$CACHE{_PJ_${option}_DEFAULT}"))
+    set(_value auto)
+  endif()
+  if(_value STREQUAL "auto" AND package)
+    include(Pj/PackageRoot)
+    pj_package_root_given(${package} _root)
+    if(_root)
+      set(_value system)
+    endif()
+  endif()
+  set(${out} ${_value} PARENT_SCOPE)
+endfunction()
+
+# pj_dep_fail_if_asked(<option> <package> <providers> <reason>...)
+#
+# For a library this build leaves out: stop when the provider <option> asks
+# for (pj_dep_choice()) is one of <providers>, which cannot be used, with
+# <reason> (the strings joined) and the values that can be set instead. auto
+# and none leave the library out. Reading the option also keeps CMake from
+# reporting a -D<option>=none as unused.
+function(pj_dep_fail_if_asked option package providers)
+  pj_dep_choice(${option} "${package}" _choice)
+  if(NOT _choice IN_LIST providers)
+    return()
+  endif()
+  set(_reason "")
+  math(EXPR _last "${ARGC} - 1")
+  foreach(_i RANGE 3 ${_last})
+    string(APPEND _reason "${ARGV${_i}}")
+  endforeach()
+  get_property(_values CACHE ${option} PROPERTY STRINGS)
+  if(NOT _values)
+    set(_values auto bundled system none)
+  endif()
+  list(REMOVE_ITEM _values ${providers})
+  if(_choice STREQUAL "${${option}}")
+    set(_asked "${option}=${_choice}")
+  else()
+    set(_asked "${option}=auto, with a ${package} root given,")
+    list(REMOVE_ITEM _values auto)
+    list(APPEND _values "auto without the root")
+  endif()
+  list(POP_BACK _values _last_value)
+  list(JOIN _values ", " _set)
+  if(_set)
+    string(APPEND _set " or ")
+  endif()
+  message(FATAL_ERROR "${_asked} cannot be used: ${_reason}. "
+    "Set ${option} to ${_set}${_last_value}.")
 endfunction()

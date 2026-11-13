@@ -1,3 +1,5 @@
+include(Pj/PackageRoot)
+
 function(_srtp_find version)
   if(DEFINED SRTP_FIND_VERSION_MAJOR
       AND NOT SRTP_FIND_VERSION_MAJOR EQUAL ${version})
@@ -17,7 +19,7 @@ function(_srtp_find version)
 
   find_package(PkgConfig QUIET)
   if(PKG_CONFIG_FOUND)
-    pkg_search_module(PC_SRTP QUIET ${libs})
+    pj_pkg_search_module(PC_SRTP QUIET ${libs})
   endif()
 
   find_path(SRTP_INCLUDE_DIR
@@ -55,11 +57,39 @@ if(NOT SRTP_FOUND)
   _srtp_find(1)
 endif()
 
+# Usable when srtp_init() links, as autoconf checks. Which of srtp_deinit()
+# and srtp_shutdown() it has picks how pjmedia ends it. All three are checked
+# again when the library changes, e.g. with a new SRTP_ROOT.
+if(SRTP_INCLUDE_DIR AND SRTP_LIBRARY)
+  include(Pj/CheckLibraryUsable)
+  # once check_function_exists() results, which were never checked again
+  unset(SRTP_HAS_DEINIT CACHE)
+  unset(SRTP_HAS_SHUTDOWN CACHE)
+  if(SRTP_FIND_QUIETLY)
+    set(_srtp_quiet QUIET)
+  endif()
+  foreach(_srtp_fn IN ITEMS init deinit shutdown)
+    string(TOUPPER "${_srtp_fn}" _srtp_upper)
+    pj_check_library_usable(SRTP_${_srtp_upper} ${_srtp_quiet}
+      FUNCTION srtp_${_srtp_fn}
+      LIBRARIES "${SRTP_LIBRARY}"
+      DEFINITIONS ${PC_SRTP_CFLAGS_OTHER}
+    )
+  endforeach()
+  set(SRTP_USABLE ${SRTP_INIT_USABLE})
+  set(SRTP_HAS_DEINIT ${SRTP_DEINIT_USABLE})
+  set(SRTP_HAS_SHUTDOWN ${SRTP_SHUTDOWN_USABLE})
+  unset(_srtp_quiet)
+  unset(_srtp_fn)
+  unset(_srtp_upper)
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(SRTP
   REQUIRED_VARS
     SRTP_INCLUDE_DIR
     SRTP_LIBRARY
+    SRTP_USABLE
   VERSION_VAR
     SRTP_VERSION
 )
@@ -68,21 +98,6 @@ if(SRTP_FOUND)
   set(SRTP_LIBRARIES ${SRTP_LIBRARY})
   set(SRTP_INCLUDE_DIRS ${SRTP_INCLUDE_DIR})
   set(SRTP_DEFINITIONS ${PC_SRTP_CFLAGS_OTHER})
-
-  # check for `srtp_deinit` and `srtp_shutdown`
-  block(SCOPE_FOR VARIABLES PROPAGATE SRTP_HAS_DEINIT SRTP_HAS_SHUTDOWN)
-    include(CheckFunctionExists)
-    include(CMakePushCheckState)
-
-    cmake_push_check_state(RESET)
-      set(CMAKE_REQUIRED_INCLUDES "${SRTP_INCLUDE_DIRS}")
-      set(CMAKE_REQUIRED_LIBRARIES "${SRTP_LIBRARIES}")
-      set(CMAKE_REQUIRED_DEFINITIONS "${SRTP_DEFINITIONS}")
-
-      check_function_exists(srtp_deinit SRTP_HAS_DEINIT)
-      check_function_exists(srtp_shutdown SRTP_HAS_SHUTDOWN)
-    cmake_pop_check_state()
-  endblock()
 
   if(NOT TARGET SRTP::SRTP)
     add_library(SRTP::SRTP UNKNOWN IMPORTED GLOBAL)
@@ -96,6 +111,8 @@ if(SRTP_FOUND)
       SRTP_HAS_SHUTDOWN "$<BOOL:${SRTP_HAS_SHUTDOWN}>"
       SRTP_VERSION_MAJOR "${SRTP_VERSION_MAJOR}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(SRTP::SRTP SRTP_LIBRARY)
   endif()
 endif()
 
