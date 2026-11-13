@@ -973,12 +973,24 @@ foreach(_var IN LISTS _pj_cache_vars)
   if(_in_sysroot OR _value MATCHES "/System/Library/Frameworks/")
     continue()
   endif()
+  # FindFFMPEG finds more components than pjmedia links
+  if(_var MATCHES "^FFMPEG_([A-Za-z0-9]+)_"
+     AND NOT CMAKE_MATCH_1 IN_LIST PJ_FFMPEG_COMPONENTS)
+    continue()
+  endif()
   # Find modules name their entries in either case: OPUS_LIBRARY, UUID_...
   foreach(_pkg IN LISTS _pj_found_pkgs)
     pj_package_owns_var(${_pkg} ${_var} _owns)
     if(_owns)
+      # A bracket the value cannot close
+      set(_eq "=")
+      string(FIND "${_value}]" "]${_eq}]" _pos)
+      while(NOT _pos EQUAL -1)
+        string(APPEND _eq "=")
+        string(FIND "${_value}]" "]${_eq}]" _pos)
+      endwhile()
       string(APPEND _pj_found_paths
-        "_pj_use_found(${_var} ${_type} [==[${_value}]==])\n"
+        "_pj_use_found(${_var} [${_eq}[${_value}]${_eq}])\n"
       )
       break()
     endif()
@@ -1006,6 +1018,8 @@ unset(_in_sysroot)
 unset(_type)
 unset(_value)
 unset(_pkg)
+unset(_eq)
+unset(_pos)
 
 install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/${PJ_CMAKE_CONFIG_FILE}"
