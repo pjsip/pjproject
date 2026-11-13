@@ -504,6 +504,14 @@
     #   define PJ_IOQUEUE_MAX_HANDLES           16
     #endif
 
+    /* Safe unregistration guards a key against another thread's callback
+     * and pre-allocates every key, 320 bytes each, when the I/O queue is
+     * created. Without threads there is nothing to guard against, so keys
+     * are allocated on registration from the registering object's pool
+     * and die with it.
+     */
+    #define PJ_IOQUEUE_HAS_SAFE_UNREG           PJ_HAS_THREADS
+
     #define PJ_CRC32_HAS_TABLES                 0
 
     /* pjlib's cipher table is filled from the suites Mbed TLS enables, a
@@ -562,7 +570,14 @@
      * up to its next class (..., 2048, 4096, 8192, 12288, 16384, ...), so
      * each is a class, with a small increment for whatever does not fit.
      */
-    #define PJSIP_POOL_LEN_ENDPT                8192
+    /* The endpoint pool holds about 11.6 KB when the I/O queue pre-allocates
+     * its keys (safe unregistration, above) and 4.2 KB when it does not.
+     */
+    #if PJ_IOQUEUE_HAS_SAFE_UNREG
+    #   define PJSIP_POOL_LEN_ENDPT             8192
+    #else
+    #   define PJSIP_POOL_LEN_ENDPT             4096
+    #endif
     #define PJSIP_POOL_INC_ENDPT                1024
     #define PJSIP_POOL_LEN_TDATA                4096
     #define PJSIP_POOL_INC_TDATA                1024

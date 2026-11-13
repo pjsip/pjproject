@@ -572,12 +572,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
 
     pj_ioqueue_unlock_key(key);
 
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
     /* Drain pending write callbacks. See #4864, #4878.
      * Must be done before clearing callbacks below.
      */
     ioqueue_drain_pending_writes(key);
-#endif
 
     /* Clear callback */
     key->cb.on_accept_complete = NULL;
