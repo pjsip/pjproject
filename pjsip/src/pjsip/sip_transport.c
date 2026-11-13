@@ -506,6 +506,14 @@ PJ_DEF(pj_status_t) pjsip_tx_data_create( pjsip_tpmgr *mgr,
     pj_ansi_snprintf(tdata->obj_name, sizeof(tdata->obj_name), "tdta%p", tdata);
     pj_memcpy(pool->obj_name, tdata->obj_name, sizeof(pool->obj_name));
 
+    /* The packet buffer now, while the pool's first block is still empty:
+     * allocated after the message's headers it would no longer fit there
+     * and the pool would grow by a block for it.
+     */
+    tdata->buf.start = (char*) pj_pool_alloc(pool, PJSIP_MAX_PKT_LEN);
+    tdata->buf.cur = tdata->buf.start;
+    tdata->buf.end = tdata->buf.start + PJSIP_MAX_PKT_LEN;
+
     status = pj_atomic_create(tdata->pool, 0, &tdata->ref_cnt);
     if (status != PJ_SUCCESS) {
         pjsip_endpt_release_pool( mgr->endpt, tdata->pool );

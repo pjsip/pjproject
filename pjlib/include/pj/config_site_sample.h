@@ -525,12 +525,37 @@
     #define PJSIP_MAX_DIALOG_COUNT              15
     #define PJSIP_MAX_TIMER_COUNT               32
 
-    /* Largest SIP message. An INVITE with a long SDP from a desktop UA,
-     * through a proxy, is about 2 KB. The stock 4000 is the size of every
-     * message buffer, of which there is one per transaction and transport.
+    /* Every transmit buffer, receive buffer, transaction, dialog and invite
+     * session carries one pointer per possible module. The sample registers
+     * 8 modules; pjsua-lib needs about 12.
+     */
+    #define PJSIP_MAX_MODULE                    16
+
+    /* Addresses a destination may resolve to, kept in every transmit buffer
+     * (52 bytes each). The stock 16 is for DNS SRV with many targets; a
+     * device that is given its server's address resolves to one.
+     */
+    #define PJSIP_MAX_RESOLVED_ADDRESSES        2
+
+    /* Queued media events, 72 bytes each in the event manager and again in
+     * a static scratch queue. Only posted events queue up, which audio
+     * never does; four covers nested publishes.
+     */
+    #define PJMEDIA_EVENT_MAX_EVENTS            4
+
+    /* A group lock without threads uses about 140 bytes of its own pool,
+     * so one 256-byte block holds it; with threads the two mutexes need a
+     * second block, the same 512 as the stock size.
+     */
+    #define PJ_GRP_LOCK_POOL_SIZE               256
+
+    /* Largest SIP message, sent or received. An INVITE with the SDP of a
+     * desktop UA offering many codecs, through a proxy, is about 2 KB. The
+     * stock 4000 is the size of every message buffer, of which there is one
+     * per transaction and transport.
      */
     #ifndef PJSIP_MAX_PKT_LEN
-    #   define PJSIP_MAX_PKT_LEN                2500
+    #   define PJSIP_MAX_PKT_LEN                2200
     #endif
 
     /* Pools sized to what they hold. The caching pool rounds an initial size

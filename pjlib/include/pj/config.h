@@ -690,6 +690,15 @@
 #  define PJ_GRP_LOCK_DEBUG     0
 #endif
 
+/**
+ * Initial size and increment of the pool each group lock creates for
+ * itself. The lock, its mutex, its reference counter and the handlers and
+ * locks added to it come out of it. Default: 512
+ */
+#ifndef PJ_GRP_LOCK_POOL_SIZE
+#  define PJ_GRP_LOCK_POOL_SIZE 512
+#endif
+
 
 /**
  * Numeric default stack size used by pjlib in legacy code paths and on
