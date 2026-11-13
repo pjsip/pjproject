@@ -217,15 +217,6 @@ if(BUILD_SHARED_LIBS)
       "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}"
     )
   endif()
-
-  # And the directories of dependencies found outside the system ones (a
-  # <Pkg>_ROOT, CMAKE_PREFIX_PATH): without them an application cannot link
-  # or start against the installed libraries. CMake leaves the system
-  # directories out. Not when cross-compiling, where the libraries run on
-  # another machine.
-  if(NOT DEFINED CMAKE_INSTALL_RPATH_USE_LINK_PATH AND NOT CMAKE_CROSSCOMPILING)
-    set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
-  endif()
 endif()
 
 # ##############################################################################
@@ -939,6 +930,31 @@ if(PJMEDIA_WITH_VIDEODEV_SDL)
 endif()
 
 include(Pj/PackageRoot)
+
+# CMake leaves the folders of dependencies out of the installed libraries'
+# RPATH, so a dependency taken from a root is not found there unless asked
+if(BUILD_SHARED_LIBS AND UNIX AND NOT CMAKE_CROSSCOMPILING
+   AND NOT DEFINED CMAKE_INSTALL_RPATH_USE_LINK_PATH)
+  set(_pj_rooted "")
+  foreach(_pkg IN LISTS _pj_found_pkgs)
+    pj_package_root_given(${_pkg} _root)
+    if(_root OR (_pkg STREQUAL "OpenSSL" AND OPENSSL_ROOT_DIR))
+      list(APPEND _pj_rooted ${_pkg})
+    endif()
+  endforeach()
+  if(CMAKE_PREFIX_PATH)
+    list(APPEND _pj_rooted "CMAKE_PREFIX_PATH")
+  endif()
+  if(_pj_rooted)
+    list(JOIN _pj_rooted ", " _pj_rooted)
+    message(STATUS "[!] The installed shared libraries will not find the "
+      "dependencies from a root (${_pj_rooted}); "
+      "set CMAKE_INSTALL_RPATH_USE_LINK_PATH=ON to record their folders")
+  endif()
+  unset(_pj_rooted)
+  unset(_root)
+endif()
+
 set(_pj_found_paths "")
 get_cmake_property(_pj_cache_vars CACHE_VARIABLES)
 foreach(_var IN LISTS _pj_cache_vars)
