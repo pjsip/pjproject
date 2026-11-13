@@ -551,11 +551,15 @@
      */
     #define PJMEDIA_EVENT_MAX_EVENTS            4
 
-    /* A group lock without threads uses about 140 bytes of its own pool,
-     * so one 256-byte block holds it; with threads the two mutexes need a
-     * second block, the same 512 as the stock size.
+    /* A group lock uses about 220 bytes of its own pool without threads
+     * and about 330 with them (the two mutexes), so one block of the
+     * matching size holds it.
      */
-    #define PJ_GRP_LOCK_POOL_SIZE               256
+    #if PJ_HAS_THREADS
+    #   define PJ_GRP_LOCK_POOL_SIZE            512
+    #else
+    #   define PJ_GRP_LOCK_POOL_SIZE            256
+    #endif
 
     /* Values an Allow, Supported, Require or Accept header can hold, in
      * every parsed or built one and in the two a dialog keeps for the
@@ -581,11 +585,11 @@
      * up to its next class (..., 2048, 4096, 8192, 12288, 16384, ...), so
      * each is a class, with a small increment for whatever does not fit.
      */
-    /* The endpoint pool holds about 11.6 KB when the I/O queue pre-allocates
-     * its keys (safe unregistration, above) and 4.2 KB when it does not.
+    /* The endpoint pool holds about 11.2 KB when the I/O queue pre-allocates
+     * its keys (safe unregistration, above) and 3.8 KB when it does not.
      */
     #if PJ_IOQUEUE_HAS_SAFE_UNREG
-    #   define PJSIP_POOL_LEN_ENDPT             8192
+    #   define PJSIP_POOL_LEN_ENDPT             12288
     #else
     #   define PJSIP_POOL_LEN_ENDPT             4096
     #endif
