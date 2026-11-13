@@ -557,6 +557,17 @@
      */
     #define PJ_GRP_LOCK_POOL_SIZE               256
 
+    /* Values an Allow, Supported, Require or Accept header can hold, in
+     * every parsed or built one and in the two a dialog keeps for the
+     * peer; a desktop UA sends about 12 methods. Extra values are ignored.
+     */
+    #define PJSIP_GENERIC_ARRAY_MAX_COUNT       16
+
+    /* Codecs the media endpoint can register, each a descriptor in the
+     * codec manager and an entry in every SDP negotiator. G.711 is two.
+     */
+    #define PJMEDIA_CODEC_MGR_MAX_CODECS        4
+
     /* Largest SIP message, sent or received. An INVITE with the SDP of a
      * desktop UA offering many codecs, through a proxy, is about 2 KB. The
      * stock 4000 is the size of every message buffer, of which there is one
@@ -684,9 +695,9 @@
     #define PJMEDIA_STREAM_SIZE                 8192
     #define PJMEDIA_STREAM_INC                  1024
     #if PJ_HAS_THREADS
-    #   define PJMEDIA_POOL_LEN_ENDPT           12288
+    #   define PJMEDIA_POOL_LEN_ENDPT           8192
     #else
-    #   define PJMEDIA_POOL_LEN_ENDPT           4096
+    #   define PJMEDIA_POOL_LEN_ENDPT           1024
     #endif
     #define PJMEDIA_POOL_INC_ENDPT              1024
 

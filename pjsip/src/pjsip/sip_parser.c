@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1838,7 +1838,7 @@ static void parse_generic_array_hdr( pjsip_generic_array_hdr *hdr,
         
         /* Get element */
         pj_scan_get( scanner, &pconst.pjsip_NOT_COMMA_OR_NEWLINE, &elem);
-        if (elem.slen > 0) {
+        if (elem.slen > 0 && hdr->count < PJ_ARRAY_SIZE(hdr->values)) {
             hdr->values[hdr->count++] = elem;
         }
         
