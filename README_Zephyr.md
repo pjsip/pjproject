@@ -28,14 +28,14 @@ The preset builds G.711 only; G.722 and the resampler are a `config_site.h` sett
 
 ## Footprint
 
-As an indication of the footprint, these are the sizes of the whole AN521 image, Zephyr and its network stack included, for the four ways the sample builds. The sample is built as it ships: G.711 with SDES-SRTP, and room for four concurrent calls (`MAX_CALLS` 4, with the heap arena sized to the measured peak of those four calls arriving at once plus 5% for the heap's own bookkeeping and fragmentation: 236 KB over UDP, 257 KB with threads, 293 KB over TLS and 312 KB with both, set per feature in the sample's Kconfig). The figures are the FLASH and RAM lines of the memory usage summary that `west build` prints at the end of the link, rounded to KB. RAM is the static allocation, data and BSS including the heap arena, the kernel heap and the thread stacks, not the run-time use. pjproject's pools and libsrtp's allocations come out of the heap arena, so they are inside this number, not on top of it; what they take at run time is the next table:
+As an indication of the footprint, these are the sizes of the whole AN521 image, Zephyr and its network stack included, for the four ways the sample builds, G.711 with SDES-SRTP. The four-call column is the sample as it ships, with room for the four concurrent calls `MAX_CALLS` allows: the heap arena is sized to the measured peak of those four calls arriving at once plus 5% for the heap's own bookkeeping and fragmentation (236 KB over UDP, 257 KB with threads, 293 KB over TLS and 312 KB with both, set per feature in the sample's Kconfig), and the receive pool holds the four INVITEs of such a burst. The one-call column is the same build sized for a single call, which is what most of the RAM is about: the arena at the one-call peak plus 5% (94, 112, 142 and 161 KB) and the receive pool at the 40 packets and 80 buffers that calls arriving one at a time need; each was verified with a call on the emulator. The figures are the FLASH and RAM lines of the memory usage summary that `west build` prints at the end of the link, rounded to KB. RAM is the static allocation, data and BSS including the heap arena, the kernel heap and the thread stacks, not the run-time use. pjproject's pools and libsrtp's allocations come out of the heap arena, so they are inside this number, not on top of it; what they take at run time is the next table:
 
-| Build | Flash | RAM |
-|---|---|---|
-| SIP over UDP, single thread | 342 KB | 371 KB |
-| SIP over UDP, threads | 351 KB | 411 KB |
-| SIP over TLS, single thread | 450 KB | 492 KB |
-| SIP over TLS, threads | 460 KB | 531 KB |
+| Build | Flash | RAM, one call | RAM, four calls |
+|---|---|---|---|
+| SIP over UDP, single thread | 342 KB | 178 KB | 371 KB |
+| SIP over UDP, threads | 351 KB | 216 KB | 411 KB |
+| SIP over TLS, single thread | 450 KB | 290 KB | 492 KB |
+| SIP over TLS, threads | 460 KB | 329 KB | 531 KB |
 
 Most of the RAM is what the configuration sets aside rather than pjproject's own data: the heap arena for pjlib's pools, the 17 KB kernel heap the media thread's stack comes from in the threaded build, and about 80 KB of network buffers, most of it the receive pool sized for four INVITEs arriving at once (see the LAN9118 note under Known limitations). The image size is the same however many calls are active, since calls draw on the heap arena at run time. What the arena holds was measured on the AN521, in the single-threaded UDP build with SRTP, with the sample's `mem` command (section 3) and `CONFIG_SYS_HEAP_RUNTIME_STATS=y`:
 

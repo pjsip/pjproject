@@ -208,7 +208,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
 {
     pj_ioqueue_t *ioqueue;
     pj_lock_t *lock;
+#if PJ_IOQUEUE_HAS_SAFE_UNREG
     pj_size_t i;
+#endif
     pj_status_t rc;
 
     /* Check that arguments are valid. */
@@ -301,7 +303,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
  */
 PJ_DEF(pj_status_t) pj_ioqueue_destroy(pj_ioqueue_t *ioqueue)
 {
+#if PJ_IOQUEUE_HAS_SAFE_UNREG
     pj_ioqueue_key_t *key;
+#endif
 
     PJ_ASSERT_RETURN(ioqueue, PJ_EINVAL);
 
