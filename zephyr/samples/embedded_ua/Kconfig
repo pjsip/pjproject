@@ -40,6 +40,18 @@ config EMBUA_JB_SIZE
 	  14 bytes per millisecond, comes out of each call's stream pool.
 	  200 ms suits a LAN; pjmedia's own default is 500 ms.
 
+config EMBUA_LOG_LEVEL
+	int "Log level"
+	range 0 6
+	default 3
+	help
+	  pjlib log level at run time: 3 shows registration, call state and
+	  the "mem" dump, 4 adds every SIP message in full, 5 and 6 pjlib's
+	  own debug and trace. Each line goes out over the console from the
+	  thread that logs it, so on a slow UART levels above 3 stall the
+	  media while a call is set up. PJ_LOG_MAX_LEVEL in config_site.h
+	  caps this at build time.
+
 config EMBUA_SIP_SERVER_IP
 	string "SIP server (registrar and proxy) IP address"
 	default "192.0.2.2"
@@ -69,5 +81,39 @@ config EMBUA_HOST_TAP_IFACE
 	  the QEMU MPS2 boards; native_sim takes it from its devicetree.
 
 endmenu
+
+# Memory sized to the feature set, from measurements on the AN521 with the
+# four calls MAX_CALLS allows arriving at once (README_Zephyr.md,
+# "Footprint"). A value in prj.conf or an overlay overrides these.
+
+# The C library heap arena, where pjlib's pools and Mbed TLS's contexts
+# come from: the measured peak with four calls up plus 5% for the heap's
+# own bookkeeping and fragmentation (at the bare peak the fourth call
+# fails with "No memory"). Threads add per-object locks and the
+# pre-allocated I/O queue keys, TLS the record buffers and the retained
+# messages of its connection.
+config COMMON_LIBC_MALLOC_ARENA_SIZE
+	default 319488 if PJPROJECT_TLS && PJPROJECT_THREADS
+	default 300032 if PJPROJECT_TLS
+	default 263168 if PJPROJECT_THREADS
+	default 241664
+
+# The kernel heap holds the media thread's 16 KB stack and nothing else
+config HEAP_MEM_POOL_SIZE
+	default 17408 if PJPROJECT_THREADS
+
+# TCP keeps every segment until the peer acknowledges it, so answering four
+# INVITEs at once holds eight TLS records, about 7 KB, in the transmit pool
+# at the same time. With fewer buffers Zephyr's TCP only logs the failed
+# allocation and the stream that reaches the server is corrupt ("bad record
+# mac" in its log), which drops the connection and every call on it. UDP
+# frees a sent packet as soon as the driver has it and needs far less.
+config NET_PKT_TX_COUNT
+	default 32 if PJPROJECT_TLS
+	default 24
+
+config NET_BUF_TX_COUNT
+	default 96 if PJPROJECT_TLS
+	default 48
 
 source "Kconfig.zephyr"

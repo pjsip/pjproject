@@ -28,24 +28,24 @@ The preset builds G.711 only; G.722 and the resampler are a `config_site.h` sett
 
 ## Footprint
 
-As an indication of the footprint, these are the sizes of the whole AN521 image, Zephyr and its network stack included, for the four ways the sample builds. The sample is built as it ships: G.711 with SDES-SRTP, and room for four concurrent calls (`MAX_CALLS` 4, with the 320 KB heap arena that holds them, 384 KB with TLS). The figures are the FLASH and RAM lines of the memory usage summary that `west build` prints at the end of the link, rounded to KB. RAM is the static allocation, data and BSS including the heap arena, the kernel heap and the thread stacks, not the run-time use. pjproject's pools and libsrtp's allocations come out of the heap arena, so they are inside this number, not on top of it; what they take at run time is the next table:
+As an indication of the footprint, these are the sizes of the whole AN521 image, Zephyr and its network stack included, for the four ways the sample builds. The sample is built as it ships: G.711 with SDES-SRTP, and room for four concurrent calls (`MAX_CALLS` 4, with the heap arena sized to the measured peak of those four calls arriving at once plus 5% for the heap's own bookkeeping and fragmentation: 236 KB over UDP, 257 KB with threads, 293 KB over TLS and 312 KB with both, set per feature in the sample's Kconfig). The figures are the FLASH and RAM lines of the memory usage summary that `west build` prints at the end of the link, rounded to KB. RAM is the static allocation, data and BSS including the heap arena, the kernel heap and the thread stacks, not the run-time use. pjproject's pools and libsrtp's allocations come out of the heap arena, so they are inside this number, not on top of it; what they take at run time is the next table:
 
 | Build | Flash | RAM |
 |---|---|---|
-| SIP over UDP, single thread | 343 KB | 402 KB |
-| SIP over UDP, threads | 351 KB | 468 KB |
-| SIP over TLS, single thread | 451 KB | 522 KB |
-| SIP over TLS, threads | 460 KB | 589 KB |
+| SIP over UDP, single thread | 342 KB | 371 KB |
+| SIP over UDP, threads | 351 KB | 411 KB |
+| SIP over TLS, single thread | 450 KB | 492 KB |
+| SIP over TLS, threads | 460 KB | 531 KB |
 
-Most of the RAM is what the configuration sets aside rather than pjproject's own data: a 320 KB heap arena for pjlib's pools (384 KB with TLS), the kernel heap the thread stacks come from in the threaded build, and the network buffers. The image size is the same however many calls are active, since calls draw on the heap arena at run time. What the arena holds was measured on the AN521, in the single-threaded UDP build with SRTP, with the sample's `mem` command (section 3) and `CONFIG_SYS_HEAP_RUNTIME_STATS=y`:
+Most of the RAM is what the configuration sets aside rather than pjproject's own data: the heap arena for pjlib's pools, the 17 KB kernel heap the media thread's stack comes from in the threaded build, and about 80 KB of network buffers, most of it the receive pool sized for four INVITEs arriving at once (see the LAN9118 note under Known limitations). The image size is the same however many calls are active, since calls draw on the heap arena at run time. What the arena holds was measured on the AN521, in the single-threaded UDP build with SRTP, with the sample's `mem` command (section 3) and `CONFIG_SYS_HEAP_RUNTIME_STATS=y`:
 
 | State | Heap in use |
 |---|---|
-| Registered, idle | 51 KB |
-| Each established call | about 55 KB |
-| Four concurrent calls | 271 KB, peak 280 KB while they were set up |
+| Registered, idle | 26 KB |
+| Each established call | about 46 KB |
+| Four concurrent calls | 223 KB, peak 225 KB while they were set up |
 
-Each reading includes a few KB for the SIP transactions still timing out, among them the MESSAGE that asked for it, so the steady idle figure is about 35 KB: the SIP endpoint, the transport, the media endpoint and the registration. A call is its media stream with the jitter buffer (10 KB), the dialog and INVITE session (12 KB), the 200 OK kept for retransmission (8 KB), the UDP media transport (5.5 KB), SRTP (4 KB), the call's own pool, codec, locks and INVITE transaction (6 KB), and libsrtp's own allocations (3 KB); nearly all of it is pool memory. The sample's 320 KB arena therefore holds the four calls that `MAX_CALLS` allows with room to spare; the four-call row was measured with the four INVITEs arriving within 10 ms of each other and all four calls carrying RTP both ways with no loss. These figures are with the preset's sizing (section 8): with pjproject's stock pool sizes, packet buffers and SDP limits a call took 82 KB and four calls peaked at 436 KB.
+Each reading includes a few KB for the SIP transactions still timing out, among them the MESSAGE that asked for it, so the steady idle figure is about 20 KB: the SIP endpoint, the transport, the media endpoint and the registration. A call is its media stream with the jitter buffer (8 KB), the dialog and INVITE session (12 KB), the 200 OK kept for retransmission (7 KB), the UDP media transport (6 KB), SRTP (4 KB), the call's own pool, codec, locks and INVITE transaction (5 KB), and libsrtp's own allocations (3.5 KB); nearly all of it is pool memory. The arena is that four-call peak plus 5%, which is what the heap needs to place the blocks (at the bare peak the fourth call fails with "No memory"); the four-call row was measured with the four INVITEs arriving at once and all four calls carrying RTP both ways with no loss. These figures are with the preset's sizing (section 8): with pjproject's stock pool sizes, packet buffers and SDP limits a call took 82 KB and four calls peaked at 436 KB.
 
 ## 1. Install Zephyr and get pjproject
 
@@ -210,7 +210,7 @@ cd $PJ_DIR/pjsip-apps/bin
 ./pjsua-x86_64-pc-linux-gnu --no-tcp --local-port 5062 --use-srtp=2 --srtp-secure=0 --play-file ../../tests/pjsua/wavs/input.16.wav --auto-play
 ```
 
-At the pjsua prompt type `m`, then the URI `sip:bob@192.0.2.1:55060`. The sample answers after one ring. The Zephyr side logs every SIP message, so you can watch the INVITE, the SDP negotiation and the SRTP setup go by. `--play-file` with `--auto-play` makes pjsua stream the WAV into the call as soon as it connects, and the sample loops whatever it receives straight back. To hear that loopback, connect the call to the sound device: type `cl` to list the conference ports, then `cc`, the call's port number as source and `0` (the sound device) as destination. The WAV then comes out of your speaker after a round trip through the Zephyr guest. `dq` in pjsua prints the call quality and `h` hangs up.
+At the pjsua prompt type `m`, then the URI `sip:bob@192.0.2.1:55060`. The sample answers after one ring. With `CONFIG_EMBUA_LOG_LEVEL=4` (section 8; the default 3 keeps the console quiet enough not to disturb the media) the Zephyr side logs every SIP message, so you can watch the INVITE, the SDP negotiation and the SRTP setup go by. `--play-file` with `--auto-play` makes pjsua stream the WAV into the call as soon as it connects, and the sample loops whatever it receives straight back. To hear that loopback, connect the call to the sound device: type `cl` to list the conference ports, then `cc`, the call's port number as source and `0` (the sound device) as destination. The WAV then comes out of your speaker after a round trip through the Zephyr guest. `dq` in pjsua prints the call quality and `h` hangs up.
 
 ### With a SIP server
 
@@ -272,11 +272,11 @@ For a run without any server give `-DCONFIG_EMBUA_USE_REGISTRATION=0` instead, a
 
 ```
 Memory region         Used Size  Region Size  %age Used
-           FLASH:      351352 B         4 MB      8.38%
-             RAM:      411376 B       640 KB     62.77%
+           FLASH:      350608 B         4 MB      8.36%
+             RAM:      379600 B       640 KB     57.92%
 ```
 
-That is the whole image, Zephyr and its network stack included; 320 KB of the RAM is the heap arena pjlib's pools are carved from. With `overlay-tls.conf` the image is 451 KB of flash and 522 KB of RAM, and 589 KB of RAM with the threads overlay too: Mbed TLS's code, and the 64 KB the TLS overlay adds to the heap arena for its contexts.
+That is the whole image, Zephyr and its network stack included; 236 KB of the RAM is the heap arena pjlib's pools are carved from. With `overlay-tls.conf` the image is 450 KB of flash and 492 KB of RAM, and 531 KB of RAM with the threads overlay too: Mbed TLS's code, the larger arena for its contexts and the retained messages of its connection, and a larger transmit pool (section 8 and the sample's Kconfig have the sizes).
 
 The overlays apply as in section 3. For the largest variant, SIP over TLS with the media on its own thread:
 
@@ -351,7 +351,7 @@ Things to adjust in the sample for a real board, in a `boards/<your board>.conf`
 
 - Addressing. The sample uses a static address on the TAP link. On a real network, drop the `CONFIG_NET_CONFIG_MY_IPV4_*` lines and enable `CONFIG_NET_DHCPV4=y`.
 - Random numbers. Remove `CONFIG_TEST_RANDOM_GENERATOR` and let the board's hardware RNG serve `CONFIG_ENTROPY_GENERATOR`. SIP Call-IDs, tags and SRTP keys all come from it.
-- Memory. `CONFIG_COMMON_LIBC_MALLOC_ARENA_SIZE` is the heap pjlib allocates its pools from; at about 55 KB a call the sample's 320 KB holds four concurrent calls with room to spare, and 192 KB would hold two (see the footprint figures in "What the port provides"). `CONFIG_MAIN_STACK_SIZE` of 16 KB covers pjsip's message parsing on the main thread; the deepest use seen was 12.4 KB.
+- Memory. `CONFIG_COMMON_LIBC_MALLOC_ARENA_SIZE` is the heap pjlib allocates its pools from. The sample's Kconfig sets it per feature set to the measured peak of four concurrent calls plus 5%, 236 KB over UDP without threads (see "Footprint"), so an application that needs fewer calls, or wants more headroom, sets its own; at about 46 KB a call, 150 KB would hold two. `CONFIG_MAIN_STACK_SIZE` of 16 KB covers pjsip's message parsing on the main thread; the deepest use seen was 12.4 KB.
 - The board needs an Ethernet or other IP-capable interface with a Zephyr driver, and `CONFIG_NET_L2_ETHERNET=y` (or the matching L2) for it.
 
 A board with less than 640 KB of RAM needs a smaller arena and fewer network buffers; a 1 MB part such as the STM32H753 has room to spare.
@@ -388,11 +388,11 @@ CONFIG_NET_SOCKETS=y
 CONFIG_NET_IPV4_FRAGMENT=y
 
 CONFIG_MAIN_STACK_SIZE=16384
-CONFIG_COMMON_LIBC_MALLOC_ARENA_SIZE=327680
+CONFIG_COMMON_LIBC_MALLOC_ARENA_SIZE=241664
 CONFIG_ENTROPY_GENERATOR=y
 ```
 
-The sample's `zephyr/samples/embedded_ua/prj.conf` is a complete, commented example and the best starting point; copy it and remove what you do not need. Two of its settings deserve a word. `CONFIG_NET_IPV4_FRAGMENT=y` is there because a SIP INVITE with SDP is usually larger than the Ethernet MTU and arrives as IP fragments. `CONFIG_ZVFS_OPEN_MAX` bounds the file descriptors `select()` can watch and must be at least `PJ_IOQUEUE_MAX_HANDLES`; the build checks this with a static assertion.
+The sample's `zephyr/samples/embedded_ua/prj.conf` is a complete, commented example and the best starting point; copy it and remove what you do not need. Three of its settings deserve a word. `CONFIG_NET_IPV4_FRAGMENT=y` is there because a SIP INVITE with SDP is usually larger than the Ethernet MTU and arrives as IP fragments. The receive pool (`CONFIG_NET_PKT_RX_COUNT`, `CONFIG_NET_BUF_RX_COUNT`) is sized for four such INVITEs arriving at once, which is more than a UA that takes calls one at a time needs (the LAN9118 note under Known limitations has the smaller figure). `CONFIG_ZVFS_OPEN_MAX` bounds the file descriptors `select()` can watch and must be at least `PJ_IOQUEUE_MAX_HANDLES`; the build checks this with a static assertion.
 
 To build your application for QEMU's AN521 or for native_sim as the stand-ins for the hardware, add the `pjproject-sim` snippet of section 9 with `set(SNIPPET pjproject-sim)` before `find_package(Zephyr)`, as the sample does, or with `-S pjproject-sim` on the command line. It limits the AN521 to 640 KB, corrects its clock and seeds native_sim's entropy source, and does nothing on other boards.
 
@@ -452,7 +452,7 @@ The pjlib test application in `zephyr/tests/pjlib` needs a 64-socket I/O queue a
 
 ### The sample's own options
 
-The sample's build settings are `CONFIG_EMBUA_*` macros that `embedded_ua.c` reads on every platform; on Zephyr they are options in the sample's Kconfig, set in `prj.conf`, in menuconfig or with `-DCONFIG_...` on the west command line. `CONFIG_EMBUA_SIP_SERVER_IP` (default 192.0.2.2), `CONFIG_EMBUA_USE_REGISTRATION` (1), `CONFIG_EMBUA_USERNAME` (bob) and `CONFIG_EMBUA_PASSWORD` (secret) describe the account. `CONFIG_EMBUA_AUDIO_CODEC` (1 for G.711, 2 for G.722, which also needs `PJMEDIA_HAS_G722_CODEC` in `config_site.h`), `CONFIG_EMBUA_USE_SRTP`, `CONFIG_EMBUA_SIP_TRANSPORT` (1 for UDP, 2 for TLS) and `CONFIG_EMBUA_USE_MEDIA_THREAD` follow the `CONFIG_PJPROJECT_*` options by default. `CONFIG_EMBUA_JB_SIZE` (200) is the jitter buffer size in milliseconds; its memory comes out of each call's stream pool, and pjmedia's own default is 500. The on/off settings are ints rather than Kconfig bools so that the macro is always defined. `CONFIG_EMBUA_HOST_TAP_IFACE` (zeth) is only used by `run-qemu.sh`. Without registration the sample is reached at `sip:<address>:55060`.
+The sample's build settings are `CONFIG_EMBUA_*` macros that `embedded_ua.c` reads on every platform; on Zephyr they are options in the sample's Kconfig, set in `prj.conf`, in menuconfig or with `-DCONFIG_...` on the west command line. `CONFIG_EMBUA_SIP_SERVER_IP` (default 192.0.2.2), `CONFIG_EMBUA_USE_REGISTRATION` (1), `CONFIG_EMBUA_USERNAME` (bob) and `CONFIG_EMBUA_PASSWORD` (secret) describe the account. `CONFIG_EMBUA_AUDIO_CODEC` (1 for G.711, 2 for G.722, which also needs `PJMEDIA_HAS_G722_CODEC` in `config_site.h`), `CONFIG_EMBUA_USE_SRTP`, `CONFIG_EMBUA_SIP_TRANSPORT` (1 for UDP, 2 for TLS) and `CONFIG_EMBUA_USE_MEDIA_THREAD` follow the `CONFIG_PJPROJECT_*` options by default. `CONFIG_EMBUA_JB_SIZE` (200) is the jitter buffer size in milliseconds; its memory comes out of each call's stream pool, and pjmedia's own default is 500. `CONFIG_EMBUA_LOG_LEVEL` (3) is pjlib's run-time log level: 4 adds every SIP message in full, 5 pjlib's own debug output; each line is written to the console by the thread that logs it, so on a slow UART anything above 3 stalls the media while a call is set up. The on/off settings are ints rather than Kconfig bools so that the macro is always defined. `CONFIG_EMBUA_HOST_TAP_IFACE` (zeth) is only used by `run-qemu.sh`. Without registration the sample is reached at `sip:<address>:55060`.
 
 ## 9. How the port is put together
 
@@ -474,8 +474,8 @@ Random numbers come from Zephyr's `sys_rand32_get()` rather than the C library's
 ## 10. Known limitations
 
 - IPv6 is disabled on Zephyr.
-- QEMU's MPS2 boards drop full-size Ethernet frames: Zephyr's `smsc911x` driver rounds the frame length up before subtracting the checksum, asks for a buffer two bytes larger than the network stack allows for a 1514-byte frame, and the frame is lost. The first fragment of a SIP INVITE is such a frame. Until the driver is fixed, keep the host side of the TAP at MTU 1400 so that every frame is smaller. Real hardware and native_sim are not affected.
-- QEMU's LAN9118 model stops delivering usable frames once the driver has skipped one. When Zephyr's `smsc911x` driver cannot get a receive buffer it tells the controller to skip the frame, and the model's FIFO accounting does not follow (the `RX_DP_CTRL` handler in QEMU's `hw/net/lan9118.c` leaves the packet size and the used count stale), so every later frame is misframed and dropped as a processing error while the host keeps sending. On QEMU the receive pools must therefore never run dry. Four INVITEs arriving together while the sample logs every SIP message at level 5 keep the main thread busy long enough for the RTP of the first calls to exhaust the default pools; the four-call measurement in "What the port provides" was made with `PJ_LOG_MAX_LEVEL` 3, `CONFIG_NET_PKT_RX_COUNT=96` and `CONFIG_NET_BUF_RX_COUNT=384`. Real hardware drops the frame and carries on.
+- QEMU's MPS2 boards drop full-size Ethernet frames: Zephyr's `smsc911x` driver rounds the frame length up before subtracting the checksum, asks for a buffer two bytes larger than the network stack allows for a 1514-byte frame, and the frame is lost. The first fragment of a SIP INVITE is such a frame. Until the driver is fixed, keep the host side of the TAP at MTU 1400 so that every frame is smaller; the `pjproject-sim` snippet caps the guest's own IPv4 MTU at 1400 as well, so that nothing it sends is larger either, while `prj.conf` keeps 1500 for real hardware. Real hardware and native_sim are not affected.
+- QEMU's LAN9118 model stops delivering usable frames once the driver has skipped one. When Zephyr's `smsc911x` driver cannot get a receive buffer it tells the controller to skip the frame, and the model's FIFO accounting does not follow (the `RX_DP_CTRL` handler in QEMU's `hw/net/lan9118.c` leaves the packet size and the used count stale), so every later frame is misframed and dropped as a processing error while the host keeps sending. On QEMU the receive pools must therefore never run dry. Several INVITEs arriving within a second of each other can do that: each waits in the receive pool, whole, while the main thread sets up the call before it, and the RTP of the calls already up keeps coming in. The sample's receive pool (`CONFIG_NET_PKT_RX_COUNT=96`, `CONFIG_NET_BUF_RX_COUNT=384`, 15 buffers per INVITE) takes four INVITEs arriving at once, with the help of `CONFIG_NET_IPV4_FRAGMENT_MAX_COUNT=2`: the third and fourth lose a fragment at the IP layer, the server resends them half a second later, and the burst is answered two calls at a time without the RTP of the first calls piling up; with four reassemblies at once even 384 buffers ran dry. A pool of 40 packets and 80 buffers, about 55 KB less, holds calls that arrive a few seconds apart. Logging every SIP message (`CONFIG_EMBUA_LOG_LEVEL` 4 or more) makes it worse, since the main thread is then writing to the UART instead of draining the sockets. Real hardware drops the frame and carries on.
 - The QEMU boards have no entropy device, so the sample uses Zephyr's test random generator, seeded from the timer so that each boot differs. It is not a secure source; a real board must use its hardware RNG.
 - QEMU's AN521 model clocks SysTick at 20 MHz, while Zephyr's board files declare the real board's 25 MHz. Left alone, the guest's clock runs at 80% of real time: the sample sends 40 RTP packets a second instead of 50, the audio from it breaks up, and pjsua reports RTTs of half a second. The `pjproject-sim` snippet therefore sets `CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC=20000000` for that board; an application of your own gets it from the snippet, and must not have it on the hardware. The AN385 model and native_sim are not affected.
 - Even with the SysTick rate corrected, the AN521 guest's clock runs slightly slow under QEMU and the guest logs "Frame lost, recovered!" about once a second during a call, with an occasional "Internal RTCP NTP clock skew detected". Nothing is lost: pjsua reports zero loss and the jitter buffer's summary at the end of the call shows `discard=0`. The guest reads frames a little slower than they arrive, so the jitter buffer discards one now and then to keep its latency down and conceals the gap with PLC, which is what the message reports. The cause is QEMU's timer model losing time when the host deschedules the emulator, and it goes away with periodic kernel ticks (`CONFIG_TICKLESS_KERNEL=n` and `CONFIG_SYS_CLOCK_TICKS_PER_SEC=1000`); the sample does not set these because real hardware runs tickless, and the messages are harmless.

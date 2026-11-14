@@ -214,6 +214,13 @@
 #  define CONFIG_EMBUA_JB_SIZE              200
 #endif
 
+/* Run-time log level. Each line goes out from the thread that logs it, so
+ * 4 and above (every SIP message in full) stall the media on a slow console.
+ */
+#ifndef CONFIG_EMBUA_LOG_LEVEL
+#  define CONFIG_EMBUA_LOG_LEVEL            3
+#endif
+
 /* The SIP server and the account, as quoted strings. */
 #ifndef CONFIG_EMBUA_SIP_SERVER_IP
 #  define CONFIG_EMBUA_SIP_SERVER_IP        "192.168.0.7"
@@ -459,7 +466,12 @@ static void log_printk(int level, const char *data, int len)
 #if defined(__ZEPHYR__) && defined(CONFIG_SYS_HEAP_RUNTIME_STATS)
 #include <zephyr/sys/mem_stats.h>
 int malloc_runtime_stats_get(struct sys_memory_stats *stats);
-#endif
+#  if CONFIG_HEAP_MEM_POOL_SIZE > 0
+/* The kernel heap, where pthread stacks come from in the threaded build. */
+#  include <zephyr/kernel.h>
+extern struct k_heap _system_heap;
+#  endif
+#endif /* __ZEPHYR__ */
 
 static void dump_heap(void)
 {
@@ -472,7 +484,15 @@ static void dump_heap(void)
                   (unsigned)st.max_allocated_bytes,
                   (unsigned)st.free_bytes));
     }
-#endif
+#  if CONFIG_HEAP_MEM_POOL_SIZE > 0
+    if (sys_heap_runtime_stats_get(&_system_heap.heap, &st) == 0) {
+        PJ_LOG(3,(THIS_FILE, "Kernel heap: %u used, %u peak, %u free",
+                  (unsigned)st.allocated_bytes,
+                  (unsigned)st.max_allocated_bytes,
+                  (unsigned)st.free_bytes));
+    }
+#  endif
+#endif  /* __ZEPHYR__ */
 }
 
 static void deinit(void)
@@ -762,7 +782,7 @@ static void init(void)
         exit(10);
     pj_caching_pool_init(&g.cp, &pj_pool_factory_default_policy, 0);
 
-    pj_log_set_level(5);
+    pj_log_set_level(CONFIG_EMBUA_LOG_LEVEL);
     CHKS(pjlib_util_init(), 20);
 
     g.pool = pj_pool_create(&g.cp.factory, "app%p", 1000, 1000, NULL);
