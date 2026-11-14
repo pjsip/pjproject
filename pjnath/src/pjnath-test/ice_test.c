@@ -2038,6 +2038,353 @@ on_return:
     return rc;
 }
 
+/*****************************************************************************
+ * The remote agent chooses the XOR-MAPPED-ADDRESS of its responses. When
+ * every check succeeds the valid list is full, and a response to the
+ * nominated check with a new mapped address adds a peer-reflexive pair that
+ * no longer fits in the valid list.
+ */
+#define VFULL_LCAND     2
+#define VFULL_RCAND     16
+
+struct vfull_pkt
+{
+    PJ_DECL_LIST_MEMBER(struct vfull_pkt);
+    pj_ice_sess     *dst;
+    unsigned         comp_id;
+    unsigned         transport_id;
+    pj_sockaddr      src_addr;
+    pj_size_t        len;
+    pj_uint8_t       data[800];
+};
+
+struct vfull_test
+{
+    pj_pool_t       *pool;
+    pj_ice_sess     *victim;
+    pj_ice_sess     *peer;
+    pj_sockaddr      laddr[VFULL_LCAND];
+    pj_sockaddr      raddr[VFULL_RCAND];
+    pj_sockaddr      fake[8];
+    unsigned         fake_tp[8];
+    unsigned         fake_cnt;
+    pj_uint8_t       tsx_id[PJ_ICE_MAX_CHECKS*2][12];
+    unsigned         tsx_dst[PJ_ICE_MAX_CHECKS*2];
+    unsigned         tsx_cnt;
+    pj_bool_t        completed;
+    pj_bool_t        shim_err;
+    struct vfull_pkt txq;
+};
+
+static void vfull_queue(struct vfull_test *t, pj_ice_sess *dst,
+                        unsigned comp_id, unsigned tp_id,
+                        const pj_sockaddr *src, const void *pkt,
+                        pj_size_t size)
+{
+    struct vfull_pkt *p;
+
+    if (size > sizeof(p->data)) {
+        t->shim_err = PJ_TRUE;
+        return;
+    }
+    p = PJ_POOL_ZALLOC_T(t->pool, struct vfull_pkt);
+    p->dst = dst;
+    p->comp_id = comp_id;
+    p->transport_id = tp_id;
+    pj_sockaddr_cp(&p->src_addr, src);
+    p->len = size;
+    pj_memcpy(p->data, pkt, size);
+    pj_list_push_back(&t->txq, p);
+}
+
+static pj_bool_t vfull_is_nomination(struct vfull_test *t, const void *pkt,
+                                     pj_size_t size)
+{
+    pj_stun_msg *msg;
+
+    if (pj_stun_msg_decode(t->pool, (const pj_uint8_t*)pkt, size,
+                           PJ_STUN_IS_DATAGRAM, &msg, NULL,
+                           NULL) != PJ_SUCCESS)
+    {
+        return PJ_FALSE;
+    }
+    return PJ_STUN_IS_REQUEST(msg->hdr.type) &&
+           pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_USE_CANDIDATE, 0);
+}
+
+static pj_status_t vfull_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id,
+                                   unsigned transport_id,
+                                   const void *pkt, pj_size_t size,
+                                   const pj_sockaddr_t *dst_addr,
+                                   unsigned dst_addr_len)
+{
+    struct vfull_test *t = (struct vfull_test*) ice->user_data;
+    unsigned i;
+
+    PJ_UNUSED_ARG(dst_addr_len);
+
+    if (ice == t->victim) {
+        const pj_sockaddr *src;
+
+        if (transport_id < 1 || transport_id > VFULL_LCAND) {
+            t->shim_err = PJ_TRUE;
+            return PJ_EINVAL;
+        }
+        src = &t->laddr[transport_id-1];
+
+        /* Answer the nominated check with a new mapped address */
+        if (vfull_is_nomination(t, pkt, size) &&
+            t->fake_cnt < PJ_ARRAY_SIZE(t->fake))
+        {
+            pj_str_t ip = pj_str((char*)"10.0.0.1");
+            pj_sockaddr_init(pj_AF_INET(), &t->fake[t->fake_cnt], &ip,
+                             (pj_uint16_t)(40000 + t->fake_cnt));
+            t->fake_tp[t->fake_cnt] = transport_id;
+            src = &t->fake[t->fake_cnt++];
+        }
+
+        for (i=0; i<VFULL_RCAND; ++i) {
+            if (pj_sockaddr_cmp(dst_addr, &t->raddr[i]) == 0) {
+                unsigned j;
+
+                /* Remember where the request went, to answer from there */
+                for (j=0; size >= 20 && j<t->tsx_cnt; ++j) {
+                    if (pj_memcmp(t->tsx_id[j], (const pj_uint8_t*)pkt + 8,
+                                  12) == 0)
+                    {
+                        break;
+                    }
+                }
+                if (size >= 20 && j == t->tsx_cnt &&
+                    t->tsx_cnt < PJ_ARRAY_SIZE(t->tsx_id))
+                {
+                    pj_memcpy(t->tsx_id[t->tsx_cnt],
+                              (const pj_uint8_t*)pkt + 8, 12);
+                    t->tsx_dst[t->tsx_cnt++] = i;
+                }
+                vfull_queue(t, t->peer, comp_id, 1, src, pkt, size);
+                return PJ_SUCCESS;
+            }
+        }
+    } else {
+        const pj_sockaddr *src = &t->raddr[0];
+
+        for (i=0; size >= 20 && i<t->tsx_cnt; ++i) {
+            if (pj_memcmp(t->tsx_id[i], (const pj_uint8_t*)pkt + 8,
+                          12) == 0)
+            {
+                src = &t->raddr[t->tsx_dst[i]];
+                break;
+            }
+        }
+
+        for (i=0; i<VFULL_LCAND; ++i) {
+            if (pj_sockaddr_cmp(dst_addr, &t->laddr[i]) == 0) {
+                vfull_queue(t, t->victim, comp_id, i+1, src, pkt, size);
+                return PJ_SUCCESS;
+            }
+        }
+        for (i=0; i<t->fake_cnt; ++i) {
+            if (pj_sockaddr_cmp(dst_addr, &t->fake[i]) == 0) {
+                vfull_queue(t, t->victim, comp_id, t->fake_tp[i], src,
+                            pkt, size);
+                return PJ_SUCCESS;
+            }
+        }
+    }
+
+    t->shim_err = PJ_TRUE;
+    return PJ_EINVAL;
+}
+
+static void vfull_on_ice_complete(pj_ice_sess *ice, pj_status_t status)
+{
+    struct vfull_test *t = (struct vfull_test*) ice->user_data;
+    PJ_UNUSED_ARG(status);
+    if (ice == t->victim)
+        t->completed = PJ_TRUE;
+}
+
+static void vfull_poll(struct vfull_test *t, pj_stun_config *stun_cfg,
+                       unsigned msec)
+{
+    pj_time_val stop, now;
+
+    pj_gettimeofday(&stop);
+    stop.msec += msec;
+    pj_time_val_normalize(&stop);
+
+    for (;;) {
+        struct vfull_pkt *p, *next;
+        pj_bool_t hold = PJ_FALSE;
+        unsigned i;
+
+        pj_timer_heap_poll(stun_cfg->timer_heap, NULL);
+
+        /* The peer holds its responses until every check has been sent,
+         * so that all of them succeed before nomination starts.
+         */
+        for (i=0; i<t->victim->clist.count; ++i) {
+            if (t->victim->clist.checks[i].state <
+                PJ_ICE_SESS_CHECK_STATE_IN_PROGRESS)
+            {
+                hold = PJ_TRUE;
+                break;
+            }
+        }
+
+        for (p=t->txq.next; p!=&t->txq; p=next) {
+            next = p->next;
+            if (hold && p->dst == t->victim)
+                continue;
+            pj_list_erase(p);
+            pj_ice_sess_on_rx_pkt(p->dst, p->comp_id, p->transport_id,
+                                  p->data, p->len, &p->src_addr,
+                                  pj_sockaddr_get_len(&p->src_addr));
+        }
+
+        pj_gettimeofday(&now);
+        if (PJ_TIME_VAL_GTE(now, stop))
+            break;
+        pj_thread_sleep(1);
+    }
+}
+
+int ice_valid_list_full_test(void)
+{
+    app_sess_t app_sess;
+    struct vfull_test t;
+    pj_ice_sess_cb cb;
+    pj_ice_sess_options opt;
+    pj_ice_sess_cand rcand[VFULL_LCAND > VFULL_RCAND ?
+                           VFULL_LCAND : VFULL_RCAND];
+    pj_str_t vufrag, vpass, pufrag, ppass, ip, fnd;
+    unsigned i, cand_id;
+    pj_status_t status;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "ICE valid list full"));
+    pj_log_push_indent();
+
+    status = create_stun_config(&app_sess);
+    if (status != PJ_SUCCESS) {
+        pj_log_pop_indent();
+        return -10;
+    }
+
+    pj_bzero(&t, sizeof(t));
+    t.pool = app_sess.pool;
+    pj_list_init(&t.txq);
+
+    pj_bzero(&cb, sizeof(cb));
+    cb.on_tx_pkt = &vfull_on_tx_pkt;
+    cb.on_ice_complete = &vfull_on_ice_complete;
+    cb.on_rx_data = &wvp_on_rx_data;
+
+    vufrag = pj_str((char*)"vfullUA1");
+    pufrag = pj_str((char*)"vfullUA2");
+    vpass = ppass = pj_str((char*)"0123456789012345678901");
+    ip = pj_str((char*)"127.0.0.1");
+
+    status = pj_ice_sess_create(&app_sess.stun_cfg, "vfullUA1",
+                                PJ_ICE_SESS_ROLE_CONTROLLING, 1, &cb,
+                                &vufrag, &vpass, NULL, &t.victim);
+    if (status != PJ_SUCCESS) {
+        rc = -20; goto on_return;
+    }
+    t.victim->user_data = &t;
+
+    /* Regular nomination, as used against an ICE lite peer */
+    pj_ice_sess_get_options(t.victim, &opt);
+    opt.aggressive = PJ_FALSE;
+    pj_ice_sess_set_options(t.victim, &opt);
+
+    status = pj_ice_sess_create(&app_sess.stun_cfg, "vfullUA2",
+                                PJ_ICE_SESS_ROLE_CONTROLLED, 1, &cb,
+                                &pufrag, &ppass, NULL, &t.peer);
+    if (status != PJ_SUCCESS) {
+        rc = -21; goto on_return;
+    }
+    t.peer->user_data = &t;
+
+    fnd = pj_str((char*)"Hhost");
+    for (i=0; i<VFULL_LCAND; ++i) {
+        pj_sockaddr_init(pj_AF_INET(), &t.laddr[i], &ip,
+                         (pj_uint16_t)(34201 + i));
+        status = pj_ice_sess_add_cand(t.victim, 1, i+1,
+                                      PJ_ICE_CAND_TYPE_HOST,
+                                      (pj_uint16_t)(65535 - i), &fnd,
+                                      &t.laddr[i], &t.laddr[i], &t.laddr[i],
+                                      pj_sockaddr_get_len(&t.laddr[i]),
+                                      &cand_id);
+        if (status != PJ_SUCCESS) {
+            rc = -22; goto on_return;
+        }
+    }
+    for (i=0; i<VFULL_RCAND; ++i) {
+        pj_sockaddr_init(pj_AF_INET(), &t.raddr[i], &ip,
+                         (pj_uint16_t)(34301 + i));
+        status = pj_ice_sess_add_cand(t.peer, 1, 1,
+                                      PJ_ICE_CAND_TYPE_HOST,
+                                      (pj_uint16_t)(65535 - i), &fnd,
+                                      &t.raddr[i], &t.raddr[i], &t.raddr[i],
+                                      pj_sockaddr_get_len(&t.raddr[i]),
+                                      &cand_id);
+        if (status != PJ_SUCCESS) {
+            rc = -23; goto on_return;
+        }
+        rcand[i] = t.peer->lcand[cand_id];
+    }
+
+    if (pj_ice_sess_create_check_list(t.victim, &pufrag, &ppass,
+                                      VFULL_RCAND, rcand))
+    {
+        rc = -24; goto on_return;
+    }
+    for (i=0; i<VFULL_LCAND; ++i)
+        rcand[i] = t.victim->lcand[i];
+    if (pj_ice_sess_create_check_list(t.peer, &vufrag, &vpass,
+                                      VFULL_LCAND, rcand))
+    {
+        rc = -25; goto on_return;
+    }
+
+    if (t.victim->clist.count != PJ_ICE_MAX_CHECKS) {
+        PJ_LOG(1,(THIS_FILE, INDENT "err: expecting %d checks, got %d",
+                  PJ_ICE_MAX_CHECKS, t.victim->clist.count));
+        rc = -26; goto on_return;
+    }
+
+    pj_ice_sess_start_check(t.victim);
+
+    for (i=0; i<50 && !t.completed; ++i)
+        vfull_poll(&t, &app_sess.stun_cfg, 100);
+
+    if (t.victim->valid_list.count > PJ_ICE_MAX_CHECKS) {
+        PJ_LOG(1,(THIS_FILE, INDENT "err: valid list overflow, count=%d",
+                  t.victim->valid_list.count));
+        rc = -27; goto on_return;
+    }
+    if (t.fake_cnt == 0) {
+        PJ_LOG(1,(THIS_FILE, INDENT "err: nominated check not sent"));
+        rc = -28; goto on_return;
+    }
+    if (t.shim_err) {
+        PJ_LOG(1,(THIS_FILE, INDENT "err: transport shim saw an "
+                  "unexpected packet"));
+        rc = -29; goto on_return;
+    }
+
+on_return:
+    if (t.victim) pj_ice_sess_destroy(t.victim);
+    if (t.peer) pj_ice_sess_destroy(t.peer);
+    pj_list_init(&t.txq);
+    destroy_stun_config(&app_sess);
+    pj_log_pop_indent();
+
+    return rc;
+}
+
 
 /*****************************************************************************
  * The application may stop the ICE session while pj_ice_sess_on_rx_pkt() is

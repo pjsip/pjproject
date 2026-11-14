@@ -249,6 +249,7 @@ static int test_inner(int argc, char *argv[])
 
 #if INCLUDE_ICE_TEST
     UT_ADD_TEST(&test_app.ut_app, ice_wait_valid_pair_test, 0);
+    UT_ADD_TEST(&test_app.ut_app, ice_valid_list_full_test, 0);
     UT_ADD_TEST(&test_app.ut_app, ice_rx_data_stop_test, 0);
 #endif
 
