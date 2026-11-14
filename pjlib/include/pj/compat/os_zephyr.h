@@ -170,6 +170,17 @@
 #   endif
 #endif
 
+/* pj_rand() draws from Zephyr's cryptographically secure generator when
+ * there is one: the entropy driver (a board's hardware RNG) or, with
+ * CONFIG_TEST_RANDOM_GENERATOR on an emulator, its insecure stand-in. SIP
+ * tags, Call-IDs and, without TLS, SRTP keys all come from pj_rand().
+ */
+#if defined(CONFIG_CSPRNG_ENABLED) || defined(CONFIG_TEST_CSPRNG_GENERATOR)
+#   define PJ_RAND_IS_CSPRNG        1
+#else
+#   define PJ_RAND_IS_CSPRNG        0
+#endif
+
 #define PJ_HAS_HIGH_RES_TIMER       1
 #define PJ_HAS_MALLOC               1
 #ifndef PJ_OS_HAS_CHECK_STACK

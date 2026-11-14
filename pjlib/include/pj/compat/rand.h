@@ -32,10 +32,23 @@
     */
 #  include <zephyr/random/random.h>
 #  define platform_srand(seed)  ((void)(seed))
+#  if PJ_RAND_IS_CSPRNG != 0
+   /* The secure generator, whatever CONFIG_*_RANDOM_GENERATOR selects for
+    * sys_rand32_get(); see PJ_RAND_IS_CSPRNG in compat/os_zephyr.h.
+    */
+   PJ_INLINE(int) platform_rand(void)
+   {
+       pj_uint32_t v;
+       if (sys_csrand_get(&v, sizeof(v)) != 0)
+           v = sys_rand32_get();
+       return (int)(v & 0x7FFFFFFF);
+   }
+#  else
    PJ_INLINE(int) platform_rand(void)
    {
        return (int)(sys_rand32_get() & 0x7FFFFFFF);
    }
+#  endif
 #elif defined(PJ_HAS_STDLIB_H) && PJ_HAS_STDLIB_H != 0
    /*
     * Use stdlib based rand() and srand().
