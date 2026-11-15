@@ -90,17 +90,7 @@ int main(void)
 {
     static char args[] = CONFIG_PJMEDIA_TEST_ARGS;
     char *argv[16] = { "pjmedia-test", "--ci-mode", "-w", "0" };
-    int argc = 4;
-    char *p = args;
-
-    while (argc < (int)PJ_ARRAY_SIZE(argv) - 1) {
-        while (*p == ' ') ++p;
-        if (!*p) break;
-        argv[argc++] = p;
-        while (*p && *p != ' ') ++p;
-        if (*p) *p++ = '\0';
-    }
-    argv[argc] = NULL;
+    int argc = ut_split_args(args, argv, 4, PJ_ARRAY_SIZE(argv));
     return pj_run_app(&main_func, argc, argv, 0);
 }
 #else

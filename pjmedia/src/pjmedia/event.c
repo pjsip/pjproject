@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2011-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2011-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -153,6 +153,7 @@ static pj_status_t event_mgr_distribute_events(pjmedia_event_mgr *mgr,
     return err;
 }
 
+#if PJ_HAS_THREADS
 /* Event worker thread function. */
 static int event_worker_thread(void *arg)
 {
@@ -173,6 +174,7 @@ static int event_worker_thread(void *arg)
 
     return 0;
 }
+#endif
 
 PJ_DEF(pj_status_t) pjmedia_event_mgr_create(pj_pool_t *pool,
                                              unsigned options,
@@ -188,6 +190,7 @@ PJ_DEF(pj_status_t) pjmedia_event_mgr_create(pj_pool_t *pool,
     pj_list_init(&mgr->esub_list);
     pj_list_init(&mgr->free_esub_list);
 
+#if PJ_HAS_THREADS
     if (!(options & PJMEDIA_EVENT_MGR_NO_THREAD)) {
         status = pj_sem_create(mgr->pool, "ev_sem", 0, MAX_EVENTS + 1,
                                &mgr->sem);
@@ -202,6 +205,9 @@ PJ_DEF(pj_status_t) pjmedia_event_mgr_create(pj_pool_t *pool,
             return status;
         }
     }
+#else
+    PJ_UNUSED_ARG(options);
+#endif
 
     status = pj_mutex_create_recursive(mgr->pool, "ev_mutex", &mgr->mutex);
     if (status != PJ_SUCCESS) {
@@ -408,10 +414,13 @@ PJ_DEF(pj_status_t) pjmedia_event_publish( pjmedia_event_mgr *mgr,
     event->epub = epub;
 
     pj_mutex_lock(mgr->mutex);
-    if (flag & PJMEDIA_EVENT_PUBLISH_POST_EVENT) {
+    if ((flag & PJMEDIA_EVENT_PUBLISH_POST_EVENT) && mgr->thread) {
         if (event_queue_add_event(&mgr->ev_queue, event) == PJ_SUCCESS)
             pj_sem_post(mgr->sem);
     } else {
+        /* Synchronous, also for a posted event when there is no worker
+         * thread to deliver it (PJMEDIA_EVENT_MGR_NO_THREAD).
+         */
         /* For nested pjmedia_event_publish() calls, i.e. calling publish()
          * inside the subscriber's callback, the function will only add
          * the event to the event queue of the first publish() call. It

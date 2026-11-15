@@ -2604,6 +2604,7 @@ static pjmedia_port* init_conf_call(unsigned nb_participant,
     return pjmedia_conf_get_master_port(conf);
 }
 
+#if PJMEDIA_HAS_G711_CODEC
 /***************************************************************************/
 /* Benchmark conf with 100 call using PCMU codec */
 static pjmedia_port* conf100_pcmu_test_init(pj_pool_t *pool,
@@ -2634,6 +2635,9 @@ static pjmedia_port* conf100_pcmu_noparallel_test_init(pj_pool_t *pool,
                           PJ_TRUE, flags, te);
 }
 
+#endif  /* PJMEDIA_HAS_G711_CODEC */
+
+#if PJMEDIA_HAS_SPEEX_CODEC
 /***************************************************************************/
 /* Benchmark conf with 100 call using Speex codec */
 static pjmedia_port* conf100_speex_test_init(pj_pool_t *pool,
@@ -2649,6 +2653,9 @@ static pjmedia_port* conf100_speex_test_init(pj_pool_t *pool,
                           PJ_FALSE, flags, te);
 }
 
+#endif  /* PJMEDIA_HAS_SPEEX_CODEC */
+
+#if PJMEDIA_HAS_G711_CODEC
 /***************************************************************************/
 /* Benchmark conf with 100 call using PCMU codec, SRTP 80 bit with auth */
 static pjmedia_port* conf100_pcmu_srtp80auth_test_init(pj_pool_t *pool,
@@ -2665,6 +2672,7 @@ static pjmedia_port* conf100_pcmu_srtp80auth_test_init(pj_pool_t *pool,
 }
 
 
+#endif  /* PJMEDIA_HAS_G711_CODEC */
 #endif  /* !PJTEST_SMALL_FOOTPRINT */
 
 /***************************************************************************/
