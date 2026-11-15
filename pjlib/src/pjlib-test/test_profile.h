@@ -71,6 +71,20 @@
 #endif
 
 /**
+ * Whether the host can reach anything beyond its loopback interface. The
+ * Zephyr test apps are built with loopback as their only interface: a
+ * connection to any other address is refused at once, where a desktop
+ * would keep trying.
+ */
+#ifndef PJTEST_HAS_OUTSIDE_ROUTE
+#   if defined(__ZEPHYR__)
+#       define PJTEST_HAS_OUTSIDE_ROUTE    0
+#   else
+#       define PJTEST_HAS_OUTSIDE_ROUTE    1
+#   endif
+#endif
+
+/**
  * Exclude the benchmarks (pool, socket and ioqueue performance), which need
  * far more memory and time than the functional tests, and a clock that
  * runs while they do.

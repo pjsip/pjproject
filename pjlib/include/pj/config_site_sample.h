@@ -514,11 +514,25 @@
 
     #define PJ_CRC32_HAS_TABLES                 0
 
-    /* pjlib's cipher table is filled from the suites Mbed TLS enables, a
-     * handful at most; the stock 256 entries are 4 KB of static RAM.
+    /* pjlib's cipher table is filled from the suites Mbed TLS enables;
+     * Zephyr's Mbed TLS offers 16 in all.
      */
     #ifndef PJ_SSL_SOCK_MAX_CIPHERS
     #   define PJ_SSL_SOCK_MAX_CIPHERS          32
+    #endif
+
+    /* A WebSocket endpoint allocates its receive and transmit buffers, and
+     * one for reassembling the largest message it accepts, when it is
+     * created.
+     */
+    #ifndef PJ_WEBSOCK_RX_BUF_SIZE
+    #   define PJ_WEBSOCK_RX_BUF_SIZE           8192
+    #endif
+    #ifndef PJ_WEBSOCK_TX_BUF_SIZE
+    #   define PJ_WEBSOCK_TX_BUF_SIZE           8192
+    #endif
+    #ifndef PJ_WEBSOCK_MAX_RX_MSG_SIZE
+    #   define PJ_WEBSOCK_MAX_RX_MSG_SIZE       16384
     #endif
 
     /*
@@ -533,15 +547,16 @@
     #define PJSIP_MAX_DIALOG_COUNT              15
     #define PJSIP_MAX_TIMER_COUNT               32
 
-    /* Every transmit buffer, receive buffer, transaction, dialog and invite
-     * session carries one pointer per possible module. The sample registers
-     * 8 modules; pjsua-lib needs about 12.
+    /* The sample registers 8 modules; pjsua-lib needs about 12. pjsip-test
+     * needs 32, set in zephyr/tests/pjsip/CMakeLists.txt.
      */
-    #define PJSIP_MAX_MODULE                    16
+    #ifndef PJSIP_MAX_MODULE
+    #   define PJSIP_MAX_MODULE                 16
+    #endif
 
     /* Addresses a destination may resolve to, kept in every transmit buffer
-     * (52 bytes each). The stock 16 is for DNS SRV with many targets; a
-     * device that is given its server's address resolves to one.
+     * (52 bytes each). A device that is given its server's address resolves
+     * to one.
      */
     #define PJSIP_MAX_RESOLVED_ADDRESSES        2
 
@@ -573,9 +588,9 @@
     #define PJMEDIA_CODEC_MGR_MAX_CODECS        4
 
     /* Largest SIP message, sent or received. An INVITE with the SDP of a
-     * desktop UA offering many codecs, through a proxy, is about 2 KB. The
-     * stock 4000 is the size of every message buffer, of which there is one
-     * per transaction and transport.
+     * desktop UA offering many codecs, through a proxy, is about 2 KB. This
+     * is the size of every message buffer, of which there is one per
+     * transaction and transport.
      */
     #ifndef PJSIP_MAX_PKT_LEN
     #   define PJSIP_MAX_PKT_LEN                2200
