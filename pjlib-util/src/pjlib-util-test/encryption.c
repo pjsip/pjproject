@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -65,7 +65,7 @@ static void digest_to_hex(const pj_uint8_t digest[PJ_SHA1_DIGEST_SIZE],
 
 static int sha1_test1(void)
 {
-    enum { MILLION = 1000000 };
+    enum { MILLION = 1000000, BLOCK = 1000 };
     int k;
     pj_sha1_context context;
     pj_uint8_t digest[20];
@@ -99,13 +99,16 @@ static int sha1_test1(void)
         return -20;
     }
 
-    /* million 'a' test, using block */
-    pool = pj_pool_create(mem, "sha1test", 256, 512, NULL);
-    block = (pj_uint8_t*)pj_pool_alloc(pool, MILLION);
-    pj_memset(block, 'a', MILLION);
+    /* million 'a' test, using a block fed a thousand times: a small board
+     * has no room for a million-byte one
+     */
+    pool = pj_pool_create(mem, "sha1test", BLOCK + 256, 512, NULL);
+    block = (pj_uint8_t*)pj_pool_alloc(pool, BLOCK);
+    pj_memset(block, 'a', BLOCK);
 
     pj_sha1_init(&context);
-    pj_sha1_update(&context, block, MILLION);
+    for (k = 0; k < MILLION / BLOCK; ++k)
+        pj_sha1_update(&context, block, BLOCK);
     pj_sha1_final(&context, digest);
     digest_to_hex(digest, output, sizeof(output));
     if (strcmp(output, sha1_test_results[2])) {
@@ -115,7 +118,7 @@ static int sha1_test1(void)
     }
 
     /* verify that original buffer was not modified */
-    for (k=0; k<MILLION; ++k) {
+    for (k=0; k<BLOCK; ++k) {
         if (block[k] != 'a') {
             pj_pool_release(pool);
             PJ_LOG(3, (THIS_FILE, "    block was modified!"));
