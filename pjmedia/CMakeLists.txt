@@ -1095,27 +1095,32 @@ endif()
 # ##############################################################################
 #  Test application
 
+# The sources, except main, are an INTERFACE target so that another build
+# (the Zephyr test app) compiles the same list.
+add_library(pjmedia-test-sources INTERFACE)
+target_sources(pjmedia-test-sources INTERFACE
+  src/test/codec_vectors.c
+  src/test/conf_test.c
+  src/test/jbuf_test.c
+  src/test/mips_test.c
+  src/test/vid_codec_test.c
+  src/test/vid_conf_test.c
+  src/test/vid_dev_test.c
+  src/test/vid_port_test.c
+  src/test/rtp_test.c
+  src/test/test.c
+  src/test/tone_detector_test.c
+  src/test/sdp_neg_test.c
+  src/test/sdp_attr_test.c
+  src/test/transport_srtp_test.c
+)
+
 if(BUILD_TESTING)
-  add_executable(pjmedia-test
-    src/test/codec_vectors.c
-    src/test/conf_test.c
-    src/test/jbuf_test.c
-    src/test/main.c
-    src/test/mips_test.c
-    src/test/vid_codec_test.c
-    src/test/vid_conf_test.c
-    src/test/vid_dev_test.c
-    src/test/vid_port_test.c
-    src/test/rtp_test.c
-    src/test/test.c
-    src/test/tone_detector_test.c
-    src/test/sdp_neg_test.c
-    src/test/sdp_attr_test.c
-    src/test/transport_srtp_test.c
-  )
+  add_executable(pjmedia-test src/test/main.c)
 
   target_link_libraries(pjmedia-test
     PRIVATE
+      pjmedia-test-sources
       pjlib
       pjlib-util
       pjnath

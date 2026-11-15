@@ -1,0 +1,18 @@
+# native_sim runs under twister; the AN521 is build-only, as for tests/pjlib.
+# The MIPS benchmark is a hardware run (CONFIG_PJMEDIA_TEST_BENCHMARK).
+common:
+  tags: pjsip
+tests:
+  pjsip.pjmedia:
+    platform_allow:
+      - native_sim/native/64
+    harness: console
+    harness_config:
+      type: one_line
+      regex:
+        - "Looks like everything is okay"
+    timeout: 900
+  pjsip.pjmedia.an521:
+    platform_allow:
+      - mps2/an521/cpu0
+    build_only: true

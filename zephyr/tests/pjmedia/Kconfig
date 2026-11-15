@@ -1,0 +1,22 @@
+# Copyright (C) 2026 Teluu Inc. (http://www.teluu.com)
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+mainmenu "pjmedia-test on Zephyr"
+
+config PJMEDIA_TEST_ARGS
+	string "Arguments for pjmedia-test: test names and options; empty runs every test"
+	default ""
+	help
+	  Appended, split at spaces, to the "--ci-mode -w 0" the Zephyr build
+	  always passes. "mips_test" runs the MIPS benchmark alone; "-h" lists
+	  the options.
+
+config PJMEDIA_TEST_BENCHMARK
+	bool "Build the MIPS benchmark (mips_test) on a small board too"
+	default n
+	help
+	  test_profile.h leaves the benchmark out on a board with less than
+	  2 MB of RAM, and on native_sim, whose clock stands still while the
+	  CPU is busy. Set it to run the benchmark on real hardware.
+
+source "Kconfig.zephyr"

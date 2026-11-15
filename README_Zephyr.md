@@ -28,7 +28,7 @@ The preset builds G.711 only; G.722 and the resampler are a `config_site.h` sett
 
 ## Footprint
 
-As an indication of the footprint, these are the sizes of the whole AN521 image, Zephyr and its network stack included, for the four ways the sample builds, G.711 with SDES-SRTP. The four-call column is the sample as it ships, with room for the four concurrent calls `MAX_CALLS` allows: the heap arena is sized to the measured peak of those four calls arriving at once plus 5% for the heap's own bookkeeping and fragmentation (236 KB over UDP, 257 KB with threads, 293 KB over TLS and 312 KB with both, set per feature in the sample's Kconfig), and the receive pool holds the four INVITEs of such a burst. The one-call column is the same build sized for a single call, which is what most of the RAM is about: the arena at the one-call peak plus 5% (94, 112, 142 and 161 KB) and the receive pool at the 40 packets and 80 buffers that calls arriving one at a time need; each was verified with a call on the emulator. The figures are the FLASH and RAM lines of the memory usage summary that `west build` prints at the end of the link, rounded to KB. RAM is the static allocation, data and BSS including the heap arena, the kernel heap and the thread stacks, not the run-time use. pjproject's pools and libsrtp's allocations come out of the heap arena, so they are inside this number, not on top of it; what they take at run time is the next table:
+As an indication of the footprint, these are the sizes of the whole AN521 image, Zephyr and its network stack included, for the four ways the sample builds, G.711 with SDES-SRTP, at Zephyr's default optimisation level, `-Os` (`CONFIG_SIZE_OPTIMIZATIONS`). The four-call column is the sample as it ships, with room for the four concurrent calls `MAX_CALLS` allows: the heap arena is sized to the measured peak of those four calls arriving at once plus 5% for the heap's own bookkeeping and fragmentation (236 KB over UDP, 257 KB with threads, 293 KB over TLS and 312 KB with both, set per feature in the sample's Kconfig), and the receive pool holds the four INVITEs of such a burst. The one-call column is the same build sized for a single call, which is what most of the RAM is about: the arena at the one-call peak plus 5% (94, 112, 142 and 161 KB) and the receive pool at the 40 packets and 80 buffers that calls arriving one at a time need; each was verified with a call on the emulator. The figures are the FLASH and RAM lines of the memory usage summary that `west build` prints at the end of the link, rounded to KB. RAM is the static allocation, data and BSS including the heap arena, the kernel heap and the thread stacks, not the run-time use. pjproject's pools and libsrtp's allocations come out of the heap arena, so they are inside this number, not on top of it; what they take at run time is the next table:
 
 | Build | Flash | RAM, one call | RAM, four calls |
 |---|---|---|---|
@@ -60,6 +60,148 @@ So the arena has 10 to 15 KB to spare at the four-call peak; an application with
 > **G.722 needs a larger arena.** These arenas are sized for G.711. With G.722 (section 8) each call's jitter buffer and frames are for 16 kHz, and the same four-call burst on the board peaked at 240 KB, 9 KB more and 1.7 KB short of the UDP arena, so add 10 KB to `CONFIG_COMMON_LIBC_MALLOC_ARENA_SIZE` for G.722 (246 KB over UDP without threads) to keep the same margin.
 
 Each reading includes a few KB for the SIP transactions still timing out, among them the MESSAGE that asked for it, so the steady idle figure is about 20 KB: the SIP endpoint, the transport, the media endpoint and the registration. A call is its media stream with the jitter buffer (8 KB), the dialog and INVITE session (12 KB), the 200 OK kept for retransmission (7 KB), the UDP media transport (6 KB), SRTP (4 KB), the call's own pool, codec, locks and INVITE transaction (5 KB), and libsrtp's own allocations (3.5 KB); nearly all of it is pool memory. The arena is that four-call peak plus 5%, which is what the heap needs to place the blocks (at the bare peak the fourth call fails with "No memory"); the four-call row was measured with the four INVITEs arriving at once and all four calls carrying RTP both ways with no loss. These figures are with the preset's sizing (section 8): with pjproject's stock pool sizes, packet buffers and SDP limits a call took 82 KB and four calls peaked at 436 KB.
+
+## Processing cost
+
+What the media components cost on the NUCLEO-H563ZI, a Cortex-M33 at 240 MHz, measured with pjmedia-test's `mips_test` (section 5): the share of the core that one instance of each takes per second of audio, so a call reads straight off the stream rows. The benchmark application builds with `CONFIG_SPEED_OPTIMIZATIONS=y` (`-O2`, 57 KB more flash than `-Os`); the `-Os` column is Zephyr's default level, which the sample and the footprint figures above are built with.
+
+| Component | `-O2` | `-Os` |
+|---|---|---|
+| G.711 encode and decode | 0.37% | 0.49% |
+| G.711 stream, plain RTP | 0.48% | 0.72% |
+| G.711 stream, SRTP AES-CM-128 with 80-bit HMAC-SHA1 | 1.94% | 2.12% |
+| G.722 encode and decode | 11.9% | 16.9% |
+| G.722 stream, plain RTP | 12.0% | |
+| Jitter buffer WSOLA at 16 kHz, no loss / 5% loss | 0.07% / 0.22% | 0.29% / 0.48% |
+| Resampling 8 to 16 kHz and back, linear | 0.31% | |
+| Resampling 8 to 16 kHz and back, libresample small filter | 4.9% | |
+| Resampling 8 to 16 kHz and back, libresample large filter | 29% | |
+| Resampling 16 to 32 kHz and back, libresample small filter | 9.8% | |
+| Conference bridge, 16 ports at 16 kHz | 5.4% | 10.5% |
+| Echo suppressor, 100 ms tail, 16 kHz | 0.47% | 0.96% |
+| Tone generator, two frequencies, 8 kHz | 1.3% | 1.56% |
+
+So a G.711 call with SRTP costs about 2% of the core and a G.722 call about 13% at `-O2`, 19% at `-Os`: G.722 is the ITU reference-style integer code with a function call per sample, and `-O2` takes a third off it. SRTP is a flat 1.4 points per call, as libsrtp's AES and SHA-1 are table driven. Four concurrent calls on the sample, by the thread analyzer, came to 15% of the core for G.711 with SRTP and 80% for G.722, at `-Os` (section 6). The resampler is the component to keep out of the path: libresample's large filter alone takes a third of the core at 8 kHz and the small filter 5%, where linear interpolation costs under 1%; the preset builds none, and the sample runs everything at the codec's rate. An application that runs G.722 or resamples should build with `CONFIG_SPEED_OPTIMIZATIONS=y`.
+
+The whole table, for reference. The MIPS column is the CPU column times the 1.5 DMIPS/MHz of a Cortex-M33, so the CPU column is the one to read. The "echo canceller" rows equal the "echo suppressor" rows because the preset builds no acoustic echo canceller, so both fall back to the suppressor, whose cost does not depend on the tail length.
+
+<details>
+<summary>mips_test on the NUCLEO-H563ZI at -O2</summary>
+
+```
+MIPS test, with CPU=240Mhz,  360.0 MIPS
+Clock  Item                                                        Time       CPU    MIPS
+ Rate                                                             (usec)      (%)
+-----------------------------------------------------------------------------------------
+ 8KHz get from memplayer                                             160    0.016    0.06
+ 8KHz conference bridge with 1 port                                 2940    0.294    1.06
+ 8KHz conference bridge with 2 ports                                5040    0.504    1.81
+ 8KHz conference bridge with 4 ports                                8460    0.846    3.05
+ 8KHz conference bridge with 8 ports                               15280    1.528    5.50
+ 8KHz conference bridge with 16 ports                              28970    2.897   10.43
+ 8KHz upsample+downsample - linear                                  3120    0.312    1.12
+ 8KHz upsample+downsample - small filter                           49180    4.918   17.70
+ 8KHz upsample+downsample - large filter                          291410   29.141  104.91
+ 8KHz WSOLA PLC - 0% loss                                            580    0.058    0.21
+ 8KHz WSOLA PLC - 2% loss                                            770    0.077    0.28
+ 8KHz WSOLA PLC - 5% loss                                           1270    0.127    0.46
+ 8KHz WSOLA PLC - 10% loss                                          1590    0.159    0.57
+ 8KHz WSOLA PLC - 20% loss                                          2610    0.261    0.94
+ 8KHz WSOLA PLC - 50% loss                                          5010    0.501    1.80
+ 8KHz WSOLA discard 2% excess                                        460    0.046    0.17
+ 8KHz WSOLA discard 5% excess                                        640    0.064    0.23
+ 8KHz WSOLA discard 10% excess                                      1100    0.110    0.40
+ 8KHz WSOLA discard 20% excess                                      1650    0.165    0.59
+ 8KHz WSOLA discard 50% excess                                      3460    0.346    1.25
+ 8KHz Delay buffer                                                   500    0.050    0.18
+ 8KHz Delay buffer - drift -2%                                       950    0.095    0.34
+ 8KHz Delay buffer - drift -5%                                      1040    0.104    0.37
+ 8KHz Delay buffer - drift -10%                                     1380    0.138    0.50
+ 8KHz Delay buffer - drift -20%                                     2340    0.234    0.84
+ 8KHz Delay buffer - drift +2%                                       810    0.081    0.29
+ 8KHz Delay buffer - drift +5%                                       980    0.098    0.35
+ 8KHz Delay buffer - drift +10%                                     1300    0.130    0.47
+ 8KHz Delay buffer - drift +20%                                     2000    0.200    0.72
+ 8KHz echo canceller 100ms tail len                                 4280    0.428    1.54
+ 8KHz echo canceller 128ms tail len                                 4560    0.456    1.64
+ 8KHz echo canceller 200ms tail len                                 6240    0.624    2.25
+ 8KHz echo canceller 256ms tail len                                 6940    0.694    2.50
+ 8KHz echo canceller 400ms tail len                                 2720    0.272    0.98
+ 8KHz echo canceller 500ms tail len                                 4040    0.404    1.45
+ 8KHz echo canceller 512ms tail len                                 4220    0.422    1.52
+ 8KHz echo canceller 600ms tail len                                 5720    0.572    2.06
+ 8KHz echo canceller 800ms tail len                                 3060    0.306    1.10
+ 8KHz echo suppressor 100ms tail len                                4280    0.428    1.54
+ 8KHz echo suppressor 128ms tail len                                4560    0.456    1.64
+ 8KHz echo suppressor 200ms tail len                                6240    0.624    2.25
+ 8KHz echo suppressor 256ms tail len                                6940    0.694    2.50
+ 8KHz echo suppressor 400ms tail len                                2720    0.272    0.98
+ 8KHz echo suppressor 500ms tail len                                4040    0.404    1.45
+ 8KHz echo suppressor 512ms tail len                                4220    0.422    1.52
+ 8KHz echo suppressor 600ms tail len                                5720    0.572    2.06
+ 8KHz echo suppressor 800ms tail len                                3060    0.306    1.10
+ 8KHz tone generator with single freq                               6380    0.638    2.30
+ 8KHz tone generator with dual freq                                12980    1.298    4.67
+ 8KHz codec encode/decode - G.711                                   3660    0.366    1.32
+ 8KHz stream TX/RX - G.711                                          4800    0.480    1.73
+ 8KHz stream TX/RX - G.711 SRTP 32bit                              13170    1.317    4.74
+ 8KHz stream TX/RX - G.711 SRTP 32bit +auth                        19370    1.937    6.97
+ 8KHz stream TX/RX - G.711 SRTP 80bit                              13150    1.315    4.73
+ 8KHz stream TX/RX - G.711 SRTP 80bit +auth                        19360    1.936    6.97
+16KHz get from memplayer                                             240    0.024    0.09
+16KHz conference bridge with 1 port                                 5360    0.536    1.93
+16KHz conference bridge with 2 ports                                9330    0.933    3.36
+16KHz conference bridge with 4 ports                               15680    1.568    5.64
+16KHz conference bridge with 8 ports                               28380    2.838   10.22
+16KHz conference bridge with 16 ports                              53780    5.378   19.36
+16KHz upsample+downsample - linear                                  5820    0.582    2.10
+16KHz upsample+downsample - small filter                           97680    9.768   35.16
+16KHz upsample+downsample - large filter                          582070   58.207  209.55
+16KHz WSOLA PLC - 0% loss                                            740    0.074    0.27
+16KHz WSOLA PLC - 2% loss                                           1220    0.122    0.44
+16KHz WSOLA PLC - 5% loss                                           2170    0.217    0.78
+16KHz WSOLA PLC - 10% loss                                          3400    0.340    1.22
+16KHz WSOLA PLC - 20% loss                                          6720    0.672    2.42
+16KHz WSOLA PLC - 50% loss                                         13920    1.392    5.01
+16KHz WSOLA discard 2% excess                                        450    0.045    0.16
+16KHz WSOLA discard 5% excess                                       1480    0.148    0.53
+16KHz WSOLA discard 10% excess                                      2020    0.202    0.73
+16KHz WSOLA discard 20% excess                                      3820    0.382    1.38
+16KHz WSOLA discard 50% excess                                     10310    1.031    3.71
+16KHz Delay buffer                                                   800    0.080    0.29
+16KHz Delay buffer - drift -2%                                      1440    0.144    0.52
+16KHz Delay buffer - drift -5%                                      1690    0.169    0.61
+16KHz Delay buffer - drift -10%                                     2600    0.260    0.94
+16KHz Delay buffer - drift -20%                                     4490    0.449    1.62
+16KHz Delay buffer - drift +2%                                      1240    0.124    0.45
+16KHz Delay buffer - drift +5%                                      1850    0.185    0.67
+16KHz Delay buffer - drift +10%                                     2660    0.266    0.96
+16KHz Delay buffer - drift +20%                                     3870    0.387    1.39
+16KHz echo canceller 100ms tail len                                 4700    0.470    1.69
+16KHz echo canceller 128ms tail len                                 5100    0.510    1.84
+16KHz echo canceller 200ms tail len                                 3520    0.352    1.27
+16KHz echo canceller 256ms tail len                                 3640    0.364    1.31
+16KHz echo canceller 400ms tail len                                 3840    0.384    1.38
+16KHz echo canceller 500ms tail len                                 4240    0.424    1.53
+16KHz echo canceller 512ms tail len                                 3880    0.388    1.40
+16KHz echo canceller 600ms tail len                                 3680    0.368    1.32
+16KHz echo canceller 800ms tail len                                 3460    0.346    1.25
+16KHz echo suppressor 100ms tail len                                4700    0.470    1.69
+16KHz echo suppressor 128ms tail len                                5100    0.510    1.84
+16KHz echo suppressor 200ms tail len                                3520    0.352    1.27
+16KHz echo suppressor 256ms tail len                                3640    0.364    1.31
+16KHz echo suppressor 400ms tail len                                3840    0.384    1.38
+16KHz echo suppressor 500ms tail len                                4240    0.424    1.53
+16KHz echo suppressor 512ms tail len                                3880    0.388    1.40
+16KHz echo suppressor 600ms tail len                                3680    0.368    1.32
+16KHz echo suppressor 800ms tail len                                3460    0.346    1.25
+16KHz tone generator with single freq                              12680    1.268    4.56
+16KHz tone generator with dual freq                                25860    2.586    9.31
+16KHz codec encode/decode - G.722                                 118820   11.882   42.78
+16KHz stream TX/RX - G.722                                        119880   11.988   43.16
+```
+
+</details>
 
 ## 1. Install Zephyr and get pjproject
 
@@ -352,6 +494,17 @@ The AN521 configuration enables `CONFIG_HW_STACK_PROTECTION`, so a stack overflo
 
 Everything else runs unchanged and passes on both targets in both thread modes.
 
+### pjmedia-test and the MIPS benchmark
+
+pjmedia-test builds the same way in [`zephyr/tests/pjmedia`](zephyr/tests/pjmedia/), sharing the suite's sources with the desktop build through an INTERFACE target in `pjmedia/CMakeLists.txt`, and with G.722 and libresample enabled on top of the preset. Its Kconfig has two settings of its own: `CONFIG_PJMEDIA_TEST_ARGS`, the test names and options to pass to the suite (empty runs every test), and `CONFIG_PJMEDIA_TEST_BENCHMARK`, which brings in `mips_test`, the benchmark `test_profile.h` otherwise leaves out of a small board and of native_sim, where the simulated clock stands still while the CPU is busy. The benchmark pushes five seconds of audio through each media component as fast as it can and reports the share of the CPU that component takes per second of audio: codecs, streams with and without SRTP, the jitter buffer's WSOLA, the conference bridge, the delay buffer, the echo suppressor and the tone generator, at 8 and 16 kHz. Build it for the board with the options that print the table as it goes, since the test runner shows a passing test's log only when asked:
+
+```sh
+west build -p always -b nucleo_h563zi/stm32h563xx -d build-mips $PJ_DIR/zephyr/tests/pjmedia -- -DCONFIG_PJMEDIA_TEST_BENCHMARK=y -DCONFIG_PJMEDIA_TEST_ARGS=\"--log-no-cache -l 3 mips_test\"
+west flash
+```
+
+The application's `prj.conf` builds at `-O2` and sizes the heap for the 16-port conference bridge at 16 kHz, the benchmark's largest user; the entries that need a hundred streams are left out on a small board. The figures measured on the NUCLEO-H563ZI are in "Processing cost" at the top.
+
 ## 6. Run on real hardware
 
 Build for your board and flash as with any Zephyr application:
@@ -378,7 +531,7 @@ A board with less than 640 KB of RAM needs a smaller arena and fewer network buf
 Measured on a NUCLEO-H563ZI (STM32H563ZI, Cortex-M33 at 250 MHz, 640 KB of RAM) on a wired link to the host that runs Kamailio and pjsua, with each of the four builds of the sample. In every build the board took its address from DHCP, registered within a few seconds of the lease, and answered four INVITEs sent within 100 ms of each other at once: four G.711 calls with SDES-SRTP both ways, zero packets lost or discarded in either direction on any of them, round trips of 0.5 to 2 ms, no jitter buffer messages on the board, and clean hangups. The image sizes and the heap peaks are in "Footprint"; the other things worth knowing before trusting a board:
 
 - Clock. The board runs tickless and its clock keeps time: over a two-minute call its RTP clock drifted 6 ms against the host's, 50 ppm, which is the crystals' tolerance, with jitter under 0.5 ms. None of the "Frame lost, recovered!" messages of the QEMU guest.
-- CPU. Four SRTP calls leave the processor mostly idle: Zephyr's thread analyzer (`CONFIG_THREAD_ANALYZER=y` with `CONFIG_THREAD_ANALYZER_AUTO=y`) put the idle thread at 86% or more of the cycles since boot throughout the calls on the TLS build with threads, which also carries the TLS handshake at start-up, and at 96% or more over UDP.
+- CPU. Four G.711 calls with SRTP take about 15% of the core and four G.722 calls about 80%, by the thread analyzer's cycle counts per 10 s interval during the calls (`CONFIG_THREAD_ANALYZER=y` with `CONFIG_THREAD_ANALYZER_AUTO=y`; the percentages it prints itself are cumulative since boot). Where it goes, component by component, is in "Processing cost" at the top.
 - Stacks, from the same analyzer in the threaded builds: the media thread peaked at 7.6 KB of the 16 KB `CONFIG_DYNAMIC_THREAD_STACK_SIZE` in the threads overlay and the main thread at 4.7 KB of its 16 KB; Zephyr's network RX and TX threads and the system work queue, which the sample leaves at Zephyr's defaults, stayed under 80% of theirs. In the single-threaded builds the main thread parses SIP and runs the media too; the 12.4 KB above is its deepest use seen.
 - Memory. The heap peaks of the four-call bursts are those of the emulator to within a few hundred bytes (236 KB arena: 226 KB peak, and so on, see "Footprint"); nothing on the board allocates differently.
 - Reset and re-registration. A board reset while registered leaves the old binding in the registrar until it expires, which with Kamailio means an INVITE forks to the old Contact too; it does no harm over UDP, but see section 11 for what it does when the old and the new image use different transports. Send `quit` before reflashing when the registrar matters.

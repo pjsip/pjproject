@@ -66,7 +66,12 @@ int test_main(int argc, char *argv[])
 
     mem = &caching_pool.factory;
 
-    PJ_TEST_SUCCESS(pjmedia_event_mgr_create(pool, 0, NULL),
+    /* No worker thread in a build without threads; the tests that post
+     * events poll it themselves.
+     */
+    PJ_TEST_SUCCESS(pjmedia_event_mgr_create(pool,
+                                 PJ_HAS_THREADS ? 0 :
+                                 PJMEDIA_EVENT_MGR_NO_THREAD, NULL),
                     NULL, {rc=30; goto on_return;});
 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
