@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -813,7 +813,8 @@ int txdata_test(void)
         if (usec[i].u64 < min.u64) min.u64 = usec[i].u64;
     }
 
-    msgs = (unsigned)(freq.u64 * LOOP / min.u64);
+    /* The clock may not advance while the CPU is busy (native_sim) */
+    msgs = min.u64 ? (unsigned)(freq.u64 * LOOP / min.u64) : 0;
 
     PJ_LOG(3,(THIS_FILE, "    Requests created at %d requests/sec", msgs));
 
@@ -840,7 +841,8 @@ int txdata_test(void)
         if (usec[i].u64 < min.u64) min.u64 = usec[i].u64;
     }
 
-    msgs = (unsigned)(freq.u64 * LOOP / min.u64);
+    /* The clock may not advance while the CPU is busy (native_sim) */
+    msgs = min.u64 ? (unsigned)(freq.u64 * LOOP / min.u64) : 0;
 
     PJ_LOG(3,(THIS_FILE, "    Responses created at %d responses/sec", msgs));
 

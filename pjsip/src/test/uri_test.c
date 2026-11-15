@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1057,6 +1057,7 @@ on_return:
 
 int uri_test(void)
 {
+#if INCLUDE_BENCHMARKS
     enum { COUNT = 1, DETECT=0, PARSE=1, PRINT=2 };
     struct {
         unsigned parse;
@@ -1066,6 +1067,7 @@ int uri_test(void)
     unsigned i, max;
     pj_ssize_t avg_len;
     char desc[200];
+#endif
     pj_status_t status;
 
     status = simple_uri_test();

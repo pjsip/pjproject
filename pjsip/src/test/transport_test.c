@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -257,9 +257,11 @@ int transport_send_recv_test( pjsip_transport_type_e tp_type,
 
     /* Need this to make sure we use our loop transport rather than other
      * loop transport instances created by other test thread (which they
-     * can disappear at any time)
+     * can disappear at any time). For UDP it keeps the sender distinct
+     * from the target: a datagram whose source and destination endpoints
+     * are the same is dropped by some stacks (Zephyr).
      */
-    if (tp_type==PJSIP_TRANSPORT_LOOP_DGRAM) {
+    if (tp_type==PJSIP_TRANSPORT_LOOP_DGRAM || tp_type==PJSIP_TRANSPORT_UDP) {
         pjsip_tpselector tp_sel;
         pj_bzero(&tp_sel, sizeof(tp_sel));
         tp_sel.type = PJSIP_TPSELECTOR_TRANSPORT;
@@ -635,6 +637,13 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
     PJ_UNUSED_ARG(tp_type);
     PJ_UNUSED_ARG(ref_tp);
 
+#if !PJ_HAS_THREADS
+    PJ_LOG(3,(THIS_FILE, "  multithreaded round-trip test skipped: "
+                         "no threads"));
+    *lost = 0;
+    return 0;
+#endif
+
     PJ_LOG(3,(THIS_FILE, "  multithreaded round-trip test (%d threads)...",
                   THREADS));
     PJ_LOG(3,(THIS_FILE, "    this will take approx %d seconds, please wait..",
@@ -671,8 +680,9 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
     pj_bzero(g_rt[tid].rt_test_data, sizeof(g_rt[tid].rt_test_data));
 
     /* Need to use specific loop transport (otherwise we may get transport
-     * that is being shutdown) */
-    g_rt[tid].rt_transport = tp_type==PJSIP_TRANSPORT_LOOP_DGRAM? ref_tp : NULL;
+     * that is being shutdown); for UDP, see transport_send_recv_test() */
+    g_rt[tid].rt_transport = (tp_type==PJSIP_TRANSPORT_LOOP_DGRAM ||
+                              tp_type==PJSIP_TRANSPORT_UDP)? ref_tp : NULL;
 
     /* Initialize thread data. */
     for (i=0; i<THREADS; ++i) {

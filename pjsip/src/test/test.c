@@ -124,8 +124,12 @@ static pj_status_t init_report(void)
                      "pjsip-static-bench-%s-%s.htm", PJ_OS_NAME, PJ_CC_NAME);
 
     status = pj_file_open(NULL, tmp, PJ_O_WRONLY, &fd_report);
-    if (status != PJ_SUCCESS)
-        return status;
+    if (status != PJ_SUCCESS) {
+        /* No file system, say: run without the report */
+        PJ_PERROR(3,(THIS_FILE, status, "Report file %s not created", tmp));
+        fd_report = NULL;
+        return PJ_SUCCESS;
+    }
 
     /* Title */
     len = pj_ansi_snprintf(buf, sizeof(buf),
@@ -137,7 +141,8 @@ static pj_status_t init_report(void)
                                "\n", 
                                PJ_VERSION,
                                (PJ_DEBUG ? "Debug" : "Release"));
-    pj_file_write(fd_report, buf, &len);
+    if (fd_report)
+        pj_file_write(fd_report, buf, &len);
 
 
     /* Title */
@@ -145,13 +150,15 @@ static pj_status_t init_report(void)
                                "<H1>PJSIP %s (%s) - Static Benchmark</H1>\n", 
                                PJ_VERSION,
                                (PJ_DEBUG ? "Debug" : "Release"));
-    pj_file_write(fd_report, buf, &len);
+    if (fd_report)
+        pj_file_write(fd_report, buf, &len);
 
     len = pj_ansi_snprintf(buf, sizeof(buf), 
                                "<P>Below is the benchmark result generated "
                                "by <b>test-pjsip</b> program. The program "
                                "is single-threaded only.</P>\n");
-    pj_file_write(fd_report, buf, &len);
+    if (fd_report)
+        pj_file_write(fd_report, buf, &len);
 
 
     /* Write table heading */
@@ -161,7 +168,8 @@ static pj_status_t init_report(void)
                                "      <TD bgColor=\"aqua\" align=\"center\">Value</TD>\n"
                                "      <TD bgColor=\"aqua\" align=\"center\">Description</TD>\n"
                                "  </TR>\n");
-    pj_file_write(fd_report, buf, &len);
+    if (fd_report)
+        pj_file_write(fd_report, buf, &len);
 
 
     /* Write version */
@@ -213,7 +221,8 @@ void report_sval(const char *name, const char* value, const char *valname,
                                "      <TD>%s</TD>\n"
                                "  </TR>\n",
                                name, value, valname, desc);
-    pj_file_write(fd_report, buf, &len);
+    if (fd_report)
+        pj_file_write(fd_report, buf, &len);
 }
 
 
@@ -228,7 +237,8 @@ void report_ival(const char *name, int value, const char *valname,
                                "      <TD>%s</TD>\n"
                                "  </TR>\n",
                                name, value, valname, desc);
-    pj_file_write(fd_report, buf, &len);
+    if (fd_report)
+        pj_file_write(fd_report, buf, &len);
 
 }
 

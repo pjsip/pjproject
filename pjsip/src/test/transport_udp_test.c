@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -126,8 +126,7 @@ int transport_udp_test(void)
     enum { SEND_RECV_LOOP = 8 };
     enum { NUM_TP = 4 };
     pjsip_transport *tp[NUM_TP], *udp_tp;
-    pj_sockaddr_in rem_addr;
-    pj_str_t s;
+    char target[32];
     pj_status_t status;
     int rtt[SEND_RECV_LOOP], min_rtt;
     int i, pkt_lost;
@@ -136,12 +135,12 @@ int transport_udp_test(void)
     if (status != PJ_SUCCESS)
         return status;
 
-    /* Basic transport's send/receive loopback test. */
-    pj_sockaddr_in_init(&rem_addr, pj_cstr(&s, "127.0.0.1"), TEST_UDP_PORT);
+    /* Basic transport's send/receive loopback test, from tp[0] to tp[1]. */
+    pj_ansi_snprintf(target, sizeof(target), "127.0.0.1:%d",
+                     tp[1]->local_name.port);
     for (i=0; i<SEND_RECV_LOOP; ++i) {
         status = transport_send_recv_test(PJSIP_TRANSPORT_UDP, tp[0], 
-                                          "127.0.0.1:"TEST_UDP_PORT_STR,
-                                          &rtt[i]);
+                                          target, &rtt[i]);
         if (status != 0)
             return status;
     }
@@ -157,8 +156,7 @@ int transport_udp_test(void)
 
 
     /* Multi-threaded round-trip test. */
-    status = transport_rt_test(PJSIP_TRANSPORT_UDP, tp[0], 
-                               "127.0.0.1:"TEST_UDP_PORT_STR, 
+    status = transport_rt_test(PJSIP_TRANSPORT_UDP, tp[0], target,
                                &pkt_lost);
     if (status != 0)
         return status;
