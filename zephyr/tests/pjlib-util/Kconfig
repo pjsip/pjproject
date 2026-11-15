@@ -1,0 +1,17 @@
+# Copyright (C) 2026 Teluu Inc. (http://www.teluu.com)
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+mainmenu "pjlib-util-test on Zephyr"
+
+config PJLIB_UTIL_TEST_ARGS
+	string "Arguments for pjlib-util-test: test names and options; empty runs every test"
+	default ""
+	help
+	  Appended, split at spaces, to the "--ci-mode -w 0" the Zephyr build
+	  always passes. "-h" lists the options.
+
+# The kernel heap, where the threaded build takes its pthread stacks from
+config HEAP_MEM_POOL_SIZE
+	default 65536 if PJPROJECT_THREADS
+
+source "Kconfig.zephyr"

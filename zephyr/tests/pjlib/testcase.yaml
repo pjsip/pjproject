@@ -17,7 +17,7 @@ tests:
   pjsip.pjlib.threads:
     platform_allow:
       - native_sim/native/64
-    extra_args: EXTRA_CONF_FILE=overlay-threads.conf
+    extra_args: EXTRA_CONF_FILE=../overlay-threads.conf
     harness: console
     harness_config:
       type: one_line
@@ -31,5 +31,5 @@ tests:
   pjsip.pjlib.an521.threads:
     platform_allow:
       - mps2/an521/cpu0
-    extra_args: EXTRA_CONF_FILE=overlay-threads.conf
+    extra_args: EXTRA_CONF_FILE=../overlay-threads.conf
     build_only: true

@@ -19,4 +19,8 @@ config PJMEDIA_TEST_BENCHMARK
 	  2 MB of RAM, and on native_sim, whose clock stands still while the
 	  CPU is busy. Set it to run the benchmark on real hardware.
 
+# The kernel heap, where the threaded build takes its pthread stacks from
+config HEAP_MEM_POOL_SIZE
+	default 65536 if PJPROJECT_THREADS
+
 source "Kconfig.zephyr"

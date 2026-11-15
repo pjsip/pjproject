@@ -681,11 +681,13 @@ target_link_libraries(pjmedia
     $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVDEVICE}>:FFMPEG::avdevice>
 )
 
-if (NOT (WIN32 OR CYGWIN OR MINGW))
+if (NOT (WIN32 OR CYGWIN OR MINGW OR DEFINED ZEPHYR_BASE))
   # pjmedia calls libm functions (sin(), cos(), ...), a separate library on
   # these systems that the final link needs. Linked by name so that a cross
   # toolchain picks the libm matching its CPU flags; a Generic one resolves
   # -lm through its multilib specs, where find_library() does not look.
+  # Zephyr's own libc provides them (and the host's static libm does not
+  # link into native_sim).
   find_library(MATH_LIBRARY m)
   if(MATH_LIBRARY OR CMAKE_SYSTEM_NAME STREQUAL "Generic")
     target_link_libraries(pjmedia PRIVATE m)

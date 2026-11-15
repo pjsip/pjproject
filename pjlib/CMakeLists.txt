@@ -295,8 +295,9 @@ if(APPLE)
   endif()
 endif()
 
-# math library
-if(NOT (WIN32 OR CYGWIN OR MINGW))
+# math library. Zephyr's own libc provides it (and the host's static libm
+# does not link into native_sim).
+if(NOT (WIN32 OR CYGWIN OR MINGW OR DEFINED ZEPHYR_BASE))
   find_library(MATH_LIBRARY m)
   # A toolchain for a Generic system (no OS, or an RTOS such as Zephyr)
   # ships libm beside its libc and resolves -lm through its multilib specs,
