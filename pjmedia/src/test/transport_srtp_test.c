@@ -619,7 +619,8 @@ static int scenario_retry_keeps_setting(pj_pool_t *pool, pjmedia_endpt *endpt)
 }
 
 
-#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
+#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0) && \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
 
 /* DTLS-SRTP keying runs over real UDP sockets on 127.0.0.1, polled from
  * this thread.
@@ -829,7 +830,8 @@ int transport_srtp_test(void)
     rc |= scenario_winner_writeback(pool, endpt);
     rc |= scenario_other_ssrc_first(pool, endpt);
     rc |= scenario_retry_keeps_setting(pool, endpt);
-#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
+#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0) && \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
     rc |= scenario_dtls_fprint(pool, endpt, PJ_FALSE);
     rc |= scenario_dtls_fprint(pool, endpt, PJ_TRUE);
 #endif
