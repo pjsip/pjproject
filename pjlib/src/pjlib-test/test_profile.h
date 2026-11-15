@@ -28,15 +28,28 @@
  */
 
 /**
+ * The target's RAM in KB, for tests that scale a size to it, such as the
+ * number of threads a stress test runs. The build may define it. Otherwise
+ * it is the board's RAM on Zephyr, which publishes it as CONFIG_SRAM_SIZE
+ * in KB (0 on native_sim, which uses host memory), and 1 GB everywhere
+ * else.
+ */
+#ifndef PJTEST_RAM_KB
+#   if defined(__ZEPHYR__) && defined(CONFIG_SRAM_SIZE) && CONFIG_SRAM_SIZE > 0
+#       define PJTEST_RAM_KB    CONFIG_SRAM_SIZE
+#   else
+#       define PJTEST_RAM_KB    (1024 * 1024)
+#   endif
+#endif
+
+/**
  * Select the small footprint profile: test sizes that fit a small embedded
  * target with a few hundred KB of RAM, and no benchmarks. The build may
- * define it as 0 or 1. Otherwise it is 1 on a Zephyr board with less than
- * 2 MB of RAM, which Zephyr publishes as CONFIG_SRAM_SIZE in KB (0 on
- * native_sim, which uses host memory), and 0 everywhere else.
+ * define it as 0 or 1. Otherwise it is 1 when PJTEST_RAM_KB is less than
+ * 2 MB, and 0 everywhere else.
  */
 #ifndef PJTEST_SMALL_FOOTPRINT
-#   if defined(__ZEPHYR__) && defined(CONFIG_SRAM_SIZE) && \
-       CONFIG_SRAM_SIZE > 0 && CONFIG_SRAM_SIZE < 2048
+#   if PJTEST_RAM_KB < 2048
 #       define PJTEST_SMALL_FOOTPRINT   1
 #   else
 #       define PJTEST_SMALL_FOOTPRINT   0

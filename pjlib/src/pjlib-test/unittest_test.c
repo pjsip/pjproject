@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2024 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -632,7 +632,10 @@ int unittest_parallel_test()
     }
 
     pj_test_runner_param_default(&prm);
-    prm.nthreads = MAX_TESTS; /* more threads than we need, for testing */
+    /* More threads than we need, for testing; a small board has stacks for
+     * a few, and three suffice for the parallel tests below.
+     */
+    prm.nthreads = (PJTEST_RAM_KB < 2048) ? 4 : MAX_TESTS;
     PJ_TEST_SUCCESS(pj_test_create_text_runner(pool, &prm, &runner), 
                     NULL, { pj_pool_release(pool); return -10; });
 

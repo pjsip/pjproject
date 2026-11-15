@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -783,13 +783,15 @@ static int parallel_recv_test(const pj_ioqueue_cfg *cfg)
     pj_ioqueue_callback cb;
     enum {
         ASYNC_CNT = 16,
+        /* Polling threads: one per operation, where there is room for them */
+        THREAD_CNT = (PJTEST_RAM_KB < 2048) ? 4 : ASYNC_CNT,
         PKT_SIZE = 16,
         SEND_DELAY_MSECS = 250,
         TIMEOUT_SECS = (SEND_DELAY_MSECS*ASYNC_CNT/1000)+2,
     };
     typedef int packet_t;
-    pj_thread_t *threads[ASYNC_CNT];
-    parallel_thread_data thread_datas[ASYNC_CNT], threads_total;
+    pj_thread_t *threads[THREAD_CNT];
+    parallel_thread_data thread_datas[THREAD_CNT], threads_total;
     pj_ioqueue_op_key_t recv_ops[ASYNC_CNT];
     parallel_recv_data recv_datas[ASYNC_CNT];
     unsigned i, async_send = 0, recv_packet_count = 0;
@@ -800,6 +802,8 @@ static int parallel_recv_test(const pj_ioqueue_cfg *cfg)
         app_perror("Unable to create pool", PJ_ENOMEM);
         return -1100;
     }
+    pj_bzero(threads, sizeof(threads));
+    pj_bzero(thread_datas, sizeof(thread_datas));
 
     CHECK(-1110, app_socketpair(pj_AF_INET(), pj_SOCK_STREAM(), 0,
           &ssock, &csock));
@@ -821,8 +825,7 @@ static int parallel_recv_test(const pj_ioqueue_cfg *cfg)
     }
 
     /* spawn polling threads */
-    pj_bzero(thread_datas, sizeof(thread_datas));
-    for (i=0; i<ASYNC_CNT; ++i) {
+    for (i=0; i<THREAD_CNT; ++i) {
         parallel_thread_data *arg = &thread_datas[i];
         arg->ioqueue = ioqueue;
         arg->id = i;
@@ -856,15 +859,16 @@ static int parallel_recv_test(const pj_ioqueue_cfg *cfg)
     }
 
     /* Signal threads that it's done */
-    for (i=0; i<ASYNC_CNT; ++i) {
+    for (i=0; i<THREAD_CNT; ++i) {
         parallel_thread_data *arg = &thread_datas[i];
         arg->quit_flag = 1;
     }
 
     /* Wait until all threads quits */
-    for (i=0; i<ASYNC_CNT; ++i) {
+    for (i=0; i<THREAD_CNT; ++i) {
         CHECK(-1170, pj_thread_join(threads[i]));
         CHECK(-1180, pj_thread_destroy(threads[i]));
+        threads[i] = NULL;
     }
 
     /* Display thread statistics */
@@ -873,7 +877,7 @@ static int parallel_recv_test(const pj_ioqueue_cfg *cfg)
     PJ_LOG(3,(THIS_FILE, "      Thread Wakeups Events  Errors"));
     PJ_LOG(3,(THIS_FILE, "      ============================="));
     pj_bzero(&threads_total, sizeof(threads_total));
-    for (i=0; i<ASYNC_CNT; ++i) {
+    for (i=0; i<THREAD_CNT; ++i) {
         parallel_thread_data *arg = &thread_datas[i];
 
         threads_total.wakeup_cnt += arg->wakeup_cnt;
@@ -909,6 +913,15 @@ static int parallel_recv_test(const pj_ioqueue_cfg *cfg)
         PJ_LOG(3,(THIS_FILE, "....success"));
 
 on_return:
+    /* On failure, the threads created so far still poll the ioqueue */
+    for (i=0; i<THREAD_CNT; ++i)
+        thread_datas[i].quit_flag = 1;
+    for (i=0; i<THREAD_CNT; ++i) {
+        if (threads[i]) {
+            pj_thread_join(threads[i]);
+            pj_thread_destroy(threads[i]);
+        }
+    }
     if (skey)
         pj_ioqueue_unregister(skey);
     if (csock != PJ_INVALID_SOCKET)

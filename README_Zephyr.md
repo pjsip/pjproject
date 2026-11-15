@@ -483,16 +483,18 @@ The test setup is in these places:
 - In [`pjlib/src/pjlib-test/main.c`](pjlib/src/pjlib-test/main.c) directory:
 
   - [`main.c`](pjlib/src/pjlib-test/main.c) sets `--ci-mode` and `-w 0`, so the tests run one at a time.
-  - [`test_profile.h`](pjlib/src/pjlib-test/test_profile.h) selects the small footprint profile on any Zephyr board with less than 2 MB of RAM and records that native_sim's clock stands still while the CPU is busy
+  - [`test_profile.h`](pjlib/src/pjlib-test/test_profile.h) publishes the target's RAM as `PJTEST_RAM_KB` (Zephyr's `CONFIG_SRAM_SIZE`, 1 GB elsewhere), selects the small footprint profile below 2 MB from it, and records that native_sim's clock stands still while the CPU is busy. Tests that run a number of threads take it from the RAM size: the ioqueue stress test, the parallel receive test and the runner's own scheduling test run 4 each on a 640 KB board, 16 and more on a desktop.
   - [`test.h`](pjlib/src/pjlib-test/test.h) derives the test sizes and which tests are built from that profile, and says why each one is left out.
 
 - In [`zephyr/tests/pjlib/`](zephyr/tests/pjlib/) directory:
 
-  - [`prj.conf`](zephyr/tests/pjlib/prj.conf) and [`boards/`](zephyr/tests/pjlib/boards/) files size the network stack, heap and stacks for the tests, with the reason for each setting.
+  - [`prj.conf`](zephyr/tests/pjlib/prj.conf), [`Kconfig`](zephyr/tests/pjlib/Kconfig) and the [`boards/`](zephyr/tests/pjlib/boards/) files size the network stack, heap and stacks for the tests, with the reason for each setting; the kernel heap the threaded build takes its stacks from follows the thread counts above.
 
-The AN521 configuration enables `CONFIG_HW_STACK_PROTECTION`, so a stack overflow faults instead of corrupting memory silently. It caught two: the activesock test keeps 100 operation keys on the main thread's stack, so the suite needs a 32 KB main stack, and Zephyr's `poll()` keeps one event per possible descriptor on the stack, which with `CONFIG_ZVFS_POLL_MAX` at 88 outgrows the 1200-byte default stack of the socket service thread the DNS resolver uses. Keep both in mind when sizing an application: pjlib itself needs neither.
+The AN521 and NUCLEO-H563ZI configurations enable `CONFIG_HW_STACK_PROTECTION`, so a stack overflow faults instead of corrupting memory silently. It caught two: the activesock test keeps 100 operation keys on the main thread's stack, so the suite needs a 32 KB main stack, and Zephyr's `poll()` keeps one event per possible descriptor on the stack, which with `CONFIG_ZVFS_POLL_MAX` at 88 outgrows the 1200-byte default stack of the socket service thread the DNS resolver uses. Keep both in mind when sizing an application: pjlib itself needs neither.
 
 Everything else runs unchanged and passes on both targets in both thread modes.
+
+On the NUCLEO-H563ZI the suite builds as above with `-b nucleo_h563zi/stm32h563xx` and `west flash`; its board file leaves the Ethernet driver out, since the tests only use loopback. Both builds pass on the board, the single-threaded one in 3 minutes (20 tests) and the threaded one in 6 (25 tests plus the runner's scheduling test), at 463 KB and 550 KB of RAM. Three things the board's 640 KB turned up are fixed on every platform: the runner's error path, which destroyed worker threads that were still waiting; the parallel receive test, which left its threads polling a destroyed ioqueue when one could not be created; and the thread counts above, which used to assume a desktop.
 
 ### pjmedia-test and the MIPS benchmark
 

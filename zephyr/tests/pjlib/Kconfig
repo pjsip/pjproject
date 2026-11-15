@@ -1,0 +1,13 @@
+# Copyright (C) 2026 Teluu Inc. (http://www.teluu.com)
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+mainmenu "pjlib-test on Zephyr"
+
+# The kernel heap, where the threaded build takes its pthread stacks from:
+# the threads of the ioqueue stress test, 4 on a board with less than 2 MB
+# (ioq_stress_test.c) at 8 KB each, plus the handful of other test threads.
+# native_sim sets its own in boards/.
+config HEAP_MEM_POOL_SIZE
+	default 65536 if PJPROJECT_THREADS
+
+source "Kconfig.zephyr"
