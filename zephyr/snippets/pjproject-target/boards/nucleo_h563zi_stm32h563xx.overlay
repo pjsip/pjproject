@@ -1,0 +1,10 @@
+/* The board files give Zephyr only SRAM1 (256 KB). SRAM1, SRAM2 and SRAM3
+ * are contiguous (0x20000000-0x2009FFFF), so use all 640 KB as one region.
+ * Requires SRAM2/SRAM3 ECC off in the option bytes, the factory default.
+ */
+/delete-node/ &sram2;
+/delete-node/ &sram3;
+
+&sram1 {
+	reg = <0x20000000 DT_SIZE_K(640)>;
+};
