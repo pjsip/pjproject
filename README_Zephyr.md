@@ -56,6 +56,9 @@ On the NUCLEO-H563ZI the heap behaves exactly as on the emulator: the same code 
 
 So the arena has 10 to 15 KB to spare at the four-call peak; an application with less margin than the sample should measure on its own board, with `mem`, before trimming it. In the threaded builds the 17 KB kernel heap holds the media thread's 16 KB stack and 1 KB is left, which is as intended: nothing else is allocated from it after start-up.
 
+> [!NOTE]
+> **G.722 needs a larger arena.** These arenas are sized for G.711. With G.722 (section 8) each call's jitter buffer and frames are for 16 kHz, and the same four-call burst on the board peaked at 240 KB, 9 KB more and 1.7 KB short of the UDP arena, so add 10 KB to `CONFIG_COMMON_LIBC_MALLOC_ARENA_SIZE` for G.722 (246 KB over UDP without threads) to keep the same margin.
+
 Each reading includes a few KB for the SIP transactions still timing out, among them the MESSAGE that asked for it, so the steady idle figure is about 20 KB: the SIP endpoint, the transport, the media endpoint and the registration. A call is its media stream with the jitter buffer (8 KB), the dialog and INVITE session (12 KB), the 200 OK kept for retransmission (7 KB), the UDP media transport (6 KB), SRTP (4 KB), the call's own pool, codec, locks and INVITE transaction (5 KB), and libsrtp's own allocations (3.5 KB); nearly all of it is pool memory. The arena is that four-call peak plus 5%, which is what the heap needs to place the blocks (at the bare peak the fourth call fails with "No memory"); the four-call row was measured with the four INVITEs arriving at once and all four calls carrying RTP both ways with no loss. These figures are with the preset's sizing (section 8): with pjproject's stock pool sizes, packet buffers and SDP limits a call took 82 KB and four calls peaked at 436 KB.
 
 ## 1. Install Zephyr and get pjproject
