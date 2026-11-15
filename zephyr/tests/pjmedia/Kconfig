@@ -19,8 +19,21 @@ config PJMEDIA_TEST_BENCHMARK
 	  2 MB of RAM, and on native_sim, whose clock stands still while the
 	  CPU is busy. Set it to run the benchmark on real hardware.
 
-# The kernel heap, where the threaded build takes its pthread stacks from
+# The C heap: the MIPS benchmark's 16-port conference bridge at 16 kHz sizes
+# it; the threaded build, which does not run the benchmark on a 640 KB board,
+# gives some of it to the kernel heap below
+config COMMON_LIBC_MALLOC_ARENA_SIZE
+	default 458752 if PJPROJECT_THREADS
+	default 507904
+
+# The kernel heap, where the threaded build takes its pthread stacks from:
+# the event manager's thread and the conference bridge's worker, each 8 KB
+# plus the alignment the MPU wants
 config HEAP_MEM_POOL_SIZE
-	default 65536 if PJPROJECT_THREADS
+	default 49152 if PJPROJECT_THREADS
+
+# Mutexes for the threaded build: one per ioqueue handle
+config MAX_PTHREAD_MUTEX_COUNT
+	default 256 if PJPROJECT_THREADS
 
 source "Kconfig.zephyr"

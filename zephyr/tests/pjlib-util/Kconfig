@@ -14,4 +14,8 @@ config PJLIB_UTIL_TEST_ARGS
 config HEAP_MEM_POOL_SIZE
 	default 65536 if PJPROJECT_THREADS
 
+# Mutexes for the threaded build: one per ioqueue handle
+config MAX_PTHREAD_MUTEX_COUNT
+	default 256 if PJPROJECT_THREADS
+
 source "Kconfig.zephyr"

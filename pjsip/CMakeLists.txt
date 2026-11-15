@@ -345,13 +345,18 @@ target_sources(pjsip-test-sources INTERFACE
   src/test/uri_test.c
   src/test/inv_offer_answer_test.c
   src/test/auth_async_test.c
-  src/test/pjsua_auth_test.c
-  src/test/pjsua_call_test.c
-  src/test/pjsua_acc_test.c
-  src/test/pjsua_pres_test.c
-  src/test/pjsua_dns_test.c
   src/test/srv_failover_test.c
 )
+# pjsua is not part of the Zephyr port: its tests stay out of that build
+if(NOT DEFINED ZEPHYR_BASE)
+  target_sources(pjsip-test-sources INTERFACE
+    src/test/pjsua_auth_test.c
+    src/test/pjsua_call_test.c
+    src/test/pjsua_acc_test.c
+    src/test/pjsua_pres_test.c
+    src/test/pjsua_dns_test.c
+  )
+endif()
 
 if(BUILD_TESTING)
   # pjsip test application

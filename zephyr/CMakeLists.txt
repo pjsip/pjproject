@@ -98,7 +98,7 @@ foreach(_lib third_party pjlib pjlib-util pjnath pjmedia pjsip)
 endforeach()
 
 # Zephyr's include paths, flags and generated headers for every target
-foreach(_t pjlib pjlib-util pjnath pjmedia pjmedia-codec pjmedia-audiodev
+foreach(_t pjlib pjlib-util pjnath pjmedia pjmedia-codec pjmedia-audiodev pjmedia-videodev
            pjsip pjsip-simple pjsip-ua pjsua-lib srtp resample)
   if(TARGET ${_t})
     target_link_libraries(${_t} PRIVATE zephyr_interface)

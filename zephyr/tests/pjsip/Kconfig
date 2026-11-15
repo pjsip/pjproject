@@ -10,8 +10,14 @@ config PJSIP_TEST_ARGS
 	  Appended, split at spaces, to the "--ci-mode -w 0" the Zephyr build
 	  always passes. "-h" lists the options.
 
-# The kernel heap, where the threaded build takes its pthread stacks from
+# The kernel heap, where the threaded build takes its pthread stacks from:
+# the endpoint's worker thread and a few test threads at a time
 config HEAP_MEM_POOL_SIZE
-	default 65536 if PJPROJECT_THREADS
+	default 32768 if PJPROJECT_THREADS
+
+# Mutexes for the threaded build: one per ioqueue handle, plus the transactions and
+# dialogs the registration test keeps alive at once
+config MAX_PTHREAD_MUTEX_COUNT
+	default 512 if PJPROJECT_THREADS
 
 source "Kconfig.zephyr"
