@@ -11,7 +11,7 @@ This guide takes you from a clean machine to a SIP call running on [Zephyr RTOS]
 
   - `native_sim/native/64`
   - `mps2/an521/cpu0` (Cortex-M33 under QEMU, limited to 640 KB of RAM to match an STM32H563). Both register and complete calls with zero packet loss.
-- pjlib-test, PJLIB's own test suite, runs on both targets through twister, single threaded and with threads.
+- The five test suites, pjlib-test, pjlib-util-test, pjnath-test, pjmedia-test and pjsip-test, build as Zephyr test applications with twister entries for native_sim, single threaded and with threads, and for an AN521 build. pjlib-test passes on both targets and on the NUCLEO-H563ZI in both thread modes; the other four pass single threaded on native_sim so far.
 
 Current status:
 
@@ -21,7 +21,7 @@ Current status:
 - SDES-SRTP
 - Single threaded or pjsip and the media on two pthreads
 - The standard pjsip and pjmedia feature set are working: RFC 3261, registration refresh, digest authentication (RFC 2617), rport (RFC 3581), SDP offer/answer (RFC 3264) with the RTCP (RFC 3605), re-INVITE and UPDATE (RFC 3311), PRACK (RFC 3262), call hold and resume, mid-call codec change, SIP MESSAGE (RFC 3428), RTCP reports and quality statistics, DTMF (RFC 4733), adaptive jitter buffer (200 ms by default, `CONFIG_EMBUA_JB_SIZE`), packet loss concealment, VAD with silence suppression, symmetric RTP and ptime negotiation.
-- The rest of the libraries compiles too, among them SUBSCRIBE/NOTIFY and PUBLISH, session timers, REFER, ICE, STUN and TURN, the conference bridge and the WAV ports, but *has not been exercised on Zephyr*, and there is no Zephyr sound device backend.
+- The rest of the libraries compiles too, among them SUBSCRIBE/NOTIFY and PUBLISH, session timers, REFER, the conference bridge and the WAV ports, but *has not been exercised on Zephyr* beyond what the test suites of section 5 cover (they run STUN, TURN, ICE and the conference bridge over loopback on native_sim), and there is no Zephyr sound device backend.
 
 The preset builds G.711 only; G.722 and the resampler are a `config_site.h` setting away.
 
@@ -455,19 +455,19 @@ The script finds QEMU in the SDK, attaches the board's Ethernet to the TAP inter
 To stop QEMU press Ctrl-A, release it, then X. The terminal is the board's serial console, so Ctrl-C goes to the guest and does nothing. If the sequence does not reach QEMU, `pkill qemu-system-arm` from another terminal ends it.
 
 
-## 5. Run the pjlib test suite
+## 5. Run the test suites
 
-pjlib-test, PJLIB's own test suite, builds as a Zephyr test application in `zephyr/tests/pjlib`. It exercises the OS abstraction that a port touches most: pools, threads and thread-local storage, mutexes, timers, sockets over loopback, select and the ioqueue. Its `testcase.yaml` lets twister build and run it on native_sim, single threaded and with threads, checking the console for the suite's final line, and build it for the AN521:
+Each library's own test suite builds as a Zephyr test application under `zephyr/tests/`: [`pjlib`](zephyr/tests/pjlib/), [`pjlib-util`](zephyr/tests/pjlib-util/), [`pjnath`](zephyr/tests/pjnath/), [`pjmedia`](zephyr/tests/pjmedia/) and [`pjsip`](zephyr/tests/pjsip/). The applications share one layout: a `CMakeLists.txt` that links the suite's sources through an INTERFACE target in the library's own `CMakeLists.txt`, so the desktop and Zephyr builds compile the same files; a `Kconfig` with `CONFIG_<SUITE>_TEST_ARGS`, the test names and options to pass to the suite, empty for every test, and the kernel heap the threaded build takes its thread stacks from; a `prj.conf` sizing the network stack, heap and stacks for the tests, with the reason for each setting; `boards/` files for native_sim, the AN521 and the NUCLEO-H563ZI, whose file leaves the Ethernet driver out since the tests only use loopback; and a `testcase.yaml` for twister, which runs the suite on native_sim, single threaded and with threads, watching the console for the suite's closing line, and builds it for the AN521. The tests run one at a time (`-w 0`) in `--ci-mode`. The threaded build of any suite adds `-DEXTRA_CONF_FILE=../overlay-threads.conf`, the overlay all five share in `zephyr/tests/`. To run everything twister can:
 
 ```sh
 cd ~/zephyrproject/mypjproject
-west twister -T $PJ_DIR/zephyr/tests/pjlib -p native_sim/native/64 -p mps2/an521/cpu0 -v
+west twister -T $PJ_DIR/zephyr/tests -p native_sim/native/64 -p mps2/an521/cpu0 -v
 ```
 
-A run takes a few minutes per configuration. To build and run one configuration by hand:
+pjlib-test, in `zephyr/tests/pjlib`, exercises the OS abstraction that a port touches most: pools, threads and thread-local storage, mutexes, timers, sockets over loopback, select and the ioqueue. A run takes a few minutes per configuration. To build and run one configuration by hand:
 
 ```sh
-west build -p always -b native_sim/native/64 -d build-test $PJ_DIR/zephyr/tests/pjlib -- -DEXTRA_CONF_FILE=overlay-threads.conf
+west build -p always -b native_sim/native/64 -d build-test $PJ_DIR/zephyr/tests/pjlib -- -DEXTRA_CONF_FILE=../overlay-threads.conf
 build-test/zephyr/zephyr.exe
 ```
 
@@ -505,7 +505,22 @@ west build -p always -b nucleo_h563zi/stm32h563xx -d build-mips $PJ_DIR/zephyr/t
 west flash
 ```
 
-The application's `prj.conf` builds at `-O2` and sizes the heap for the 16-port conference bridge at 16 kHz, the benchmark's largest user; the entries that need a hundred streams are left out on a small board. The figures measured on the NUCLEO-H563ZI are in "Processing cost" at the top.
+The application's `prj.conf` builds at `-O2` and sizes the heap for the 16-port conference bridge at 16 kHz, the benchmark's largest user; the entries that need a hundred streams are left out on a small board. The figures measured on the NUCLEO-H563ZI are in "Processing cost" at the top. Two tests stay out on Zephyr, in the suite's `test.h`: the jitter buffer test and the codec test vectors read their data from files.
+
+### pjlib-util-test, pjnath-test and pjsip-test
+
+The three remaining suites build the same way, in [`zephyr/tests/pjlib-util`](zephyr/tests/pjlib-util/), [`zephyr/tests/pjnath`](zephyr/tests/pjnath/) and [`zephyr/tests/pjsip`](zephyr/tests/pjsip/):
+
+```sh
+west build -p always -b native_sim/native/64 -d build-pjnath $PJ_DIR/zephyr/tests/pjnath -- -DCONFIG_PJNATH_TEST_ARGS=\"ice_test turn_sock_test\"
+build-pjnath/zephyr/zephyr.exe
+```
+
+Each talks to itself over loopback: pjlib-util-test runs its DNS resolver against its own server, pjnath-test runs STUN, TURN and ICE against the test server in its sources, and pjsip-test runs its transports and its own DNS server. The applications give the ioqueue 64 handles (`PJ_IOQUEUE_MAX_HANDLES`) and the network stack the sockets and buffers the busiest tests open, and pjsip-test keeps its benchmark memory at 128 KB (`PJSIP_TEST_MEM_SIZE`); the heap each needs is in its `prj.conf`. Single threaded on native_sim, pjlib-util-test passes its 5 tests in a second, pjsip-test its 13 in a minute and pjnath-test its 20 in nine minutes, most of that the ICE tests' fixed waits.
+
+Without threads a suite leaves out what needs a worker thread, and says so in its `test.h`: pjlib-util-test's HTTP client and WebSocket tests, whose servers are threads, and it runs the resolver test in its single-threaded form; pjnath-test's concurrency and session authentication tests; and pjsip-test's loop transport, which runs on a worker thread, and with it the transaction, invite, registration and pjsua tests, as `PJSIP_TEST_HAS_LOOP` records. pjsua itself is not part of the port yet.
+
+The suites found four things a loopback-only host does differently from a desktop, each fixed in the test rather than in the library: pjsip-test sent a datagram to its own socket, which Zephyr drops as having identical source and destination endpoints, so the UDP round trips now go between two transports; pjsip-test's TCP selector test connected to an outside address, which a host with only loopback refuses at once, so it connects to one of its own listeners; the ICE test enabled loopback host candidates only on the legacy STUN setting, not on the per-server one that takes effect once a STUN server is configured, which left its server-reflexive candidates without a base; and the TURN test server kept reading a connection the client had closed, which on a real OS is a busy wait that still ends and on native_sim, where the simulated clock stands still while the CPU is busy, never did.
 
 ## 6. Run on real hardware
 
@@ -647,7 +662,7 @@ The Zephyr-specific parts are few, and this is where to look when something need
 - `pjlib/include/pj/compat/os_zephyr.h`: the platform description (which headers and socket functions exist, threads, TCP and TLS from Kconfig, no IPv6). `pj/config.h` selects it when `__ZEPHYR__` is defined. One of its settings, `PJ_THREAD_LOCAL_USE_COMPILER_TLS`, makes pjlib's thread-local storage use the compiler's `__thread` rather than pthread keys, which Zephyr does not provide to its main thread.
 - `pjlib/src/pj/ip_helper_zephyr.c`: network interface and route enumeration through Zephyr's `net_if` API, since Zephyr has no `getifaddrs()`. This is how pjsip learns the address to put in Via and Contact headers.
 - The `PJ_CONFIG_ZEPHYR` preset in `pjlib/include/pj/config_site_sample.h`, which sizes pjsip and pjmedia for a small endpoint; `config_site.h` selects it.
-- `zephyr/tests/pjlib`: the pjlib-test application of section 5, with the `testcase.yaml` that twister runs and, in `boards/`, the heap and stack sizes its tests need on each board. Its sources are pjlib's own in `pjlib/src/pjlib-test`.
+- `zephyr/tests/<lib>` and `zephyr/tests/overlay-threads.conf`: the five test applications of section 5, each with the `testcase.yaml` that twister runs and, in `boards/`, the heap and stack sizes its tests need on each board. Their sources are the libraries' own, in `<lib>/src/<lib>-test` (`pjmedia/src/test`, `pjsip/src/test`).
 - `zephyr/snippets/pjproject-target`: a [snippet](https://docs.zephyrproject.org/latest/build/snippets/index.html) with what pjproject's applications need on each target beyond Zephyr's board files: the NUCLEO-H563ZI, and QEMU's AN521 and native_sim as its stand-ins. Each file under its `boards/` says what it sets and why. The sample and the test select it in their `CMakeLists.txt`; a `-S` on the command line replaces that selection, so give `-S pjproject-target` too when adding another snippet. It is registered through `snippet_root` in `module.yml` and so available to any application that uses the module.
 - `zephyr/samples/embedded_ua`: the sample's `CMakeLists.txt`, `Kconfig`, `prj.conf`, `run-qemu.sh` and, in `boards/`, the static TAP address of the two emulated boards. The source is `pjsip-apps/src/samples/embedded_ua.c`, the same file that builds on Linux, Windows and macOS; on Zephyr it reads its settings from the `CONFIG_EMBUA_*` options.
 
