@@ -854,6 +854,15 @@ PJ_DEF(pj_status_t) pj_test_create_text_runner(
     return PJ_SUCCESS;
 
 on_error:
+    /* The threads created so far are suspended, waiting for a suite that
+     * will never come: wake them to exit before destroying them, or they
+     * run on a destroyed runner.
+     */
+    runner->base.stopping = PJ_TRUE;
+    for (i=0; i<runner->base.prm.nthreads; ++i) {
+        pj_thread_resume(runner->threads[i]);
+        pj_thread_join(runner->threads[i]);
+    }
     text_runner_destroy(&runner->base);
     return status;
 }
