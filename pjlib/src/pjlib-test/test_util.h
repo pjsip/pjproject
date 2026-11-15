@@ -43,6 +43,29 @@
 #  define UNDEF_THIS_FILE   1
 #endif
 
+#ifdef __ZEPHYR__
+/**
+ * Zephyr's main() has no arguments: a test application passes them in a
+ * Kconfig string. Append the words of that string to argv, which already
+ * holds the fixed arguments, and return the new argc. The string is split
+ * in place.
+ */
+PJ_INLINE(int) ut_split_args(char *args, char *argv[], int argc, int max_argc)
+{
+    char *p = args;
+
+    while (argc < max_argc - 1) {
+        while (*p == ' ') ++p;
+        if (!*p) break;
+        argv[argc++] = p;
+        while (*p && *p != ' ') ++p;
+        if (*p) *p++ = '\0';
+    }
+    argv[argc] = NULL;
+    return argc;
+}
+#endif
+
 /* Unit testing app */
 typedef struct ut_app_t
 {

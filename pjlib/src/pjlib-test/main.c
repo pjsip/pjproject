@@ -56,13 +56,18 @@ static void usage()
 
 
 #ifdef __ZEPHYR__
-/* Zephyr's main() has no arguments. No worker thread: tests then run one at
- * a time, so a small target only needs stacks for one test's threads.
+/* Zephyr's main() has no arguments: they come from the test application's
+ * CONFIG_PJLIB_TEST_ARGS, after these. No worker thread: tests then run one
+ * at a time, so a small target only needs stacks for one test's threads.
  */
+#ifndef CONFIG_PJLIB_TEST_ARGS
+#   define CONFIG_PJLIB_TEST_ARGS ""
+#endif
 int main(void)
 {
-    char *argv[] = { "pjlib-test", "--ci-mode", "-w", "0", NULL };
-    int argc = PJ_ARRAY_SIZE(argv) - 1;
+    static char args[] = CONFIG_PJLIB_TEST_ARGS;
+    char *argv[16] = { "pjlib-test", "--ci-mode", "-w", "0" };
+    int argc = ut_split_args(args, argv, 4, PJ_ARRAY_SIZE(argv));
 #else
 int main(int argc, char *argv[])
 {

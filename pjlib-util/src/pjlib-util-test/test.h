@@ -31,8 +31,9 @@
 #define INCLUDE_ENCRYPTION_TEST     1
 #define INCLUDE_STUN_TEST           1
 #define INCLUDE_RESOLVER_TEST       1
-#define INCLUDE_HTTP_CLIENT_TEST    PJ_HAS_TCP
-#define INCLUDE_WEBSOCK_TEST        PJ_HAS_TCP
+/* The HTTP client and WebSocket tests run their server on a thread */
+#define INCLUDE_HTTP_CLIENT_TEST    (PJ_HAS_TCP && PJ_HAS_THREADS)
+#define INCLUDE_WEBSOCK_TEST        (PJ_HAS_TCP && PJ_HAS_THREADS)
 #define INCLUDE_WEBSOCK_ONLINE_TEST 0
 
 extern int xml_test(void);

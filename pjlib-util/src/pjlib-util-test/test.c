@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -87,8 +87,9 @@ static int test_inner(int argc, char *argv[])
 #endif
 
 #if INCLUDE_RESOLVER_TEST
+#if PJ_HAS_THREADS
     UT_ADD_TEST(&test_app.ut_app, resolver_test, 0);
-#if !PJ_HAS_THREADS
+#else
     UT_ADD_TEST(&test_app.ut_app, resolver_nothreads_test, 0);
 #endif
 #endif
@@ -103,6 +104,8 @@ static int test_inner(int argc, char *argv[])
 
     if (ut_run_tests(&test_app.ut_app, "pjlib-util tests", argc, argv)) {
         rc = 1;
+    } else {
+        PJ_LOG(3,("test", "Looks like everything is okay!"));
     }
 
 on_return:
