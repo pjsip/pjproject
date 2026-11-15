@@ -29,10 +29,22 @@
 
 #define INCLUDE_STUN_TEST           1
 #define INCLUDE_ICE_TEST            1
-#define INCLUDE_TRICKLE_ICE_TEST    1
+/* The trickle ICE test needs more heap than a 640 KB board has to spare:
+ * it passes with 448 KB, not with 384, while the other ICE tests run in 320
+ */
+#define INCLUDE_TRICKLE_ICE_TEST    (!PJTEST_SMALL_FOOTPRINT)
 #define INCLUDE_STUN_SOCK_TEST      1
 #define INCLUDE_TURN_SOCK_TEST      1
 #define INCLUDE_CONCUR_TEST         PJ_HAS_THREADS
+/* The 50 rounds of concur_test: its four pollers and the ICE test's four
+ * on one select ioqueue make Zephyr's select() return at once, and on
+ * native_sim a thread that never blocks stops the simulated clock
+ */
+#if defined(__ZEPHYR__)
+#   define INCLUDE_CONCUR_STRESS_TEST 0
+#else
+#   define INCLUDE_CONCUR_STRESS_TEST INCLUDE_CONCUR_TEST
+#endif
 
 #define GET_AF(use_ipv6) (use_ipv6?pj_AF_INET6():pj_AF_INET())
 

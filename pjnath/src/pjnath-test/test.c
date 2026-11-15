@@ -19,6 +19,9 @@
 #include "test.h"
 #include <pjlib.h>
 #include <pj/compat/socket.h>
+#if defined(PJ_SOCK_NONBLOCK_USE_FCNTL) && PJ_SOCK_NONBLOCK_USE_FCNTL != 0
+#   include <fcntl.h>
+#endif
 
 #define THIS_FILE   "test.c"
 
@@ -42,6 +45,10 @@ void app_set_sock_nb(pj_sock_t sock)
     defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
     u_long value = 1;
     ioctlsocket(sock, FIONBIO, &value);
+#elif defined(PJ_SOCK_NONBLOCK_USE_FCNTL) && PJ_SOCK_NONBLOCK_USE_FCNTL != 0
+    int flags = fcntl(sock, F_GETFL, 0);
+    if (flags >= 0)
+        fcntl(sock, F_SETFL, flags | O_NONBLOCK);
 #else
     pj_uint32_t value = 1;
     ioctl(sock, FIONBIO, &value);
@@ -266,7 +273,8 @@ static int test_inner(int argc, char *argv[])
 
 #if INCLUDE_CONCUR_TEST
     UT_ADD_TEST(&test_app.ut_app, ice_conc_test, 0);
-
+#endif
+#if INCLUDE_CONCUR_STRESS_TEST
     for (i=0; i<50; ++i) {
         UT_ADD_TEST(&test_app.ut_app, concur_test, 0);
     }
