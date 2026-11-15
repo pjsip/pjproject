@@ -32,7 +32,7 @@
 #define INCLUDE_TRICKLE_ICE_TEST    1
 #define INCLUDE_STUN_SOCK_TEST      1
 #define INCLUDE_TURN_SOCK_TEST      1
-#define INCLUDE_CONCUR_TEST         1
+#define INCLUDE_CONCUR_TEST         PJ_HAS_THREADS
 
 #define GET_AF(use_ipv6) (use_ipv6?pj_AF_INET6():pj_AF_INET())
 

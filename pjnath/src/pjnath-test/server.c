@@ -559,6 +559,17 @@ static pj_bool_t turn_tcp_on_data_read(pj_activesock_t *asock,
     test_server *test_srv = (test_server *)pj_activesock_get_user_data(asock);
 
     PJ_UNUSED_ARG(remainder);
+
+    /* The connection is closed or broken: drop it, or a stuck EOF keeps
+     * the ioqueue busy
+     */
+    if (status != PJ_SUCCESS) {
+        if (asock == test_srv->cl_turn_sock)
+            test_srv->cl_turn_sock = NULL;
+        pj_activesock_close(asock);
+        return PJ_FALSE;
+    }
+
     return turn_on_data_read(test_srv, data, size, &test_srv->remote_addr, 
                             sizeof(test_srv->remote_addr), status);
 }
@@ -634,6 +645,14 @@ static pj_bool_t turn_tls_on_data_read(pj_ssl_sock_t *ssl_sock,
     test_server *test_srv = (test_server *)pj_ssl_sock_get_user_data(ssl_sock);
 
     PJ_UNUSED_ARG(remainder);
+
+    if (status != PJ_SUCCESS) {
+        if (ssl_sock == test_srv->ssl_cl_sock)
+            test_srv->ssl_cl_sock = NULL;
+        pj_ssl_sock_close(ssl_sock);
+        return PJ_FALSE;
+    }
+
     return turn_on_data_read(test_srv, data, size, 
                              &test_srv->remote_addr, 
                              sizeof(test_srv->remote_addr), 

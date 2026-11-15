@@ -231,7 +231,10 @@ static int test_inner(int argc, char *argv[])
 
 #if INCLUDE_STUN_TEST
     UT_ADD_TEST(&test_app.ut_app, stun_test, 0);
+#if PJ_HAS_THREADS
+    /* Its server and client are threads */
     UT_ADD_TEST(&test_app.ut_app, sess_auth_test, 0);
+#endif
 #endif
 
 #if INCLUDE_STUN_SOCK_TEST
@@ -275,6 +278,7 @@ static int test_inner(int argc, char *argv[])
         rc = 5;
     } else {
         rc = 0;
+        PJ_LOG(3,("test", "Looks like everything is okay!"));
     }
 
     ut_app_destroy(&test_app.ut_app);
