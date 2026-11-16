@@ -89,13 +89,19 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/pjsua2.py"
 )
 
 # ##############################################################################
-# Test: test.py, run against the module in the build tree
+# Test: test.py, run against the module in the build tree. Through runpy, so
+# that the module search starts in the build tree: running the script by its
+# path would search its own folder first, where a make build leaves its
+# pjsua2.py.
 
 if(BUILD_TESTING)
+  string(CONCAT _pj_run_test "import runpy; runpy.run_path("
+    "r'${CMAKE_CURRENT_SOURCE_DIR}/test.py', run_name='__main__')")
   add_test(NAME pjsua2-python
-    COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/test.py"
+    COMMAND "${Python3_EXECUTABLE}" -c "${_pj_run_test}"
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
   )
+  unset(_pj_run_test)
   set_tests_properties(pjsua2-python PROPERTIES
     ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}"
   )
