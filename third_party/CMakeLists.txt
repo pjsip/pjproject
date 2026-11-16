@@ -225,6 +225,9 @@ foreach(dep IN LISTS DEPS)
   # add alias
 endforeach()
 
+# For the pkg-config file: the files of the dependencies found here
+pj_pc_remember_imported_targets()
+
 # install selected sub-diriectories
 if(install_subdirs)
   # append `$ORIGIN/pjproject/third_party` to RPATH, and the same folder seen

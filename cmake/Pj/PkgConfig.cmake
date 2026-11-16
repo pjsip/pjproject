@@ -13,7 +13,8 @@
 # pj_pc_remember_imported_targets() records in the directory that found it,
 # where the target is visible: when pkg-config has a module for that same
 # library, the module's own `--libs` flags are used (with `--static` for a
-# static library), otherwise the file as -L/-l.
+# static library), otherwise the file as -L/-l, followed by what the target
+# links. A static library whose target links more is written that way too.
 #
 # Everything is known at configure time, so the .pc is written then, and
 # installed like any other file. Its prefix is relative to the file itself,
@@ -66,9 +67,10 @@ set(_PJ_PC_PAIRED_OPTIONS "-framework;-weak_framework;-Xlinker")
 
 # The library files of the imported library target `target`: its file, and
 # the absolute paths it lists in INTERFACE_LINK_LIBRARIES (e.g. libixml for
-# UPNP::UPNP). Nothing else of that list is read: a dependency's targets may
-# use any generator expression.
-function(_pj_pc_target_files out target)
+# UPNP::UPNP). The rest of that list, targets, flags and library names (e.g.
+# OpenSSL::Crypto for a static libsrtp), goes to `others`, without the items
+# holding a generator expression: a dependency's targets may use any.
+function(_pj_pc_target_files out others target)
   set(files "")
   get_target_property(configs ${target} IMPORTED_CONFIGURATIONS)
   set(suffixes _RELEASE _NOCONFIG "")
@@ -90,25 +92,33 @@ function(_pj_pc_target_files out target)
       break()
     endif()
   endforeach()
+  set(rest "")
   get_target_property(items ${target} INTERFACE_LINK_LIBRARIES)
   foreach(item IN LISTS items)
-    if(IS_ABSOLUTE "${item}" AND NOT item MATCHES "\\$<")
+    if(item STREQUAL "" OR item MATCHES "\\$<|-NOTFOUND$")
+      continue()
+    elseif(IS_ABSOLUTE "${item}")
       list(APPEND files "${item}")
+    else()
+      list(APPEND rest "${item}")
     endif()
   endforeach()
   set(${out} "${files}" PARENT_SCOPE)
+  set(${others} "${rest}" PARENT_SCOPE)
 endfunction()
 
-# Records the library files of the imported library targets found in the
-# current directory, while they are visible. To be called at the end of each
-# directory that finds dependencies of the PJSIP libraries.
+# Records the library files and other link items of the imported library
+# targets found in the current directory, while they are visible. To be
+# called at the end of each directory that finds dependencies of the PJSIP
+# libraries.
 function(pj_pc_remember_imported_targets)
   get_directory_property(targets IMPORTED_TARGETS)
   foreach(target IN LISTS targets)
     get_target_property(type ${target} TYPE)
     if(NOT type STREQUAL "INTERFACE_LIBRARY")
-      _pj_pc_target_files(files ${target})
+      _pj_pc_target_files(files others ${target})
       set_property(GLOBAL PROPERTY "_PJ_PC_FILES_${target}" "${files}")
+      set_property(GLOBAL PROPERTY "_PJ_PC_OTHERS_${target}" "${others}")
     endif()
   endforeach()
 endfunction()
@@ -427,8 +437,10 @@ function(_pj_pc_dependency target)
   # The library files: recorded where the target was found, or read here
   # when the target is global
   get_property(recorded GLOBAL PROPERTY "_PJ_PC_FILES_${target}" SET)
+  set(others "")
   if(recorded)
     get_property(paths GLOBAL PROPERTY "_PJ_PC_FILES_${target}")
+    get_property(others GLOBAL PROPERTY "_PJ_PC_OTHERS_${target}")
   elseif(TARGET "${target}")
     get_target_property(type ${target} TYPE)
     if(type STREQUAL "INTERFACE_LIBRARY")
@@ -437,7 +449,7 @@ function(_pj_pc_dependency target)
       _pj_pc_visit(${target})
       return()
     endif()
-    _pj_pc_target_files(paths ${target})
+    _pj_pc_target_files(paths others ${target})
   else()
     set(paths "")
   endif()
@@ -474,15 +486,33 @@ function(_pj_pc_dependency target)
         set(static TRUE)
       endif()
     endforeach()
+    # A static library whose target lists what it links is linked as in
+    # the build, not as its module says (static libsrtp with OpenSSL)
+    list(GET paths 0 first)
+    if(others AND first MATCHES "\\.(a|lib)$"
+       AND NOT first MATCHES "\\.dll\\.a$")
+      set(static TRUE)
+    endif()
     set(found FALSE)
     if(NOT static)
-      list(GET paths 0 first)
       _pj_pc_module_flags(flags found "${modules}" "${first}")
     endif()
     if(NOT found)
       foreach(path IN LISTS paths)
         _pj_pc_file_flags(file_flags "${path}")
         list(APPEND flags ${file_flags})
+      endforeach()
+      # Without the module's --static flags: what the target links, after
+      # it. Targets are recorded before it, as the list is reversed at the end
+      _pj_pc_pair_options(others "${others}")
+      foreach(item IN LISTS others)
+        if(item MATCHES "::" OR TARGET "${item}")
+          _pj_pc_dependency("${item}")
+        elseif(item MATCHES "^-")
+          list(APPEND flags "${item}")
+        else()
+          list(APPEND flags "-l${item}")
+        endif()
       endforeach()
     endif()
   else()

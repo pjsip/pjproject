@@ -49,6 +49,8 @@ function(_srtp_find version)
 
     set(SRTP_VERSION_MAJOR "${version}" PARENT_SCOPE)
     set(SRTP_FOUND TRUE PARENT_SCOPE)
+    set(PC_SRTP_CFLAGS_OTHER "${PC_SRTP_CFLAGS_OTHER}" PARENT_SCOPE)
+    set(PC_SRTP_STATIC_LIBRARIES "${PC_SRTP_STATIC_LIBRARIES}" PARENT_SCOPE)
   endif()
 endfunction()
 
@@ -56,6 +58,17 @@ _srtp_find(2)
 if(NOT SRTP_FOUND)
   _srtp_find(1)
 endif()
+
+# OpenSSL in pjlib's search order, so that both link the same one: CMake's
+# FindOpenSSL, then OpenSSL's own package (e.g. given with OpenSSL_DIR)
+macro(_srtp_find_openssl)
+  if(NOT TARGET OpenSSL::Crypto)
+    find_package(OpenSSL QUIET COMPONENTS Crypto MODULE)
+  endif()
+  if(NOT TARGET OpenSSL::Crypto)
+    find_package(OpenSSL QUIET COMPONENTS Crypto CONFIG)
+  endif()
+endmacro()
 
 # Usable when srtp_init() links, as autoconf checks. Which of srtp_deinit()
 # and srtp_shutdown() it has picks how pjmedia ends it. All three are checked
@@ -68,11 +81,50 @@ if(SRTP_INCLUDE_DIR AND SRTP_LIBRARY)
   if(SRTP_FIND_QUIETLY)
     set(_srtp_quiet QUIET)
   endif()
+
+  # A static libsrtp needs the libraries it was built with, which pkg-config
+  # lists as private. OpenSSL's are taken as pjproject finds OpenSSL. When
+  # none are listed, OpenSSL's libcrypto is tried if the library alone fails.
+  set(_srtp_link_libs)
+  if(UNIX AND SRTP_LIBRARY MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$")
+    foreach(_srtp_lib IN LISTS PC_SRTP_STATIC_LIBRARIES)
+      if(_srtp_lib MATCHES "^(lib)?srtp[12]?$")
+        continue()
+      elseif(_srtp_lib MATCHES "^(crypto|ssl)$")
+        _srtp_find_openssl()
+        if(_srtp_lib STREQUAL "ssl" AND TARGET OpenSSL::SSL)
+          list(APPEND _srtp_link_libs OpenSSL::SSL)
+        elseif(TARGET OpenSSL::Crypto)
+          list(APPEND _srtp_link_libs OpenSSL::Crypto)
+        else()
+          list(APPEND _srtp_link_libs ${_srtp_lib})
+        endif()
+      else()
+        list(APPEND _srtp_link_libs ${_srtp_lib})
+      endif()
+    endforeach()
+    list(REMOVE_DUPLICATES _srtp_link_libs)
+
+    if(NOT _srtp_link_libs)
+      pj_check_library_usable(SRTP_ALONE ${_srtp_quiet}
+        FUNCTION srtp_init
+        LIBRARIES "${SRTP_LIBRARY}"
+        DEFINITIONS ${PC_SRTP_CFLAGS_OTHER}
+      )
+      if(NOT SRTP_ALONE_USABLE)
+        _srtp_find_openssl()
+        if(TARGET OpenSSL::Crypto)
+          set(_srtp_link_libs OpenSSL::Crypto)
+        endif()
+      endif()
+    endif()
+  endif()
+
   foreach(_srtp_fn IN ITEMS init deinit shutdown)
     string(TOUPPER "${_srtp_fn}" _srtp_upper)
     pj_check_library_usable(SRTP_${_srtp_upper} ${_srtp_quiet}
       FUNCTION srtp_${_srtp_fn}
-      LIBRARIES "${SRTP_LIBRARY}"
+      LIBRARIES "${SRTP_LIBRARY}" ${_srtp_link_libs}
       DEFINITIONS ${PC_SRTP_CFLAGS_OTHER}
     )
   endforeach()
@@ -82,6 +134,7 @@ if(SRTP_INCLUDE_DIR AND SRTP_LIBRARY)
   unset(_srtp_quiet)
   unset(_srtp_fn)
   unset(_srtp_upper)
+  unset(_srtp_lib)
 endif()
 
 include(FindPackageHandleStandardArgs)
@@ -95,16 +148,17 @@ find_package_handle_standard_args(SRTP
 )
 
 if(SRTP_FOUND)
-  set(SRTP_LIBRARIES ${SRTP_LIBRARY})
+  set(SRTP_LIBRARIES ${SRTP_LIBRARY} ${_srtp_link_libs})
   set(SRTP_INCLUDE_DIRS ${SRTP_INCLUDE_DIR})
   set(SRTP_DEFINITIONS ${PC_SRTP_CFLAGS_OTHER})
 
   if(NOT TARGET SRTP::SRTP)
     add_library(SRTP::SRTP UNKNOWN IMPORTED GLOBAL)
     set_target_properties(SRTP::SRTP PROPERTIES
-      IMPORTED_LOCATION "${SRTP_LIBRARIES}"
+      IMPORTED_LOCATION "${SRTP_LIBRARY}"
       INTERFACE_INCLUDE_DIRECTORIES "${SRTP_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${SRTP_DEFINITIONS}"
+      INTERFACE_LINK_LIBRARIES "${_srtp_link_libs}"
 
       # target metadata
       SRTP_HAS_DEINIT "$<BOOL:${SRTP_HAS_DEINIT}>"
@@ -117,3 +171,4 @@ if(SRTP_FOUND)
 endif()
 
 mark_as_advanced(SRTP_INCLUDE_DIR SRTP_LIBRARY)
+unset(_srtp_link_libs)
