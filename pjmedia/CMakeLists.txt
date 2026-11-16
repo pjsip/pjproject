@@ -17,13 +17,27 @@ cmake_dependent_option(PJMEDIA_WITH_SRTP
 )
 
 # Include resampling implementation
-# an earlier configure forced this to none when libresample was left out;
-# libsamplerate, when unusable, waits for a new root as the other libraries
+# Undo a value an earlier configure forced: libsamplerate if that was asked
+# for (it now stops below when unusable), else the default. A value set
+# since is kept.
 get_property(_pj_doc CACHE PJMEDIA_WITH_RESAMPLE PROPERTY HELPSTRING)
-if(_pj_doc MATCHES "\\(forced\\)$" AND
-   NOT "$CACHE{_PJ_PJMEDIA_WITH_RESAMPLE_UNFORCED}" STREQUAL "libsamplerate")
-  unset(PJMEDIA_WITH_RESAMPLE CACHE)
+if(_pj_doc MATCHES "\\(forced\\)$")
+  set(_pj_value "$CACHE{PJMEDIA_WITH_RESAMPLE}")
+  if(_pj_value STREQUAL "none")
+    set(_pj_value "")
+    if("$CACHE{_PJ_PJMEDIA_WITH_RESAMPLE_UNFORCED}" STREQUAL "libsamplerate")
+      set(_pj_value libsamplerate)
+    endif()
+  endif()
+  if(_pj_value)
+    set_property(CACHE PJMEDIA_WITH_RESAMPLE PROPERTY VALUE ${_pj_value})
+    string(REGEX REPLACE " ?\\(forced\\)$" "" _pj_doc "${_pj_doc}")
+    set_property(CACHE PJMEDIA_WITH_RESAMPLE PROPERTY HELPSTRING "${_pj_doc}")
+  else()
+    unset(PJMEDIA_WITH_RESAMPLE CACHE)
+  endif()
   unset(_PJ_PJMEDIA_WITH_RESAMPLE_UNFORCED CACHE)
+  unset(_pj_value)
 endif()
 unset(_pj_doc)
 pj_option(PJMEDIA_WITH_RESAMPLE "Enable resampling implementation"
@@ -44,8 +58,9 @@ if(PJMEDIA_WITH_RESAMPLE STREQUAL "libresample")
 elseif(PJMEDIA_WITH_RESAMPLE STREQUAL "libsamplerate")
   find_package(SampleRate ${PJ_FIND_QUIET})
   if(NOT SampleRate_FOUND)
-    pj_force_set(PJMEDIA_WITH_RESAMPLE "none"
-      "libsamplerate not found or cannot be linked")
+    message(FATAL_ERROR "PJMEDIA_WITH_RESAMPLE=libsamplerate cannot be used: "
+      "libsamplerate not found or cannot be linked. Set "
+      "PJMEDIA_WITH_RESAMPLE to libresample, speex or none.")
   endif()
 elseif(PJMEDIA_WITH_RESAMPLE STREQUAL "speex")
   if(NOT TARGET Pj::Dep::Speex)
