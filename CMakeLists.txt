@@ -898,11 +898,15 @@ if(_pj_find_modules)
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/CheckLibraryUsable.cmake"
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/DebugLibrary.cmake"
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/GetMacroValue.cmake"
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/PackageRoot.cmake"
     DESTINATION "${PJ_CMAKE_INSTALL_DIR}/Pj"
     COMPONENT PjDevelopment
   )
 endif()
+# PjConfig.cmake includes it whatever is found
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/PackageRoot.cmake"
+  DESTINATION "${PJ_CMAKE_INSTALL_DIR}/Pj"
+  COMPONENT PjDevelopment
+)
 
 # What each dependency PjConfig.cmake looks up was found as here: the
 # <Pkg>_LIBRARY, <Pkg>_INCLUDE_DIR, <Pkg>_DIR, ... cache entries. PjConfig.cmake
