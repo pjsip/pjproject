@@ -59,14 +59,10 @@ if(NOT SRTP_FOUND)
   _srtp_find(1)
 endif()
 
-# OpenSSL in pjlib's search order, so that both link the same one: CMake's
-# FindOpenSSL, then OpenSSL's own package (e.g. given with OpenSSL_DIR)
+# OpenSSL as pjlib finds it, so that both link the same one
 macro(_srtp_find_openssl)
   if(NOT TARGET OpenSSL::Crypto)
-    find_package(OpenSSL QUIET COMPONENTS Crypto MODULE)
-  endif()
-  if(NOT TARGET OpenSSL::Crypto)
-    find_package(OpenSSL QUIET COMPONENTS Crypto CONFIG)
+    pj_find_openssl(QUIET COMPONENTS Crypto)
   endif()
 endmacro()
 

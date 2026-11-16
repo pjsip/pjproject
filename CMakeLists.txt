@@ -953,7 +953,7 @@ if(BUILD_SHARED_LIBS AND UNIX AND NOT CMAKE_CROSSCOMPILING
   set(_pj_rooted "")
   foreach(_pkg IN LISTS _pj_found_pkgs)
     pj_package_root_given(${_pkg} _root)
-    if(_root OR (_pkg STREQUAL "OpenSSL" AND OPENSSL_ROOT_DIR))
+    if(_root)
       list(APPEND _pj_rooted ${_pkg})
     endif()
   endforeach()

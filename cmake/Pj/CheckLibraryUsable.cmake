@@ -82,7 +82,8 @@ int main(void) { return ${arg_FUNCTION}(); }
   set(_targets "")
   set(_target_inputs "")
   set(_pending ${arg_LIBRARIES})
-  while(_pending)
+  # not while(_pending): a list ending in a *-NOTFOUND item reads as false
+  while(NOT "${_pending}" STREQUAL "")
     list(POP_FRONT _pending _lib)
     if(NOT TARGET "${_lib}" OR "${_lib}" IN_LIST _targets)
       continue()
@@ -101,7 +102,8 @@ int main(void) { return ${arg_FUNCTION}(); }
     endforeach()
     foreach(_prop IN LISTS _props)
       get_target_property(_value ${_lib} ${_prop})
-      if(_value)
+      # unset or empty; not if(_value), as for the while() above
+      if(NOT _value STREQUAL "_value-NOTFOUND" AND NOT _value STREQUAL "")
         string(APPEND _target_inputs "|${_lib}.${_prop}=${_value}")
         if(_prop STREQUAL "INTERFACE_LINK_LIBRARIES")
           list(APPEND _pending ${_value})

@@ -66,11 +66,13 @@ endfunction()
 # pj_package_root_given(<package> <out-var>)
 #
 # TRUE when a root is given for <package> as a CMake variable, i.e. the user
-# named where find_package() should look. A root in the environment may be
-# meant for another project, so it does not count.
+# named where find_package() should look, for OpenSSL also OPENSSL_ROOT_DIR.
+# A root in the environment may be meant for another project, so it does not
+# count.
 function(pj_package_root_given package out)
   string(TOUPPER "${package}" _upper)
-  if(${package}_ROOT OR ${_upper}_ROOT)
+  if(${package}_ROOT OR ${_upper}_ROOT
+     OR (package STREQUAL "OpenSSL" AND OPENSSL_ROOT_DIR))
     set(${out} TRUE PARENT_SCOPE)
   else()
     set(${out} FALSE PARENT_SCOPE)
@@ -355,3 +357,16 @@ function(pj_warn_rerooted_package_roots)
     endif()
   endforeach()
 endfunction()
+
+# pj_find_openssl(<find_package arguments>...)
+#
+# find_package(OpenSSL) in the one order every part of pjproject uses, so
+# that all of them link the same OpenSSL: CMake's FindOpenSSL, then
+# OpenSSL's own CMake package (e.g. given with OpenSSL_DIR). A macro, so
+# that the results are set where it is called.
+macro(pj_find_openssl)
+  find_package(OpenSSL ${ARGN} MODULE)
+  if(NOT OPENSSL_FOUND)
+    find_package(OpenSSL ${ARGN} CONFIG)
+  endif()
+endmacro()
