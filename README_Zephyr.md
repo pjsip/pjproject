@@ -546,7 +546,7 @@ The test setup is in these places:
 - In [`pjlib/src/pjlib-test/main.c`](pjlib/src/pjlib-test/main.c) directory:
 
   - [`main.c`](pjlib/src/pjlib-test/main.c) sets `--ci-mode` and `-w 0`, so the tests run one at a time.
-  - [`test_profile.h`](pjlib/src/pjlib-test/test_profile.h) publishes the target's RAM as `PJTEST_RAM_KB` (Zephyr's `CONFIG_SRAM_SIZE`, 1 GB elsewhere), selects the small footprint profile below 2 MB from it, and records that native_sim's clock stands still while the CPU is busy. Tests that run a number of threads take it from the RAM size: the ioqueue stress test, the parallel receive test and the runner's own scheduling test run 4 each on a 640 KB board, 16 and more on a desktop.
+  - [`test_profile.h`](pjlib/src/pjlib-test/test_profile.h) scales the test sizes to the target's RAM, `PJTEST_TARGET_RAM_KB` (Zephyr's `CONFIG_SRAM_SIZE`, 1 GB elsewhere): a thread count is one thread per 160 KB, so the ioqueue stress test, the parallel receive test and the runner's own scheduling test run 4 each on a 640 KB board and 16 on a desktop, and the timer test's size is one unit per 256 KB. It also records that native_sim's clock stands still while the CPU is busy, and that a target with less than 2 MB has a slow CPU, which sets the benchmarks' loop counts.
   - [`test.h`](pjlib/src/pjlib-test/test.h) derives the test sizes and which tests are built from that profile, and says why each one is left out.
 
 - In [`zephyr/tests/pjlib/`](zephyr/tests/pjlib/) directory:

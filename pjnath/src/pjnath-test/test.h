@@ -30,9 +30,10 @@
 #define INCLUDE_STUN_TEST           1
 #define INCLUDE_ICE_TEST            1
 /* The trickle ICE test needs more heap than a 640 KB board has to spare:
- * it passes with 448 KB, not with 384, while the other ICE tests run in 320
+ * it passes with 448 KB, not with 384, while the other ICE tests run in 320.
+ * From 1 MB of RAM the Zephyr test's Kconfig sizes the heap for it
  */
-#define INCLUDE_TRICKLE_ICE_TEST    (!PJTEST_SMALL_FOOTPRINT)
+#define INCLUDE_TRICKLE_ICE_TEST    (PJTEST_TARGET_RAM_KB >= 1024)
 #define INCLUDE_STUN_SOCK_TEST      1
 #define INCLUDE_TURN_SOCK_TEST      1
 #define INCLUDE_CONCUR_TEST         PJ_HAS_THREADS

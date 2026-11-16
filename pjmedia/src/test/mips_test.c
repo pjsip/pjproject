@@ -2368,7 +2368,8 @@ static pjmedia_port* delaybuf_n20(pj_pool_t *pool,
 }
 
 
-#if !PJTEST_SMALL_FOOTPRINT
+/* The hundred-call entries: a hundred streams of pools and jitter buffers */
+#if PJTEST_TARGET_RAM_KB >= 2048
 /***************************************************************************/
 
 static pjmedia_stream* create_call_stream(  pjmedia_endpt *endpt,
@@ -2673,7 +2674,7 @@ static pjmedia_port* conf100_pcmu_srtp80auth_test_init(pj_pool_t *pool,
 
 
 #endif  /* PJMEDIA_HAS_G711_CODEC */
-#endif  /* !PJTEST_SMALL_FOOTPRINT */
+#endif  /* PJTEST_TARGET_RAM_KB >= 2048 */
 
 /***************************************************************************/
 /* Run test entry, return elapsed time */
@@ -2786,7 +2787,7 @@ int mips_test(void)
         { "conference bridge with 4 ports", OP_GET_PUT, K8|K16, &conf4_test_init},
         { "conference bridge with 8 ports", OP_GET_PUT, K8|K16, &conf8_test_init},
         { "conference bridge with 16 ports", OP_GET_PUT, K8|K16, &conf16_test_init},
-#if !PJTEST_SMALL_FOOTPRINT
+#if PJTEST_TARGET_RAM_KB >= 2048
 #if PJMEDIA_HAS_G711_CODEC
         { "conf bridge 100 calls - PCMU", OP_PUT_GET, K8, &conf100_pcmu_test_init},
         { "conf bridge 100 calls - PCMU, no parallel", OP_PUT_GET, K8, &conf100_pcmu_noparallel_test_init},

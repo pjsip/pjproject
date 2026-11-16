@@ -21,7 +21,7 @@
 #include <pjlib.h>
 
 #define POOL_SIZE       8000
-#if PJTEST_SMALL_FOOTPRINT
+#if PJTEST_SLOW_CPU
 #   define LOOP         2000
 #elif defined(PJ_DEBUG) && PJ_DEBUG!=0
 #   define LOOP         10000

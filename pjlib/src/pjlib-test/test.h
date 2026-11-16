@@ -31,14 +31,10 @@
 
 /* Size of the timer test: PJTEST_TIMER_LOOP*250 timer entries, and the
  * thread counts of its stress test scale with it too. 16 needs 1.2 MB of
- * pools and 20 threads; 2 fits a 640 KB board.
+ * pools and 20 threads; 2 fits a 640 KB board: one per 256 KB of RAM.
  */
 #ifndef PJTEST_TIMER_LOOP
-#   if PJTEST_SMALL_FOOTPRINT
-#       define PJTEST_TIMER_LOOP      2
-#   else
-#       define PJTEST_TIMER_LOOP      16
-#   endif
+#   define PJTEST_TIMER_LOOP      PJTEST_RAM_SCALE(256, 2, 16)
 #endif
 
 #define TEST_DEFAULT                1

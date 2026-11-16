@@ -59,15 +59,11 @@ extern pj_caching_pool caching_pool;
 #define TEST_UDP_PORT_STR   "15060"
 
 /**
- * Memory size to use in caching pool.
- * Default: 2MB, 64 KB on a small target
+ * Memory size to use in caching pool: a tenth of the target's RAM, from
+ * 64 KB on a 640 KB board to 2 MB.
  */
 #ifndef PJSIP_TEST_MEM_SIZE
-#  if PJTEST_SMALL_FOOTPRINT
-#    define PJSIP_TEST_MEM_SIZE     (64*1024)
-#  else
-#    define PJSIP_TEST_MEM_SIZE     (2*1024*1024)
-#  endif
+#  define PJSIP_TEST_MEM_SIZE       (PJTEST_RAM_SCALE(10, 64, 2048) * 1024)
 #endif
 
 #define INCLUDE_MESSAGING_GROUP     1

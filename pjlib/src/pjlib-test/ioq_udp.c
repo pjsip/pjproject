@@ -784,7 +784,7 @@ static int parallel_recv_test(const pj_ioqueue_cfg *cfg)
     enum {
         ASYNC_CNT = 16,
         /* Polling threads: one per operation, where there is room for them */
-        THREAD_CNT = (PJTEST_RAM_KB < 2048) ? 4 : ASYNC_CNT,
+        THREAD_CNT = PJTEST_RAM_SCALE(160, 4, ASYNC_CNT),
         PKT_SIZE = 16,
         SEND_DELAY_MSECS = 250,
         TIMEOUT_SECS = (SEND_DELAY_MSECS*ASYNC_CNT/1000)+2,

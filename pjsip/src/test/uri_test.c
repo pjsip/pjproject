@@ -32,7 +32,7 @@
 #define PARAM_CHAR  ALPHANUM MARK "[]/:&+$"
 
 #define POOL_SIZE       8000
-#if PJTEST_SMALL_FOOTPRINT
+#if PJTEST_SLOW_CPU
 #   define LOOP_COUNT   2000
 #elif defined(PJ_DEBUG) && PJ_DEBUG!=0
 #   define LOOP_COUNT   10000

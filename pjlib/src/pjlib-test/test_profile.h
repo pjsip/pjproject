@@ -28,31 +28,39 @@
  */
 
 /**
- * The target's RAM in KB, for tests that scale a size to it, such as the
- * number of threads a stress test runs. The build may define it. Otherwise
- * it is the board's RAM on Zephyr, which publishes it as CONFIG_SRAM_SIZE
- * in KB (0 on native_sim, which uses host memory), and 1 GB everywhere
- * else.
+ * The target's RAM in KB, for the test sizes that scale with it. The build
+ * may define it. Otherwise it is the board's RAM on Zephyr, which publishes
+ * it as CONFIG_SRAM_SIZE in KB (0 on native_sim, which uses host memory),
+ * and 1 GB everywhere else.
  */
-#ifndef PJTEST_RAM_KB
+#ifndef PJTEST_TARGET_RAM_KB
 #   if defined(__ZEPHYR__) && defined(CONFIG_SRAM_SIZE) && CONFIG_SRAM_SIZE > 0
-#       define PJTEST_RAM_KB    CONFIG_SRAM_SIZE
+#       define PJTEST_TARGET_RAM_KB     CONFIG_SRAM_SIZE
 #   else
-#       define PJTEST_RAM_KB    (1024 * 1024)
+#       define PJTEST_TARGET_RAM_KB     (1024 * 1024)
 #   endif
 #endif
 
 /**
- * Select the small footprint profile: test sizes that fit a small embedded
- * target with a few hundred KB of RAM, and no benchmarks. The build may
- * define it as 0 or 1. Otherwise it is 1 when PJTEST_RAM_KB is less than
- * 2 MB, and 0 everywhere else.
+ * A test size scaled to the target's RAM: one unit per kb_per_unit KB, no
+ * less than min and no more than max. A constant expression, usable in #if.
  */
-#ifndef PJTEST_SMALL_FOOTPRINT
-#   if PJTEST_RAM_KB < 2048
-#       define PJTEST_SMALL_FOOTPRINT   1
+#define PJTEST_RAM_SCALE(kb_per_unit, min, max) \
+    ((PJTEST_TARGET_RAM_KB / (kb_per_unit)) < (min) ? (min) : \
+     (PJTEST_TARGET_RAM_KB / (kb_per_unit)) > (max) ? (max) : \
+     (PJTEST_TARGET_RAM_KB / (kb_per_unit)))
+
+/**
+ * Whether the target's CPU is slow, for the loop counts of the benchmarks.
+ * There is no fact to read this from, so the RAM stands in: a target with
+ * less than 2 MB is a microcontroller at a few hundred MHz. The build may
+ * define it as 0 or 1.
+ */
+#ifndef PJTEST_SLOW_CPU
+#   if PJTEST_TARGET_RAM_KB < 2048
+#       define PJTEST_SLOW_CPU          1
 #   else
-#       define PJTEST_SMALL_FOOTPRINT   0
+#       define PJTEST_SLOW_CPU          0
 #   endif
 #endif
 
@@ -86,11 +94,11 @@
 
 /**
  * Exclude the benchmarks (pool, socket and ioqueue performance), which need
- * far more memory and time than the functional tests, and a clock that
- * runs while they do.
+ * far more time than the functional tests, and a clock that runs while
+ * they do.
  */
 #ifndef PJ_EXCLUDE_BENCHMARK_TESTS
-#   define PJ_EXCLUDE_BENCHMARK_TESTS   (PJTEST_SMALL_FOOTPRINT || \
+#   define PJ_EXCLUDE_BENCHMARK_TESTS   (PJTEST_SLOW_CPU || \
                                          !PJTEST_TIME_PASSES_WHEN_BUSY)
 #endif
 

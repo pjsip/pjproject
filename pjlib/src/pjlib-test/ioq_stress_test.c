@@ -19,14 +19,10 @@
 #include <pjlib.h>
 
 #define THIS_FILE       "ioq_stress_test.c"
-/* Threads per test. 16 need about 160 KB of stacks, which a board with
- * 640 KB of RAM has neither the room nor a use for.
+/* Threads per test, one per 160 KB of RAM: 16 need about 160 KB of
+ * stacks, which a board with 640 KB has neither the room nor a use for.
  */
-#if PJTEST_RAM_KB < 2048
-#   define MAX_THREADS  4
-#else
-#   define MAX_THREADS  16
-#endif
+#define MAX_THREADS     PJTEST_RAM_SCALE(160, 4, 16)
 //#define TRACE(log)      PJ_LOG(3,log)
 #define TRACE(log)
 #define MAX_ASYNC       16

@@ -10,6 +10,13 @@ config PJNATH_TEST_ARGS
 	  Appended, split at spaces, to the "--ci-mode -w 0" the Zephyr build
 	  always passes. "-h" lists the options.
 
+# The C heap, where PJLIB's pools come from. With 1 MB of RAM or more the
+# suite includes the trickle ICE test (pjnath-test's test.h), which needs
+# 448 KB of heap
+config COMMON_LIBC_MALLOC_ARENA_SIZE
+	default 491520 if SRAM_SIZE >= 1024
+	default 360448
+
 # The kernel heap, where the threaded build takes its pthread stacks from
 config HEAP_MEM_POOL_SIZE
 	default 65536 if PJPROJECT_THREADS

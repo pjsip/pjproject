@@ -21,5 +21,5 @@ target_link_libraries(app PRIVATE pjlib-test-sources pjlib)
 # queue. Set here rather than in the tree's config_site.h, which is the
 # user's. CONFIG_ZVFS_OPEN_MAX in prj.conf must be at least this.
 zephyr_compile_definitions(PJ_IOQUEUE_MAX_HANDLES=64)
-# Test sizes follow the board's RAM: PJTEST_SMALL_FOOTPRINT in
+# Test sizes follow the board's RAM, PJTEST_TARGET_RAM_KB in
 # pjlib/src/pjlib-test/test_profile.h

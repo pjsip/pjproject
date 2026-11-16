@@ -635,7 +635,7 @@ int unittest_parallel_test()
     /* More threads than we need, for testing; a small board has stacks for
      * a few, and three suffice for the parallel tests below.
      */
-    prm.nthreads = (PJTEST_RAM_KB < 2048) ? 4 : MAX_TESTS;
+    prm.nthreads = PJTEST_RAM_SCALE(160, 4, MAX_TESTS);
     PJ_TEST_SUCCESS(pj_test_create_text_runner(pool, &prm, &runner), 
                     NULL, { pj_pool_release(pool); return -10; });
 
