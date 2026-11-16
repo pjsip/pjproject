@@ -594,7 +594,8 @@ static pj_status_t tick_at(pjmedia_port *master, pj_uint64_t ts)
  * A new clock source (e.g. a reopened sound or null device) restarts the
  * frame timestamps from zero. The first frame mixed into a sink under the new
  * clock may then carry the timestamp of the last frame mixed under the old
- * one, and must still replace, not add to, the sink's previous mix.
+ * one, and must still replace, not add to, the sink's previous mix. A sink
+ * with no transmitter at that timestamp must not get its previous mix again.
  */
 static int clock_restart_test(unsigned src_cnt)
 {
@@ -647,7 +648,20 @@ static int clock_restart_test(unsigned src_cnt)
         rc = -609; goto on_return;
     }
 
-    /* New clock: timestamps restart, the first mix is again at SPF */
+    /* New clock, no transmitter: the sink has nothing to get at SPF */
+    sink->put_peak = 0;
+    if (tick_at(master, 0) != PJ_SUCCESS ||
+        tick_at(master, SPF) != PJ_SUCCESS)
+    {
+        rc = -614; goto on_return;
+    }
+    if (sink->put_peak != 0) {
+        PJ_LOG(1, (THIS_FILE, "   sink level %d after clock restart with no "
+                   "transmitter", sink->put_peak));
+        rc = -615; goto on_return;
+    }
+
+    /* Another new clock: reconnect, the first mix is again at SPF */
     for (i = 0; i < src_cnt; ++i) {
         status = pjmedia_conf_connect_port(conf, slot_src[i], slot_sink, 0);
         if (status != PJ_SUCCESS) { rc = -610; goto on_return; }

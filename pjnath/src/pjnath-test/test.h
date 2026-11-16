@@ -70,6 +70,7 @@ int ice_test(void*);
 int ice_conc_test(void);
 int trickle_ice_test(void);
 int ice_wait_valid_pair_test(void);
+int ice_valid_list_full_test(void);
 int ice_rx_data_stop_test(void);
 int concur_test(void);
 int test_main(int argc, char *argv[]);

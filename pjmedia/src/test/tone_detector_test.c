@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/tone_detector.h>
+#include <pjmedia/conference.h>
 #include <pjmedia/event.h>
 #include <pjmedia/port.h>
 #include <pj/log.h>
@@ -110,6 +111,98 @@ static void drain_events(void)
     pj_thread_sleep(100);
 }
 
+/* Pull frames from the conference master port so queued operations
+ * (e.g. port removal) are processed.
+ */
+static pj_status_t pump_conf(pjmedia_port *master, pj_timestamp *ts,
+                             unsigned n)
+{
+    pj_int16_t buf[SAMPLES_PER_FRAME];
+    pjmedia_frame f;
+    unsigned i;
+    pj_status_t status;
+
+    for (i = 0; i < n; ++i) {
+        pj_bzero(&f, sizeof(f));
+        f.type = PJMEDIA_FRAME_TYPE_AUDIO;
+        f.buf = buf;
+        f.size = sizeof(buf);
+        f.timestamp.u64 = ts->u64;
+        status = pjmedia_port_get_frame(master, &f);
+        if (status != PJ_SUCCESS)
+            return status;
+        ts->u64 += SAMPLES_PER_FRAME;
+    }
+    return PJ_SUCCESS;
+}
+
+/* Destroy the detector the way pjsua does: remove it from the bridge,
+ * destroy it and release the caller's pool right away, before the bridge
+ * has processed the queued removal. The port must not live in that pool.
+ */
+static int conf_teardown_test(void)
+{
+    pj_pool_t *conf_pool, *port_pool;
+    pjmedia_conf *conf = NULL;
+    pjmedia_port *master, *port = NULL;
+    pj_timestamp ts;
+    test_ctx_t ctx;
+    const unsigned freqs[] = { 440u, 480u };
+    unsigned slot;
+    pj_status_t status;
+    int rc = 0;
+
+    PJ_LOG(3, (THIS_FILE, "  conf teardown"));
+
+    ts.u64 = 0;
+    pj_bzero(&ctx, sizeof(ctx));
+
+    conf_pool = pj_pool_create(mem, "tone_det_conf", 4000, 4000, NULL);
+    PJ_TEST_NOT_NULL(conf_pool, "conf pool create", return -100);
+    port_pool = pj_pool_create(mem, "tone_det_port", 1000, 1000, NULL);
+    PJ_TEST_NOT_NULL(port_pool, "port pool create",
+                     {pj_pool_release(conf_pool); return -101;});
+
+    status = pjmedia_conf_create(conf_pool, 4, CLOCK_RATE, CHANNEL_COUNT,
+                                 SAMPLES_PER_FRAME, BITS_PER_SAMPLE,
+                                 PJMEDIA_CONF_NO_DEVICE, &conf);
+    PJ_TEST_SUCCESS(status, "conf create", {rc=-110; goto on_return;});
+    master = pjmedia_conf_get_master_port(conf);
+
+    status = pjmedia_tone_detector_port_create(port_pool, CLOCK_RATE,
+                                               CHANNEL_COUNT,
+                                               SAMPLES_PER_FRAME,
+                                               BITS_PER_SAMPLE,
+                                               freqs, PJ_ARRAY_SIZE(freqs),
+                                               &port, &on_tone_detected, &ctx);
+    PJ_TEST_SUCCESS(status, "port create", {rc=-120; goto on_return;});
+
+    status = pjmedia_conf_add_port(conf, port_pool, port, NULL, &slot);
+    PJ_TEST_SUCCESS(status, "conf add port", {rc=-130; goto on_return;});
+    status = pump_conf(master, &ts, 2);
+    PJ_TEST_SUCCESS(status, "pump after add", {rc=-140; goto on_return;});
+
+    status = pjmedia_conf_remove_port(conf, slot);
+    PJ_TEST_SUCCESS(status, "conf remove port", {rc=-150; goto on_return;});
+    pjmedia_port_destroy(port);
+    port = NULL;
+    pj_pool_release(port_pool);
+    port_pool = NULL;
+
+    status = pump_conf(master, &ts, 2);
+    PJ_TEST_SUCCESS(status, "pump after remove", {rc=-160; goto on_return;});
+
+on_return:
+    if (port)
+        pjmedia_port_destroy(port);
+    if (conf)
+        pjmedia_conf_destroy(conf);
+    if (port_pool)
+        pj_pool_release(port_pool);
+    pj_pool_release(conf_pool);
+    return rc;
+}
+
 int tone_detector_test(void)
 {
     pj_pool_t *pool;
@@ -187,5 +280,7 @@ cleanup:
     if (port)
         pjmedia_port_destroy(port);
     pj_pool_release(pool);
+    if (rc == 0)
+        rc = conf_teardown_test();
     return rc;
 }
