@@ -23,6 +23,7 @@
 #include <pj/assert.h>
 #include <pj/errno.h>
 #include <pj/hash.h>
+#include <pj/list.h>
 #include <pj/lock.h>
 #include <pj/log.h>
 #include <pj/os.h>
@@ -104,6 +105,7 @@ struct perm_t
 
 struct conn_bind_t
 {
+    PJ_DECL_LIST_MEMBER(struct conn_bind_t);
     pj_uint32_t      id;                /* Connection ID.       */
     pj_sockaddr      peer_addr;         /* Peer address.        */
     unsigned         peer_addr_len;
@@ -151,6 +153,8 @@ struct pj_turn_session
 
     pj_hash_table_t     *ch_table;
     pj_hash_table_t     *perm_table;
+
+    struct conn_bind_t   conn_bind_free;
 
     pj_uint32_t          send_ind_tsx_id[3];
     /* tx_pkt must be 16bit aligned */
@@ -286,6 +290,8 @@ PJ_DEF(pj_status_t) pj_turn_session_create( const pj_stun_config *cfg,
 
     /* Permission hash table */
     sess->perm_table = pj_hash_create(pool, PJ_TURN_PERM_HTABLE_SIZE);
+
+    pj_list_init(&sess->conn_bind_free);
 
     /* Session lock */
     if (grp_lock) {
@@ -1203,7 +1209,12 @@ PJ_DEF(pj_status_t) pj_turn_session_connection_bind(
                               PJ_STUN_ATTR_CONNECTION_ID,
                               conn_id);
 
-    conn_bind = PJ_POOL_ZALLOC_T(sess->pool, struct conn_bind_t);
+    if (!pj_list_empty(&sess->conn_bind_free)) {
+        conn_bind = sess->conn_bind_free.next;
+        pj_list_erase(conn_bind);
+    } else {
+        conn_bind = PJ_POOL_ZALLOC_T(sess->pool, struct conn_bind_t);
+    }
     conn_bind->id = conn_id;
     pj_sockaddr_cp(&conn_bind->peer_addr, peer_addr);
     conn_bind->peer_addr_len = addr_len;
@@ -1213,6 +1224,8 @@ PJ_DEF(pj_status_t) pj_turn_session_connection_bind(
      */
     status = pj_stun_session_send_msg(sess->stun, conn_bind, PJ_FALSE,
                                       PJ_FALSE, peer_addr, addr_len, tdata);
+    if (status != PJ_SUCCESS && status != PJ_EPENDING)
+        pj_list_push_back(&sess->conn_bind_free, conn_bind);
 
 on_return:
     pj_grp_lock_release(sess->grp_lock);
@@ -1813,6 +1826,7 @@ static void stun_on_request_complete(pj_stun_session *stun,
                         (sess, status, conn_bind->id,
                         &conn_bind->peer_addr, conn_bind->peer_addr_len);
         }
+        pj_list_push_back(&sess->conn_bind_free, conn_bind);
     } else if (method == PJ_STUN_CONNECT_METHOD) {
         /* Handle Connct response */
         struct pj_sockaddr_t *peer_addr = (struct pj_sockaddr_t*)token;
