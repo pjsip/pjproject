@@ -13,8 +13,8 @@
 # pj_pc_remember_imported_targets() records in the directory that found it,
 # where the target is visible: when pkg-config has a module for that same
 # library, the module's own `--libs` flags are used (with `--static` for a
-# static library), otherwise the file as -L/-l, followed by what the target
-# links. A static library whose target links more is written that way too.
+# static library), otherwise the file as -L/-l; either is followed by what
+# the target links, for a static library also after the module's flags.
 #
 # Everything is known at configure time, so the .pc is written then, and
 # installed like any other file. Its prefix is relative to the file itself,
@@ -486,13 +486,7 @@ function(_pj_pc_dependency target)
         set(static TRUE)
       endif()
     endforeach()
-    # A static library whose target lists what it links is linked as in
-    # the build, not as its module says (static libsrtp with OpenSSL)
     list(GET paths 0 first)
-    if(others AND first MATCHES "\\.(a|lib)$"
-       AND NOT first MATCHES "\\.dll\\.a$")
-      set(static TRUE)
-    endif()
     set(found FALSE)
     if(NOT static)
       _pj_pc_module_flags(flags found "${modules}" "${first}")
@@ -502,8 +496,13 @@ function(_pj_pc_dependency target)
         _pj_pc_file_flags(file_flags "${path}")
         list(APPEND flags ${file_flags})
       endforeach()
-      # Without the module's --static flags: what the target links, after
-      # it. Targets are recorded before it, as the list is reversed at the end
+    endif()
+    # What the target links, after it: without the module's flags, and for
+    # a static library also beside them, as its .pc file may leave out what
+    # the build linked (a static libsrtp's libcrypto). Targets are recorded
+    # before it, as the list is reversed at the end.
+    if(NOT found OR (first MATCHES "\\.(a|lib)$"
+                     AND NOT first MATCHES "\\.dll\\.a$"))
       _pj_pc_pair_options(others "${others}")
       foreach(item IN LISTS others)
         if(item MATCHES "::" OR TARGET "${item}")
