@@ -151,9 +151,10 @@ endfunction()
 # pj_warn_if_changed(<name> <value> <what>)
 #
 # For a search input a reconfigure does not follow: libraries already found
-# are not searched again, as anywhere in CMake. Remember <value> from the
-# first configure of the build folder and, while it differs, warn that <what>
-# needs `cmake --fresh` to take effect.
+# are not searched again, as anywhere in CMake, and an option switched off
+# for a library not found comes back only with a new <Pkg>_ROOT. Remember
+# <value> from the first configure of the build folder and, while it
+# differs, warn that <what> needs `cmake --fresh` to take effect.
 function(pj_warn_if_changed name value what)
   if(NOT DEFINED CACHE{_PJ_FIRST_${name}})
     set(_PJ_FIRST_${name} "${value}" CACHE INTERNAL "")
@@ -163,8 +164,9 @@ function(pj_warn_if_changed name value what)
       set(_was "empty")
     endif()
     message(WARNING "${what} changed since this build folder was first "
-      "configured (was ${_was}). Libraries already found are not searched "
-      "again; reconfigure with 'cmake --fresh' for the change to take "
+      "configured (was ${_was}). Libraries already found are kept, and "
+      "features switched off because their library was not found stay "
+      "off; reconfigure with 'cmake --fresh' for the change to take "
       "effect.")
   endif()
 endfunction()

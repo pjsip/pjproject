@@ -2,12 +2,15 @@
 #
 # Defines the imported target `IPP::IPP`. As autoconf --enable-ipp:
 #
-#   IPP_ROOT          IPP location (--with-ipp), else $ENV{IPPROOT}, else
-#                     the first /opt/intel/ipp/*/*
+#   IPP_ROOT          IPP location (--with-ipp), else the first
+#                     /opt/intel/ipp/*/*
 #   IPP_SAMPLES_ROOT  samples location (--with-ipp-samples), else
-#                     $ENV{IPPSAMPLES}, else /opt/intel/ipp-samples
+#                     /opt/intel/ipp-samples
 #   IPP_ARCH_SUFFIX   library name suffix (--with-ipp-arch), e.g. "64" or
 #                     "em64t"; empty for IA32
+#
+# autoconf's IPPROOT and IPPSAMPLES environment variables are not read: the
+# two variables above are the one way to give each location.
 #
 # The samples must have been built: the library is libusc.a (IPP 5) or
 # libspeech.a (IPP 6) under speech-codecs/{bin,_bin}/*gcc*/lib.
@@ -15,28 +18,20 @@
 set(IPP_ARCH_SUFFIX "" CACHE STRING "Intel IPP library name suffix")
 
 if(NOT IPP_ROOT)
-  if(DEFINED ENV{IPPROOT})
-    set(IPP_ROOT "$ENV{IPPROOT}")
-  else()
-    file(GLOB _ipp_roots LIST_DIRECTORIES TRUE "/opt/intel/ipp/*/*")
-    if(_ipp_roots)
-      list(GET _ipp_roots 0 IPP_ROOT)
-    endif()
-    unset(_ipp_roots)
+  file(GLOB _ipp_roots LIST_DIRECTORIES TRUE "/opt/intel/ipp/*/*")
+  if(_ipp_roots)
+    list(GET _ipp_roots 0 IPP_ROOT)
   endif()
+  unset(_ipp_roots)
 endif()
 
-if(NOT IPP_SAMPLES_ROOT)
-  if(DEFINED ENV{IPPSAMPLES})
-    set(IPP_SAMPLES_ROOT "$ENV{IPPSAMPLES}")
-  elseif(IS_DIRECTORY "/opt/intel/ipp-samples")
-    set(IPP_SAMPLES_ROOT "/opt/intel/ipp-samples")
-  endif()
+if(NOT IPP_SAMPLES_ROOT AND IS_DIRECTORY "/opt/intel/ipp-samples")
+  set(IPP_SAMPLES_ROOT "/opt/intel/ipp-samples")
 endif()
 
-# The samples' search results follow a changed samples location, given or
-# from IPPSAMPLES; pj_retry_on_new_root() only watches IPP_ROOT. The first
-# configure only records it, keeping IPP_USC_* given with it.
+# The samples' search results follow a changed samples location;
+# pj_retry_on_new_root() only watches IPP_ROOT. The first configure only
+# records it, keeping IPP_USC_* given with it.
 if(NOT "${IPP_SAMPLES_ROOT}" STREQUAL "$CACHE{_PJ_IPP_USC_FOR}")
   if(DEFINED CACHE{_PJ_IPP_USC_FOR})
     unset(IPP_USC_INCLUDE_DIR CACHE)

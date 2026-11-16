@@ -273,11 +273,6 @@ pj_find_optional(PJMEDIA_WITH_BCG729_CODEC OFF BCG729)
 # config_site.h. See cmake/FindIPP.cmake for where to point the build.
 option(PJMEDIA_WITH_INTEL_IPP "Link the Intel IPP codec libraries" OFF)
 pj_retry_on_new_root(PJMEDIA_WITH_INTEL_IPP IPP_SAMPLES)
-if(NOT IPP_ROOT AND (PJMEDIA_WITH_INTEL_IPP
-   OR DEFINED CACHE{_PJ_PJMEDIA_WITH_INTEL_IPP_UNFORCED}))
-  pj_warn_if_changed(IPPROOT "$ENV{IPPROOT}"
-    "The IPPROOT environment variable")
-endif()
 pj_find_optional(PJMEDIA_WITH_INTEL_IPP OFF IPP)
 
 # Lyra codec
