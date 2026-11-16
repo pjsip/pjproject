@@ -2,23 +2,24 @@
 
 include(CMakeFindDependencyMacro)
 
+# Everything below in a variable scope of its own, so that the variables it
+# sets for the searches (CMAKE_MODULE_PATH, the paths pjproject found) are
+# gone afterwards, also when a find_dependency() fails and returns early
+block(SCOPE_FOR VARIABLES PROPAGATE Pj_FOUND Pj_NOT_FOUND_MESSAGE)
+
 # Add our Find modules to the search path for dependencies below
-set(_pj_saved_module_path "${CMAKE_MODULE_PATH}")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
 
 # Search for each dependency where pjproject found it, unless the consumer
 # already chose (that variable, or a root for its package as a CMake
 # variable, OPENSSL_ROOT_DIR too), or that file is gone, e.g. this install
-# was copied to another machine. Normal variables, unset after the searches
-# below, so that nothing is left in the consumer's cache for its own
-# find_package() calls.
+# was copied to another machine. Normal variables, so that nothing is left
+# in the consumer's cache for its own find_package() calls.
 include(Pj/PackageRoot)
-set(_pj_found_vars "")
 function(_pj_use_found package var value)
   pj_package_root_given(${package} _root)
   if(NOT _root AND NOT DEFINED ${var} AND EXISTS "${value}")
     set(${var} "${value}" PARENT_SCOPE)
-    set(_pj_found_vars ${_pj_found_vars} ${var} PARENT_SCOPE)
   endif()
 endfunction()
 include("${CMAKE_CURRENT_LIST_DIR}/PjFoundPaths.cmake")
@@ -159,17 +160,10 @@ if(@PJ_APPLE@ AND @PJMEDIA_WITH_ILBC_CODEC@)
   find_dependency(AudioToolbox)
 endif()
 
-set(CMAKE_MODULE_PATH "${_pj_saved_module_path}")
-unset(_pj_saved_module_path)
-
 # Load exported targets
 include("${CMAKE_CURRENT_LIST_DIR}/@PJ_CMAKE_TARGETS_FILE@")
 
 # Recreate Pj::Dep::* alias targets for bundled/system dependencies
 include("${CMAKE_CURRENT_LIST_DIR}/PjDeps.cmake")
 
-foreach(_pj_var IN LISTS _pj_found_vars)
-  unset(${_pj_var})
-endforeach()
-unset(_pj_var)
-unset(_pj_found_vars)
+endblock()
