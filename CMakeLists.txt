@@ -259,13 +259,16 @@ cmake_dependent_option(PJ_BUILD_SWIG_CSHARP
   "Build the pjsua2 C# bindings with SWIG" OFF
   "PJ_BUILD_PJSUA2" OFF
 )
-# iOS apps reach the C# bindings with DllImport("__Internal"), so the app links
-# them and every library they need from one static libpjsua2.a
-if(IOS AND PJ_BUILD_SWIG_CSHARP AND BUILD_SHARED_LIBS)
+# The bindings' native library has to hold the pjproject libraries: iOS apps
+# link it statically (DllImport("__Internal")), and Android, which does not
+# version library names, would name pjproject's shared pjsua2 library
+# libpjsua2.so, as the bindings' own
+if((IOS OR ANDROID) AND PJ_BUILD_SWIG_CSHARP AND BUILD_SHARED_LIBS)
   message(FATAL_ERROR
-    "PJ_BUILD_SWIG_CSHARP on iOS needs static libraries: the app links the "
-    "bindings and the pjproject libraries statically, from libpjsua2.a. Set "
-    "BUILD_SHARED_LIBS=OFF, or PJ_BUILD_SWIG_CSHARP=OFF.")
+    "PJ_BUILD_SWIG_CSHARP on iOS and Android needs static libraries: the "
+    "bindings' native library (libpjsua2.a on iOS, libpjsua2.so on Android) "
+    "has to hold the pjproject libraries. Set BUILD_SHARED_LIBS=OFF, or "
+    "PJ_BUILD_SWIG_CSHARP=OFF.")
 endif()
 if(PJ_BUILD_SWIG_JAVA OR PJ_BUILD_SWIG_PYTHON OR PJ_BUILD_SWIG_CSHARP)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
