@@ -3165,7 +3165,16 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
     }
 
     if (i==ice->valid_list.count) {
-        pj_assert(ice->valid_list.count < PJ_ICE_MAX_CHECKS);
+        if (ice->valid_list.count >= PJ_ICE_MAX_CHECKS) {
+            LOG4((ice->obj_name, "Check %s: valid list is full",
+                  dump_check(ice->tmp.txt, sizeof(ice->tmp.txt),
+                             &ice->clist, check)));
+            check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_FAILED,
+                            PJ_ETOOMANY);
+            on_check_complete(ice, check);
+            pj_grp_lock_release(ice->grp_lock);
+            return;
+        }
         new_check = &ice->valid_list.checks[ice->valid_list.count++];
         new_check->lcand = lcand;
         new_check->rcand = check->rcand;
