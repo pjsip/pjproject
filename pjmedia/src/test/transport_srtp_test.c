@@ -702,15 +702,22 @@ static pj_status_t dtls_peer_create_sdp(pj_pool_t *pool, dtls_peer *peer)
     return pjmedia_sdp_parse(pool, buf, len, &peer->sdp);
 }
 
+typedef enum dtls_fprint_case
+{
+    DTLS_FPRINT_VALID,
+    DTLS_FPRINT_TAMPERED,
+    DTLS_FPRINT_EMPTY
+} dtls_fprint_case;
+
 /* The answerer becomes the DTLS client and starts the handshake from
  * encode_sdp(), so the handshake can complete before media_start(), e.g.
  * while the call is ringing. A fingerprint mismatch found at that point
  * must still fail media_start() instead of SRTP being started with the
- * unverified peer's keys. With tamper==PJ_FALSE the same flow must
- * succeed.
+ * unverified peer's keys. An empty fingerprint must be rejected by
+ * encode_sdp(). With a valid fingerprint the same flow must succeed.
  */
 static int scenario_dtls_fprint(pj_pool_t *pool, pjmedia_endpt *endpt,
-                                pj_bool_t tamper)
+                                dtls_fprint_case fp_case)
 {
     dtls_peer a, b;
     pjmedia_sdp_session *offer;
@@ -743,7 +750,7 @@ static int scenario_dtls_fprint(pj_pool_t *pool, pjmedia_endpt *endpt,
      * not match the offered fingerprint, as with a man in the middle.
      */
     offer = pjmedia_sdp_session_clone(pool, a.sdp);
-    if (tamper) {
+    if (fp_case != DTLS_FPRINT_VALID) {
         pjmedia_sdp_attr *fp;
 
         fp = pjmedia_sdp_media_find_attr2(offer->media[0], "fingerprint",
@@ -751,16 +758,28 @@ static int scenario_dtls_fprint(pj_pool_t *pool, pjmedia_endpt *endpt,
         CHECK(fp && fp->value.slen, "offer has a=fingerprint");
         if (!fp || !fp->value.slen)
             goto on_return;
-        fp->value.ptr[fp->value.slen-1] =
-            (char)(fp->value.ptr[fp->value.slen-1] == '0' ? '1' : '0');
+        if (fp_case == DTLS_FPRINT_EMPTY) {
+            fp->value.slen = 0;
+        } else {
+            fp->value.ptr[fp->value.slen-1] =
+                (char)(fp->value.ptr[fp->value.slen-1] == '0' ? '1' : '0');
+        }
     }
 
     /* B answers (a=setup:active) and starts the handshake */
     status = pjmedia_transport_media_create(b.tp, pool, 0, offer, 0);
     if (status == PJ_SUCCESS)
         status = dtls_peer_create_sdp(pool, &b);
-    if (status == PJ_SUCCESS)
-        status = pjmedia_transport_encode_sdp(b.tp, pool, b.sdp, offer, 0);
+    CHECK(status == PJ_SUCCESS, "prepare answer");
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    status = pjmedia_transport_encode_sdp(b.tp, pool, b.sdp, offer, 0);
+    if (fp_case == DTLS_FPRINT_EMPTY) {
+        CHECK(status == PJMEDIA_SRTP_DTLS_ENOFPRINT,
+              "encode_sdp() rejects an empty fingerprint");
+        goto on_return;
+    }
     CHECK(status == PJ_SUCCESS, "create answer");
     if (status != PJ_SUCCESS)
         goto on_return;
@@ -782,7 +801,7 @@ static int scenario_dtls_fprint(pj_pool_t *pool, pjmedia_endpt *endpt,
                 pjmedia_transport_info_get_spc_info(
                                     &info, PJMEDIA_TRANSPORT_TYPE_SRTP);
 
-    if (tamper) {
+    if (fp_case == DTLS_FPRINT_TAMPERED) {
         CHECK(b.nego_status == PJMEDIA_SRTP_DTLS_EFPNOTMATCH,
               "DTLS nego reports the fingerprint mismatch");
         CHECK(status != PJ_SUCCESS,
@@ -832,8 +851,9 @@ int transport_srtp_test(void)
     rc |= scenario_retry_keeps_setting(pool, endpt);
 #if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0) && \
     (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
-    rc |= scenario_dtls_fprint(pool, endpt, PJ_FALSE);
-    rc |= scenario_dtls_fprint(pool, endpt, PJ_TRUE);
+    rc |= scenario_dtls_fprint(pool, endpt, DTLS_FPRINT_VALID);
+    rc |= scenario_dtls_fprint(pool, endpt, DTLS_FPRINT_TAMPERED);
+    rc |= scenario_dtls_fprint(pool, endpt, DTLS_FPRINT_EMPTY);
 #endif
 
     pj_pool_release(pool);

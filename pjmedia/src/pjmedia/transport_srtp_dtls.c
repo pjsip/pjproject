@@ -1202,6 +1202,8 @@ static pj_status_t parse_setup_finger_attr(dtls_srtp *ds,
     } else {
         pj_str_t rem_fp = a->value;
         pj_strtrim(&rem_fp);
+        if (!rem_fp.slen)
+            return PJMEDIA_SRTP_DTLS_ENOFPRINT;
         if (pj_stricmp(&ds->rem_fingerprint, &rem_fp))
             pj_strdup(ds->pool, &ds->rem_fingerprint, &rem_fp);
     }
