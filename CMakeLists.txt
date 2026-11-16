@@ -1005,7 +1005,7 @@ foreach(_var IN LISTS _pj_cache_vars)
         string(FIND "${_value}]" "]${_eq}]" _pos)
       endwhile()
       string(APPEND _pj_found_paths
-        "_pj_use_found(${_var} [${_eq}[${_value}]${_eq}])\n"
+        "_pj_use_found(${_pkg} ${_var} [${_eq}[${_value}]${_eq}])\n"
       )
       break()
     endif()
