@@ -23,7 +23,8 @@ include(CMakePushCheckState)
 # Threads::Threads is looked up as needed.
 # Sets the cache variable <package>_USABLE; pass it to
 # find_package_handle_standard_args() as a REQUIRED_VARS entry. The check is
-# re-run whenever its inputs change. If LANGUAGE (default C) is not enabled in
+# re-run whenever its inputs change, for a target in LIBRARIES also the files
+# it stands for. If LANGUAGE (default C) is not enabled in
 # the calling project, the check is skipped and the library assumed usable.
 # With CMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY (bare-metal toolchains)
 # nothing is linked, so only the compile is checked.
@@ -75,7 +76,41 @@ int main(void) { return ${arg_FUNCTION}(); }
     endforeach()
   endif()
 
-  string(SHA1 _inputs "${arg_LANGUAGE}|${arg_INCLUDE_DIRS}|${arg_LIBRARIES}|${arg_DEFINITIONS}|${arg_CODE}")
+  # A target counts with what it stands for, its files, include directories
+  # and own links, so that the check runs again when they change, e.g. with
+  # a new OPENSSL_ROOT_DIR, which leaves the name OpenSSL::Crypto as it was
+  set(_targets "")
+  set(_target_inputs "")
+  set(_pending ${arg_LIBRARIES})
+  while(_pending)
+    list(POP_FRONT _pending _lib)
+    if(NOT TARGET "${_lib}" OR "${_lib}" IN_LIST _targets)
+      continue()
+    endif()
+    list(APPEND _targets "${_lib}")
+    get_target_property(_configs ${_lib} IMPORTED_CONFIGURATIONS)
+    if(NOT _configs)
+      set(_configs "")
+    endif()
+    set(_props INTERFACE_INCLUDE_DIRECTORIES INTERFACE_LINK_LIBRARIES
+      IMPORTED_LOCATION IMPORTED_IMPLIB)
+    foreach(_config IN LISTS _configs)
+      string(TOUPPER "${_config}" _config)
+      list(APPEND _props
+        IMPORTED_LOCATION_${_config} IMPORTED_IMPLIB_${_config})
+    endforeach()
+    foreach(_prop IN LISTS _props)
+      get_target_property(_value ${_lib} ${_prop})
+      if(_value)
+        string(APPEND _target_inputs "|${_lib}.${_prop}=${_value}")
+        if(_prop STREQUAL "INTERFACE_LINK_LIBRARIES")
+          list(APPEND _pending ${_value})
+        endif()
+      endif()
+    endforeach()
+  endwhile()
+
+  string(SHA1 _inputs "${arg_LANGUAGE}|${arg_INCLUDE_DIRS}|${arg_LIBRARIES}|${arg_DEFINITIONS}|${arg_CODE}${_target_inputs}")
   if(NOT _inputs STREQUAL "$CACHE{_PJ_${package}_USABLE_INPUTS}")
     unset(${package}_USABLE CACHE)
     set(_PJ_${package}_USABLE_INPUTS "${_inputs}" CACHE INTERNAL "")

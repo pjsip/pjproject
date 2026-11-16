@@ -2,6 +2,7 @@
 # Options
 
 option(SRTP_WITH_OPENSSL "Build SRTP with OpenSSL support" ON)
+set(OPENSSL_HAS_GCM FALSE)
 if(SRTP_WITH_OPENSSL)
   # Same search order as pjlib, so that both link the same OpenSSL. srtp
   # only needs libcrypto (EVP and HMAC), not libssl.
@@ -10,30 +11,26 @@ if(SRTP_WITH_OPENSSL)
     find_package(OpenSSL COMPONENTS Crypto CONFIG ${PJ_FIND_QUIET})
   endif()
   if(OPENSSL_FOUND)
-    # check GCM support. Under its own cache key: an earlier version of this
-    # probe could fail into OPENSSL_HAS_GCM, and a cached result is never
-    # probed again.
-    include(CheckCSourceCompiles)
-    include(CMakePushCheckState)
-
-    cmake_push_check_state(RESET)
-      if(PJ_FIND_QUIET)
-        set(CMAKE_REQUIRED_QUIET ON)
-      endif()
-      set(CMAKE_REQUIRED_LIBRARIES OpenSSL::Crypto)
-      check_c_source_compiles([=[
+    # GCM support, checked again when libcrypto changes. Earlier versions of
+    # this probe kept their result in PJ_SRTP_OPENSSL_HAS_GCM or
+    # OPENSSL_HAS_GCM, and never checked again.
+    unset(PJ_SRTP_OPENSSL_HAS_GCM CACHE)
+    include(Pj/CheckLibraryUsable)
+    pj_check_library_usable(SRTP_OPENSSL_GCM
+      CODE [=[
         #include <openssl/evp.h>
 
         int main(void) {
-          EVP_CIPHER_CTX *ctx;
           EVP_aes_128_gcm();
           return 0;
         }
-      ]=] PJ_SRTP_OPENSSL_HAS_GCM)
-    cmake_pop_check_state()
-    set(OPENSSL_HAS_GCM "${PJ_SRTP_OPENSSL_HAS_GCM}")
+      ]=]
+      LIBRARIES OpenSSL::Crypto
+    )
+    set(OPENSSL_HAS_GCM "${SRTP_OPENSSL_GCM_USABLE}")
   else()
-    set(SRTP_WITH_OPENSSL OFF CACHE BOOL "OpenSSL not found" FORCE)
+    # this configure only: OpenSSL may be found by the next one
+    set(SRTP_WITH_OPENSSL OFF)
   endif()
 endif()
 
