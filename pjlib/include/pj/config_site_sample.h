@@ -767,6 +767,41 @@
     #   define PJSUA_DEFAULT_CLOCK_RATE         8000
     #endif
 
+    /* pjsua-lib's state is one static object with an array for each of
+     * these; at the desktop defaults (8 accounts, 256 buddies, 32 players
+     * and recorders) it is 195 KB on a Cortex-M, 159 KB of it buddies. An
+     * account is 4 KB, a buddy 620 bytes, a call 4.7 KB (PJSUA_MAX_CALLS
+     * stays at its default of 4). A local account per transport, as the
+     * pjsua application adds with pjsua_acc_add_local(), takes a slot too.
+     */
+    #ifndef PJSUA_MAX_ACC
+    #   define PJSUA_MAX_ACC                    1
+    #endif
+    #ifndef PJSUA_MAX_BUDDIES
+    #   define PJSUA_MAX_BUDDIES                2
+    #endif
+    #ifndef PJSUA_MAX_PLAYERS
+    #   define PJSUA_MAX_PLAYERS                2
+    #endif
+    #ifndef PJSUA_MAX_RECORDERS
+    #   define PJSUA_MAX_RECORDERS              2
+    #endif
+    /* Conference bridge slots, allocated when the bridge is created: the
+     * sound device, the calls, the players and recorders, and two spare.
+     */
+    #ifndef PJSUA_MAX_CONF_PORTS
+    #   define PJSUA_MAX_CONF_PORTS             (1 + PJSUA_MAX_CALLS + \
+                                                 PJSUA_MAX_PLAYERS + \
+                                                 PJSUA_MAX_RECORDERS + 2)
+    #endif
+    /* No echo canceller on the sound device: the preset builds none, and
+     * the echo suppressor it would fall back to has nothing to suppress on
+     * a null sound device.
+     */
+    #ifndef PJSUA_DEFAULT_EC_TAIL_LEN
+    #   define PJSUA_DEFAULT_EC_TAIL_LEN        0
+    #endif
+
     /* SRTP keyed by SDES only. 0 leaves libsrtp out of the image. */
     #ifndef PJMEDIA_HAS_SRTP
     #   define PJMEDIA_HAS_SRTP                 1

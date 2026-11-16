@@ -84,6 +84,42 @@
 #define SIP_USER        CONFIG_SIMPLE_PJSUA_USERNAME
 #define SIP_PASSWD      CONFIG_SIMPLE_PJSUA_PASSWORD
 
+/* On Zephyr, built with CONFIG_SYS_HEAP_RUNTIME_STATS, the heaps' peak use
+ * is logged every ten seconds: the C heap the pools come from and the
+ * kernel heap the thread stacks come from. The getter for the C heap is
+ * not declared in any header.
+ */
+#if defined(__ZEPHYR__) && defined(CONFIG_SYS_HEAP_RUNTIME_STATS)
+#include <zephyr/sys/mem_stats.h>
+#include <zephyr/kernel.h>
+int malloc_runtime_stats_get(struct sys_memory_stats *stats);
+#  if CONFIG_HEAP_MEM_POOL_SIZE > 0
+extern struct k_heap _system_heap;
+#  endif
+
+static void dump_heap(void)
+{
+    struct sys_memory_stats st;
+
+    if (malloc_runtime_stats_get(&st) == 0) {
+        PJ_LOG(3,(THIS_FILE, "C heap: %u used, %u peak, %u free",
+                  (unsigned)st.allocated_bytes,
+                  (unsigned)st.max_allocated_bytes,
+                  (unsigned)st.free_bytes));
+    }
+#  if CONFIG_HEAP_MEM_POOL_SIZE > 0
+    if (sys_heap_runtime_stats_get(&_system_heap.heap, &st) == 0) {
+        PJ_LOG(3,(THIS_FILE, "Kernel heap: %u used, %u peak, %u free",
+                  (unsigned)st.allocated_bytes,
+                  (unsigned)st.max_allocated_bytes,
+                  (unsigned)st.free_bytes));
+    }
+#  endif
+}
+#else
+#define dump_heap()
+#endif
+
 
 /* Callback called by the library upon receiving incoming call */
 static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
@@ -161,6 +197,7 @@ static int simple_pjsua(const char *call_url)
     {
         pjsua_config cfg;
         pjsua_logging_config log_cfg;
+        pjsua_media_config media_cfg;
 
         pjsua_config_default(&cfg);
         cfg.max_calls = CONFIG_SIMPLE_PJSUA_MAX_CALLS;
@@ -171,7 +208,14 @@ static int simple_pjsua(const char *call_url)
         pjsua_logging_config_default(&log_cfg);
         log_cfg.console_level = CONFIG_SIMPLE_PJSUA_LOG_LEVEL;
 
-        status = pjsua_init(&cfg, &log_cfg, NULL);
+        pjsua_media_config_default(&media_cfg);
+#if defined(__ZEPHYR__)
+        /* RTP on the SIP worker thread rather than a thread of its own */
+        media_cfg.has_ioqueue = PJ_FALSE;
+        media_cfg.thread_cnt = 0;
+#endif
+
+        status = pjsua_init(&cfg, &log_cfg, &media_cfg);
         if (status != PJ_SUCCESS) error_exit("Error in pjsua_init()", status);
     }
 
@@ -221,8 +265,10 @@ static int simple_pjsua(const char *call_url)
 
 #if defined(__ZEPHYR__)
     /* No stdin: the worker thread runs the calls until the board is reset */
-    for (;;)
-        pj_thread_sleep(1000);
+    for (;;) {
+        pj_thread_sleep(10000);
+        dump_heap();
+    }
 #else
     /* Wait until user press "q" to quit. */
     for (;;) {

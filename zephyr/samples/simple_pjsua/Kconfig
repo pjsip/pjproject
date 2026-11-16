@@ -59,15 +59,20 @@ config SIMPLE_PJSUA_CALL_URL
 
 endmenu
 
-# The C library heap arena, where pjlib's pools come from: sized for the
-# emulated boards while the port of pjsua-lib is being measured
-config COMMON_LIBC_MALLOC_ARENA_SIZE
-	default 1048576
+# Memory sized from measurements on the AN521 with one G.711 call, as
+# embedded_ua's (README_Zephyr.md, section 3). A value in prj.conf or an
+# overlay overrides these.
 
-# The kernel heap holds the pthread stacks, 16 KB each plus alignment:
-# pjsua-lib's worker thread, pjmedia's event thread and the null sound
-# device's clock thread (64 KB was not enough for the three)
+# The C library heap arena, where pjlib's pools come from: 55 KB registered
+# and idle, 135 KB with the call up and 138 KB at its teardown, plus 5% for
+# the heap's own bookkeeping and fragmentation
+config COMMON_LIBC_MALLOC_ARENA_SIZE
+	default 147456
+
+# The kernel heap holds the pthread stacks, DYNAMIC_THREAD_STACK_SIZE each:
+# pjsua-lib's worker thread, pjmedia's event thread and, while a call is
+# up, the null sound device's clock thread
 config HEAP_MEM_POOL_SIZE
-	default 131072
+	default 65536
 
 source "Kconfig.zephyr"
