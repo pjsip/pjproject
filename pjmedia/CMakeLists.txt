@@ -272,6 +272,7 @@ pj_find_optional(PJMEDIA_WITH_BCG729_CODEC OFF BCG729)
 # speech codec samples, the codecs are enabled with PJMEDIA_HAS_INTEL_IPP in
 # config_site.h. See cmake/FindIPP.cmake for where to point the build.
 option(PJMEDIA_WITH_INTEL_IPP "Link the Intel IPP codec libraries" OFF)
+pj_retry_on_new_root(PJMEDIA_WITH_INTEL_IPP IPP_SAMPLES)
 pj_find_optional(PJMEDIA_WITH_INTEL_IPP OFF IPP)
 
 # Lyra codec
