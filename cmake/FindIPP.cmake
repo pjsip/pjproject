@@ -35,10 +35,13 @@ if(NOT IPP_SAMPLES_ROOT)
 endif()
 
 # The samples' search results follow a changed samples location, given or
-# from IPPSAMPLES; pj_retry_on_new_root() only watches IPP_ROOT
+# from IPPSAMPLES; pj_retry_on_new_root() only watches IPP_ROOT. The first
+# configure only records it, keeping IPP_USC_* given with it.
 if(NOT "${IPP_SAMPLES_ROOT}" STREQUAL "$CACHE{_PJ_IPP_USC_FOR}")
-  unset(IPP_USC_INCLUDE_DIR CACHE)
-  unset(IPP_USC_LIBRARY CACHE)
+  if(DEFINED CACHE{_PJ_IPP_USC_FOR})
+    unset(IPP_USC_INCLUDE_DIR CACHE)
+    unset(IPP_USC_LIBRARY CACHE)
+  endif()
   set(_PJ_IPP_USC_FOR "${IPP_SAMPLES_ROOT}" CACHE INTERNAL "")
 endif()
 
