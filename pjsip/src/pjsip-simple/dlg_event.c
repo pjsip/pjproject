@@ -333,6 +333,12 @@ pjsip_dlg_event_parse_dialog_info2(char *body, unsigned body_len,
     pjsip_dlg_info_dialog *dialog;
 
     dlgev_st->info_cnt = 0;
+    /* dlgev_st is reused for every NOTIFY. Clear the slot completely, so
+     * that fields absent in this NOTIFY (e.g. <local>/<remote> in a
+     * "terminated" dialog) do not keep the length of a previous NOTIFY
+     * while their pointer is reset to NULL.
+     */
+    pj_bzero(&dlgev_st->info[0], sizeof(dlgev_st->info[0]));
     dialog_info = pjsip_dlg_info_parse(pool, body, body_len);
     if (dialog_info == NULL)
         return PJSIP_SIMPLE_EBADPIDF;
