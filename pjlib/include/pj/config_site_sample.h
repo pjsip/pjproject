@@ -547,8 +547,10 @@
     #define PJSIP_MAX_DIALOG_COUNT              15
     #define PJSIP_MAX_TIMER_COUNT               32
 
-    /* The sample registers 8 modules; pjsua-lib needs about 12. pjsip-test
-     * needs 32, set in zephyr/tests/pjsip/CMakeLists.txt.
+    /* Modules registered with the endpoint, a pointer each in the endpoint
+     * and in every transaction, dialog and message buffer. embedded_ua
+     * registers 8. pjsua-lib registers 20 and pjsip-test up to 32: their
+     * applications set it (zephyr/samples/simple_pjsua, zephyr/tests/pjsip).
      */
     #ifndef PJSIP_MAX_MODULE
     #   define PJSIP_MAX_MODULE                 16
@@ -727,6 +729,11 @@
      */
     #define PJMEDIA_WSOLA_IMP                   PJMEDIA_WSOLA_IMP_WSOLA_LITE
 
+    /* One core: the conference bridge processes its ports in the thread
+     * that clocks it, with no worker threads (16 KB of stack each).
+     */
+    #define PJMEDIA_CONF_THREADS                1
+
     /* No video, no echo canceller */
     #define PJMEDIA_HAS_VIDEO                   0
     #define PJMEDIA_HAS_SPEEX_AEC               0
@@ -750,6 +757,14 @@
      */
     #ifndef PJMEDIA_RESAMPLE_IMP
     #   define PJMEDIA_RESAMPLE_IMP             PJMEDIA_RESAMPLE_NONE
+    #endif
+
+    /* pjsua-lib's conference bridge runs at the codec's rate, 8 kHz for
+     * G.711, since a stream at another rate would need the resampler.
+     * 16000 for G.722.
+     */
+    #ifndef PJSUA_DEFAULT_CLOCK_RATE
+    #   define PJSUA_DEFAULT_CLOCK_RATE         8000
     #endif
 
     /* SRTP keyed by SDES only. 0 leaves libsrtp out of the image. */

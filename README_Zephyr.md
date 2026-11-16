@@ -4,9 +4,10 @@ This guide takes you from a clean machine to a SIP call running on [Zephyr RTOS]
 
 ## What the port provides
 
-- pjproject is a [Zephyr module](https://docs.zephyrproject.org/latest/develop/modules.html). Add this source tree to a Zephyr application and PJLIB, PJLIB-UTIL, PJNATH, PJMEDIA and PJSIP are built with the application, configured through Kconfig like any other part of Zephyr.
+- pjproject is a [Zephyr module](https://docs.zephyrproject.org/latest/develop/modules.html). Add this source tree to a Zephyr application and PJLIB, PJLIB-UTIL, PJNATH, PJMEDIA, PJSIP and pjsua-lib are built with the application, configured through Kconfig like any other part of Zephyr.
 - The port runs on Zephyr's POSIX layer: BSD sockets, `select()`, `clock_gettime()` and, optionally, pthreads. There is one Zephyr-specific source file in PJLIB (network interface enumeration) and one platform header. Everything else is the same code that runs on Linux.
 - [`embedded_ua.c`](pjsip-apps/src/samples/embedded_ua.c), a complete headless SIP user agent on pjsip and pjmedia without pjsua-lib, builds as a Zephyr sample. It registers to a SIP server (or not), supports TLS via [Mbed TLS](https://www.trustedfirmware.org/projects/mbed-tls/), answers calls with audio loopback, speaks SDES-SRTP, and is driven by SIP MESSAGE requests. It is the bring-up and reference application of the port.
+- [`simple_pjsua.c`](pjsip-apps/src/samples/simple_pjsua.c), the pjsua-lib sample, builds as a Zephyr sample too: it registers, answers calls on the null sound device and makes one when told to. It runs on native_sim so far, with threads and a 1 MB heap; sizing pjsua-lib for the 640 KB boards is the next step (section 3).
 - Tested targets:
 
   - `native_sim/native/64`
@@ -428,6 +429,18 @@ The sample has no certificate of its own, so it cannot accept TLS connections: t
 
 embedded_ua has no console input. Send it a SIP MESSAGE (in pjsua: add it as a buddy and use `i`) with one of these bodies: `call <uri>` makes it place a call, `mem` logs its pool usage (and the C heap, when built with `CONFIG_SYS_HEAP_RUNTIME_STATS=y`), `quit` ends every call, unregisters and exits.
 
+### pjsua-lib: simple_pjsua
+
+[`simple_pjsua.c`](pjsip-apps/src/samples/simple_pjsua.c), pjsua-lib's minimal user agent, builds as the Zephyr sample in [`zephyr/samples/simple_pjsua`](zephyr/samples/simple_pjsua/). Its settings follow embedded_ua's pattern: `CONFIG_SIMPLE_PJSUA_SIP_DOMAIN`, `_USERNAME`, `_PASSWORD`, `_SIP_PORT`, `_MAX_CALLS` (1), `_LOG_LEVEL` and `_CALL_URL`, the URL to call at start since there is no command line, are Kconfig options in its "simple_pjsua" menu, and the sample reads them as `CONFIG_SIMPLE_PJSUA_*` on every platform. pjsua-lib runs its SIP endpoint from a worker thread and its media from the sound device's clock, so the sample builds with threads (`prj.conf` sets `CONFIG_PJPROJECT_THREADS`) and, as the port has no sound device driver, on pjsua's null sound device (`CONFIG_SIMPLE_PJSUA_NULL_SND_DEV`), which clocks the conference bridge so that a call's audio flows: in, decoded into the bridge, and out as silence. Three threads come out of the kernel heap, 16 KB each: pjsua's worker, pjmedia's event thread and the clock.
+
+```sh
+cd ~/zephyrproject/mypjproject
+west build -p always -b native_sim/native/64 -d build-pjsua $PJ_DIR/zephyr/samples/simple_pjsua -- -DCONFIG_SIMPLE_PJSUA_SIP_DOMAIN=\"$SIP_SERVER\"
+build-pjsua/zephyr/zephyr.exe
+```
+
+It registers as `bob`/`secret` to the server, and pjsua on the host (above, without the SRTP options) can call `sip:bob@$SIP_SERVER` or the sample directly at `sip:bob@192.0.2.1:5060`. Verified on native_sim against Kamailio: registration, a G.711 call from pjsua with no packet loss either way, and the hangup. The sample's CMakeLists sets `PJSIP_MAX_MODULE` 32 for the build, as pjsua-lib registers 20 modules where the preset allows 16, enough for an application on pjsip, the recommended way on a small target. Two settings in the Zephyr preset came from this: `PJMEDIA_CONF_THREADS` 1 (the parallel conference bridge would start three more threads on a single core) and `PJSUA_DEFAULT_CLOCK_RATE` 8000 (the bridge runs at G.711's rate, since the preset builds no resampler; 16000 for G.722). The sample is sized for native_sim and not yet for the boards: a 1 MB heap arena and a 128 KB kernel heap in its Kconfig, and pjsua-lib's static state (`pjsua_var`, 377 KB on a 64-bit host) is sized by `PJSUA_MAX_CALLS`, `PJSUA_MAX_ACC`, `PJSUA_MAX_BUDDIES`, `PJSUA_MAX_CONF_PORTS`, `PJSUA_MAX_PLAYERS` and `PJSUA_MAX_RECORDERS`, all at their desktop defaults.
+
 ## 4. Run on a Cortex-M33 under QEMU
 
 The MPS2 AN521 is an Arm development board that QEMU emulates, with a Cortex-M33 and a LAN9118 Ethernet controller. The `pjproject-target` snippet (section 9) limits it to 640 KB of RAM, the size of the STM32H563, so that an image that would not fit the real part fails to link here, and sets the clock to what QEMU's model runs.
@@ -602,7 +615,7 @@ target_sources(app PRIVATE src/main.c)
 target_link_libraries(app PRIVATE pjproject)
 ```
 
-`ZEPHYR_EXTRA_MODULES` tells Zephyr to treat the pjproject tree as a module, and must be set before `find_package(Zephyr)`. It can equally be given on the command line (`-DZEPHYR_EXTRA_MODULES=/path/to/pjproject`) or, to make pjproject a permanent part of a west workspace, listed as a project in the west manifest, after which the line is not needed at all. The `pjproject` target carries every pjproject library and the include paths; the application includes `<pjsip.h>`, `<pjmedia.h>`, `<pjlib.h>` and so on as usual.
+The `pjproject` target carries every library, pjsua-lib included; they are static archives, so an application links only what it calls. `ZEPHYR_EXTRA_MODULES` tells Zephyr to treat the pjproject tree as a module, and must be set before `find_package(Zephyr)`. It can equally be given on the command line (`-DZEPHYR_EXTRA_MODULES=/path/to/pjproject`) or, to make pjproject a permanent part of a west workspace, listed as a project in the west manifest, after which the line is not needed at all. The `pjproject` target carries every pjproject library and the include paths; the application includes `<pjsip.h>`, `<pjmedia.h>`, `<pjlib.h>` and so on as usual.
 
 `prj.conf` needs, besides whatever the application needs itself:
 

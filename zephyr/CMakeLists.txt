@@ -112,10 +112,12 @@ if(TARGET srtp)
   target_compile_definitions(srtp PRIVATE asm=__asm__)
 endif()
 
-# What an application links. pjnath is there because pjmedia.h includes its
-# headers; it costs nothing in the image unless the application uses ICE.
+# What an application links. Static libraries, so an application that does
+# not call pjsua-lib carries nothing of it; pjnath is there because
+# pjmedia.h includes its headers, and costs nothing unless the application
+# uses ICE.
 add_library(pjproject INTERFACE)
 target_link_libraries(pjproject INTERFACE
-  pjsip-ua pjsip-simple pjsip pjmedia-codec pjmedia-audiodev pjmedia pjnath
-  pjlib-util pjlib
+  pjsua-lib pjsip-ua pjsip-simple pjsip pjmedia-codec pjmedia-audiodev
+  pjmedia pjnath pjlib-util pjlib
 )

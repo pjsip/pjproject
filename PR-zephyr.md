@@ -100,6 +100,13 @@ Tested targets are `native_sim/native/64`, which runs Zephyr as a Linux process,
   - pjsip-test's Kconfig has `CONFIG_PJSIP_TEST_BENCHMARK`, the counterpart of pjmedia-test's, for the URI and message parsing benchmarks that `test_profile.h` leaves out of a small board; the README's "Processing cost" section has the figures from the NUCLEO-H563ZI.
   - On a small board the benchmarks run 2,000 rounds instead of 40,000 and 100,000; their per-second figures are computed with nanosecond resolution now (a Cortex-M prints a URI in 4 µs, which the microsecond arithmetic rounded to a quarter); the message benchmark no longer divides by zero where the clock stood still; and the transaction benchmark depends on the loop transport it runs over (`PJSIP_TEST_HAS_LOOP`), as the other loop-transport tests do.
 
+- **pjsua-lib and simple_pjsua on Zephyr** (`zephyr/samples/simple_pjsua/`):
+  - pjsua-lib is part of the module's `pjproject` link target; the libraries are static archives, so an application that does not call it carries nothing of it (embedded_ua's image is unchanged).
+  - `simple_pjsua.c` takes its settings as `CONFIG_SIMPLE_PJSUA_*` macros on every platform, the sample's Kconfig options on Zephyr (domain, user name, password, port, calls at once, log level, the null sound device and a URL to call at start), has a Zephyr `main()` since there is no command line or stdin, and can run on pjsua's null sound device, which the port needs as it has no sound device driver.
+  - The Zephyr sample builds with threads (pjsua's worker, pjmedia's event thread and the null sound device's clock) and is sized for native_sim: a 1 MB heap arena and a 128 KB kernel heap. Sizing pjsua-lib for the 640 KB boards is a later step: `pjsua_var` alone is 377 KB on a 64-bit host at the desktop defaults of `PJSUA_MAX_*`.
+  - The sample sets `PJSIP_MAX_MODULE` 32 for its build, as pjsua-lib registers 20 modules; the preset keeps 16, for an application on pjsip, the recommended way on a small target. Two preset settings came from it: `PJMEDIA_CONF_THREADS` 1 (the parallel conference bridge would start three more threads on a single core) and `PJSUA_DEFAULT_CLOCK_RATE` 8000 (the bridge runs at G.711's rate as the preset builds no resampler).
+  - Verified on native_sim against Kamailio: registration, a G.711 call from pjsua with no loss either way, and the hangup.
+
 - **Documentation**:
   - `README_Zephyr.md` at the tree root is the full guide, from installing Zephyr to running on native_sim, QEMU and real hardware, using pjproject in an application, configuration, how the port is put together, known limitations and troubleshooting. docs.pjsip.org will link to or copy it.
 
