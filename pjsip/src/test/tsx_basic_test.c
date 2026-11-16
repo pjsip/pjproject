@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -455,7 +455,8 @@ int tsx_destroy_test()
             1,
             20000
         },
-#if PJ_HAS_TCP
+#if PJ_HAS_TCP && PJTEST_HAS_OUTSIDE_ROUTE
+        /* The connection must still be in progress when the layer goes */
         {
             "tcp connect and destroy",
             &tsx_create_and_send_req,
@@ -470,7 +471,7 @@ int tsx_destroy_test()
             1,
             60000
         },
-#endif
+#endif /* PJ_HAS_TCP && PJTEST_HAS_OUTSIDE_ROUTE */
     };
     int rc;
     unsigned i;

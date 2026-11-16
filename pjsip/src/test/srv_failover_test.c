@@ -34,13 +34,17 @@
 
 #define THIS_FILE   "srv_failover_test.c"
 
-#if PJSIP_HAS_RESOLVER && PJ_HAS_THREADS
+#if INCLUDE_SRV_FAILOVER_TEST && PJSIP_HAS_RESOLVER
 
 #define TEST_DOMAIN     "failover.test"
 /* Its SRV targets list srv1 twice, with srv2 before or after the second */
 #define DUP_DOMAIN      "dup." TEST_DOMAIN
 #define SRV_CNT         3
 #define MAX_CONN        16
+
+/* A large request goes out with a TCP copy of each address in front */
+PJ_STATIC_ASSERT(PJSIP_MAX_RESOLVED_ADDRESSES >= 2 * SRV_CNT,
+                 PJSIP_MAX_RESOLVED_ADDRESSES_too_small_for_srv_failover_test);
 
 /* Transaction timers for the test: timer F (timeout) is TD */
 #define TEST_T1         100
@@ -1922,14 +1926,14 @@ on_return:
     return rc;
 }
 
-#else   /* PJSIP_HAS_RESOLVER && PJ_HAS_THREADS */
+#else   /* INCLUDE_SRV_FAILOVER_TEST && PJSIP_HAS_RESOLVER */
 
 int srv_failover_test(void)
 {
     return 0;
 }
 
-#endif  /* PJSIP_HAS_RESOLVER && PJ_HAS_THREADS */
+#endif  /* INCLUDE_SRV_FAILOVER_TEST && PJSIP_HAS_RESOLVER */
 
 
 #if INCLUDE_PJSUA_ACC_TEST

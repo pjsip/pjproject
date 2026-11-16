@@ -637,9 +637,13 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
     PJ_UNUSED_ARG(tp_type);
     PJ_UNUSED_ARG(ref_tp);
 
-#if !PJ_HAS_THREADS
-    PJ_LOG(3,(THIS_FILE, "  multithreaded round-trip test skipped: "
-                         "no threads"));
+#if !PJ_HAS_THREADS || !PJTEST_TIME_PASSES_WHEN_BUSY
+    /* Its threads keep the endpoint busy for the whole interval: on a
+     * simulator whose clock stands still while a thread is busy, it never
+     * ends
+     */
+    PJ_LOG(3,(THIS_FILE, "  multithreaded round-trip test skipped: it "
+                         "needs threads and a clock that runs while busy"));
     *lost = 0;
     return 0;
 #endif

@@ -27,7 +27,9 @@
 
 #define HFIND(msg,h,H) ((pjsip_##h##_hdr*) pjsip_msg_find_hdr(msg, PJSIP_H_##H, NULL))
 
-#if defined(PJ_DEBUG) && PJ_DEBUG!=0
+#if PJTEST_SMALL_FOOTPRINT
+#   define LOOP     1000
+#elif defined(PJ_DEBUG) && PJ_DEBUG!=0
 #   define LOOP     10000
 #else
 #   define LOOP     100000
@@ -629,7 +631,8 @@ static int txdata_test_uri_params(void)
  */
 static int create_request_bench(pj_timestamp *p_elapsed)
 {
-    enum { COUNT = 100 };
+    /* Messages alive at once: their pools size the heap of a small board */
+    enum { COUNT = PJTEST_SMALL_FOOTPRINT ? 10 : 100 };
     unsigned i, j;
     pjsip_tx_data *tdata[COUNT];
     pj_timestamp t1, t2, elapsed;
@@ -684,7 +687,8 @@ on_error:
  */
 static int create_response_bench(pj_timestamp *p_elapsed)
 {
-    enum { COUNT = 100 };
+    /* Messages alive at once: their pools size the heap of a small board */
+    enum { COUNT = PJTEST_SMALL_FOOTPRINT ? 10 : 100 };
     unsigned i, j;
     pjsip_via_hdr *via;
     pjsip_rx_data rdata;

@@ -438,9 +438,30 @@ int test_main(int argc, char *argv[])
 #endif
 
 #if INCLUDE_TSX_TEST
-    PJ_TEST_SUCCESS(rc=pjsip_udp_transport_start(endpt, NULL, NULL, 1, &tp),
-                    NULL, goto on_return);
-    tsx_test[tsx_test_cnt].port = tp->local_name.port;
+    {
+        /* Two UDP transports, the target being the one the manager does
+         * not send from: a datagram whose source and destination endpoints
+         * are the same does not arrive on every platform (Zephyr drops it)
+         */
+        pjsip_transport *tp2, *sender;
+        pj_sockaddr_in rem;
+
+        PJ_TEST_SUCCESS(rc=pjsip_udp_transport_start(endpt, NULL, NULL, 1,
+                                                     &tp),
+                        NULL, goto on_return);
+        PJ_TEST_SUCCESS(rc=pjsip_udp_transport_start(endpt, NULL, NULL, 1,
+                                                     &tp2),
+                        NULL, goto on_return);
+        pj_sockaddr_in_init(&rem, &tp->local_name.host,
+                            (pj_uint16_t)tp->local_name.port);
+        PJ_TEST_SUCCESS(rc=pjsip_endpt_acquire_transport(endpt,
+                                                         PJSIP_TRANSPORT_UDP,
+                                                         &rem, sizeof(rem),
+                                                         NULL, &sender),
+                        NULL, goto on_return);
+        pjsip_transport_dec_ref(sender);
+        tsx_test[tsx_test_cnt].port = (sender == tp ? tp2 : tp)->local_name.port;
+    }
     tsx_test[tsx_test_cnt].tp_type = "udp";
     tsx_test[tsx_test_cnt].type = PJSIP_TRANSPORT_UDP;
     ++tsx_test_cnt;

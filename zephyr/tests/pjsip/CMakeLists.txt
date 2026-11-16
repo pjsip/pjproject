@@ -20,6 +20,9 @@ target_link_libraries(app PRIVATE pjsip-test-sources pjsip-ua pjsip-simple pjsip
 # The suite's tests register more modules than the preset's 16 at a time,
 # the ones of the dialog and invite tests staying until the end
 zephyr_compile_definitions(PJSIP_MAX_MODULE=32)
+# The SRV failover test resolves its domain to three addresses, and its
+# large requests go out with a TCP copy of each in front
+zephyr_compile_definitions(PJSIP_MAX_RESOLVED_ADDRESSES=6)
 # The tests create I/O queues for more sockets than the preset's 16. Set
 # here rather than in the tree's config_site.h, which is the user's.
 # CONFIG_ZVFS_OPEN_MAX in prj.conf must be at least this.

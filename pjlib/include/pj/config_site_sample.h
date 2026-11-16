@@ -556,9 +556,11 @@
 
     /* Addresses a destination may resolve to, kept in every transmit buffer
      * (52 bytes each). A device that is given its server's address resolves
-     * to one.
+     * to one. pjsip-test needs 6, set in zephyr/tests/pjsip/CMakeLists.txt.
      */
-    #define PJSIP_MAX_RESOLVED_ADDRESSES        2
+    #ifndef PJSIP_MAX_RESOLVED_ADDRESSES
+    #   define PJSIP_MAX_RESOLVED_ADDRESSES     2
+    #endif
 
     /* Queued media events, 72 bytes each in the event manager and again in
      * a static scratch queue. Only posted events queue up, which audio
