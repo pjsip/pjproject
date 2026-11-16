@@ -83,6 +83,21 @@ What the media components cost on the NUCLEO-H563ZI, a Cortex-M33 at 240 MHz, me
 
 So a G.711 call with SRTP costs about 2% of the core and a G.722 call about 13% at `-O2`, 19% at `-Os`: G.722 is the ITU reference-style integer code with a function call per sample, and `-O2` takes a third off it. SRTP is a flat 1.4 points per call, as libsrtp's AES and SHA-1 are table driven. Four concurrent calls on the sample, by the thread analyzer, came to 15% of the core for G.711 with SRTP and 80% for G.722, at `-Os` (section 6). The resampler is the component to keep out of the path: libresample's large filter alone takes a third of the core at 8 kHz and the small filter 5%, where linear interpolation costs under 1%; the preset builds none, and the sample runs everything at the codec's rate. An application that runs G.722 or resamples should build with `CONFIG_SPEED_OPTIMIZATIONS=y`.
 
+What the SIP stack costs on the same board at `-O2`, measured with pjsip-test's URI, message and transmit-buffer benchmarks (section 5), run 2,000 times over the suite's 41 URIs, 35 bytes long on average, and its 8 messages, 560 bytes on average. The suite logs rates normalised to 80-byte URIs and 800-byte messages; the table divides the elapsed times by the number of operations instead.
+
+| Operation | Time | Rate |
+|---|---|---|
+| Parse a URI (`pjsip_parse_uri`) | 11 µs | 91,000 URIs/s |
+| Print a URI (`pjsip_uri_print`) | 4.3 µs | 230,000 URIs/s |
+| Compare two URIs (`pjsip_uri_cmp`) | 4.7 µs | 211,000 pairs/s |
+| Find a message's end in a buffer (`pjsip_find_msg`) | 31 µs | 32,000 msg/s |
+| Parse a message (`pjsip_parse_msg`) | 115 µs | 8,700 msg/s |
+| Print a message (`pjsip_msg_print`) | 41 µs | 25,000 msg/s |
+| Create a request (`pjsip_endpt_create_request`) | 183 µs | 5,500 msg/s |
+| Create a response (`pjsip_endpt_create_response`) | 43 µs | 23,000 msg/s |
+
+So a message arriving from the network costs the parser about 150 µs before the transaction layer sees it, and building a request about 180 µs, with the URI parser accounting for most of it: a message holds a dozen URIs. For scale, the desktop build of the same suite on an x86-64 host parses a URI in 0.2 µs and a message in 2.6 µs.
+
 The whole table, for reference. The MIPS column is the CPU column times the 1.5 DMIPS/MHz of a Cortex-M33, so the CPU column is the one to read. The "echo canceller" rows equal the "echo suppressor" rows because the preset builds no acoustic echo canceller, so both fall back to the suppressor, whose cost does not depend on the tail length.
 
 <details>
@@ -517,6 +532,13 @@ build-pjnath/zephyr/zephyr.exe
 ```
 
 Each talks to itself over loopback: pjlib-util-test runs its DNS resolver, HTTP and WebSocket clients against servers in its sources, pjnath-test runs STUN, TURN and ICE against its test server, and pjsip-test runs its transports and its own DNS server. The applications give the ioqueue 64 handles (`PJ_IOQUEUE_MAX_HANDLES`) and the network stack the sockets and buffers the busiest tests open; pjsip-test allows 32 modules (`PJSIP_MAX_MODULE`, the preset's 16 is for an application) and 6 resolved addresses per destination (`PJSIP_MAX_RESOLVED_ADDRESSES`, the preset's 2; the SRV failover test resolves to three servers and sends its large requests with a TCP copy of each in front) and, like every suite built with `PJTEST_SMALL_FOOTPRINT`, keeps 64 KB of freed pools instead of 2 MB (`PJSIP_TEST_MEM_SIZE` in its `test.h`). The C heap each suite needs is in its `prj.conf` or, where it differs between the two thread modes, its `Kconfig`.
+
+pjsip-test's Kconfig also has `CONFIG_PJSIP_TEST_BENCHMARK`, the counterpart of pjmedia-test's, which brings in the URI and message parsing benchmarks that `test_profile.h` leaves out of a small board and of native_sim. On a small board they run 2,000 rounds over the suite's URIs and messages instead of 40,000 and 100,000, ten seconds in all. The figures measured on the NUCLEO-H563ZI are in "Processing cost" at the top; to reproduce them, with the options that print the figures as they come:
+
+```sh
+west build -p always -b nucleo_h563zi/stm32h563xx -d build-bench $PJ_DIR/zephyr/tests/pjsip -- -DCONFIG_PJSIP_TEST_BENCHMARK=y -DCONFIG_PJSIP_TEST_ARGS=\"--log-no-cache -l 3 uri_test msg_test txdata_test\" -DCONFIG_SPEED_OPTIMIZATIONS=y
+west flash
+```
 
 What passes where, with the time a run takes:
 

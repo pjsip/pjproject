@@ -21,7 +21,9 @@
 #include <pjlib.h>
 
 #define POOL_SIZE       8000
-#if defined(PJ_DEBUG) && PJ_DEBUG!=0
+#if PJTEST_SMALL_FOOTPRINT
+#   define LOOP         2000
+#elif defined(PJ_DEBUG) && PJ_DEBUG!=0
 #   define LOOP         10000
 #else
 #   define LOOP         100000
@@ -879,9 +881,11 @@ static int msg_benchmark(unsigned *p_detect, unsigned *p_parse,
     pj_highprec_div(kbytes, 100000);
     elapsed = pj_elapsed_time(&zero, &var.detect_time);
     avg_detect = pj_elapsed_usec(&zero, &var.detect_time);
-    pj_highprec_mul(avg_detect, AVERAGE_MSG_LEN);
+    pj_highprec_mul(avg_detect, AVERAGE_MSG_LEN * 1000);
     pj_highprec_div(avg_detect, var.detect_len);
-    avg_detect = 1000000 / avg_detect;
+    if (avg_detect == 0)
+        avg_detect = 1;
+    avg_detect = 1000000000 / avg_detect;
 
     PJ_LOG(3,(THIS_FILE, 
               "    %u.%u MB detected in %ld.%03lds (avg=%d msg detection/sec)", 
@@ -895,9 +899,11 @@ static int msg_benchmark(unsigned *p_detect, unsigned *p_parse,
     pj_highprec_div(kbytes, 100000);
     elapsed = pj_elapsed_time(&zero, &var.parse_time);
     avg_parse = pj_elapsed_usec(&zero, &var.parse_time);
-    pj_highprec_mul(avg_parse, AVERAGE_MSG_LEN);
+    pj_highprec_mul(avg_parse, AVERAGE_MSG_LEN * 1000);
     pj_highprec_div(avg_parse, var.parse_len);
-    avg_parse = 1000000 / avg_parse;
+    if (avg_parse == 0)
+        avg_parse = 1;
+    avg_parse = 1000000000 / avg_parse;
 
     PJ_LOG(3,(THIS_FILE, 
               "    %u.%u MB parsed in %ld.%03lds (avg=%d msg parsing/sec)", 
@@ -911,9 +917,11 @@ static int msg_benchmark(unsigned *p_detect, unsigned *p_parse,
     pj_highprec_div(kbytes, 100000);
     elapsed = pj_elapsed_time(&zero, &var.print_time);
     avg_print = pj_elapsed_usec(&zero, &var.print_time);
-    pj_highprec_mul(avg_print, AVERAGE_MSG_LEN);
+    pj_highprec_mul(avg_print, AVERAGE_MSG_LEN * 1000);
     pj_highprec_div(avg_print, var.print_len);
-    avg_print = 1000000 / avg_print;
+    if (avg_print == 0)
+        avg_print = 1;
+    avg_print = 1000000000 / avg_print;
 
     PJ_LOG(3,(THIS_FILE, 
               "    %u.%u MB printed in %ld.%03lds (avg=%d msg print/sec)", 

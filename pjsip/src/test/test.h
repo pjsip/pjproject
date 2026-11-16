@@ -97,7 +97,8 @@ extern pj_caching_pool caching_pool;
 #define INCLUDE_MSG_TEST        (INCLUDE_MESSAGING_GROUP && !APPLE_ASAN)
 #define INCLUDE_MULTIPART_TEST  INCLUDE_MESSAGING_GROUP
 #define INCLUDE_TXDATA_TEST     INCLUDE_MESSAGING_GROUP
-#define INCLUDE_TSX_BENCH       (INCLUDE_MESSAGING_GROUP && WITH_BENCHMARK)
+#define INCLUDE_TSX_BENCH       (INCLUDE_MESSAGING_GROUP && WITH_BENCHMARK && \
+                                 PJSIP_TEST_HAS_LOOP)
 /* The loop transport runs on a worker thread, and the transaction, dialog
  * and registration tests run over it
  */

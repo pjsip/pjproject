@@ -32,7 +32,9 @@
 #define PARAM_CHAR  ALPHANUM MARK "[]/:&+$"
 
 #define POOL_SIZE       8000
-#if defined(PJ_DEBUG) && PJ_DEBUG!=0
+#if PJTEST_SMALL_FOOTPRINT
+#   define LOOP_COUNT   2000
+#elif defined(PJ_DEBUG) && PJ_DEBUG!=0
 #   define LOOP_COUNT   10000
 #else
 #   define LOOP_COUNT   40000
@@ -994,11 +996,11 @@ static int uri_benchmark(unsigned *p_parse, unsigned *p_print, unsigned *p_cmp)
     pj_highprec_div(kbytes, 100000);
     elapsed = pj_elapsed_time(&zero, &var.parse_time);
     avg_parse = pj_elapsed_usec(&zero, &var.parse_time);
-    pj_highprec_mul(avg_parse, AVERAGE_URL_LEN);
+    pj_highprec_mul(avg_parse, AVERAGE_URL_LEN * 1000);
     pj_highprec_div(avg_parse, var.parse_len);
     if (avg_parse == 0)
         avg_parse = 1;
-    avg_parse = 1000000 / avg_parse;
+    avg_parse = 1000000000 / avg_parse;
 
     PJ_LOG(3,(THIS_FILE,
               "    %u.%u MB of urls parsed in %ld.%03lds (avg=%d urls/sec)",
@@ -1013,11 +1015,11 @@ static int uri_benchmark(unsigned *p_parse, unsigned *p_print, unsigned *p_cmp)
     pj_highprec_div(kbytes, 100000);
     elapsed = pj_elapsed_time(&zero, &var.print_time);
     avg_print = pj_elapsed_usec(&zero, &var.print_time);
-    pj_highprec_mul(avg_print, AVERAGE_URL_LEN);
+    pj_highprec_mul(avg_print, AVERAGE_URL_LEN * 1000);
     pj_highprec_div(avg_print, var.parse_len);
     if (avg_print == 0)
         avg_print = 1;
-    avg_print = 1000000 / avg_print;
+    avg_print = 1000000000 / avg_print;
 
     PJ_LOG(3,(THIS_FILE,
               "    %u.%u MB of urls printed in %ld.%03lds (avg=%d urls/sec)",
@@ -1035,9 +1037,9 @@ static int uri_benchmark(unsigned *p_parse, unsigned *p_print, unsigned *p_cmp)
     if (PJ_HIGHPREC_VALUE_IS_ZERO(avg_cmp) || var.cmp_len == 0) {
         avg_cmp = 0;
     } else {
-        pj_highprec_mul(avg_cmp, AVERAGE_URL_LEN);
+        pj_highprec_mul(avg_cmp, AVERAGE_URL_LEN * 1000);
         pj_highprec_div(avg_cmp, var.cmp_len);
-        avg_cmp = 1000000 / avg_cmp;
+        avg_cmp = 1000000000 / avg_cmp;
     }
 
     PJ_LOG(3,(THIS_FILE,

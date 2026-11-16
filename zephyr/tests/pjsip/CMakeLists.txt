@@ -27,3 +27,6 @@ zephyr_compile_definitions(PJSIP_MAX_RESOLVED_ADDRESSES=6)
 # here rather than in the tree's config_site.h, which is the user's.
 # CONFIG_ZVFS_OPEN_MAX in prj.conf must be at least this.
 zephyr_compile_definitions(PJ_IOQUEUE_MAX_HANDLES=64)
+if(CONFIG_PJSIP_TEST_BENCHMARK)
+  zephyr_compile_definitions(PJ_EXCLUDE_BENCHMARK_TESTS=0)
+endif()
