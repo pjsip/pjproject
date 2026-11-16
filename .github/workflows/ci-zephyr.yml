@@ -1,0 +1,125 @@
+name: CI Zephyr
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref (e.g. a force-push to a PR) so they
+# stop holding CI runner slots.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# pjproject as a Zephyr module (README_Zephyr.md), from the workspace that
+# west.yml at the repository root describes: Zephyr pinned to a release, the
+# five modules the targets need, and the SDK's Arm toolchain, cached between
+# runs by action-zephyr-setup. Every job restores the same caches.
+#
+# The suites found Zephyr's own quirks once, and those are fixed; what breaks
+# on Zephyr afterwards is a library change that calls something its libc or
+# POSIX layer lacks, or growth that no longer fits 640 KB of RAM. A build
+# catches both, so every test suite and sample is built for native_sim and
+# for the Cortex-M33 AN521, where the link fails when the image outgrows the
+# RAM, and pjlib-test, which exercises the OS abstraction the port consists
+# of, is run on native_sim in both thread modes.
+jobs:
+  detect-changes:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    outputs:
+      # Sources that reach a Zephyr image, the Zephyr build files and this
+      # workflow. On a push the filter is skipped and everything runs.
+      zephyr_deps: ${{ github.event_name != 'pull_request' || steps.filter.outputs.src == 'true' }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dorny/paths-filter@v3
+      if: github.event_name == 'pull_request'
+      id: filter
+      with:
+        filters: |
+          src:
+            - 'pjlib/**'
+            - 'pjlib-util/**'
+            - 'pjnath/**'
+            - 'pjmedia/**'
+            - 'pjsip/**'
+            - 'pjsip-apps/src/samples/**'
+            - 'third_party/**'
+            - 'zephyr/**'
+            - 'CMakeLists.txt'
+            - 'cmake/**'
+            - 'west.yml'
+            - '.github/workflows/ci-zephyr.yml'
+
+  # Every test suite and sample, built for the host and for the Cortex-M33
+  build:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.zephyr_deps == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [native_sim/native/64, mps2/an521/cpu0]
+    name: build ${{ matrix.platform }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        path: pjproject
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Set up the Zephyr workspace and SDK
+      uses: zephyrproject-rtos/action-zephyr-setup@v1
+      with:
+        app-path: pjproject
+        toolchains: arm-zephyr-eabi
+    - name: Select the Zephyr preset
+      run: |
+        printf '#define PJ_CONFIG_ZEPHYR 1\n#include <pj/config_site_sample.h>\n' > pjproject/pjlib/include/pj/config_site.h
+    - name: Build
+      run: |
+        west twister -T pjproject/zephyr -p ${{ matrix.platform }} --build-only -v --inline-logs -O twister-out
+    - name: Upload the logs
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-${{ strategy.job-index }}
+        path: twister-out/**/*.log
+
+  # pjlib-test on native_sim, single threaded and with threads
+  pjlib-test:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.zephyr_deps == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: [pjsip.pjlib, pjsip.pjlib.threads]
+    name: ${{ matrix.scenario }} on native_sim
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        path: pjproject
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Set up the Zephyr workspace and SDK
+      uses: zephyrproject-rtos/action-zephyr-setup@v1
+      with:
+        app-path: pjproject
+        toolchains: arm-zephyr-eabi
+    - name: Select the Zephyr preset
+      run: |
+        printf '#define PJ_CONFIG_ZEPHYR 1\n#include <pj/config_site_sample.h>\n' > pjproject/pjlib/include/pj/config_site.h
+    - name: Build and run
+      run: |
+        west twister -T pjproject/zephyr/tests/pjlib -p native_sim/native/64 -s ${{ matrix.scenario }} -v --inline-logs -O twister-out
+    - name: Upload the logs
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.scenario }}
+        path: twister-out/**/*.log

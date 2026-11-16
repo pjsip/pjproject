@@ -267,7 +267,17 @@ west packages pip --install
 west zephyr-export
 ```
 
-`west update` downloads Zephyr's modules and takes a while. Zephyr 4.4 is the release the port is developed and tested on, and the oldest one it supports. Zephyr 4.4 moved to Mbed TLS 4.1 with the separate TF-PSA-Crypto module; pjproject's TLS backend works with both Mbed TLS 3.6 and 4.x, so Zephyr 4.3 and older, which ship Mbed TLS 3.6, may well work too, but they are not tested. To check out a specific release, add `--mr v4.4.0` to the `west init` command.
+`west update` downloads Zephyr's modules and takes a while. Zephyr 4.5 is the release the port is tested on, in CI on every change (section 5). Zephyr 4.4.2 was checked by hand: everything builds and pjlib-test passes, except the TLS overlay, which sizes Mbed TLS's record buffers with `CONFIG_MBEDTLS_SSL_IN_CONTENT_LEN` and `_OUT_CONTENT_LEN`, names 4.4 does not have; there set `CONFIG_MBEDTLS_SSL_MAX_CONTENT_LEN=16384` instead, at 12 KB more RAM, since it sizes the output buffer too. Zephyr 4.4 moved to Mbed TLS 4.1 with the separate TF-PSA-Crypto module; pjproject's TLS backend works with both Mbed TLS 3.6 and 4.x, so Zephyr 4.3 and older, which ship Mbed TLS 3.6, may well work too, but they are not tested. To check out a specific release, add `--mr v4.5.0` to the `west init` command.
+
+A smaller workspace, with Zephyr pinned to that release and only the five modules the port's targets need instead of all of Zephyr's, comes from the manifest at the root of pjproject, [`west.yml`](west.yml); it is what CI builds from. It replaces the `west init` and `west update` above and the "Get pjproject" clone at the end of this section, as pjproject is the workspace's manifest repository and is checked out by `west init` itself:
+
+```sh
+west init -m https://github.com/pjsip/pjproject ~/zephyrproject
+cd ~/zephyrproject
+west update
+west packages pip --install
+west zephyr-export
+```
 
 Install the Zephyr SDK, which has the cross compilers and a QEMU that knows the MPS2 boards:
 
@@ -513,6 +523,10 @@ cd ~/zephyrproject/mypjproject
 west twister -T $PJ_DIR/zephyr/tests -p native_sim/native/64 -p mps2/an521/cpu0 -v
 ```
 
+### Continuous integration
+
+The "CI Zephyr" workflow ([`.github/workflows/ci-zephyr.yml`](.github/workflows/ci-zephyr.yml)) runs on every pull request that touches the libraries, the samples or the Zephyr files, in the workspace that `west.yml` describes (section 1), with the SDK's Arm toolchain cached between runs. Four jobs run in parallel: every test suite and sample built for native_sim and for the AN521, where the link fails when an image outgrows the 640 KB of RAM, and pjlib-test run on native_sim single threaded and with threads. The other suites are built but not run there: they found what Zephyr does differently once, and those things are fixed in the tests; what a library change breaks on Zephyr afterwards is the build, a call into something its libc or POSIX layer lacks, or the footprint, and the builds catch both in a fraction of the time the suites take.
+
 pjlib-test, in `zephyr/tests/pjlib`, exercises the OS abstraction that a port touches most: pools, threads and thread-local storage, mutexes, timers, sockets over loopback, select and the ioqueue. A run takes a few minutes per configuration. To build and run one configuration by hand:
 
 ```sh
@@ -722,7 +736,7 @@ The sample's build settings are `CONFIG_EMBUA_*` macros that `embedded_ua.c` rea
 
 The Zephyr-specific parts are few, and this is where to look when something needs changing:
 
-- `zephyr/module.yml`: tells Zephyr this tree is a module and where its Kconfig and CMake are.
+- `zephyr/module.yml`: tells Zephyr this tree is a module and where its Kconfig and CMake are, and that it is configured after Zephyr's Mbed TLS module, whose targets the TLS backend links (a module listed before it, as the manifest repository of a workspace is, would otherwise be configured first).
 - `zephyr/Kconfig`: the `CONFIG_PJPROJECT_*` options above.
 - `zephyr/CMakeLists.txt`: when `CONFIG_PJPROJECT` is set, checks that `config_site.h` selects the Zephyr preset, drives pjproject's own per-library `CMakeLists.txt` files with options derived from Kconfig, gives every library Zephyr's include paths and flags, and defines the `pjproject` link target.
 - `zephyr/cmake/MbedTLSConfig.cmake`: lets pjlib's Mbed TLS backend find Zephyr's Mbed TLS.

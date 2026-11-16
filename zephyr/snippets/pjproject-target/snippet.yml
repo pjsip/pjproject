@@ -5,7 +5,6 @@
 # set(SNIPPET pjproject-target) before find_package(Zephyr), to your own.
 # It changes nothing on other boards.
 name: pjproject-target
-description: The NUCLEO-H563ZI, and QEMU's AN521 and native_sim as its stand-ins
 boards:
   nucleo_h563zi/stm32h563xx:
     append:

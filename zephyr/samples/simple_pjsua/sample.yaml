@@ -7,4 +7,4 @@ tests:
     platform_allow:
       - mps2/an521/cpu0
       - native_sim/native/64
-    tags: net pjsip
+    tags: pjsip
