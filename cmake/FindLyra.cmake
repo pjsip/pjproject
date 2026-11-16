@@ -24,7 +24,19 @@ find_library(Lyra_LIBRARY
 mark_as_advanced(Lyra_LIBRARY)
 
 # Headers of Lyra's dependencies, laid out as for autoconf --with-lyra=DIR
-# (DIR/include/<bazel repo>), or installed on the system
+# (DIR/include/<bazel repo>), or installed on the system. A Lyra_INCLUDE_DIR
+# set by hand later keeps those found beside the earlier one (a new
+# Lyra_ROOT searches them all again).
+if(Lyra_ABSL_INCLUDE_DIR AND DEFINED CACHE{_PJ_LYRA_DEPS_FOR}
+   AND NOT "$CACHE{_PJ_LYRA_DEPS_FOR}" STREQUAL "${Lyra_INCLUDE_DIR}")
+  message(WARNING "Lyra_INCLUDE_DIR changed (was "
+    "\"$CACHE{_PJ_LYRA_DEPS_FOR}\"), but Lyra_ABSL_INCLUDE_DIR, "
+    "Lyra_FILESYSTEM_INCLUDE_DIR, Lyra_GLOG_INCLUDE_DIR and Lyra_MODEL_PATH "
+    "were found beside the earlier one and are kept. Set Lyra_ROOT instead, "
+    "or reconfigure with 'cmake --fresh'.")
+else()
+  set(_PJ_LYRA_DEPS_FOR "${Lyra_INCLUDE_DIR}" CACHE INTERNAL "")
+endif()
 set(_lyra_dep_hints "${Lyra_INCLUDE_DIR}" "${Lyra_INCLUDE_DIR}/..")
 find_path(Lyra_ABSL_INCLUDE_DIR
   NAMES "absl/types/span.h"

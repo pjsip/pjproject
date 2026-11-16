@@ -299,6 +299,11 @@ endif()
 # another project
 include(Pj/Option)
 
+pj_warn_if_changed(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}"
+  "CMAKE_PREFIX_PATH")
+pj_warn_if_changed(ENV_CMAKE_PREFIX_PATH "$ENV{CMAKE_PREFIX_PATH}"
+  "The CMAKE_PREFIX_PATH environment variable")
+
 # base library
 pj_add_subdirectory(pjlib)
 
