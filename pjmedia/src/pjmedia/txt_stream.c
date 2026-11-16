@@ -109,6 +109,8 @@ typedef struct pjmedia_txt_stream {
     pjmedia_clock *clock; /**< Clock.                 */
     unsigned buf_time;    /**< Buffering time.        */
     pj_bool_t is_idle;    /**< Is idle?               */
+    pj_bool_t tx_busy;    /**< A thread is sending RTP,
+                               see send_text_locked(). */
 
     pj_timestamp rtcp_last_tx;   /**< Last RTCP tx time.     */
     pj_timestamp tx_last_ts;     /**< Timestamp of last tx.  */
@@ -1094,6 +1096,14 @@ static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
     int max_pass = 1;
     unsigned pt_to_use;
 
+    /* The transport's send_rtp() must not be called by two threads at once,
+     * and both the application and the clock thread send. No lock is held
+     * across that call, so tx_busy (protected by jb_mutex) marks it instead.
+     * While it is set, leave the text buffered, the clock thread sends it.
+     */
+    if (stream->tx_busy)
+        return PJ_SUCCESS;
+
     pj_get_timestamp(&now);
 
     is_first_packet =
@@ -1209,6 +1219,18 @@ static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
             stream->is_idle = PJ_TRUE;
         }
 
+        /* Prepare second pass if needed. This is done before jb_mutex is
+         * released below, so that text added meanwhile is appended to the
+         * deferred text instead of being overwritten by it.
+         */
+        pass++;
+        if (pass == 1 && has_deferred_char) {
+            stream->tx_buf[0].length = deferred_char_len;
+            pj_memcpy(stream->tx_buf[0].buf, deferred_char_buf,
+                      deferred_char_len);
+            rtp_ts_len = 10;
+        }
+
         /* Network Transmission */
         {
             char tx_pkt[PJMEDIA_MAX_MTU];
@@ -1216,19 +1238,12 @@ static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
             pj_memcpy(tx_pkt, channel->buf, tx_size);
 
             stream->tx_last_ts = now;
+            stream->tx_busy = PJ_TRUE;
             pj_mutex_unlock(c_strm->jb_mutex);
             status =
                 pjmedia_transport_send_rtp(c_strm->transport, tx_pkt, tx_size);
             pj_mutex_lock(c_strm->jb_mutex);
-        }
-
-        /* Prepare second pass if needed */
-        pass++;
-        if (pass == 1 && has_deferred_char) {
-            stream->tx_buf[0].length = deferred_char_len;
-            pj_memcpy(stream->tx_buf[0].buf, deferred_char_buf,
-                      deferred_char_len);
-            rtp_ts_len = 10;
+            stream->tx_busy = PJ_FALSE;
         }
     }
 
@@ -1301,11 +1316,17 @@ static void check_start_ka(pjmedia_txt_stream *stream)
 
     /* The RTP session is shared with send_text_locked(). */
     pj_mutex_lock(c_strm->jb_mutex);
+    if (stream->tx_busy) {
+        /* The application is sending text, retry at next interval. */
+        pj_mutex_unlock(c_strm->jb_mutex);
+        return;
+    }
     status = pjmedia_rtp_encode_rtp(&channel->rtp, channel->pt, 0, 1, 0,
                                     &rtphdr, &hdrlen);
     if (status == PJ_SUCCESS) {
         pj_memcpy(&hdr, rtphdr, sizeof(hdr));
         update_tx_stat(stream, rtphdr);
+        stream->tx_busy = PJ_TRUE;
     }
     pj_mutex_unlock(c_strm->jb_mutex);
     if (status != PJ_SUCCESS)
@@ -1315,6 +1336,9 @@ static void check_start_ka(pjmedia_txt_stream *stream)
 
     /* On failure (e.g. SRTP keys not ready yet), retry at next interval. */
     status = pjmedia_transport_send_rtp(c_strm->transport, &hdr, sizeof(hdr));
+    pj_mutex_lock(c_strm->jb_mutex);
+    stream->tx_busy = PJ_FALSE;
+    pj_mutex_unlock(c_strm->jb_mutex);
     if (status != PJ_SUCCESS)
         return;
 
@@ -1390,6 +1414,7 @@ static void check_idle_ka(pjmedia_txt_stream *stream)
     if (status == PJ_SUCCESS) {
         pj_memcpy(pkt, rtphdr, sizeof(pjmedia_rtp_hdr));
         update_tx_stat(stream, rtphdr);
+        stream->tx_busy = PJ_TRUE;
     }
     pj_mutex_unlock(c_strm->jb_mutex);
     if (status != PJ_SUCCESS)
@@ -1400,6 +1425,9 @@ static void check_idle_ka(pjmedia_txt_stream *stream)
     /* On failure, retry at next interval. */
     pjmedia_transport_send_rtp(c_strm->transport, pkt,
                                sizeof(pjmedia_rtp_hdr) + red_len);
+    pj_mutex_lock(c_strm->jb_mutex);
+    stream->tx_busy = PJ_FALSE;
+    pj_mutex_unlock(c_strm->jb_mutex);
 }
 
 /* Clock callback */

@@ -21,6 +21,7 @@
 #include <pjmedia/transport.h>
 #include <pjmedia/txt_stream.h>
 #include <pj/log.h>
+#include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/sock.h>
 #include <pj/string.h>
@@ -730,6 +731,160 @@ on_return:
     return rc;
 }
 
+#if PJMEDIA_STREAM_START_KA_CNT > 0
+
+/* Text stream tx race test.
+ *
+ * RTP is sent by the stream's clock thread and by the thread calling
+ * pjmedia_txt_stream_send_text(), and the transports don't support
+ * concurrent send_rtp(). The transport here holds the clock thread in
+ * send_rtp() with its start keep-alive while text is sent. The text must
+ * not enter the transport as well, and must be sent after the keep-alive.
+ */
+typedef struct hold_tp
+{
+    stub_tp              stub;
+    pj_mutex_t          *mutex;         /* Protects the fields below    */
+    pj_bool_t            hold;          /* Hold the next RTP packet     */
+    pj_bool_t            held;          /* The RTP packet got held      */
+    unsigned             in_send;       /* Threads inside send_rtp()    */
+    pj_bool_t            overlap;       /* Was more than one inside?    */
+    pj_bool_t            text_sent;     /* Has the text been sent?      */
+    pj_sem_t            *release;       /* Lets the held packet go      */
+} hold_tp;
+
+static pj_status_t hold_send_rtp(pjmedia_transport *tp, const void *pkt,
+                                 pj_size_t size)
+{
+    hold_tp *htp = (hold_tp*)tp;
+    pj_bool_t hold;
+
+    pj_mutex_lock(htp->mutex);
+    if (++htp->in_send > 1)
+        htp->overlap = PJ_TRUE;
+    /* The text is the last byte, also with redundancy */
+    if (size > sizeof(pjmedia_rtp_hdr) &&
+        ((const pj_uint8_t*)pkt)[size - 1] == 'A')
+    {
+        htp->text_sent = PJ_TRUE;
+    }
+    hold = htp->hold;
+    htp->hold = PJ_FALSE;
+    if (hold)
+        htp->held = PJ_TRUE;
+    pj_mutex_unlock(htp->mutex);
+
+    if (hold)
+        pj_sem_wait(htp->release);
+
+    pj_mutex_lock(htp->mutex);
+    htp->in_send--;
+    pj_mutex_unlock(htp->mutex);
+    return PJ_SUCCESS;
+}
+
+/* Wait until the transport has set the flag, but not forever */
+static pj_bool_t hold_tp_wait(hold_tp *htp, const pj_bool_t *flag)
+{
+    pj_bool_t set = PJ_FALSE;
+    unsigned i;
+
+    for (i = 0; i < 1000; ++i) {
+        pj_mutex_lock(htp->mutex);
+        set = *flag;
+        pj_mutex_unlock(htp->mutex);
+        if (set)
+            break;
+        pj_thread_sleep(10);
+    }
+    return set;
+}
+
+static int tx_race_test(pjmedia_endpt *endpt, int red_level)
+{
+    const char *title = red_level ? "tx race (RED)" : "tx race (T.140)";
+    pj_str_t loopback = pj_str("127.0.0.1");
+    pj_str_t text = pj_str("A");
+    pjmedia_txt_stream_info si;
+    pjmedia_txt_stream *stream = NULL;
+    pjmedia_transport_op op = stub_op;
+    hold_tp tp;
+    pj_pool_t *pool;
+    pj_bool_t held, sent, overlap;
+    pj_status_t status = PJ_SUCCESS;
+    int rc = 0;
+
+    pj_bzero(&tp, sizeof(tp));
+    pj_ansi_strxcpy(tp.stub.base.name, "stub", sizeof(tp.stub.base.name));
+    op.send_rtp = &hold_send_rtp;
+    tp.stub.base.op = &op;
+
+    pool = pj_pool_create(mem, "txrace", 512, 512, NULL);
+    PJ_TEST_NOT_NULL(pool, title, return -200);
+    PJ_TEST_SUCCESS(pj_mutex_create_simple(pool, NULL, &tp.mutex), title,
+                    {rc = -210; goto on_return;});
+    PJ_TEST_SUCCESS(pj_sem_create(pool, NULL, 0, 1, &tp.release), title,
+                    {rc = -220; goto on_return;});
+
+    pj_bzero(&si, sizeof(si));
+    si.type = PJMEDIA_TYPE_TEXT;
+    si.proto = PJMEDIA_TP_PROTO_RTP_AVP;
+    si.dir = PJMEDIA_DIR_ENCODING_DECODING;
+    pj_sockaddr_init(pj_AF_INET(), &si.rem_addr, &loopback, 4000);
+    si.fmt.type = PJMEDIA_TYPE_TEXT;
+    si.fmt.pt = T140_PT;
+    si.fmt.encoding_name = pj_str("t140");
+    si.fmt.clock_rate = 1000;
+    si.tx_pt = si.rx_pt = T140_PT;
+    if (red_level) {
+        si.tx_red_pt = si.rx_red_pt = RED_PT;
+        si.tx_red_level = si.rx_red_level = red_level;
+    }
+    si.rtcp_sdes_bye_disabled = PJ_TRUE;
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
+    si.use_ka = PJ_TRUE;
+    pjmedia_stream_ka_config_default(&si.ka_cfg);
+#endif
+
+    PJ_TEST_SUCCESS(pjmedia_txt_stream_create(endpt, NULL, &si,
+                                              &tp.stub.base, NULL, &stream),
+                    title, {rc = -230; goto on_return;});
+
+    /* Hold the first RTP packet of the clock thread, a start keep-alive */
+    pj_mutex_lock(tp.mutex);
+    tp.hold = PJ_TRUE;
+    pj_mutex_unlock(tp.mutex);
+    PJ_TEST_SUCCESS(pjmedia_txt_stream_start(stream), title,
+                    {rc = -240; goto on_return;});
+    held = hold_tp_wait(&tp, &tp.held);
+
+    /* The text must be left to the clock thread now */
+    if (held)
+        status = pjmedia_txt_stream_send_text(stream, &text);
+    pj_sem_post(tp.release);
+    PJ_TEST_TRUE(held, title, {rc = -250; goto on_return;});
+    PJ_TEST_SUCCESS(status, title, {rc = -260; goto on_return;});
+
+    sent = hold_tp_wait(&tp, &tp.text_sent);
+    pj_mutex_lock(tp.mutex);
+    overlap = tp.overlap;
+    pj_mutex_unlock(tp.mutex);
+    PJ_TEST_TRUE(!overlap, title, {rc = -270; goto on_return;});
+    PJ_TEST_TRUE(sent, title, {rc = -280; goto on_return;});
+
+on_return:
+    if (stream)
+        pjmedia_txt_stream_destroy(stream);
+    if (tp.release)
+        pj_sem_destroy(tp.release);
+    if (tp.mutex)
+        pj_mutex_destroy(tp.mutex);
+    pj_pool_release(pool);
+    return rc;
+}
+
+#endif  /* PJMEDIA_STREAM_START_KA_CNT > 0 */
+
 int txt_stream_test(void)
 {
     pjmedia_endpt *endpt;
@@ -792,6 +947,18 @@ int txt_stream_test(void)
     status = tx_seq_test(endpt, 2, PJ_TRUE);
     if (status != 0 && rc == 0)
         rc = status;
+
+#if PJMEDIA_STREAM_START_KA_CNT > 0
+    PJ_LOG(3, (THIS_FILE, "  tx race"));
+
+    status = tx_race_test(endpt, 0);
+    if (status != 0 && rc == 0)
+        rc = status;
+
+    status = tx_race_test(endpt, 2);
+    if (status != 0 && rc == 0)
+        rc = status;
+#endif
 
     pjmedia_endpt_destroy2(endpt);
     return rc;
