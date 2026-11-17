@@ -464,6 +464,12 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister(pj_ioqueue_key_t *key)
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
     /* Decrement counter. */
     decrement_counter(key);
+#else
+    /* Destroy the key lock. Before the dec_ref below: without safe
+     * unregistration the key lives in the registering object's pool,
+     * which the group lock's destructor may free.
+     */
+    pj_lock_destroy(key->lock);
 #endif
 
     /* Done. */
@@ -476,11 +482,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister(pj_ioqueue_key_t *key)
         // key->grp_lock = NULL;
         pj_grp_lock_dec_ref_dbg(grp_lock, "ioqueue", 0);
     }
-
-#if !PJ_IOQUEUE_HAS_SAFE_UNREG
-    /* Destroy the key lock */
-    pj_lock_destroy(key->lock);
-#endif
 
     return PJ_SUCCESS;
 }
