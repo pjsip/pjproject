@@ -120,6 +120,10 @@ int test_main(int argc, char *argv[])
 #if HAS_TONE_DETECTOR_TEST
     UT_ADD_TEST(&test_app.ut_app, tone_detector_test, 0);
 #endif
+#if HAS_TXT_STREAM_TEST
+    /* Creates/destroys a local pjmedia_endpt (see codec_test_vectors). */
+    UT_ADD_TEST(&test_app.ut_app, txt_stream_test, PJ_TEST_EXCLUSIVE);
+#endif
 #if HAS_TRANSPORT_SRTP_TEST
     /* Creates/destroys a local pjmedia_endpt (see codec_test_vectors). */
     UT_ADD_TEST(&test_app.ut_app, transport_srtp_test, PJ_TEST_EXCLUSIVE);

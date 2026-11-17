@@ -933,6 +933,7 @@ Random numbers come from Zephyr's `sys_rand32_get()` rather than the C library's
 - The sample's TLS transport has no certificate, so it cannot take inbound TLS connections; requests to it must arrive on the connection it registered over (section 3). That is the sample's choice, not the port's: with a certificate and key in `pjsip_tls_setting` the listener works as on any platform. The listener is nevertheless created: built with `PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER` the sample registers, but Kamailio then opens a new connection to the Contact for every request instead of reusing the registration's, and that connection fails; with the listener present the requests arrive over the registration's connection.
 - `exit()` on Zephyr does not end the program; after `quit`, the sample's final log line is followed by an idle loop. Stop the emulator by hand.
 - Zephyr drops a datagram whose source and destination addresses and ports are the same, so a socket cannot send to itself; the test suites send between two sockets instead (section 5). An application never needs to.
+- pjmedia's text stream (`pjmedia_txt_stream`) paces its RTP with a clock thread, so it needs the threads build; its test runs only there.
 - The threaded pjsip-test needs about 690 KB of RAM and does not fit the 640 KB boards; pjnath-test's trickle ICE test is out below 1 MB and its concurrency stress on Zephyr (section 5).
 
 ## 11. Troubleshooting

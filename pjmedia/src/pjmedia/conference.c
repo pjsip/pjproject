@@ -3131,6 +3131,28 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
             return PJ_SUCCESS;
     }
 
+    /* Samples this frame adds after resampling and channel conversion. */
+    if (cport->clock_rate != conf->clock_rate) {
+        dst_count = (unsigned)(conf->samples_per_frame * 1.0 *
+                               cport->clock_rate / conf->clock_rate + 0.5);
+    } else {
+        dst_count = conf->samples_per_frame;
+    }
+    if (conf->channel_count == 1)
+        dst_count *= cport->channel_count;
+    else if (cport->channel_count == 1)
+        dst_count /= conf->channel_count;
+
+    /* The leftover is drained below even when the port fails, so this
+     * should not happen, but never write past the TX buffer.
+     */
+    if (cport->tx_buf_count + dst_count > cport->tx_buf_cap) {
+        PJ_LOG(4,(THIS_FILE, "TX buffer of %.*s overflows, dropping %u "
+                             "samples", (int)cport->name.slen,
+                             cport->name.ptr, cport->tx_buf_count));
+        cport->tx_buf_count = 0;
+    }
+
     /* If it has different clock_rate, must resample. */
     if (cport->clock_rate != conf->clock_rate) {
         pjmedia_resample_run( cport->tx_resample, buf, 
@@ -3198,6 +3220,13 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
                                frame.size / BYTES_PER_SAMPLE));
 
             status = pjmedia_port_put_frame(cport->port, &frame);
+            if (status != PJ_SUCCESS) {
+                /* Drop the rest, otherwise the leftover accumulates and
+                 * overruns the TX buffer while the port keeps failing.
+                 */
+                cport->tx_buf_count = 0;
+                break;
+            }
 
         } else
             status = PJ_SUCCESS;

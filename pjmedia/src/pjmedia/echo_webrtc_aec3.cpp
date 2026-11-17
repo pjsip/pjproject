@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2011-2021 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2011-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -270,20 +270,26 @@ PJ_DEF(pj_status_t) webrtc_aec3_cancel_echo(void *state,
 
         echo->aec->AnalyzeCapture(echo->cap_buf);
         echo->aec->AnalyzeRender(echo->rend_buf);
-        
+
+        /* Same order as WebRTC APM: NS analyzes the capture before AEC,
+         * suppresses after it, and AGC2 runs on the merged full band.
+         */
         if (echo->ns) {
             echo->ns->Analyze(*echo->cap_buf);
-            echo->ns->Process(echo->cap_buf);
         }
-        
+
         echo->aec->ProcessCapture(echo->cap_buf, false);
 
-        if (echo->agc) {
-            echo->agc->Process(echo->cap_buf);
+        if (echo->ns) {
+            echo->ns->Process(echo->cap_buf);
         }
 
         if (echo->clock_rate > 16000) {
             echo->cap_buf->MergeFrequencyBands();
+        }
+
+        if (echo->agc) {
+            echo->agc->Process(echo->cap_buf);
         }
 
         echo->cap_buf->CopyTo(scfg, rec_frm + i);

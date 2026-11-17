@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -407,6 +407,46 @@ PJ_DECL(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *session,
                                    unsigned ts,
                                    unsigned payload,
                                    pj_bool_t discarded);
+
+
+/**
+ * Parameters for pjmedia_rtcp_rx_rtp3().
+ */
+typedef struct pjmedia_rtcp_rx_rtp_param
+{
+    unsigned    seq;        /**< RTP sequence, in host byte order.      */
+    unsigned    ts;         /**< RTP timestamp, in host byte order.     */
+    unsigned    payload;    /**< Size of the payload.                   */
+    pj_bool_t   discarded;  /**< The packet is discarded.               */
+
+    /**
+     * The packet fails RTCP's sequence check, but the caller used it, so
+     * it is not counted in stat.rx.discard.
+     */
+    pj_bool_t   bad_used;
+
+} pjmedia_rtcp_rx_rtp_param;
+
+
+/**
+ * Initialize pjmedia_rtcp_rx_rtp_param with default values.
+ *
+ * @param prm       The parameters.
+ */
+PJ_DECL(void) pjmedia_rtcp_rx_rtp_param_default(
+                                    pjmedia_rtcp_rx_rtp_param *prm);
+
+
+/**
+ * Call this function everytime an RTP packet is received to let the RTCP
+ * session do its internal calculations. Same as pjmedia_rtcp_rx_rtp2(),
+ * with the parameters in a struct.
+ *
+ * @param session   The session.
+ * @param prm       The parameters.
+ */
+PJ_DECL(void) pjmedia_rtcp_rx_rtp3(pjmedia_rtcp_session *session,
+                                   const pjmedia_rtcp_rx_rtp_param *prm);
 
 
 /**

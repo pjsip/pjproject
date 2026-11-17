@@ -33,6 +33,9 @@ enum
 
 static int get_ip_addr_ver(const pj_str_t *host);
 static void schedule_reregistration(pjsua_acc *acc);
+static pj_status_t acc_set_registration(pjsua_acc_id acc_id, pj_bool_t renew,
+                                        pj_bool_t release_all,
+                                        pj_bool_t by_app);
 static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te);
 
 /* Bridge: maps low-level auth challenge -> pjsua on_auth_challenge */
@@ -124,6 +127,8 @@ PJ_DEF(pj_bool_t) pjsua_acc_is_valid(pjsua_acc_id acc_id)
  */
 PJ_DEF(pj_status_t) pjsua_acc_set_default(pjsua_acc_id acc_id)
 {
+    if (!pjsua_acc_is_valid(acc_id))
+        return PJ_EINVAL;
     pjsua_var.default_acc = acc_id;
     return PJ_SUCCESS;
 }
@@ -308,6 +313,24 @@ static void reset_outbound_rejection(pjsua_acc *acc)
     acc->outbound_rejected = PJ_FALSE;
 }
 
+/* Deinit the account's registration once its regc is destroyed */
+static void clear_regc(pjsua_acc *acc)
+{
+    acc->regc = NULL;
+    acc->contact.slen = 0;
+    acc->reg_mapped_addr.slen = 0;
+    acc->rfc5626_status = OUTBOUND_UNKNOWN;
+    acc->rfc5626_flowtmr = 0;
+    /* New regc starts with an empty route_set; reset the mirror so the
+     * next sa_sync_route_set diff re-pushes the hidden Route. Also
+     * reset the sub-pool that held the previous mirror's clones to
+     * reclaim memory. (#4964)
+     */
+    pj_list_init(&acc->sa_pushed_route);
+    if (acc->sa_mirror_pool)
+        pj_pool_reset(acc->sa_mirror_pool);
+}
+
 /*
  * Destroy account's registration and deinit.
  */
@@ -322,19 +345,7 @@ static pj_status_t destroy_regc(pjsua_acc *acc, pj_bool_t force)
             return status;
         }
     }
-    acc->regc = NULL;
-    acc->contact.slen = 0;
-    acc->reg_mapped_addr.slen = 0;
-    acc->rfc5626_status = OUTBOUND_UNKNOWN;
-    acc->rfc5626_flowtmr = 0;
-    /* New regc starts with an empty route_set; reset the mirror so the
-     * next sa_sync_route_set diff re-pushes the hidden Route. Also
-     * reset the sub-pool that held the previous mirror's clones to
-     * reclaim memory. (#4964)
-     */
-    pj_list_init(&acc->sa_pushed_route);
-    if (acc->sa_mirror_pool)
-        pj_pool_reset(acc->sa_mirror_pool);
+    clear_regc(acc);
 
     return PJ_SUCCESS;
 }
@@ -677,14 +688,20 @@ static void sa_build_reg_route_set(pjsua_acc *acc, pj_pool_t *pool,
     if ((acc->cfg.reg_use_proxy & PJSUA_REG_USE_ACC_PROXY) &&
         acc->cfg.proxy_cnt)
     {
-        int cnt = acc->cfg.proxy_cnt;
-        pjsip_route_hdr *pos = route_set->prev;
-        int i;
+        unsigned i;
 
-        r = acc->route_set.prev;
-        for (i=0; i<cnt; ++i) {
-            pj_list_push_front(pos, pjsip_hdr_shallow_clone(pool, r));
-            r = r->prev;
+        /* acc->route_set is [hidden Route][outbound proxies][account
+         * proxies][Service-Route], so count the account proxies from the
+         * head: Service-Route must not be used for REGISTER (#5393).
+         */
+        r = acc->route_set.next;
+        if (r == acc->sa_route_hdr)
+            r = r->next;
+        for (i = 0; i < pjsua_var.ua_cfg.outbound_proxy_cnt; ++i)
+            r = r->next;
+        for (i = 0; i < acc->cfg.proxy_cnt; ++i) {
+            pj_list_push_back(route_set, pjsip_hdr_shallow_clone(pool, r));
+            r = r->next;
         }
     }
 }
@@ -834,6 +851,11 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
 
     PJ_ASSERT_RETURN(cfg, PJ_EINVAL);
     PJ_ASSERT_RETURN(cfg->proxy_cnt <= PJSUA_ACC_MAX_PROXIES, PJ_EINVAL);
+    PJ_ASSERT_RETURN(cfg->transport_id == PJSUA_INVALID_ID ||
+                     (cfg->transport_id >= 0 &&
+                      cfg->transport_id <
+                          (int)PJ_ARRAY_SIZE(pjsua_var.tpdata)),
+                     PJ_EINVAL);
 
     if (pjsua_var.acc_cnt >= PJ_ARRAY_SIZE(pjsua_var.acc))
         return PJ_ETOOMANY;
@@ -907,6 +929,11 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
     status = initialize_acc(id);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Error adding account", status);
+        /* The shared auth session's lock lives in acc->pool, if it got
+         * that far.
+         */
+        if (acc->shared_auth_sess.endpt)
+            pjsip_auth_clt_deinit(&acc->shared_auth_sess);
         pj_pool_release(acc->pool);
         acc->pool = NULL;
         PJSUA_UNLOCK();
@@ -1129,7 +1156,7 @@ PJ_DEF(pj_status_t) pjsua_acc_del2(pjsua_acc_id acc_id,
 
     /* Delete registration */
     if (acc->regc != NULL) {
-        pjsua_acc_set_registration(acc_id, PJ_FALSE);
+        acc_set_registration(acc_id, PJ_FALSE, PJ_FALSE, PJ_FALSE);
         destroy_regc(acc, PJ_TRUE);
     }
 
@@ -1141,6 +1168,9 @@ PJ_DEF(pj_status_t) pjsua_acc_del2(pjsua_acc_id acc_id,
 
     /* Delete server presence subscription */
     pjsua_pres_delete_acc(acc_id, 0);
+
+    /* The shared auth session's lock lives in acc->pool. */
+    pjsip_auth_clt_deinit(&acc->shared_auth_sess);
 
     /* Release & wipe account pool */
     if (acc->sa_mirror_pool) {
@@ -1292,6 +1322,11 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
                      PJ_EINVAL);
     PJ_ASSERT_RETURN(cfg && cfg->proxy_cnt <= PJSUA_ACC_MAX_PROXIES,
+                     PJ_EINVAL);
+    PJ_ASSERT_RETURN(cfg->transport_id == PJSUA_INVALID_ID ||
+                     (cfg->transport_id >= 0 &&
+                      cfg->transport_id <
+                          (int)PJ_ARRAY_SIZE(pjsua_var.tpdata)),
                      PJ_EINVAL);
 
 #if !PJ_HAS_IPV6
@@ -1957,7 +1992,8 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     /* Unregister first */
     if (unreg_first) {
         if (acc->regc && !cfg->disable_reg_on_modify) {
-            status = pjsua_acc_set_registration(acc->index, PJ_FALSE);
+            status = acc_set_registration(acc->index, PJ_FALSE, PJ_FALSE,
+                                          PJ_FALSE);
             if (status != PJ_SUCCESS) {
                 pjsua_perror(THIS_FILE, "Ignored failure in unregistering the "
                              "old account setting in modifying account",
@@ -2463,6 +2499,10 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     if (acc->cfg.allow_contact_rewrite == PJ_FALSE)
         return PJ_FALSE;
 
+    /* Don't register an account the application has unregistered */
+    if (acc->app_unreg)
+        return PJ_FALSE;
+
     /* If SIP outbound is active, no need to update */
     if (acc->rfc5626_status == OUTBOUND_ACTIVE) {
         PJ_LOG(4,(THIS_FILE, "Acc %d has SIP outbound active, no need to "
@@ -2688,7 +2728,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
             /* Unregister current contact. Must be done before acc->contact
              * is replaced, as the unregister uses the old Contact.
              */
-            pjsua_acc_set_registration(acc->index, PJ_FALSE);
+            acc_set_registration(acc->index, PJ_FALSE, PJ_FALSE, PJ_FALSE);
             destroy_regc(acc, PJ_TRUE);
         }
 
@@ -2718,7 +2758,8 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
          * that a send failing at once can clear it.
          */
         acc->contact_rewritten = PJ_TRUE;
-        if (pjsua_acc_set_registration(acc->index, PJ_TRUE) != PJ_SUCCESS &&
+        if (acc_set_registration(acc->index, PJ_TRUE, PJ_FALSE,
+                                 PJ_FALSE) != PJ_SUCCESS &&
             acc->contact_rewritten)
         {
             /* Not reported back, e.g. failed before sending */
@@ -3115,6 +3156,32 @@ static void handle_call_on_ip_change_cb(void *user_data)
     pjsua_acc_handle_call_on_ip_change(acc);
 }
 
+/* A result of an earlier request is ignored: the newer request reports
+ * its own.
+ */
+static void ignore_earlier_result(pjsua_acc *acc)
+{
+    PJ_LOG(4, (THIS_FILE, "Acc %d: result of an earlier REGISTER ignored, "
+               "a newer one reports its own", acc->index));
+}
+
+/* End the registration with the result of its latest request */
+static pj_bool_t end_regc_if_latest(pjsua_acc *acc,
+                                    const struct pjsip_regc_cbparam *param)
+{
+    pj_status_t status;
+
+    status = pjsip_regc_destroy_if_latest(acc->regc, param->cseq);
+    if (status != PJ_SUCCESS) {
+        pj_assert(status == PJ_EBUSY);
+        ignore_earlier_result(acc);
+        return PJ_FALSE;
+    }
+    clear_regc(acc);
+
+    return PJ_TRUE;
+}
+
 /*
  * This callback is called by pjsip_regc when outgoing register
  * request has completed.
@@ -3148,34 +3215,26 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
      * Print registration status.
      */
     if (param->status!=PJ_SUCCESS) {
-        pj_status_t status;
-
         pjsua_perror(THIS_FILE, "SIP registration error", 
                      param->status);
 
-        if (param->status == PJSIP_EBUSY) {
+        /* This callback is called without holding the registration's lock,
+         * so there can be a race condition with another registration
+         * process. Therefore, the registration is destroyed only if no
+         * request has been sent or reserved since this one.
+         */
+        if (param->status == PJSIP_EBUSY || !end_regc_if_latest(acc, param)) {
             pj_log_pop_indent();
             PJSUA_UNLOCK();
             return;
         }
 
-        /* This callback is called without holding the registration's lock,
-         * so there can be a race condition with another registration
-         * process. Therefore, we must not forcefully try to destroy
-         * the registration here.
-         */
-        status = destroy_regc(acc, PJ_FALSE);
-        if (status == PJ_SUCCESS) {
-            /* Stop keep-alive timer if any. */
-            update_keep_alive(acc, PJ_FALSE, NULL);
-        } else {
-            /* Another registration is in progress. */
-            pj_assert(status == PJ_EBUSY);
-            pjsua_perror(THIS_FILE, "Deleting registration failed", 
-                         status);           
-        }
+        /* Stop keep-alive timer if any. */
+        update_keep_alive(acc, PJ_FALSE, NULL);
 
     } else if (param->code < 0 || param->code >= 300) {
+        pjsip_transport *timed_out_tp = NULL;
+
         PJ_LOG(2, (THIS_FILE, "SIP registration failed, status=%d (%.*s)", 
                    param->code, 
                    (int)param->reason.slen, param->reason.ptr));
@@ -3192,15 +3251,28 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
             if (reginfo.transport &&
                 (reginfo.transport->flag & PJSIP_TRANSPORT_RELIABLE))
             {
-                PJ_LOG(3, (THIS_FILE,
-                           "Registration timed out, shutting down transport "
-                           "%s to force a reconnect on next registration",
-                           reginfo.transport->obj_name));
-                pjsip_transport_shutdown(reginfo.transport);
+                timed_out_tp = reginfo.transport;
+                pjsip_transport_add_ref(timed_out_tp);
             }
         }
 
-        destroy_regc(acc, PJ_TRUE);
+        /* A newer request may use the same connection */
+        if (!end_regc_if_latest(acc, param)) {
+            if (timed_out_tp)
+                pjsip_transport_dec_ref(timed_out_tp);
+            pj_log_pop_indent();
+            PJSUA_UNLOCK();
+            return;
+        }
+
+        if (timed_out_tp) {
+            PJ_LOG(3, (THIS_FILE,
+                       "Registration timed out, shutting down transport "
+                       "%s to force a reconnect on next registration",
+                       timed_out_tp->obj_name));
+            pjsip_transport_shutdown(timed_out_tp);
+            pjsip_transport_dec_ref(timed_out_tp);
+        }
 
         /* Clear Service-Route header */
         update_service_route(acc, NULL);
@@ -3208,13 +3280,28 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
         /* Stop keep-alive timer if any. */
         update_keep_alive(acc, PJ_FALSE, NULL);
     } else if (PJSIP_IS_STATUS_IN_CLASS(param->code, 200)) {
+        pj_bool_t latest;
 
-        /* Update auto registration flag */
-        acc->auto_rereg.active = PJ_FALSE;
+        /* The server accepts the account even if the result is ignored */
         acc->auto_rereg.attempt_cnt = 0;
 
         if (param->expiration < 1) {
-            destroy_regc(acc, PJ_TRUE);
+            latest = end_regc_if_latest(acc, param);
+        } else {
+            latest = pjsip_regc_is_latest(acc->regc, param->cseq);
+            if (!latest)
+                ignore_earlier_result(acc);
+        }
+        if (!latest) {
+            pj_log_pop_indent();
+            PJSUA_UNLOCK();
+            return;
+        }
+
+        /* Update auto registration flag */
+        acc->auto_rereg.active = PJ_FALSE;
+
+        if (param->expiration < 1) {
             /* Reset pointer to registration transport */
             //acc->auto_rereg.reg_tp = NULL;
 
@@ -3428,7 +3515,9 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
         (*pjsua_var.ua_cfg.cb.on_reg_state2)(acc->index, &reg_info);
     }
 
-    if (acc->ip_change_op == PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT) {
+    if (acc->ip_change_op == PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT &&
+        !acc->ip_change_reg_done)
+    {
         if (pjsua_var.ua_cfg.cb.on_ip_change_progress) {
             pjsua_ip_change_op_info ip_chg_info;
             pjsip_regc_info rinfo;
@@ -3443,16 +3532,23 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
                                                          &ip_chg_info);
         }
 
-        if (PJSIP_IS_STATUS_IN_CLASS(param->code, 200)) {
-            if (param->expiration < 1) {
+        /* An account unregistered by the application goes on to its calls */
+        if (PJSIP_IS_STATUS_IN_CLASS(param->code, 200) || acc->app_unreg) {
+            if (param->expiration < 1 && !acc->app_unreg) {
                 pj_status_t status;
                 /* Send re-register. */
                 PJ_LOG(3, (THIS_FILE, "%.*s: send registration triggered by IP"
                            " change", (int)pjsua_var.acc[acc->index].cfg.id.slen,
                            pjsua_var.acc[acc->index].cfg.id.ptr));
 
-                status = pjsua_acc_set_registration(acc->index, PJ_TRUE);
-                if (status != PJ_SUCCESS) {
+                status = acc_set_registration(acc->index, PJ_TRUE, PJ_FALSE,
+                                              PJ_FALSE);
+                /* A failure the registration callback has already reported
+                 * has ended the IP change
+                 */
+                if (status != PJ_SUCCESS &&
+                    acc->ip_change_op == PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT)
+                {
                     if (pjsua_var.ua_cfg.cb.on_ip_change_progress) {
                         pjsua_ip_change_op_info ip_chg_info;
 
@@ -3468,6 +3564,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
                 }
             } else {
                 /* Avoid deadlock issue when sending BYE or Re-INVITE.  */
+                acc->ip_change_reg_done = PJ_TRUE;
                 pjsua_schedule_timer2(&handle_call_on_ip_change_cb,
                                       (void*)acc, 0);
             }
@@ -3819,10 +3916,12 @@ pj_bool_t pjsua_media_acc_is_using_upnp(pjsua_acc_id acc_id)
 /*
  * Update registration or perform unregistration. PJSUA_LOCK is released
  * while sending; with release_all, also the levels the caller holds, as
- * the new transaction's group lock must not be taken under it.
+ * the new transaction's group lock must not be taken under it. by_app
+ * records the application's choice, see app_unreg.
  */
 static pj_status_t acc_set_registration(pjsua_acc_id acc_id, pj_bool_t renew,
-                                        pj_bool_t release_all)
+                                        pj_bool_t release_all,
+                                        pj_bool_t by_app)
 {
     pjsua_acc *acc;
     pj_status_t status = 0;
@@ -3896,11 +3995,11 @@ static pj_status_t acc_set_registration(pjsua_acc_id acc_id, pj_bool_t renew,
     } else {
         if (pjsua_var.acc[acc_id].regc == NULL) {
             PJ_LOG(3,(THIS_FILE, "Currently not registered"));
+            if (by_app)
+                acc->app_unreg = PJ_TRUE;
             status = PJ_EINVALIDOP;
             goto on_return;
         }
-
-        pjsua_pres_unpublish(&pjsua_var.acc[acc_id], 0);
 
         status = pjsip_regc_unregister(pjsua_var.acc[acc_id].regc, &tdata);
     }
@@ -3926,6 +4025,19 @@ static pj_status_t acc_set_registration(pjsua_acc_id acc_id, pj_bool_t renew,
                                    NULL, NULL,
                                    &tdata->via_tp);
         }
+
+        /* Claim the regc and record the application's choice in this
+         * lock hold. The reserved request is sent below whatever happens.
+         */
+        status = pjsip_regc_reserve(regc, tdata);
+        if (status != PJ_SUCCESS) {
+            pjsip_tx_data_dec_ref(tdata);
+            goto on_error;
+        }
+        if (by_app)
+            acc->app_unreg = !renew;
+        if (!renew)
+            pjsua_pres_unpublish(acc, 0);
 
         /* Increment ref counter and release PJSUA lock here, to avoid
          * deadlock while making sure that regc won't be destroyed.
@@ -3973,6 +4085,7 @@ static pj_status_t acc_set_registration(pjsua_acc_id acc_id, pj_bool_t renew,
         }
     }
 
+on_error:
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Unable to create/send REGISTER", 
                      status);
@@ -3994,7 +4107,7 @@ on_return:
 PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
                                                 pj_bool_t renew)
 {
-    return acc_set_registration(acc_id, renew, PJ_FALSE);
+    return acc_set_registration(acc_id, renew, PJ_FALSE, PJ_TRUE);
 }
 
 
@@ -4987,8 +5100,11 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
 
     /* If Record-Route is present, then URI is the top Record-Route. */
     if (rdata->msg_info.record_route) {
-        sip_uri = (pjsip_sip_uri*) 
-                pjsip_uri_get_uri(rdata->msg_info.record_route->name_addr.uri);
+        pjsip_uri *uri = rdata->msg_info.record_route->name_addr.uri;
+
+        if (!PJSIP_URI_SCHEME_IS_SIP(uri) && !PJSIP_URI_SCHEME_IS_SIPS(uri))
+            return PJSIP_EINVALIDROUTEURI;
+        sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(uri);
     } else {
         pjsip_hdr *pos = NULL;
         pjsip_contact_hdr *h_contact;
@@ -5169,7 +5285,10 @@ PJ_DEF(pj_status_t) pjsua_acc_set_transport( pjsua_acc_id acc_id,
     PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
     acc = &pjsua_var.acc[acc_id];
 
-    PJ_ASSERT_RETURN(tp_id < (int)PJ_ARRAY_SIZE(pjsua_var.tpdata), PJ_EINVAL);
+    PJ_ASSERT_RETURN(tp_id == PJSUA_INVALID_ID ||
+                     (tp_id >= 0 &&
+                      tp_id < (int)PJ_ARRAY_SIZE(pjsua_var.tpdata)),
+                     PJ_EINVAL);
 
     if (acc->cfg.transport_id == tp_id)
         return PJ_SUCCESS;
@@ -5419,7 +5538,7 @@ static void auto_rereg_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
      * the auto-reregistration.
      */
     if (!acc->valid || !acc->auto_rereg.active || 
-        acc->cfg.reg_retry_interval == 0)
+        acc->cfg.reg_retry_interval == 0 || acc->app_unreg)
     {
         goto on_return;
     }
@@ -5466,8 +5585,8 @@ static void auto_rereg_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
                  * next retry rather than abandon the in-flight tsx
                  * and race a second REGISTER against it.
                  */
-                status = pjsua_acc_set_registration(acc->index,
-                                                   PJ_FALSE);
+                status = acc_set_registration(acc->index, PJ_FALSE,
+                                              PJ_FALSE, PJ_FALSE);
                 if (status != PJ_SUCCESS) {
                     pjsua_perror(THIS_FILE,
                                  "Unable to send unregister of old"
@@ -5507,7 +5626,7 @@ static void auto_rereg_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
         clear_sa_pin(acc);
     }
 
-    status = acc_set_registration(acc->index, PJ_TRUE, PJ_TRUE);
+    status = acc_set_registration(acc->index, PJ_TRUE, PJ_TRUE, PJ_FALSE);
     if (status != PJ_SUCCESS)
         schedule_reregistration(acc);
 
@@ -5528,7 +5647,7 @@ static void schedule_reregistration(pjsua_acc *acc)
     pj_assert(acc);
 
     /* Validate the account and re-registration feature status */
-    if (!acc->valid || acc->cfg.reg_retry_interval == 0) {
+    if (!acc->valid || acc->cfg.reg_retry_interval == 0 || acc->app_unreg) {
         return;
     }
 
@@ -5722,7 +5841,12 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc)
     pj_bool_t no_unreg = ((acc->cfg.contact_rewrite_method &
                            PJSUA_CONTACT_REWRITE_NO_UNREG) != 0);
 
+    /* Don't register an account the application has unregistered */
+    if (acc->app_unreg)
+        return pjsua_acc_handle_call_on_ip_change(acc);
+
     acc->ip_change_op = PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT;
+    acc->ip_change_reg_done = PJ_FALSE;
 
     PJ_LOG(3, (THIS_FILE, "%.*s: send %sregistration triggered "
                "by IP change", (int)acc->cfg.id.slen,
@@ -5739,7 +5863,7 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc)
      */
     reset_outbound_rejection(acc);
 
-    status = pjsua_acc_set_registration(acc->index, !need_unreg);
+    status = acc_set_registration(acc->index, !need_unreg, PJ_FALSE, PJ_FALSE);
     if ((status != PJ_SUCCESS)
         && (acc->ip_change_op == PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT))
     {
@@ -5771,8 +5895,9 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc)
                                                 "Contact", rc);
                         status = rc;
                     } else {
-                        status = pjsua_acc_set_registration(acc->index,
-                                                            !need_unreg);
+                        status = acc_set_registration(acc->index,
+                                                      !need_unreg, PJ_FALSE,
+                                                      PJ_FALSE);
                         if (status == PJ_SUCCESS) {
                             return status;
                         }
@@ -5781,10 +5906,13 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc)
             }
         }
 
+        /* A failure the registration callback has already reported has
+         * ended the IP change
+         */
+        if (acc->ip_change_op != PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT)
+            return status;
+
         if (pjsua_var.ua_cfg.cb.on_ip_change_progress) {
-            /* If update contact fails, notification might already been
-             * triggered from registration callback.
-             */
             pjsua_ip_change_op_info info;
 
             pj_bzero(&info, sizeof(info));

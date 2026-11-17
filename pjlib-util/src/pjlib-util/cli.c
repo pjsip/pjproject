@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2010-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -488,48 +488,67 @@ static void on_syntax_error(pj_scanner *scanner)
     PJ_THROW(PJ_EINVAL);
 }
 
+/* Build the command hash key (optional group-ID prefix + command name) into
+ * the caller's MAX_CMD_HASH_NAME_LENGTH buffer. Returns PJ_FALSE if the
+ * combined key would not fit, so callers reject instead of overflowing.
+ */
+static pj_bool_t build_cmd_hash_key(const pj_cli_cmd_spec *group,
+                                    const pj_str_t *cmd_name,
+                                    char *buf, pj_str_t *key)
+{
+    key->ptr = buf;
+    key->slen = 0;
+
+    if (group) {
+        char cmd_str[MAX_CMD_ID_LENGTH];
+        int id_len;
+
+        id_len = pj_ansi_snprintf(cmd_str, sizeof(cmd_str), "%d", group->id);
+        if (id_len < 0 || id_len >= (int)sizeof(cmd_str) ||
+            id_len + cmd_name->slen > MAX_CMD_HASH_NAME_LENGTH)
+        {
+            return PJ_FALSE;
+        }
+        pj_strcat2(key, cmd_str);
+    } else if (cmd_name->slen > MAX_CMD_HASH_NAME_LENGTH) {
+        return PJ_FALSE;
+    }
+    pj_strcat(key, cmd_name);
+    return PJ_TRUE;
+}
+
 /* Get the command from the command hash */
-static pj_cli_cmd_spec *get_cmd_name(const pj_cli_t *cli, 
-                                     const pj_cli_cmd_spec *group, 
+static pj_cli_cmd_spec *get_cmd_name(const pj_cli_t *cli,
+                                     const pj_cli_cmd_spec *group,
                                      const pj_str_t *cmd)
 {
     pj_str_t cmd_val;
     char cmd_ptr[MAX_CMD_HASH_NAME_LENGTH];
 
-    cmd_val.ptr = cmd_ptr;
-    cmd_val.slen = 0;
+    if (!build_cmd_hash_key(group, cmd, cmd_ptr, &cmd_val))
+        return NULL;
 
-    if (group) {
-        char cmd_str[MAX_CMD_ID_LENGTH];
-        pj_ansi_snprintf(cmd_str, sizeof(cmd_str), "%d", group->id);
-        pj_strcat2(&cmd_val, cmd_str);  
-    }
-    pj_strcat(&cmd_val, cmd);
-    return (pj_cli_cmd_spec *)pj_hash_get(cli->cmd_name_hash, cmd_val.ptr, 
+    return (pj_cli_cmd_spec *)pj_hash_get(cli->cmd_name_hash, cmd_val.ptr,
                                           (unsigned)cmd_val.slen, NULL);
 }
 
 /* Add command to the command hash */
-static void add_cmd_name(pj_cli_t *cli, pj_cli_cmd_spec *group, 
-                         pj_cli_cmd_spec *cmd, pj_str_t *cmd_name)
+static pj_status_t add_cmd_name(pj_cli_t *cli, pj_cli_cmd_spec *group,
+                                pj_cli_cmd_spec *cmd, pj_str_t *cmd_name)
 {
     pj_str_t cmd_val;
     pj_str_t add_cmd;
     char cmd_ptr[MAX_CMD_HASH_NAME_LENGTH];
 
-    cmd_val.ptr = cmd_ptr;
-    cmd_val.slen = 0;
+    if (!build_cmd_hash_key(group, cmd_name, cmd_ptr, &cmd_val))
+        return PJ_CLI_EBADNAME;
 
-    if (group) {
-        char cmd_str[MAX_CMD_ID_LENGTH];
-        pj_ansi_snprintf(cmd_str, sizeof(cmd_str),  "%d", group->id);
-        pj_strcat2(&cmd_val, cmd_str);  
-    }
-    pj_strcat(&cmd_val, cmd_name);
     pj_strdup(cli->pool, &add_cmd, &cmd_val);
-    
-    pj_hash_set(cli->pool, cli->cmd_name_hash, cmd_val.ptr, 
+
+    pj_hash_set(cli->pool, cli->cmd_name_hash, cmd_val.ptr,
                 (unsigned)cmd_val.slen, 0, cmd);
+
+    return PJ_SUCCESS;
 }
 
 /**
@@ -778,20 +797,42 @@ static pj_status_t add_cmd_node(pj_cli_t *cli,
         }
     }
 
+    /* Validate that every hash key (the primary name and each shortcut) fits
+     * before inserting any of them, so a name that is too long leaves no
+     * partial entries behind in the command hash.
+     */
+    {
+        char key_buf[MAX_CMD_HASH_NAME_LENGTH];
+        pj_str_t key_val;
+        unsigned i;
+
+        if (!build_cmd_hash_key(group, &cmd->name, key_buf, &key_val))
+            return PJ_CLI_EBADNAME;
+        for (i = 0; i < cmd->sc_cnt; i++) {
+            if (!build_cmd_hash_key(&cli->root, &sc[i], key_buf, &key_val))
+                return PJ_CLI_EBADNAME;
+        }
+    }
+
     if (cmd->sc_cnt) {
         unsigned i;
 
         cmd->sc = (pj_str_t *)pj_pool_zalloc(cli->pool, cmd->sc_cnt *
                                              sizeof(pj_str_t));
         for (i = 0; i < cmd->sc_cnt; i++) {
-            pj_strdup(cli->pool, &cmd->sc[i], &sc[i]);  
+            pj_strdup(cli->pool, &cmd->sc[i], &sc[i]);
             /** Add shortcut to root command **/
-            add_cmd_name(cli, &cli->root, cmd, &sc[i]);
+            status = add_cmd_name(cli, &cli->root, cmd, &sc[i]);
+            if (status != PJ_SUCCESS)
+                return status;
         }
     }
-    
-    add_cmd_name(cli, group, cmd, &cmd->name);    
-    pj_hash_set(cli->pool, cli->cmd_id_hash, 
+
+    status = add_cmd_name(cli, group, cmd, &cmd->name);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    pj_hash_set(cli->pool, cli->cmd_id_hash,
                 &cmd->id, sizeof(pj_cli_cmd_id), 0, cmd);
 
     cmd->handler = handler;
@@ -1028,7 +1069,13 @@ static pj_status_t insert_new_hint2(pj_pool_t *pool,
 {
     pj_cli_hint_info *hint;
     PJ_ASSERT_RETURN(pool && info, PJ_EINVAL);
-    PJ_ASSERT_RETURN((info->hint_cnt < PJ_CLI_MAX_HINTS), PJ_EINVAL);
+
+    /* Truncate the completion list when it is full instead of asserting:
+     * a command with more matching candidates than PJ_CLI_MAX_HINTS (e.g. a
+     * large command group) is reachable from an unauthenticated telnet TAB.
+     */
+    if (info->hint_cnt >= PJ_CLI_MAX_HINTS)
+        return PJ_SUCCESS;
 
     if ((unique_insert) && (hint_inserted(name, desc, type, info)))
         return PJ_SUCCESS;
@@ -1249,8 +1296,10 @@ static pj_status_t get_match_args(pj_cli_sess *sess,
                 (*arg->get_dyn_choice)(&dyn_choice_param);
                 for (j=0; j < dyn_choice_param.cnt; ++j) {
                     pj_cli_arg_choice_val *choice = &dyn_choice_param.choice[j];
+                    if (info->hint_cnt >= PJ_CLI_MAX_HINTS)
+                        break;
                     if (!pj_strncmp(&choice->value, cmd_val, cmd_val->slen)) {
-                        pj_strassign(&info->hint[info->hint_cnt].name, 
+                        pj_strassign(&info->hint[info->hint_cnt].name,
                                      &choice->value);
                         pj_strassign(&info->hint[info->hint_cnt].type, 
                                      &choice_str);

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2010-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2010-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -77,6 +77,10 @@
 #  define AV_OPT_SET_INT(obj,name,val)  (av_set_int(obj,name,val)!=NULL)
 #endif
 #define AVCODEC_HAS_DECODE(c)           (c->decode != (void*)0)
+
+#ifndef AV_INPUT_BUFFER_PADDING_SIZE
+#  define AV_INPUT_BUFFER_PADDING_SIZE  FF_INPUT_BUFFER_PADDING_SIZE
+#endif
 
 /* AVCodec H264 default PT */
 #define AVC_H264_PT                       PJMEDIA_RTP_PT_H264_RSV3
@@ -580,11 +584,18 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
         AVCodecContext *ctx = ff->dec_ctx;
 
         /* Apply the "sprop-parameter-sets" fmtp from remote SDP to
-         * extradata of ffmpeg codec context.
+         * extradata of ffmpeg codec context. ffmpeg owns and frees
+         * extradata, so it must come from av_malloc() with input padding.
          */
         if (data->fmtp.sprop_param_sets_len) {
-            ctx->extradata_size = (int)data->fmtp.sprop_param_sets_len;
-            ctx->extradata = data->fmtp.sprop_param_sets;
+            pj_size_t len = data->fmtp.sprop_param_sets_len;
+
+            ctx->extradata = (pj_uint8_t*)
+                             av_mallocz(len + AV_INPUT_BUFFER_PADDING_SIZE);
+            if (!ctx->extradata)
+                return PJ_ENOMEM;
+            pj_memcpy(ctx->extradata, data->fmtp.sprop_param_sets, len);
+            ctx->extradata_size = (int)len;
         }
     }
 
@@ -1280,6 +1291,7 @@ static void free_codec_context(AVCodecContext **ctx, pj_bool_t opened)
         return;
     if (opened)
         avcodec_close(*ctx);
+    av_freep(&(*ctx)->extradata);
     av_free(*ctx);
     *ctx = NULL;
 #endif
@@ -1476,7 +1488,12 @@ static pj_status_t ffmpeg_codec_open( pjmedia_vid_codec *codec,
         ff->enc_buf = pj_pool_alloc(ff->pool, ff->enc_buf_size);
 
         ff->dec_buf_size = PJ_MAX((unsigned)ff->dec_vafp.framebytes, ff->dec_buf_size);
-        ff->dec_buf = pj_pool_alloc(ff->pool, ff->dec_buf_size);
+        /* Over-allocate by the ffmpeg input padding, as decoding zeroes that
+         * many bytes past the reassembled bitstream (which may reach exactly
+         * dec_buf_size).
+         */
+        ff->dec_buf = pj_pool_alloc(ff->pool, ff->dec_buf_size +
+                                              AV_INPUT_BUFFER_PADDING_SIZE);
     }
 
     /* Update codec attributes, e.g: encoding format may be changed by
@@ -1825,7 +1842,11 @@ static pj_status_t check_decode_result(pjmedia_vid_codec *codec,
                        (unsigned)ff->dec_buf_size,
                        (unsigned)ff->dec_vafp.framebytes));
             ff->dec_buf_size = (unsigned)ff->dec_vafp.framebytes;
-            ff->dec_buf = pj_pool_alloc(ff->pool, ff->dec_buf_size);
+            /* Over-allocate by the ffmpeg input padding, see the comment at
+             * the initial dec_buf allocation.
+             */
+            ff->dec_buf = pj_pool_alloc(ff->pool, ff->dec_buf_size +
+                                                  AV_INPUT_BUFFER_PADDING_SIZE);
         }
 
         /* Broadcast format changed event */
@@ -1907,21 +1928,12 @@ static pj_status_t ffmpeg_codec_decode_whole(pjmedia_vid_codec *codec,
     avpacket.size = (int)input->size;
 
     /* ffmpeg warns:
-     * - input buffer padding, at least FF_INPUT_BUFFER_PADDING_SIZE
+     * - input buffer padding, at least AV_INPUT_BUFFER_PADDING_SIZE
      * - null terminated
      * Normally, encoded buffer is allocated more than needed, so lets just
      * bzero the input buffer end/pad, hope it will be just fine.
      */
-#if LIBAVCODEC_VER_AT_LEAST(56,35)
-    /* 2015-07-27 - lavc 56.56.100 / 56.35.0 - avcodec.h
-    *  29d147c / 059a9348 
-    * - Rename FF_INPUT_BUFFER_PADDING_SIZE and FF_MIN_BUFFER_SIZE
-    *   to AV_INPUT_BUFFER_PADDING_SIZE and AV_INPUT_BUFFER_MIN_SIZE.
-    */
     pj_bzero(avpacket.data+avpacket.size, AV_INPUT_BUFFER_PADDING_SIZE);
-#else
-    pj_bzero(avpacket.data+avpacket.size, FF_INPUT_BUFFER_PADDING_SIZE);
-#endif
 
     output->bit_info = 0;
     output->timestamp = input->timestamp;

@@ -207,7 +207,8 @@ struct pjsua_call
     int                  secure_level;/**< Signaling security level.        */
     pjsua_call_hold_type call_hold_type; /**< How to do call hold.          */
     pj_bool_t            local_hold;/**< Flag for call-hold by local.       */
-    void                *hold_msg;  /**< Outgoing hold tx_data.             */
+    pj_bool_t            offer_sent;/**< Our offer awaits its answer.       */
+    pj_bool_t            offer_hold;/**< local_hold before that offer.      */
     pj_str_t             cname;     /**< RTCP CNAME.                        */
     char                 cname_buf[16];/**< cname buffer.                   */
 
@@ -216,8 +217,6 @@ struct pjsua_call
     unsigned             med_prov_cnt;/**< Number of provisional media.     */
     pjsua_call_media     media_prov[PJSUA_MAX_CALL_MEDIA];
                                     /**< Array of provisional media.        */
-    pj_bool_t            med_update_success;
-                                    /**< Is media update successful?        */
     pj_bool_t            hanging_up;/**< Is call in the process of hangup?  */
 
     int                  audio_idx; /**< First active audio media.          */
@@ -292,11 +291,13 @@ struct pjsua_call
     unsigned             hangup_code;   /**< Hangup code.                   */
     pj_str_t             hangup_reason; /**< Hangup reason.                 */
     pjsua_msg_data      *hangup_msg_data;/**< Hangup message data.          */
+    pj_bool_t            owner_released;/**< Owner is gone, hang up.        */
     pj_str_t             siprec_metadata;/** siprec metadata in body        */
     unsigned             siprec_metadata_cap;
                                     /**< Allocated size of siprec_metadata */
 
     pjmedia_av_sync     *av_sync;       /**< Media stream synchronizer      */
+    pjmedia_sdp_session *answer_sdp;/**< Application SDP pending media init.*/
 };
 
 PJ_INLINE(pj_bool_t) pjsua_call_media_is_app_managed(
@@ -445,6 +446,9 @@ typedef struct pjsua_acc
     pjsua_ip_change_op ip_change_op;/**< IP change process progress.    */
     pjsip_auth_clt_sess shared_auth_sess; /**< Share one auth session over
                                                all requests             */
+    pj_bool_t        app_unreg;     /**< Unregistered by application.   */
+    pj_bool_t        ip_change_reg_done; /**< IP change registration step
+                                              is over.                  */
 } pjsua_acc;
 
 
@@ -643,7 +647,8 @@ struct pjsua_data
     /* SIP: */
     pjsip_endpoint      *endpt;     /**< Global endpoint.               */
     pjsip_module         mod;       /**< pjsua's PJSIP module.          */
-    pjsua_transport_data tpdata[8]; /**< Array of transports.           */
+    /** Array of transports. */
+    pjsua_transport_data tpdata[PJSUA_MAX_TRANSPORTS];
     pjsip_tp_state_callback old_tp_cb; /**< Old transport callback.     */
 
     /* Threading: */
@@ -759,6 +764,11 @@ struct pjsua_data
     pjsua_timer_list     timer_list;
     pjsua_event_list     event_list;
     pj_mutex_t          *timer_mutex;
+
+    /* Guards the calls' owner_released and the changes of their user_data,
+     * no other lock is taken while holding it.
+     */
+    pj_mutex_t          *call_owner_mutex;
 };
 
 
@@ -935,6 +945,11 @@ pj_status_t pjsua_acc_get_uac_dlg_addr(pjsua_acc_id acc_id,
  */
 pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata);
 
+pj_status_t pjsua_call_validate_initial_local_offer(
+                                      const pjsua_call *call,
+                                      const pjsua_call_setting *opt,
+                                      const pjmedia_sdp_session *sdp);
+
 /*
  * Media channel.
  */
@@ -1052,6 +1067,11 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg);
 pj_status_t pjsua_call_subsys_start(void);
 
 /**
+ * Destroy call subsystem resources.
+ */
+void pjsua_call_subsys_destroy(void);
+
+/**
  * Init media subsystems.
  */
 pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg);
@@ -1121,6 +1141,14 @@ pj_status_t acquire_call(const char *title,
                          pjsua_call_id call_id,
                          pjsua_call **p_call,
                          pjsip_dialog **p_dlg);
+
+/* If the call's user data is still owner, clear it and hang up the call,
+ * unless the library is being destroyed. Used by pjsua2 when a Call is
+ * deleted. Returns PJ_ETIMEDOUT if the call or the library is busy, the
+ * hangup is then retried later, until the library is being destroyed.
+ */
+pj_status_t pjsua_call_release_owner(pjsua_call_id call_id, void *owner);
+
 const char *good_number(char *buf, unsigned buf_size, pj_int32_t val);
 void print_call(const char *title,
                 int call_id,
@@ -1190,6 +1218,12 @@ pj_status_t pjsua_txt_channel_update(pjsua_call_media *call_med,
  * Schedule check for the need of re-INVITE/UPDATE after media update
  */
 void pjsua_call_schedule_reinvite_check(pjsua_call *call, unsigned delay_ms);
+
+/*
+ * Send a request of the call, recording the SDP offer it carries.
+ */
+pj_status_t pjsua_call_send_offer(pjsua_call *call, pjsip_tx_data *tdata,
+                                  pjmedia_sdp_neg_state old_state);
 
 /*
  * Update contact per account on IP change process.

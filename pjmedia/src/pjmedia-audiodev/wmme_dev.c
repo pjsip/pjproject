@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -996,7 +996,9 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
                     frame = &strm->xfrm->base;
 
                     strm->xfrm->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
-                    strm->xfrm->base.size = strm->bytes_per_frame;
+                    /* Capacity of the subframes area, see pjmedia_frame_ext */
+                    strm->xfrm->base.size = strm->xfrm_size -
+                                            sizeof(pjmedia_frame_ext);
                     strm->xfrm->base.buf = NULL;
                     strm->xfrm->base.timestamp.u64 = wmme_strm->timestamp.u64;
                     strm->xfrm->base.bit_info = 0;

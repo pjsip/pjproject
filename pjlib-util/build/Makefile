@@ -49,7 +49,7 @@ export PJLIB_UTIL_LDFLAGS += $(PJLIB_LDLIB) $(_LDFLAGS)
 # Defines for building test application
 #
 export UTIL_TEST_SRCDIR = ../src/pjlib-util-test
-export UTIL_TEST_OBJS += xml.o encryption.o stun.o resolver_test.o test.o \
+export UTIL_TEST_OBJS += xml.o encryption.o stun.o resolver_test.o dns_packet_test.o test.o \
 		json_test.o http_client.o websock_test.o
 export UTIL_TEST_CFLAGS += $(_CFLAGS)
 export UTIL_TEST_CXXFLAGS += $(_CXXFLAGS)

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -75,8 +75,8 @@ static int replaces_hdr_print( pjsip_replaces_hdr *hdr,
     const pjsip_parser_const_t *pc = pjsip_parser_const();
 
     copy_advance(p, hdr->name);
-    *p++ = ':';
-    *p++ = ' ';
+    copy_advance_char_check(p, ':');
+    copy_advance_char_check(p, ' ');
 
     copy_advance(p, hdr->call_id);
     copy_advance_pair(p, ";to-tag=", 8, hdr->to_tag);

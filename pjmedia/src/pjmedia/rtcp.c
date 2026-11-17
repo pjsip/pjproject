@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -318,7 +318,30 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess,
                                   unsigned rtp_ts,
                                   unsigned payload,
                                   pj_bool_t discarded)
-{   
+{
+    pjmedia_rtcp_rx_rtp_param prm;
+
+    pjmedia_rtcp_rx_rtp_param_default(&prm);
+    prm.seq = seq;
+    prm.ts = rtp_ts;
+    prm.payload = payload;
+    prm.discarded = discarded;
+    pjmedia_rtcp_rx_rtp3(sess, &prm);
+}
+
+PJ_DEF(void) pjmedia_rtcp_rx_rtp_param_default(
+                                    pjmedia_rtcp_rx_rtp_param *prm)
+{
+    pj_bzero(prm, sizeof(*prm));
+}
+
+PJ_DEF(void) pjmedia_rtcp_rx_rtp3(pjmedia_rtcp_session *sess,
+                                  const pjmedia_rtcp_rx_rtp_param *prm)
+{
+    unsigned seq = prm->seq;
+    unsigned rtp_ts = prm->ts;
+    unsigned payload = prm->payload;
+    pj_bool_t discarded = prm->discarded;
     pj_timestamp ts;
     pj_uint32_t arrival;
     pj_int32_t transit;
@@ -354,7 +377,8 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess,
     }
 
     if (seq_st.status.flag.bad) {
-        sess->stat.rx.discard++;
+        if (!prm->bad_used)
+            sess->stat.rx.discard++;
 
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
         pjmedia_rtcp_xr_rx_rtp(&sess->xr_session, seq, 

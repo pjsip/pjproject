@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -820,7 +820,11 @@ pjmedia_vid_codec_encode_more( pjmedia_vid_codec *codec,
  * to decode multiple encoded packets into one picture. These encoded
  * packets are typically retrieved from the jitter buffer. If the packing
  * is set to PJMEDIA_VID_PACKING_WHOLE, then this decode function can only
- * accept one frame as the input.
+ * accept one frame as the input. In this mode, the caller must allocate the
+ * input buffer with some extra padding bytes (at least 64) beyond the encoded
+ * frame size, as some codec backends (e.g. the ffmpeg based codecs) may read
+ * or write a few trailing bytes past the frame while decoding. In
+ * PJMEDIA_VID_PACKING_PACKETS mode this is handled internally by the codec.
  *
  * Note that the decoded picture format may different to the configured
  * setting (i.e. the format specified in the #pjmedia_vid_codec_param when

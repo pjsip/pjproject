@@ -31,6 +31,7 @@ struct test_result
     pj_status_t last_status;
     unsigned    conn_status_cnt;
     pj_status_t last_conn_status;
+    pj_uint32_t last_conn_id;
 };
 
 struct test_session
@@ -309,7 +310,6 @@ static void turn_on_connection_status(pj_turn_sock *turn_sock,
 {
     struct test_session *sess;
 
-    PJ_UNUSED_ARG(conn_id);
     PJ_UNUSED_ARG(peer_addr);
     PJ_UNUSED_ARG(addr_len);
 
@@ -319,6 +319,7 @@ static void turn_on_connection_status(pj_turn_sock *turn_sock,
 
     sess->result.conn_status_cnt++;
     sess->result.last_conn_status = status;
+    sess->result.last_conn_id = conn_id;
 
     if (sess->destroy_on_conn_status && !sess->destroy_called) {
         sess->destroy_called = PJ_TRUE;
@@ -968,11 +969,13 @@ static int destroy_in_rx_data_test(pj_stun_config *stun_cfg,
 /////////////////////////////////////////////////////////////////////
 
 /* ConnectionBind result (RFC 6062) is reported, and the data connection
- * may be released while its read is being handled.
+ * may be released while its read is being handled. With stale_nonce, the
+ * request is retried after a 438 and the retry times out.
  */
 static int conn_bind_test(pj_stun_config *stun_cfg,
                           pj_bool_t use_ipv6,
-                          pj_bool_t accept_bind)
+                          pj_bool_t accept_bind,
+                          pj_bool_t stale_nonce)
 {
     struct test_session_cfg test_cfg =
     {
@@ -997,7 +1000,8 @@ static int conn_bind_test(pj_stun_config *stun_cfg,
     int rc;
 
     PJ_LOG(3,("", "  ConnectionBind %s test (%s)",
-              accept_bind?"success":"failure", use_ipv6?"IPv6":"IPv4"));
+              stale_nonce? "stale nonce" : (accept_bind?"success":"failure"),
+              use_ipv6?"IPv6":"IPv4"));
 
     set_server_flag(&test_cfg, use_ipv6, PJ_TURN_TP_TCP);
 
@@ -1007,6 +1011,7 @@ static int conn_bind_test(pj_stun_config *stun_cfg,
 
     sess->test_srv->turn_respond_connect = PJ_TRUE;
     sess->test_srv->turn_accept_conn_bind = accept_bind;
+    sess->test_srv->turn_stale_conn_bind = stale_nonce;
     sess->destroy_on_conn_status = accept_bind;
 
     /* Wait until state is READY */
@@ -1074,6 +1079,18 @@ static int conn_bind_test(pj_stun_config *stun_cfg,
                   sess->result.last_conn_status));
         destroy_session(sess);
         return -320;
+    }
+
+    if (stale_nonce &&
+        (sess->test_srv->turn_stat.rx_conn_bind_cnt != 2 ||
+         sess->result.last_conn_id != 1))
+    {
+        PJ_LOG(3,("", "    error: expecting a retried ConnectionBind for "
+                  "connection 1, got %u request(s), connection %u",
+                  sess->test_srv->turn_stat.rx_conn_bind_cnt,
+                  sess->result.last_conn_id));
+        destroy_session(sess);
+        return -330;
     }
 
     /* Wait for the graceful deallocation before releasing the session */
@@ -1166,11 +1183,16 @@ int turn_sock_test(void *p)
 
     /* TCP peer connections (RFC 6062) need TCP to the server */
     if (tp_type == PJ_TURN_TP_TCP) {
-        rc = conn_bind_test(&app_sess.stun_cfg, USE_IPV6, PJ_FALSE);
+        rc = conn_bind_test(&app_sess.stun_cfg, USE_IPV6, PJ_FALSE,
+                            PJ_FALSE);
         if (rc != 0)
             goto on_return;
 
-        rc = conn_bind_test(&app_sess.stun_cfg, USE_IPV6, PJ_TRUE);
+        rc = conn_bind_test(&app_sess.stun_cfg, USE_IPV6, PJ_TRUE, PJ_FALSE);
+        if (rc != 0)
+            goto on_return;
+
+        rc = conn_bind_test(&app_sess.stun_cfg, USE_IPV6, PJ_FALSE, PJ_TRUE);
         if (rc != 0)
             goto on_return;
     }

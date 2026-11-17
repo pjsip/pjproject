@@ -239,11 +239,15 @@ void comp_powercat_and_catbalance(Word16 *power_categories,
             temp_category_balances[max_rate_pointer] = raw_min_index;
             move16();
 
-        	max = sub(max,expected_bits_table[max_rate_categories[raw_min_index]]);
-        	max_rate_categories[raw_min_index] = sub(max_rate_categories[raw_min_index],1);
-        	move16();
+            /* raw_min_index is stale if no region was eligible */
+            if (max_rate_categories[raw_min_index] > 0)
+            {
+                max = sub(max,expected_bits_table[max_rate_categories[raw_min_index]]);
+                max_rate_categories[raw_min_index] = sub(max_rate_categories[raw_min_index],1);
+                move16();
 
-            max = add(max,expected_bits_table[max_rate_categories[raw_min_index]]);
+                max = add(max,expected_bits_table[max_rate_categories[raw_min_index]]);
+            }
         }
         else 
         {
@@ -277,12 +281,17 @@ void comp_powercat_and_catbalance(Word16 *power_categories,
             move16();
             
             min_rate_pointer = add(min_rate_pointer,1);
-            min = sub(min,expected_bits_table[min_rate_categories[raw_max_index]]);
-            
-            min_rate_categories[raw_max_index] = add(min_rate_categories[raw_max_index],1);
-            move16();
-            
-            min = add(min,expected_bits_table[min_rate_categories[raw_max_index]]);
+
+            /* raw_max_index is stale if no region was eligible */
+            if (min_rate_categories[raw_max_index] < NUM_CATEGORIES-1)
+            {
+                min = sub(min,expected_bits_table[min_rate_categories[raw_max_index]]);
+
+                min_rate_categories[raw_max_index] = add(min_rate_categories[raw_max_index],1);
+                move16();
+
+                min = add(min,expected_bits_table[min_rate_categories[raw_max_index]]);
+            }
         }
     }
     

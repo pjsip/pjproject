@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -275,7 +275,7 @@ PJ_DECL(pj_status_t) pjmedia_jbuf_reset(pjmedia_jbuf *jb);
  * @param frame         Pointer to frame buffer to be stored in the jitter
  *                      buffer.
  * @param size          The frame size.
- * @param frame_seq     The frame sequence number.
+ * @param frame_seq     The frame sequence number, must not be negative.
  */
 PJ_DECL(void) pjmedia_jbuf_put_frame( pjmedia_jbuf *jb, 
                                       const void *frame, 
@@ -298,7 +298,7 @@ PJ_DECL(void) pjmedia_jbuf_put_frame( pjmedia_jbuf *jb,
  *                      exactly start and end at the octet boundary, so this
  *                      field may be used for specifying start & end bit
  *                      offset.
- * @param frame_seq     The frame sequence number.
+ * @param frame_seq     The frame sequence number, must not be negative.
  * @param discarded     Flag whether the frame is discarded by jitter buffer.
  */
 PJ_DECL(void) pjmedia_jbuf_put_frame2( pjmedia_jbuf *jb, 
@@ -324,7 +324,7 @@ PJ_DECL(void) pjmedia_jbuf_put_frame2( pjmedia_jbuf *jb,
  *                      exactly start and end at the octet boundary, so this
  *                      field may be used for specifying start & end bit
  *                      offset.
- * @param frame_seq     The frame sequence number.
+ * @param frame_seq     The frame sequence number, must not be negative.
  * @param frame_ts      The frame timestamp.
  * @param discarded     Flag whether the frame is discarded by jitter buffer.
  */

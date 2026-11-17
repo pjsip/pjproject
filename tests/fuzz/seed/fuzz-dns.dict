@@ -1,0 +1,15 @@
+# DNS types and classes (network byte order)
+"\x00\x01"
+"\x00\x02"
+"\x00\x05"
+"\x00\x0c"
+"\x00\x1c"
+"\x00\x21"
+# Common header flags and compression marker
+"\x01\x00"
+"\x81\x80"
+"\x81\x83"
+"\xc0\x0c"
+# Common labels
+"\x07example\x03com\x00"
+"\x04_sip\x04_tcp"

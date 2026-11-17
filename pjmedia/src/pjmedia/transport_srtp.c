@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1232,13 +1232,15 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_stop(pjmedia_transport *srtp)
 
     pj_lock_acquire(p_srtp->mutex);
 
+    /* DTLS may create the RTCP context before the session starts */
+    destroy_srtp_ctx(p_srtp, &p_srtp->srtp_rtcp);
+
     if (!p_srtp->session_inited) {
         pj_lock_release(p_srtp->mutex);
         return PJ_SUCCESS;
     }
 
     destroy_srtp_ctx(p_srtp, &p_srtp->srtp_ctx);
-    destroy_srtp_ctx(p_srtp, &p_srtp->srtp_rtcp);
 
     p_srtp->session_inited = PJ_FALSE;
 

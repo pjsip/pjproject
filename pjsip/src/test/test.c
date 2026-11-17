@@ -482,6 +482,14 @@ int test_main(int argc, char *argv[])
         UT_ADD_TEST1(&test_app.ut_app, tsx_uac_test, (void*)(uintptr_t)i, 0);
         UT_ADD_TEST1(&test_app.ut_app, tsx_uas_test, (void*)(uintptr_t)i, 0);
     }
+
+#if PJ_HAS_TCP && PJ_HAS_THREADS
+    /* Exclusive, as any thread polling the endpoint may wait for the
+     * transaction's lock that this test holds.
+     */
+    UT_ADD_TEST1(&test_app.ut_app, tsx_send_cb_terminate_test,
+                 (void*)(uintptr_t)(tsx_test_cnt - 1), PJ_TEST_EXCLUSIVE);
+#endif
 #endif
 
 #if INCLUDE_LOOP_TEST
@@ -520,6 +528,8 @@ int test_main(int argc, char *argv[])
 
 #if INCLUDE_PJSUA_CALL_TEST
     UT_ADD_TEST(&test_app.ut_app, pjsua_call_test,
+                PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
+    UT_ADD_TEST(&test_app.ut_app, pjsua_late_sdp_offer_test,
                 PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
 #endif
 

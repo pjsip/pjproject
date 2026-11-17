@@ -1,5 +1,5 @@
 /*
- * Copyright (C)2020 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C)2020-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1476,9 +1476,10 @@ static pj_status_t  and_media_codec_recover(pjmedia_codec *codec,
     unsigned samples_per_frame;
     pj_bool_t generate_plc = (codec_data->plc_enabled && codec_data->plc);
 
-    PJ_UNUSED_ARG(output_buf_len);
-
     samples_per_frame = and_media_data->samples_per_frame;
+    if (output_buf_len < (samples_per_frame << 1))
+        return PJMEDIA_CODEC_EPCMTOOSHORT;
+
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->size = samples_per_frame << 1;
 

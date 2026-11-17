@@ -297,7 +297,8 @@ void OnVideoMediaOpCompletedParam::fromPj(const pjmedia_vid_conf_op_info &info)
 
 ///////////////////////////////////////////////////////////////////////////////
 UaConfig::UaConfig()
-: mainThreadOnly(false)
+: mainThreadOnly(false),
+  enableCallSendAckCallback(false)
 {
     pjsua_config ua_cfg;
 
@@ -334,6 +335,7 @@ void UaConfig::fromPj(const pjsua_config &ua_cfg)
     this->accServerAffinityDefault = PJ2BOOL(ua_cfg.acc_server_affinity_default);
     this->serverFailover = PJ2BOOL(ua_cfg.server_failover);
     this->resolverFallback = PJ2BOOL(ua_cfg.resolver_fallback);
+    this->notifyOfferlessReinvite = PJ2BOOL(ua_cfg.notify_offerless_reinvite);
 }
 
 pjsua_config UaConfig::toPj() const
@@ -378,6 +380,7 @@ pjsua_config UaConfig::toPj() const
     pua_cfg.acc_server_affinity_default = this->accServerAffinityDefault;
     pua_cfg.server_failover = this->serverFailover;
     pua_cfg.resolver_fallback = this->resolverFallback;
+    pua_cfg.notify_offerless_reinvite = this->notifyOfferlessReinvite;
 
     return pua_cfg;
 }
@@ -402,6 +405,8 @@ void UaConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
     NODE_READ_BOOL_OPT( this_node, accServerAffinityDefault);
     NODE_READ_BOOL_OPT( this_node, serverFailover);
     NODE_READ_BOOL_OPT( this_node, resolverFallback);
+    NODE_READ_BOOL_OPT( this_node, enableCallSendAckCallback);
+    NODE_READ_BOOL_OPT( this_node, notifyOfferlessReinvite);
 }
 
 void UaConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
@@ -424,6 +429,8 @@ void UaConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
     NODE_WRITE_BOOL    ( this_node, accServerAffinityDefault);
     NODE_WRITE_BOOL    ( this_node, serverFailover);
     NODE_WRITE_BOOL    ( this_node, resolverFallback);
+    NODE_WRITE_BOOL    ( this_node, enableCallSendAckCallback);
+    NODE_WRITE_BOOL    ( this_node, notifyOfferlessReinvite);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -953,17 +960,22 @@ void Endpoint::on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
     prm.callId = call_id;
     prm.rdata.fromPj(*rdata);
 
+    /* Take over the cloned rdata, the call may be gone after the callback
+     * (e.g. hung up by the application).
+     */
+    pjsip_rx_data *cloned_rdata = call->incoming_data;
+    call->incoming_data = NULL;
+
     acc->onIncomingCall(prm);
 
     /* Free cloned rdata. */
-    pjsip_rx_data_free_cloned(call->incoming_data);
-    call->incoming_data = NULL;
+    pjsip_rx_data_free_cloned(cloned_rdata);
 
     /* disconnect if callback doesn't handle the call */
     pjsua_call_info ci;
 
-    pjsua_call_get_info(call_id, &ci);
-    if (!pjsua_call_get_user_data(call_id) &&
+    if (pjsua_call_get_info(call_id, &ci) == PJ_SUCCESS &&
+        !pjsua_call_get_user_data(call_id) &&
         ci.state != PJSIP_INV_STATE_DISCONNECTED)
     {
         pjsua_call_hangup(call_id, PJSIP_SC_INTERNAL_SERVER_ERROR, NULL, NULL);
@@ -1195,12 +1207,13 @@ AuthChallenge::~AuthChallenge()
         /* Abandon unconditionally, so the token's group lock reference and
          * the reference it holds on its owner (regc/pubc) are released.
          *
-         * This is safe even after the account has been deleted: no
-         * abandon_impl() reads the auth session, the only field
-         * async_abandon() itself touches is sess->parent -- always NULL for
-         * the account's shared session -- and the token's own group lock
-         * reference keeps its memory readable.  No PJSUA_LOCK is needed,
-         * which also removes any lock-order inversion.
+         * This is safe after the account has been deleted: pjsua
+         * deinitialises the shared auth session before releasing the
+         * account, leaving its parent and lock NULL, no abandon_impl()
+         * reads the auth session, and the token's own group lock
+         * reference keeps its memory readable. Deleting the account
+         * concurrently with this call is not supported. No PJSUA_LOCK is
+         * needed, which also removes any lock-order inversion.
          */
         pjsip_auth_clt_async_abandon(auth_sess_, token_);
     }
@@ -1249,6 +1262,7 @@ pj_status_t AuthChallenge::respond()
         PJSUA_LOCK();
         if (!pjsua_acc_is_valid(acc_id_)) {
             PJSUA_UNLOCK();
+            pjsip_auth_clt_async_abandon(auth_sess_, token_);
             consumed_ = true;
             return PJ_EINVALIDOP;
         }
@@ -1276,15 +1290,8 @@ pj_status_t AuthChallenge::respond()
         PJSUA_UNLOCK();
 
     if (status == PJ_SUCCESS && new_tdata) {
+        /* Consumes the token even on failure, when it may be freed */
         status = pjsip_auth_clt_async_send_req(sess, tok, new_tdata);
-        if (status != PJ_SUCCESS) {
-            /* send_req may fail without consuming the token (e.g. account
-             * deleted between unlock and send) — abandon to release the
-             * token's grp_lock reference.  If the token was already
-             * consumed, abandon will harmlessly return PJ_EINVAL.
-             */
-            pjsip_auth_clt_async_abandon(sess, tok);
-        }
     } else {
         pjsip_auth_clt_async_abandon(sess, tok);
         if (status == PJ_SUCCESS)
@@ -1307,6 +1314,7 @@ pj_status_t AuthChallenge::respond(const AuthCredInfoVector &creds)
         PJSUA_LOCK();
         if (!pjsua_acc_is_valid(acc_id_)) {
             PJSUA_UNLOCK();
+            pjsip_auth_clt_async_abandon(auth_sess_, token_);
             consumed_ = true;
             return PJ_EINVALIDOP;
         }
@@ -1343,11 +1351,11 @@ pj_status_t AuthChallenge::abandon()
     pjsip_auth_clt_sess *sess;
     void *tok;
     if (deferred_) {
-        /* Safe without PJSUA_LOCK and without checking the account: the
-         * token holds a reference on its owner, no abandon_impl() reads
-         * the auth session, and taking PJSUA_LOCK here would risk
-         * lock-order inversion since abandon_impl may run regc/inv
-         * callbacks that acquire the tsx group lock.
+        /* Safe without PJSUA_LOCK and without checking the account (see
+         * ~AuthChallenge): the token holds a reference on its owner, no
+         * abandon_impl() reads the auth session, and taking PJSUA_LOCK
+         * here would risk lock-order inversion since abandon_impl may run
+         * regc/inv callbacks that acquire the tsx group lock.
          */
         sess = auth_sess_;  tok = token_;
     } else {
@@ -1570,6 +1578,30 @@ void Endpoint::on_call_sdp_created(pjsua_call_id call_id,
             pj_memcpy(sdp, new_sdp, sizeof(*sdp));
         }
     }
+}
+
+pj_bool_t Endpoint::on_call_send_ack(pjsua_call_id call_id,
+                                     pjsip_rx_data *rdata)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+        return PJ_FALSE;
+    }
+
+    OnCallSendAckParam prm;
+    prm.rdata.fromPj(*rdata);
+    prm.cseq = rdata->msg_info.cseq->cseq;
+
+    try {
+        call->onCallSendAck(prm);
+    } catch (Error &err) {
+        PJ_LOG(1,(THIS_FILE, "onCallSendAck() error: %s", err.info().c_str()));
+        return PJ_FALSE;
+    } catch (...) {
+        PJ_LOG(1,(THIS_FILE, "onCallSendAck() threw an unknown exception"));
+        return PJ_FALSE;
+    }
+    return prm.suppressSendAck ? PJ_TRUE : PJ_FALSE;
 }
 
 void Endpoint::on_stream_precreate(pjsua_call_id call_id,
@@ -2379,6 +2411,9 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
                                         = &Endpoint::on_call_tsx_terminate_session;
     ua_cfg.cb.on_call_media_state       = &Endpoint::on_call_media_state;
     ua_cfg.cb.on_call_sdp_created       = &Endpoint::on_call_sdp_created;
+    if (prmEpConfig.uaConfig.enableCallSendAckCallback) {
+        ua_cfg.cb.on_call_send_ack      = &Endpoint::on_call_send_ack;
+    }
     ua_cfg.cb.on_stream_precreate       = &Endpoint::on_stream_precreate;
     ua_cfg.cb.on_stream_created2        = &Endpoint::on_stream_created2;
     ua_cfg.cb.on_stream_destroyed       = &Endpoint::on_stream_destroyed;
@@ -2727,7 +2762,7 @@ TransportId Endpoint::transportCreate(pjsip_transport_type_e type,
 
 IntVector Endpoint::transportEnum() const PJSUA2_THROW(Error)
 {
-    pjsua_transport_id tids[32];
+    pjsua_transport_id tids[PJSUA_MAX_TRANSPORTS];
     unsigned count = PJ_ARRAY_SIZE(tids);
 
     PJSUA2_CHECK_EXPR( pjsua_enum_transports(tids, &count) );

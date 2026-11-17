@@ -54,13 +54,11 @@ a=sendrecv
     <action>
       <!-- Verify the 200 OK carries the custom SDP injected by alt_pjsua.
            Check for the AMR-WB dynamic PT rtpmap so the test is
-           environment-independent. The condexec nop avoids SIPp 3.7
-           exiting on "referenced 1 times" warning. -->
+           environment-independent. -->
       <ereg regexp="a=rtpmap:116 AMR-WB/16000" search_in="msg"
             check_it="true" assign_to="1"/>
     </action>
   </recv>
-  <nop condexec="1"></nop>
 
   <send>
     <![CDATA[
@@ -98,6 +96,9 @@ a=sendrecv
 
   <recv response="200" crlf="true">
   </recv>
+
+  <!-- The variables only carry the checks above. -->
+  <Reference variables="1"/>
 
   <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>
   <CallLengthRepartition value="10, 50, 100, 500, 1000, 5000, 10000"/>

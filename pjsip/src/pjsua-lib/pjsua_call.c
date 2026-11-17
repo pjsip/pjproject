@@ -44,6 +44,8 @@
 /* Max number of hangup retries. */
 #define CALL_HANGUP_MAX_RETRY        4
 
+static long ack_callback_inv_tls = -1;
+
 /*
  * The INFO method.
  */
@@ -124,6 +126,14 @@ static pj_bool_t pjsua_call_on_uac_tsx_terminate_session(
                                             pjsip_transaction *tsx,
                                             pjsip_event *e);
 
+/*
+ * This callback is called by the invite session framework when it needs to
+ * send an ACK request for the 2xx response of INVITE, and the application
+ * has asked to handle the ACK transmission manually.
+ */
+static void pjsua_call_on_send_ack(pjsip_inv_session *inv,
+                                   pjsip_rx_data *rdata);
+
 #if PJSUA_HAS_SIPREC
 /*
  * SIPREC metadata verification handler.
@@ -185,6 +195,9 @@ static void reset_call(pjsua_call_id id)
         pjsip_rx_data_free_cloned(call->incoming_data);
         call->incoming_data = NULL;
     }
+
+    /* A deleted owner may be releasing the call at the same time */
+    pj_mutex_lock(pjsua_var.call_owner_mutex);
     pj_bzero(call, sizeof(*call));
     call->index = id;
     call->last_text.ptr = call->last_text_buf_;
@@ -209,6 +222,7 @@ static void reset_call(pjsua_call_id id)
     pj_bzero(&call->trickle_ice, sizeof(call->trickle_ice));
     pj_timer_entry_init(&call->trickle_ice.timer, 0, call,
                         &trickle_ice_send_sip_info);
+    pj_mutex_unlock(pjsua_var.call_owner_mutex);
 }
 
 /* Get DTMF method type name */
@@ -236,6 +250,12 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
 
     /* Copy config */
     pjsua_config_dup(pjsua_var.pool, &pjsua_var.ua_cfg, cfg);
+
+    if (pjsua_var.ua_cfg.cb.on_call_send_ack) {
+        status = pj_thread_local_alloc(&ack_callback_inv_tls);
+        if (status != PJ_SUCCESS)
+            return status;
+    }
 
     /* Verify settings */
     if (pjsua_var.ua_cfg.max_calls > PJSUA_MAX_CALLS) 
@@ -269,6 +289,9 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     inv_cb.on_tsx_state_changed = &pjsua_call_on_tsx_state_changed;
     inv_cb.on_redirected = &pjsua_call_on_redirected;
     inv_cb.on_rx_reinvite = &pjsua_call_on_rx_reinvite;
+    if (pjsua_var.ua_cfg.cb.on_call_send_ack) {
+        inv_cb.on_send_ack = &pjsua_call_on_send_ack;
+    }
     if (pjsua_var.ua_cfg.cb.on_call_tsx_terminate_session) {
         inv_cb.on_uac_tsx_terminate_session =
                                     &pjsua_call_on_uac_tsx_terminate_session;
@@ -310,6 +333,16 @@ pj_status_t pjsua_call_subsys_start(void)
 {
     /* Nothing to do */
     return PJ_SUCCESS;
+}
+
+
+/* Destroy call subsystem resources. */
+void pjsua_call_subsys_destroy(void)
+{
+    if (ack_callback_inv_tls != -1) {
+        pj_thread_local_free(ack_callback_inv_tls);
+        ack_callback_inv_tls = -1;
+    }
 }
 
 
@@ -446,6 +479,8 @@ static int call_get_secure_level(pjsua_call *call)
         pjsip_uri *uri = r->name_addr.uri;
         pjsip_sip_uri *sip_uri;
 
+        if (!PJSIP_URI_SCHEME_IS_SIP(uri) && !PJSIP_URI_SCHEME_IS_SIPS(uri))
+            return 0;
         sip_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(uri);
         if (pj_stricmp2(&sip_uri->transport_param, "tls")==0)
             return 1;
@@ -804,6 +839,55 @@ static pj_status_t validate_managed_sdp(pj_bool_t media_app_managed,
     }
 
     return validate_app_sdp(sdp, inv);
+}
+
+pj_status_t pjsua_call_validate_initial_local_offer(
+                                      const pjsua_call *call,
+                                      const pjsua_call_setting *opt,
+                                      const pjmedia_sdp_session *sdp)
+{
+    const pjsua_call_setting *effective_opt =
+        (opt && !call->opt_inited) ? opt : &call->opt;
+    unsigned media_count = 0;
+    pj_bool_t prepared = call->med_ch_cb || call->med_prov_cnt != 0 ||
+                         (call->inv &&
+                          call->inv->state == PJSIP_INV_STATE_CONFIRMED);
+    pj_status_t status = validate_app_sdp(sdp, NULL);
+
+    if (status != PJ_SUCCESS)
+        return status;
+
+    if (prepared) {
+        media_count = call->med_prov_cnt;
+    } else {
+        if (effective_opt->flag & PJSUA_CALL_MEDIA_APP_MANAGED)
+            return PJ_EINVALIDOP;
+        if (effective_opt->aud_cnt > PJSUA_MAX_CALL_MEDIA ||
+            effective_opt->vid_cnt > PJSUA_MAX_CALL_MEDIA ||
+            effective_opt->txt_cnt > PJSUA_MAX_CALL_MEDIA ||
+            effective_opt->aud_cnt + effective_opt->vid_cnt +
+                effective_opt->txt_cnt > PJSUA_MAX_CALL_MEDIA)
+        {
+            return PJ_ETOOMANY;
+        }
+
+        media_count = effective_opt->aud_cnt + effective_opt->vid_cnt +
+                      effective_opt->txt_cnt;
+
+        if (effective_opt->flag & PJSUA_CALL_INCLUDE_DISABLED_MEDIA) {
+            if (!effective_opt->aud_cnt && media_count < PJSUA_MAX_CALL_MEDIA)
+                ++media_count;
+#if PJMEDIA_HAS_VIDEO
+            if (!effective_opt->vid_cnt && media_count < PJSUA_MAX_CALL_MEDIA)
+                ++media_count;
+#endif
+            if (!effective_opt->txt_cnt && media_count < PJSUA_MAX_CALL_MEDIA)
+                ++media_count;
+        }
+    }
+
+    return sdp->media_count > media_count ? PJMEDIA_SDPNEG_EMISMEDIA :
+                                            PJ_SUCCESS;
 }
 
 static pj_status_t apply_call_setting(pjsua_call *call,
@@ -1238,7 +1322,9 @@ PJ_DEF(pj_status_t) pjsua_call_make_call2(
     call->secure_level = get_secure_level(acc_id, dest_uri);
 
     /* Attach user data */
+    pj_mutex_lock(pjsua_var.call_owner_mutex);
     call->user_data = user_data;
+    pj_mutex_unlock(pjsua_var.call_owner_mutex);
 
     /* Store variables required for the callback after the async
      * media transport creation is completed.
@@ -3097,7 +3183,9 @@ PJ_DEF(pj_status_t) pjsua_call_set_user_data( pjsua_call_id call_id,
 {
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
                      PJ_EINVAL);
+    pj_mutex_lock(pjsua_var.call_owner_mutex);
     pjsua_var.calls[call_id].user_data = user_data;
+    pj_mutex_unlock(pjsua_var.call_owner_mutex);
 
     return PJ_SUCCESS;
 }
@@ -3108,9 +3196,15 @@ PJ_DEF(pj_status_t) pjsua_call_set_user_data( pjsua_call_id call_id,
  */
 PJ_DEF(void*) pjsua_call_get_user_data(pjsua_call_id call_id)
 {
+    void *user_data;
+
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
                      NULL);
-    return pjsua_var.calls[call_id].user_data;
+    pj_mutex_lock(pjsua_var.call_owner_mutex);
+    user_data = pjsua_var.calls[call_id].user_data;
+    pj_mutex_unlock(pjsua_var.call_owner_mutex);
+
+    return user_data;
 }
 
 
@@ -3185,16 +3279,22 @@ on_answer_call_med_tp_complete(pjsua_call_id call_id,
     if (call->async_call.med_ch_deinit) {
         pjsua_media_channel_deinit(call->index);
         call->med_ch_cb = NULL;
+        call->answer_sdp = NULL;
         PJSUA_UNLOCK();
         return PJ_SUCCESS;
     }
 
-    status = pjsua_media_channel_create_sdp(call_id,
-                                            call->async_call.dlg->pool,
-                                            NULL, &sdp, &sip_err_code);
-    if (status != PJ_SUCCESS) {
-        pjsua_perror(THIS_FILE, "Error creating SDP answer", status);
-        goto on_return;
+    if (call->answer_sdp) {
+        sdp = call->answer_sdp;
+        call->answer_sdp = NULL;
+    } else {
+        status = pjsua_media_channel_create_sdp(call_id,
+                                                call->async_call.dlg->pool,
+                                                NULL, &sdp, &sip_err_code);
+        if (status != PJ_SUCCESS) {
+            pjsua_perror(THIS_FILE, "Error creating SDP answer", status);
+            goto on_return;
+        }
     }
 
     status = pjsip_inv_set_local_sdp(call->inv, sdp);
@@ -3206,6 +3306,8 @@ on_answer_call_med_tp_complete(pjsua_call_id call_id,
 
 on_return:
     if (status != PJ_SUCCESS) {
+        call->answer_sdp = NULL;
+
         /* If the callback is called from pjsua_call_on_incoming(), the
          * invite's state is PJSIP_INV_STATE_NULL, so the invite session
          * will be terminated later, otherwise we end the session here.
@@ -3278,15 +3380,18 @@ PJ_DEF(pj_status_t) pjsua_call_answer( pjsua_call_id call_id,
 /*
  * Send response to incoming INVITE request.
  */
-PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
+static pj_status_t call_answer_with_pending_sdp(pjsua_call_id call_id,
                                        const pjsua_call_setting *opt,
                                        unsigned code,
                                        const pj_str_t *reason,
-                                       const pjsua_msg_data *msg_data)
+                                       const pjsua_msg_data *msg_data,
+                                       pjsip_inv_session *sdp_inv,
+                                       pjmedia_sdp_session *pending_sdp)
 {
     pjsua_call *call;
     pjsip_dialog *dlg = NULL;
     pjsip_tx_data *tdata;
+    pj_bool_t answer_sdp_handed_off = PJ_FALSE;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
@@ -3298,6 +3403,11 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
     status = acquire_call("pjsua_call_answer()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
         goto on_return;
+
+    if (pending_sdp && call->inv != sdp_inv) {
+        status = PJ_EINVALIDOP;
+        goto on_return;
+    }
 
     if (!call->inv->invite_tsx ||
         call->inv->invite_tsx->role != PJSIP_ROLE_UAS ||
@@ -3354,16 +3464,26 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
      * the following conditions are met:
      * - no pending media channel init
      * - local SDP has not been generated
-     * - call setting has just been set, or SDP offer needs to be sent, i.e:
-     *   answer code 183 or 2xx is issued
+     * - call setting has just been set
+     * - an SDP offer was supplied or needs to be created
+     * - answer code 183 or 2xx is issued
      */
     if (!(call->opt.flag & PJSUA_CALL_MEDIA_APP_MANAGED) &&
         !call->med_ch_cb &&
-        (call->opt_inited || (code==183 || code/100==2)) &&
+        (pending_sdp || call->opt_inited || (code==183 || code/100==2)) &&
         (!call->inv->neg ||
          pjmedia_sdp_neg_get_state(call->inv->neg) ==
                 PJMEDIA_SDP_NEG_STATE_NULL))
     {
+        if (pending_sdp) {
+            if (call->answer_sdp) {
+                PJSUA_UNLOCK();
+                status = PJ_EBUSY;
+                goto on_return;
+            }
+            call->answer_sdp = pending_sdp;
+        }
+
         /* Mark call setting as initialized as it is just about to be used
          * for initializing the media channel.
          */
@@ -3380,7 +3500,9 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
                 PJSUA_UNLOCK();
                 goto on_return;
             }
-        } else if (status != PJ_EPENDING) {
+        } else if (status == PJ_EPENDING) {
+            answer_sdp_handed_off = PJ_TRUE;
+        } else {
             PJSUA_UNLOCK();
             pjsua_perror(THIS_FILE, "Error initializing media channel", status);
             goto on_return;
@@ -3417,9 +3539,7 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
             answer);
        
         PJSUA_UNLOCK();
-        if (dlg) pjsip_dlg_dec_lock(dlg);
-        pj_log_pop_indent();
-        return status;
+        goto on_return;
     }
 
     PJSUA_UNLOCK();
@@ -3454,9 +3574,28 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
                      status);
 
 on_return:
+    if (dlg && pending_sdp && !answer_sdp_handed_off &&
+        call->inv == sdp_inv && call->answer_sdp == pending_sdp)
+    {
+        call->answer_sdp = NULL;
+    }
     if (dlg) pjsip_dlg_dec_lock(dlg);
     pj_log_pop_indent();
     return status;
+}
+
+
+/*
+ * Send response to incoming INVITE request.
+ */
+PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
+                                       const pjsua_call_setting *opt,
+                                       unsigned code,
+                                       const pj_str_t *reason,
+                                       const pjsua_msg_data *msg_data)
+{
+    return call_answer_with_pending_sdp(call_id, opt, code, reason, msg_data,
+                                        NULL, NULL);
 }
 
 
@@ -3475,8 +3614,11 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
     pjsip_dialog *dlg = NULL;
     pjsip_inv_session *inv;
     pjmedia_sdp_neg *old_neg;
+    pjmedia_sdp_neg_state neg_state;
     pj_bool_t app_managed;
+    pj_bool_t local_offer;
     pj_status_t status, cancel_status;
+    pjmedia_sdp_session *pending_sdp = NULL;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
                      PJ_EINVAL);
@@ -3489,6 +3631,7 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
     inv = call->inv;
     old_neg = inv->neg;
     app_managed = (call->opt.flag & PJSUA_CALL_MEDIA_APP_MANAGED) != 0;
+
     if (app_managed) {
         if (inv->neg &&
             pjmedia_sdp_neg_get_state(inv->neg) ==
@@ -3505,7 +3648,67 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
         if (status == PJ_SUCCESS)
             status = pjsip_inv_set_local_sdp(inv, sdp);
     } else {
-        status = pjsip_inv_set_sdp_answer(inv, sdp);
+        neg_state = inv->neg ? pjmedia_sdp_neg_get_state(inv->neg) :
+                            PJMEDIA_SDP_NEG_STATE_NULL;
+        local_offer = !inv->neg ||
+                    neg_state == PJMEDIA_SDP_NEG_STATE_NULL ||
+                    neg_state == PJMEDIA_SDP_NEG_STATE_DONE;
+
+        if (sdp && local_offer && code >= 100 && code < 200 &&
+            (code == 100 || code == 180 || code == 181 ||
+            !(inv->options & PJSIP_INV_REQUIRE_100REL)))
+        {
+            PJ_LOG(3,(THIS_FILE, "Cannot send an SDP offer in unreliable "
+                                "provisional response %u", code));
+            pjsip_dlg_dec_lock(dlg);
+            return PJ_EINVALIDOP;
+        }
+
+        if (sdp && code >= 300) {
+            PJ_LOG(3,(THIS_FILE,
+                      "Cannot supply SDP in final error response %u", code));
+            pjsip_dlg_dec_lock(dlg);
+            return PJ_EINVALIDOP;
+        }
+
+        if (code < 300 && sdp && local_offer)
+        {
+            if (call->med_ch_cb) {
+                PJ_LOG(3,(THIS_FILE, "Cannot set SDP offer while media "
+                                    "initialization is pending"));
+                pjsip_dlg_dec_lock(dlg);
+                return PJ_EBUSY;
+            }
+
+            status = pjsua_call_validate_initial_local_offer(call, opt, sdp);
+            if (status != PJ_SUCCESS) {
+                pjsua_perror(THIS_FILE, "SDP offer does not match call media",
+                             status);
+                pjsip_dlg_dec_lock(dlg);
+                return status;
+            }
+
+            /* For an initial offerless INVITE, let call_answer_with_pending_sdp()
+             * initialize media before setting the supplied SDP offer.
+             */
+            if (neg_state == PJMEDIA_SDP_NEG_STATE_NULL)
+            {
+                if (call->answer_sdp) {
+                    pjsip_dlg_dec_lock(dlg);
+                    return PJ_EBUSY;
+                }
+
+                pending_sdp = pjmedia_sdp_session_clone(call->inv->pool, sdp);
+                if (!pending_sdp) {
+                    pjsip_dlg_dec_lock(dlg);
+                    return PJ_ENOMEM;
+                }
+            }
+        }
+
+        if (!pending_sdp) {
+            status = pjsip_inv_set_local_sdp(call->inv, sdp);
+        }
     }
 
     pjsip_dlg_dec_lock(dlg);
@@ -3513,8 +3716,11 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
         return status;
 
-    status = pjsua_call_answer2(call_id, opt, code, reason, msg_data);
-    if (status == PJ_SUCCESS)
+    status = call_answer_with_pending_sdp(call_id, opt, code,
+                                          reason, msg_data, inv,
+                                          pending_sdp);
+
+    if (status == PJ_SUCCESS || status == PJ_EPENDING)
         return status;
 
     cancel_status = acquire_call("pjsua_call_answer_with_sdp() rollback",
@@ -3545,6 +3751,98 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
         pjsip_dlg_dec_lock(dlg);
     }
 
+    return status;
+}
+
+static pj_status_t call_inv_send_ack(pjsip_inv_session *inv,
+                                     int cseq,
+                                     const pjmedia_sdp_session *sdp)
+{
+    pjsip_tx_data *tdata;
+    pj_status_t status;
+    pjmedia_sdp_neg_state neg_state;
+
+    if (inv == NULL)
+        return PJ_EINVAL;
+
+    if (sdp) {
+        if (inv->neg == NULL)
+            return PJMEDIA_SDPNEG_EINSTATE;
+
+        neg_state = pjmedia_sdp_neg_get_state(inv->neg);
+        if (neg_state != PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER &&
+            neg_state != PJMEDIA_SDP_NEG_STATE_WAIT_NEGO)
+            return PJMEDIA_SDPNEG_EINSTATE;
+
+        status = pjsip_inv_set_sdp_answer(inv, sdp);
+        if (status != PJ_SUCCESS) {
+            pjsua_perror(THIS_FILE, "Unable to set SDP answer for ACK",
+                        status);
+            goto on_return;
+        }
+    }
+
+    status = pjsip_inv_create_ack(inv, cseq, &tdata);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE, "Unable to create ACK", status);
+        goto on_return;
+    }
+
+    status = pjsip_inv_send_msg(inv, tdata);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE, "Unable to send ACK", status);
+    }
+
+on_return:
+    return status;
+}
+
+/*
+ * Create and send an ACK request for the 2xx response, optionally with an
+ * SDP answer \a sdp attached to it.
+ */
+PJ_DEF(pj_status_t) pjsua_call_send_ack(pjsua_call_id call_id,
+                                        int cseq,
+                                        const pjmedia_sdp_session *sdp)
+{
+    pjsua_call *call;
+    pjsip_dialog *dlg = NULL;
+    pjsip_inv_session *callback_inv = NULL;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
+                     PJ_EINVAL);
+
+    PJ_LOG(4,(THIS_FILE, "Sending ACK for call %d", call_id));
+    pj_log_push_indent();
+
+    if (ack_callback_inv_tls != -1)
+        callback_inv = (pjsip_inv_session*)
+                       pj_thread_local_get(ack_callback_inv_tls);
+
+    if (callback_inv) {
+        call = (pjsua_call*) callback_inv->dlg->mod_data[pjsua_var.mod.id];
+        if (!call || call->index != call_id) {
+            status = PJ_EINVALIDOP;
+            goto on_return;
+        }
+    } else {
+        status = acquire_call("pjsua_call_send_ack()", call_id, &call, &dlg);
+        if (status != PJ_SUCCESS) {
+            goto on_return;
+        }
+
+        callback_inv = call->inv;
+    }
+
+    status = call_inv_send_ack(callback_inv, cseq, sdp);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE, "Unable to send ACK", status);
+    }
+
+on_return:
+    if (dlg) pjsip_dlg_dec_lock(dlg);
+    pj_log_pop_indent();
     return status;
 }
 
@@ -3676,14 +3974,44 @@ static void hangup_timer_cb(pj_timer_heap_t *th, pj_timer_entry *entry)
     pj_log_pop_indent();
 }
 
+/* Lock the call without waiting, PJ_ETIMEDOUT if it is busy */
+static pj_status_t try_acquire_call(pjsua_call_id call_id,
+                                    pjsua_call **p_call,
+                                    pjsip_dialog **p_dlg)
+{
+    pjsua_call *call;
+    pjsip_dialog *dlg;
+
+    if (PJSUA_TRY_LOCK() != PJ_SUCCESS)
+        return PJ_ETIMEDOUT;
+
+    call = &pjsua_var.calls[call_id];
+    dlg = call->inv ? call->inv->dlg : call->async_call.dlg;
+    if (dlg == NULL) {
+        PJSUA_UNLOCK();
+        return PJSIP_ESESSIONTERMINATED;
+    }
+    if (pjsip_dlg_try_inc_lock(dlg) != PJ_SUCCESS) {
+        PJSUA_UNLOCK();
+        return PJ_ETIMEDOUT;
+    }
+    PJSUA_UNLOCK();
+
+    *p_call = call;
+    *p_dlg = dlg;
+    return PJ_SUCCESS;
+}
+
 /*
  * Hangup call by using method that is appropriate according to the
- * call state.
+ * call state. With released set, only a call whose owner has released it.
  */
-PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
-                                      unsigned code,
-                                      const pj_str_t *reason,
-                                      const pjsua_msg_data *msg_data)
+static pj_status_t call_hangup(pjsua_call_id call_id,
+                               unsigned code,
+                               const pj_str_t *reason,
+                               const pjsua_msg_data *msg_data,
+                               pj_bool_t released,
+                               pj_bool_t no_wait)
 {
     pjsua_call *call;
     pjsip_dialog *dlg = NULL;
@@ -3697,12 +4025,32 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
                      PJ_EINVAL);
 
-    PJ_LOG(4,(THIS_FILE, "Call %d hanging up: code=%d..", call_id, code));
+    if (!released)
+        PJ_LOG(4,(THIS_FILE, "Call %d hanging up: code=%d..", call_id, code));
     pj_log_push_indent();
 
-    status = acquire_call("pjsua_call_hangup()", call_id, &call, &dlg);
+    if (no_wait)
+        status = try_acquire_call(call_id, &call, &dlg);
+    else
+        status = acquire_call("pjsua_call_hangup()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
         goto on_return;
+
+    /* The slot can't be given to another call while the dialog is held,
+     * and a new call doesn't have the flag.
+     */
+    if (released) {
+        pj_bool_t owner_released;
+
+        pj_mutex_lock(pjsua_var.call_owner_mutex);
+        owner_released = call->owner_released;
+        pj_mutex_unlock(pjsua_var.call_owner_mutex);
+        if (!owner_released)
+            goto on_return;
+        if (call->inv && call->inv->state == PJSIP_INV_STATE_DISCONNECTED)
+            goto on_return;
+        PJ_LOG(4,(THIS_FILE, "Call %d hanging up: code=%d..", call_id, code));
+    }
 
     if (!call->hanging_up) {
         pj_bool_t delay_hangup = PJ_FALSE;
@@ -3788,6 +4136,102 @@ on_return:
 
 
 /*
+ * Hangup call.
+ */
+PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
+                                      unsigned code,
+                                      const pj_str_t *reason,
+                                      const pjsua_msg_data *msg_data)
+{
+    return call_hangup(call_id, code, reason, msg_data, PJ_FALSE, PJ_FALSE);
+}
+
+
+static void hangup_released(void *user_data);
+
+static void retry_hangup_released(pjsua_call_id call_id)
+{
+    pj_status_t status;
+
+    status = pjsua_schedule_timer2(&hangup_released,
+                                   (void*)(pj_ssize_t)call_id,
+                                   CALL_HANGUP_RETRY_INTERVAL);
+    if (status == PJ_SUCCESS) {
+        PJ_LOG(4,(THIS_FILE, "Will retry call %d hangup in %d msec",
+                             call_id, CALL_HANGUP_RETRY_INTERVAL));
+    } else {
+        PJ_PERROR(1,(THIS_FILE, status, "Call %d: failed to schedule hangup",
+                     call_id));
+    }
+}
+
+/* Hang up a call whose owner has released it, retry later while it is
+ * busy. A retry doesn't wait for the lock, so the timer thread isn't held
+ * up.
+ */
+static pj_status_t hangup_released_call(pjsua_call_id call_id,
+                                        pj_bool_t no_wait)
+{
+    pj_bool_t retry;
+    pj_status_t status;
+
+    status = call_hangup(call_id, 0, NULL, NULL, PJ_TRUE, no_wait);
+    if (status != PJ_ETIMEDOUT)
+        return status;
+
+    pj_mutex_lock(pjsua_var.call_owner_mutex);
+    retry = pjsua_var.calls[call_id].owner_released;
+    pj_mutex_unlock(pjsua_var.call_owner_mutex);
+
+    if (retry)
+        retry_hangup_released(call_id);
+    return status;
+}
+
+static void hangup_released(void *user_data)
+{
+    /* While the library is being destroyed, it ends the calls itself */
+    if (pjsua_get_state() >= PJSUA_STATE_CLOSING)
+        return;
+
+    hangup_released_call((pjsua_call_id)(pj_ssize_t)user_data, PJ_TRUE);
+}
+
+
+pj_status_t pjsua_call_release_owner(pjsua_call_id call_id, void *owner)
+{
+    pjsua_call *call;
+    pj_bool_t hangup;
+    pj_bool_t released = PJ_FALSE;
+
+    PJ_ASSERT_RETURN(owner, PJ_EINVAL);
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
+                     PJ_EINVAL);
+
+    call = &pjsua_var.calls[call_id];
+
+    /* While the library is being destroyed, it ends the calls itself */
+    hangup = (pjsua_get_state() < PJSUA_STATE_CLOSING);
+
+    /* Already detached, e.g. on disconnect, if the owner doesn't match.
+     * The slot is reset under the same mutex, so the flag can't be left
+     * on a new call.
+     */
+    pj_mutex_lock(pjsua_var.call_owner_mutex);
+    if (call->user_data == owner) {
+        call->user_data = NULL;
+        call->owner_released = hangup;
+        released = hangup;
+    }
+    pj_mutex_unlock(pjsua_var.call_owner_mutex);
+
+    if (released && hangup_released_call(call_id, PJ_FALSE) == PJ_ETIMEDOUT)
+        return PJ_ETIMEDOUT;
+    return PJ_SUCCESS;
+}
+
+
+/*
  * Accept or reject redirection.
  */
 PJ_DEF(pj_status_t) pjsua_call_process_redirect( pjsua_call_id call_id,
@@ -3831,6 +4275,7 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold2(pjsua_call_id call_id,
     pjsip_dialog *dlg = NULL;
     pjsip_tx_data *tdata;
     pj_str_t *new_contact = NULL;
+    pjmedia_sdp_neg_state old_state;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
@@ -3896,6 +4341,8 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold2(pjsua_call_id call_id,
     }
 
     /* Create re-INVITE with new offer */
+    old_state = call->inv->neg ? pjmedia_sdp_neg_get_state(call->inv->neg) :
+                                 PJMEDIA_SDP_NEG_STATE_NULL;
     status = pjsip_inv_reinvite( call->inv, new_contact, sdp, &tdata);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Unable to create re-INVITE", status);
@@ -3905,14 +4352,10 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold2(pjsua_call_id call_id,
     /* Add additional headers etc */
     pjsua_process_msg_data( tdata, msg_data);
 
-    /* Record the tx_data to keep track the operation */
-    call->hold_msg = (void*) tdata;
-
     /* Send the request */
-    status = pjsip_inv_send_msg( call->inv, tdata);
+    status = pjsua_call_send_offer(call, tdata, old_state);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Unable to send re-INVITE", status);
-        call->hold_msg = NULL;
         goto on_return;
     }
 
@@ -3997,6 +4440,55 @@ static void cancel_created_local_offer(pjsua_call *call,
         PJ_PERROR(3,(THIS_FILE, status,
                      "Unable to cancel failed local SDP offer"));
     }
+}
+
+/* Restore the hold state and media from before our failed offer */
+static void call_offer_failed(pjsua_call *call, int reason)
+{
+    if (call->local_hold != call->offer_hold) {
+        PJ_LOG(3,(THIS_FILE, call->offer_hold ?
+                  "Error releasing hold on call %d (reason=%d)" :
+                  "Error putting call %d on hold (reason=%d)",
+                  call->index, reason));
+        call->local_hold = call->offer_hold;
+    }
+    pjsua_media_prov_revert(call->index);
+    call->offer_sent = PJ_FALSE;
+}
+
+/* Our offer has failed once the negotiator no longer waits for its answer */
+static void call_check_offer(pjsua_call *call, int reason)
+{
+    if (call->offer_sent &&
+        (!call->inv->neg ||
+         pjmedia_sdp_neg_get_state(call->inv->neg) !=
+             PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER))
+    {
+        call_offer_failed(call, reason);
+    }
+}
+
+pj_status_t pjsua_call_send_offer(pjsua_call *call, pjsip_tx_data *tdata,
+                                  pjmedia_sdp_neg_state old_state)
+{
+    pj_bool_t first = PJ_FALSE;
+    pj_status_t status;
+
+    if (!call->offer_sent && pjsip_tdata_get_sdp_info(tdata)->sdp) {
+        call->offer_sent = PJ_TRUE;
+        call->offer_hold = call->local_hold;
+        first = PJ_TRUE;
+    }
+
+    status = pjsip_inv_send_msg(call->inv, tdata);
+    if (status != PJ_SUCCESS) {
+        cancel_created_local_offer(call, old_state);
+
+        /* A send failure may have ended the call or the offer already */
+        if (first && call->inv && call->offer_sent)
+            call_offer_failed(call, 0);
+    }
+    return status;
 }
 
 static void rollback_failed_call_operation(pjsua_call *call,
@@ -4182,8 +4674,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite3(
     pjsua_process_msg_data( tdata, msg_data);
 
     /* Send the request */
-    call->med_update_success = PJ_FALSE;
-    status = pjsip_inv_send_msg( call->inv, tdata);
+    status = pjsua_call_send_offer(call, tdata, old_neg_state);
     if (status == PJ_SUCCESS &&
         ((call->opt.flag & PJSUA_CALL_UNHOLD) &&
          (call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0))
@@ -4382,8 +4873,7 @@ PJ_DEF(pj_status_t) pjsua_call_update3(
     pjsua_process_msg_data( tdata, msg_data);
 
     /* Send the request */
-    call->med_update_success = PJ_FALSE;
-    status = pjsip_inv_send_msg( call->inv, tdata);
+    status = pjsua_call_send_offer(call, tdata, old_neg_state);
     if (status == PJ_SUCCESS &&
         ((call->opt.flag & PJSUA_CALL_UNHOLD) &&
          (call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0))
@@ -5284,8 +5774,8 @@ static pj_status_t process_pending_reinvite(pjsua_call *call)
                 conn = m->conn;
                 if (!conn)
                     conn = cur_sdp->conn;
-                if (pj_strcmp2(&conn->addr, "0.0.0.0")==0 ||
-                    pj_strcmp2(&conn->addr, "0")==0)
+                if (conn && (pj_strcmp2(&conn->addr, "0.0.0.0")==0 ||
+                             pj_strcmp2(&conn->addr, "0")==0))
                 {
                     if (!new_m->conn) {
                         new_m->conn = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_conn);
@@ -5324,7 +5814,7 @@ static pj_status_t process_pending_reinvite(pjsua_call *call)
     }
 
     /* Send the UPDATE/re-INVITE request */
-    status = pjsip_inv_send_msg(inv, tdata);
+    status = pjsua_call_send_offer(call, tdata, PJMEDIA_SDP_NEG_STATE_DONE);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Error sending UPDATE/re-INVITE",
                      status);
@@ -6212,6 +6702,8 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
         goto on_return;
     }
 
+    /* Our offer, if any, has been answered */
+    call->offer_sent = PJ_FALSE;
 
     /* Get local and remote SDP */
     status = pjmedia_sdp_neg_get_active_local(call->inv->neg, &local_sdp);
@@ -6231,8 +6723,6 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
         //call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
         goto on_return;
     }
-
-    call->med_update_success = (status == PJ_SUCCESS);
 
     /* Trickle ICE tasks:
      * - Check remote SDP for trickle ICE support & start sending SIP INFO.
@@ -6550,8 +7040,9 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
         if (!conn)
             conn = offer->conn;
 
-        if (pj_strcmp2(&conn->addr, "0.0.0.0")==0 ||
-            pj_strcmp2(&conn->addr, "0")==0)
+        /* Disabled media may have no connection info */
+        if (conn && (pj_strcmp2(&conn->addr, "0.0.0.0")==0 ||
+                     pj_strcmp2(&conn->addr, "0")==0))
         {
             pjmedia_sdp_conn *a_conn = answer->media[i]->conn;
 
@@ -6599,8 +7090,12 @@ static pj_status_t pjsua_call_on_rx_reinvite(pjsip_inv_session *inv,
 
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
-    if (!offer && pjsua_call_media_is_app_managed(call)) {
+    if (!offer && (pjsua_call_media_is_app_managed(call) ||
+                   (pjsua_var.ua_cfg.notify_offerless_reinvite &&
+                    pjsua_var.ua_cfg.cb.on_call_rx_reinvite)))
+    {
         pjsua_call_setting opt;
+        pjsua_call_setting callback_opt;
         pjsip_status_code code = PJSIP_SC_OK;
         pjsip_tx_data *response = NULL;
         pj_status_t status;
@@ -6612,6 +7107,7 @@ static pj_status_t pjsua_call_on_rx_reinvite(pjsip_inv_session *inv,
          */
         opt = call->opt;
         pjsua_call_cleanup_flag(&opt);
+        callback_opt = opt;
         async = PJ_FALSE;
 
         if (pjsua_var.ua_cfg.cb.on_call_rx_reinvite) {
@@ -6630,8 +7126,13 @@ static pj_status_t pjsua_call_on_rx_reinvite(pjsip_inv_session *inv,
         if (code != PJSIP_SC_OK)
             async = PJ_FALSE;
 
-        /* Apply callback settings only when accepting the re-INVITE. */
-        if (code == PJSIP_SC_OK) {
+        /* Apply callback settings only when accepting the re-INVITE and the
+         * settings have changed or are app-managed.
+         */
+        if (code == PJSIP_SC_OK &&
+            (pjsua_call_media_is_app_managed(call) ||
+             pj_memcmp(&opt, &callback_opt, sizeof(opt)) != 0))
+        {
             status = apply_call_setting(call, &opt, NULL);
             if (status != PJ_SUCCESS) {
                 PJ_PERROR(3,(THIS_FILE, status,
@@ -7430,6 +7931,17 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
         goto on_return;
     }
 
+    /* Our offer may have ended with this request, also when it was
+     * challenged: check it before the app is told.
+     */
+    if (tsx->role == PJSIP_ROLE_UAC &&
+        tsx->state >= PJSIP_TSX_STATE_COMPLETED &&
+        (tsx->method.id == PJSIP_INVITE_METHOD ||
+         pjsip_method_cmp(&tsx->method, &pjsip_update_method) == 0))
+    {
+        call_check_offer(call, tsx->status_code);
+    }
+
     /* https://github.com/pjsip/pjproject/issues/1452:
      *    If a request is retried due to 401/407 challenge, don't process the
      *    transaction first but wait until we've retried it.
@@ -7548,71 +8060,17 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
                pjsip_method_cmp(&tsx->method, pjsip_get_invite_method())==0 &&
                tsx->state >= PJSIP_TSX_STATE_COMPLETED &&
                e->body.tsx_state.prev_state < PJSIP_TSX_STATE_COMPLETED &&
-               (!PJSIP_IS_STATUS_IN_CLASS(tsx->status_code, 300) &&
-                tsx->status_code!=401 && tsx->status_code!=407 &&
-                tsx->status_code!=422))
+               tsx->status_code/100 == 2)
     {
-        if (tsx->status_code/100 == 2) {
-            /* If we have sent CANCEL and the original INVITE returns a 2xx,
-             * we then send BYE.
-             */
-            if (call->hanging_up) {
-                pj_str_t reason = pj_str("Cancelling call");
-                PJ_LOG(3,(THIS_FILE, "Unsuccessful in cancelling the original "
-                          "INVITE for call %d due to %d response, sending BYE "
-                          "instead", call->index, tsx->status_code));
-                call_disconnect(call->inv, PJSIP_SC_OK, &reason);
-            }
-        } else {
-            /* Monitor the status of call hold/unhold request */
-            if (tsx->last_tx == (pjsip_tx_data*)call->hold_msg) {
-                /* Outgoing call hold failed */
-                call->local_hold = PJ_FALSE;
-                PJ_LOG(3,(THIS_FILE, "Error putting call %d on hold "
-                          "(reason=%d)", call->index, tsx->status_code));
-            } else if (call->opt.flag & PJSUA_CALL_UNHOLD) {
-                /* Call unhold failed */
-                call->local_hold = PJ_TRUE;
-                PJ_LOG(3,(THIS_FILE, "Error releasing hold on call %d "
-                          "(reason=%d)", call->index, tsx->status_code));
-            }   
-        }
-        
-        if (tsx->last_tx == (pjsip_tx_data*)call->hold_msg) {
-            call->hold_msg = NULL;
-        }
-        
-        if (tsx->last_tx->msg->body &&
-            (tsx->status_code/100 != 2 || !call->med_update_success))
-        {
-            /* Either we get non-2xx or media update failed,
-             * revert back provisional media.
-             */
-            if (inv->invite_tsx == NULL || tsx == inv->invite_tsx) {
-                pjsua_media_prov_revert(call->index);
-            }
-            else
-            {
-                PJ_LOG(4, (THIS_FILE, "Retaining provisional media for call %d "
-                    "since this is not the active Invite",
-                    call->index));
-            }
-        }
-    } else if (tsx->role == PJSIP_ROLE_UAC &&
-               pjsip_method_cmp(&tsx->method, &pjsip_update_method)==0 &&
-               tsx->state >= PJSIP_TSX_STATE_COMPLETED &&
-               e->body.tsx_state.prev_state < PJSIP_TSX_STATE_COMPLETED &&
-               (!PJSIP_IS_STATUS_IN_CLASS(tsx->status_code, 300) &&
-                tsx->status_code!=401 && tsx->status_code!=407 &&
-                tsx->status_code!=422))
-    {
-        if (tsx->last_tx->msg->body &&
-            (tsx->status_code/100 != 2 || !call->med_update_success))
-        {
-            /* Either we get non-2xx or media update failed,
-             * revert back provisional media.
-             */
-            pjsua_media_prov_revert(call->index);
+        /* If we have sent CANCEL and the original INVITE returns a 2xx,
+         * we then send BYE.
+         */
+        if (call->hanging_up) {
+            pj_str_t reason = pj_str("Cancelling call");
+            PJ_LOG(3,(THIS_FILE, "Unsuccessful in cancelling the original "
+                      "INVITE for call %d due to %d response, sending BYE "
+                      "instead", call->index, tsx->status_code));
+            call_disconnect(call->inv, PJSIP_SC_OK, &reason);
         }
     } else if (tsx->role==PJSIP_ROLE_UAS &&
                tsx->state==PJSIP_TSX_STATE_TRYING &&
@@ -7663,7 +8121,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
                 pj_ssize_t found_idx;
 
                 delim = pj_str("\r\n");
-                input = pj_str(rdata->msg_info.msg->body->data);
+                pj_strset(&input, (char*)body->data, body->len);
                 found_idx = pj_strtok(&input, &delim, &token, 0);
                 if (found_idx != input.slen) {
                     /* Get signal/digit */
@@ -7689,9 +8147,9 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
                             PJ_LOG(2, (THIS_FILE, "Invalid dtmf-relay format"));
                         }
 
-                        /* Get duration */
-                        input.ptr += token.slen + 2;
-                        input.slen -= (token.slen + 2);
+                        /* Get duration, from the rest after the first line */
+                        input.slen -= (token.ptr + token.slen - input.ptr);
+                        input.ptr = token.ptr + token.slen;
 
                         val = pj_strstr(&input, &STR_DURATION);
                         if (val && is_handled) {
@@ -7911,6 +8369,63 @@ static pj_bool_t pjsua_call_on_uac_tsx_terminate_session(
 
     return (*pjsua_var.ua_cfg.cb.on_call_tsx_terminate_session)(call->index,
                                                                 tsx, e);
+}
+
+/*
+ * This callback is called by the invite session framework when it needs to
+ * send an ACK request for the 2xx response of INVITE, and the application
+ * has asked to handle the ACK transmission manually (by implementing
+ * on_call_send_ack()).
+ */
+static void pjsua_call_on_send_ack(pjsip_inv_session *inv,
+                                   pjsip_rx_data *rdata)
+{
+    pj_bool_t skip_sending_ack = PJ_FALSE;
+    pjsua_call *call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+    pjsip_inv_session *prev_inv = NULL;
+    pj_status_t status;
+
+    if (!call) {
+        status = call_inv_send_ack(inv, rdata->msg_info.cseq->cseq, NULL);
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(3,(THIS_FILE, "Failed to send ACK for SIP Call-ID %.*s "
+                      "(CSeq %d), status=%d",
+                      (int)inv->dlg->call_id->id.slen,
+                      inv->dlg->call_id->id.ptr,
+                      rdata->msg_info.cseq->cseq, status));
+        }
+        return;
+    }
+
+    pj_log_push_indent();
+
+    if (pjsua_var.ua_cfg.cb.on_call_send_ack) {
+        prev_inv = (pjsip_inv_session*)
+                   pj_thread_local_get(ack_callback_inv_tls);
+        status = pj_thread_local_set(ack_callback_inv_tls, inv);
+        if (status == PJ_SUCCESS) {
+            skip_sending_ack = (*pjsua_var.ua_cfg.cb.on_call_send_ack)(
+                                                            call->index,
+                                                            rdata);
+            pj_thread_local_set(ack_callback_inv_tls, prev_inv);
+        } else {
+            pjsua_perror(THIS_FILE, "Unable to set ACK callback context",
+                         status);
+        }
+    }
+    if (!skip_sending_ack) {
+        status = call_inv_send_ack(inv, rdata->msg_info.cseq->cseq, NULL);
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(3,(THIS_FILE, "Failed to send ACK for call %d "
+                      "(SIP Call-ID %.*s, CSeq %d), status=%d",
+                      call->index,
+                      (int)inv->dlg->call_id->id.slen,
+                      inv->dlg->call_id->id.ptr,
+                      rdata->msg_info.cseq->cseq, status));
+        }
+    }
+
+    pj_log_pop_indent();
 }
 
 #if defined(PJSUA_MEDIA_HAS_PJMEDIA) && PJSUA_MEDIA_HAS_PJMEDIA != 0

@@ -609,7 +609,7 @@ static int setup_pjsua(const stress_opts_t *opts)
     {
         pjsua_transport_id tid;
         pjsua_transport_info tinfo;
-        pjsua_transport_id ids[8];
+        pjsua_transport_id ids[PJSUA_MAX_TRANSPORTS];
         unsigned cnt = PJ_ARRAY_SIZE(ids);
         unsigned i;
         pjsua_acc_config acc_cfg;
@@ -764,7 +764,7 @@ static int run_stress(const stress_opts_t *opts)
         char name[32];
         worker_ctx_t *w = &g.workers[i];
         w->id = i;
-        w->rng_state = opts->seed ^ (unsigned)(i * 2654435761u);
+        w->rng_state = opts->seed ^ (unsigned)((pj_uint64_t)i * 2654435761u);
         pj_ansi_snprintf(name, sizeof(name), "stress-%d", i);
         status = pj_thread_create(g.pool, name, &worker_thread, w,
                                   0, 0, &w->thread);

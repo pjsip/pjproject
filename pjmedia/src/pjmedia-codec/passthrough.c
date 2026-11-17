@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -974,6 +974,11 @@ static pj_status_t codec_encode( pjmedia_codec *codec,
                 pj_assert(sf);
 
                 sf_len = (sf->bitlen + 7) >> 3;
+                if (output->size + sf_len > output_buf_len) {
+                    output->size = 0;
+                    output->type = PJMEDIA_FRAME_TYPE_NONE;
+                    return PJMEDIA_CODEC_EFRMTOOSHORT;
+                }
 
                 pj_memcpy(p, sf->data, sf_len);
                 p += sf_len;

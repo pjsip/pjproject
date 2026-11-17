@@ -276,6 +276,8 @@ jobs:
         $env:PATH+=";$env:OPENSSL_DIR\bin"
         cd pjsip/bin
         Invoke-Expression "$env:CI_RUNNER ./pjsip-test-i386-Win32-vc14-Release.exe $env:CI_MODE $env:CI_WIN_ARGS"
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        Invoke-Expression "$env:CI_RUNNER ./pjsua2-test-i386-Win32-vc14-Release.exe"
       shell: powershell
     - name: python pjsua tests
       run: |
@@ -735,6 +737,8 @@ jobs:
         $env:PATH+=";$env:SDL_DIR\lib\x86;"
         cd pjsip/bin
         Invoke-Expression "$env:CI_RUNNER ./pjsip-test-i386-Win32-vc14-Release.exe $env:CI_MODE $env:CI_WIN_ARGS"
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        Invoke-Expression "$env:CI_RUNNER ./pjsua2-test-i386-Win32-vc14-Release.exe"
       shell: powershell
     - name: upload artifacts on failure
       if: ${{ failure() }}

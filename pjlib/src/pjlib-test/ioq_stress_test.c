@@ -29,6 +29,9 @@
 #define MAX_UDP_MISMATCH_LOG    10
 
 #define RETCODE_CONNECT_FAILED  650
+#define RETCODE_TIMEOUT         700
+
+#define PASS_TIMEOUT_MSEC       60000
 
 /* index in socks[], keys[] array */
 #define SERVER  0
@@ -116,10 +119,14 @@ struct test_desc
         pj_ioqueue_t *ioq;
         pj_grp_lock_t *grp_lock;
         pj_sock_t listen_sock;       /* tcp listening socket */
+        pj_sock_t refuse_sock;       /* to pick a free port */
+        pj_timestamp pass_start;
         pj_ioqueue_key_t *listen_key;/* tcp listening key */
 
         pj_sock_t socks[2];          /* server/client sockets */
         unsigned cnt[2];             /* number of packets sent/received */
+        pj_uint8_t rx_carry[sizeof(int)]; /* TCP bytes of a partial int */
+        unsigned rx_carry_len;
         pj_ioqueue_key_t *keys[2];   /* server/client keys */
         pj_status_t connect_status;
 
@@ -170,14 +177,16 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 {
     test_desc *test = (test_desc*)pj_ioqueue_get_user_data(key);
     op_key_user_data *okud = (op_key_user_data*)op_key->user_data;
+    pj_status_t status;
 
     assert(okud->common.side == SERVER);
 
     do {
         unsigned counter = test->state.cnt[SERVER];
 
-        /* can only handle multiple of ints,*/
-        PJ_ASSERT_ON_FAIL(bytes_read<0 || bytes_read%sizeof(int)==0,
+        /* TCP may split an int across reads, it is carried over below */
+        PJ_ASSERT_ON_FAIL(bytes_read<0 || bytes_read%sizeof(int)==0 ||
+                          test->cfg.sock_type==pj_SOCK_STREAM(),
                           {
                              test->state.retcode = 410;
                              okud->server.status = PJ_EBUG;
@@ -194,13 +203,32 @@ static void on_read_complete(pj_ioqueue_key_t *key,
         }
 
         if (bytes_read > 0) {
+            pj_uint8_t *buf = (pj_uint8_t*)okud->server.recv_buf;
+            pj_size_t n_bytes = (pj_size_t)bytes_read;
+            unsigned n_ints;
+
             pj_lock_acquire((pj_lock_t*)test->state.grp_lock);
+
+            /* Prepend the bytes carried from the previous read, recv_buf
+             * has room for one more int. With concur=1 completions may be
+             * reordered, but the byte count stays exact.
+             */
+            if (test->state.rx_carry_len) {
+                pj_memmove(buf + test->state.rx_carry_len, buf, n_bytes);
+                pj_memcpy(buf, test->state.rx_carry, test->state.rx_carry_len);
+                n_bytes += test->state.rx_carry_len;
+            }
+            n_ints = (unsigned)(n_bytes / sizeof(int));
+            test->state.rx_carry_len = (unsigned)(n_bytes % sizeof(int));
+            pj_memcpy(test->state.rx_carry, buf + n_ints * sizeof(int),
+                      test->state.rx_carry_len);
+
             if (test->cfg.sequenced) {
                 unsigned *p, *start, *end;
                 pj_bool_t has_error = PJ_FALSE;
 
                 start = okud->server.recv_buf;
-                end = start + (bytes_read / sizeof(int));
+                end = start + n_ints;
 
                 for (p=start; p!=end; ++p) {
                     counter = test->state.cnt[SERVER]++;
@@ -235,7 +263,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                     }
                 }
             } else {
-                test->state.cnt[SERVER] += (unsigned)(bytes_read / 4);
+                test->state.cnt[SERVER] += n_ints;
             }
             pj_lock_release((pj_lock_t*)test->state.grp_lock);
         }
@@ -247,17 +275,22 @@ static void on_read_complete(pj_ioqueue_key_t *key,
             break;
         }
 
-        /* next read */
+        /* next read. Once pending, the op may complete in another thread,
+         * which then updates okud, so don't touch okud afterwards.
+         */
         bytes_read = test->cfg.pkt_len * sizeof(int);
-        okud->server.status = pj_ioqueue_recv(key, op_key, okud->server.recv_buf,
-                                              &bytes_read, 0);
-        if (okud->server.status != PJ_SUCCESS && okud->server.status != PJ_EPENDING) {
-            PJ_PERROR(1,(THIS_FILE, okud->server.status, "pj_ioqueue_recv() error"));
+        okud->server.status = PJ_EPENDING;
+        status = pj_ioqueue_recv(key, op_key, okud->server.recv_buf,
+                                 &bytes_read, 0);
+        if (status != PJ_EPENDING)
+            okud->server.status = status;
+        if (status != PJ_SUCCESS && status != PJ_EPENDING) {
+            PJ_PERROR(1,(THIS_FILE, status, "pj_ioqueue_recv() error"));
             test->state.retcode = 420;
             return;
         }
 
-    } while (okud->server.status==PJ_SUCCESS &&
+    } while (status==PJ_SUCCESS &&
              test->state.retcode==0  // <= this can be set by other thread
             );
 }
@@ -270,11 +303,15 @@ static void on_write_complete(pj_ioqueue_key_t *key,
     op_key_user_data *okud = (op_key_user_data*)op_key->user_data;
     unsigned *p, *end;
     unsigned counter;
+    pj_ssize_t total, sent;
+    pj_status_t status;
 
     pj_assert(okud != NULL);
     assert(okud->common.side == CLIENT);
 
-    PJ_ASSERT_ON_FAIL(bytes_sent<0 || bytes_sent%sizeof(int)==0,
+    /* A queued TCP remainder may end anywhere in an int */
+    PJ_ASSERT_ON_FAIL(bytes_sent<0 || bytes_sent%sizeof(int)==0 ||
+                      test->cfg.sock_type==pj_SOCK_STREAM(),
                       {
                          test->state.retcode = 501;
                          okud->client.status = PJ_EBUG;
@@ -290,11 +327,14 @@ static void on_write_complete(pj_ioqueue_key_t *key,
     }
 
     /* for TCP, client stop transmission when number of transmitted
-     * count is done. For UDP, continue transmitting indefinitely (until
-     * receiver says to stop) because packets may be dropped.
+     * count is done. For UDP, also continue until the receiver has
+     * received enough, because packets may be dropped.
      */
     counter = test->state.cnt[CLIENT];
-    if (test->cfg.sock_type==pj_SOCK_STREAM() && counter >= test->cfg.tx_cnt) {
+    if (counter >= test->cfg.tx_cnt &&
+        (test->cfg.sock_type==pj_SOCK_STREAM() ||
+         test->state.cnt[SERVER] >= test->cfg.rx_cnt))
+    {
         //TRACE((THIS_FILE, "op_key:%p: TX counter reached (%d)",
         //             op_key, counter));
         okud->client.status = PJ_SUCCESS;
@@ -311,14 +351,25 @@ static void on_write_complete(pj_ioqueue_key_t *key,
     while (p != end)
         *p++ = test->state.cnt[CLIENT]++;
 
-    /* next write */
-    bytes_sent = test->cfg.pkt_len * sizeof(int);
-    okud->client.status = pj_ioqueue_send(key, op_key, okud->client.send_buf,
-                                          &bytes_sent, 0);
-    if (okud->client.status != PJ_SUCCESS && okud->client.status != PJ_EPENDING) {
-        PJ_PERROR(1,(THIS_FILE, okud->client.status, "pj_ioqueue_send() error"));
+    /* next write. Immediate TCP send may be partial, send the rest. */
+    total = test->cfg.pkt_len * sizeof(int);
+    sent = 0;
+    do {
+        bytes_sent = total - sent;
+        okud->client.status = PJ_EPENDING;
+        status = pj_ioqueue_send(key, op_key,
+                                 (char*)okud->client.send_buf+sent,
+                                 &bytes_sent, 0);
+        if (status != PJ_EPENDING)
+            okud->client.status = status;
+        if (status == PJ_SUCCESS)
+            sent += bytes_sent;
+    } while (status == PJ_SUCCESS && bytes_sent > 0 &&
+             sent < total && test->cfg.sock_type == pj_SOCK_STREAM());
+    if (status != PJ_SUCCESS && status != PJ_EPENDING) {
+        PJ_PERROR(1,(THIS_FILE, status, "pj_ioqueue_send() error"));
         test->state.retcode = 520;
-    } else if (okud->client.status == PJ_SUCCESS) {
+    } else if (status == PJ_SUCCESS) {
         counter = test->state.cnt[CLIENT];
         if (test->cfg.sock_type==pj_SOCK_STREAM() && counter >= test->cfg.tx_cnt) {
             //TRACE((THIS_FILE, "op_key:%p: TX counter reached (%d)",
@@ -367,7 +418,9 @@ static void on_accept_complete(pj_ioqueue_key_t *key,
     }
 
     if (!okud->server.recv_buf) {
-        okud->server.recv_buf = pj_pool_calloc(test->state.pool, test->cfg.pkt_len,
+        /* One more int for the bytes carried over from the previous read */
+        okud->server.recv_buf = pj_pool_calloc(test->state.pool,
+                                               test->cfg.pkt_len + 1,
                                                sizeof(int));
     }
 
@@ -427,6 +480,25 @@ static void on_connect_complete(pj_ioqueue_key_t *key,
     }
 };
 
+static void dump_state(test_desc *test)
+{
+    unsigned side, i;
+
+    PJ_LOG(1,(THIS_FILE, "Error: pass timed out: tx=%u/%u rx=%u/%u "
+                         "connect_status=%d",
+              test->state.cnt[CLIENT], test->cfg.tx_cnt,
+              test->state.cnt[SERVER], test->cfg.rx_cnt,
+              test->state.connect_status));
+    for (side=0; side<2; ++side) {
+        for (i=0; i<test->state.okuds_cnt[side]; ++i) {
+            op_key_user_data *okud = &test->state.okuds[side][i];
+            PJ_LOG(1,(THIS_FILE, "  %s op %u: status=%d",
+                      (side==SERVER? "server" : "client"), i,
+                      okud->common.status));
+        }
+    }
+}
+
 /* worker thread */
 static int worker_thread(void *p)
 {
@@ -441,6 +513,7 @@ static int worker_thread(void *p)
     while (test->state.retcode==0) {
         unsigned i;
         pj_time_val timeout = {0, 10};
+        pj_timestamp now;
 
         int rc = pj_ioqueue_poll(test->state.ioq, &timeout);
         if (rc < 0) {
@@ -449,6 +522,17 @@ static int worker_thread(void *p)
 
         if (rc > 0)
             n_events += rc;
+
+        pj_get_timestamp(&now);
+        if (pj_elapsed_msec(&test->state.pass_start, &now) > PASS_TIMEOUT_MSEC) {
+            pj_lock_acquire((pj_lock_t*)test->state.grp_lock);
+            if (test->state.retcode == 0) {
+                test->state.retcode = RETCODE_TIMEOUT;
+                dump_state(test);
+            }
+            pj_lock_release((pj_lock_t*)test->state.grp_lock);
+            break;
+        }
 
         if (test->state.cnt[CLIENT] >= test->cfg.tx_cnt &&
             test->state.cnt[SERVER] >= test->cfg.rx_cnt)
@@ -467,9 +551,10 @@ static int worker_thread(void *p)
         {
             op_key_user_data *okud = &test->state.okuds[CLIENT][i];
             pj_lock_acquire((pj_lock_t*)test->state.grp_lock);
-            if (!pj_ioqueue_is_pending(test->state.keys[CLIENT],
-                                       &okud->client.send_op))
-            {
+            /* Don't use pj_ioqueue_is_pending(), the op is no longer
+             * pending just before its completion callback is called.
+             */
+            if (okud->client.status != PJ_EPENDING) {
                 on_write_complete(test->state.keys[CLIENT],
                                   &okud->client.send_op, -12345);
             }
@@ -527,6 +612,9 @@ static int perform_single_pass(test_desc *test)
     test->state.connect_status = PJ_EPENDING;
     test->state.listen_key = NULL;
     test->state.listen_sock = PJ_INVALID_SOCKET;
+    test->state.refuse_sock = PJ_INVALID_SOCKET;
+    test->state.rx_carry_len = 0;
+    pj_get_timestamp(&test->state.pass_start);
     for (i=0; i<2; ++i) {
         int j;
 
@@ -601,7 +689,7 @@ static int perform_single_pass(test_desc *test)
             okud = alloc_okud(test, SERVER);
             if (!okud->server.recv_buf) {
                 okud->server.recv_buf = pj_pool_calloc(test->state.pool,
-                                                       test->cfg.pkt_len,
+                                                       test->cfg.pkt_len + 1,
                                                        sizeof(int));
             }
             pj_ioqueue_op_key_init(&okud->server.recv_op, sizeof(pj_ioqueue_op_key_t));
@@ -640,7 +728,25 @@ static int perform_single_pass(test_desc *test)
                                         &test->state.keys[CLIENT]));
     if (test->cfg.sock_type == pj_SOCK_STREAM()) {
         if (test->cfg.failed_connect) {
-            pj_sockaddr_in_init((pj_sockaddr_in*)&addr, &localhost, 39275);
+            /* A fixed port may be in use, or picked as the client's own
+             * ephemeral port (TCP self-connect). Bind the client, then
+             * connect to a free port that differs from the client's.
+             * The port must not stay bound, macOS doesn't refuse
+             * connections to a bound, non-listening socket.
+             */
+            pj_sockaddr refuse_addr;
+            int refuse_len = sizeof(refuse_addr);
+
+            CHECK(43, pj_sock_bind_in(test->state.socks[CLIENT], 0, 0));
+            CHECK(43, pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0,
+                                     &test->state.refuse_sock));
+            CHECK(43, pj_sock_bind_in(test->state.refuse_sock, 0, 0));
+            CHECK(43, pj_sock_getsockname(test->state.refuse_sock,
+                                          &refuse_addr, &refuse_len));
+            pj_sock_close(test->state.refuse_sock);
+            test->state.refuse_sock = PJ_INVALID_SOCKET;
+            pj_sockaddr_in_init((pj_sockaddr_in*)&addr, &localhost,
+                                pj_sockaddr_get_port(&refuse_addr));
             test->state.connect_status = pj_ioqueue_connect(test->state.keys[CLIENT],
                                                             &addr,
                                                             sizeof(pj_sockaddr_in));
@@ -717,6 +823,8 @@ static int perform_single_pass(test_desc *test)
 on_return:
     if (test->state.listen_key)
         pj_ioqueue_unregister(test->state.listen_key);
+    if (test->state.refuse_sock != PJ_INVALID_SOCKET)
+        pj_sock_close(test->state.refuse_sock);
     for (i=0; i<2; ++i) {
         if (test->state.keys[i])
             pj_ioqueue_unregister(test->state.keys[i]);

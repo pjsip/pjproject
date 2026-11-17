@@ -24,6 +24,7 @@
 #include <pjlib-util/resolver.h>
 
 #define POOL_SIZE 4000
+#define MAX_INPUT_SIZE 16384
 
 /* Global state for one-time initialization */
 static pj_caching_pool caching_pool;
@@ -45,8 +46,9 @@ extern int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
         initialized = 1;
     }
 
-    /* Skip tiny inputs */
-    if (Size < 12)
+    /* Keep the size conversion explicit; the parser requires a non-NULL
+     * packet with non-zero size. */
+    if (Size == 0 || Size > MAX_INPUT_SIZE)
         return 0;
 
     /* Create pool for this iteration */
@@ -57,13 +59,19 @@ extern int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     /* Test DNS packet parsing */
     status = pj_dns_parse_packet(pool, Data, (unsigned)Size, &dns);
     
-    if (status == PJ_SUCCESS && dns && dns->hdr.anscount > 0) {
-        /* Test A record parsing */
+    if (status == PJ_SUCCESS && dns) {
+        pj_dns_parsed_packet *dup = NULL;
         pj_dns_a_record a_rec;
+        pj_dns_addr_record addr_rec;
+
+        /* Exercise ownership/copy handling for every successfully parsed
+         * section without changing the packet presented to the parser. */
+        pj_dns_packet_dup(pool, dns, 0, &dup);
+
+        /* Test A record parsing */
         pj_dns_parse_a_response(dns, &a_rec);
         
         /* Test addr record parsing  */
-        pj_dns_addr_record addr_rec;
         pj_dns_parse_addr_response(dns, &addr_rec);
     }
 

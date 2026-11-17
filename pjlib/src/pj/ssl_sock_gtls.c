@@ -339,7 +339,7 @@ static int tls_cert_verify_cb(gnutls_session_t session)
             return GNUTLS_E_CERTIFICATE_ERROR;
     }
 
-    if (ssock->param.verify_peer) {
+    if (ssock->param.verify_peer && ssock->param.server_name.slen) {
         gnutls_x509_crt_t cert;
         unsigned int cert_list_size;
         const gnutls_datum_t *cert_list;
@@ -814,8 +814,8 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
             gnutls_datum_t cert_buf;
             gnutls_datum_t privkey_buf;
 
-            cert_buf.data = (unsigned char*)cert->CA_buf.ptr;
-            cert_buf.size = cert->CA_buf.slen;
+            cert_buf.data = (unsigned char*)cert->cert_buf.ptr;
+            cert_buf.size = cert->cert_buf.slen;
             privkey_buf.data = (unsigned char*)cert->privkey_buf.ptr;
             privkey_buf.size = cert->privkey_buf.slen;
 
@@ -984,8 +984,11 @@ static void tls_cert_get_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
     pj_bool_t update_needed;
     char buf[512] = { 0 };
     size_t bufsize = sizeof(buf);
-    pj_uint8_t serial_no[64] = { 0 }; /* should be >= sizeof(ci->serial_no) */
-    size_t serialsize = sizeof(serial_no);
+    pj_uint8_t serial_buf[64];
+    const pj_uint8_t *serial = serial_buf;
+    size_t serialsize = sizeof(serial_buf);
+    pj_uint8_t serial_no[sizeof(ci->serial_no)] = { 0 };
+    pj_bool_t serial_truncated = PJ_FALSE;
     size_t len = sizeof(buf);
     int i, ret, seq = 0;
     pj_ssl_cert_name_type type;
@@ -995,12 +998,36 @@ static void tls_cert_get_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
     /* Get issuer */
     gnutls_x509_crt_get_issuer_dn(cert, buf, &bufsize);
 
-    /* Get serial no */
-    gnutls_x509_crt_get_serial(cert, serial_no, &serialsize);
+    /* Get serial no, right-aligned as the OpenSSL backend stores it. GnuTLS
+     * keeps the DER sign octet, dropped only if the serial won't fit. */
+    ret = gnutls_x509_crt_get_serial(cert, serial_buf, &serialsize);
+    if (ret == GNUTLS_E_SHORT_MEMORY_BUFFER) {
+        void *p = pj_pool_alloc(pool, serialsize);
 
-    /* Check if the contents need to be updated */
+        if (p) {
+            serial = (const pj_uint8_t*)p;
+            ret = gnutls_x509_crt_get_serial(cert, p, &serialsize);
+        }
+    }
+    if (ret < 0) {
+        serialsize = 0;
+        serial_truncated = PJ_TRUE;
+    }
+    while (serialsize > sizeof(serial_no) && *serial == 0) {
+        ++serial;
+        --serialsize;
+    }
+    if (serialsize > sizeof(serial_no)) {
+        serialsize = sizeof(serial_no);
+        serial_truncated = PJ_TRUE;
+    }
+    pj_memcpy(serial_no + sizeof(serial_no) - serialsize, serial, serialsize);
+
+    /* Check if the contents need to be updated; a truncated serial cannot
+     * be proven equal, so it always refreshes. */
     update_needed = pj_strcmp2(&ci->issuer.info, buf) ||
-                    pj_memcmp(ci->serial_no, serial_no, serialsize);
+                    pj_memcmp(ci->serial_no, serial_no, sizeof(serial_no)) ||
+                    serial_truncated;
     if (!update_needed)
         return;
 

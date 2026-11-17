@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -76,7 +76,12 @@ static int test(void)
         t_setup.u32.lo = t_insert.u32.lo = t_search.u32.lo = t_erase.u32.lo = 0;
 
         for (j=0; j<count; j++) {
-            pj_create_random_string(key[j].str, STRSIZE);
+            /* Unique and NUL terminated, so the test doesn't depend on
+             * pj_rand(), which may repeat values when other tests call it
+             * concurrently.
+             */
+            pj_ansi_snprintf(key[j].str, STRSIZE, "%08x%07x",
+                             (unsigned)pj_rand(), (unsigned)j);
 
             pj_get_timestamp(&t1);
             node[j].key = &key[j];

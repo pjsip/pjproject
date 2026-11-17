@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -78,7 +78,9 @@ typedef struct nat_detect_session
 
     pj_timer_heap_t         *timer_heap;
     pj_timer_entry           timer;
+    pj_timer_entry           destroy_timer;
     unsigned                 timer_executed;
+    pj_bool_t                ended;
 
     void                    *user_data;
     pj_stun_nat_detect_cb   *cb;
@@ -130,7 +132,9 @@ static pj_status_t send_test(nat_detect_session *sess,
                              enum test_type test_id,
                              const pj_sockaddr *alt_addr,
                              pj_uint32_t change_flag);
-static void on_sess_timer(pj_timer_heap_t *th,
+static void on_test_timer(pj_timer_heap_t *th,
+                          pj_timer_entry *te);
+static void on_destroy_timer(pj_timer_heap_t *th,
                              pj_timer_entry *te);
 static void sess_destroy(nat_detect_session *sess);
 static void sess_on_destroy(void *member);
@@ -267,8 +271,10 @@ PJ_DEF(pj_status_t) pj_stun_detect_nat_type2(const pj_sockaddr *server,
      * Init timer to self-destroy.
      */
     sess->timer_heap = stun_cfg->timer_heap;
-    sess->timer.cb = &on_sess_timer;
+    sess->timer.cb = &on_test_timer;
     sess->timer.user_data = sess;
+    sess->destroy_timer.cb = &on_destroy_timer;
+    sess->destroy_timer.user_data = sess;
 
 
     /*
@@ -343,11 +349,17 @@ PJ_DEF(pj_status_t) pj_stun_detect_nat_type2(const pj_sockaddr *server,
     pj_ioqueue_op_key_init(&sess->write_op, sizeof(sess->write_op));
     on_read_complete(sess->key, &sess->read_op, 0);
 
+    /* Posting the read failed: the callback has been invoked and the
+     * session destruction is scheduled.
+     */
+    if (sess->ended)
+        return PJ_SUCCESS;
+
     /*
      * Start TEST_1
      */
     sess->timer.id = TIMER_TEST;
-    on_sess_timer(stun_cfg->timer_heap, &sess->timer);
+    on_test_timer(stun_cfg->timer_heap, &sess->timer);
 
     return PJ_SUCCESS;
 
@@ -394,6 +406,13 @@ static void end_session(nat_detect_session *sess,
     char errmsg[PJ_ERR_MSG_SIZE];
     pj_time_val delay;
 
+    /* The callback must only be invoked once. Late STUN completions or
+     * socket errors may still arrive until the destroy timer fires.
+     */
+    if (sess->ended)
+        return;
+    sess->ended = PJ_TRUE;
+
     if (sess->timer.id != 0) {
         pj_timer_heap_cancel(sess->timer_heap, &sess->timer);
         sess->timer.id = 0;
@@ -414,8 +433,8 @@ static void end_session(nat_detect_session *sess,
     delay.sec = 0;
     delay.msec = 0;
 
-    pj_timer_heap_schedule_w_grp_lock(sess->timer_heap, &sess->timer, &delay,
-                                      TIMER_DESTROY, sess->grp_lock);
+    pj_timer_heap_schedule_w_grp_lock(sess->timer_heap, &sess->destroy_timer,
+                                      &delay, TIMER_DESTROY, sess->grp_lock);
 }
 
 
@@ -434,8 +453,8 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
     pj_grp_lock_acquire(sess->grp_lock);
 
-    /* Ignore packet when STUN session has been destroyed */
-    if (!sess->stun_sess)
+    /* Ignore packet when the session has ended or been destroyed */
+    if (sess->ended || !sess->stun_sess)
         goto on_return;
 
     if (bytes_read < 0) {
@@ -454,6 +473,8 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                                   PJ_STUN_IS_DATAGRAM|PJ_STUN_CHECK_PACKET, 
                                   NULL, NULL, 
                                   &sess->src_addr, sess->src_addr_len);
+        if (sess->ended)
+            goto on_return;
     }
 
 
@@ -525,6 +546,9 @@ static void on_request_complete(pj_stun_session *stun_sess,
     sess = (nat_detect_session*) pj_stun_session_get_user_data(stun_sess);
 
     pj_grp_lock_acquire(sess->grp_lock);
+
+    if (sess->ended)
+        goto on_return;
 
     /* Find errors in the response */
     if (status == PJ_SUCCESS) {
@@ -892,58 +916,67 @@ on_error:
 }
 
 
-/* Timer callback */
-static void on_sess_timer(pj_timer_heap_t *th,
+/* Destroy timer callback */
+static void on_destroy_timer(pj_timer_heap_t *th,
                              pj_timer_entry *te)
 {
     nat_detect_session *sess;
 
+    PJ_UNUSED_ARG(th);
+
     sess = (nat_detect_session*) te->user_data;
 
-    if (te->id == TIMER_DESTROY) {
-        pj_grp_lock_acquire(sess->grp_lock);
-        pj_ioqueue_unregister(sess->key);
-        sess->key = NULL;
-        sess->sock = PJ_INVALID_SOCKET;
-        te->id = 0;
+    pj_grp_lock_acquire(sess->grp_lock);
+    pj_ioqueue_unregister(sess->key);
+    sess->key = NULL;
+    sess->sock = PJ_INVALID_SOCKET;
+    pj_grp_lock_release(sess->grp_lock);
+
+    sess_destroy(sess);
+}
+
+
+/* Test timer callback */
+static void on_test_timer(pj_timer_heap_t *th,
+                          pj_timer_entry *te)
+{
+    nat_detect_session *sess;
+    pj_bool_t next_timer;
+
+    sess = (nat_detect_session*) te->user_data;
+
+    pj_grp_lock_acquire(sess->grp_lock);
+
+    /* The session may have ended while this timer was being dispatched */
+    if (sess->ended) {
         pj_grp_lock_release(sess->grp_lock);
-
-        sess_destroy(sess);
-
-    } else if (te->id == TIMER_TEST) {
-
-        pj_bool_t next_timer;
-
-        pj_grp_lock_acquire(sess->grp_lock);
-
-        next_timer = PJ_FALSE;
-
-        if (sess->timer_executed == 0) {
-            send_test(sess, ST_TEST_1, NULL, 0);
-            next_timer = PJ_TRUE;
-        } else if (sess->timer_executed == 1) {
-            send_test(sess, ST_TEST_2, NULL, CHANGE_IP_PORT_FLAG);
-            next_timer = PJ_TRUE;
-        } else if (sess->timer_executed == 2) {
-            send_test(sess, ST_TEST_3, NULL, CHANGE_PORT_FLAG);
-        } else {
-            pj_assert(!"Shouldn't have timer at this state");
-        }
-
-        ++sess->timer_executed;
-
-        if (next_timer) {
-            pj_time_val delay = {0, TEST_INTERVAL};
-            pj_timer_heap_schedule_w_grp_lock(th, te, &delay,
-                                              TIMER_TEST, sess->grp_lock);
-        } else {
-            te->id = 0;
-        }
-
-        pj_grp_lock_release(sess->grp_lock);
-
-    } else {
-        pj_assert(!"Invalid timer ID");
+        return;
     }
+
+    next_timer = PJ_FALSE;
+
+    if (sess->timer_executed == 0) {
+        send_test(sess, ST_TEST_1, NULL, 0);
+        next_timer = PJ_TRUE;
+    } else if (sess->timer_executed == 1) {
+        send_test(sess, ST_TEST_2, NULL, CHANGE_IP_PORT_FLAG);
+        next_timer = PJ_TRUE;
+    } else if (sess->timer_executed == 2) {
+        send_test(sess, ST_TEST_3, NULL, CHANGE_PORT_FLAG);
+    } else {
+        pj_assert(!"Shouldn't have timer at this state");
+    }
+
+    ++sess->timer_executed;
+
+    if (next_timer) {
+        pj_time_val delay = {0, TEST_INTERVAL};
+        pj_timer_heap_schedule_w_grp_lock(th, te, &delay,
+                                          TIMER_TEST, sess->grp_lock);
+    } else {
+        te->id = 0;
+    }
+
+    pj_grp_lock_release(sess->grp_lock);
 }
 

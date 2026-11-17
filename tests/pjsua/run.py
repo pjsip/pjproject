@@ -121,6 +121,11 @@ G_EXE = G_EXE.rstrip("\n\r \t")
 # assuming a particular build system's generated header layout.
 inc.G_EXE = G_EXE
 
+def shell_cmd(cmd):
+    """On Unix, exec the command, so that the process is pjsua itself and
+    not the shell, which matters when it has to be killed."""
+    return "exec " + cmd if G_INUNIX else cmd
+
 ###################################
 # Poor man's 'expect'-like class
 class Expect(threading.Thread):
@@ -150,7 +155,7 @@ class Expect(threading.Thread):
         if self.use_telnet:
             fullcmd = G_EXE + " " + self.inst_param.arg + " --use-cli --no-cli-console --cli-telnet-port=%d" % (self.inst_param.telnet_port)
             self.trace("Popen " + fullcmd)
-            self.proc = subprocess.Popen(fullcmd, shell=G_INUNIX)
+            self.proc = subprocess.Popen(shell_cmd(fullcmd), shell=G_INUNIX)
             
             # start telnet-ing to pjsua, raise exception if telnet fails after 5s
             t0 = time.time()
@@ -165,29 +170,34 @@ class Expect(threading.Thread):
                         raise inc.TestError(self.name + ": Timeout connecting to pjsua: " + repr(e))
 
             self.running = True
-            while self.proc.poll() is None:
-                line = self.telnet.read_until(b'\n', 60)
-                linestr = line.decode('utf-8')
-                if linestr == "" or const.DESTROYED in linestr:
-                    break;
-                    
-                #Print the line if echo is ON
-                if self.echo:
-                    try:
-                        print(self.name + ": " + linestr.rstrip())
-                    except UnicodeEncodeError:
-                        print((self.name + ": " + linestr.rstrip()).encode('utf-8'))
+            try:
+                while self.proc.poll() is None:
+                    line = self.telnet.read_until(b'\n', 60)
+                    linestr = line.decode('utf-8')
+                    if linestr == "" or const.DESTROYED in linestr:
+                        break;
 
-                self.lock.acquire()
-                self.output += linestr
-                self.lock.release()
-            self.running = False
+                    #Print the line if echo is ON
+                    if self.echo:
+                        try:
+                            print(self.name + ": " + linestr.rstrip())
+                        except UnicodeEncodeError:
+                            print((self.name + ": " + linestr.rstrip()).encode('utf-8'))
+
+                    self.lock.acquire()
+                    self.output += linestr
+                    self.lock.release()
+            except (EOFError, OSError) as e:
+                # pjsua closed the telnet session, e.g. on shutdown
+                self.trace("telnet connection closed: " + repr(e))
+            finally:
+                self.running = False
         else:
             fullcmd = G_EXE + " " + self.inst_param.arg + " --stdout-refresh=5 --stdout-refresh-text=" + const.STDOUT_REFRESH
             if not self.inst_param.enable_buffer:
                 fullcmd = fullcmd + " --stdout-no-buf"
             self.trace("Popen " + fullcmd)
-            self.proc = subprocess.Popen(fullcmd, shell=G_INUNIX, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=False)
+            self.proc = subprocess.Popen(shell_cmd(fullcmd), shell=G_INUNIX, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=False)
             self.running = True
             while self.proc.poll() is None:
                 line = self.proc.stdout.readline()
@@ -270,12 +280,23 @@ class Expect(threading.Thread):
             self.send(cmd)
             self.expect(cmd)
 
-    def wait(self):
+    def wait(self, timeout=60):
+        """Wait for pjsua to exit, killing it after timeout seconds.
+        Return False if it had to be killed."""
         self.trace("wait")
+        exited = True
+        try:
+            self.proc.wait(timeout)
+        except subprocess.TimeoutExpired:
+            print(self.name + ": pjsua did not exit in %d s, killing it" % timeout)
+            self.proc.kill()
+            self.proc.wait()
+            exited = False
         self.join()
         self.proc.communicate()
         if self.telnet:
             self.telnet.close()
+        return exited
 
     def trace(self, s):
         if self.trace_enabled:
@@ -311,7 +332,8 @@ def handle_error(errmsg, t, close_processes = True):
                 is_err = True
             if is_err and p.proc.poll() is None:
                 if sys.hexversion >= 0x02060000:
-                    p.proc.terminate()
+                    # not terminate(), SDL in pjsua catches SIGTERM
+                    p.proc.kill()
                 else:
                     p.wait()
             else:
@@ -416,22 +438,34 @@ if script.test.test_func != None:
 
 # Shutdown all instances
 for p in script.test.process:
-    # Unregister if we have_reg to make sure that next tests
-    # won't fail
-    if p.inst_param.have_reg:
-        p.send("ru")
-        p.expect(p.inst_param.uri+".*unregistration success")
-    
-    if p.use_telnet:
-        p.send("shutdown")
-    else:
-        p.send("q")
+    try:
+        # Unregister if we have_reg to make sure that next tests
+        # won't fail
+        if p.inst_param.have_reg:
+            p.send("ru")
+            p.expect(p.inst_param.uri+".*unregistration success")
+
+        if p.use_telnet:
+            p.send("shutdown")
+        else:
+            p.send("q")
+    except inc.TestError as e:
+        handle_error(e.desc, script.test)
+    except OSError as e:
+        # The telnet session is gone, wait() below kills pjsua
+        print(p.name + ": failed to send command: " + repr(e))
 
 time.sleep(0.5)
+not_exited = []
 for p in script.test.process:
     if p.running:
         p.expect(const.DESTROYED, False)
-    p.wait()
+    if not p.wait():
+        not_exited.append(p.name)
+
+if not_exited:
+    handle_error("pjsua did not exit on shutdown: " + ", ".join(not_exited),
+                 script.test, False)
 
 # Run the post test function
 if script.test.post_func != None:

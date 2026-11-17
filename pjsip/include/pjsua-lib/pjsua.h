@@ -1780,15 +1780,20 @@ typedef struct pjsua_callback
      * Otherwise, by default the re-INVITE will be answered automatically
      * after the callback returns.
      *
-     * For an application-managed call receiving a re-INVITE without SDP,
-     * this callback is also called with a NULL offer. By default, the active
-     * local SDP is re-offered. Application may set \a async to PJ_TRUE and
+     * For a re-INVITE without SDP, this callback is called with a NULL offer
+     * only for application-managed calls or when
+     * pjsua_config.notify_offerless_reinvite is enabled. Otherwise, ordinary
+     * calls handle the request automatically without invoking this callback.
+     * By default, the active local SDP is re-offered.
+     * Application may set \a async to PJ_TRUE and
      * later send the response with #pjsua_call_answer_with_sdp(), supplying
      * its own local SDP offer. On the asynchronous path, a successful final
      * response requires an application-supplied offer; the active local SDP
      * is not automatically re-offered.
      * On the synchronous offerless path, any 2xx callback code is treated
-     * as 200. Codes outside 200-699 are rejected with 500.
+     * as 200, and final rejection codes (300-699) are accepted. Codes outside
+     * 200-699 are rejected with 500. For a re-INVITE containing SDP, only
+     * 200 and 488 are valid callback codes.
      *
      * Remarks: If manually answering at a later timing, application may
      * need to monitor on_call_tsx_state() callback to check whether
@@ -1808,15 +1813,19 @@ typedef struct pjsua_callback
      * as pjsua deactivates it there, see on_call_sdp_created().
      *
      * @param call_id   The call index.
-     * @param offer     Remote offer, or NULL for an application-managed
-     *                  call receiving a re-INVITE without SDP.
+     * @param offer     Remote offer, or NULL for a re-INVITE without SDP
+     *                  on an application-managed call or when
+     *                  pjsua_config.notify_offerless_reinvite is enabled.
      * @param rdata     The received re-INVITE request.
      * @param reserved  Reserved param, currently not used.
      * @param async     On input, it is PJ_FALSE. Set to PJ_TRUE if
      *                  app wants to manually answer the re-INVITE.
      * @param code      Status code to be returned for answering the
      *                  offer. On input, it contains status code 200.
-     *                  Currently, valid values are only 200 and 488.
+     *                  For a re-INVITE containing SDP, valid values are 200
+     *                  and 488. For a synchronous offerless re-INVITE, 2xx
+     *                  is treated as 200, 300-699 rejects the request, and
+     *                  values outside 200-699 are changed to 500.
      * @param opt       The current call setting, application can update
      *                  this setting for answering the offer.
      */
@@ -1912,7 +1921,8 @@ typedef struct pjsua_callback
     /**
      * Notify application when registration status has changed.
      * Application may then query the account info to get the
-     * registration details.
+     * registration details. The result of a REGISTER is not reported once
+     * the account has sent a newer one, which reports its own.
      *
      * @param acc_id        The account ID.
      */
@@ -1921,7 +1931,8 @@ typedef struct pjsua_callback
     /**
      * Notify application when registration status has changed.
      * Application may inspect the registration info to get the
-     * registration status details.
+     * registration status details. As with \a on_reg_state, the result of
+     * a REGISTER is not reported once the account has sent a newer one.
      *
      * @param acc_id        The account ID.
      * @param info          The registration info.
@@ -2464,7 +2475,12 @@ typedef struct pjsua_callback
      * \a param->handled to PJ_TRUE and later call
      * pjsip_auth_clt_async_send_req() to resend with authentication,
      * or pjsip_auth_clt_async_abandon() to give up. Both may be called
-     * synchronously within this callback or deferred.
+     * synchronously within this callback or deferred. A deferred REGISTER
+     * is not sent, and PJ_ECANCELLED is returned, if the account has sent
+     * or started another REGISTER since the challenge, or has dropped its
+     * registration and the deferred REGISTER is not an unregistration.
+     * Abandoning such a REGISTER doesn't report a registration failure:
+     * the newer REGISTER reports the result.
      *
      * If \a param->handled is left as PJ_FALSE (the default), the library
      * falls back to synchronous authentication using configured credentials.
@@ -2478,6 +2494,28 @@ typedef struct pjsua_callback
      * @param param     The callback parameters.
      */
     void (*on_auth_challenge)(pjsua_on_auth_challenge_param *param);
+
+    /**
+     * Notify application when the framework needs to send an ACK request
+     * after it receives an incoming 2xx response for INVITE (e.g. when the
+     * 2xx response carries a late SDP offer). Implementing this callback
+     * alone does not transfer responsibility for sending the ACK. The
+     * framework continues to send it automatically unless this callback
+     * returns PJ_TRUE. When it returns PJ_TRUE, the application is
+     * responsible for creating and sending the ACK itself, using
+     * #pjsua_call_send_ack(). This allows an SDP answer to be attached to
+     * the ACK or the ACK transmission to be delayed, e.g. while waiting for
+     * the SDP answer in 3PCC scenarios.
+     *
+     * @param call_id   The call index.
+     * @param rdata     The received 2xx response that triggered the need to
+     *                  send an ACK request.
+     * @return          PJ_TRUE to suppress the automatic ack request sending.
+     *                  PJ_FALSE (default) to keep current behavior, automatic
+     *                  ACK sending by the framework will proceed as usual.
+     */
+    pj_bool_t (*on_call_send_ack)(pjsua_call_id call_id,
+                                  pjsip_rx_data *rdata);
 
 } pjsua_callback;
 
@@ -2964,6 +3002,20 @@ typedef struct pjsua_config
      * Default: PJ_DNS_RESOLVER_SYS_FALLBACK (disabled)
      */
     pj_bool_t        resolver_fallback;
+
+    /**
+     * Invoke #pjsua_callback.on_call_rx_reinvite for re-INVITEs without SDP
+     * on ordinary calls. The callback receives a NULL offer and may accept,
+     * reject, or asynchronously answer the request. Applications enabling
+     * this option must handle a NULL offer in the callback.
+     *
+     * Application-managed calls receive this notification regardless of
+     * this setting. When disabled, ordinary calls handle offerless
+     * re-INVITEs automatically without invoking the callback.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t        notify_offerless_reinvite;
 
 } pjsua_config;
 
@@ -3656,7 +3708,8 @@ PJ_DECL(void) pjsua_dump(pj_bool_t detail);
  *    configurable via \a pjsua_acc_config.ip_change_cfg.shutdown_tp).
  * 3. Update contact URI by sending re-Registration (this step is configurable 
  *    via a\ pjsua_acc_config.allow_contact_rewrite and 
- *    a\ pjsua_acc_config.contact_rewrite_method)
+ *    a\ pjsua_acc_config.contact_rewrite_method). An account unregistered
+ *    with #pjsua_acc_set_registration() is not registered again.
  * 4. Hangup active calls (this step is configurable via 
  *    a\ pjsua_acc_config.ip_change_cfg.hangup_calls) or 
  *    continue the call by sending re-INVITE 
@@ -4077,6 +4130,27 @@ PJ_DECL(pj_status_t) pjsua_transport_lis_restart( pjsua_transport_id id,
  */
 #ifndef PJSUA_MAX_ACC
 #   define PJSUA_MAX_ACC            8
+#endif
+
+/**
+ * Maximum number of transports, i.e. those created with
+ * #pjsua_transport_create() or registered with #pjsua_transport_register()
+ * or #pjsua_tpfactory_register(). This can be overridden in config_site.h.
+ *
+ * Each transport takes a handle from the SIP endpoint's ioqueue, which is
+ * created with PJSIP_MAX_TRANSPORTS (PJ_IOQUEUE_MAX_HANDLES, 64 by default)
+ * handles and is shared with TCP/TLS connections and the DNS resolver.
+ * Raising this setting beyond a few dozen therefore also requires raising
+ * PJ_IOQUEUE_MAX_HANDLES.
+ *
+ * Default: 8
+ */
+#ifndef PJSUA_MAX_TRANSPORTS
+#   define PJSUA_MAX_TRANSPORTS     8
+#endif
+
+#if PJSUA_MAX_TRANSPORTS < 1
+#   error "PJSUA_MAX_TRANSPORTS must be at least 1"
 #endif
 
 
@@ -5567,7 +5641,8 @@ PJ_DECL(pj_bool_t) pjsua_acc_is_valid(pjsua_acc_id acc_id);
  *
  * @param acc_id        The account ID to be used as default.
  *
- * @return              PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success, or PJ_EINVAL if the account
+ *                      is not valid.
  */
 PJ_DECL(pj_status_t) pjsua_acc_set_default(pjsua_acc_id acc_id);
 
@@ -5859,6 +5934,10 @@ PJ_DECL(pj_status_t) pjsua_acc_set_online_status2(pjsua_acc_id acc_id,
  * when the account is added with #pjsua_acc_add(). Application normally
  * only need to call this function if it wants to manually update the
  * registration or to unregister from the server.
+ *
+ * After an unregistration, pjsua doesn't register the account again by
+ * itself, e.g: on IP change or with an auto retry, until the application
+ * renews the registration or modifies the account so that it registers.
  *
  * @param acc_id        The account ID.
  * @param renew         If renew argument is zero, this will start 
@@ -6933,17 +7012,27 @@ PJ_DECL(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
 
 /**
  * Same as #pjsua_call_answer2() but this function will set the local SDP
- * first before sending the response. For application-managed calls
- * (#PJSUA_CALL_MEDIA_APP_MANAGED), the SDP is used as an offer when answering
- * an offerless INVITE or re-INVITE, and as an answer otherwise. For ordinary
- * calls, the SDP is used only as an answer to a pending remote offer.
+ * before sending the response. The SDP is used as an offer when answering
+ * an offerless INVITE or re-INVITE, and as an answer to a pending remote
+ * offer otherwise. For ordinary initial offerless calls, media is initialized
+ * before installing the supplied offer. A pending local offer cannot be
+ * replaced by this function.
+ * Supplying a local SDP offer while media initialization is already pending
+ * returns PJ_EBUSY without changing call state.
+ * Supplying SDP with a final error response (code >= 300) returns
+ * PJ_EINVALIDOP without changing call state.
  * An application-managed answer must have the same media-line count as the
  * remote offer; otherwise PJMEDIA_SDPNEG_EMISMEDIA is returned.
  *
+ * For calls whose media is not application-managed, supplying a local SDP
+ * offer in a provisional (1xx) response requires 100rel to be active
+ * (#PJSIP_INV_REQUIRE_100REL). Otherwise PJ_EINVALIDOP is returned.
+ * Codes 100, 180, and 181 are rejected for such offers even with 100rel active.
+ * These restrictions apply to SDP offers, not answers to remote offers.
+ *
  * @param call_id       Incoming call identification.
- * @param sdp           Local SDP answer, or a local SDP offer for an
- *                      application-managed call answering an offerless
- *                      INVITE or re-INVITE.
+ * @param sdp           Local SDP answer, or a local SDP offer when answering
+ *                      an offerless INVITE or re-INVITE.
  * @param opt           Optional call setting.
  * @param code          Status code, (100-699).
  * @param reason        Optional reason phrase. If NULL, default text
@@ -6953,7 +7042,10 @@ PJ_DECL(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
  *                      be persistent in all next answers/responses for this
  *                      INVITE request.
  *
- * @return              PJ_SUCCESS on success, or the appropriate error code.
+ * @return              PJ_SUCCESS on success, PJ_EPENDING if media
+ *                      initialization is asynchronous, in which case the
+ *                      answer will be sent once the media initialization
+ *                      completes, or the appropriate error code on failure.
  */
 PJ_DECL(pj_status_t)
 pjsua_call_answer_with_sdp(pjsua_call_id call_id,
@@ -6962,6 +7054,33 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
                            unsigned code,
                            const pj_str_t *reason,
                            const pjsua_msg_data *msg_data);
+
+
+/**
+ * Create and send an ACK request for the 2xx response, optionally with an
+ * SDP answer \a sdp attached to it. Application would normally use this
+ * function from within the #pjsua_callback.on_call_send_ack() callback,
+ * to manually take over the ACK transmission, e.g. to attach an SDP answer
+ * to the ACK for a late SDP offer received in the 2xx response.
+ * This function is safe to call synchronously from the
+ * #pjsua_callback.on_call_send_ack() callback when \a call_id identifies the
+ * call whose ACK triggered the callback. A different call ID is rejected with
+ * PJ_EINVALIDOP to avoid acquiring the PJSUA lock while holding the callback
+ * call's dialog lock.
+ *
+ * @param call_id       Call identification.
+ * @param cseq          CSeq of the 2xx response that triggered the need to
+ *                      send an ACK request; normally this is the CSeq of
+ *                      the \a rdata received in the on_call_send_ack()
+ *                      callback.
+ * @param sdp           Optional SDP answer to be attached to the ACK
+ *                      request. May be NULL if no SDP body is required.
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_call_send_ack(pjsua_call_id call_id,
+                                        int cseq,
+                                        const pjmedia_sdp_session *sdp);
 
 
 /**

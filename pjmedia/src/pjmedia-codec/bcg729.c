@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2017-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -537,6 +537,10 @@ static pj_status_t bcg729_codec_encode(pjmedia_codec *codec,
     nsamples = input->size >> 1;
     output->size = 0;
 
+    /* Each frame produces up to G729_FRAME_SIZE bytes, make sure they fit */
+    if (nsamples / G729_SAMPLES_PER_FRAME * G729_FRAME_SIZE > output_buf_len)
+        return PJMEDIA_CODEC_EFRMTOOSHORT;
+
     /* Encode */
     while (nsamples >= G729_SAMPLES_PER_FRAME) {
         bcg729Encoder(bcg729_data->encoder, pcm_in,
@@ -573,6 +577,11 @@ static pj_status_t bcg729_codec_decode(pjmedia_codec *codec,
 
     PJ_ASSERT_RETURN(codec && input && output_buf_len && output, PJ_EINVAL);
 
+    if (input->size < G729_FRAME_SIZE)
+        return PJMEDIA_CODEC_EFRMTOOSHORT;
+    if (output_buf_len < G729_SAMPLES_PER_FRAME * 2)
+        return PJMEDIA_CODEC_EPCMTOOSHORT;
+
     bcg729_data = (struct bcg729_private*) codec->codec_data;
 
     bcg729Decoder(bcg729_data->decoder,
@@ -601,6 +610,9 @@ static pj_status_t  bcg729_codec_recover(pjmedia_codec *codec,
     bcg729_private *bcg729_data;
 
     PJ_ASSERT_RETURN(codec && output_buf_len && output, PJ_EINVAL);
+
+    if (output_buf_len < G729_SAMPLES_PER_FRAME * 2)
+        return PJMEDIA_CODEC_EPCMTOOSHORT;
 
     bcg729_data = (struct bcg729_private*) codec->codec_data;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2015-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2012-2015 Zaark Technology AB
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1140,8 +1140,6 @@ static pj_status_t  codec_decode( pjmedia_codec *codec,
     int fec = 0;
     int frm_size;
 
-    PJ_UNUSED_ARG(output_buf_len);
-
     pj_mutex_lock (opus_data->mutex);
 
     /* Validate input size against decode buffer capacity before any copy.
@@ -1194,8 +1192,8 @@ static pj_status_t  codec_decode( pjmedia_codec *codec,
      * then frame_size needs to be exactly the duration of audio that
      * is missing.
      */
-    frm_size = (int)output->size / (sizeof(opus_int16) *
-               opus_data->cfg.channel_cnt);
+    frm_size = (int)(output_buf_len / (sizeof(opus_int16) *
+               opus_data->cfg.channel_cnt));
     if (inframe->type != PJMEDIA_FRAME_TYPE_AUDIO || fec) {
         frm_size = PJ_MIN((unsigned)frm_size,
                           opus_data->cfg.sample_rate *
@@ -1262,20 +1260,24 @@ static pj_status_t  codec_recover( pjmedia_codec *codec,
         samples_per_frame = opus_data->cfg.sample_rate * opus_data->dec_ptime/
                             opus_data->dec_ptime_denum / 1000;
         output->type = PJMEDIA_FRAME_TYPE_AUDIO;
-        output->size = samples_per_frame << 1;
+        output->size = samples_per_frame * opus_data->cfg.channel_cnt *
+                       sizeof(opus_int16);
         if (output->size > output_buf_len) {
-            pj_assert(!"Buffer too small");
+            PJ_LOG(5, (THIS_FILE, "Recover buffer too small (%u < %u), "
+                                  "truncating", output_buf_len,
+                                  (unsigned)output->size));
             output->size = output_buf_len;
         }
-        pjmedia_zero_samples((pj_int16_t*)output->buf, samples_per_frame);
+        pjmedia_zero_samples((pj_int16_t*)output->buf,
+                             (unsigned)output->size / sizeof(opus_int16));
         pj_mutex_unlock (opus_data->mutex);
 
         return PJ_SUCCESS;
     }
 
     inframe = &opus_data->dec_frame[opus_data->dec_frame_index];
-    frm_size = (int)output->size / (sizeof(opus_int16) *
-               opus_data->cfg.channel_cnt);
+    frm_size = (int)(output_buf_len / (sizeof(opus_int16) *
+               opus_data->cfg.channel_cnt));
     if (inframe->type != PJMEDIA_FRAME_TYPE_AUDIO) {
         frm_size = PJ_MIN((unsigned)frm_size, opus_data->cfg.sample_rate *
                           opus_data->dec_ptime / opus_data->dec_ptime_denum /

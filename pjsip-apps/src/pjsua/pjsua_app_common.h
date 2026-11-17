@@ -205,6 +205,7 @@ typedef struct pjsua_app_config
     /* Custom SDP to inject via on_call_sdp_created (replaces generated SDP).
      * Only available when PJSUA_MEDIA_HAS_PJMEDIA=0 (alt media backend). */
     pj_str_t                custom_sdp;
+    pj_bool_t               dummy_codecs;
 #endif
 
     /* Set PJSUA_CALL_MEDIA_APP_MANAGED on the default call setting used for

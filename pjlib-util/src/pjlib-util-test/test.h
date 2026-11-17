@@ -31,6 +31,7 @@
 #define INCLUDE_ENCRYPTION_TEST     1
 #define INCLUDE_STUN_TEST           1
 #define INCLUDE_RESOLVER_TEST       1
+#define INCLUDE_DNS_PACKET_TEST     1
 /* The HTTP client and WebSocket tests run their server on a thread */
 #define INCLUDE_HTTP_CLIENT_TEST    (PJ_HAS_TCP && PJ_HAS_THREADS)
 #define INCLUDE_WEBSOCK_TEST        (PJ_HAS_TCP && PJ_HAS_THREADS)
@@ -44,6 +45,7 @@ extern int stun_test();
 extern int test_main(int argc, char *argv[]);
 extern int resolver_test(void);
 extern int resolver_nothreads_test(void);
+extern int dns_packet_test(void);
 extern int http_client_test();
 extern int websock_test(void);
 

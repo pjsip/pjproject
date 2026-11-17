@@ -595,10 +595,12 @@ jobs:
         make pjmedia-test
     - name: pjsip-test serial
       # when using no worker thread, pjsip_endpt is safe without suppression
+      # Run the binary rather than "make pjsip-test", which also runs
+      # pjsua2-test: once is enough, and it needs the suppression below.
       run: |
         export CI_ARGS="-w 0 --shuffle --stdout-buf 1 tsx_basic_test tsx_uac_test tsx_uas_test"
         export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp"
-        make pjsip-test
+        cd pjsip/build && $CI_RUNNER ../bin/pjsip-test-`make -s -C ../.. infotarget` $CI_ARGS $CI_MODE
     - name: pjsip-test parallel
       # when using multiple worker threads, add pjsip_endpt suppression
       run: |
@@ -628,7 +630,7 @@ jobs:
     - name: get ffmpeg
       run: git clone --depth 1 --single-branch --branch release/4.2 https://github.com/FFmpeg/FFmpeg.git
     - name: configure ffmpeg
-      run: cd FFmpeg && ./configure --enable-shared --disable-static --enable-gpl --enable-libx264
+      run: cd FFmpeg && ./configure --enable-shared --disable-static --enable-gpl --enable-libx264 --disable-doc
     - name: build ffmpeg
       run: cd FFmpeg && $MAKE_FAST && sudo make install
     - name: config site
@@ -813,6 +815,10 @@ jobs:
         python3 run.py --exe ../../pjsip-apps/src/3rdparty_media_sample/alt_pjsua mod_sipp.py scripts-sipp/alt-pjsua-uas-multiple-amr.xml
         python3 run.py --exe ../../pjsip-apps/src/3rdparty_media_sample/alt_pjsua mod_sipp.py scripts-sipp/alt-pjsua-uas-media-app-managed.xml
         python3 run.py --exe ../../pjsip-apps/src/3rdparty_media_sample/alt_pjsua mod_sipp.py scripts-sipp/alt-pjsua-uas-early-update-app-managed.xml
+        python3 run.py --exe ../../pjsip-apps/src/3rdparty_media_sample/alt_pjsua mod_sipp.py scripts-sipp/alt-pjsua-uac-late-offer.xml
+        python3 run.py --exe ../../pjsip-apps/src/3rdparty_media_sample/alt_pjsua mod_sipp.py scripts-sipp/alt-pjsua-uas-late-offer.xml
+        python3 run.py --exe ../../pjsip-apps/src/3rdparty_media_sample/alt_pjsua mod_sipp.py scripts-sipp/alt-pjsua-uac-late-offer-dummy-codecs.xml
+        python3 run.py --exe ../../pjsip-apps/src/3rdparty_media_sample/alt_pjsua mod_sipp.py scripts-sipp/alt-pjsua-uas-late-offer-dummy-codecs.xml
     - name: upload artifacts on failure
       if: ${{ failure() }}
       uses: actions/upload-artifact@v4

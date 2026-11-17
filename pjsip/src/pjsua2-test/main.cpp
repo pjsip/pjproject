@@ -17,8 +17,10 @@
  */
 
 #include <pjsua2/endpoint.hpp>
+#include <iostream>
 #include "instant_messaging.hpp"
 #include "auth_challenge.hpp"
+#include "object_lifetime.hpp"
 
 using namespace pj;
 
@@ -28,6 +30,12 @@ void callTransferCustomCallIdTest();
 
 int main(int argc, char *argv[])
 {
+#if !PJ_HAS_THREADS
+    /* Most of the tests need the library's worker or media threads */
+    std::cout << "pjsua2-test skipped: no threads" << std::endl;
+    return 0;
+#endif
+
     try {
         audioMediaPortTest();
         callReplaceRejectReasonTest();
@@ -50,8 +58,29 @@ int main(int argc, char *argv[])
             authChallengeTests.deferredRespondWithCreds();
             authChallengeTests.deferredAbandon();
             authChallengeTests.accountDeleteWithPending();
+            authChallengeTests.deferredRespondAfterUnregister();
+            authChallengeTests.deferredRespondAfterDelete(false);
+            authChallengeTests.deferredRespondAfterDelete(true);
             authChallengeTests.digestToPj();
             authChallengeTests.credAuthOtherParam();
+        }
+
+        {
+            ObjectLifetimeTests objectLifetimeTests;
+
+            objectLifetimeTests.deleteActiveCall();
+            objectLifetimeTests.deleteCallCreatingMedia();
+            objectLifetimeTests.deleteCallWithLibraryBusy();
+            objectLifetimeTests.deleteCallWithDialogBusy();
+            objectLifetimeTests.deleteCallWithLibraryBriefBusy();
+            objectLifetimeTests.hangupRetryAfterSlotReuse();
+            objectLifetimeTests.hangupRetryWhileBusy();
+            objectLifetimeTests.deleteCallInOwnCallback();
+            objectLifetimeTests.deleteCallWhileClosing();
+            objectLifetimeTests.hangupRetryWhileClosing();
+            objectLifetimeTests.deleteCallAfterSlotReuse();
+            objectLifetimeTests.deleteAccountAfterSlotReuse();
+            objectLifetimeTests.deleteAccountDeletedUnderneath();
         }
     } catch (...) {
         return 1;

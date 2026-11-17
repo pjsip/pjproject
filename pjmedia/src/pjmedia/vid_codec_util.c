@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -20,6 +20,7 @@
 #include <pjmedia/errno.h>
 #include <pjmedia/stream_common.h>
 #include <pjlib-util/base64.h>
+#include <pj/assert.h>
 #include <pj/ctype.h>
 #include <pj/math.h>
 
@@ -28,6 +29,12 @@
 
 
 #define THIS_FILE   "vid_codec_util.c"
+
+/* PJMEDIA_H264_DEFAULT_PROFILE_LEVEL_ID must be a string literal of six
+ * hex digits; the level itself is only checked at run time.
+ */
+PJ_STATIC_ASSERT(sizeof(PJMEDIA_H264_DEFAULT_PROFILE_LEVEL_ID) == 7,
+                 h264_default_profile_level_id_must_be_6_hex_digits);
 
 /* If this is set to non-zero, H.264 custom negotiation will require
  * "profile-level-id" and "packetization-mode" to be exact match to
@@ -80,7 +87,7 @@ static pj_status_t parse_custom_res_fmtp(const pj_str_t *fmtp_val,
     p_end = p + fmtp_val->slen;
 
     while (p<=p_end && i<PJ_ARRAY_SIZE(val)) {
-        if (*p==',' || p==p_end) {
+        if (p==p_end || *p==',') {
             token.slen = (char*)p - token.ptr;
             val[i++] = pj_strtoul(&token);
             token.ptr = (char*)p+1;
@@ -102,7 +109,7 @@ static pj_status_t parse_custom_res_fmtp(const pj_str_t *fmtp_val,
 
 
 /* H263 fmtp parser */
-PJ_DEF(pj_status_t) pjmedia_vid_codec_parse_h263_fmtp(
+PJ_DEF(pj_status_t) pjmedia_vid_codec_h263_parse_fmtp(
                                     const pjmedia_codec_fmtp *fmtp,
                                     pjmedia_vid_codec_h263_fmtp *h263_fmtp)
 {
@@ -190,7 +197,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h263_apply_fmtp(
         /* Get local param */
         // Local param should be fetched from "param->enc_fmt" instead of
         // "param->dec_fmtp".
-        //status = pjmedia_vid_codec_parse_h263_fmtp(&param->dec_fmtp,
+        //status = pjmedia_vid_codec_h263_parse_fmtp(&param->dec_fmtp,
         //                                         &fmtp_loc);
         //if (status != PJ_SUCCESS)
         //    return status;
@@ -199,7 +206,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h263_apply_fmtp(
         fmtp_loc.mpi[0].val  = fps_to_mpi(&vfd->fps);
 
         /* Get remote param */
-        status = pjmedia_vid_codec_parse_h263_fmtp(&param->enc_fmtp,
+        status = pjmedia_vid_codec_h263_parse_fmtp(&param->enc_fmtp,
                                                    &fmtp_rem);
         if (status != PJ_SUCCESS)
             return status;
@@ -265,7 +272,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h263_apply_fmtp(
         pjmedia_video_format_detail *vfd;
         pj_status_t status;
         
-        status = pjmedia_vid_codec_parse_h263_fmtp(&param->dec_fmtp,
+        status = pjmedia_vid_codec_h263_parse_fmtp(&param->dec_fmtp,
                                                    &fmtp);
         if (status != PJ_SUCCESS)
             return status;
@@ -465,9 +472,14 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_parse_fmtp(
         }
     }
 
-    /* When profile-level-id is not specified, use default value "42000A" */
+    /* When profile-level-id is not specified, use the configured default
+     * (RFC 6184 default "42000A", see PJMEDIA_H264_DEFAULT_PROFILE_LEVEL_ID).
+     */
     if (h264_fmtp->profile_idc == 0) {
-        const pj_str_t DEF_PROFILE = {"42000A", 6};
+        const pj_str_t DEF_PROFILE = {
+            PJMEDIA_H264_DEFAULT_PROFILE_LEVEL_ID,
+            sizeof(PJMEDIA_H264_DEFAULT_PROFILE_LEVEL_ID) - 1
+        };
 
         status = init_h264_profile(&DEF_PROFILE, h264_fmtp);
         if (status != PJ_SUCCESS)

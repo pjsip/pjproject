@@ -147,9 +147,17 @@ typedef std::vector<SslCertName> SslCertNameVector;
 struct SslCertInfo
 {
     unsigned            version;            /**< Certificate version    */
-    unsigned char       serialNo[20];       /**< Serial number, array
-                                                 of octets, first index
-                                                 is MSB                 */
+    unsigned char       serialNo[20];       /**< Serial number, most
+                                                 significant octet first,
+                                                 right-aligned and padded
+                                                 with leading zero octets.
+                                                 A serial longer than 20
+                                                 octets keeps its 20 most
+                                                 significant octets. A
+                                                 negative serial, which
+                                                 RFC 5280 does not allow,
+                                                 has a layout that depends
+                                                 on the backend.        */
     string              subjectCn;          /**< Subject common name    */
     string              subjectInfo;        /**< One line subject, fields
                                                  are separated by slash, e.g:
@@ -1041,6 +1049,28 @@ struct UaConfig : public PersistentObject
      * Default: PJ_DNS_RESOLVER_SYS_FALLBACK (disabled)
      */
     bool                resolverFallback;
+
+    /**
+     * Enable Call::onCallSendAck() for application-controlled ACK handling.
+     * Set this before Endpoint::libInit(). When disabled, PJSIP sends ACK
+     * automatically without invoking the callback.
+     *
+     * Default: false
+     */
+    bool                enableCallSendAckCallback;
+
+    /**
+     * Invoke Call::onCallRxReinvite() for re-INVITEs without SDP on
+     * ordinary calls. The callback receives an empty offer and may accept,
+     * reject, or asynchronously answer the request.
+     *
+     * Application-managed calls receive this notification regardless of
+     * this setting. When disabled, ordinary calls handle offerless
+     * re-INVITEs automatically without invoking the callback.
+     *
+     * Default: false
+     */
+    bool                notifyOfferlessReinvite;
 
 public:
     /**
@@ -2164,7 +2194,9 @@ public:
      *    configurable via \a AccountConfig.ipChangeConfig.shutdownTp).
      * 3. Update contact URI by sending re-Registration (this step is 
      *    configurable via a\ AccountConfig.natConfig.contactRewriteUse and
-     *    a\ AccountConfig.natConfig.contactRewriteMethod)
+     *    a\ AccountConfig.natConfig.contactRewriteMethod). An account
+     *    unregistered with Account::setRegistration() is not registered
+     *    again.
      * 4. Hangup active calls (this step is configurable via
      *    a\ AccountConfig.ipChangeConfig.hangupCalls) or
      *    continue the call by sending re-INVITE
@@ -2432,6 +2464,8 @@ private:
                                     pjmedia_sdp_session *sdp,
                                     pj_pool_t *pool,
                                     const pjmedia_sdp_session *rem_sdp);
+    static pj_bool_t on_call_send_ack(pjsua_call_id call_id,
+                                 pjsip_rx_data *rdata);
     static void on_stream_precreate(pjsua_call_id call_id,
                                     pjsua_on_stream_precreate_param *param);
     static void on_stream_created2(pjsua_call_id call_id,
@@ -2543,4 +2577,3 @@ private:
 
 
 #endif  /* __PJSUA2_UA_HPP__ */
-

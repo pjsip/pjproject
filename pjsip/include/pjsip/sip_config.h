@@ -1415,6 +1415,9 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * case the registrar is unable to return exact Contact URI in the
  * 200/OK response.
  *
+ * A Contact URI that has an "x-uid" parameter of its own keeps it, and
+ * no other is added.
+ *
  * This setting can be changed in run-time by setting 
  * \a regc.add_xuid_param field of pjsip_cfg().
  *

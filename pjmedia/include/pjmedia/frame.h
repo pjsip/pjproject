@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -78,6 +78,11 @@ typedef struct pjmedia_frame
  * represented by pjmedia_frame_ext_subframe structure. Every next
  * subframe immediately follows the previous subframe, and all subframes
  * are byte-aligned although its payload may not be byte-aligned.
+ *
+ * When an extended frame is passed to a port's get_frame(), the "size"
+ * field of the base frame specifies, on input, the capacity in bytes of
+ * the buffer following this structure, and the port must not append
+ * subframes beyond it.
  */
 
 #pragma pack(1)

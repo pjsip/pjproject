@@ -89,16 +89,13 @@ a=maxptime:240
     <action>
       <!-- Verify the 200 OK carries the custom answer injected by alt_pjsua
            unmodified: PT 118's own fmtp (octet-align=0), not reconciled/
-           merged against the offer's duplicate PT 96 (octet-align=1). The
-           condexec nops avoid SIPp 3.7 exiting on "referenced 1 times". -->
+           merged against the offer's duplicate PT 96 (octet-align=1). -->
       <ereg regexp="a=rtpmap:118 AMR/8000" search_in="msg"
             check_it="true" assign_to="1"/>
       <ereg regexp="a=fmtp:118 octet-align=0" search_in="msg"
             check_it="true" assign_to="2"/>
     </action>
   </recv>
-  <nop condexec="1"></nop>
-  <nop condexec="2"></nop>
 
   <send>
     <![CDATA[
@@ -132,8 +129,6 @@ a=maxptime:240
             check_it="true" assign_to="4"/>
     </action>
   </recv>
-  <nop condexec="3"></nop>
-  <nop condexec="4"></nop>
 
   <send>
     <![CDATA[
@@ -192,8 +187,6 @@ a=sendrecv
             check_it="true" assign_to="6"/>
     </action>
   </recv>
-  <nop condexec="5"></nop>
-  <nop condexec="6"></nop>
 
   <send>
     <![CDATA[
@@ -241,6 +234,9 @@ a=sendrecv
 
   <recv response="200" crlf="true">
   </recv>
+
+  <!-- The variables only carry the checks above. -->
+  <Reference variables="1,2,3,4,5,6"/>
 
   <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>
   <CallLengthRepartition value="10, 50, 100, 500, 1000, 5000, 10000"/>

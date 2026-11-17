@@ -148,6 +148,7 @@ int regc_test(void);
 int auth_async_test(void);
 int pjsua_auth_test(void);
 int pjsua_call_test(void);
+int pjsua_late_sdp_offer_test(void);
 int pjsua_acc_test(void);
 int pjsua_pres_test(void);
 int srv_failover_pjsua_test(void);
@@ -168,6 +169,7 @@ struct tsx_test_param
 extern struct tsx_test_param tsx_test[MAX_TSX_TESTS];
 
 int tsx_basic_test(unsigned tid);
+int tsx_send_cb_terminate_test(unsigned tid);
 int tsx_uac_test(unsigned tid);
 int tsx_uas_test(unsigned tid);
 

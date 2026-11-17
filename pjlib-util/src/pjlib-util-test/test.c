@@ -94,6 +94,10 @@ static int test_inner(int argc, char *argv[])
 #endif
 #endif
 
+#if INCLUDE_DNS_PACKET_TEST
+    UT_ADD_TEST(&test_app.ut_app, dns_packet_test, 0);
+#endif
+
 #if INCLUDE_HTTP_CLIENT_TEST
     UT_ADD_TEST(&test_app.ut_app, http_client_test, 0);
 #endif

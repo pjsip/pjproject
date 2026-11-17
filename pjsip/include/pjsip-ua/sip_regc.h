@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -79,6 +79,12 @@ struct pjsip_regc_cbparam
     int                  contact_cnt;/**<Number of contacts in response.    */
     pjsip_contact_hdr   *contact[PJSIP_REGC_MAX_CONTACT]; /**< Contacts.    */
     pj_bool_t            is_unreg;  /**< Expire header, if any, set to zero?*/
+
+    /** CSeq of the request this result is for, or of the last request
+     *  sent if a refresh could not be sent. See
+     *  #pjsip_regc_destroy_if_latest() and #pjsip_regc_is_latest().
+     */
+    pj_int32_t           cseq;
 };
 
 
@@ -113,7 +119,7 @@ struct pjsip_regc_info
 {
     pj_str_t    server_uri; /**< Server URI,                                */
     pj_str_t    client_uri; /**< Client URI (From header).                  */
-    pj_bool_t   is_busy;    /**< Have pending transaction?                  */
+    pj_bool_t   is_busy;    /**< Have pending or reserved request?          */
     pj_bool_t   auto_reg;   /**< Will register automatically?               */
     unsigned    interval;   /**< Registration interval (seconds).           */
     unsigned    next_reg;   /**< Time until next registration (seconds).    */
@@ -163,12 +169,47 @@ PJ_DECL(pj_status_t) pjsip_regc_destroy(pjsip_regc *regc);
  *   pjsip_regc_destroye()).
  * - if force is PJ_FALSE, the function will return PJ_EBUSY
  *
+ * A request reserved with #pjsip_regc_reserve() counts as a transaction in
+ * progress.
+ *
  * @param regc      The client registration structure.
  * @param force     Specify if the function must destroy the structure.
  *
  * @return          PJ_SUCCESS on success, or PJ_EBUSY.
  */
 PJ_DECL(pj_status_t) pjsip_regc_destroy2(pjsip_regc *regc, pj_bool_t force);
+
+
+/**
+ * Destroy client registration structure as #pjsip_regc_destroy2() with
+ * force set to PJ_FALSE, unless the registration has sent a request since
+ * the one with the specified CSeq. Call it from the callback with the
+ * \a cseq field of #pjsip_regc_cbparam to end the registration on a
+ * failure: the check and the destroy are done at once, so a newer request,
+ * which reports its own result, keeps the registration.
+ *
+ * @param regc      The client registration structure.
+ * @param cseq      The \a cseq field of the callback parameter.
+ *
+ * @return          PJ_SUCCESS on success, or PJ_EBUSY if a request is in
+ *                  progress or reserved, or has been sent since.
+ */
+PJ_DECL(pj_status_t) pjsip_regc_destroy_if_latest(pjsip_regc *regc,
+                                                  pj_int32_t cseq);
+
+
+/**
+ * Check that the registration has not sent or reserved a request since the
+ * one with the specified CSeq, i.e. that a result with this CSeq is the
+ * latest one. Use #pjsip_regc_destroy_if_latest() instead to end the
+ * registration on the result.
+ *
+ * @param regc      The client registration structure.
+ * @param cseq      The \a cseq field of the callback parameter.
+ *
+ * @return          PJ_TRUE if no newer request has been sent or reserved.
+ */
+PJ_DECL(pj_bool_t) pjsip_regc_is_latest(pjsip_regc *regc, pj_int32_t cseq);
 
 
 /**
@@ -471,12 +512,57 @@ PJ_DECL(pj_status_t) pjsip_regc_update_expires( pjsip_regc *regc,
  * The process will complete asynchronously, and application
  * will be notified via the callback when the process completes.
  *
+ * If another request is reserved with #pjsip_regc_reserve(), PJSIP_EBUSY
+ * is returned. If the registration has been destroyed while a reference to
+ * it is held, only an un-REGISTER (Expires header of zero) is still sent;
+ * any other request is not sent and PJ_ECANCELLED is returned.
+ *
  * @param regc      The client registration structure.
  * @param tdata     Transmit data.
  *
  * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata);
+
+
+/**
+ * Reserve the client registration for the request \a tdata, so that
+ * \a tdata is the next request sent with #pjsip_regc_send(). Until it is
+ * sent, any other request, including the automatic refresh and a resend
+ * after a 423 response, is refused with PJSIP_EBUSY, as if a transaction
+ * were pending. The authentication of an earlier challenged request is
+ * dropped without calling the callback.
+ *
+ * This lets the caller claim the registration and update its own state in
+ * one hold of its own lock, and send after releasing that lock. The
+ * registration never holds its lock while calling the callbacks, so this
+ * function may be called with a lock that the callbacks also take.
+ *
+ * After a successful call, the caller must send \a tdata with
+ * #pjsip_regc_send(). The reservation ends when that call returns,
+ * whatever its result. If the registration is destroyed before that,
+ * \a tdata is still sent if it is an un-REGISTER (Expires header of zero),
+ * without calling the callback on its response. Otherwise it is not sent
+ * and #pjsip_regc_send() returns PJ_ECANCELLED. The reservation holds a
+ * reference to the registration and to \a tdata until then. If the send
+ * fails before a transaction is created, the failure is also reported to
+ * the callback, since the result of an earlier request may have been left
+ * to this one.
+ *
+ * @param regc      The client registration structure.
+ * @param tdata     The request created with #pjsip_regc_register(),
+ *                  #pjsip_regc_unregister() or
+ *                  #pjsip_regc_unregister_all(). If the function fails,
+ *                  the caller still owns it.
+ *
+ * @return          PJ_SUCCESS, PJSIP_EBUSY if a transaction is pending or
+ *                  another request is reserved, PJ_EINVALIDOP if the
+ *                  registration has been destroyed while the caller holds
+ *                  a reference to it (#pjsip_regc_add_ref()), or
+ *                  PJ_EINVAL.
+ */
+PJ_DECL(pj_status_t) pjsip_regc_reserve(pjsip_regc *regc,
+                                        pjsip_tx_data *tdata);
 
 
 /**
@@ -498,6 +584,15 @@ PJ_DECL(pj_status_t) pjsip_regc_set_auth_sess( pjsip_regc *regc,
 
 /**
  * Get the authentication session used by this client registration.
+ *
+ * When the application handles a challenge asynchronously, the
+ * authenticated request is not sent, and PJ_ECANCELLED is returned, if the
+ * registration has sent or reserved another request since the challenge,
+ * or has been destroyed and the request does not have an Expires header of
+ * zero. In that case, and when such a challenge is abandoned, the callback
+ * is not called: the newer request reports the result, or none after
+ * destroy. The built-in handling of a challenge drops such a request the
+ * same way.
  *
  * @param regc      The client registration structure.
  *

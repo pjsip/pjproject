@@ -3,8 +3,8 @@
 
 <!-- SIPp acts as UAC and sends an INVITE with a PCMU+H263-1998 SDP offer.
      alt_pjsua auto-answers 200 OK with its custom SDP. SIPp verifies the
-     200 OK body contains both audio and video codecs from the custom SDP,
-     sends ACK, waits briefly, then sends BYE. -->
+     200 OK accepts PCMU and rejects the video, since alt_pjsua runs without
+     video enabled, then sends ACK, waits briefly, and sends BYE. -->
 
 <scenario name="alt_pjsua UAS custom SDP: SIPp as UAC">
 
@@ -46,16 +46,15 @@ a=rtpmap:96 H263-1998/90000
     <action>
       <!-- Verify the 200 OK carries the custom SDP injected by alt_pjsua.
            Check codecs only (no IP/port) so the test is environment-independent.
-           search_in="msg" searches the entire SIP message. The condexec nop
-           avoids SIPp 3.7 exiting on "referenced 1 times" warning. -->
+           A rejected stream may omit its rtpmap (RFC 3264), so the video is
+           checked by its m= line. search_in="msg" searches the entire SIP
+           message. -->
       <ereg regexp="a=rtpmap:0 PCMU/8000" search_in="msg"
             check_it="true" assign_to="1"/>
-      <ereg regexp="a=rtpmap:96 H263-1998/90000" search_in="msg"
+      <ereg regexp="m=video 0 RTP/AVP 96" search_in="msg"
             check_it="true" assign_to="2"/>
     </action>
   </recv>
-  <nop condexec="1"></nop>
-  <nop condexec="2"></nop>
 
   <send>
     <![CDATA[
@@ -93,6 +92,9 @@ a=rtpmap:96 H263-1998/90000
 
   <recv response="200" crlf="true">
   </recv>
+
+  <!-- The variables only carry the checks above. -->
+  <Reference variables="1,2"/>
 
   <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>
   <CallLengthRepartition value="10, 50, 100, 500, 1000, 5000, 10000"/>
