@@ -54,11 +54,18 @@ elseif("@PJ_SRTP_WITH_OPENSSL@")
   set(_pj_openssl_components Crypto)
 endif()
 if(_pj_openssl_components)
-  # in pjproject's order: FindOpenSSL, then OpenSSL's own package; when
-  # neither finds it, find_dependency() reports it and stops here
+  # in pjproject's order: FindOpenSSL, then OpenSSL's own package. When
+  # neither finds it, say so as find_dependency() would, with how to point
+  # at it, rather than search again
   pj_find_openssl(COMPONENTS ${_pj_openssl_components} QUIET)
-  if(NOT OpenSSL_FOUND AND NOT OPENSSL_FOUND)
-    find_dependency(OpenSSL COMPONENTS ${_pj_openssl_components} CONFIG)
+  if(NOT OPENSSL_FOUND)
+    list(JOIN _pj_openssl_components " " _pj_components)
+    set(${CMAKE_FIND_PACKAGE_NAME}_FOUND FALSE)
+    string(CONCAT ${CMAKE_FIND_PACKAGE_NAME}_NOT_FOUND_MESSAGE
+      "${CMAKE_FIND_PACKAGE_NAME} could not be found because dependency "
+      "OpenSSL (${_pj_components}) could not be found. Give its location "
+      "with OPENSSL_ROOT_DIR.")
+    return()
   endif()
 endif()
 if(_pj_ssl_backend STREQUAL "gnutls")

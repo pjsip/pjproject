@@ -363,10 +363,14 @@ endfunction()
 # find_package(OpenSSL) in the one order every part of pjproject uses, so
 # that all of them link the same OpenSSL: CMake's FindOpenSSL, then
 # OpenSSL's own CMake package (e.g. given with OpenSSL_DIR). A macro, so
-# that the results are set where it is called.
+# that the results are set where it is called; OPENSSL_FOUND tells either
+# way.
 macro(pj_find_openssl)
   find_package(OpenSSL ${ARGN} MODULE)
   if(NOT OPENSSL_FOUND)
     find_package(OpenSSL ${ARGN} CONFIG)
+    # OpenSSL's package returns before setting OPENSSL_FOUND when its
+    # targets exist already, e.g. from a parent project's search
+    set(OPENSSL_FOUND "${OpenSSL_FOUND}")
   endif()
 endmacro()
