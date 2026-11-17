@@ -3,10 +3,12 @@
 # Recreates Pj::Dep::* targets that map to either bundled (exported in
 # PjTargets) or system (via find_dependency) third-party libraries.
 # Included by PjConfig.cmake inside its block(), which has put this folder's
-# Find modules on CMAKE_MODULE_PATH and drops the variables set here.
+# Find modules on CMAKE_MODULE_PATH and drops the variables set here. It
+# calls _pj_find_system_deps() before loading PjTargets, so that a missing
+# system library leaves no Pj:: target, and _pj_add_dep_targets() after.
+# Macros, so that find_dependency() returns from PjConfig.cmake.
 
 # Bundled dependencies: real targets are exported as Pj::<subdir> in PjTargets.
-# Create INTERFACE IMPORTED targets that forward to them.
 set(_pj_bundled_deps "@PJ_BUNDLED_DEPS_STR@")
 
 set(_pj_bundled_target_G7221      "Pj::g7221")
@@ -19,22 +21,7 @@ set(_pj_bundled_target_YUV        "Pj::yuv")
 set(_pj_bundled_target_WebRTC     "Pj::webrtc")
 set(_pj_bundled_target_WebRTC_AEC3 "Pj::webrtc_aec3")
 
-foreach(_dep IN LISTS _pj_bundled_deps)
-  if(NOT TARGET Pj::Dep::${_dep} AND DEFINED _pj_bundled_target_${_dep})
-    if(TARGET ${_pj_bundled_target_${_dep}})
-      add_library(Pj::Dep::${_dep} INTERFACE IMPORTED)
-      set_target_properties(Pj::Dep::${_dep} PROPERTIES
-        INTERFACE_LINK_LIBRARIES "${_pj_bundled_target_${_dep}}"
-      )
-    else()
-      message(WARNING "pjproject: bundled target ${_pj_bundled_target_${_dep}} "
-        "not found for Pj::Dep::${_dep}")
-    endif()
-  endif()
-endforeach()
-
-# System dependencies: locate via find_dependency, then create forwarding
-# targets.
+# System dependencies: located via find_dependency
 set(_pj_system_deps "@PJ_SYSTEM_DEPS_STR@")
 
 set(_pj_system_package_G7221    "G7221")
@@ -46,18 +33,42 @@ set(_pj_system_package_YUV      "YUV")
 set(_pj_system_package_WebRTC   "WebRTC")
 set(_pj_system_package_WebRTC_AEC3 "WebRTC_AEC3")
 
-foreach(_dep IN LISTS _pj_system_deps)
-  if(NOT TARGET Pj::Dep::${_dep} AND DEFINED _pj_system_package_${_dep})
-    find_dependency(${_pj_system_package_${_dep}})
-    set(_sys_target "${_pj_system_package_${_dep}}::${_pj_system_package_${_dep}}")
-    if(TARGET ${_sys_target})
-      add_library(Pj::Dep::${_dep} INTERFACE IMPORTED)
-      set_target_properties(Pj::Dep::${_dep} PROPERTIES
-        INTERFACE_LINK_LIBRARIES "${_sys_target}"
-      )
-    else()
-      message(WARNING "pjproject: system target ${_sys_target} "
-        "not found for Pj::Dep::${_dep}")
+macro(_pj_find_system_deps)
+  foreach(_dep IN LISTS _pj_system_deps)
+    if(NOT TARGET Pj::Dep::${_dep} AND DEFINED _pj_system_package_${_dep})
+      find_dependency(${_pj_system_package_${_dep}})
     endif()
-  endif()
-endforeach()
+  endforeach()
+endmacro()
+
+# INTERFACE IMPORTED targets that forward to the bundled or system ones
+macro(_pj_add_dep_targets)
+  foreach(_dep IN LISTS _pj_bundled_deps)
+    if(NOT TARGET Pj::Dep::${_dep} AND DEFINED _pj_bundled_target_${_dep})
+      if(TARGET ${_pj_bundled_target_${_dep}})
+        add_library(Pj::Dep::${_dep} INTERFACE IMPORTED)
+        set_target_properties(Pj::Dep::${_dep} PROPERTIES
+          INTERFACE_LINK_LIBRARIES "${_pj_bundled_target_${_dep}}"
+        )
+      else()
+        message(WARNING "pjproject: bundled target ${_pj_bundled_target_${_dep}} "
+          "not found for Pj::Dep::${_dep}")
+      endif()
+    endif()
+  endforeach()
+
+  foreach(_dep IN LISTS _pj_system_deps)
+    if(NOT TARGET Pj::Dep::${_dep} AND DEFINED _pj_system_package_${_dep})
+      set(_sys_target "${_pj_system_package_${_dep}}::${_pj_system_package_${_dep}}")
+      if(TARGET ${_sys_target})
+        add_library(Pj::Dep::${_dep} INTERFACE IMPORTED)
+        set_target_properties(Pj::Dep::${_dep} PROPERTIES
+          INTERFACE_LINK_LIBRARIES "${_sys_target}"
+        )
+      else()
+        message(WARNING "pjproject: system target ${_sys_target} "
+          "not found for Pj::Dep::${_dep}")
+      endif()
+    endif()
+  endforeach()
+endmacro()

@@ -9,6 +9,13 @@ if(CMAKE_VERSION VERSION_LESS 3.25)
   return()
 endif()
 
+# Found by an earlier call here: its targets are loaded. find_dependency()
+# would skip its searches then, but block() below drops what it keeps for it.
+# Pj::pjlib is in every build, and PjTargets creates all its targets or none.
+if(${CMAKE_FIND_PACKAGE_NAME}_FOUND AND TARGET Pj::pjlib)
+  return()
+endif()
+
 include(CMakeFindDependencyMacro)
 
 # Everything below in a variable scope of its own, so that the variables it
@@ -175,10 +182,15 @@ if(@PJ_APPLE@ AND @PJMEDIA_WITH_ILBC_CODEC@)
   find_dependency(AudioToolbox)
 endif()
 
+# System copies of libraries pjproject also bundles (PJ_DEP_<X>=system),
+# searched like the dependencies above before any Pj:: target is created
+include("${CMAKE_CURRENT_LIST_DIR}/PjDeps.cmake")
+_pj_find_system_deps()
+
 # Load exported targets
 include("${CMAKE_CURRENT_LIST_DIR}/@PJ_CMAKE_TARGETS_FILE@")
 
 # Recreate Pj::Dep::* alias targets for bundled/system dependencies
-include("${CMAKE_CURRENT_LIST_DIR}/PjDeps.cmake")
+_pj_add_dep_targets()
 
 endblock()
