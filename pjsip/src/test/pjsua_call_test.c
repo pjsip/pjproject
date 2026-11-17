@@ -7430,6 +7430,199 @@ on_return:
 }
 
 
+/* A call that ends while its re-INVITE waits for the STUN resolution
+ * (#5380). With no worker thread the wait polls the endpoint itself, so the
+ * BYE from the peer is handled inside the wait and resets the call. The
+ * re-INVITE must then fail with PJ_ECANCELLED instead of carrying on with
+ * call->inv NULL.
+ */
+static struct {
+    pjsua_call_id   caller;
+    pjsua_call_id   callee;
+    pj_bool_t       stun_cancelled;
+} g_stun_wait;
+
+static pj_bool_t stun_sessions_gone(pjsua_call_id call_id)
+{
+    PJ_UNUSED_ARG(call_id);
+    return pj_list_empty(&pjsua_var.stun_res);
+}
+
+static void stun_wait_cancel_cb(void *user_data)
+{
+    PJ_UNUSED_ARG(user_data);
+
+    /* End the wait only after the BYE has reset the caller */
+    if (pjsua_var.calls[g_stun_wait.caller].inv != NULL) {
+        pjsua_schedule_timer2(&stun_wait_cancel_cb, NULL, TEST_POLL_MSEC);
+        return;
+    }
+    pjsua_cancel_stun_resolution(NULL, PJ_TRUE);
+    g_stun_wait.stun_cancelled = PJ_TRUE;
+}
+
+static void stun_wait_hangup_cb(void *user_data)
+{
+    PJ_UNUSED_ARG(user_data);
+    pjsua_call_hangup(g_stun_wait.callee, 0, NULL, NULL);
+    pjsua_schedule_timer2(&stun_wait_cancel_cb, NULL, TEST_POLL_MSEC);
+}
+
+static int test_stun_wait_remote_bye(pj_bool_t restart, pj_bool_t ice,
+                                     int err_base)
+{
+    pjsua_call_setting opt;
+    pj_pool_t *pool = NULL;
+    pjsua_acc_config acc_cfg;
+    pj_bool_t acc_modified = PJ_FALSE;
+    pjsua_ice_config_use saved_ice_cfg_use = PJSUA_ICE_CONFIG_USE_DEFAULT;
+    pj_bool_t saved_enable_ice = PJ_FALSE;
+    pj_bool_t saved_ignore_failure = pjsua_var.ua_cfg.stun_ignore_failure;
+    pj_sock_t sock = PJ_INVALID_SOCKET;
+    pj_sockaddr_in addr;
+    int addr_len = sizeof(addr);
+    char srv_buf[32];
+    pj_str_t srv;
+    pj_status_t status;
+    int rc;
+
+    PJ_LOG(3, (THIS_FILE, "  remote BYE during the STUN wait of a re-INVITE "
+               "(%s resolution%s)", restart ? "restarted" : "pending",
+               ice ? ", ICE" : ""));
+
+    rc = establish_self_call(&g_stun_wait.caller, &g_stun_wait.callee,
+                             err_base);
+    if (rc != 0)
+        goto on_return;
+
+    /* With a fatal STUN failure the media creation fails on its own after
+     * the wait, and the re-INVITE never reaches the reset call.
+     */
+    pjsua_var.ua_cfg.stun_ignore_failure = PJ_TRUE;
+
+    /* A STUN server that never answers */
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &sock);
+    if (status != PJ_SUCCESS) {
+        rc = err_base - 10;
+        goto on_return;
+    }
+    pj_sockaddr_in_init(&addr, NULL, 0);
+    addr.sin_addr.s_addr = pj_htonl(0x7f000001);
+    if (pj_sock_bind(sock, &addr, sizeof(addr)) != PJ_SUCCESS ||
+        pj_sock_getsockname(sock, &addr, &addr_len) != PJ_SUCCESS)
+    {
+        rc = err_base - 11;
+        goto on_return;
+    }
+    pj_ansi_snprintf(srv_buf, sizeof(srv_buf), "127.0.0.1:%u",
+                     pj_ntohs(addr.sin_port));
+    srv = pj_str(srv_buf);
+
+    status = pjsua_update_stun_servers(1, &srv, PJ_FALSE);
+    if (status != PJ_SUCCESS) {
+        rc = err_base - 12;
+        goto on_return;
+    }
+
+    if (ice) {
+        /* The re-INVITE creates ICE transports, which wait for the STUN
+         * resolution in create_ice_media_transport().
+         */
+        pool = pjsua_pool_create("stunwait", 512, 512);
+        if (!pool) {
+            rc = err_base - 19;
+            goto on_return;
+        }
+        status = pjsua_acc_get_config(g_ctx.acc_id, pool, &acc_cfg);
+        if (status != PJ_SUCCESS) {
+            rc = err_base - 17;
+            goto on_return;
+        }
+        saved_ice_cfg_use = acc_cfg.ice_cfg_use;
+        saved_enable_ice = acc_cfg.ice_cfg.enable_ice;
+        acc_cfg.ice_cfg_use = PJSUA_ICE_CONFIG_USE_CUSTOM;
+        acc_cfg.ice_cfg.enable_ice = PJ_TRUE;
+        status = pjsua_acc_modify(g_ctx.acc_id, &acc_cfg);
+        if (status != PJ_SUCCESS) {
+            rc = err_base - 18;
+            goto on_return;
+        }
+        acc_modified = PJ_TRUE;
+    }
+
+    if (restart) {
+        /* Fail it first, so that the media creation restarts the resolution
+         * (PJSUA_STUN_RETRY_ON_FAILURE) and waits in
+         * pjsua_resolve_stun_servers().
+         */
+        pjsua_cancel_stun_resolution(NULL, PJ_TRUE);
+        if (pjsua_var.stun_status == PJ_EPENDING ||
+            pjsua_var.stun_status == PJ_SUCCESS)
+        {
+            rc = err_base - 13;
+            goto on_return;
+        }
+    }
+
+    g_stun_wait.stun_cancelled = PJ_FALSE;
+    status = pjsua_schedule_timer2(&stun_wait_hangup_cb, NULL,
+                                   TEST_POLL_MSEC);
+    if (status != PJ_SUCCESS) {
+        rc = err_base - 20;
+        goto on_return;
+    }
+
+    pjsua_call_setting_default(&opt);
+    opt.aud_cnt = 1;
+    opt.vid_cnt = 0;
+    opt.txt_cnt = 0;
+    opt.flag = PJSUA_CALL_REINIT_MEDIA;
+    status = pjsua_call_reinvite2(g_stun_wait.caller, &opt, NULL);
+
+    if (!g_stun_wait.stun_cancelled) {
+        PJ_LOG(1, (THIS_FILE, "    the BYE was not handled during the wait"));
+        rc = err_base - 14;
+        goto on_return;
+    }
+    if (status != PJ_ECANCELLED) {
+        PJ_LOG(1, (THIS_FILE, "    re-INVITE expected PJ_ECANCELLED, got %d",
+                   status));
+        rc = err_base - 15;
+        goto on_return;
+    }
+
+on_return:
+    /* A cancelled resolution keeps its STUN socket until the request times
+     * out, and destroying it then would end the next variant's wait.
+     */
+    pjsua_cancel_stun_resolution(NULL, PJ_TRUE);
+    if (!wait_until(&stun_sessions_gone, PJSUA_INVALID_ID,
+                    3 * TEST_TIMEOUT_MSEC) && rc == 0)
+    {
+        rc = err_base - 22;
+    }
+    /* The API can't clear the STUN servers */
+    pjsua_var.ua_cfg.stun_srv_cnt = 0;
+    pjsua_var.stun_status = PJ_SUCCESS;
+    pjsua_var.ua_cfg.stun_ignore_failure = saved_ignore_failure;
+    if (sock != PJ_INVALID_SOCKET)
+        pj_sock_close(sock);
+    drain_all_calls();
+    if (acc_modified) {
+        acc_cfg.ice_cfg_use = saved_ice_cfg_use;
+        acc_cfg.ice_cfg.enable_ice = saved_enable_ice;
+        if (pjsua_acc_modify(g_ctx.acc_id, &acc_cfg) != PJ_SUCCESS && rc == 0)
+            rc = err_base - 21;
+    }
+    if (pool)
+        pj_pool_release(pool);
+    if (rc == 0 && pjsua_call_get_count() != 0) {
+        PJ_LOG(1, (THIS_FILE, "    %u calls left", pjsua_call_get_count()));
+        rc = err_base - 16;
+    }
+    return rc;
+}
+
 int pjsua_call_test(void)
 {
     extern pjsip_endpoint *endpt;       /* test framework endpoint */
@@ -7675,6 +7868,15 @@ int pjsua_call_test(void)
     if (rc != 0) goto on_return;
 
     rc = test_final_answer_in_early_callback();
+    if (rc != 0) goto on_return;
+
+    rc = test_stun_wait_remote_bye(PJ_FALSE, PJ_FALSE, -9000);
+    if (rc != 0) goto on_return;
+
+    rc = test_stun_wait_remote_bye(PJ_TRUE, PJ_FALSE, -9100);
+    if (rc != 0) goto on_return;
+
+    rc = test_stun_wait_remote_bye(PJ_FALSE, PJ_TRUE, -9200);
     if (rc != 0) goto on_return;
 
 on_return:

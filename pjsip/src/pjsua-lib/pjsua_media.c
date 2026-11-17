@@ -415,6 +415,31 @@ static int get_media_ip_version(pjsua_call_media *call_med,
     return 4;
 }
 
+/* Has the call ended, or been reset, while its media transport was being
+ * created? Waiting for STUN may poll the endpoint, which can process a BYE
+ * or a hangup for this call.
+ */
+static pj_bool_t call_wait_cancelled(const pjsua_call *call)
+{
+    pj_bool_t cancelled;
+
+    if (!call->inv) {
+        cancelled = (call->async_call.dlg == NULL);
+    } else if (call->inv->state == PJSIP_INV_STATE_NULL) {
+        /* Hangup of an incoming call is deferred until media is ready */
+        cancelled = PJ_FALSE;
+    } else {
+        cancelled = call->hanging_up ||
+                    call->inv->state == PJSIP_INV_STATE_DISCONNECTED;
+    }
+
+    if (cancelled) {
+        PJ_LOG(5,(THIS_FILE, "Media transport creation cancelled because "
+                             "call %d has been disconnected", call->index));
+    }
+    return cancelled;
+}
+
 /*
  * Create RTP and RTCP socket pair, and possibly resolve their public
  * address via STUN/UPnP.
@@ -450,6 +475,8 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
                                 PJSUA_STUN_RETRY_ON_FAILURE;
         status = resolve_stun_server(PJ_TRUE, retry_stun,
                                      (unsigned)acc->cfg.nat64_opt);
+        if (call_wait_cancelled(call_med->call))
+            return PJ_ECANCELLED;
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
             return status;
@@ -640,6 +667,10 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
                 status=pjsua_update_stun_servers(pjsua_var.ua_cfg.stun_srv_cnt,
                                                  pjsua_var.ua_cfg.stun_srv,
                                                  PJ_TRUE);
+                if (call_wait_cancelled(call_med->call)) {
+                    status = PJ_ECANCELLED;
+                    goto on_error;
+                }
                 if (status == PJ_SUCCESS) {
                     if (pjsua_var.stun_srv.addr.sa_family != 0) {
                         pj_sockaddr_print(&pjsua_var.stun_srv,
@@ -1168,6 +1199,8 @@ static pj_status_t create_ice_media_transport(
                                 PJSUA_STUN_RETRY_ON_FAILURE;
         status = resolve_stun_server(PJ_TRUE, retry_stun,
                                      (unsigned)acc_cfg->nat64_opt);
+        if (call_wait_cancelled(call_med->call))
+            return PJ_ECANCELLED;
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
             return status;
