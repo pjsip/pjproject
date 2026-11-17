@@ -46,6 +46,9 @@
 
 static long ack_callback_inv_tls = -1;
 
+/* Set while this thread handles pjsua's events or transport callback */
+static long in_events_tls = -1;
+
 /*
  * The INFO method.
  */
@@ -189,6 +192,9 @@ static pj_status_t call_inv_end_session(pjsua_call *call,
 static void reset_call(pjsua_call_id id)
 {
     pjsua_call *call = &pjsua_var.calls[id];
+    unsigned med_init_cnt;
+    pj_bool_t med_wait;
+    pj_pool_t *hangup_req_pool;
     unsigned i;
 
     if (call->incoming_data) {
@@ -198,8 +204,16 @@ static void reset_call(pjsua_call_id id)
 
     /* A deleted owner may be releasing the call at the same time */
     pj_mutex_lock(pjsua_var.call_owner_mutex);
+    /* A media init still running owns the slot. A deferred hangup is
+     * dropped: its timer finds nothing pending.
+     */
+    med_init_cnt = call->med_init_cnt;
+    med_wait = call->med_wait;
+    hangup_req_pool = call->hangup_req.pool;
     pj_bzero(call, sizeof(*call));
     call->index = id;
+    call->med_init_cnt = med_init_cnt;
+    call->med_wait = med_wait;
     call->last_text.ptr = call->last_text_buf_;
     call->cname.ptr = call->cname_buf;
     call->cname.slen = sizeof(call->cname_buf);
@@ -222,6 +236,77 @@ static void reset_call(pjsua_call_id id)
     pj_bzero(&call->trickle_ice, sizeof(call->trickle_ice));
     pj_timer_entry_init(&call->trickle_ice.timer, 0, call,
                         &trickle_ice_send_sip_info);
+    pj_mutex_unlock(pjsua_var.call_owner_mutex);
+
+    if (hangup_req_pool)
+        pj_pool_release(hangup_req_pool);
+}
+
+/* pjsua_media_init_cancelled() under call_owner_mutex: a hangup may set
+ * the call's hangup_req meanwhile
+ */
+static pj_bool_t call_media_init_cancelled(const pjsua_call *call)
+{
+    pj_bool_t cancelled;
+
+    pj_mutex_lock(pjsua_var.call_owner_mutex);
+    cancelled = pjsua_media_init_cancelled(call);
+    pj_mutex_unlock(pjsua_var.call_owner_mutex);
+    return cancelled;
+}
+
+/* Mark this thread as handling pjsua's events, its transport state
+ * callback or a call state callback, where a callback may hold a dialog
+ * or the transport manager: make call's wait mustn't release its locks
+ * then. Returns the previous mark, to be restored afterwards.
+ */
+pj_bool_t pjsua_call_set_in_events(pj_bool_t in_events)
+{
+    pj_bool_t prev;
+
+    if (in_events_tls == -1)
+        return PJ_FALSE;
+    prev = pj_thread_local_get(in_events_tls) != NULL;
+    pj_thread_local_set(in_events_tls, in_events? (void*)&pjsua_var : NULL);
+    return prev;
+}
+
+pj_bool_t pjsua_call_in_events(void)
+{
+    return in_events_tls != -1 && pj_thread_local_get(in_events_tls) != NULL;
+}
+
+/* Report the call state with the mark set: the callback may also run on an
+ * app thread, e.g. from pjsua_call_hangup(), with a dialog held.
+ */
+static void call_report_state(pjsua_call_id call_id, pjsip_event *e)
+{
+    pj_bool_t prev_mark = pjsua_call_set_in_events(PJ_TRUE);
+
+    (*pjsua_var.ua_cfg.cb.on_call_state)(call_id, e);
+    pjsua_call_set_in_events(prev_mark);
+}
+
+/* Bracket a media init that may wait for STUN (#5380): the slot stays
+ * reserved and pjsua_destroy() waits for it. Called with the dialog held,
+ * so it uses the leaf call_owner_mutex.
+ */
+void pjsua_call_med_init_begin(pjsua_call *call)
+{
+    pj_mutex_lock(pjsua_var.call_owner_mutex);
+    ++call->med_init_cnt;
+    ++pjsua_var.med_init_cnt;
+    pj_mutex_unlock(pjsua_var.call_owner_mutex);
+}
+
+void pjsua_call_med_init_end(pjsua_call *call)
+{
+    pj_mutex_lock(pjsua_var.call_owner_mutex);
+    pj_assert(call->med_init_cnt > 0 && pjsua_var.med_init_cnt > 0);
+    if (call->med_init_cnt > 0)
+        --call->med_init_cnt;
+    if (pjsua_var.med_init_cnt > 0)
+        --pjsua_var.med_init_cnt;
     pj_mutex_unlock(pjsua_var.call_owner_mutex);
 }
 
@@ -256,6 +341,10 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
         if (status != PJ_SUCCESS)
             return status;
     }
+
+    status = pj_thread_local_alloc(&in_events_tls);
+    if (status != PJ_SUCCESS)
+        return status;
 
     /* Verify settings */
     if (pjsua_var.ua_cfg.max_calls > PJSUA_MAX_CALLS) 
@@ -339,6 +428,10 @@ pj_status_t pjsua_call_subsys_start(void)
 /* Destroy call subsystem resources. */
 void pjsua_call_subsys_destroy(void)
 {
+    if (in_events_tls != -1) {
+        pj_thread_local_free(in_events_tls);
+        in_events_tls = -1;
+    }
     if (ack_callback_inv_tls != -1) {
         pj_thread_local_free(ack_callback_inv_tls);
         ack_callback_inv_tls = -1;
@@ -391,6 +484,13 @@ PJ_DEF(pj_status_t) pjsua_enum_calls( pjsua_call_id ids[],
 }
 
 
+/* A media init still running keeps the slot reserved */
+static pj_bool_t call_slot_is_free(const pjsua_call *call)
+{
+    return call->inv == NULL && call->async_call.dlg == NULL &&
+           call->med_init_cnt == 0;
+}
+
 /* Allocate one call id */
 static pjsua_call_id alloc_call_id(void)
 {
@@ -408,18 +508,14 @@ static pjsua_call_id alloc_call_id(void)
          cid<(int)pjsua_var.ua_cfg.max_calls;
          ++cid)
     {
-        if (pjsua_var.calls[cid].inv == NULL &&
-            pjsua_var.calls[cid].async_call.dlg == NULL)
-        {
+        if (call_slot_is_free(&pjsua_var.calls[cid])) {
             ++pjsua_var.next_call_id;
             return cid;
         }
     }
 
     for (cid=0; cid < pjsua_var.next_call_id; ++cid) {
-        if (pjsua_var.calls[cid].inv == NULL &&
-            pjsua_var.calls[cid].async_call.dlg == NULL)
-        {
+        if (call_slot_is_free(&pjsua_var.calls[cid])) {
             ++pjsua_var.next_call_id;
             return cid;
         }
@@ -683,7 +779,7 @@ on_error:
         pjsip_event user_event;
         PJSIP_EVENT_INIT_USER(user_event, 0, 0, 0, 0);
 
-        (*pjsua_var.ua_cfg.cb.on_call_state)(call_id, &user_event);
+        call_report_state(call_id, &user_event);
     }
 
     /* This may destroy the dialog */
@@ -896,6 +992,7 @@ static pj_status_t apply_call_setting(pjsua_call *call,
 {
     pjsua_call_setting prev_opt;
     pj_bool_t media_app_managed;
+    pj_status_t status;
 
     pj_assert(call);
 
@@ -943,9 +1040,19 @@ static pj_status_t apply_call_setting(pjsua_call *call,
     pj_assert(call->opt.vid_cnt == 0);
 #endif
 
+    /* The deinit below may also wait (video) */
+    pjsua_call_med_init_begin(call);
+
     if (call->opt.flag & PJSUA_CALL_REINIT_MEDIA) {
+        pj_bool_t had_inv = (call->inv != NULL);
+
         PJ_LOG(4, (THIS_FILE, "PJSUA_CALL_REINIT_MEDIA"));
         pjsua_media_channel_deinit(call->index);
+        if (had_inv && !call->inv) {
+            /* The call ended meanwhile */
+            status = PJ_ECANCELLED;
+            goto on_return;
+        }
     }
 
     /* If call is established or media channel hasn't been initialized,
@@ -958,7 +1065,6 @@ static pj_status_t apply_call_setting(pjsua_call *call,
          (call->opt.flag & PJSUA_CALL_REINIT_MEDIA)))
     {
         pjsip_role_e role = rem_sdp? PJSIP_ROLE_UAS : PJSIP_ROLE_UAC;
-        pj_status_t status;
 
         status = pjsua_media_channel_init(call->index, role,
                                           call->secure_level,
@@ -966,14 +1072,24 @@ static pj_status_t apply_call_setting(pjsua_call *call,
                                           rem_sdp, NULL,
                                           PJ_FALSE, NULL);
         if (status != PJ_SUCCESS) {
-            pjsua_perror(THIS_FILE, "Error re-initializing media channel",
-                         status);
-            call->opt = prev_opt;
-            return status;
+            /* The call ended meanwhile, already logged; the slot may be
+             * reset, don't restore its setting.
+             */
+            if (status != PJ_ECANCELLED ||
+                !call_media_init_cancelled(call))
+            {
+                pjsua_perror(THIS_FILE, "Error re-initializing media channel",
+                             status);
+                call->opt = prev_opt;
+            }
+            goto on_return;
         }
     }
+    status = PJ_SUCCESS;
 
-    return PJ_SUCCESS;
+on_return:
+    pjsua_call_med_init_end(call);
+    return status;
 }
 
 static void dlg_set_via(pjsip_dialog *dlg, pjsua_acc *acc)
@@ -1115,6 +1231,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call2(
     int call_id = -1;
     pj_str_t contact;
     pj_bool_t media_app_managed;
+    pj_bool_t outer_lock, med_bracket = PJ_FALSE;
     pj_status_t status;
 
     /* Check that account is valid */
@@ -1129,6 +1246,8 @@ PJ_DEF(pj_status_t) pjsua_call_make_call2(
 
     pj_log_push_indent();
 
+    /* Only a lock of its own may be released while it waits for STUN */
+    outer_lock = PJSUA_LOCK_IS_LOCKED();
     PJSUA_LOCK();
 
     acc = &pjsua_var.acc[acc_id];
@@ -1348,11 +1467,21 @@ PJ_DEF(pj_status_t) pjsua_call_make_call2(
     if ((call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0 &&
         !(sdp && (call->opt.flag & PJSUA_CALL_MEDIA_APP_MANAGED)))
     {
-        /* Init media channel */
+        /* Init media channel. If its wait may release the lock,
+         * pjsua_destroy() waits until make call has cleaned up.
+         */
+        call->med_unlock_pjsua = !outer_lock;
+        if (!outer_lock && !pjsua_call_in_events()) {
+            pjsua_call_med_init_begin(call);
+            med_bracket = PJ_TRUE;
+        }
+        call->med_acc_gen = acc->gen;
+        call->med_acc_ip_change = acc->ip_change_cnt;
         status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC,
                                           call->secure_level, dlg->pool,
                                           NULL, NULL, PJ_TRUE,
                                           &on_make_call_med_tp_complete);
+        call->med_unlock_pjsua = PJ_FALSE;
     }
     if (status == PJ_SUCCESS) {
         status = on_make_call_med_tp_complete(call->index, NULL);
@@ -1372,6 +1501,8 @@ PJ_DEF(pj_status_t) pjsua_call_make_call2(
     pjsip_dlg_dec_lock(dlg);
     pj_pool_release(tmp_pool);
     PJSUA_UNLOCK();
+    if (med_bracket)
+        pjsua_call_med_init_end(call);
 
     pj_log_pop_indent();
 
@@ -1395,6 +1526,8 @@ on_error:
     if (tmp_pool)
         pj_pool_release(tmp_pool);
     PJSUA_UNLOCK();
+    if (med_bracket)
+        pjsua_call_med_init_end(call);
 
     pj_log_pop_indent();
     return status;
@@ -4002,6 +4135,220 @@ static pj_status_t try_acquire_call(pjsua_call_id call_id,
     return PJ_SUCCESS;
 }
 
+/* How often a deferred hangup tries to lock its call */
+#define HANGUP_REQ_INTERVAL     50
+
+static pj_status_t call_hangup(pjsua_call_id call_id,
+                               unsigned code,
+                               const pj_str_t *reason,
+                               const pjsua_msg_data *msg_data,
+                               pj_bool_t released,
+                               pj_bool_t no_wait,
+                               pjsip_dialog *locked_dlg);
+
+/* The call's dialog, also while it creates its media before the INVITE */
+static const pjsip_dialog *call_cur_dlg(const pjsua_call *call)
+{
+    return call->inv ? call->inv->dlg : call->async_call.dlg;
+}
+
+/* Hang up a call whose hangup was deferred, once its media init has
+ * returned and the call can be locked
+ */
+static void hangup_req_timer_cb(void *user_data)
+{
+    pjsua_call_id call_id = (pjsua_call_id)(pj_ssize_t)user_data;
+    pjsua_call *call = &pjsua_var.calls[call_id];
+    struct pjsua_call_hangup_req req;
+    pjsua_call *locked_call;
+    pjsip_dialog *dlg;
+    pj_bool_t pending, busy;
+    pj_status_t status;
+
+    pj_mutex_lock(pjsua_var.call_owner_mutex);
+    pending = call->hangup_req.pending;
+    busy = call->med_init_cnt > 0;
+    pj_mutex_unlock(pjsua_var.call_owner_mutex);
+    if (!pending)
+        return;
+
+    if (busy || try_acquire_call(call_id, &locked_call, &dlg) != PJ_SUCCESS) {
+        status = pjsua_schedule_timer2(&hangup_req_timer_cb, user_data,
+                                       HANGUP_REQ_INTERVAL);
+        if (status != PJ_SUCCESS) {
+            /* Drop it, so that the call isn't left half hung up */
+            PJ_PERROR(1,(THIS_FILE, status, "Deferred hangup of call %d "
+                         "lost", call_id));
+            pj_mutex_lock(pjsua_var.call_owner_mutex);
+            req = call->hangup_req;
+            pj_bzero(&call->hangup_req, sizeof(call->hangup_req));
+            pj_mutex_unlock(pjsua_var.call_owner_mutex);
+            if (req.pool)
+                pj_pool_release(req.pool);
+        }
+        return;
+    }
+
+    /* With the dialog held the call can't be reset; a reset before
+     * dropped the request, so a request now is this call's
+     */
+    pj_mutex_lock(pjsua_var.call_owner_mutex);
+    req = call->hangup_req;
+    pj_bzero(&call->hangup_req, sizeof(call->hangup_req));
+    pj_mutex_unlock(pjsua_var.call_owner_mutex);
+    if (!req.pending) {
+        pjsip_dlg_dec_lock(dlg);
+        return;
+    }
+
+    status = call_hangup(call_id, req.code,
+                         req.reason.ptr ? &req.reason : NULL, req.msg_data,
+                         req.released, PJ_FALSE, dlg);
+    if (status != PJ_SUCCESS)
+        PJ_PERROR(1,(THIS_FILE, status, "Deferred hangup of call %d failed",
+                     call_id));
+    pj_pool_release(req.pool);
+}
+
+/* Record a hangup that couldn't lock its call in time because a media init
+ * waits for STUN (#5380): of this call, or of another one whose lock the
+ * waiter's caller holds (the IP change loop). A timer hangs the call up
+ * once it can.
+ */
+static pj_status_t call_defer_hangup(pjsua_call *call, unsigned code,
+                                     const pj_str_t *reason,
+                                     const pjsua_msg_data *msg_data,
+                                     pj_bool_t released,
+                                     const pjsip_dialog *dlg)
+{
+    pj_pool_t *pool;
+    pj_str_t reason_copy;
+    pjsua_msg_data *msg_data_copy = NULL;
+    pj_bool_t pending;
+    pj_status_t status;
+
+    pool = pjsua_pool_create("hangupreq%p", 512, 512);
+    if (!pool)
+        return PJ_ENOMEM;
+    pj_bzero(&reason_copy, sizeof(reason_copy));
+    if (reason)
+        pj_strdup(pool, &reason_copy, reason);
+    if (msg_data)
+        msg_data_copy = pjsua_msg_data_clone(pool, msg_data);
+
+    pj_mutex_lock(pjsua_var.call_owner_mutex);
+    if (call_cur_dlg(call) != dlg) {
+        /* Reset meanwhile, maybe given to a new call */
+        pj_mutex_unlock(pjsua_var.call_owner_mutex);
+        pj_pool_release(pool);
+        return PJSIP_ESESSIONTERMINATED;
+    }
+    pending = call->hangup_req.pending;
+    if (!pending) {
+        call->hangup_req.pending = PJ_TRUE;
+        call->hangup_req.released = released;
+        call->hangup_req.code = code;
+        call->hangup_req.reason = reason_copy;
+        call->hangup_req.msg_data = msg_data_copy;
+        call->hangup_req.pool = pool;
+        pool = NULL;
+    }
+    pj_mutex_unlock(pjsua_var.call_owner_mutex);
+    if (pool) {
+        /* Already deferred */
+        pj_pool_release(pool);
+        return PJ_SUCCESS;
+    }
+
+    status = pjsua_schedule_timer2(&hangup_req_timer_cb,
+                                   (void*)(pj_ssize_t)call->index,
+                                   HANGUP_REQ_INTERVAL);
+    if (status != PJ_SUCCESS) {
+        pj_mutex_lock(pjsua_var.call_owner_mutex);
+        if (call->hangup_req.pending) {
+            pool = call->hangup_req.pool;
+            call->hangup_req.pending = PJ_FALSE;
+            call->hangup_req.pool = NULL;
+        }
+        pj_mutex_unlock(pjsua_var.call_owner_mutex);
+        if (pool)
+            pj_pool_release(pool);
+        return status;
+    }
+
+    PJ_LOG(4,(THIS_FILE, "Call %d hangup deferred until it can be locked",
+              call->index));
+    return PJ_SUCCESS;
+}
+
+/* Lock the call to hang it up. A STUN wait of the call holds its dialog:
+ * ask it to end, then wait as acquire_call() does. If the call is still
+ * locked once that time is up and a media init waits for STUN, defer the
+ * hangup (PJ_EPENDING) instead of failing.
+ */
+static pj_status_t acquire_call_to_hangup(pjsua_call_id call_id,
+                                          unsigned code,
+                                          const pj_str_t *reason,
+                                          const pjsua_msg_data *msg_data,
+                                          pj_bool_t released,
+                                          pj_bool_t no_wait,
+                                          pjsua_call **p_call,
+                                          pjsip_dialog **p_dlg)
+{
+    pjsua_call *call = &pjsua_var.calls[call_id];
+    const pjsip_dialog *dlg = NULL, *cur_dlg;
+    pj_time_val start, now;
+    pj_bool_t waiting;
+    unsigned retry;
+    pj_status_t status;
+
+    pj_gettickcount(&start);
+    for (retry = 0; ; ++retry) {
+        status = try_acquire_call(call_id, p_call, p_dlg);
+        if (status != PJ_ETIMEDOUT)
+            return status;
+
+        /* The call this hangup is for: the slot may be reset meanwhile.
+         * A call still creating its media has only the async dialog.
+         */
+        pj_mutex_lock(pjsua_var.call_owner_mutex);
+        cur_dlg = call_cur_dlg(call);
+        if (!dlg)
+            dlg = cur_dlg;
+        if (call->med_wait && cur_dlg && cur_dlg == dlg)
+            call->hangup_req.stop = PJ_TRUE;
+        waiting = cur_dlg && cur_dlg == dlg &&
+                  (call->hangup_req.stop || pjsua_var.med_wait_cnt > 0);
+        pj_mutex_unlock(pjsua_var.call_owner_mutex);
+
+        pj_gettickcount(&now);
+        PJ_TIME_VAL_SUB(now, start);
+        if (no_wait || PJ_TIME_VAL_MSEC(now) >= PJSUA_ACQUIRE_CALL_TIMEOUT) {
+            if (!waiting)
+                break;
+            status = call_defer_hangup(call, code, reason, msg_data,
+                                       released, dlg);
+            if (status == PJ_SUCCESS)
+                return PJ_EPENDING;
+
+            /* Not deferred: don't leave the call's media inits cancelled */
+            pj_mutex_lock(pjsua_var.call_owner_mutex);
+            if (call_cur_dlg(call) == dlg)
+                call->hangup_req.stop = PJ_FALSE;
+            pj_mutex_unlock(pjsua_var.call_owner_mutex);
+            return status;
+        }
+        pj_thread_sleep(retry/10);
+    }
+
+    if (!no_wait) {
+        PJ_LOG(1,(THIS_FILE, "Timed-out trying to acquire call %d "
+                             "(possibly system has deadlocked) in "
+                             "pjsua_call_hangup()", call_id));
+    }
+    return PJ_ETIMEDOUT;
+}
+
 /*
  * Hangup call by using method that is appropriate according to the
  * call state. With released set, only a call whose owner has released it.
@@ -4011,7 +4358,8 @@ static pj_status_t call_hangup(pjsua_call_id call_id,
                                const pj_str_t *reason,
                                const pjsua_msg_data *msg_data,
                                pj_bool_t released,
-                               pj_bool_t no_wait)
+                               pj_bool_t no_wait,
+                               pjsip_dialog *locked_dlg)
 {
     pjsua_call *call;
     pjsip_dialog *dlg = NULL;
@@ -4029,12 +4377,26 @@ static pj_status_t call_hangup(pjsua_call_id call_id,
         PJ_LOG(4,(THIS_FILE, "Call %d hanging up: code=%d..", call_id, code));
     pj_log_push_indent();
 
-    if (no_wait)
-        status = try_acquire_call(call_id, &call, &dlg);
-    else
-        status = acquire_call("pjsua_call_hangup()", call_id, &call, &dlg);
-    if (status != PJ_SUCCESS)
-        goto on_return;
+    if (locked_dlg) {
+        /* From the deferred hangup, which holds the dialog */
+        call = &pjsua_var.calls[call_id];
+        dlg = locked_dlg;
+        status = PJ_SUCCESS;
+    } else {
+        status = acquire_call_to_hangup(call_id, code, reason, msg_data,
+                                        released, no_wait, &call, &dlg);
+        if (status == PJ_EPENDING) {
+            status = PJ_SUCCESS;
+            goto on_return;
+        }
+        if (status != PJ_SUCCESS)
+            goto on_return;
+    }
+
+    /* The media init the hangup asked to end has returned */
+    pj_mutex_lock(pjsua_var.call_owner_mutex);
+    call->hangup_req.stop = PJ_FALSE;
+    pj_mutex_unlock(pjsua_var.call_owner_mutex);
 
     /* The slot can't be given to another call while the dialog is held,
      * and a new call doesn't have the flag.
@@ -4115,8 +4477,7 @@ static pj_status_t call_hangup(pjsua_call_id call_id,
          */
         PJSIP_EVENT_INIT_USER(user_event, 0, 0, 0, 0);
         if (pjsua_var.ua_cfg.cb.on_call_state) {
-            (*pjsua_var.ua_cfg.cb.on_call_state)(call->index,
-                                                 &user_event);
+            call_report_state(call->index, &user_event);
         }
 
         if (call->inv && !delay_hangup) {
@@ -4143,7 +4504,8 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
                                       const pj_str_t *reason,
                                       const pjsua_msg_data *msg_data)
 {
-    return call_hangup(call_id, code, reason, msg_data, PJ_FALSE, PJ_FALSE);
+    return call_hangup(call_id, code, reason, msg_data, PJ_FALSE, PJ_FALSE,
+                       NULL);
 }
 
 
@@ -4175,7 +4537,7 @@ static pj_status_t hangup_released_call(pjsua_call_id call_id,
     pj_bool_t retry;
     pj_status_t status;
 
-    status = call_hangup(call_id, 0, NULL, NULL, PJ_TRUE, no_wait);
+    status = call_hangup(call_id, 0, NULL, NULL, PJ_TRUE, no_wait, NULL);
     if (status != PJ_ETIMEDOUT)
         return status;
 
@@ -4291,6 +4653,12 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold2(pjsua_call_id call_id,
     if (call->hanging_up) {
         PJ_LOG(3,(THIS_FILE, "Can not hold call %d while it is hanging up",
                   call_id));
+        status = PJ_EINVALIDOP;
+        goto on_return;
+    }
+
+    if (pjsua_call_media_is_changing(call)) {
+        PJ_LOG(1,(THIS_FILE, "Unable to hold call" ERR_MEDIA_CHANGING));
         status = PJ_EINVALIDOP;
         goto on_return;
     }
@@ -4573,7 +4941,8 @@ static pj_status_t prepare_call_offer(pjsua_call *call,
     *old_opt = call->opt;
     status = apply_call_setting(call, opt, NULL);
     if (status != PJ_SUCCESS) {
-        pjsua_perror(THIS_FILE, "Failed to apply call setting", status);
+        if (status != PJ_ECANCELLED)
+            pjsua_perror(THIS_FILE, "Failed to apply call setting", status);
         return status;
     }
     *old_neg_state = call->inv->neg ?
@@ -4827,9 +5196,13 @@ PJ_DEF(pj_status_t) pjsua_call_update3(
         goto on_return;
     }
 
-    /* Don't check media changing if UPDATE is sent without SDP */
-    if (pjsua_call_media_is_changing(call) &&
-        (opt && opt->flag & PJSUA_CALL_NO_SDP_OFFER) == 0)
+    /* Don't check media changing if UPDATE is sent without SDP, unless a
+     * media wait of the call is running (the sync ICE wait, or a polled
+     * wait on this thread): the UPDATE would still initialize the media.
+     */
+    if (call->med_wait ||
+        (pjsua_call_media_is_changing(call) &&
+         (opt && opt->flag & PJSUA_CALL_NO_SDP_OFFER) == 0))
     {
         PJ_LOG(1,(THIS_FILE, "Unable to send UPDATE" ERR_MEDIA_CHANGING));
         status = PJ_EINVALIDOP;
@@ -6503,7 +6876,7 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
     */
 
     if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_call_state)
-        (*pjsua_var.ua_cfg.cb.on_call_state)(call->index, e);
+        call_report_state(call->index, e);
 
     /* Re-acquire the locks. */
     PJSUA_RELOCK(num_locks);
@@ -6997,6 +7370,14 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
      */
     call->offer_app_managed = async;
     status = apply_call_setting(call, &opt, offer);
+    if (status == PJ_ECANCELLED && call_media_init_cancelled(call)) {
+        /* The call ended during the media init; the slot may be reset */
+        if (call->inv == inv)
+            call->offer_app_managed = PJ_FALSE;
+        if (app_answer)
+            cancel_pending_local_answer(inv);
+        goto on_return;
+    }
     call->offer_app_managed = PJ_FALSE;
     if (status != PJ_SUCCESS) {
         if (app_answer)
@@ -7133,7 +7514,14 @@ static pj_status_t pjsua_call_on_rx_reinvite(pjsip_inv_session *inv,
             (pjsua_call_media_is_app_managed(call) ||
              pj_memcmp(&opt, &callback_opt, sizeof(opt)) != 0))
         {
-            status = apply_call_setting(call, &opt, NULL);
+            /* As for an offer, see pjsua_call_on_rx_offer() */
+            if (pjsua_call_media_is_changing(call)) {
+                PJ_LOG(1,(THIS_FILE, "Unable to process offerless re-INVITE"
+                          ERR_MEDIA_CHANGING));
+                status = PJ_EINVALIDOP;
+            } else {
+                status = apply_call_setting(call, &opt, NULL);
+            }
             if (status != PJ_SUCCESS) {
                 PJ_PERROR(3,(THIS_FILE, status,
                              "Unable to apply call setting for offerless "

@@ -2237,9 +2237,27 @@ static pj_status_t call_reoffer_sdp(pjsua_call_id call_id,
 }
 
 /* Add a new video stream into a call */
+static pj_status_t add_video_media(pjsua_call *call,
+                                   pjmedia_vid_dev_index cap_dev,
+                                   pjmedia_dir dir);
+
 static pj_status_t call_add_video(pjsua_call *call,
                                   pjmedia_vid_dev_index cap_dev,
                                   pjmedia_dir dir)
+{
+    pj_status_t status;
+
+    /* The media transport waits, see call_wait_begin() */
+    pjsua_call_med_init_begin(call);
+    status = add_video_media(call, cap_dev, dir);
+    pjsua_call_med_init_end(call);
+
+    return status;
+}
+
+static pj_status_t add_video_media(pjsua_call *call,
+                                   pjmedia_vid_dev_index cap_dev,
+                                   pjmedia_dir dir)
 {
     pj_pool_t *pool = call->inv->pool_prov;
     pjsua_acc_config *acc_cfg = &pjsua_var.acc[call->acc_id].cfg;
@@ -2349,7 +2367,27 @@ on_error:
 /* Modify a video stream from a call, i.e: update direction,
  * remove/disable.
  */
+static pj_status_t modify_video_media(pjsua_call *call,
+                                     int med_idx,
+                                     pjmedia_dir dir,
+                                     pj_bool_t remove);
+
 static pj_status_t call_modify_video(pjsua_call *call,
+                                     int med_idx,
+                                     pjmedia_dir dir,
+                                     pj_bool_t remove)
+{
+    pj_status_t status;
+
+    /* The media transport waits, see call_wait_begin() */
+    pjsua_call_med_init_begin(call);
+    status = modify_video_media(call, med_idx, dir, remove);
+    pjsua_call_med_init_end(call);
+
+    return status;
+}
+
+static pj_status_t modify_video_media(pjsua_call *call,
                                      int med_idx,
                                      pjmedia_dir dir,
                                      pj_bool_t remove)

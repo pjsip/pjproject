@@ -134,6 +134,9 @@ int auth_async_test(void);
 int pjsua_auth_test(void);
 int pjsua_call_test(void);
 int pjsua_late_sdp_offer_test(void);
+#if PJ_HAS_THREADS
+int pjsua_stun_wait_test(void);
+#endif
 int pjsua_acc_test(void);
 int pjsua_pres_test(void);
 int srv_failover_pjsua_test(void);
@@ -200,7 +203,7 @@ PJ_INLINE(pj_bool_t) is_user_equal(const pjsip_fromto_hdr *hdr, const char *user
 /* Settings. */
 extern int log_level;
 
-#define UT_MAX_TESTS    40
+#define UT_MAX_TESTS    48
 #include "../../../pjlib/src/pjlib-test/test_util.h"
 
 struct test_app_t

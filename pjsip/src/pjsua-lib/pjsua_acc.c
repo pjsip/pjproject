@@ -554,6 +554,7 @@ static pj_status_t initialize_acc(unsigned acc_id)
 
     /* Mark account as valid */
     pjsua_var.acc[acc_id].valid = PJ_TRUE;
+    pjsua_var.acc[acc_id].gen = ++pjsua_var.acc_gen;
 
     /* Insert account ID into account ID array, sorted by priority */
     for (i=0; i<pjsua_var.acc_cnt; ++i) {
@@ -5941,10 +5942,18 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
     if (acc->cfg.ip_change_cfg.hangup_calls ||
         acc->cfg.ip_change_cfg.reinvite_flags)
     {
+        /* A call still in make call's STUN wait has no inv for the loop
+         * below: end the wait, as the loop would hang it up
+         */
+        pj_mutex_lock(pjsua_var.call_owner_mutex);
+        ++acc->ip_change_cnt;
+        pj_mutex_unlock(pjsua_var.call_owner_mutex);
+
         for (i = 0; i < pjsua_var.ua_cfg.max_calls; ++i) {
             pjsua_call_info call_info;
             pjsua_call *call;
             pjsip_dialog *dlg = NULL;
+            pj_bool_t hangup_pending;
 
             if (!pjsua_call_is_active(i) ||
                 pjsua_var.calls[i].acc_id != acc->index ||
@@ -5952,6 +5961,13 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
             {
                 continue;
             }
+
+            /* Hung up while an earlier call of the loop waited for STUN */
+            pj_mutex_lock(pjsua_var.call_owner_mutex);
+            hangup_pending = pjsua_var.calls[i].hangup_req.pending;
+            pj_mutex_unlock(pjsua_var.call_owner_mutex);
+            if (hangup_pending)
+                continue;
 
             status = acquire_call("call_tpsel_on_ip_change()",
                                   i, &call, &dlg);
@@ -6070,8 +6086,12 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
                 if (use_update) {
                     status = pjsua_call_update(i, call_info.setting.flag,
                                                NULL);
-                    /* If this fails, retry using INVITE below */
-                    if (status != PJ_SUCCESS) {
+                    /* If this fails, retry using INVITE below, unless the call
+                     * ended or is being hung up meanwhile
+                     */
+                    if (status != PJ_SUCCESS && status != PJ_ECANCELLED &&
+                        pjsua_call_is_active(i))
+                    {
                         PJ_LOG(3, (THIS_FILE, "Call #%d: failed sending UPDATE"
                                               " retrying using re-INVITE", i));
                         use_update = PJ_FALSE;
