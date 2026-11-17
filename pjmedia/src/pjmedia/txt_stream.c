@@ -109,6 +109,8 @@ typedef struct pjmedia_txt_stream {
     pjmedia_clock *clock; /**< Clock.                 */
     unsigned buf_time;    /**< Buffering time.        */
     pj_bool_t is_idle;    /**< Is idle?               */
+    pj_bool_t tx_busy;    /**< A thread is sending RTP,
+                               see send_text_locked(). */
 
     pj_timestamp rtcp_last_tx;   /**< Last RTCP tx time.     */
     pj_timestamp tx_last_ts;     /**< Timestamp of last tx.  */
@@ -117,7 +119,11 @@ typedef struct pjmedia_txt_stream {
                                         keep-alives to send.      */
     unsigned start_ka_msec;        /**< Effective start keep-alive
                                         interval, in msec.        */
-    pj_timestamp start_ka_last_tx; /**< Last start keep-alive tx. */
+    unsigned idle_ka_msec;         /**< Idle keep-alive interval
+                                        before the first text, in
+                                        msec. 0 to disable.       */
+    pj_timestamp start_ka_last_tx; /**< Last start or idle
+                                        keep-alive tx.            */
     red_buf tx_buf[NUM_BUFFERS]; /**< Tx buffer.         */
     int tx_nred;                 /**< Num of redundant data. */
 
@@ -149,7 +155,8 @@ static void clock_cb(const pj_timestamp *ts, void *user_data);
 #include "stream_imp_common.c"
 
 /*
- * Set up the start-of-stream keep-alive burst, see check_start_ka().
+ * Set up the start-of-stream keep-alive burst and the idle keep-alive,
+ * see check_start_ka() and check_idle_ka().
  * Must be called after the transport is attached.
  */
 static void init_start_ka(pjmedia_txt_stream *stream)
@@ -162,10 +169,12 @@ static void init_start_ka(pjmedia_txt_stream *stream)
     /* Take the runtime settings, already set from info->ka_cfg above. */
     stream->start_ka_left = c_strm->use_ka ? c_strm->start_ka_count : 0;
     stream->start_ka_msec = c_strm->start_ka_interval;
+    stream->idle_ka_msec = c_strm->use_ka ? c_strm->ka_interval * 1000 : 0;
 #else
     /* No runtime settings in this build, they are compiled out. */
     stream->start_ka_left = PJMEDIA_STREAM_START_KA_CNT;
     stream->start_ka_msec = PJMEDIA_STREAM_START_KA_INTERVAL_MSEC;
+    stream->idle_ka_msec = PJMEDIA_STREAM_KA_INTERVAL * 1000;
 #endif
 
     if (stream->start_ka_left > START_KA_MAX_CNT)
@@ -173,18 +182,22 @@ static void init_start_ka(pjmedia_txt_stream *stream)
     if (stream->start_ka_msec < START_KA_MIN_INTERVAL_MSEC)
         stream->start_ka_msec = START_KA_MIN_INTERVAL_MSEC;
 
-    if (stream->start_ka_left == 0)
+    if (stream->start_ka_left == 0 && stream->idle_ka_msec == 0)
         return;
 
-    /* ICE connectivity checks already create the NAT bindings. */
+    /* ICE connectivity checks already create the NAT bindings, and its
+     * own keep-alives maintain them.
+     */
     pjmedia_transport_info_init(&tpinfo);
     if (pjmedia_transport_get_info(c_strm->transport, &tpinfo) == PJ_SUCCESS)
     {
         ice_info = (pjmedia_ice_transport_info *)
                    pjmedia_transport_info_get_spc_info(
                        &tpinfo, PJMEDIA_TRANSPORT_TYPE_ICE);
-        if (ice_info && ice_info->active)
+        if (ice_info && ice_info->active) {
             stream->start_ka_left = 0;
+            stream->idle_ka_msec = 0;
+        }
     }
 }
 
@@ -1050,6 +1063,18 @@ static pj_status_t encode_red(pjmedia_txt_stream *stream, unsigned pt,
     return PJ_SUCCESS;
 }
 
+/* Keep the sequence and timestamp of the last RTP packet sent, as the audio
+ * and video streams do, so a stream recreated by pjsua continues them (see
+ * pjsua_txt_stop_stream()). Must be called with jb_mutex held.
+ */
+static void update_tx_stat(pjmedia_txt_stream *stream, const void *rtphdr)
+{
+    const pjmedia_rtp_hdr *hdr = (const pjmedia_rtp_hdr *) rtphdr;
+
+    stream->base.rtcp.stat.rtp_tx_last_ts = pj_ntohl(hdr->ts);
+    stream->base.rtcp.stat.rtp_tx_last_seq = pj_ntohs(hdr->seq);
+}
+
 static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
                                     unsigned rtp_ts_len)
 {
@@ -1070,6 +1095,14 @@ static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
     int pass = 0;
     int max_pass = 1;
     unsigned pt_to_use;
+
+    /* The transport's send_rtp() must not be called by two threads at once,
+     * and both the application and the clock thread send. No lock is held
+     * across that call, so tx_busy (protected by jb_mutex) marks it instead.
+     * While it is set, leave the text buffered, the clock thread sends it.
+     */
+    if (stream->tx_busy)
+        return PJ_SUCCESS;
 
     pj_get_timestamp(&now);
 
@@ -1138,6 +1171,7 @@ static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
         pj_memcpy(channel->buf, rtphdr, sizeof(pjmedia_rtp_hdr));
         stream->tx_buf[0].timestamp =
             pj_ntohl(((pjmedia_rtp_hdr *) rtphdr)->ts);
+        update_tx_stat(stream, rtphdr);
 
         if (stream->is_idle && !is_keepalive) {
             stream->is_idle = PJ_FALSE;
@@ -1185,6 +1219,18 @@ static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
             stream->is_idle = PJ_TRUE;
         }
 
+        /* Prepare second pass if needed. This is done before jb_mutex is
+         * released below, so that text added meanwhile is appended to the
+         * deferred text instead of being overwritten by it.
+         */
+        pass++;
+        if (pass == 1 && has_deferred_char) {
+            stream->tx_buf[0].length = deferred_char_len;
+            pj_memcpy(stream->tx_buf[0].buf, deferred_char_buf,
+                      deferred_char_len);
+            rtp_ts_len = 10;
+        }
+
         /* Network Transmission */
         {
             char tx_pkt[PJMEDIA_MAX_MTU];
@@ -1192,19 +1238,12 @@ static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
             pj_memcpy(tx_pkt, channel->buf, tx_size);
 
             stream->tx_last_ts = now;
+            stream->tx_busy = PJ_TRUE;
             pj_mutex_unlock(c_strm->jb_mutex);
             status =
                 pjmedia_transport_send_rtp(c_strm->transport, tx_pkt, tx_size);
             pj_mutex_lock(c_strm->jb_mutex);
-        }
-
-        /* Prepare second pass if needed */
-        pass++;
-        if (pass == 1 && has_deferred_char) {
-            stream->tx_buf[0].length = deferred_char_len;
-            pj_memcpy(stream->tx_buf[0].buf, deferred_char_buf,
-                      deferred_char_len);
-            rtp_ts_len = 10;
+            stream->tx_busy = PJ_FALSE;
         }
     }
 
@@ -1277,10 +1316,18 @@ static void check_start_ka(pjmedia_txt_stream *stream)
 
     /* The RTP session is shared with send_text_locked(). */
     pj_mutex_lock(c_strm->jb_mutex);
+    if (stream->tx_busy) {
+        /* The application is sending text, retry at next interval. */
+        pj_mutex_unlock(c_strm->jb_mutex);
+        return;
+    }
     status = pjmedia_rtp_encode_rtp(&channel->rtp, channel->pt, 0, 1, 0,
                                     &rtphdr, &hdrlen);
-    if (status == PJ_SUCCESS)
+    if (status == PJ_SUCCESS) {
         pj_memcpy(&hdr, rtphdr, sizeof(hdr));
+        update_tx_stat(stream, rtphdr);
+        stream->tx_busy = PJ_TRUE;
+    }
     pj_mutex_unlock(c_strm->jb_mutex);
     if (status != PJ_SUCCESS)
         return;
@@ -1289,6 +1336,9 @@ static void check_start_ka(pjmedia_txt_stream *stream)
 
     /* On failure (e.g. SRTP keys not ready yet), retry at next interval. */
     status = pjmedia_transport_send_rtp(c_strm->transport, &hdr, sizeof(hdr));
+    pj_mutex_lock(c_strm->jb_mutex);
+    stream->tx_busy = PJ_FALSE;
+    pj_mutex_unlock(c_strm->jb_mutex);
     if (status != PJ_SUCCESS)
         return;
 
@@ -1300,6 +1350,84 @@ static void check_start_ka(pjmedia_txt_stream *stream)
     }
 
     stream->start_ka_left--;
+}
+
+/*
+ * check_idle_ka()
+ * send_text_locked() sends idle keep-alives only once text has been sent.
+ * Until then, after the start-of-stream burst, send an empty RTP packet
+ * every idle_ka_msec, so the NAT bindings stay open while nothing is typed.
+ */
+static void check_idle_ka(pjmedia_txt_stream *stream)
+{
+    pjmedia_stream_common *c_strm = &stream->base;
+    pjmedia_channel *channel = c_strm->enc;
+    pj_uint8_t pkt[sizeof(pjmedia_rtp_hdr) +
+                   PJMEDIA_TXT_STREAM_MAX_RED_LEVELS * 4 + 1];
+    unsigned pt = channel->pt;
+    int red_len = 0;
+    const void *rtphdr;
+    int hdrlen;
+    unsigned elapsed;
+    pj_timestamp now;
+    pj_status_t status = PJ_SUCCESS;
+
+    if (stream->idle_ka_msec == 0 || stream->start_ka_left != 0)
+        return;
+
+    pj_get_timestamp(&now);
+    if (stream->start_ka_last_tx.u64 == 0) {
+        /* No start burst, count from the first clock tick. */
+        stream->start_ka_last_tx = now;
+        return;
+    }
+
+    elapsed = pj_elapsed_msec(&stream->start_ka_last_tx, &now);
+    if (elapsed < stream->idle_ka_msec)
+        return;
+    stream->start_ka_last_tx = now;
+
+    /* The RTP session and tx buffer are shared with send_text_locked(). */
+    pj_mutex_lock(c_strm->jb_mutex);
+    if (stream->tx_last_ts.u64 != 0 || stream->tx_buf[0].length != 0) {
+        /* Text has been sent or is pending, send_text_locked() keeps the
+         * stream alive.
+         */
+        pj_mutex_unlock(c_strm->jb_mutex);
+        return;
+    }
+    /* With redundancy, send it as RED with empty blocks, so the receiver
+     * doesn't take a lost keep-alive for lost text.
+     */
+    if (stream->si.tx_red_pt > 0) {
+        pt = stream->si.tx_red_pt;
+        red_len = (int) (sizeof(pkt) - sizeof(pjmedia_rtp_hdr));
+        status = encode_red(stream, stream->si.tx_pt,
+                            (char *) pkt + sizeof(pjmedia_rtp_hdr), &red_len,
+                            PJ_TRUE);
+    }
+    /* Advance the timestamp as a media packet sent now would. */
+    if (status == PJ_SUCCESS) {
+        status = pjmedia_rtp_encode_rtp(&channel->rtp, pt, 0, 1,
+                                        (int) elapsed, &rtphdr, &hdrlen);
+    }
+    if (status == PJ_SUCCESS) {
+        pj_memcpy(pkt, rtphdr, sizeof(pjmedia_rtp_hdr));
+        update_tx_stat(stream, rtphdr);
+        stream->tx_busy = PJ_TRUE;
+    }
+    pj_mutex_unlock(c_strm->jb_mutex);
+    if (status != PJ_SUCCESS)
+        return;
+
+    TRC_((c_strm->port.info.name.ptr, "Sending idle keep-alive"));
+
+    /* On failure, retry at next interval. */
+    pjmedia_transport_send_rtp(c_strm->transport, pkt,
+                               sizeof(pjmedia_rtp_hdr) + red_len);
+    pj_mutex_lock(c_strm->jb_mutex);
+    stream->tx_busy = PJ_FALSE;
+    pj_mutex_unlock(c_strm->jb_mutex);
 }
 
 /* Clock callback */
@@ -1326,6 +1454,8 @@ static void clock_cb(const pj_timestamp *ts, void *user_data)
     check_tx_rtcp(stream);
 
     check_start_ka(stream);
+
+    check_idle_ka(stream);
 }
 
 PJ_DEF(pj_status_t)

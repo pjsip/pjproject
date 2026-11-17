@@ -21,6 +21,7 @@
 #include <pjmedia/transport.h>
 #include <pjmedia/txt_stream.h>
 #include <pj/log.h>
+#include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/sock.h>
 #include <pj/string.h>
@@ -41,12 +42,19 @@
 #define MAX_PKTS        20
 #define MAX_OUT         64
 
-/* Stub transport, it only keeps the rx callback to feed packets. */
+/* Stub transport, it keeps the rx callback to feed packets and records
+ * the sequence and timestamp of the RTP packets sent.
+ */
 typedef struct stub_tp
 {
     pjmedia_transport    base;
     void                *user_data;
     void               (*rtp_cb2)(pjmedia_tp_cb_param*);
+    unsigned             tx_cnt;        /* RTP packets sent             */
+    pj_uint16_t          tx_first_seq;  /* Sequence of the first packet */
+    pj_uint16_t          tx_last_seq;   /* Sequence of the last packet  */
+    pj_uint32_t          tx_first_ts;   /* Timestamp of the first packet*/
+    pj_uint32_t          tx_last_ts;    /* Timestamp of the last packet */
 } stub_tp;
 
 static pj_status_t stub_get_info(pjmedia_transport *tp,
@@ -79,9 +87,18 @@ static void stub_detach(pjmedia_transport *tp, void *user_data)
 static pj_status_t stub_send_rtp(pjmedia_transport *tp, const void *pkt,
                                  pj_size_t size)
 {
-    PJ_UNUSED_ARG(tp);
-    PJ_UNUSED_ARG(pkt);
-    PJ_UNUSED_ARG(size);
+    stub_tp *stub = (stub_tp*)tp;
+    pjmedia_rtp_hdr hdr;
+
+    if (size >= sizeof(hdr)) {
+        pj_memcpy(&hdr, pkt, sizeof(hdr));
+        stub->tx_last_seq = pj_ntohs(hdr.seq);
+        stub->tx_last_ts = pj_ntohl(hdr.ts);
+        if (stub->tx_cnt++ == 0) {
+            stub->tx_first_seq = stub->tx_last_seq;
+            stub->tx_first_ts = stub->tx_last_ts;
+        }
+    }
     return PJ_SUCCESS;
 }
 
@@ -613,6 +630,261 @@ on_return:
     return rc;
 }
 
+/* Text stream tx sequence continuity test.
+ *
+ * When pjsua recreates a stream (e.g. on hold/unhold), it continues the RTP
+ * sequence and timestamp: it saves rtcp.stat.rtp_tx_last_seq/ts of the old
+ * stream and seeds the new one with them. Check that the text stream
+ * records them, and that a seeded stream continues where the last ended,
+ * also when the sequence and the timestamp wrap around in between.
+ */
+static int tx_seq_test(pjmedia_endpt *endpt, int red_level, pj_bool_t wrap)
+{
+    static const char *titles[2][2] = {
+        {"tx seq continuity (T.140)", "tx seq continuity (T.140, wrap)"},
+        {"tx seq continuity (RED)", "tx seq continuity (RED, wrap)"}
+    };
+    const char *title = titles[red_level ? 1 : 0][wrap ? 1 : 0];
+    pj_str_t loopback = pj_str("127.0.0.1");
+    pj_str_t text = pj_str("A");
+    pjmedia_rtcp_stat stat;
+    pj_uint16_t prev_seq = 0;
+    pj_uint32_t prev_ts = 0;
+    unsigned i;
+    int rc = 0;
+
+    pj_bzero(&stat, sizeof(stat));
+
+    for (i = 0; i < 3 && rc == 0; ++i) {
+        pjmedia_txt_stream_info si;
+        pjmedia_txt_stream *stream = NULL;
+        stub_tp stub;
+
+        pj_bzero(&stub, sizeof(stub));
+        pj_ansi_strxcpy(stub.base.name, "stub", sizeof(stub.base.name));
+        stub.base.op = &stub_op;
+
+        pj_bzero(&si, sizeof(si));
+        si.type = PJMEDIA_TYPE_TEXT;
+        si.proto = PJMEDIA_TP_PROTO_RTP_AVP;
+        si.dir = PJMEDIA_DIR_ENCODING_DECODING;
+        pj_sockaddr_init(pj_AF_INET(), &si.rem_addr, &loopback, 4000);
+        si.fmt.type = PJMEDIA_TYPE_TEXT;
+        si.fmt.pt = T140_PT;
+        si.fmt.encoding_name = pj_str("t140");
+        si.fmt.clock_rate = 1000;
+        si.tx_pt = si.rx_pt = T140_PT;
+        if (red_level) {
+            si.tx_red_pt = si.rx_red_pt = RED_PT;
+            si.tx_red_level = si.rx_red_level = red_level;
+        }
+        si.rtcp_sdes_bye_disabled = PJ_TRUE;
+        si.ssrc = SSRC;
+        if (i > 0) {
+            /* As pjsua_txt_channel_update() does */
+            si.rtp_seq = stat.rtp_tx_last_seq;
+            si.rtp_ts = stat.rtp_tx_last_ts;
+            si.rtp_seq_ts_set = 1 | (1 << 1);
+        } else if (wrap) {
+            /* Make the first stream end right before the wrap-around */
+            si.rtp_seq = 0xFFFD;
+            si.rtp_ts = 0xFFFFFFD0;
+            si.rtp_seq_ts_set = 1 | (1 << 1);
+        }
+
+        PJ_TEST_SUCCESS(pjmedia_txt_stream_create(endpt, NULL, &si,
+                                                  &stub.base, NULL, &stream),
+                        title, return -100);
+
+        /* The stream is not started, so its clock doesn't send anything
+         * and the text is sent from this thread only.
+         */
+        PJ_TEST_SUCCESS(pjmedia_txt_stream_send_text(stream, &text),
+                        title, {rc = -110; goto on_return;});
+        PJ_TEST_GT(stub.tx_cnt, 0, title, {rc = -120; goto on_return;});
+
+        /* As pjsua_txt_stop_stream() does */
+        PJ_TEST_SUCCESS(pjmedia_stream_common_get_stat(
+                        (pjmedia_stream_common *) stream, &stat),
+                        title, {rc = -130; goto on_return;});
+
+        /* The stream must report what it has sent last */
+        PJ_TEST_EQ(stat.rtp_tx_last_seq, stub.tx_last_seq, title,
+                   {rc = -140; goto on_return;});
+        PJ_TEST_EQ(stat.rtp_tx_last_ts, stub.tx_last_ts, title,
+                   {rc = -150; goto on_return;});
+
+        /* A recreated stream must continue the previous one */
+        if (i > 0) {
+            PJ_TEST_EQ(stub.tx_first_seq, (pj_uint16_t)(prev_seq + 1), title,
+                       {rc = -160; goto on_return;});
+            PJ_TEST_GT((pj_int32_t)(stub.tx_first_ts - prev_ts), 0, title,
+                       {rc = -170; goto on_return;});
+        }
+        prev_seq = stub.tx_last_seq;
+        prev_ts = stub.tx_last_ts;
+
+on_return:
+        pjmedia_txt_stream_destroy(stream);
+    }
+
+    return rc;
+}
+
+#if PJMEDIA_STREAM_START_KA_CNT > 0
+
+/* Text stream tx race test.
+ *
+ * RTP is sent by the stream's clock thread and by the thread calling
+ * pjmedia_txt_stream_send_text(), and the transports don't support
+ * concurrent send_rtp(). The transport here holds the clock thread in
+ * send_rtp() with its start keep-alive while text is sent. The text must
+ * not enter the transport as well, and must be sent after the keep-alive.
+ */
+typedef struct hold_tp
+{
+    stub_tp              stub;
+    pj_mutex_t          *mutex;         /* Protects the fields below    */
+    pj_bool_t            hold;          /* Hold the next RTP packet     */
+    pj_bool_t            held;          /* The RTP packet got held      */
+    unsigned             in_send;       /* Threads inside send_rtp()    */
+    pj_bool_t            overlap;       /* Was more than one inside?    */
+    pj_bool_t            text_sent;     /* Has the text been sent?      */
+    pj_sem_t            *release;       /* Lets the held packet go      */
+} hold_tp;
+
+static pj_status_t hold_send_rtp(pjmedia_transport *tp, const void *pkt,
+                                 pj_size_t size)
+{
+    hold_tp *htp = (hold_tp*)tp;
+    pj_bool_t hold;
+
+    pj_mutex_lock(htp->mutex);
+    if (++htp->in_send > 1)
+        htp->overlap = PJ_TRUE;
+    /* The text is the last byte, also with redundancy */
+    if (size > sizeof(pjmedia_rtp_hdr) &&
+        ((const pj_uint8_t*)pkt)[size - 1] == 'A')
+    {
+        htp->text_sent = PJ_TRUE;
+    }
+    hold = htp->hold;
+    htp->hold = PJ_FALSE;
+    if (hold)
+        htp->held = PJ_TRUE;
+    pj_mutex_unlock(htp->mutex);
+
+    if (hold)
+        pj_sem_wait(htp->release);
+
+    pj_mutex_lock(htp->mutex);
+    htp->in_send--;
+    pj_mutex_unlock(htp->mutex);
+    return PJ_SUCCESS;
+}
+
+/* Wait until the transport has set the flag, but not forever */
+static pj_bool_t hold_tp_wait(hold_tp *htp, const pj_bool_t *flag)
+{
+    pj_bool_t set = PJ_FALSE;
+    unsigned i;
+
+    for (i = 0; i < 1000; ++i) {
+        pj_mutex_lock(htp->mutex);
+        set = *flag;
+        pj_mutex_unlock(htp->mutex);
+        if (set)
+            break;
+        pj_thread_sleep(10);
+    }
+    return set;
+}
+
+static int tx_race_test(pjmedia_endpt *endpt, int red_level)
+{
+    const char *title = red_level ? "tx race (RED)" : "tx race (T.140)";
+    pj_str_t loopback = pj_str("127.0.0.1");
+    pj_str_t text = pj_str("A");
+    pjmedia_txt_stream_info si;
+    pjmedia_txt_stream *stream = NULL;
+    pjmedia_transport_op op = stub_op;
+    hold_tp tp;
+    pj_pool_t *pool;
+    pj_bool_t held, sent, overlap;
+    pj_status_t status = PJ_SUCCESS;
+    int rc = 0;
+
+    pj_bzero(&tp, sizeof(tp));
+    pj_ansi_strxcpy(tp.stub.base.name, "stub", sizeof(tp.stub.base.name));
+    op.send_rtp = &hold_send_rtp;
+    tp.stub.base.op = &op;
+
+    pool = pj_pool_create(mem, "txrace", 512, 512, NULL);
+    PJ_TEST_NOT_NULL(pool, title, return -200);
+    PJ_TEST_SUCCESS(pj_mutex_create_simple(pool, NULL, &tp.mutex), title,
+                    {rc = -210; goto on_return;});
+    PJ_TEST_SUCCESS(pj_sem_create(pool, NULL, 0, 1, &tp.release), title,
+                    {rc = -220; goto on_return;});
+
+    pj_bzero(&si, sizeof(si));
+    si.type = PJMEDIA_TYPE_TEXT;
+    si.proto = PJMEDIA_TP_PROTO_RTP_AVP;
+    si.dir = PJMEDIA_DIR_ENCODING_DECODING;
+    pj_sockaddr_init(pj_AF_INET(), &si.rem_addr, &loopback, 4000);
+    si.fmt.type = PJMEDIA_TYPE_TEXT;
+    si.fmt.pt = T140_PT;
+    si.fmt.encoding_name = pj_str("t140");
+    si.fmt.clock_rate = 1000;
+    si.tx_pt = si.rx_pt = T140_PT;
+    if (red_level) {
+        si.tx_red_pt = si.rx_red_pt = RED_PT;
+        si.tx_red_level = si.rx_red_level = red_level;
+    }
+    si.rtcp_sdes_bye_disabled = PJ_TRUE;
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
+    si.use_ka = PJ_TRUE;
+    pjmedia_stream_ka_config_default(&si.ka_cfg);
+#endif
+
+    PJ_TEST_SUCCESS(pjmedia_txt_stream_create(endpt, NULL, &si,
+                                              &tp.stub.base, NULL, &stream),
+                    title, {rc = -230; goto on_return;});
+
+    /* Hold the first RTP packet of the clock thread, a start keep-alive */
+    pj_mutex_lock(tp.mutex);
+    tp.hold = PJ_TRUE;
+    pj_mutex_unlock(tp.mutex);
+    PJ_TEST_SUCCESS(pjmedia_txt_stream_start(stream), title,
+                    {rc = -240; goto on_return;});
+    held = hold_tp_wait(&tp, &tp.held);
+
+    /* The text must be left to the clock thread now */
+    if (held)
+        status = pjmedia_txt_stream_send_text(stream, &text);
+    pj_sem_post(tp.release);
+    PJ_TEST_TRUE(held, title, {rc = -250; goto on_return;});
+    PJ_TEST_SUCCESS(status, title, {rc = -260; goto on_return;});
+
+    sent = hold_tp_wait(&tp, &tp.text_sent);
+    pj_mutex_lock(tp.mutex);
+    overlap = tp.overlap;
+    pj_mutex_unlock(tp.mutex);
+    PJ_TEST_TRUE(!overlap, title, {rc = -270; goto on_return;});
+    PJ_TEST_TRUE(sent, title, {rc = -280; goto on_return;});
+
+on_return:
+    if (stream)
+        pjmedia_txt_stream_destroy(stream);
+    if (tp.release)
+        pj_sem_destroy(tp.release);
+    if (tp.mutex)
+        pj_mutex_destroy(tp.mutex);
+    pj_pool_release(pool);
+    return rc;
+}
+
+#endif  /* PJMEDIA_STREAM_START_KA_CNT > 0 */
+
 int txt_stream_test(void)
 {
     pjmedia_endpt *endpt;
@@ -653,6 +925,40 @@ int txt_stream_test(void)
                 rc = status;
         }
     }
+
+    PJ_LOG(3, (THIS_FILE, "  tx seq/ts continuity"));
+
+    /* Plain T.140 */
+    status = tx_seq_test(endpt, 0, PJ_FALSE);
+    if (status != 0 && rc == 0)
+        rc = status;
+
+    /* RED with two redundancy levels */
+    status = tx_seq_test(endpt, 2, PJ_FALSE);
+    if (status != 0 && rc == 0)
+        rc = status;
+
+    /* Plain T.140, sequence and timestamp wrap around */
+    status = tx_seq_test(endpt, 0, PJ_TRUE);
+    if (status != 0 && rc == 0)
+        rc = status;
+
+    /* RED, sequence and timestamp wrap around */
+    status = tx_seq_test(endpt, 2, PJ_TRUE);
+    if (status != 0 && rc == 0)
+        rc = status;
+
+#if PJMEDIA_STREAM_START_KA_CNT > 0
+    PJ_LOG(3, (THIS_FILE, "  tx race"));
+
+    status = tx_race_test(endpt, 0);
+    if (status != 0 && rc == 0)
+        rc = status;
+
+    status = tx_race_test(endpt, 2);
+    if (status != 0 && rc == 0)
+        rc = status;
+#endif
 
     pjmedia_endpt_destroy2(endpt);
     return rc;
