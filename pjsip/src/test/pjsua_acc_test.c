@@ -58,6 +58,10 @@
  *      while another REGISTER was completing. A call refused with
  *      PJSIP_EBUSY changes nothing, presence stays published, a later
  *      registration undoes it.
+ *  14. A Service-Route from the registrar goes into the dialog route set
+ *      but not into the next REGISTER, which keeps the account proxy.
+ *      Also with a server affinity UDP pin, whose hidden Route leads the
+ *      account route set.
  */
 
 #include "test.h"
@@ -100,6 +104,8 @@ static struct {
     pj_bool_t     drop;         /* don't answer */
     pj_bool_t     dropped;      /* a request was not answered */
     pj_bool_t     challenge;    /* 401 to a request without credentials */
+    const char   *service_route;/* Service-Route in a 2xx, or NULL */
+    char          route_users[64];  /* users of the Route URIs received */
 } g_mock_reg = {
     {
         NULL, NULL,
@@ -180,6 +186,32 @@ static pj_bool_t mock_registrar_rx_request(pjsip_rx_data *rdata)
         }
     }
 
+    /* And the user part of each Route URI, comma separated */
+    {
+        pjsip_route_hdr *hr = NULL;
+        pj_size_t len = 0;
+
+        g_mock_reg.route_users[0] = '\0';
+        while ((hr = (pjsip_route_hdr*)
+                     pjsip_msg_find_hdr(msg, PJSIP_H_ROUTE,
+                                        hr ? hr->next : NULL)) != NULL)
+        {
+            pjsip_sip_uri *uri;
+            int n;
+
+            if (!PJSIP_URI_SCHEME_IS_SIP(hr->name_addr.uri))
+                continue;
+            uri = (pjsip_sip_uri*) pjsip_uri_get_uri(hr->name_addr.uri);
+            n = pj_ansi_snprintf(g_mock_reg.route_users + len,
+                                 sizeof(g_mock_reg.route_users) - len,
+                                 "%s%.*s", len ? "," : "",
+                                 (int)uri->user.slen, uri->user.ptr);
+            if (n < 0 || (pj_size_t)n >= sizeof(g_mock_reg.route_users)-len)
+                break;
+            len += n;
+        }
+    }
+
     {
         pjsip_expires_hdr *he = (pjsip_expires_hdr*)
                                 pjsip_msg_find_hdr(msg, PJSIP_H_EXPIRES,
@@ -219,6 +251,14 @@ static pj_bool_t mock_registrar_rx_request(pjsip_rx_data *rdata)
         code = g_mock_reg.code ? g_mock_reg.code : 200;
         if (g_mock_reg.code_once)
             g_mock_reg.code = 0;
+    }
+    if (code / 100 == 2 && g_mock_reg.service_route) {
+        const pj_str_t hname = pj_str("Service-Route");
+        pj_str_t hvalue = pj_str((char*)g_mock_reg.service_route);
+
+        pj_list_push_back(&hdr_list,
+                          pjsip_generic_string_hdr_create(
+                              rdata->tp_info.pool, &hname, &hvalue));
     }
     pjsip_endpt_respond_stateless(pjsua_get_pjsip_endpt(), rdata, code,
                                   NULL, &hdr_list, NULL);
@@ -786,6 +826,123 @@ static int rewrite_send_fail_test(pjsua_transport_id tp_id, int port)
 on_return:
     g_mock_reg.received = NULL;
     g_fail_tx.host = NULL;
+    pjsua_acc_del(acc_id);
+    pjsua_handle_events(500);
+    return rc;
+}
+
+
+/*****************************************************************************
+ * Service-Route
+ *****************************************************************************/
+
+/* The Service-Route of a registration is for the requests outside the
+ * REGISTER (RFC 3608, 3GPP TS 24.229 5.1.1.2): it must reach the dialog
+ * route set after the account proxy, but a re-REGISTER must still route
+ * through the account proxy alone. (#5393)
+ */
+static int service_route_test(pjsua_transport_id tp_id, int port,
+                              pj_bool_t affinity, int err_base)
+{
+    pjsua_acc_config acc_cfg;
+    pjsua_acc_id     acc_id;
+    pjsua_acc       *acc;
+    char             reg_uri[64];
+    char             proxy[64];
+    char             service_route[64];
+    const pjsip_route_hdr *hr;
+    pj_status_t      status;
+    int              rc = 0;
+
+    PJ_LOG(3, (THIS_FILE, "  pjsua acc: Service-Route not used for "
+               "REGISTER%s", affinity ? ", with server affinity" : ""));
+
+    pj_bzero(&g_ctx, sizeof(g_ctx));
+    g_mock_reg.req_count = 0;
+
+    pj_ansi_snprintf(reg_uri, sizeof(reg_uri), "sip:127.0.0.1:%d", port);
+    pj_ansi_snprintf(proxy, sizeof(proxy), "<sip:proxy@127.0.0.1:%d;lr>",
+                     port);
+    pj_ansi_snprintf(service_route, sizeof(service_route),
+                     "<sip:service@127.0.0.1:%d;lr>", port);
+    g_mock_reg.service_route = service_route;
+
+    pjsua_acc_config_default(&acc_cfg);
+    acc_cfg.id       = pj_str("sip:" TEST_USER "@pjsip.org");
+    acc_cfg.reg_uri  = pj_str(reg_uri);
+    /* Affinity is bypassed when transport_id is set */
+    if (affinity)
+        acc_cfg.server_affinity = PJSUA_SERVER_AFFINITY_ENABLED;
+    else
+        acc_cfg.transport_id = tp_id;
+    acc_cfg.register_on_acc_add = PJ_FALSE;
+    acc_cfg.allow_contact_rewrite = PJ_FALSE;
+    acc_cfg.proxy_cnt = 1;
+    acc_cfg.proxy[0] = pj_str(proxy);
+
+    status = pjsua_acc_add(&acc_cfg, PJ_FALSE, &acc_id);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(3, (THIS_FILE, "    error: pjsua_acc_add failed (%d)", status));
+        g_mock_reg.service_route = NULL;
+        return err_base;
+    }
+    acc = &pjsua_var.acc[acc_id];
+
+    /* The first 2xx carries the Service-Route, the second REGISTER is the
+     * one that must not use it.
+     */
+    while (g_ctx.reg_ok_count < 2) {
+        unsigned ok_count = g_ctx.reg_ok_count;
+
+        g_ctx.reg_done = PJ_FALSE;
+        status = pjsua_acc_set_registration(acc_id, PJ_TRUE);
+        if (status != PJ_SUCCESS || wait_reg(10000) != 0 ||
+            g_ctx.reg_ok_count == ok_count)
+        {
+            PJ_LOG(3, (THIS_FILE, "    error: registration %u failed (%d), "
+                       "last code %d", ok_count, status, g_ctx.reg_code));
+            rc = err_base - 1;
+            goto on_return;
+        }
+        if (pj_ansi_strcmp(g_mock_reg.route_users, "proxy") != 0) {
+            PJ_LOG(3, (THIS_FILE, "    error: REGISTER %u routed via '%s', "
+                       "expected 'proxy'", ok_count,
+                       g_mock_reg.route_users));
+            rc = err_base - 2;
+            goto on_return;
+        }
+    }
+
+    /* The hidden Route of the pin must lead the route set, or this run
+     * does not cover it.
+     */
+    hr = acc->route_set.next;
+    if (affinity) {
+        if (acc->sa_route_hdr == NULL || hr != acc->sa_route_hdr) {
+            PJ_LOG(3, (THIS_FILE, "    error: no server affinity UDP pin"));
+            rc = err_base - 4;
+            goto on_return;
+        }
+        hr = hr->next;
+    }
+
+    /* The dialog route set: the account proxy, then the Service-Route */
+    if (hr == &acc->route_set || hr->next->next != &acc->route_set ||
+        pj_strcmp2(&((pjsip_sip_uri*)
+                     pjsip_uri_get_uri(hr->name_addr.uri))->user,
+                   "proxy") != 0 ||
+        pj_strcmp2(&((pjsip_sip_uri*)
+                     pjsip_uri_get_uri(hr->next->name_addr.uri))->user,
+                   "service") != 0)
+    {
+        PJ_LOG(3, (THIS_FILE, "    error: dialog route set is not the "
+                   "account proxy followed by the Service-Route"));
+        rc = err_base - 3;
+        goto on_return;
+    }
+
+on_return:
+    g_mock_reg.service_route = NULL;
     pjsua_acc_del(acc_id);
     pjsua_handle_events(500);
     return rc;
@@ -1685,6 +1842,11 @@ int pjsua_acc_test(void)
     }
 
     rc = rewrite_send_fail_test(tp_id, (int)port);
+    if (rc != 0) goto on_return;
+
+    rc = service_route_test(tp_id, (int)port, PJ_FALSE, -2550);
+    if (rc != 0) goto on_return;
+    rc = service_route_test(tp_id, (int)port, PJ_TRUE, -2560);
     if (rc != 0) goto on_return;
 
     {

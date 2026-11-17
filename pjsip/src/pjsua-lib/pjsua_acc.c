@@ -688,14 +688,20 @@ static void sa_build_reg_route_set(pjsua_acc *acc, pj_pool_t *pool,
     if ((acc->cfg.reg_use_proxy & PJSUA_REG_USE_ACC_PROXY) &&
         acc->cfg.proxy_cnt)
     {
-        int cnt = acc->cfg.proxy_cnt;
-        pjsip_route_hdr *pos = route_set->prev;
-        int i;
+        unsigned i;
 
-        r = acc->route_set.prev;
-        for (i=0; i<cnt; ++i) {
-            pj_list_push_front(pos, pjsip_hdr_shallow_clone(pool, r));
-            r = r->prev;
+        /* acc->route_set is [hidden Route][outbound proxies][account
+         * proxies][Service-Route], so count the account proxies from the
+         * head: Service-Route must not be used for REGISTER (#5393).
+         */
+        r = acc->route_set.next;
+        if (r == acc->sa_route_hdr)
+            r = r->next;
+        for (i = 0; i < pjsua_var.ua_cfg.outbound_proxy_cnt; ++i)
+            r = r->next;
+        for (i = 0; i < acc->cfg.proxy_cnt; ++i) {
+            pj_list_push_back(route_set, pjsip_hdr_shallow_clone(pool, r));
+            r = r->next;
         }
     }
 }
