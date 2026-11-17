@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -78,7 +78,24 @@ static int main_func(int argc, char *argv[])
     return rc;
 }
 
+#ifdef __ZEPHYR__
+/* Zephyr's main() has no arguments: they come from the test application's
+ * CONFIG_PJMEDIA_TEST_ARGS, split at spaces. No worker thread, so tests
+ * run one at a time.
+ */
+#ifndef CONFIG_PJMEDIA_TEST_ARGS
+#   define CONFIG_PJMEDIA_TEST_ARGS ""
+#endif
+int main(void)
+{
+    static char args[] = CONFIG_PJMEDIA_TEST_ARGS;
+    char *argv[16] = { "pjmedia-test", "--ci-mode", "-w", "0" };
+    int argc = ut_split_args(args, argv, 4, PJ_ARRAY_SIZE(argv));
+    return pj_run_app(&main_func, argc, argv, 0);
+}
+#else
 int main(int argc, char *argv[])
 {
     return pj_run_app(&main_func, argc, argv, 0);
 }
+#endif

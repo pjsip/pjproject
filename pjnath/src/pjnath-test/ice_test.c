@@ -176,6 +176,10 @@ static void set_stun_turn_cfg(struct ice_ept *ept,
         ice_cfg->stun_tp[stun_idx].port = stun_server_port;
 
         ice_cfg->stun_tp[stun_idx].af = GET_AF(use_ipv6);
+        /* Host candidates come from this entry when it is set, so the
+         * loopback setting below must be mirrored here.
+         */
+        ice_cfg->stun_tp[stun_idx].loop_addr = (ept->cfg.enable_host != 0);
     }
     ice_cfg->stun.af = GET_AF(use_ipv6);
     if (ept->cfg.enable_host == 0) {    
@@ -1205,7 +1209,7 @@ int ice_one_conc_test(pj_stun_config *stun_cfg, int err_quit)
     /* test a: destroy as soon as nego starts */
     cfg.title = "    ice test a: immediate destroy";
     pj_bzero(&test_param, sizeof(test_param));
-    test_param.worker_cnt = 4;
+    test_param.worker_cnt = PJ_HAS_THREADS ? 4 : 0;
     test_param.worker_timeout = 1000;
     test_param.destroy_after_create = PJ_TRUE;
 
@@ -1227,7 +1231,7 @@ int ice_one_conc_test(pj_stun_config *stun_cfg, int err_quit)
     /* test c: normal */
     cfg.title = "    ice test c: normal flow";
     pj_bzero(&test_param, sizeof(test_param));
-    test_param.worker_cnt = 4;
+    test_param.worker_cnt = PJ_HAS_THREADS ? 4 : 0;
     test_param.worker_timeout = 1000;
 
     rc = perform_test2(cfg.title, stun_cfg, cfg.server_flag,

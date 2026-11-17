@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2025-2026 Teluu Inc. (http://www.teluu.com)
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 #include <pj/argparse.h>
 #include <pj/errno.h>
 #include <pj/list.h>
@@ -24,6 +41,29 @@
 #ifndef THIS_FILE
 #  define THIS_FILE         "test.c"
 #  define UNDEF_THIS_FILE   1
+#endif
+
+#ifdef __ZEPHYR__
+/**
+ * Zephyr's main() has no arguments: a test application passes them in a
+ * Kconfig string. Append the words of that string to argv, which already
+ * holds the fixed arguments, and return the new argc. The string is split
+ * in place.
+ */
+PJ_INLINE(int) ut_split_args(char *args, char *argv[], int argc, int max_argc)
+{
+    char *p = args;
+
+    while (argc < max_argc - 1) {
+        while (*p == ' ') ++p;
+        if (!*p) break;
+        argv[argc++] = p;
+        while (*p && *p != ' ') ++p;
+        if (*p) *p++ = '\0';
+    }
+    argv[argc] = NULL;
+    return argc;
+}
 #endif
 
 /* Unit testing app */
@@ -142,7 +182,7 @@ PJ_INLINE(void) ut_list_tests(ut_app_t *ut_app, const char *title)
     const pj_test_case *tc, *prev=NULL;
 
     pj_log_set_decor(d ^ PJ_LOG_HAS_NEWLINE);
-    PJ_LOG(3,(THIS_FILE, "%ld %s:", pj_list_size(&ut_app->suite.tests),
+    PJ_LOG(3,(THIS_FILE, "%ld %s:", (long)pj_list_size(&ut_app->suite.tests),
               title));
     pj_log_set_decor(0);
     for (tc=ut_app->suite.tests.next; tc!=&ut_app->suite.tests; tc=tc->next) {

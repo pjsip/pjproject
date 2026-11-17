@@ -45,7 +45,8 @@ static struct server_t
      */
     int             action;
     pj_bool_t       send_content_length;
-    unsigned        data_size;
+    unsigned        data_size;      /* Content-Length announced */
+    unsigned        body_size;      /* Bytes sent, 0 for data_size */
     unsigned        buf_size;
 } g_server;
 
@@ -154,7 +155,8 @@ static int server_thread(void *p)
                 pj_sock_close(newsock);
                 continue;
             }
-            while (send_len < srv->data_size) {
+            while (send_len < (srv->body_size ? srv->body_size :
+                                                srv->data_size)) {
                 pkt_len = srv->data_size - send_len;
                 if (pkt_len > (signed)srv->buf_size)
                     pkt_len = srv->buf_size;
@@ -965,8 +967,12 @@ int http_client_test_maxlen()
     thread_quit = PJ_FALSE;
     g_server.action = ACTION_REPLY;
     g_server.send_content_length = PJ_TRUE;
-    /* Advertise a body larger than the client's internal buffering limit. */
+    /* Advertise a body larger than the client's internal buffering limit,
+     * and send only a little of it: the client rejects the header, and a
+     * small stack cannot take megabytes over loopback anyway
+     */
     g_server.data_size = (unsigned)PJ_HTTP_MAX_CONTENT_LENGTH + 1024;
+    g_server.body_size = 4096;
     g_server.buf_size = 1024;
 
     sstatus = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0,
@@ -1024,6 +1030,7 @@ int http_client_test_maxlen()
     thread_quit = PJ_TRUE;
     pj_thread_join(g_server.thread);
     pj_sock_close(g_server.sock);
+    g_server.body_size = 0;
 #endif
 
     pj_http_req_destroy(http_req);

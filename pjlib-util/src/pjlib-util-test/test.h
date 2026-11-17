@@ -18,6 +18,7 @@
  */
 #include <pj/types.h>
 #include <pj/unittest.h>
+#include "../../../pjlib/src/pjlib-test/test_profile.h"
 
 #if defined(PJ_EXCLUDE_BENCHMARK_TESTS) && (PJ_EXCLUDE_BENCHMARK_TESTS==1)
 #   define WITH_BENCHMARK           0
@@ -31,8 +32,9 @@
 #define INCLUDE_STUN_TEST           1
 #define INCLUDE_RESOLVER_TEST       1
 #define INCLUDE_DNS_PACKET_TEST     1
-#define INCLUDE_HTTP_CLIENT_TEST    PJ_HAS_TCP
-#define INCLUDE_WEBSOCK_TEST        PJ_HAS_TCP
+/* The HTTP client and WebSocket tests run their server on a thread */
+#define INCLUDE_HTTP_CLIENT_TEST    (PJ_HAS_TCP && PJ_HAS_THREADS)
+#define INCLUDE_WEBSOCK_TEST        (PJ_HAS_TCP && PJ_HAS_THREADS)
 #define INCLUDE_WEBSOCK_ONLINE_TEST 0
 
 extern int xml_test(void);

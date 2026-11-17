@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -41,6 +41,7 @@
 
 #define PJ_THREAD_FUNC  
 #define PJ_NORETURN             
+#define PJ_THREAD_LOCAL         __thread
 #define PJ_ATTR_NORETURN        __attribute__ ((noreturn))
 #define PJ_ATTR_MAY_ALIAS       __attribute__ ((__may_alias__))
 

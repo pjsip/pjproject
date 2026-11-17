@@ -1,0 +1,13 @@
+# Zephyr module descriptor for pjproject. Add this tree to a Zephyr
+# application with -DZEPHYR_EXTRA_MODULES=<path to pjproject>, or list it as
+# a project in a west manifest. See README_Zephyr.md at the root of the tree.
+name: pjproject
+build:
+  # Configured after Zephyr's Mbed TLS, whose targets pjlib's TLS backend
+  # links; the module is in every Zephyr workspace, as it is in west.yml
+  depends:
+    - mbedtls
+  cmake: zephyr
+  kconfig: zephyr/Kconfig
+  settings:
+    snippet_root: zephyr

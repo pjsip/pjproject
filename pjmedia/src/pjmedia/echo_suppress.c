@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -789,7 +789,7 @@ PJ_DEF(pj_status_t) echo_supp_cancel_echo( void *state,
                 PJ_LOG(5,(THIS_FILE, "Echo suppressor residue = %d.%03d",
                           iresidue/1000, iresidue%1000));
 
-                if (ec->residue > MAX_RESIDUE && !ec->learning) {
+                if (ec->residue > (float)MAX_RESIDUE && !ec->learning) {
                     echo_supp_soft_reset(ec);
                     ec->residue = 0;
                 } else {

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -523,7 +523,8 @@ typedef struct in_addr pj_in_addr;
 
 /**
  * The size of sin_zero field in pj_sockaddr_in structure. Most OSes
- * use 8, but others such as the BSD TCP/IP stack in eCos uses 24.
+ * use 8, but others such as the BSD TCP/IP stack in eCos uses 24, and
+ * Zephyr has none (0, a zero-length array, which GCC and Clang accept).
  */
 #ifndef PJ_SOCKADDR_IN_SIN_ZERO_LEN
 #   define PJ_SOCKADDR_IN_SIN_ZERO_LEN  8

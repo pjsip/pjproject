@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2011-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2011-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -350,8 +350,9 @@ typedef enum pjmedia_event_mgr_flag
 {
     /**
      * Tell the event manager not to create any event worker thread.
-     * Do not set this flag if app plans to publish an event using
-     * PJMEDIA_EVENT_PUBLISH_POST_EVENT.
+     * An event published with PJMEDIA_EVENT_PUBLISH_POST_EVENT is then
+     * delivered synchronously, from the publisher's thread, as if it had
+     * been published without the flag.
      */
     PJMEDIA_EVENT_MGR_NO_THREAD = 1
 

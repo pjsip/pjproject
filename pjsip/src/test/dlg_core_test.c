@@ -197,8 +197,12 @@ static int ack_resolve_case(pj_pool_t *pool, enum ack_answer answer)
     PJ_TEST_SUCCESS(pj_grp_lock_add_handler(dlg->grp_lock_, pool, NULL,
                                             &on_dlg_destroy),
                     NULL, {pjsip_dlg_dec_lock(dlg); return -235 - off;});
-    PJ_TEST_NOT_NULL(pj_pool_alloc(dlg->pool, 128 * 1024), NULL,
-                     {rc = -240 - off; goto on_error;});
+    /* Past the caching pool's largest size class (64 KB), so that the
+     * dialog's pool is really freed with the dialog; less on a small board
+     */
+    PJ_TEST_NOT_NULL(pj_pool_alloc(dlg->pool, PJTEST_TARGET_RAM_KB < 1024 ?
+                                               72 * 1024 : 128 * 1024),
+                     NULL, {rc = -240 - off; goto on_error;});
 
     /* A loose route to a host name, so that the ACK has to be resolved */
     route = (pjsip_route_hdr*)

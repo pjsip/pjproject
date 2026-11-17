@@ -1,0 +1,10 @@
+sample:
+  name: PJSIP simple_pjsua
+  description: pjsua-lib user agent registering to a PBX and taking calls
+tests:
+  sample.pjsip.simple_pjsua:
+    build_only: true
+    platform_allow:
+      - mps2/an521/cpu0
+      - native_sim/native/64
+    tags: pjsip

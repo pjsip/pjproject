@@ -1,0 +1,53 @@
+# Copyright (C) 2026 Teluu Inc. (http://www.teluu.com)
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+menuconfig PJPROJECT
+	bool "PJSIP (pjproject)"
+	depends on POSIX_API && NETWORKING && NET_SOCKETS && NET_IPV4
+	select REQUIRES_FULL_LIBC
+	help
+	  Build PJSIP for this application: pjlib, pjlib-util, pjnath,
+	  pjmedia, pjmedia-codec, pjsip, pjsip-simple, pjsip-ua and
+	  pjsua-lib.
+	  See README_Zephyr.md.
+
+if PJPROJECT
+
+config PJPROJECT_THREADS
+	bool "Thread support in PJLIB"
+	select POSIX_THREADS
+	select THREAD_LOCAL_STORAGE if ARCH_HAS_THREAD_LOCAL_STORAGE && TOOLCHAIN_SUPPORTS_THREAD_LOCAL_STORAGE
+	help
+	  Build PJLIB with threads, mutexes and semaphores over pthreads.
+	  Off, PJLIB is single threaded: the application drives everything
+	  by polling and no pthread function is linked.
+
+	  PJLIB keeps its per-thread data in compiler thread-local storage
+	  rather than pthread keys, so that it works from Zephyr's main
+	  thread too; this needs THREAD_LOCAL_STORAGE. That storage comes
+	  off the top of every thread's stack, kernel threads included:
+	  PJLIB's share is about 270 bytes, more than the idle thread's
+	  default stack, so raise IDLE_STACK_SIZE. Threads PJLIB creates
+	  need DYNAMIC_THREAD, and get DYNAMIC_THREAD_STACK_SIZE each
+	  unless the application asks for more; see
+	  zephyr/samples/embedded_ua/overlay-threads.conf.
+
+config PJPROJECT_TLS
+	bool "SIP over TLS with Mbed TLS"
+	depends on MBEDTLS && NET_TCP
+	help
+	  Build PJLIB's Mbed TLS backend and the SIP TLS transport against
+	  the Mbed TLS that Zephyr provides. The application configures
+	  Mbed TLS itself: TLS version, ciphersuites, certificate parsing
+	  and record buffer sizes. zephyr/samples/embedded_ua/overlay-tls.conf
+	  is a working TLS 1.2 client configuration.
+
+config PJPROJECT_FLOATING_POINT
+	bool "Floating point in PJLIB"
+	default FPU
+	help
+	  Off, PJLIB avoids floating point arithmetic, which saves the
+	  soft-float helpers on a core without an FPU. The G.711 and G.722
+	  codecs use integers only.
+
+endif # PJPROJECT

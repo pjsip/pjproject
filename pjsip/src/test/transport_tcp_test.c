@@ -36,7 +36,6 @@ static pj_status_t multi_listener_test(pjsip_tpfactory *factory[],
 {
     pj_status_t status;
     unsigned i = 0;
-    pj_str_t s;
     pjsip_transport *tcp;
     pjsip_tpfactory *tpfactory = NULL;
     pj_sockaddr_in rem_addr;
@@ -114,7 +113,11 @@ static pj_status_t multi_listener_test(pjsip_tpfactory *factory[],
     pj_bzero(&tp_sel, sizeof(tp_sel));
     tp_sel.type = PJSIP_TPSELECTOR_LISTENER;
     tp_sel.u.listener = factory[num_factory/2];
-    pj_sockaddr_in_init(&rem_addr, pj_cstr(&s, "1.1.1.1"), 80);
+    /* Connect to another listener of ours rather than to an outside
+     * address: a loopback-only host refuses the latter at once.
+     */
+    pj_sockaddr_in_init(&rem_addr, &factory[1]->addr_name.host,
+                        (pj_uint16_t)factory[1]->addr_name.port);
     status = pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_TCP,
                                            &rem_addr, sizeof(rem_addr),
                                            &tp_sel, &tcp);

@@ -92,20 +92,24 @@ target_link_libraries(pjturn-srv PRIVATE pjlib pjlib-util pjnath)
 # ##############################################################################
 # Test application
 
-if(BUILD_TESTING)
-  add_executable(pjnath-test
-    src/pjnath-test/ice_test.c
-    src/pjnath-test/stun.c
-    src/pjnath-test/sess_auth.c
-    src/pjnath-test/server.c
-    src/pjnath-test/concur_test.c
-    src/pjnath-test/stun_sock_test.c
-    src/pjnath-test/turn_sock_test.c
-    src/pjnath-test/test.c
-    src/pjnath-test/${PJ_TEST_MAIN}
-  )
+# The sources, except main, are an INTERFACE target so that another build
+# (the Zephyr test app) compiles the same list.
+add_library(pjnath-test-sources INTERFACE)
+target_sources(pjnath-test-sources INTERFACE
+  src/pjnath-test/ice_test.c
+  src/pjnath-test/stun.c
+  src/pjnath-test/sess_auth.c
+  src/pjnath-test/server.c
+  src/pjnath-test/concur_test.c
+  src/pjnath-test/stun_sock_test.c
+  src/pjnath-test/turn_sock_test.c
+  src/pjnath-test/test.c
+)
 
-  target_link_libraries(pjnath-test PRIVATE pjlib pjlib-util pjnath)
+if(BUILD_TESTING)
+  add_executable(pjnath-test src/pjnath-test/${PJ_TEST_MAIN})
+
+  target_link_libraries(pjnath-test PRIVATE pjnath-test-sources pjlib pjlib-util pjnath)
 
   add_test(NAME pjnath-test COMMAND pjnath-test)
 endif()

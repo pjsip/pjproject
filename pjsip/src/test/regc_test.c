@@ -2056,7 +2056,7 @@ int regc_test(void)
 
     unsigned i;
     pj_sockaddr_in addr;
-    pjsip_transport *udp = NULL;
+    pjsip_transport *udp = NULL, *udp2 = NULL, *sender;
     pj_uint16_t port; 
     char registrar_uri_buf[80];
     pj_str_t registrar_uri;
@@ -2064,22 +2064,38 @@ int regc_test(void)
 
     pj_sockaddr_in_init(&addr, 0, 0);
 
-    /* Acquire existing transport, if any */
+    /* Acquire existing transport, if any, else start one; it is released
+     * at the end either way
+     */
     rc = pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_UDP, &addr, sizeof(addr), NULL, &udp);
-    if (rc == PJ_SUCCESS) {
-        port = pj_sockaddr_get_port(&udp->local_addr);
-        pjsip_transport_dec_ref(udp);
-        udp = NULL;
-    } else {
+    if (rc != PJ_SUCCESS) {
         rc = pjsip_udp_transport_start(endpt, NULL, NULL, 1, &udp);
         if (rc != PJ_SUCCESS) {
             app_perror("   error creating UDP transport", rc);
             rc = -2;
             goto on_return;
         }
-
-        port = pj_sockaddr_get_port(&udp->local_addr);
     }
+
+    /* The registrar is the UDP transport the manager does not send from:
+     * a datagram whose source and destination endpoints are the same does
+     * not arrive on every platform (Zephyr drops it)
+     */
+    rc = pjsip_udp_transport_start(endpt, NULL, NULL, 1, &udp2);
+    if (rc != PJ_SUCCESS) {
+        app_perror("   error creating UDP transport", rc);
+        rc = -2;
+        goto on_return;
+    }
+    rc = pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_UDP, &addr, sizeof(addr), NULL, &sender);
+    if (rc != PJ_SUCCESS) {
+        app_perror("   error acquiring UDP transport", rc);
+        rc = -2;
+        goto on_return;
+    }
+    port = pj_sockaddr_get_port(sender == udp2 ? &udp->local_addr :
+                                                 &udp2->local_addr);
+    pjsip_transport_dec_ref(sender);
 
     /* Register registrar module */
     rc = pjsip_endpt_register_module(endpt, &registrar.mod);
@@ -2241,6 +2257,9 @@ on_return:
     }
     if (send_mod.mod.id != -1) {
         pjsip_endpt_unregister_module(endpt, &send_mod.mod);
+    }
+    if (udp2) {
+        pjsip_transport_dec_ref(udp2);
     }
     if (udp) {
         pjsip_transport_dec_ref(udp);

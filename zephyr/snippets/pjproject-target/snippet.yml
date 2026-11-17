@@ -1,0 +1,18 @@
+# What pjproject's applications need on each target beyond Zephyr's board
+# files: the hardware the port is sized for, and the emulated boards that
+# stand in for it. Each file under boards/ says what it sets and why.
+# Applied by the sample and the test; add -S pjproject-target, or
+# set(SNIPPET pjproject-target) before find_package(Zephyr), to your own.
+# It changes nothing on other boards.
+name: pjproject-target
+boards:
+  nucleo_h563zi/stm32h563xx:
+    append:
+      EXTRA_DTC_OVERLAY_FILE: boards/nucleo_h563zi_stm32h563xx.overlay
+  mps2/an521/cpu0:
+    append:
+      EXTRA_CONF_FILE: boards/mps2_an521_cpu0.conf
+      EXTRA_DTC_OVERLAY_FILE: boards/mps2_an521_cpu0.overlay
+  native_sim/native/64:
+    append:
+      EXTRA_CONF_FILE: boards/native_sim_native_64.conf

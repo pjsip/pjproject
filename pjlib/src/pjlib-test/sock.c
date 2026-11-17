@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -933,6 +933,32 @@ on_error:
     return rc;
 }
 
+/* The OS has socketpair() but not for this family/type (Zephyr: AF_UNIX
+ * stream only).
+ */
+static pj_bool_t sockpair_unsupported(pj_status_t rc)
+{
+    char errmsg[PJ_ERR_MSG_SIZE];
+
+    if (rc == PJ_EAFNOTSUP ||
+#if defined(EPROTOTYPE)
+        rc == PJ_STATUS_FROM_OS(EPROTOTYPE) ||
+#endif
+#if defined(EPROTONOSUPPORT)
+        rc == PJ_STATUS_FROM_OS(EPROTONOSUPPORT) ||
+#endif
+#if defined(EOPNOTSUPP)
+        rc == PJ_STATUS_FROM_OS(EOPNOTSUPP) ||
+#endif
+        0)
+    {
+        PJ_LOG(2, ("test", "....skipped: %s",
+                   pj_strerror(rc, errmsg, sizeof(errmsg)).ptr));
+        return PJ_TRUE;
+    }
+    return PJ_FALSE;
+}
+
 static int socketpair_test()
 {
     int rc;
@@ -942,7 +968,7 @@ static int socketpair_test()
     /* AF_UNIX */
 #if (defined(PJ_SOCK_HAS_SOCKETPAIR) && PJ_SOCK_HAS_SOCKETPAIR)
     rc = do_sockpair_tst(pj_AF_UNIX(), pj_SOCK_DGRAM(), 0);
-    if (rc != PJ_SUCCESS)
+    if (rc != PJ_SUCCESS && !sockpair_unsupported(rc))
         return rc;
 
     rc = do_sockpair_tst(pj_AF_UNIX(), pj_SOCK_STREAM(), 0);
@@ -962,6 +988,7 @@ static int socketpair_test()
         return rc;
 #endif
 
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
     /* AF_INET6 */
     rc = do_sockpair_tst(pj_AF_INET6(), pj_SOCK_DGRAM(), 0);
     if (rc != PJ_SUCCESS)
@@ -970,6 +997,7 @@ static int socketpair_test()
     rc = do_sockpair_tst(pj_AF_INET6(), pj_SOCK_STREAM(), 0);
     if (rc != PJ_SUCCESS)
         return rc;
+#endif
 #endif
 
     return 0;

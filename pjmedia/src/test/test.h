@@ -21,6 +21,7 @@
 
 #include <pjmedia.h>
 #include <pjlib.h>
+#include "../../../pjlib/src/pjlib-test/test_profile.h"
 
 #if defined(PJ_EXCLUDE_BENCHMARK_TESTS) && (PJ_EXCLUDE_BENCHMARK_TESTS==1)
 #   define WITH_BENCHMARK           0
@@ -36,11 +37,20 @@
 #endif
 #define HAS_SDP_NEG_TEST        1
 #define HAS_SDP_ATTR_TEST       1
-#define HAS_JBUF_TEST           1
+/* Zephyr: the test app mounts no file system, which the jitter buffer
+ * test's data and the codec vectors come from
+ */
+#if defined(__ZEPHYR__)
+#   define HAS_JBUF_TEST        0
+#   define HAS_CODEC_VECTOR_TEST 0
+#else
+#   define HAS_JBUF_TEST        1
+#   define HAS_CODEC_VECTOR_TEST 1
+#endif
 #define HAS_MIPS_TEST           WITH_BENCHMARK
-#define HAS_CODEC_VECTOR_TEST   1
 #define HAS_TONE_DETECTOR_TEST  1
-#define HAS_TXT_STREAM_TEST     1
+/* The text stream paces its RTP with a clock thread */
+#define HAS_TXT_STREAM_TEST     PJ_HAS_THREADS
 #define HAS_TRANSPORT_SRTP_TEST (PJMEDIA_HAS_SRTP && \
                                  PJMEDIA_SRTP_CHECK_ROC_ON_RESTART)
 

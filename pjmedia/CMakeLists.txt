@@ -578,14 +578,8 @@ target_sources(pjmedia
 # compile definitions
 target_compile_definitions(pjmedia
   PUBLIC
-    # srtp
-    PJMEDIA_HAS_SRTP=$<BOOL:${PJMEDIA_WITH_SRTP}>
-
     # the null audio device changes what RTCP-XR reports (rtcp_xr.c)
     PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO=$<BOOL:${PJMEDIA_WITH_AUDIODEV_NULL}>
-
-    # resampling backend
-    PJMEDIA_RESAMPLE_IMP=PJMEDIA_RESAMPLE_$<UPPER_CASE:${PJMEDIA_WITH_RESAMPLE}>
 
     # aec
     PJMEDIA_HAS_SPEEX_AEC=$<BOOL:${PJMEDIA_WITH_SPEEX_AEC}>
@@ -625,6 +619,11 @@ endif()
 block(SCOPE_FOR VARIABLES)
   # G711 codec
   set(PJMEDIA_HAS_G711_CODEC ${PJMEDIA_WITH_G711_CODEC})
+  # SRTP
+  set(PJMEDIA_HAS_SRTP ${PJMEDIA_WITH_SRTP})
+  # resampling backend
+  string(TOUPPER "${PJMEDIA_WITH_RESAMPLE}" _resample)
+  set(PJMEDIA_RESAMPLE_IMP "PJMEDIA_RESAMPLE_${_resample}")
 
   # write configured header
   configure_file(
@@ -688,11 +687,13 @@ target_link_libraries(pjmedia
     $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVDEVICE}>:FFMPEG::avdevice>
 )
 
-if (NOT (WIN32 OR CYGWIN OR MINGW))
+if (NOT (WIN32 OR CYGWIN OR MINGW OR DEFINED ZEPHYR_BASE))
   # pjmedia calls libm functions (sin(), cos(), ...), a separate library on
   # these systems that the final link needs. Linked by name so that a cross
   # toolchain picks the libm matching its CPU flags; a Generic one resolves
   # -lm through its multilib specs, where find_library() does not look.
+  # Zephyr's own libc provides them (and the host's static libm does not
+  # link into native_sim).
   find_library(MATH_LIBRARY m)
   if(MATH_LIBRARY OR CMAKE_SYSTEM_NAME STREQUAL "Generic")
     target_link_libraries(pjmedia PRIVATE m)
@@ -1104,28 +1105,33 @@ endif()
 # ##############################################################################
 #  Test application
 
+# The sources, except main, are an INTERFACE target so that another build
+# (the Zephyr test app) compiles the same list.
+add_library(pjmedia-test-sources INTERFACE)
+target_sources(pjmedia-test-sources INTERFACE
+  src/test/codec_vectors.c
+  src/test/conf_test.c
+  src/test/jbuf_test.c
+  src/test/mips_test.c
+  src/test/vid_codec_test.c
+  src/test/vid_conf_test.c
+  src/test/vid_dev_test.c
+  src/test/vid_port_test.c
+  src/test/rtp_test.c
+  src/test/test.c
+  src/test/tone_detector_test.c
+  src/test/txt_stream_test.c
+  src/test/sdp_neg_test.c
+  src/test/sdp_attr_test.c
+  src/test/transport_srtp_test.c
+)
+
 if(BUILD_TESTING)
-  add_executable(pjmedia-test
-    src/test/codec_vectors.c
-    src/test/conf_test.c
-    src/test/jbuf_test.c
-    src/test/main.c
-    src/test/mips_test.c
-    src/test/vid_codec_test.c
-    src/test/vid_conf_test.c
-    src/test/vid_dev_test.c
-    src/test/vid_port_test.c
-    src/test/rtp_test.c
-    src/test/test.c
-    src/test/tone_detector_test.c
-    src/test/txt_stream_test.c
-    src/test/sdp_neg_test.c
-    src/test/sdp_attr_test.c
-    src/test/transport_srtp_test.c
-  )
+  add_executable(pjmedia-test src/test/main.c)
 
   target_link_libraries(pjmedia-test
     PRIVATE
+      pjmedia-test-sources
       pjlib
       pjlib-util
       pjnath

@@ -208,7 +208,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
 {
     pj_ioqueue_t *ioqueue;
     pj_lock_t *lock;
+#if PJ_IOQUEUE_HAS_SAFE_UNREG
     pj_size_t i;
+#endif
     pj_status_t rc;
 
     /* Check that arguments are valid. */
@@ -301,7 +303,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
  */
 PJ_DEF(pj_status_t) pj_ioqueue_destroy(pj_ioqueue_t *ioqueue)
 {
+#if PJ_IOQUEUE_HAS_SAFE_UNREG
     pj_ioqueue_key_t *key;
+#endif
 
     PJ_ASSERT_RETURN(ioqueue, PJ_EINVAL);
 
@@ -367,7 +371,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
     if (sizeof(fd_set) < FD_SETSIZE && sock >= FD_SETSIZE) {
         PJ_LOG(4, ("pjlib", "Failed to register socket to ioqueue because "
                             "socket fd is too big (fd=%ld/FD_SETSIZE=%d)",
-                            sock, FD_SETSIZE));
+                            sock, (int)FD_SETSIZE));
         return PJ_ETOOBIG;
     }
 
@@ -572,12 +576,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
 
     pj_ioqueue_unlock_key(key);
 
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
     /* Drain pending write callbacks. See #4864, #4878.
      * Must be done before clearing callbacks below.
      */
     ioqueue_drain_pending_writes(key);
-#endif
 
     /* Clear callback */
     key->cb.on_accept_complete = NULL;
@@ -1091,7 +1093,13 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
         }
 
 #if PJ_HAS_TCP
+        /* A failed connect() may be flagged in both the write and the
+         * exception set (Zephyr does); the write event above then already
+         * completes it. Without this check the exception event would be a
+         * no-op that still counts in the number of events returned.
+         */
         if (key_has_pending_connect(h) && PJ_FD_ISSET(h->fd, &xfdset) &&
+            !PJ_FD_ISSET(h->fd, &wfdset) &&
             !IS_CLOSING(h) && event_cnt < MAX_EVENTS)
         {
 #if PJ_IOQUEUE_HAS_SAFE_UNREG

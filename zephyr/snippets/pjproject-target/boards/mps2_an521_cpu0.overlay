@@ -1,0 +1,7 @@
+/* The QEMU model gives this board 4 MB of SRAM. Limit it to the 640 KB of
+ * the STM32H563 pjproject is sized for, so that an image too large for the
+ * target fails to link here instead of fitting silently.
+ */
+&ssram2_3 {
+	reg = <0x38000000 DT_SIZE_K(640)>;
+};

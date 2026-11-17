@@ -24,6 +24,7 @@
 #include <pjsip/sip_ua_layer.h>
 #include <pjsip-ua/sip_inv.h>
 #include <pj/string.h>
+#include "../../../pjlib/src/pjlib-test/test_profile.h"
 
 extern pjsip_endpoint *endpt;
 
@@ -58,11 +59,11 @@ extern pj_caching_pool caching_pool;
 #define TEST_UDP_PORT_STR   "15060"
 
 /**
- * Memory size to use in caching pool.
- * Default: 2MB
+ * Memory size to use in caching pool: a tenth of the target's RAM, from
+ * 64 KB on a 640 KB board to 2 MB.
  */
 #ifndef PJSIP_TEST_MEM_SIZE
-#  define PJSIP_TEST_MEM_SIZE       (2*1024*1024)
+#  define PJSIP_TEST_MEM_SIZE       (PJTEST_RAM_SCALE(10, 64, 2048) * 1024)
 #endif
 
 #define INCLUDE_MESSAGING_GROUP     1
@@ -71,7 +72,7 @@ extern pj_caching_pool caching_pool;
 #define INCLUDE_INV_GROUP           1
 #define INCLUDE_REGC_GROUP          1
 
-#define INCLUDE_BENCHMARKS          1
+#define INCLUDE_BENCHMARKS          WITH_BENCHMARK
 
 /*
  * Include tests that normally would fail under certain gcc
@@ -92,23 +93,37 @@ extern pj_caching_pool caching_pool;
 #define INCLUDE_MSG_TEST        (INCLUDE_MESSAGING_GROUP && !APPLE_ASAN)
 #define INCLUDE_MULTIPART_TEST  INCLUDE_MESSAGING_GROUP
 #define INCLUDE_TXDATA_TEST     INCLUDE_MESSAGING_GROUP
-#define INCLUDE_TSX_BENCH       (INCLUDE_MESSAGING_GROUP && WITH_BENCHMARK)
+#define INCLUDE_TSX_BENCH       (INCLUDE_MESSAGING_GROUP && WITH_BENCHMARK && \
+                                 PJSIP_TEST_HAS_LOOP)
+/* The loop transport runs on a worker thread, and the transaction, dialog
+ * and registration tests run over it
+ */
+#define PJSIP_TEST_HAS_LOOP     PJ_HAS_THREADS
+/* pjsua is not part of the Zephyr port (its sources are left out of the
+ * build there, see pjsip/CMakeLists.txt); elsewhere it needs worker threads
+ */
+#if defined(__ZEPHYR__)
+#   define PJSIP_TEST_HAS_PJSUA 0
+#else
+#   define PJSIP_TEST_HAS_PJSUA PJ_HAS_THREADS
+#endif
 #define INCLUDE_UDP_TEST        INCLUDE_TRANSPORT_GROUP
-#define INCLUDE_LOOP_TEST       INCLUDE_TRANSPORT_GROUP
+#define INCLUDE_LOOP_TEST       (INCLUDE_TRANSPORT_GROUP && PJSIP_TEST_HAS_LOOP)
 #define INCLUDE_TCP_TEST        (INCLUDE_TRANSPORT_GROUP && PJ_HAS_TCP)
 #define INCLUDE_RESOLVE_TEST    INCLUDE_TRANSPORT_GROUP
-#define INCLUDE_SRV_FAILOVER_TEST INCLUDE_TRANSPORT_GROUP
-#define INCLUDE_TSX_TEST        INCLUDE_TSX_GROUP
-#define INCLUDE_TSX_DESTROY_TEST INCLUDE_TSX_GROUP
-#define INCLUDE_INV_OA_TEST     INCLUDE_INV_GROUP
-#define INCLUDE_DLG_TARGET_REFRESH_TEST INCLUDE_INV_GROUP
-#define INCLUDE_REGC_TEST       INCLUDE_REGC_GROUP
-#define INCLUDE_AUTH_ASYNC_TEST INCLUDE_REGC_GROUP
-#define INCLUDE_PJSUA_AUTH_TEST INCLUDE_REGC_GROUP
-#define INCLUDE_PJSUA_CALL_TEST INCLUDE_REGC_GROUP
-#define INCLUDE_PJSUA_ACC_TEST  INCLUDE_REGC_GROUP
-#define INCLUDE_PJSUA_PRES_TEST INCLUDE_REGC_GROUP
-#define INCLUDE_PJSUA_DNS_TEST  INCLUDE_TRANSPORT_GROUP
+/* Its servers are threads */
+#define INCLUDE_SRV_FAILOVER_TEST (INCLUDE_TRANSPORT_GROUP && PJ_HAS_THREADS)
+#define INCLUDE_TSX_TEST        (INCLUDE_TSX_GROUP && PJSIP_TEST_HAS_LOOP)
+#define INCLUDE_TSX_DESTROY_TEST (INCLUDE_TSX_GROUP && PJSIP_TEST_HAS_LOOP)
+#define INCLUDE_INV_OA_TEST     (INCLUDE_INV_GROUP && PJSIP_TEST_HAS_LOOP)
+#define INCLUDE_DLG_TARGET_REFRESH_TEST (INCLUDE_INV_GROUP && PJSIP_TEST_HAS_LOOP)
+#define INCLUDE_REGC_TEST       (INCLUDE_REGC_GROUP && PJSIP_TEST_HAS_LOOP)
+#define INCLUDE_AUTH_ASYNC_TEST (INCLUDE_REGC_GROUP && PJSIP_TEST_HAS_LOOP)
+#define INCLUDE_PJSUA_AUTH_TEST (INCLUDE_REGC_GROUP && PJSIP_TEST_HAS_PJSUA)
+#define INCLUDE_PJSUA_CALL_TEST (INCLUDE_REGC_GROUP && PJSIP_TEST_HAS_PJSUA)
+#define INCLUDE_PJSUA_ACC_TEST  (INCLUDE_REGC_GROUP && PJSIP_TEST_HAS_PJSUA)
+#define INCLUDE_PJSUA_PRES_TEST (INCLUDE_REGC_GROUP && PJSIP_TEST_HAS_PJSUA)
+#define INCLUDE_PJSUA_DNS_TEST  (INCLUDE_TRANSPORT_GROUP && PJSIP_TEST_HAS_PJSUA)
 #define INCLUDE_DLG_CORE_TEST   INCLUDE_MESSAGING_GROUP
 
 
