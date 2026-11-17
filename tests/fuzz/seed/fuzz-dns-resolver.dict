@@ -1,0 +1,20 @@
+# DNS header flags (resolver.c response validation)
+"\x81\x80"
+"\x81\x83"
+"\x84\x00"
+"\xa1\x80"
+# rrtype / class / compression pointer (dns.c RR parser)
+"\x00\x01"
+"\x00\x1c"
+"\x00\x21"
+"\x00\x23"
+"\x00\x01"
+"\xc0\x0c"
+"\xc0\x14"
+# name labels of the fixed query name
+"\x04fuzz"
+"\x07example"
+"\x03com"
+# rcode values
+"\x00\x03"
+"\x00\x05"
