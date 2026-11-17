@@ -564,7 +564,9 @@ static pj_bool_t turn_tcp_on_data_read(pj_activesock_t *asock,
 }
 
 /* Answer ConnectionBind on the data connection: accept it when
- * turn_accept_conn_bind is set, reject it with 400 otherwise.
+ * turn_accept_conn_bind is set, reject it with 400 otherwise. With
+ * turn_stale_conn_bind, answer the first one with 438 and a new nonce,
+ * and leave the retry unanswered.
  */
 static pj_bool_t turn_dataconn_on_data_read(pj_activesock_t *asock,
                                             void *data,
@@ -593,7 +595,19 @@ static pj_bool_t turn_dataconn_on_data_read(pj_activesock_t *asock,
                                     PJ_STUN_NO_FINGERPRINT_CHECK,
                                 &req, NULL, NULL);
     if (status == PJ_SUCCESS && PJ_STUN_IS_REQUEST(req->hdr.type)) {
-        if (test_srv->turn_accept_conn_bind) {
+        test_srv->turn_stat.rx_conn_bind_cnt++;
+
+        if (test_srv->turn_stale_conn_bind) {
+            pj_str_t tmp;
+
+            if (test_srv->turn_stat.rx_conn_bind_cnt == 1) {
+                pj_stun_msg_create_response(pool, req,
+                                            PJ_STUN_SC_STALE_NONCE, NULL,
+                                            &resp);
+                pj_stun_msg_add_string_attr(pool, resp, PJ_STUN_ATTR_NONCE,
+                                            pj_cstr(&tmp, "newnonce"));
+            }
+        } else if (test_srv->turn_accept_conn_bind) {
             pj_str_t tmp;
 
             pj_stun_msg_create_response(pool, req, 0, NULL, &resp);
