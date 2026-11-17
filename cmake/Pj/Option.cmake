@@ -100,17 +100,23 @@ endmacro()
 
 # pj_retry_on_new_root(<option> <package>)
 #
-# When <package>_ROOT or <PACKAGE>_ROOT (variable or environment), or
-# <PACKAGE>_ROOT_DIR as CMake's FindOpenSSL takes it, differs from the previous
-# configure, drop the cached search results of <package> and restore <option>
-# if pj_force_set() turned it off, so find_package() searches the new root,
-# like re-running configure with --with-<package>=DIR.
+# When <package>_ROOT or <PACKAGE>_ROOT (variable or environment), or for
+# OpenSSL OPENSSL_ROOT_DIR as CMake's FindOpenSSL takes it, differs from the
+# previous configure, drop the cached search results of <package> and restore
+# <option> if pj_force_set() turned it off, so find_package() searches the new
+# root, like re-running configure with --with-<package>=DIR.
 function(pj_retry_on_new_root option package)
   string(TOUPPER "${package}" _upper)
   set(_root "${${package}_ROOT}|${${_upper}_ROOT}|$ENV{${package}_ROOT}|$ENV{${_upper}_ROOT}")
-  # only when set, so the value recorded for other packages does not change
-  if(${_upper}_ROOT_DIR OR DEFINED ENV{${_upper}_ROOT_DIR})
-    string(APPEND _root "|${${_upper}_ROOT_DIR}|$ENV{${_upper}_ROOT_DIR}")
+  # CMake itself searches <package>_ROOT and <PACKAGE>_ROOT for every
+  # package. A <PACKAGE>_ROOT_DIR counts only where a Find module reads it,
+  # and only CMake's FindOpenSSL does (OPENSSL_ROOT_DIR); for any other
+  # package, a change of it would retry a search that does not look there.
+  # Added only when set, so the value recorded before it was given does not
+  # change.
+  if(_upper STREQUAL "OPENSSL"
+     AND (OPENSSL_ROOT_DIR OR DEFINED ENV{OPENSSL_ROOT_DIR}))
+    string(APPEND _root "|${OPENSSL_ROOT_DIR}|$ENV{OPENSSL_ROOT_DIR}")
   endif()
   # whether a cross build searches the root at all (PJ_USE_ROOTS_IN_FIND)
   if(_root MATCHES "[^|]")
