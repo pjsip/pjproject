@@ -61,13 +61,11 @@ if(_pj_openssl_components)
     find_dependency(OpenSSL COMPONENTS ${_pj_openssl_components} CONFIG)
   endif()
 endif()
-unset(_pj_openssl_components)
 if(_pj_ssl_backend STREQUAL "gnutls")
   find_dependency(GnuTLS)
 elseif(_pj_ssl_backend STREQUAL "mbedtls")
   find_dependency(MbedTLS CONFIG)
 endif()
-unset(_pj_ssl_backend)
 
 # pjlib platform deps
 if(@PJLIB_WITH_LIBUUID@)
@@ -125,7 +123,6 @@ set(_pj_resample "@PJMEDIA_WITH_RESAMPLE@")
 if(_pj_resample STREQUAL "libsamplerate")
   find_dependency(SampleRate)
 endif()
-unset(_pj_resample)
 
 # FFMPEG
 if(@PJMEDIA_WITH_FFMPEG@)
