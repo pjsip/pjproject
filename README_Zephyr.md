@@ -5,10 +5,10 @@ This guide takes you from a clean machine to a SIP call running on [Zephyr RTOS]
 ## What the port provides
 
 - pjproject is a [Zephyr module](https://docs.zephyrproject.org/latest/develop/modules.html). Add this source tree to a Zephyr application and PJLIB, PJLIB-UTIL, PJNATH, PJMEDIA, PJSIP and pjsua-lib are built with the application, configured through Kconfig like any other part of Zephyr.
-- The port runs on Zephyr's POSIX layer: BSD sockets, `select()`, `clock_gettime()` and, optionally, pthreads. There is one Zephyr-specific source file in PJLIB (network interface enumeration) and one platform header. Everything else is the same code that runs on Linux.
-- [`embedded_ua.c`](pjsip-apps/src/samples/embedded_ua.c), a complete headless SIP user agent on pjsip and pjmedia without pjsua-lib, builds as a Zephyr sample. It registers to a SIP server (or not), supports TLS via [Mbed TLS](https://www.trustedfirmware.org/projects/mbed-tls/), answers calls with audio loopback, speaks SDES-SRTP, and is driven by SIP MESSAGE requests. It is the bring-up and reference application of the port.
-- [`simple_pjsua.c`](pjsip-apps/src/samples/simple_pjsua.c), the pjsua-lib sample, builds as a Zephyr sample too: pjsua-lib is supported. It registers, answers calls on the null sound device and makes one when told to, sized for one call at a time (section 3, "Footprint").
-- Tested targets, each registering to a SIP server and completing calls with zero packet loss:
+- The port runs on Zephyr's POSIX layer: BSD sockets, `select()`, `clock_gettime()` and, optionally, pthreads.
+- [`embedded_ua.c`](pjsip-apps/src/samples/embedded_ua.c) as a Zephyr sample, based on pjsip and pjmedia without pjsua-lib. It supports four concurrent calls,  registration, TLS via [Mbed TLS](https://www.trustedfirmware.org/projects/mbed-tls/), audio loopback, and SDES-SRTP.
+- [`simple_pjsua.c`](pjsip-apps/src/samples/simple_pjsua.c), the pjsua-lib sample. It registers, answers calls on the null sound device and makes one when told to, sized for one call at a time.
+- Tested targets:
 
   - `native_sim/native/64`, Zephyr as a Linux process
   - `mps2/an521/cpu0`, a Cortex-M33 under QEMU, limited to 640 KB of RAM to stand in for the STM32H563
@@ -16,15 +16,18 @@ This guide takes you from a clean machine to a SIP call running on [Zephyr RTOS]
 - The five test suites, pjlib-test, pjlib-util-test, pjnath-test, pjmedia-test and pjsip-test, build as Zephyr test applications with twister entries. All five pass on the three targets, single threaded and with threads, with one exception: the threaded pjsip-test does not fit 640 KB (section 5).
 - A CI workflow builds every suite and sample for native_sim and the AN521 and runs pjlib-test on every pull request (section 5).
 
-Current status:
+### Current status
 
 - Registration and four concurrent calls
 - SIP transport: UDP or TLS
 - Audio codec: G.711 or G.722
 - SDES-SRTP
-- Single threaded or pjsip and the media on two pthreads
-- The standard pjsip and pjmedia feature set are working: RFC 3261, registration refresh, digest authentication (RFC 2617), rport (RFC 3581), SDP offer/answer (RFC 3264) with the RTCP (RFC 3605), re-INVITE and UPDATE (RFC 3311), PRACK (RFC 3262), call hold and resume, mid-call codec change, SIP MESSAGE (RFC 3428), RTCP reports and quality statistics, DTMF (RFC 4733), adaptive jitter buffer (200 ms by default, `CONFIG_EMBUA_JB_SIZE`), packet loss concealment, VAD with silence suppression, symmetric RTP and ptime negotiation.
-- The rest of the libraries compiles too, among them SUBSCRIBE/NOTIFY and PUBLISH, session timers, REFER, the conference bridge and the WAV ports, but *has not been exercised on Zephyr* beyond what the test suites of section 5 cover (they run STUN, TURN, ICE and the conference bridge over loopback on native_sim), and there is no Zephyr sound device backend.
+- Single threaded or one worker thread for media
+
+
+The standard pjsip and pjmedia feature set are working: RFC 3261, registration refresh, digest authentication (RFC 2617), rport (RFC 3581), SDP offer/answer (RFC 3264) with the RTCP (RFC 3605), re-INVITE and UPDATE (RFC 3311), PRACK (RFC 3262), call hold and resume, mid-call codec change, SIP MESSAGE (RFC 3428), RTCP reports and quality statistics, DTMF (RFC 4733), adaptive jitter buffer (200 ms by default, `CONFIG_EMBUA_JB_SIZE`), packet loss concealment, VAD with silence suppression, symmetric RTP and ptime negotiation.
+
+The rest of the libraries compiles too, among them SUBSCRIBE/NOTIFY and PUBLISH, session timers, REFER, the conference bridge and the WAV ports, but *has not been exercised on Zephyr* beyond what the test suites of section 5 cover (they run STUN, TURN, ICE and the conference bridge over loopback on native_sim), and there is no Zephyr sound device backend.
 
 The preset builds G.711 only; G.722 and the resampler are a `config_site.h` setting away.
 
@@ -45,7 +48,9 @@ The sizes of the whole embedded_ua image on the AN521, Zephyr and its network st
 | SIP over TLS, single thread | 450 KB | 290 KB | 492 KB |
 | SIP over TLS, threads | 460 KB | 329 KB | 531 KB |
 
-Most of the RAM is what the configuration sets aside rather than pjproject's own data: the heap arena for pjlib's pools, the kernel heap the media thread's stack comes from in the threaded build, and about 80 KB of network buffers, most of it the receive pool for four INVITEs at once (the LAN9118 note under Known limitations). The image is the same size however many calls are active, since calls draw on the arena at run time. What the arena holds, measured on the AN521 in the single-threaded UDP build with the sample's `mem` command (section 3) and `CONFIG_SYS_HEAP_RUNTIME_STATS=y`:
+Most of the RAM is what the configuration sets aside rather than pjproject's own data: the heap arena for pjlib's pools, the kernel heap the media thread's stack comes from in the threaded build, and about 80 KB of network buffers, most of it the receive pool for four INVITEs at once (the LAN9118 note under Known limitations). The image is the same size however many calls are active, since calls draw on the arena at run time.
+
+What the arena holds, measured on the AN521 in the single-threaded UDP build with the sample's `mem` command (section 3) and `CONFIG_SYS_HEAP_RUNTIME_STATS=y`:
 
 | State | Heap in use |
 |---|---|
@@ -53,19 +58,19 @@ Most of the RAM is what the configuration sets aside rather than pjproject's own
 | Each established call | about 46 KB |
 | Four concurrent calls | 218 KB, peak 226 KB while they were set up |
 
-On the NUCLEO-H563ZI the heap behaves as on the emulator: the same pools from the same arena, and the four-call peak is the same number of bytes in the UDP builds and within 400 bytes in the TLS builds. The images are larger by Zephyr's drivers for the board and the DHCP client. The board's four images as they ship, each with the heap's peak while four INVITEs arrived at once and the four calls ran, the AN521's peak in the same test, and the arena it has to fit in:
+On the NUCLEO-H563ZI the heap behaves as on the emulator: the same pools from the same arena, and the four-call peak is the same number of bytes in the UDP builds and within 400 bytes in the TLS builds. The images are larger by Zephyr's drivers for the board and the DHCP client. The board's four images as they ship, each with the heap's peak while **four** INVITEs arrived at once and the **four** calls ran, the AN521's peak in the same test, and the arena it has to fit in:
 
 | Build | Flash | RAM | Heap peak, four calls | Same on AN521 | Arena |
 |---|---|---|---|---|---|
-| SIP over UDP, single thread | 360 KB | 382 KB | 230,968 B | 230,968 B | 236 KB |
-| SIP over UDP, threads | 368 KB | 422 KB | 249,840 B | 249,840 B | 257 KB |
-| SIP over TLS, single thread | 465 KB | 503 KB | 284,912 B | 285,248 B | 293 KB |
-| SIP over TLS, threads | 474 KB | 542 KB | 303,936 B | 303,768 B | 312 KB |
+| SIP over UDP, single thread | 360 KB | 382 KB | 226 KB | 226 KB | 236 KB |
+| SIP over UDP, threads | 368 KB | 422 KB | 244 KB | 244 KB | 257 KB |
+| SIP over TLS, single thread | 465 KB | 503 KB | 278 KB | 279 KB | 293 KB |
+| SIP over TLS, threads | 474 KB | 542 KB | 297 KB | 297 KB | 312 KB |
 
 So the arena has 10 to 15 KB to spare at the four-call peak; an application with less margin than the sample should measure on its own board, with `mem`, before trimming it. In the threaded builds the kernel heap holds the media thread's stack and 1 KB is left, as intended: nothing else is allocated from it after start-up.
 
 > [!NOTE]
-> **G.722 needs a larger arena.** These arenas are sized for G.711. With G.722 (section 8) each call's jitter buffer and frames are for 16 kHz, and the same four-call burst on the board peaked at 240 KB, 9 KB more and 1.7 KB short of the UDP arena, so add 10 KB to `CONFIG_COMMON_LIBC_MALLOC_ARENA_SIZE` for G.722 (246 KB over UDP without threads) to keep the same margin.
+> **G.722 needs a larger arena.** These arenas are sized for G.711. With G.722 (section 8) each call's jitter buffer and frames are for 16 kHz, and the same four-call burst on the board peaked at 240 KB, and at 243 KB when a call had ended a few seconds before (its pools linger until the transaction timers run out), past the UDP arena: with it the sample aborted on "No memory" at the fourth call. For G.722 set `CONFIG_COMMON_LIBC_MALLOC_ARENA_SIZE` to 256 KB over UDP without threads, verified, and add the same 16 KB to the other three.
 
 Each reading includes a few KB for the SIP transactions still timing out, among them the MESSAGE that asked for it, so the steady idle figure is about 20 KB: the SIP endpoint, the transport, the media endpoint and the registration. What a call is made of, nearly all of it pool memory:
 
@@ -79,7 +84,7 @@ These figures are with the preset's sizing (section 8): with pjproject's stock p
 
 ### pjsua-lib
 
-pjsua-lib is supported, with [simple_pjsua](pjsip-apps/src/samples/simple_pjsua.c) as its sample (section 3): a user agent on pjsua-lib's null sound device, with threads, G.711 over UDP without SRTP, sized and tested for one call at a time. Its images as they ship, and embedded_ua's over UDP with threads on the same targets, the nearest build above:
+pjsua-lib is supported, with [simple_pjsua](pjsip-apps/src/samples/simple_pjsua.c) as its sample (section 3): a user agent on pjsua-lib's null sound device, with threads, sized and tested for one call at a time. The build can take the same features as embedded_ua's, TLS, SRTP and G.722 among them, through the same Kconfig and `config_site.h` settings (section 8); the figures here are the baseline with G.711 over UDP and no SRTP. Its images as they ship, and embedded_ua's over UDP with threads on the same targets, the nearest build above:
 
 | Image | Flash | RAM |
 |---|---|---|
@@ -115,7 +120,9 @@ The footprint figures above are at `-Os`, Zephyr's default (`CONFIG_SIZE_OPTIMIZ
 
 ## Processing cost
 
-What the media components cost on the NUCLEO-H563ZI, a Cortex-M33 at 240 MHz, measured with pjmedia-test's `mips_test` (section 5): the share of the core that one instance of each takes per second of audio, so a call reads straight off the stream rows. Both optimisation levels, where measured:
+### Media
+
+What the media components cost on the NUCLEO-H563ZI, a Cortex-M33 at 240 MHz, measured with pjmedia-test's `mips_test` (section 5): the share of the core that one instance of each takes per second of audio. Both optimisation levels, where measured:
 
 | Component | `-O2` | `-Os` |
 |---|---|---|
@@ -133,27 +140,14 @@ What the media components cost on the NUCLEO-H563ZI, a Cortex-M33 at 240 MHz, me
 | Echo suppressor, 100 ms tail, 16 kHz | 0.47% | 0.96% |
 | Tone generator, two frequencies, 8 kHz | 1.3% | 1.56% |
 
+Note: a stream row already includes its codec, the RTP framing and, where named, the SRTP, so the cost of one call is the figure in the matching stream row, with nothing to add.
+
 What this means for a call:
 
 - A G.711 call with SRTP costs about 2% of the core; a G.722 call about 13% at `-O2` and 19% at `-Os`. G.722 is the ITU reference-style integer code with a function call per sample, which is where `-O2` gains.
 - SRTP is a flat 1.4 points per call: libsrtp's AES and SHA-1 are table driven.
-- Four concurrent calls on the sample, by the thread analyzer at `-Os`, came to 15% of the core for G.711 with SRTP and 80% for G.722 (section 6).
+- Four concurrent calls on the sample, by the thread analyzer, came to 12% of the core for G.711 with SRTP and 57% for G.722 at `-O2`; 15% and 80% at `-Os` (section 6).
 - The resampler is the component to keep out of the path: libresample's large filter alone takes a third of the core, where linear interpolation costs under 1%. The preset builds none, and the sample runs everything at the codec's rate.
-
-What the SIP stack costs on the same board at `-O2`, measured with pjsip-test's URI, message and transmit-buffer benchmarks (section 5) over the suite's 41 URIs, 35 bytes long on average, and its 8 messages, 560 bytes on average. The suite logs rates normalised to 80-byte URIs and 800-byte messages; the table divides the elapsed times by the number of operations instead.
-
-| Operation | Time | Rate |
-|---|---|---|
-| Parse a URI (`pjsip_parse_uri`) | 11 µs | 91,000 URIs/s |
-| Print a URI (`pjsip_uri_print`) | 4.3 µs | 230,000 URIs/s |
-| Compare two URIs (`pjsip_uri_cmp`) | 4.7 µs | 211,000 pairs/s |
-| Find a message's end in a buffer (`pjsip_find_msg`) | 31 µs | 32,000 msg/s |
-| Parse a message (`pjsip_parse_msg`) | 115 µs | 8,700 msg/s |
-| Print a message (`pjsip_msg_print`) | 41 µs | 25,000 msg/s |
-| Create a request (`pjsip_endpt_create_request`) | 183 µs | 5,500 msg/s |
-| Create a response (`pjsip_endpt_create_response`) | 43 µs | 23,000 msg/s |
-
-So a message arriving from the network costs the parser about 150 µs before the transaction layer sees it, and building a request about 180 µs, with the URI parser accounting for most of it: a message holds a dozen URIs. For scale, the desktop build of the same suite on an x86-64 host parses a URI in 0.2 µs and a message in 2.6 µs.
 
 The whole table, for reference. The MIPS column is the CPU column times the 1.5 DMIPS/MHz of a Cortex-M33, so the CPU column is the one to read. The "echo canceller" rows equal the "echo suppressor" rows because the preset builds no acoustic echo canceller, so both fall back to the suppressor, whose cost does not depend on the tail length.
 
@@ -275,9 +269,29 @@ Clock  Item                                                        Time       CP
 
 </details>
 
+### SIP
+
+What the SIP stack costs on the same board at `-O2`, measured with pjsip-test's URI, message and transmit-buffer benchmarks (section 5) over the suite's 41 URIs, 35 bytes long on average, and its 8 messages, 560 bytes on average. The suite logs rates normalised to 80-byte URIs and 800-byte messages; the table divides the elapsed times by the number of operations instead.
+
+| Operation | Time | Rate |
+|---|---|---|
+| Parse a URI (`pjsip_parse_uri`) | 11 µs | 91,000 URIs/s |
+| Print a URI (`pjsip_uri_print`) | 4.3 µs | 230,000 URIs/s |
+| Compare two URIs (`pjsip_uri_cmp`) | 4.7 µs | 211,000 pairs/s |
+| Find a message's end in a buffer (`pjsip_find_msg`) | 31 µs | 32,000 msg/s |
+| Parse a message (`pjsip_parse_msg`) | 115 µs | 8,700 msg/s |
+| Print a message (`pjsip_msg_print`) | 41 µs | 25,000 msg/s |
+| Create a request (`pjsip_endpt_create_request`) | 183 µs | 5,500 msg/s |
+| Create a response (`pjsip_endpt_create_response`) | 43 µs | 23,000 msg/s |
+
+So a message arriving from the network costs the parser about 150 µs before the transaction layer sees it, and building a request about 180 µs, with the URI parser accounting for most of it: a message holds a dozen URIs. For scale, the desktop build of the same suite on an x86-64 host parses a URI in 0.2 µs and a message in 2.6 µs.
+
+
 ## 1. Install Zephyr and get pjproject
 
-If you already have a working Zephyr workspace and SDK, skip to "Get pjproject" at the end of this section. Otherwise follow the [Zephyr Getting Started Guide](https://docs.zephyrproject.org/latest/develop/getting_started/index.html); the steps below are its Ubuntu version, condensed.
+If you already have a working Zephyr workspace and SDK, skip to "Get pjproject" at the end of this section. Otherwise follow the [Zephyr Getting Started Guide](https://docs.zephyrproject.org/latest/develop/getting_started/index.html); the steps below are its Ubuntu version, condensed, with one addition: the workspace can be created from pjproject's own manifest instead of Zephyr's.
+
+### Host tools
 
 Install the host tools (Ubuntu 24.04 or later):
 
@@ -289,12 +303,24 @@ sudo apt install --no-install-recommends git cmake ninja-build gperf \
 
 Zephyr needs CMake 3.28 or later and Python 3.12. Check with `cmake --version` and `python3 --version`.
 
-Create the workspace. Zephyr lives in a Python virtual environment with its tool, `west`:
+### Create the workspace
+
+The workspace holds Zephyr, its modules and `west`, Zephyr's tool, which lives in a Python virtual environment. This guide uses `~/zephyrproject`; substitute your own path. Create the environment first:
 
 ```sh
 python3 -m venv ~/zephyrproject/.venv
 source ~/zephyrproject/.venv/bin/activate
 pip install west
+```
+
+Then fill the workspace in one of two ways. Pick one:
+
+- A standard Zephyr workspace, as in Zephyr's guide: Zephyr at the release you choose, with all its modules, and pjproject cloned separately under "Get pjproject" below. The choice when the workspace serves other applications too.
+- A workspace from pjproject's manifest: Zephyr pinned to 4.5.0 with only the five modules the port's targets need, and pjproject inside the workspace as its manifest repository. Smaller, and what CI builds from.
+
+#### A standard Zephyr workspace
+
+```sh
 west init -m https://github.com/zephyrproject-rtos/zephyr ~/zephyrproject
 cd ~/zephyrproject
 west update
@@ -308,7 +334,9 @@ west zephyr-export
 - Zephyr 4.4.2 was checked by hand: everything builds and pjlib-test passes, except the TLS overlay, which sizes Mbed TLS's record buffers with `CONFIG_MBEDTLS_SSL_IN_CONTENT_LEN` and `_OUT_CONTENT_LEN`, names 4.4 does not have. There set `CONFIG_MBEDTLS_SSL_MAX_CONTENT_LEN=16384` instead, at 12 KB more RAM.
 - Zephyr 4.3 and older ship Mbed TLS 3.6 rather than 4.x. pjproject's TLS backend works with both, so they may well work, but they are not tested.
 
-A smaller workspace, Zephyr pinned to 4.5.0 with only the five modules the port's targets need, comes from the manifest at the root of pjproject, [`west.yml`](west.yml), which CI builds from. It replaces the `west init` and `west update` above and the clone under "Get pjproject", since pjproject is then the workspace's manifest repository, at `~/zephyrproject/pjproject`:
+#### A workspace from pjproject's manifest
+
+The manifest is [`west.yml`](west.yml) at the root of pjproject. `west init` clones pjproject to `~/zephyrproject/pjproject` and `west update` fetches Zephyr 4.5.0 and the five modules next to it:
 
 ```sh
 west init -m https://github.com/pjsip/pjproject ~/zephyrproject
@@ -318,7 +346,11 @@ west packages pip --install
 west zephyr-export
 ```
 
-Install the Zephyr SDK, which has the cross compilers and a QEMU that knows the MPS2 boards:
+With this workspace there is nothing to clone under "Get pjproject"; only set `PJ_DIR` there to `~/zephyrproject/pjproject`.
+
+### Install the Zephyr SDK
+
+The SDK has the cross compilers and a QEMU that knows the MPS2 boards:
 
 ```sh
 cd ~/zephyrproject/zephyr
@@ -335,12 +367,14 @@ source ~/zephyrproject/.venv/bin/activate
 
 ### Get pjproject
 
-Clone pjproject anywhere; it does not need to be inside the Zephyr workspace:
+With a standard Zephyr workspace, clone pjproject anywhere; it does not need to be inside the workspace:
 
 ```sh
 git clone https://github.com/pjsip/pjproject.git ~/pjproject
 export PJ_DIR=~/pjproject
 ```
+
+With a workspace from pjproject's manifest, pjproject is already there: `export PJ_DIR=~/zephyrproject/pjproject`.
 
 The rest of this guide refers to that location as `$PJ_DIR`; set the variable in every shell you run the commands from. No `./configure` or `make` is needed: the Zephyr build compiles pjproject from source as part of the application.
 
@@ -350,16 +384,18 @@ Two kinds of settings shape a build. pjproject's own compile-time settings, whic
 
 ### config_site.h
 
-pjproject's compile-time settings are in `pjlib/include/pj/config_site.h` in the pjproject tree. The file is not part of the repository: create it, and for Zephyr it must select the Zephyr preset:
+pjproject's compile-time settings are in `pjlib/include/pj/config_site.h` in the pjproject tree, the same file every pjproject build reads. The file is not part of the repository: create it, and for Zephyr it must select the Zephyr preset:
 
 ```sh
 cat > $PJ_DIR/pjlib/include/pj/config_site.h <<'EOF'
-#define PJ_CONFIG_ZEPHYR 1
-#include <pj/config_site_sample.h>
+#ifdef __ZEPHYR__
+#   define PJ_CONFIG_ZEPHYR 1
+#   include <pj/config_site_sample.h>
+#endif
 EOF
 ```
 
-This is enough for the sample. The preset in [`config_site_sample.h`](pjlib/include/pj/config_site_sample.h) sizes pjproject for a small endpoint and says why for each setting; section 8 says how to change any of it in the same file. The build stops with a message if `config_site.h` is missing or does not define `PJ_CONFIG_ZEPHYR`.
+This is enough for the sample. The `#ifdef` keeps the preset out of a host build of the same tree, which the next section needs for the pjsua that calls the sample: the Zephyr toolchain defines `__ZEPHYR__`, the host compiler does not. The preset in [`config_site_sample.h`](pjlib/include/pj/config_site_sample.h) sizes pjproject for a small endpoint and says why for each setting; section 8 says how to change any of it in the same file. The build stops with a message if `config_site.h` is missing or does not define `PJ_CONFIG_ZEPHYR`.
 
 ### Kconfig
 
@@ -445,18 +481,20 @@ You will see Zephyr boot, the network interface come up, and pjsip start its UDP
 
 ### Make a call to it
 
-Any SIP client on the host can call the sample. The easiest is pjsua from a normal Linux build of pjproject (`./configure && make` in a second checkout, or the same one; the Zephyr build does not interfere with it). The sample insists on SRTP, so SRTP has to be allowed over plain UDP:
+Any SIP client on the host can call the sample. The easiest is pjsua from a normal Linux build of pjproject (`./configure && make` in the same checkout; the `#ifdef __ZEPHYR__` in `config_site.h` keeps the Zephyr preset out of it). The sample insists on SRTP, so SRTP has to be allowed over plain UDP:
 
 ```sh
 cd $PJ_DIR/pjsip-apps/bin
-./pjsua-x86_64-pc-linux-gnu --no-tcp --local-port 5062 --use-srtp=2 --srtp-secure=0 --play-file ../../tests/pjsua/wavs/input.16.wav --auto-play
+./pjsua-x86_64-pc-linux-gnu --no-tcp --local-port 5062 --use-srtp=2 --srtp-secure=0 --play-file ../../tests/pjsua/wavs/input.16.wav --auto-play --add-buddy sip:bob@192.0.2.1:55060
 ```
 
 At the pjsua prompt:
 
-- `m`, then the URI `sip:bob@192.0.2.1:55060`: the sample answers after one ring. pjsua streams the WAV into the call as soon as it connects, and the sample loops whatever it receives straight back.
-- `cl` lists the conference ports; `cc` with the call's port as source and `0`, the sound device, as destination plays the loopback on your speaker, after a round trip through the Zephyr guest.
-- `dq` prints the call quality, `h` hangs up.
+- Enter `m 1` to initiate call to the sample: the sample answers after one ring. pjsua streams the WAV into the call as soon as it connects, and the sample loops whatever it receives straight back.
+- `cl` lists the conference ports
+- `cc` with the call's port as source and `0`, the sound device, as destination (e.g. `cc 4 0`), to play the loopback on your speaker, after a round trip through the Zephyr guest.
+- `dq` prints the call quality
+- `h` hangs up.
 
 With `CONFIG_EMBUA_LOG_LEVEL=4` (section 8; the default 3 keeps the console quiet enough not to disturb the media) the Zephyr side logs every SIP message, so you can watch the INVITE, the SDP negotiation and the SRTP setup go by.
 
@@ -503,7 +541,11 @@ The sample has no certificate of its own, so it cannot accept TLS connections: t
 
 ### Driving it with SIP MESSAGE
 
-embedded_ua has no console input. Send it a SIP MESSAGE (in pjsua: add it as a buddy and use `i`) with one of these bodies: `call <uri>` makes it place a call, `mem` logs its pool usage (and the C heap, when built with `CONFIG_SYS_HEAP_RUNTIME_STATS=y`), `quit` ends every call, unregisters and exits.
+embedded_ua has no console input. Send it a SIP MESSAGE (in pjsua: use `i`) with one of these bodies:
+
+- **`call <uri>`** makes it place a call,
+- **`mem`** logs its pool usage (and the C heap, when built with `CONFIG_SYS_HEAP_RUNTIME_STATS=y`),
+- **`quit`** ends every call, unregisters and exits.
 
 ### pjsua-lib: simple_pjsua
 
@@ -512,7 +554,7 @@ embedded_ua has no console input. Send it a SIP MESSAGE (in pjsua: add it as a b
 - Its settings follow embedded_ua's pattern: `CONFIG_SIMPLE_PJSUA_*` options in the sample's "simple_pjsua" menu (domain, user name, password, port, calls at once, log level, the null sound device, and a URL to call at start since there is no command line), read by the sample on every platform.
 - It builds with threads: pjsua-lib runs its SIP endpoint from a worker thread and its media from the sound device's clock.
 - It runs on pjsua's null sound device, as the port has no sound device driver. The device clocks the conference bridge so that a call's audio flows: in, decoded into the bridge, and out as silence.
-- RTP stays on pjsua's worker thread rather than a media thread of its own, so three threads come out of the kernel heap: the worker, pjmedia's event thread and, while a call is up, the clock. The worker takes an INVITE from the socket to the answered call in one nest of calls and uses 17.4 KB of stack at its deepest, which sizes the stacks; the `boards/` files turn on `CONFIG_HW_STACK_PROTECTION`, so an overflow faults instead of corrupting memory.
+- RTP stays on pjsua's worker thread rather than a media thread of its own, so three threads come out of the kernel heap: the worker, pjmedia's event thread and, while a call is up, the clock; the main thread only sleeps and logs the heap, on its own static stack. The worker takes an INVITE from the socket to the answered call in one nest of calls and uses 17.4 KB of stack at its deepest, which sizes the stacks; the `boards/` files turn on `CONFIG_HW_STACK_PROTECTION`, so an overflow faults instead of corrupting memory.
 
 ```sh
 cd ~/zephyrproject/mypjproject
@@ -597,6 +639,8 @@ The "CI Zephyr" workflow ([`.github/workflows/ci-zephyr.yml`](.github/workflows/
 - pjlib-test run on native_sim, with threads
 
 The other suites are built but not run: what Zephyr does differently they found once, and those things are fixed in the tests. What a library change breaks on Zephyr afterwards is the build, a call into something its libc or POSIX layer lacks, or the footprint, and the builds catch both in a fraction of the time the suites take.
+
+### pjlib-test
 
 pjlib-test, in `zephyr/tests/pjlib`, exercises the OS abstraction that a port touches most: pools, threads and thread-local storage, mutexes, timers, sockets over loopback, select and the ioqueue. A run takes a few minutes per configuration. To build and run one configuration by hand:
 
@@ -691,18 +735,40 @@ The suites found a few things a loopback-only host does differently from a deskt
 
 ## 6. Run on real hardware
 
-Build for your board and flash as with any Zephyr application:
+The steps below are for the NUCLEO-H563ZI, the board the port was developed on; another board takes its own name in the build command and the adjustments listed after the steps.
 
-```sh
-west build -p always -b <your board> $PJ_DIR/zephyr/samples/embedded_ua
-west flash
-```
+1. Connect the board: Ethernet to a network with a DHCP server from which the SIP server is reachable, and the ST-LINK USB port (CN1) to the host. The ST-LINK is the programmer and the serial console in one.
+
+2. Build as for QEMU in section 4, with the board's name and a build directory of its own. SIP over UDP, single threaded:
+
+   ```sh
+   cd ~/zephyrproject/mypjproject
+   west build -p always -b nucleo_h563zi/stm32h563xx -d build-h563 $PJ_DIR/zephyr/samples/embedded_ua -- -DCONFIG_EMBUA_SIP_SERVER_IP=\"$SIP_SERVER\"
+   ```
+
+   The overlays of section 3 apply the same way. SIP over TLS with the media on its own thread:
+
+   ```sh
+   west build -p always -b nucleo_h563zi/stm32h563xx -d build-h563 $PJ_DIR/zephyr/samples/embedded_ua -- -DCONFIG_EMBUA_SIP_SERVER_IP=\"$SIP_SERVER\" -DEXTRA_CONF_FILE="overlay-threads.conf;overlay-tls.conf"
+   ```
+
+3. Flash, giving the same build directory. The board's default runner is STM32CubeProgrammer; without it, use pyocd, which Zephyr's Python requirements install, after `pyocd pack install stm32h5` once for the STM32H5 family:
+
+   ```sh
+   west flash -d build-h563 -r pyocd
+   ```
+
+   The board resets and runs the image when flashing ends.
+
+4. Watch the console on the ST-LINK's serial port, `/dev/ttyACM0` on Linux, at 115200 baud, with any terminal program (`screen /dev/ttyACM0 115200`, `tio /dev/ttyACM0`). Open it before flashing to see the boot. The log shows the DHCP lease with the board's address, the REGISTER, the 401 challenge and the 200 OK.
+
+5. Call it as in section 3, through the server, since the board's address comes from DHCP: in pjsua, `m sip:bob@$SIP_SERVER`. The sample answers after one ring and loops the audio back.
 
 The sample is written for real hardware and the emulated boards are the exception:
 
 - `prj.conf` asks for an address from DHCP and waits for the lease; the emulated boards' static TAP address is in the sample's `boards/` files, which Zephyr merges after `prj.conf`.
 - Random numbers, which SIP Call-IDs, tags and SRTP keys all come from, come from the board's hardware generator through `CONFIG_ENTROPY_GENERATOR`; the emulated boards get a software one from the `pjproject-target` snippet (section 9).
-- The port was developed on the NUCLEO-H563ZI, whose Zephyr board files give it only 256 KB of its 640 KB; the snippet carries the devicetree overlay that gives it the rest. So that board builds as above with `-b nucleo_h563zi/stm32h563xx` and the SIP server's address in `CONFIG_EMBUA_SIP_SERVER_IP`.
+- Zephyr's board files give the NUCLEO-H563ZI only 256 KB of its 640 KB; the snippet carries the devicetree overlay that gives it the rest, so nothing has to be added for it.
 
 Things to adjust for another board, in a `boards/<your board>.conf` file in the sample directory or in your own copy of `prj.conf`:
 
@@ -717,8 +783,8 @@ A board with less than 640 KB of RAM needs a smaller arena and fewer network buf
 
 Measured on a NUCLEO-H563ZI on a wired link to the host that runs Kamailio and pjsua, with each of the four builds of the sample. In every build the board took its address from DHCP, registered within a few seconds of the lease, and answered four INVITEs sent within 100 ms of each other at once: four G.711 calls with SDES-SRTP both ways, zero packets lost or discarded in either direction, round trips of 0.5 to 2 ms, no jitter buffer messages, and clean hangups. The image sizes and the heap peaks are in "Footprint"; the other things worth knowing before trusting a board:
 
-- Clock. The board runs tickless and its clock keeps time: over a two-minute call its RTP clock drifted 6 ms against the host's, 50 ppm, which is the crystals' tolerance, with jitter under 0.5 ms. None of the "Frame lost, recovered!" messages of the QEMU guest.
-- CPU. Four G.711 calls with SRTP take about 15% of the core and four G.722 calls about 80%, by the thread analyzer's cycle counts per 10 s interval during the calls (`CONFIG_THREAD_ANALYZER=y` with `CONFIG_THREAD_ANALYZER_AUTO=y`; the percentages it prints itself are cumulative since boot). Where it goes, component by component, is in "Processing cost" at the top.
+- Clock. The board runs tickless and its clock keeps time: over three two-minute calls the interval between call setup and hangup by the board's clock was within 1 to 6 ms of the host's, under 50 ppm, which is the crystals' tolerance, with jitter under 0.5 ms. None of the "Frame lost, recovered!" messages of the QEMU guest.
+- CPU. Four G.711 calls with SRTP take about 12% of the core at `-O2` and 15% at `-Os`; four G.722 calls about 57% at `-O2` and 80% at `-Os`, by the thread analyzer's cycle counts per 10 s interval during the calls (`CONFIG_THREAD_ANALYZER=y` with `CONFIG_THREAD_ANALYZER_AUTO=y`; the percentages it prints itself are cumulative since boot). Where it goes, component by component, is in "Processing cost" at the top.
 - Stacks, from the same analyzer in the threaded builds: the media thread peaked at 7.6 KB of the 16 KB `CONFIG_DYNAMIC_THREAD_STACK_SIZE` in the threads overlay and the main thread at 4.7 KB of its 16 KB; Zephyr's network RX and TX threads and the system work queue, which the sample leaves at Zephyr's defaults, stayed under 80% of theirs. In the single-threaded builds the main thread parses SIP and runs the media too; the 12.4 KB above is its deepest use seen.
 - Memory. The heap peaks of the four-call bursts are those of the emulator to within a few hundred bytes ("Footprint"); nothing on the board allocates differently.
 - pjsua-lib. simple_pjsua on the board (section 3) took its address from DHCP, registered 12 s after reset and answered a G.711 call from pjsua: no packet lost or discarded either way, round trips under 1 ms, a clean hangup, and heap readings identical to the AN521's to the byte at every stage ("Footprint").
@@ -826,7 +892,7 @@ To change any of this, add to the same file. The codec, logging, I/O queue, SRTP
 #define PJSIP_MAX_TSX_COUNT 15
 ```
 
-A tree that also serves host builds can keep the Zephyr lines behind `#ifdef __ZEPHYR__`, which the Zephyr toolchain defines, so that the same `config_site.h` configures both.
+Keep the Zephyr lines behind `#ifdef __ZEPHYR__`, as section 2 did, when the tree also serves host builds; the Zephyr toolchain defines the macro, so the same `config_site.h` configures both.
 
 The test applications in `zephyr/tests` need larger limits than the preset's, a 64-socket I/O queue among them, and get them from compile definitions in their `CMakeLists.txt`, so that they build with the plain preset above and leave the tree's `config_site.h` to the user.
 
