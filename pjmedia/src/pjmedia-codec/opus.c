@@ -989,6 +989,26 @@ static pj_status_t  codec_parse( pjmedia_codec *codec,
                                            (opus_int32)
                                            (opus_data->parse_buf_size -
                                             out_pos));
+        if (size == OPUS_BAD_ARG && i == 0) {
+            /* Padding extensions of a later frame block the split */
+            opus_int32 unpad_len;
+
+            unpad_len = opus_packet_unpad(tmp_buf, (opus_int32)pkt_size);
+            if (unpad_len > 0) {
+                PJ_LOG(5, (THIS_FILE, "Parse retry without padding "
+                           "(pkt_size=%lu)", (unsigned long)pkt_size));
+                opus_repacketizer_init(opus_data->dec_packer);
+                opus_repacketizer_cat(opus_data->dec_packer, tmp_buf,
+                                      unpad_len);
+                size = opus_repacketizer_out_range(opus_data->dec_packer,
+                                                   i, i+1,
+                                                   opus_data->parse_buf +
+                                                   out_pos,
+                                                   (opus_int32)
+                                                   (opus_data->parse_buf_size -
+                                                    out_pos));
+            }
+        }
         if (size < 0) {
             PJ_LOG(5, (THIS_FILE, "Parse failed! (pkt_size=%lu, err=%d)",
                        (unsigned long)pkt_size, size));
