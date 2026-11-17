@@ -86,6 +86,7 @@ if(BUILD_TESTING)
     src/pjlib-util-test/json_test.c
     src/pjlib-util-test/http_client.c
     src/pjlib-util-test/websock_test.c
+    src/pjlib-util-test/cli_telnet_test.c
     src/pjlib-util-test/${PJ_TEST_MAIN}
   )
 

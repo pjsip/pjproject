@@ -34,6 +34,7 @@
 #define INCLUDE_HTTP_CLIENT_TEST    PJ_HAS_TCP
 #define INCLUDE_WEBSOCK_TEST        PJ_HAS_TCP
 #define INCLUDE_WEBSOCK_ONLINE_TEST 0
+#define INCLUDE_CLI_TELNET_TEST     PJ_HAS_TCP
 
 extern int xml_test(void);
 extern int json_test(void);
@@ -46,6 +47,7 @@ extern int resolver_nothreads_test(void);
 extern int dns_packet_test(void);
 extern int http_client_test();
 extern int websock_test(void);
+extern int cli_telnet_test(void);
 
 extern void app_perror(const char *title, pj_status_t rc);
 extern pj_pool_factory *mem;

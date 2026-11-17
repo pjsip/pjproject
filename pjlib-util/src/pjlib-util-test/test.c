@@ -105,6 +105,10 @@ static int test_inner(int argc, char *argv[])
     UT_ADD_TEST(&test_app.ut_app, websock_test, 0);
 #endif
 
+#if INCLUDE_CLI_TELNET_TEST
+    UT_ADD_TEST(&test_app.ut_app, cli_telnet_test, 0);
+#endif
+
     if (ut_run_tests(&test_app.ut_app, "pjlib-util tests", argc, argv)) {
         rc = 1;
     }
