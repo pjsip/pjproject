@@ -136,6 +136,10 @@ int test_main(int argc, char *argv[])
      */
     UT_ADD_TEST(&test_app.ut_app, codec_test_vectors, PJ_TEST_EXCLUSIVE);
 #endif
+#if HAS_OPUS_FMTP_TEST
+    /* Creates/destroys a local pjmedia_endpt (see codec_test_vectors). */
+    UT_ADD_TEST(&test_app.ut_app, codec_opus_fmtp_test, PJ_TEST_EXCLUSIVE);
+#endif
 
     if (ut_run_tests(&test_app.ut_app, "pjmedia tests", argc, argv)) {
         rc = 99;
