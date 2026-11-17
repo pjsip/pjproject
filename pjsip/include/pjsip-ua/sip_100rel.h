@@ -207,7 +207,8 @@ PJ_DECL(pj_status_t) pjsip_100rel_send_prack(pjsip_inv_session *inv,
  *                      one that is no longer pending, or
  *                      PJSIP_ERRNO_FROM_SIP_STATUS() of the status code to
  *                      reject it with: 400 if the RAck header is missing,
- *                      481 if it matches no reliable provisional response.
+ *                      481 if it matches no reliable provisional response
+ *                      sent.
  */
 PJ_DECL(pj_status_t) pjsip_100rel_on_rx_prack(pjsip_inv_session *inv,
                                               pjsip_rx_data *rdata);

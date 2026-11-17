@@ -60,10 +60,17 @@
         search_in="hdr"
         header="CSeq:"
         assign_to="2"/>
+      <todouble assign_to="3" variable="1"/>
+      <add assign_to="3" value="1"/>
+      <assignstr assign_to="4" value="[$3]"/>
+      <ereg regexp="^[0-9]+" search_in="var" variable="4" assign_to="5"/>
     </action>
   </recv>
 
-  <!-- RSeq never sent (pjsip starts below 32768): 481 -->
+  <!-- Let PJSUA queue the 180 behind the unacknowledged 183 -->
+  <pause milliseconds="1000"/>
+
+  <!-- RSeq of the queued, not yet sent, 180: 481 -->
   <send>
     <![CDATA[
 
@@ -75,14 +82,32 @@
       CSeq: 2 PRACK
       Contact: sip:sipp@[local_ip]:[local_port]
       Max-Forwards: 70
-      RAck: 99999[$2]
+      RAck: [$5][$2]
       Content-Length: 0
 
     ]]>
   </send>
 
-  <recv response="183" optional="true">
+  <recv response="481">
   </recv>
+
+  <!-- RSeq never sent (pjsip starts below 32768): 481 -->
+  <send>
+    <![CDATA[
+
+      PRACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[pid]SIPpTag09[call_number]
+      To: [service] <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 3 PRACK
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      RAck: 99999[$2]
+      Content-Length: 0
+
+    ]]>
+  </send>
 
   <recv response="481">
   </recv>
@@ -96,7 +121,7 @@
       From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[pid]SIPpTag09[call_number]
       To: [service] <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
       Call-ID: [call_id]
-      CSeq: 3 PRACK
+      CSeq: 4 PRACK
       Contact: sip:sipp@[local_ip]:[local_port]
       Max-Forwards: 70
       RAck:[$1] 99 INVITE
@@ -105,8 +130,26 @@
     ]]>
   </send>
 
-  <recv response="183" optional="true">
+  <recv response="481">
   </recv>
+
+  <!-- RAck method not INVITE: 481 -->
+  <send>
+    <![CDATA[
+
+      PRACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[pid]SIPpTag09[call_number]
+      To: [service] <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 5 PRACK
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      RAck:[$1] 1 UPDATE
+      Content-Length: 0
+
+    ]]>
+  </send>
 
   <recv response="481">
   </recv>
@@ -120,7 +163,7 @@
       From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[pid]SIPpTag09[call_number]
       To: [service] <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
       Call-ID: [call_id]
-      CSeq: 4 PRACK
+      CSeq: 6 PRACK
       Contact: sip:sipp@[local_ip]:[local_port]
       Max-Forwards: 70
       Content-Length: 0
@@ -128,13 +171,10 @@
     ]]>
   </send>
 
-  <recv response="183" optional="true">
-  </recv>
-
   <recv response="400">
   </recv>
 
-  <!-- Matching RAck: 200 -->
+  <!-- Matching RAck: the 180 is sent, then 200 -->
   <send>
     <![CDATA[
 
@@ -143,7 +183,7 @@
       From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[pid]SIPpTag09[call_number]
       To: [service] <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
       Call-ID: [call_id]
-      CSeq: 5 PRACK
+      CSeq: 7 PRACK
       Contact: sip:sipp@[local_ip]:[local_port]
       Max-Forwards: 70
       RAck:[$1][$2]
@@ -152,7 +192,7 @@
     ]]>
   </send>
 
-  <recv response="183" optional="true">
+  <recv response="180">
   </recv>
 
   <recv response="200">
@@ -167,10 +207,32 @@
       From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[pid]SIPpTag09[call_number]
       To: [service] <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
       Call-ID: [call_id]
-      CSeq: 6 PRACK
+      CSeq: 8 PRACK
       Contact: sip:sipp@[local_ip]:[local_port]
       Max-Forwards: 70
       RAck:[$1][$2]
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+
+  <recv response="200">
+  </recv>
+
+  <!-- The 180, now sent: 200 -->
+  <send>
+    <![CDATA[
+
+      PRACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[pid]SIPpTag09[call_number]
+      To: [service] <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 9 PRACK
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      RAck: [$5][$2]
       Content-Length: 0
 
     ]]>
@@ -206,7 +268,7 @@
       From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[pid]SIPpTag09[call_number]
       To: [service] <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
       Call-ID: [call_id]
-      CSeq: 7 BYE
+      CSeq: 10 BYE
       Contact: sip:sipp@[local_ip]:[local_port]
       Max-Forwards: 70
       Content-Length: 0
