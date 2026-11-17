@@ -29,15 +29,19 @@ if(NOT IPP_SAMPLES_ROOT AND IS_DIRECTORY "/opt/intel/ipp-samples")
   set(IPP_SAMPLES_ROOT "/opt/intel/ipp-samples")
 endif()
 
-# The samples' search results follow a changed samples location;
-# pj_retry_on_new_root() only watches IPP_ROOT. The first configure only
-# records it, keeping IPP_USC_* given with it.
-if(NOT "${IPP_SAMPLES_ROOT}" STREQUAL "$CACHE{_PJ_IPP_USC_FOR}")
+# The samples' search results, IPP_USC_*, follow a changed samples location:
+# pj_retry_on_new_root() for IPP_SAMPLES in pjmedia clears only entries
+# named IPP_SAMPLES_*. The first configure only records the location, also
+# none, keeping IPP_USC_* given with it.
+if(NOT DEFINED CACHE{_PJ_IPP_USC_FOR}
+   OR NOT "${IPP_SAMPLES_ROOT}" STREQUAL "$CACHE{_PJ_IPP_USC_FOR}")
+
   if(DEFINED CACHE{_PJ_IPP_USC_FOR})
     unset(IPP_USC_INCLUDE_DIR CACHE)
     unset(IPP_USC_LIBRARY CACHE)
   endif()
   set(_PJ_IPP_USC_FOR "${IPP_SAMPLES_ROOT}" CACHE INTERNAL "")
+
 endif()
 
 # IPP libraries, and where they live
