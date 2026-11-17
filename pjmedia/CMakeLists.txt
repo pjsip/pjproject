@@ -1133,6 +1133,7 @@ if(BUILD_TESTING)
       pjmedia-codec
       pjmedia-audiodev
       pjmedia-videodev
+      $<$<BOOL:${PJMEDIA_WITH_OPUS_CODEC}>:OPUS::OPUS>
   )
 
   add_test(NAME pjmedia-test COMMAND pjmedia-test)
