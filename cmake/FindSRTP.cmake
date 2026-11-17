@@ -40,7 +40,10 @@ function(_srtp_find version)
       ${PC_SRTP_LIBRARY_DIRS}
   )
 
-  if(SRTP_INCLUDE_DIR AND SRTP_LIBRARY)
+  # The header too: both versions use the same cache entries, so on a
+  # reconfigure the libsrtp 2 search sees what the libsrtp 1 search set
+  if(SRTP_INCLUDE_DIR AND SRTP_LIBRARY
+     AND EXISTS "${SRTP_INCLUDE_DIR}/${headers}")
     if(PC_SRTP_VERSION)
       set(SRTP_VERSION "${PC_SRTP_VERSION}" PARENT_SCOPE)
     else()
@@ -48,14 +51,16 @@ function(_srtp_find version)
     endif()
 
     set(SRTP_VERSION_MAJOR "${version}" PARENT_SCOPE)
-    set(SRTP_FOUND TRUE PARENT_SCOPE)
+    set(_srtp_major "${version}" PARENT_SCOPE)
     set(PC_SRTP_CFLAGS_OTHER "${PC_SRTP_CFLAGS_OTHER}" PARENT_SCOPE)
     set(PC_SRTP_STATIC_LIBRARIES "${PC_SRTP_STATIC_LIBRARIES}" PARENT_SCOPE)
   endif()
 endfunction()
 
+unset(_srtp_major)
+unset(SRTP_USABLE)
 _srtp_find(2)
-if(NOT SRTP_FOUND)
+if(NOT _srtp_major)
   _srtp_find(1)
 endif()
 
@@ -68,8 +73,9 @@ endmacro()
 
 # Usable when srtp_init() links, as autoconf checks. Which of srtp_deinit()
 # and srtp_shutdown() it has picks how pjmedia ends it. All three are checked
-# again when the library changes, e.g. with a new SRTP_ROOT.
-if(SRTP_INCLUDE_DIR AND SRTP_LIBRARY)
+# again when the library changes, e.g. with a new SRTP_ROOT. Only for a
+# version found: with neither, both entries may still be set.
+if(_srtp_major)
   include(Pj/CheckLibraryUsable)
   # once check_function_exists() results, which were never checked again
   unset(SRTP_HAS_DEINIT CACHE)
@@ -168,3 +174,4 @@ endif()
 
 mark_as_advanced(SRTP_INCLUDE_DIR SRTP_LIBRARY)
 unset(_srtp_link_libs)
+unset(_srtp_major)
