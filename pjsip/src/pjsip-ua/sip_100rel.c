@@ -570,6 +570,7 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
     pjsip_transaction* invite_tsx;
     tx_data_list_t *tl;
     pjsip_tx_data *tdata;
+    pj_uint32_t rseq;
     pj_bool_t final;
     pj_time_val delay;
 
@@ -611,6 +612,8 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
     pj_assert(!pj_list_empty(&dd->uas_state->tx_data_list));
     tl = dd->uas_state->tx_data_list.next;
     tdata = tl->tdata;
+    /* tl may be freed while sending, e.g. by a final response */
+    rseq = tl->rseq;
 
     pjsip_tx_data_add_ref(tdata);
     final = tdata->msg->line.status.code >= 200;
@@ -625,7 +628,7 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
             return;
         }
         if (!final)
-            dd->uas_state->last_sent_rseq = tl->rseq;
+            dd->uas_state->last_sent_rseq = rseq;
     } else {
         pjsip_tsx_retransmit_no_state(invite_tsx, tdata);
     }
