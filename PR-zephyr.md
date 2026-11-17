@@ -6,11 +6,13 @@ This file is the draft of the pull request description for the `zephyr-support` 
 
 ## Zephyr RTOS support: pjproject as a Zephyr module, two samples, the test suites, CI
 
-This is the third part of bringing PJSIP to Zephyr RTOS, after #5314 (portability fixes for minimal POSIX C libraries) and #5316 (CMake cross-compiling for generic targets). With this PR pjproject builds as a Zephyr module, a SIP user agent on pjsip and one on pjsua-lib run on a Cortex-M33 board, the five test suites pass there, and a CI workflow keeps it so. This description says what the PR does; [README_Zephyr.md](README_Zephyr.md) says what the result can do and how to use it, with the measurements.
+This is the third part of bringing PJSIP to [Zephyr RTOS](https://www.zephyrproject.org/), after #5314 (portability fixes for minimal POSIX C libraries) and #5316 (CMake cross-compiling for generic targets). With this PR pjproject builds as a Zephyr module, a SIP user agent on pjsip and one on pjsua-lib run on a Cortex-M33 board, the five test suites pass there, and a CI workflow keeps it so.
+
+This description says what the PR does; **[README_Zephyr.md](README_Zephyr.md)** says what the result can do and how to use it, with the measurements.
 
 ### Objective
 
-Run a SIP endpoint on a small microcontroller: an STM32H563 class device with a Cortex-M33 at 250 MHz, 640 KB of RAM and 2 MB of flash, as a statically linked firmware image with no MMU and no filesystem. The endpoint registers to a PBX, carries a few concurrent G.711 or G.722 calls with SDES-SRTP, and speaks SIP over TLS through Zephyr's Mbed TLS. No video, no echo canceller, no ICE.
+Run a SIP endpoint on a small microcontroller: an [STM32H563](https://www.st.com/en/microcontrollers-microprocessors/stm32h563-573.html) class device with a [Cortex-M33](https://developer.arm.com/Processors/Cortex-M33) at 250 MHz, 640 KB of RAM and 2 MB of flash, as a statically linked firmware image with no MMU and no filesystem. The endpoint registers to a PBX, carries a few concurrent G.711 or G.722 calls with SDES-SRTP, and speaks SIP over TLS through Zephyr's [Mbed TLS](https://www.trustedfirmware.org/projects/mbed-tls/). No video, no echo canceller, no ICE.
 
 The port had to be reusable: the Zephyr specific code is kept to a minimum and lives in a layout that a port to another RTOS can follow, and everything that could be fixed generically was fixed generically.
 
@@ -27,31 +29,40 @@ Zephyr provides a POSIX layer over its own kernel and network stack, and the por
 
 ### Tested targets
 
+The two samples are [`embedded_ua.c`](pjsip-apps/src/samples/embedded_ua.c), a headless user agent on pjsip and pjmedia without pjsua-lib, which registers, answers calls with audio loopback, speaks SDES-SRTP and SIP over TLS, and is driven by SIP MESSAGE; and [`simple_pjsua.c`](pjsip-apps/src/samples/simple_pjsua.c), pjsua-lib's minimal user agent on the null sound device. Both build as Zephyr samples under [`zephyr/samples/`](zephyr/samples/). embedded_ua builds four ways: over UDP or TLS, single threaded or with the media on its own pthread.
+
 | Target | What ran there |
 |---|---|
 | `native_sim/native/64`, Zephyr as a Linux process | Both samples; all five suites in both thread modes; CI |
-| `mps2/an521/cpu0`, a Cortex-M33 under QEMU limited to 640 KB of RAM | Both samples, all four embedded_ua builds; all five suites in both thread modes; CI builds |
-| NUCLEO-H563ZI (STM32H563ZI, Cortex-M33 at 250 MHz, 640 KB of RAM) | Both samples, all four embedded_ua builds; all five suites in both thread modes; the CPU benchmarks |
+| `mps2/an521/cpu0`, a Cortex-M33 under [QEMU](https://www.qemu.org/) limited to 640 KB of RAM | Both samples, all four embedded_ua builds; all five suites in both thread modes; CI builds |
+| [NUCLEO-H563ZI](https://www.st.com/en/evaluation-tools/nucleo-h563zi.html) (STM32H563ZI, Cortex-M33 at 250 MHz, 640 KB of RAM) | Both samples, all four embedded_ua builds; all five suites in both thread modes; the CPU benchmarks |
 
-- On every target embedded_ua registers to Kamailio and completes calls with zero packet loss, single threaded and with pjsip and the media on two pthreads, over UDP and over TLS. On the board each build took an address from DHCP and answered four INVITEs arriving at once, with round trips under 2 ms, a tickless clock within 50 ppm of the host's and the idle thread above 86% of the CPU.
-- simple_pjsua registers and completes a G.711 call on every target, one call at a time, which is what it is sized for.
-- The one suite that does not run everywhere is the threaded pjsip-test, which needs about 690 KB of RAM.
-- Zephyr 4.5.0 is the release CI pins. Zephyr 4.4.2 was checked by hand: everything builds and pjlib-test passes, except the TLS overlay, whose Mbed TLS record-size options have 4.5's names (README section 1 gives the 4.4 setting).
+Details:
 
-README sections 3 to 6 have the procedures and the results; "Footprint" and "Processing cost" at its top have the numbers.
+- On every target `embedded_ua` registers to Kamailio and completes calls with zero packet loss, single threaded and with pjsip and the media on two pthreads, over UDP and over TLS. On the board each build took an address from DHCP and answered four INVITEs arriving at once, with round trips under 2 ms, a tickless clock within 50 ppm of the host's and the idle thread above 86% of the CPU.
+- `simple_pjsua` registers and completes a G.711 call on every target, one call at a time, which is what it is sized for.
+- The one suite that does not run everywhere is the threaded `pjsip-test`, which needs about 690 KB of RAM.
+- Zephyr 4.5.0 is the release CI pins. Zephyr 4.4.2 was checked by hand: everything builds and `pjlib-test` passes, except the TLS overlay, whose Mbed TLS record-size options have 4.5's names ([README_Zephyr.md](README_Zephyr.md) section 1 gives the 4.4 setting).
+
+[README_Zephyr.md](README_Zephyr.md) sections 3 to 6 have the procedures and the results; "Footprint" and "Processing cost" at its top have the numbers.
 
 ### New concepts
 
+This PR introduces few new concepts in PJLIB, that should have been in their own PR, but included here to save time since they are not too big:
+
+- **Thread-local storage in compiler TLS.** `PJ_THREAD_LOCAL` and `PJ_THREAD_LOCAL_USE_COMPILER_TLS` let pjlib keep its per-thread data in `__thread` storage where pthread keys do not serve the main thread.
+- **A test profile.** `pjlib/src/pjlib-test/test_profile.h`, included by every suite, publishes the target's RAM as `PJTEST_TARGET_RAM_KB` and three facts about the host: whether time passes while the CPU is busy, whether there is a route beyond loopback, and a slow-CPU proxy. Each test states what it needs in those terms instead of asking whether the target is small.
+- **A cryptographic `pj_rand()` where the platform has one.** `PJ_RAND_IS_CSPRNG` says so; on Zephyr `pj_rand()` draws from the entropy driver, and SRTP's SDES keys come from it without a warning when no SSL library is built.
+
+### Zephyr related features
+
 - **pjproject as a Zephyr module.** `zephyr/module.yml` registers the tree; `zephyr/Kconfig` has the `CONFIG_PJPROJECT_*` options for what the build has to know (threads, TLS, floating point); `zephyr/CMakeLists.txt` drives pjproject's own CMake from Kconfig and defines one `pjproject` link target with every library. Codecs, logging and sizes stay in `config_site.h`, so that each setting has one place.
-- **A platform preset the build insists on.** `PJ_CONFIG_ZEPHYR` in `config_site_sample.h` sizes pjsip and pjmedia for a few calls on a 640 KB board, with the reason next to each setting. The module checks that the user's `config_site.h` selects it, since pjlib's CMake would otherwise create an empty one and build with desktop defaults.
+- `PJ_CONFIG_ZEPHYR` preset in `config_site_sample.h`.
 - **A target snippet.** `zephyr/snippets/pjproject-target` carries what each target needs beyond Zephyr's board files: the NUCLEO-H563ZI's full 640 KB of RAM, and for QEMU's AN521 and native_sim what makes them stand in for it (the same 640 KB limit, QEMU's SysTick rate, a seeded random generator, the TAP MTU). Applications select it with one line.
 - **Settings as `CONFIG_*` macros on every platform.** Both samples read `CONFIG_EMBUA_*` and `CONFIG_SIMPLE_PJSUA_*`; on Zephyr they are Kconfig options, elsewhere `#define`s with defaults, so the same source builds on Linux, Windows, macOS and Zephyr.
 - **Memory sized by measurement.** The samples' Kconfig files set the heap arena, the kernel heap and the packet pools per feature set to a measured peak plus 5%, with the measurement in the comment; the samples log the heaps (`mem` in embedded_ua, every ten seconds in simple_pjsua) so that a user can redo it on another board.
-- **Thread-local storage in compiler TLS.** `PJ_THREAD_LOCAL` and `PJ_THREAD_LOCAL_USE_COMPILER_TLS` let pjlib keep its per-thread data in `__thread` storage where pthread keys do not serve the main thread.
-- **A test profile.** `pjlib/src/pjlib-test/test_profile.h`, included by every suite, publishes the target's RAM as `PJTEST_TARGET_RAM_KB` and three facts about the host: whether time passes while the CPU is busy, whether there is a route beyond loopback, and a slow-CPU proxy. Each test states what it needs in those terms instead of asking whether the target is small.
 - **The suites as Zephyr test applications.** Each library's test sources are an INTERFACE target that both the desktop and the Zephyr build compile; the Zephyr apps take the tests to run from `CONFIG_<SUITE>_TEST_ARGS` and run under twister, with the benchmarks behind `CONFIG_PJMEDIA_TEST_BENCHMARK` and `CONFIG_PJSIP_TEST_BENCHMARK`.
 - **A west manifest and CI.** `west.yml` at the repository root makes pjproject a manifest repository, Zephyr pinned with only the modules the targets need; the "CI Zephyr" workflow builds every suite and sample for native_sim and the AN521 and runs pjlib-test on every pull request.
-- **A cryptographic `pj_rand()` where the platform has one.** `PJ_RAND_IS_CSPRNG` says so; on Zephyr `pj_rand()` draws from the entropy driver, and SRTP's SDES keys come from it without a warning when no SSL library is built.
 
 ### Changes
 
