@@ -3384,8 +3384,15 @@ static int untrusted_chain_test(void)
         goto on_return;
     }
 
-    /* The server may not have asked for the optional certificate */
     status = PJ_SUCCESS;
+#if PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_GNUTLS
+    /* This backend requests the optional client certificate */
+    if (state_serv.err != PJ_SUCCESS || !state_serv.got_cert) {
+        PJ_LOG(1, ("", "...ERROR: handshake failed or no client "
+                       "certificate received"));
+        status = PJ_EBUG;
+    }
+#endif
     if (state_serv.err == PJ_SUCCESS && state_serv.got_cert &&
         state_serv.verify_status == PJ_SSL_CERT_ESUCCESS)
     {

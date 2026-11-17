@@ -516,37 +516,55 @@ static int cert_verify_cb(void *data, mbedtls_x509_crt *crt,
      * flagged on the issuer, so map the flags at every depth.
      */
     if (((*flags) & MBEDTLS_X509_BADCERT_EXPIRED) != 0) {
-        PJ_LOG(3, (THIS_FILE, "Server certificate has expired!"));
+        PJ_LOG(3, (THIS_FILE, "Certificate at depth %d has expired", depth));
+        ssock->verify_status |= PJ_SSL_CERT_EVALIDITY_PERIOD;
+    }
+
+    if (((*flags) & MBEDTLS_X509_BADCERT_FUTURE) != 0) {
+        PJ_LOG(3, (THIS_FILE, "Certificate at depth %d is not yet valid",
+                   depth));
         ssock->verify_status |= PJ_SSL_CERT_EVALIDITY_PERIOD;
     }
 
     if (((*flags) & MBEDTLS_X509_BADCERT_REVOKED) != 0) {
-        PJ_LOG(3, (THIS_FILE, "Server certificate has been revoked!"));
+        PJ_LOG(3, (THIS_FILE, "Certificate at depth %d has been revoked",
+                   depth));
         ssock->verify_status |= PJ_SSL_CERT_EREVOKED;
     }
 
     if (((*flags) & MBEDTLS_X509_BADCERT_CN_MISMATCH) != 0) {
-        PJ_LOG(3, (THIS_FILE, "CN mismatch!"));
+        PJ_LOG(3, (THIS_FILE, "Certificate at depth %d CN mismatch", depth));
         ssock->verify_status |= PJ_SSL_CERT_EIDENTITY_NOT_MATCH;
     }
 
     if (((*flags) & MBEDTLS_X509_BADCERT_NOT_TRUSTED) != 0) {
-        PJ_LOG(3, (THIS_FILE, "Self-signed or not signed by a trusted CA!"));
+        PJ_LOG(3, (THIS_FILE, "Certificate at depth %d is self-signed or "
+                              "not signed by a trusted CA", depth));
         ssock->verify_status |= PJ_SSL_CERT_EUNTRUSTED;
     }
 
     if (((*flags) & MBEDTLS_X509_BADCRL_NOT_TRUSTED) != 0) {
-        PJ_LOG(3, (THIS_FILE, "CRL not trusted!"));
+        PJ_LOG(3, (THIS_FILE, "CRL for certificate at depth %d is not "
+                              "trusted", depth));
         ssock->verify_status |= PJ_SSL_CERT_EUNTRUSTED;
     }
 
     if (((*flags) & MBEDTLS_X509_BADCRL_EXPIRED) != 0) {
-        PJ_LOG(3, (THIS_FILE, "CRL expired!"));
+        PJ_LOG(3, (THIS_FILE, "CRL for certificate at depth %d has expired",
+                   depth));
         ssock->verify_status |= PJ_SSL_CERT_EVALIDITY_PERIOD;
     }
 
-    if (((*flags) & MBEDTLS_X509_BADCERT_OTHER) != 0) {
-        PJ_LOG(3, (THIS_FILE, "other (unknown) flags!"));
+    if (((*flags) & ~(MBEDTLS_X509_BADCERT_EXPIRED |
+                      MBEDTLS_X509_BADCERT_FUTURE |
+                      MBEDTLS_X509_BADCERT_REVOKED |
+                      MBEDTLS_X509_BADCERT_CN_MISMATCH |
+                      MBEDTLS_X509_BADCERT_NOT_TRUSTED |
+                      MBEDTLS_X509_BADCRL_NOT_TRUSTED |
+                      MBEDTLS_X509_BADCRL_EXPIRED)) != 0)
+    {
+        PJ_LOG(3, (THIS_FILE, "Certificate at depth %d has other error, "
+                              "flags 0x%x", depth, (unsigned)*flags));
         ssock->verify_status |= PJ_SSL_CERT_EUNKNOWN;
     }
 
