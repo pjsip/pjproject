@@ -826,11 +826,7 @@ CONFIG_COMMON_LIBC_MALLOC_ARENA_SIZE=241664
 CONFIG_ENTROPY_GENERATOR=y
 ```
 
-The sample's `zephyr/samples/embedded_ua/prj.conf` is a complete, commented example and the best starting point; copy it and remove what you do not need. Three of its settings deserve a word:
-
-- `CONFIG_NET_IPV4_FRAGMENT=y`: a SIP INVITE with SDP is usually larger than the Ethernet MTU and arrives as IP fragments.
-- The receive pool, `CONFIG_NET_PKT_RX_COUNT` and `CONFIG_NET_BUF_RX_COUNT`, is sized for four such INVITEs arriving at once, more than a UA that takes calls one at a time needs (section 6 has the smaller figure).
-- `CONFIG_ZVFS_OPEN_MAX` bounds the file descriptors `select()` can watch and must be at least `PJ_IOQUEUE_MAX_HANDLES`; the build checks this with a static assertion.
+The sample's `zephyr/samples/embedded_ua/prj.conf` is a complete, commented example and the best starting point; copy it and remove what you do not need.
 
 To build your application for the NUCLEO-H563ZI, or for QEMU's AN521 or native_sim as its stand-ins, add the `pjproject-target` snippet of section 9 with `set(SNIPPET pjproject-target)` before `find_package(Zephyr)`, as the sample does, or with `-S pjproject-target` on the command line. It holds what each of those targets needs beyond Zephyr's board files, with the reason for each setting in its files, and does nothing on other boards.
 
@@ -870,8 +866,10 @@ A note on threads. The sample runs single threaded by default, which needs nothi
 pjproject's compile-time settings beyond Kconfig are in `pjlib/include/pj/config_site.h` in the pjproject tree, the file every pjproject build uses and section 2 had you create. Nothing is generated: the Zephyr build reads that file as the Linux, Windows and macOS builds do. On Zephyr it must select the Zephyr preset, at minimum:
 
 ```c
-#define PJ_CONFIG_ZEPHYR 1
-#include <pj/config_site_sample.h>
+#ifdef __ZEPHYR__
+#   define PJ_CONFIG_ZEPHYR 1
+#   include <pj/config_site_sample.h>
+#endif
 ```
 
 The `PJ_CONFIG_ZEPHYR` preset in `pjlib/include/pj/config_site_sample.h` holds the Zephyr settings, each with the reason next to it: which codecs and media features are built, and the sizes of pjsip's and pjmedia's tables, pools, messages and packets, chosen for a few calls on a 640 KB board. Read it to see exactly what is set. The sizes an application may need larger, such as `PJSIP_MAX_PKT_LEN`, `PJMEDIA_MAX_MTU`, `PJMEDIA_MAX_MRU` and the SDP limits, are behind `#ifndef`, so a definition before the include overrides them. What is a fact of the platform rather than a choice, such as pjlib keeping its per-thread data in compiler thread-local storage, is in `os_zephyr.h` and applies whatever `config_site.h` says.
@@ -879,20 +877,22 @@ The `PJ_CONFIG_ZEPHYR` preset in `pjlib/include/pj/config_site_sample.h` holds t
 To change any of this, add to the same file. The codec, logging, I/O queue, SRTP and resampling settings take whatever is defined before the preset is included; the rest is overridden after it:
 
 ```c
-#define PJMEDIA_HAS_G722_CODEC 1    /* G.722 as well as G.711 */
-#define PJMEDIA_RESAMPLE_IMP PJMEDIA_RESAMPLE_LIBRESAMPLE  /* needed to switch between the two mid-call */
-#define PJMEDIA_HAS_SRTP 0          /* plain RTP; libsrtp stays out of the image */
-#define PJ_LOG_MAX_LEVEL 3          /* info and below */
-#define PJ_IOQUEUE_MAX_HANDLES 32   /* CONFIG_ZVFS_OPEN_MAX must be at least this */
+#ifdef __ZEPHYR__
+#   define PJMEDIA_HAS_G722_CODEC 1    /* G.722 as well as G.711 */
+#   define PJMEDIA_RESAMPLE_IMP PJMEDIA_RESAMPLE_LIBRESAMPLE  /* needed to switch between the two mid-call */
+#   define PJMEDIA_HAS_SRTP 0          /* plain RTP; libsrtp stays out of the image */
+#   define PJ_LOG_MAX_LEVEL 3          /* info and below */
+#   define PJ_IOQUEUE_MAX_HANDLES 32   /* CONFIG_ZVFS_OPEN_MAX must be at least this */
 
-#define PJ_CONFIG_ZEPHYR 1
-#include <pj/config_site_sample.h>
+#   define PJ_CONFIG_ZEPHYR 1
+#   include <pj/config_site_sample.h>
 
-#undef PJSIP_MAX_TSX_COUNT
-#define PJSIP_MAX_TSX_COUNT 15
+#   undef PJSIP_MAX_TSX_COUNT
+#   define PJSIP_MAX_TSX_COUNT 15
+#endif
 ```
 
-Keep the Zephyr lines behind `#ifdef __ZEPHYR__`, as section 2 did, when the tree also serves host builds; the Zephyr toolchain defines the macro, so the same `config_site.h` configures both.
+The `#ifdef __ZEPHYR__` keeps all of it out of a host build of the same tree, as in section 2.
 
 The test applications in `zephyr/tests` need larger limits than the preset's, a 64-socket I/O queue among them, and get them from compile definitions in their `CMakeLists.txt`, so that they build with the plain preset above and leave the tree's `config_site.h` to the user.
 
