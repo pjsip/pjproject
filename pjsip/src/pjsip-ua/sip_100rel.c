@@ -570,7 +570,6 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
     pjsip_transaction* invite_tsx;
     tx_data_list_t *tl;
     pjsip_tx_data *tdata;
-    pj_uint32_t rseq;
     pj_bool_t final;
     pj_time_val delay;
 
@@ -612,23 +611,27 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
     pj_assert(!pj_list_empty(&dd->uas_state->tx_data_list));
     tl = dd->uas_state->tx_data_list.next;
     tdata = tl->tdata;
-    /* tl may be freed while sending, e.g. by a final response */
-    rseq = tl->rseq;
 
     pjsip_tx_data_add_ref(tdata);
     final = tdata->msg->line.status.code >= 200;
 
     if (dd->uas_state->retransmit_count == 1) {
+        pj_uint32_t last_sent_rseq = dd->uas_state->last_sent_rseq;
         pj_status_t status;
         
+        /* Before sending: the PRACK may be processed before the send
+         * returns, and tl may be freed by then.
+         */
+        if (!final)
+            dd->uas_state->last_sent_rseq = tl->rseq;
+
         status = pjsip_tsx_send_msg(invite_tsx, tdata);
         if (status != PJ_SUCCESS) {
+            dd->uas_state->last_sent_rseq = last_sent_rseq;
             PJ_PERROR(3, (THIS_FILE, status,
                          "Failed to send message"));
             return;
         }
-        if (!final)
-            dd->uas_state->last_sent_rseq = rseq;
     } else {
         pjsip_tsx_retransmit_no_state(invite_tsx, tdata);
     }
