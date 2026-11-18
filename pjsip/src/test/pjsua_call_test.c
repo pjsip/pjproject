@@ -57,6 +57,9 @@
  *      media slots and must not mutate call state when rejected.
  *  10. Supplying SDP with a final error response must not change call state
  *      or prevent subsequent re-INVITEs.
+ *  11. A 200 sent from the EARLY state callback, i.e. while the reliable
+ *      180 that triggered the callback is being sent, must stop the
+ *      retransmission of that 180, also while the ACK is late.
  *
  * Scenarios 5 and 6 are two symptoms of one defect: apply_med_update() derives
  * the stream info from the negotiated SDP, then adjusts it (RTCP mux off when
@@ -396,6 +399,18 @@ static struct
     pj_bool_t     offerless_opt_reject;
     pj_bool_t     offerless_opt_overlimit;
     pj_bool_t     offerless_opt_seen;
+
+    /* ---- final response from the EARLY state callback ---- */
+
+    /* When armed, on_call_state answers the incoming call with 200 once it
+     * reaches EARLY, on_tx_ringing counts the 180 responses sent,
+     * retransmissions included, and on_rx_ack drops incoming ACKs while
+     * early_final_drop_ack is set.
+     */
+    pj_bool_t     early_final_armed;
+    pj_bool_t     early_final_drop_ack;
+    pj_status_t   early_final_status;
+    unsigned      early_final_ringing_cnt;
 } g_ctx;
 
 static pj_status_t parse_sdp_text(pj_pool_t *pool, const char *text,
@@ -1360,6 +1375,57 @@ static void on_call_transfer_request2(pjsua_call_id call_id,
     if (g_ctx.xfer_replaces_armed)
         opt->flag |= PJSUA_CALL_NO_SDP_OFFER;
 }
+
+static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
+{
+    pjsua_call_info ci;
+
+    PJ_UNUSED_ARG(e);
+
+    if (!g_ctx.early_final_armed ||
+        g_ctx.early_final_status != PJ_EPENDING ||
+        pjsua_call_get_info(call_id, &ci) != PJ_SUCCESS ||
+        ci.role != PJSIP_ROLE_UAS || ci.state != PJSIP_INV_STATE_EARLY)
+    {
+        return;
+    }
+
+    g_ctx.early_final_status = pjsua_call_answer(call_id, PJSIP_SC_OK,
+                                                 NULL, NULL);
+}
+
+static pj_bool_t on_rx_ack(pjsip_rx_data *rdata)
+{
+    return g_ctx.early_final_drop_ack &&
+           rdata->msg_info.msg->line.req.method.id == PJSIP_ACK_METHOD;
+}
+
+static pj_status_t on_tx_ringing(pjsip_tx_data *tdata)
+{
+    if (g_ctx.early_final_armed &&
+        tdata->msg->line.status.code == PJSIP_SC_RINGING)
+    {
+        ++g_ctx.early_final_ringing_cnt;
+    }
+    return PJ_SUCCESS;
+}
+
+static pjsip_module mod_early_final =
+{
+    NULL, NULL,                         /* prev, next.          */
+    { "mod-early-final", 15 },          /* Name.                */
+    -1,                                 /* Id                   */
+    PJSIP_MOD_PRIORITY_TSX_LAYER - 1,   /* Priority             */
+    NULL,                               /* load()               */
+    NULL,                               /* start()              */
+    NULL,                               /* stop()               */
+    NULL,                               /* unload()             */
+    &on_rx_ack,                         /* on_rx_request()      */
+    NULL,                               /* on_rx_response()     */
+    NULL,                               /* on_tx_request.       */
+    &on_tx_ringing,                     /* on_tx_response()     */
+    NULL,                               /* on_tsx_state()       */
+};
 
 /* Record the final status of the re-INVITE sent on the armed caller leg. */
 static void on_call_tsx_state(pjsua_call_id call_id,
@@ -6203,6 +6269,90 @@ on_return:
     return rc;
 }
 
+/* Answer the incoming call with 200 from the EARLY state callback, which
+ * runs while its reliable 180 (without SDP) is being sent. The 200 drops the
+ * pending 180, which must then not be retransmitted, even before the ACK
+ * arrives (ACKs are dropped meanwhile).
+ */
+static int test_final_answer_in_early_callback(void)
+{
+    pjsua_acc_config acc_cfg, saved_acc_cfg;
+    pjsua_call_setting opt;
+    pjsua_call_id caller = PJSUA_INVALID_ID;
+    pj_str_t uri = pj_str(g_ctx.self_uri);
+    pj_pool_t *pool;
+    pj_status_t status;
+    pj_bool_t acc_changed = PJ_FALSE;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  200 from the EARLY state callback stops the "
+                         "reliable 180"));
+    pool = pjsua_pool_create("early-final-test", 1024, 1024);
+    if (!pool)
+        return -2100;
+    if (pjsua_acc_get_config(g_ctx.acc_id, pool, &saved_acc_cfg) !=
+            PJ_SUCCESS ||
+        pjsua_acc_get_config(g_ctx.acc_id, pool, &acc_cfg) != PJ_SUCCESS)
+    {
+        rc = -2101;
+        goto on_return;
+    }
+    acc_cfg.require_100rel = PJSUA_100REL_MANDATORY;
+    status = pjsua_acc_modify(g_ctx.acc_id, &acc_cfg);
+    if (status != PJ_SUCCESS) {
+        rc = -2102;
+        goto on_return;
+    }
+    acc_changed = PJ_TRUE;
+
+    g_ctx.uas_offer_armed = PJ_TRUE;
+    g_ctx.incoming_seen = PJ_FALSE;
+    pjsua_call_setting_default(&opt);
+    opt.aud_cnt = 1;
+    opt.vid_cnt = opt.txt_cnt = 0;
+    status = pjsua_call_make_call(g_ctx.acc_id, &uri, &opt, NULL, NULL,
+                                  &caller);
+    if (status != PJ_SUCCESS ||
+        !wait_until(&uas_offer_received, caller, TEST_TIMEOUT_MSEC))
+    {
+        rc = -2103;
+        goto on_return;
+    }
+
+    g_ctx.early_final_status = PJ_EPENDING;
+    g_ctx.early_final_ringing_cnt = 0;
+    g_ctx.early_final_drop_ack = PJ_TRUE;
+    g_ctx.early_final_armed = PJ_TRUE;
+    status = pjsua_call_answer(g_ctx.incoming_call_id, PJSIP_SC_RINGING,
+                               NULL, NULL);
+    if (status != PJ_SUCCESS || g_ctx.early_final_status != PJ_SUCCESS) {
+        rc = -2104;
+        goto on_return;
+    }
+
+    /* The first retransmission would be sent after 2 * T1 */
+    wait_until(NULL, PJSUA_INVALID_ID, 4 * pjsip_cfg()->tsx.t1 + 1000);
+    g_ctx.early_final_drop_ack = PJ_FALSE;
+    if (g_ctx.early_final_ringing_cnt != 1) {
+        PJ_LOG(1,(THIS_FILE, "    180 sent %u times",
+                  g_ctx.early_final_ringing_cnt));
+        rc = -2105;
+    }
+
+on_return:
+    g_ctx.early_final_drop_ack = PJ_FALSE;
+    g_ctx.early_final_armed = PJ_FALSE;
+    g_ctx.uas_offer_armed = PJ_FALSE;
+    drain_all_calls();
+    if (acc_changed) {
+        status = pjsua_acc_modify(g_ctx.acc_id, &saved_acc_cfg);
+        if (status != PJ_SUCCESS && rc == 0)
+            rc = -2106;
+    }
+    pj_pool_release(pool);
+    return rc;
+}
+
 static int test_hold_during_sdpless_update_and_reinvite_on_update_response(void)
 {
     pjsua_call_id caller = PJSUA_INVALID_ID, callee = PJSUA_INVALID_ID;
@@ -7326,6 +7476,7 @@ int pjsua_call_test(void)
     ua_cfg.cb.on_stream_destroyed = &on_stream_destroyed;
     ua_cfg.cb.on_call_media_state = &on_call_media_state;
     ua_cfg.cb.on_call_tsx_state = &on_call_tsx_state;
+    ua_cfg.cb.on_call_state = &on_call_state;
     /* Single-threaded: event pumping happens on this thread, so callbacks
      * run here too and no locking races arise in the test itself. */
     ua_cfg.thread_cnt = 0;
@@ -7348,6 +7499,15 @@ int pjsua_call_test(void)
         PJ_LOG(1, (THIS_FILE, "  pjsua_init failed (%d)", status));
         pjsua_destroy();
         rc = -2002;
+        goto on_restore;
+    }
+
+    status = pjsip_endpt_register_module(pjsua_get_pjsip_endpt(),
+                                         &mod_early_final);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "  register_module failed (%d)", status));
+        pjsua_destroy();
+        rc = -2008;
         goto on_restore;
     }
 
@@ -7507,6 +7667,9 @@ int pjsua_call_test(void)
     if (rc != 0) goto on_return;
 
     rc = test_answer_with_pending_local_offer();
+    if (rc != 0) goto on_return;
+
+    rc = test_final_answer_in_early_callback();
     if (rc != 0) goto on_return;
 
 on_return:

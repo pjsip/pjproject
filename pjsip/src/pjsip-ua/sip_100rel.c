@@ -642,6 +642,10 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
         return;
     }
 
+    /* Cleared while sending, e.g. by a 2xx sent from a callback */
+    if (pj_list_empty(&dd->uas_state->tx_data_list))
+        return;
+
     /* Schedule next retransmission */
     if (dd->uas_state->retransmit_count < 6) {
         delay.sec = 0;
