@@ -111,15 +111,26 @@ unset(_value)
 
 # A package installed with only Debug and Release builds (vcpkg's SDL2 found
 # through CMAKE_PREFIX_PATH) would give MinSizeRel and RelWithDebInfo its
-# Debug library and C runtime. Use the Release one, as vcpkg's toolchain file
-# does. Set before any package is searched; a value given is kept.
+# Debug library and C runtime. Use the configuration itself when the package
+# has it, else Release. Visual Studio generates every configuration, so each
+# list ends with what CMake would pick without one: the other optimized build,
+# the configuration-less one, Debug. Set before any package is searched; a
+# value given is kept.
 if(MSVC)
-  foreach(_cfg MINSIZEREL RELWITHDEBINFO)
-    if(NOT DEFINED CMAKE_MAP_IMPORTED_CONFIG_${_cfg})
-      set(CMAKE_MAP_IMPORTED_CONFIG_${_cfg} Release "")
+  foreach(_cfg MinSizeRel RelWithDebInfo)
+    string(TOUPPER ${_cfg} _upper)
+    if(_cfg STREQUAL "MinSizeRel")
+      set(_other RelWithDebInfo)
+    else()
+      set(_other MinSizeRel)
+    endif()
+    if(NOT DEFINED CMAKE_MAP_IMPORTED_CONFIG_${_upper})
+      set(CMAKE_MAP_IMPORTED_CONFIG_${_upper} ${_cfg} Release ${_other} "" Debug)
     endif()
   endforeach()
   unset(_cfg)
+  unset(_upper)
+  unset(_other)
 endif()
 
 # C++ is needed only by pjsua2 and a few backends (WebRTC AEC3, libyuv, Lyra,
