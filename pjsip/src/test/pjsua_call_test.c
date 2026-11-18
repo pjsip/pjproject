@@ -1533,6 +1533,12 @@ static pj_bool_t wait_until(pj_bool_t (*predicate)(pjsua_call_id),
     return predicate ? predicate(call_id) : PJ_FALSE;
 }
 
+/* Pump the pjsua event loop for timeout_ms of wall-clock time. */
+static void pump_events(unsigned timeout_ms)
+{
+    (void)wait_until(NULL, PJSUA_INVALID_ID, timeout_ms);
+}
+
 static pj_bool_t hold_offer_processed(pjsua_call_id call_id)
 {
     PJ_UNUSED_ARG(call_id);
@@ -1809,8 +1815,7 @@ static void drain_all_calls(void)
      * Wait out the delay so the slots are
      * recycled before the next sub-test creates new media sockets.
      */
-    wait_until(NULL, PJSUA_INVALID_ID,
-               PJ_IOQUEUE_KEY_FREE_DELAY + IOQUEUE_CLEANUP_MARGIN_MSEC);
+    pump_events(PJ_IOQUEUE_KEY_FREE_DELAY + IOQUEUE_CLEANUP_MARGIN_MSEC);
 }
 
 #if PJSUA_HAS_SIPREC
@@ -1990,7 +1995,7 @@ on_return:
     pjsua_set_null_snd_dev();
     if (slot != PJSUA_INVALID_ID)
         pjsua_conf_remove_port(slot);
-    wait_until(NULL, PJSUA_INVALID_ID, MEDIA_SETTLE_MSEC);
+    pump_events(MEDIA_SETTLE_MSEC);
     if (port)
         pjmedia_port_destroy(port);
     if (frames)
@@ -5129,7 +5134,7 @@ static int test_rtcp_mux_no_spurious_restart(void)
     }
 
     /* Give a teardown that trails the media update a chance to be seen. */
-    wait_until(NULL, PJSUA_INVALID_ID, MEDIA_SETTLE_MSEC);
+    pump_events(MEDIA_SETTLE_MSEC);
 
     /* Guard against the test quietly degrading into a no-op. */
     if (!g_ctx.rx_offer_had_rtcp_mux) {
@@ -6331,7 +6336,7 @@ static int test_final_answer_in_early_callback(void)
     }
 
     /* The first retransmission would be sent after 2 * T1 */
-    wait_until(NULL, PJSUA_INVALID_ID, 4 * pjsip_cfg()->tsx.t1 + 1000);
+    pump_events(4 * pjsip_cfg()->tsx.t1 + 1000);
     g_ctx.early_final_drop_ack = PJ_FALSE;
     if (g_ctx.early_final_ringing_cnt != 1) {
         PJ_LOG(1,(THIS_FILE, "    180 sent %u times",
