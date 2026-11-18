@@ -483,13 +483,15 @@ static pj_bool_t call_wait_may_release(const pjsua_call *call)
 /* Begin a wait of the call's media init. pjsua_call_media_is_changing() is
  * true until it ends. A STUN wait keeps the dialog of an existing call, so
  * nothing else sees the media being initialized; a hangup that can't lock
- * a call meanwhile is deferred.
+ * a call meanwhile is deferred. With always (the sync ICE wait), the dialog
+ * and one PJSUA level are released as before (#1737).
  */
-static void call_wait_begin(pjsua_call *call, call_wait_state *st)
+static void call_wait_begin(pjsua_call *call, pj_bool_t always,
+                            call_wait_state *st)
 {
     st->pjsua_locks = 0;
     st->dlg = NULL;
-    st->keeps_locks = !call_wait_may_release(call);
+    st->keeps_locks = !always && !call_wait_may_release(call);
 
     pj_mutex_lock(pjsua_var.call_owner_mutex);
     call->med_wait = PJ_TRUE;
@@ -497,7 +499,17 @@ static void call_wait_begin(pjsua_call *call, call_wait_state *st)
         ++pjsua_var.med_wait_cnt;
     pj_mutex_unlock(pjsua_var.call_owner_mutex);
 
-    if (!st->keeps_locks) {
+    if (always) {
+        if (PJSUA_LOCK_IS_LOCKED()) {
+            PJSUA_UNLOCK();
+            st->pjsua_locks = 1;
+        }
+        st->dlg = call->inv ? call->inv->dlg : NULL;
+        if (st->dlg) {
+            pjsip_dlg_inc_session(st->dlg, &pjsua_var.mod);
+            pjsip_dlg_dec_lock(st->dlg);
+        }
+    } else if (!st->keeps_locks) {
         st->pjsua_locks = PJSUA_RELEASE_LOCK();
         st->dlg = call->inv ? NULL : call->async_call.dlg;
         if (st->dlg) {
@@ -560,7 +572,7 @@ static pj_status_t call_resolve_stun_server(pjsua_call *call,
     pj_time_val_normalize(&deadline);
 
     do {
-        call_wait_begin(call, &st);
+        call_wait_begin(call, PJ_FALSE, &st);
         status = pjsua_wait_stun_server(&call_wait_stop, call, &deadline);
         call_wait_end(call, &st);
 
@@ -593,7 +605,7 @@ static pj_status_t call_get_mapped_addr(pjsua_call *call,
     if (call_wait_stop(call))
         return PJ_ECANCELLED;
 
-    call_wait_begin(call, &st);
+    call_wait_begin(call, PJ_FALSE, &st);
     status = pjstun_get_mapped_addr2(&pjsua_var.cp.factory, opt, 2, sock,
                                      mapped_addr);
     call_wait_end(call, &st);
@@ -1642,9 +1654,7 @@ static pj_status_t create_ice_media_transport(
 
     /* Wait until transport is initialized, or time out */
     if (!async && !trickle) {
-        pj_bool_t has_pjsua_lock = PJSUA_LOCK_IS_LOCKED();
-        pjsip_dialog *dlg = call_med->call->inv ?
-                                call_med->call->inv->dlg : NULL;
+        call_wait_state wst;
         pj_time_val deadline;
         pj_bool_t use_deadline = (PJSUA_ICE_TRANSPORT_INIT_TIMEOUT > 0);
         if (use_deadline) {
@@ -1652,17 +1662,25 @@ static pj_status_t create_ice_media_transport(
             deadline.msec += PJSUA_ICE_TRANSPORT_INIT_TIMEOUT;
             pj_time_val_normalize(&deadline);
         }
-        if (has_pjsua_lock)
-            PJSUA_UNLOCK();
-        if (dlg) {
-            /* Don't lock otherwise deadlock:
-             * https://github.com/pjsip/pjproject/issues/1737
-             */
-            pjsip_dlg_inc_session(dlg, &pjsua_var.mod);
-            pjsip_dlg_dec_lock(dlg);
-        }
+        /* Don't keep the dialog locked, otherwise deadlock:
+         * https://github.com/pjsip/pjproject/issues/1737
+         */
+        call_wait_begin(call_med->call, PJ_TRUE, &wst);
         while (call_med->tp_ready == PJ_EPENDING) {
             pjsua_handle_events(100);
+            if (call_med->tp_ready == PJ_EPENDING &&
+                call_wait_stop(call_med->call))
+            {
+                /* Hung up (also deferred, while an outer caller holds the
+                 * PJSUA lock), or closing: pjsua_destroy() waits for this
+                 * only so long, and with PJSUA_DESTROY_NO_TX_MSG nothing
+                 * resets the call. As at the deadline, invalidate a queued
+                 * completion.
+                 */
+                ++call_med->tp_init_gen;
+                call_med->tp_ready = PJ_ECANCELLED;
+                break;
+            }
             if (use_deadline && call_med->tp_ready == PJ_EPENDING) {
                 pj_time_val now;
                 pj_gettickcount(&now);
@@ -1683,12 +1701,12 @@ static pj_status_t create_ice_media_transport(
                 }
             }
         }
-        if (dlg) {
-            pjsip_dlg_inc_lock(dlg);
-            pjsip_dlg_dec_session(dlg, &pjsua_var.mod);
+        call_wait_end(call_med->call, &wst);
+
+        if (call_med->tp && call_wait_cancelled(call_med->call)) {
+            status = PJ_ECANCELLED;
+            goto on_error;
         }
-        if (has_pjsua_lock)
-            PJSUA_LOCK();
     }
 
     if (!call_med->tp) {
@@ -2416,8 +2434,8 @@ pj_bool_t  pjsua_call_media_is_changing(pjsua_call *call)
      * adding media, which could cause incoming re-INVITE to be processed and
      * cause havoc. Since the handle_events() loop only happens while adding
      * media, it is sufficient to only check if "prov > cnt" for now.
-     * A STUN wait in the media init (med_wait) is the same case, but a
-     * REINIT_MEDIA keeps the media count.
+     * A wait in the media init for STUN or ICE (med_wait) is the same
+     * case, but a REINIT_MEDIA keeps the media count.
      */
     return call->med_wait || call->med_prov_cnt > call->med_cnt;
 }

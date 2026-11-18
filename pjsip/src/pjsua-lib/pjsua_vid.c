@@ -2278,6 +2278,13 @@ static pj_status_t add_video_media(pjsua_call *call,
         return PJ_EINVALIDOP;
     }
 
+    /* As for a re-INVITE, see prepare_call_offer() */
+    if (pjsua_call_offer_pending(call)) {
+        PJ_LOG(3,(THIS_FILE, "Unable to add video while another offer is "
+                             "pending"));
+        return PJ_EINVALIDOP;
+    }
+
     /* Get active local SDP and clone it */
     status = pjmedia_sdp_neg_get_active_local(call->inv->neg, &current_sdp);
     if (status != PJ_SUCCESS)
@@ -2399,6 +2406,13 @@ static pj_status_t modify_video_media(pjsua_call *call,
 
     if (pjsua_call_media_is_changing(call)) {
         PJ_LOG(1,(THIS_FILE, "Unable to modify video" ERR_MEDIA_CHANGING));
+        return PJ_EINVALIDOP;
+    }
+
+    /* As for a re-INVITE, see prepare_call_offer() */
+    if (pjsua_call_offer_pending(call)) {
+        PJ_LOG(3,(THIS_FILE, "Unable to modify video while another offer is "
+                             "pending"));
         return PJ_EINVALIDOP;
     }
 

@@ -4675,6 +4675,14 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold2(pjsua_call_id call_id,
         goto on_return;
     }
 
+    /* As for a re-INVITE, see prepare_call_offer() */
+    if (pjsua_call_offer_pending(call)) {
+        PJ_LOG(3,(THIS_FILE, "Can not hold call while another offer is "
+                             "pending"));
+        status = PJ_EINVALIDOP;
+        goto on_return;
+    }
+
     /* We may need to re-initialize media before creating SDP */
     if (call->med_prov_cnt == 0) {
         status = apply_call_setting(call, &call->opt, NULL);
@@ -4922,9 +4930,19 @@ static pj_status_t prepare_call_offer(pjsua_call *call,
                             "offer/answer negotiation"));
         return PJ_EINVALIDOP;
     }
-    if (*sdp && call->inv->neg &&
-        pjmedia_sdp_neg_get_state(call->inv->neg) !=
-            PJMEDIA_SDP_NEG_STATE_DONE)
+    /* Also for an offer pjsua creates, or new media: the answer to the
+     * pending offer could arrive while the sync ICE wait has released the
+     * dialog, and update the media being initialized.
+     */
+    if ((*sdp ||
+         (!pjsua_call_media_is_app_managed(call) &&
+          (!opt || (opt->flag & PJSUA_CALL_NO_SDP_OFFER) == 0 ||
+           (opt->flag & PJSUA_CALL_REINIT_MEDIA) ||
+           (call->inv->state == PJSIP_INV_STATE_CONFIRMED &&
+            (opt->aud_cnt != call->opt.aud_cnt ||
+             opt->vid_cnt != call->opt.vid_cnt ||
+             opt->txt_cnt != call->opt.txt_cnt))))) &&
+        pjsua_call_offer_pending(call))
     {
         PJ_LOG(3,(THIS_FILE, "Can not set a new SDP offer while another "
                             "offer is pending"));
@@ -5963,6 +5981,14 @@ static pj_status_t process_pending_reinvite(pjsua_call *call)
         pjmedia_sdp_neg_get_state(inv->neg)!=PJMEDIA_SDP_NEG_STATE_DONE)
     {
         return PJMEDIA_SDPNEG_EINSTATE;
+    }
+
+    /* Nor while a media init waits for ICE with the dialog released: the
+     * offer would be built from the media being initialized.
+     */
+    if (pjsua_call_media_is_changing(call)) {
+        pjsua_call_schedule_reinvite_check(call, LOCK_CODEC_RETRY_INTERVAL);
+        return PJ_EPENDING;
     }
 
     /* Don't do this if call is disconnecting! */

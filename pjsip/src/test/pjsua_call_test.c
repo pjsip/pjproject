@@ -7924,6 +7924,80 @@ on_return:
     return rc;
 }
 
+/* A re-INVITE that reinitializes the media, without an SDP, while the
+ * call's hold re-INVITE is still unanswered: it is refused before the media
+ * is touched. Its answer could otherwise arrive while the sync ICE wait has
+ * released the dialog and update the media being reinitialized.
+ */
+static int test_reinvite_while_offer_pending(int err_base)
+{
+    pjsua_call *call;
+    pjmedia_transport *tp;
+    pj_status_t status;
+    int rc;
+
+    PJ_LOG(3, (THIS_FILE, "  media reinit refused while an offer is "
+               "pending"));
+
+    stun_wait_reset_ctx();
+    rc = establish_self_call(&g_stun_wait.caller, &g_stun_wait.callee,
+                             err_base);
+    if (rc != 0)
+        goto on_return;
+
+    call = &pjsua_var.calls[g_stun_wait.caller];
+    tp = call->media[0].tp;
+    status = pjsua_call_set_hold(g_stun_wait.caller, NULL);
+    if (status != PJ_SUCCESS ||
+        pjmedia_sdp_neg_get_state(call->inv->neg) !=
+            PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER)
+    {
+        PJ_LOG(1, (THIS_FILE, "    hold: status %d", status));
+        rc = err_base - 10;
+        goto on_return;
+    }
+
+    status = pjsua_call_reinvite(g_stun_wait.caller,
+                                 PJSUA_CALL_REINIT_MEDIA, NULL);
+    if (status != PJ_EINVALIDOP) {
+        PJ_LOG(1, (THIS_FILE, "    expected PJ_EINVALIDOP, got %d", status));
+        rc = err_base - 11;
+        goto on_return;
+    }
+    if (call->media[0].tp != tp) {
+        PJ_LOG(1, (THIS_FILE, "    the media was reinitialized"));
+        rc = err_base - 12;
+        goto on_return;
+    }
+
+    /* Nor an UPDATE without an SDP that adds a line */
+    {
+        pjsua_call_setting opt;
+
+        opt = call->opt;
+        opt.aud_cnt = call->opt.aud_cnt + 1;
+        opt.flag = PJSUA_CALL_NO_SDP_OFFER;
+        status = pjsua_call_update2(g_stun_wait.caller, &opt, NULL);
+        if (status != PJ_EINVALIDOP || call->med_prov_cnt != call->med_cnt) {
+            PJ_LOG(1, (THIS_FILE, "    UPDATE without SDP: status %d, "
+                       "media %u/%u", status, call->med_prov_cnt,
+                       call->med_cnt));
+            rc = err_base - 14;
+            goto on_return;
+        }
+    }
+    if (!wait_until(&call_is_confirmed, g_stun_wait.caller,
+                    TEST_TIMEOUT_MSEC))
+    {
+        rc = err_base - 13;
+        goto on_return;
+    }
+
+on_return:
+    drain_all_calls();
+    return rc;
+}
+
 static struct {
     int         phase;
     pj_bool_t   seen;
@@ -8293,6 +8367,9 @@ int pjsua_call_test(void)
     if (rc != 0) goto on_return;
 
     rc = test_stun_wait_app_cancel(-9550);
+    if (rc != 0) goto on_return;
+
+    rc = test_reinvite_while_offer_pending(-9580);
     if (rc != 0) goto on_return;
 
 
@@ -8777,6 +8854,16 @@ static pj_bool_t th_caller_reset(void)
     return pjsua_var.calls[g_th.caller].inv == NULL;
 }
 
+/* The ICE transport of the re-INVITE is gathering candidates */
+static pj_bool_t th_caller_ice_pending(void)
+{
+    const pjsua_call_media *call_med;
+
+    call_med = &pjsua_var.calls[g_th.caller].media_prov[0];
+
+    return call_med->tp != NULL && call_med->tp_ready == PJ_EPENDING;
+}
+
 static pj_bool_t th_reinvite_done(void)
 {
     return g_th.reinvite_done;
@@ -8980,11 +9067,27 @@ static int th_reinvite_thread(void *arg)
     return 0;
 }
 
+/* The re-INVITE as the IP change without re-registration sends it, with
+ * the PJSUA lock held twice (handle_ip_change_on_acc() and
+ * pjsua_acc_handle_call_on_ip_change()).
+ */
+static void th_reinvite_nested_cb(void *user_data)
+{
+    PJ_UNUSED_ARG(user_data);
+    PJSUA_LOCK();
+    PJSUA_LOCK();
+    g_th.reinvite_status = stun_wait_reinit(g_th.caller);
+    PJSUA_UNLOCK();
+    PJSUA_UNLOCK();
+    g_th.reinvite_done = PJ_TRUE;
+}
+
 enum th_wait_point
 {
     TH_WAIT_RESOLUTION,
     TH_WAIT_RESOLUTION_ICE,
-    TH_WAIT_MAPPED_ADDR
+    TH_WAIT_MAPPED_ADDR,
+    TH_WAIT_ICE_INIT
 };
 
 /* Case A of #5380: the IP change re-INVITE runs on the only worker and
@@ -8995,7 +9098,8 @@ static int th_test_hangup_during_wait(enum th_wait_point point, int err_base)
 {
     static const char *names[] = { "STUN resolution",
                                    "STUN resolution (ICE)",
-                                   "STUN mapped address" };
+                                   "STUN mapped address",
+                                   "ICE candidate" };
     pj_bool_t acc_modified = PJ_FALSE;
     pj_pool_t *thread_pool = NULL;
     pj_thread_t *thread = NULL;
@@ -9010,7 +9114,7 @@ static int th_test_hangup_during_wait(enum th_wait_point point, int err_base)
     if (rc != 0)
         goto on_return;
 
-    if (point == TH_WAIT_RESOLUTION_ICE) {
+    if (point == TH_WAIT_RESOLUTION_ICE || point == TH_WAIT_ICE_INIT) {
         if (acc_set_ice(g_th.caller_acc, PJ_TRUE) != PJ_SUCCESS) {
             rc = err_base - 12;
             goto on_return;
@@ -9018,15 +9122,16 @@ static int th_test_hangup_during_wait(enum th_wait_point point, int err_base)
         acc_modified = PJ_TRUE;
     }
 
-    /* For the mapped address query the server answers the resolution, then
-     * the queries go unanswered.
+    /* For the mapped address query and the ICE candidate gathering the
+     * server answers the resolution, then the queries go unanswered.
      */
-    status = th_stun_start(point == TH_WAIT_MAPPED_ADDR ? 1 : 0);
+    status = th_stun_start(point == TH_WAIT_MAPPED_ADDR ||
+                           point == TH_WAIT_ICE_INIT ? 1 : 0);
     if (status != PJ_SUCCESS) {
         rc = err_base - 13;
         goto on_return;
     }
-    if (point == TH_WAIT_MAPPED_ADDR &&
+    if ((point == TH_WAIT_MAPPED_ADDR || point == TH_WAIT_ICE_INIT) &&
         (!th_wait(&th_stun_resolved, TEST_TIMEOUT_MSEC) ||
          pjsua_var.stun_status != PJ_SUCCESS))
     {
@@ -9047,28 +9152,35 @@ static int th_test_hangup_during_wait(enum th_wait_point point, int err_base)
                                                 &th_reinvite_thread, NULL, 0,
                                                 0, &thread) : PJ_ENOMEM;
     } else {
-        status = pjsua_schedule_timer2(&th_reinvite_cb, NULL, 0);
+        status = pjsua_schedule_timer2(point == TH_WAIT_ICE_INIT ?
+                                           &th_reinvite_nested_cb :
+                                           &th_reinvite_cb, NULL, 0);
     }
     if (status != PJ_SUCCESS) {
         rc = err_base - 15;
         goto on_return;
     }
-    if (!th_wait(&th_caller_waiting, TEST_TIMEOUT_MSEC)) {
+    if (!th_wait(point == TH_WAIT_ICE_INIT ? &th_caller_ice_pending :
+                                             &th_caller_waiting,
+                 TEST_TIMEOUT_MSEC))
+    {
         PJ_LOG(1, (THIS_FILE, "    the re-INVITE didn't wait for STUN"));
         rc = err_base - 16;
         goto on_return;
     }
 
     /* A STUN wait keeps the call's dialog, so nothing else reaches the
-     * media being initialized
+     * media being initialized; the sync ICE wait releases it, as before.
      */
     {
         pjsip_dialog *dlg = pjsua_var.calls[g_th.caller].inv->dlg;
         pj_bool_t dlg_free = PJ_FALSE;
         unsigned i;
 
-        /* Throughout the wait */
-        for (i = 0; i < 10; ++i) {
+        /* The ICE wait releases the dialog once its loop starts; a STUN
+         * wait keeps it throughout
+         */
+        for (i = 0; i < (point == TH_WAIT_ICE_INIT ? 100 : 10); ++i) {
             if (i)
                 pj_thread_sleep(20);
             dlg_free = (pjsip_dlg_try_inc_lock(dlg) == PJ_SUCCESS);
@@ -9077,7 +9189,7 @@ static int th_test_hangup_during_wait(enum th_wait_point point, int err_base)
                 break;
             }
         }
-        if (dlg_free) {
+        if (dlg_free != (point == TH_WAIT_ICE_INIT)) {
             PJ_LOG(1, (THIS_FILE, "    the dialog is %s during the wait",
                        dlg_free ? "free" : "locked"));
             rc = err_base - 26;
@@ -9099,7 +9211,7 @@ static int th_test_hangup_during_wait(enum th_wait_point point, int err_base)
         goto on_return;
     }
     /* The hangup ends the wait (the mapped address query after its 2 s),
-     * not the STUN timeout
+     * not the STUN or ICE timeout
      */
     {
         pj_time_val now;
@@ -10167,12 +10279,15 @@ on_return:
  * - The mapped address query can't be cut short.
  * - The resolution wait must end on its own once the library is closing:
  *   with PJSUA_DESTROY_NO_TX_MSG no hangup ends it.
+ * - With ICE and PJSUA_DESTROY_NO_TX_MSG nothing resets the call, so the
+ *   ICE wait must end on its own once the library is closing.
  * This destroys pjsua.
  */
 enum th_destroy_point
 {
     TH_DESTROY_MAPPED_ADDR,
-    TH_DESTROY_RESOLUTION
+    TH_DESTROY_RESOLUTION,
+    TH_DESTROY_ICE_NO_TX
 };
 
 static int th_test_destroy_during_wait(enum th_destroy_point point,
@@ -10180,7 +10295,9 @@ static int th_test_destroy_during_wait(enum th_destroy_point point,
 {
     static const char *names[] = {
         "pjsua_destroy() during the STUN mapped address",
-        "pjsua_destroy2(NO_TX_MSG) during the STUN resolution" };
+        "pjsua_destroy2(NO_TX_MSG) during the STUN resolution",
+        "pjsua_destroy2(NO_TX_MSG) during the ICE candidate" };
+    pj_bool_t ice_no_tx = (point == TH_DESTROY_ICE_NO_TX);
     pj_time_val destroy_start;
     pj_pool_t *pool;
     pj_thread_t *thread = NULL;
@@ -10199,6 +10316,13 @@ static int th_test_destroy_during_wait(enum th_destroy_point point,
     rc = th_establish_call(err_base - 1);
     if (rc != 0)
         goto on_return;
+
+    if (ice_no_tx) {
+        if (acc_set_ice(g_th.caller_acc, PJ_TRUE) != PJ_SUCCESS) {
+            rc = err_base - 15;
+            goto on_return;
+        }
+    }
 
     /* The server answers the resolution, then the queries go unanswered;
      * or it stays silent, so the re-INVITE waits for the resolution.
@@ -10223,15 +10347,17 @@ static int th_test_destroy_during_wait(enum th_destroy_point point,
         rc = err_base - 11;
         goto on_return;
     }
-    if (!th_wait(&th_caller_waiting, TEST_TIMEOUT_MSEC)) {
+    if (!th_wait(ice_no_tx ? &th_caller_ice_pending : &th_caller_waiting,
+                 TEST_TIMEOUT_MSEC))
+    {
         rc = err_base - 12;
         goto on_return;
     }
 
 on_return:
     pj_gettickcount(&destroy_start);
-    pjsua_destroy2(point == TH_DESTROY_RESOLUTION ? PJSUA_DESTROY_NO_TX_MSG :
-                                                    0);
+    pjsua_destroy2(point != TH_DESTROY_MAPPED_ADDR ? PJSUA_DESTROY_NO_TX_MSG :
+                                                     0);
     if (thread) {
         pj_thread_join(thread);
         pj_thread_destroy(thread);
@@ -10388,6 +10514,8 @@ int pjsua_stun_wait_test(void)
     if (rc == 0)
         rc = th_test_hangup_during_wait(TH_WAIT_MAPPED_ADDR, -9670);
     if (rc == 0)
+        rc = th_test_hangup_during_wait(TH_WAIT_ICE_INIT, -9740);
+    if (rc == 0)
         rc = th_test_ip_change_tcp(PJ_FALSE, PJ_FALSE, -9770);
     if (rc == 0)
         rc = th_test_ip_change_tcp(PJ_TRUE, PJ_FALSE, -9780);
@@ -10433,6 +10561,12 @@ int pjsua_stun_wait_test(void)
             rc = th_test_acc_del_during_make_call(-9920);
             pjsua_destroy();
         }
+    }
+    if (rc == 0) {
+        if (th_init() != PJ_SUCCESS)
+            rc = -9603;
+        else
+            rc = th_test_destroy_during_wait(TH_DESTROY_ICE_NO_TX, -9790);
     }
 
 on_restore:

@@ -236,12 +236,13 @@ deadlock:on_make_call_med_tp_complete
 #   M0 -> M1: pjsua_call_make_call2() holds PJSUA_LOCK and creates the
 #     dialog (pjsip_dlg_create_uac), taking its grp_lock.
 #   M1 -> M0: call_wait_end() takes the dialog grp_lock back first, then
-#     PJSUA_LOCK, as the ICE transport wait does: another thread may hold
-#     the dialog (acquire_call()) and wait for PJSUA_LOCK.
+#     PJSUA_LOCK, as the sync ICE wait does: another thread may hold the
+#     dialog (acquire_call()) and wait for PJSUA_LOCK.
 #
 # As above, make call takes the dialog lock only while the dialog is not
 # yet reachable by another thread. The STUN waits of an existing call
-# release nothing but make call's locks; elsewhere the PJSUA -> dialog
+# release nothing but make call's locks; the sync ICE wait releases the
+# dialog and one PJSUA level as before, and elsewhere the PJSUA -> dialog
 # direction only exists as a trylock in acquire_call().
 deadlock:call_wait_end
 #=============================================================================

@@ -324,6 +324,16 @@ PJ_INLINE(pj_bool_t) pjsua_call_media_is_app_managed(
     return (call->opt.flag & PJSUA_CALL_MEDIA_APP_MANAGED) != 0;
 }
 
+/* Is an offer/answer of the call still pending? A media init now could
+ * meet its answer while the sync ICE wait has released the dialog.
+ */
+PJ_INLINE(pj_bool_t) pjsua_call_offer_pending(const pjsua_call *call)
+{
+    return call->inv && call->inv->neg &&
+           pjmedia_sdp_neg_get_state(call->inv->neg) !=
+               PJMEDIA_SDP_NEG_STATE_DONE;
+}
+
 
 /**
  * Server presence subscription list head.
