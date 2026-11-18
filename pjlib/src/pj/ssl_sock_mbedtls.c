@@ -956,6 +956,7 @@ static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
 {
     mbedtls_sock_t *mssock = (mbedtls_sock_t *)ssock;
     const mbedtls_x509_crt *crt;
+    uint32_t flags;
 
     pj_assert(ssock->ssl_state == SSL_STATE_ESTABLISHED);
 
@@ -963,6 +964,25 @@ static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
     crt = mbedtls_ssl_get_peer_cert(&mssock->ssl_ctx);
     if (crt) {
         update_cert_info(crt, ssock->pool, &ssock->remote_cert_info);
+    }
+
+    /* Key usage and EC curve checks run after cert_verify_cb() */
+    flags = mbedtls_ssl_get_verify_result(&mssock->ssl_ctx);
+    if (flags == (uint32_t)-1)
+        return;
+
+    if ((flags & (MBEDTLS_X509_BADCERT_KEY_USAGE |
+                  MBEDTLS_X509_BADCERT_EXT_KEY_USAGE |
+                  MBEDTLS_X509_BADCERT_NS_CERT_TYPE)) != 0)
+    {
+        PJ_LOG(3, (THIS_FILE, "Peer certificate is not valid for this "
+                              "purpose, flags 0x%x", (unsigned)flags));
+        ssock->verify_status |= PJ_SSL_CERT_EINVALID_PURPOSE;
+    }
+
+    if ((flags & MBEDTLS_X509_BADCERT_BAD_KEY) != 0) {
+        PJ_LOG(3, (THIS_FILE, "Peer certificate key is not acceptable"));
+        ssock->verify_status |= PJ_SSL_CERT_EUNKNOWN;
     }
 }
 

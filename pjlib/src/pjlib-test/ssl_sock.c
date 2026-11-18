@@ -3252,8 +3252,7 @@ static pj_bool_t chain_on_connect(pj_ssl_sock_t *ssock, pj_status_t status)
 
     st->err = status;
     st->done = PJ_TRUE;
-    pj_ssl_sock_close(ssock);
-    return PJ_FALSE;
+    return PJ_TRUE;
 }
 
 /* A client certificate whose chain ends at a CA the server doesn't trust
@@ -3271,7 +3270,8 @@ static int untrusted_chain_test(void)
     pj_ssl_sock_info info;
     pj_ssl_cert_t *cert = NULL;
     pj_ssl_cert_t *cli_cert = NULL;
-    pj_ssl_cert_buffer ca_buf, cert_buf, key_buf, cli_buf, chain_buf;
+    pj_ssl_cert_buffer ca_buf, cert_buf, key_buf, cli_buf, issuer_buf;
+    pj_ssl_cert_buffer chain_buf;
     pj_str_t file, pass = pj_str(CERT_PRIVKEY_PASS);
     struct chain_state state_serv, state_cli;
     pj_sockaddr bind_addr, listen_addr;
@@ -3300,6 +3300,10 @@ static int untrusted_chain_test(void)
     if (status == PJ_SUCCESS)
         status = load_cert_to_buf(pool, pj_cstr(&file, CERT_CLI_FILE),
                                   &cli_buf);
+    /* Issuer of CERT_CLI_FILE, PEM so it can be appended to the chain */
+    if (status == PJ_SUCCESS)
+        status = load_cert_to_buf(pool, pj_cstr(&file, CERT_DIR "cacert.pem"),
+                                  &issuer_buf);
     if (status != PJ_SUCCESS)
         goto on_return;
 
@@ -3341,10 +3345,10 @@ static int untrusted_chain_test(void)
         goto on_return;
 
     chain_buf.ptr = (char*)pj_pool_zalloc(pool, cli_buf.slen +
-                                                cert_buf.slen + 1);
+                                                issuer_buf.slen + 1);
     pj_memcpy(chain_buf.ptr, cli_buf.ptr, cli_buf.slen);
-    pj_memcpy(chain_buf.ptr + cli_buf.slen, cert_buf.ptr, cert_buf.slen);
-    chain_buf.slen = cli_buf.slen + cert_buf.slen;
+    pj_memcpy(chain_buf.ptr + cli_buf.slen, issuer_buf.ptr, issuer_buf.slen);
+    chain_buf.slen = cli_buf.slen + issuer_buf.slen;
 
     status = load_cert_to_buf(pool, pj_cstr(&file, CERT_CLI_PRIVKEY_FILE),
                               &key_buf);
@@ -3377,8 +3381,7 @@ static int untrusted_chain_test(void)
         pj_timer_heap_poll(timer, NULL);
     }
 
-    if (!state_cli.done)
-        pj_ssl_sock_close(ssock_cli);
+    pj_ssl_sock_close(ssock_cli);
     if (!state_serv.done) {
         status = PJ_ETIMEDOUT;
         goto on_return;
@@ -3394,7 +3397,8 @@ static int untrusted_chain_test(void)
     }
 #endif
     if (state_serv.err == PJ_SUCCESS && state_serv.got_cert &&
-        state_serv.verify_status == PJ_SSL_CERT_ESUCCESS)
+        (state_serv.verify_status & (PJ_SSL_CERT_EUNTRUSTED |
+                                     PJ_SSL_CERT_EISSUER_NOT_FOUND)) == 0)
     {
         PJ_LOG(1, ("", "...ERROR: untrusted client certificate chain "
                        "reported as verified"));
