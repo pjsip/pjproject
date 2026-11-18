@@ -67,8 +67,9 @@
     </action>
   </recv>
 
-  <!-- Let PJSUA queue the 180 behind the unacknowledged 183 -->
-  <pause milliseconds="1000"/>
+  <!-- Let PJSUA queue the 180 behind the unacknowledged 183, and finish
+       before the 183 is retransmitted (2*T1) -->
+  <pause milliseconds="300"/>
 
   <!-- RSeq of the queued, not yet sent, 180: 481 -->
   <send>
