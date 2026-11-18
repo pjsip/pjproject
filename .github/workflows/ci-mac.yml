@@ -409,6 +409,11 @@ jobs:
       run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb) $(pkg-config --cflags opencore-amrwb) $(pkg-config --cflags vo-amrwbenc) -DHAS_VID_CODEC_TEST=0 -fPIC -fsanitize=address" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L opencore-amrnb) $(pkg-config --libs-only-L opencore-amrwb) $(pkg-config --libs-only-L vo-amrwbenc) -fsanitize=address" CXXFLAGS="-g -fPIC -fsanitize=address" ./configure
     - name: make
       run: $MAKE_FAST
+    # conf_test on the serial conference bridge: the backend cannot be
+    # selected at runtime, and this is the only job that builds it and runs
+    # pjmedia tests.
+    - name: pjmedia-test conf_test
+      run: cd pjmedia/build && $CI_RUNNER ../bin/pjmedia-test-`make -s -C ../.. infotarget` $CI_MODE $CI_ARGS conf_test
     - name: set up Python
       uses: actions/setup-python@v4
       with:
