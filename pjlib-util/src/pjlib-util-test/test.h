@@ -34,7 +34,7 @@
 #define INCLUDE_HTTP_CLIENT_TEST    PJ_HAS_TCP
 #define INCLUDE_WEBSOCK_TEST        PJ_HAS_TCP
 #define INCLUDE_WEBSOCK_ONLINE_TEST 0
-#define INCLUDE_CLI_TELNET_TEST     PJ_HAS_TCP
+#define INCLUDE_CLI_TELNET_TEST     (PJ_HAS_TCP && PJ_HAS_THREADS)
 
 extern int xml_test(void);
 extern int json_test(void);

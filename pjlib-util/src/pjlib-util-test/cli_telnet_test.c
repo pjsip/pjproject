@@ -113,7 +113,10 @@ int cli_telnet_test(void)
         rc = -20;
         goto on_return;
     }
-    pj_cli_telnet_get_info(fe, &info);
+    if (pj_cli_telnet_get_info(fe, &info) != PJ_SUCCESS) {
+        rc = -25;
+        goto on_return;
+    }
 
     if (pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, &sock) !=
         PJ_SUCCESS)
@@ -150,22 +153,27 @@ int cli_telnet_test(void)
     for (i = 0; i < 300 && !log_done; ++i)
         pj_thread_sleep(10);
     if (!log_done) {
-        /* The log writer is stuck holding the front end mutex */
+        /* The log writer is stuck holding the front end mutex, so leave
+         * the cli, the thread and its pool alone.
+         */
         PJ_LOG(1, (THIS_FILE, "pj_cli_write_log() did not return"));
-        return -70;
+        rc = -70;
+        goto on_return;
     }
 
     if (!recv_marker(sock, buf, sizeof(buf), &buf_len, "after\r\n", 3000))
         rc = -80;
 
 on_return:
+    if (sock != PJ_INVALID_SOCKET)
+        pj_sock_close(sock);
+    if (rc == -70)
+        return rc;
     if (thread) {
         pj_thread_join(thread);
         pj_thread_destroy(thread);
     }
     pj_cli_destroy(cli);
-    if (sock != PJ_INVALID_SOCKET)
-        pj_sock_close(sock);
     if (pool)
         pj_pool_release(pool);
     return rc;

@@ -1373,7 +1373,7 @@ static pj_status_t telnet_sess_send_with_format(cli_telnet_sess *sess,
         while (!pj_scan_is_eof(&scanner)) {
             pj_scan_get_until_ch(&scanner, '\n', &out_str);
             str_len = (int)(scanner.curptr - str_begin);
-            if (*scanner.curptr == '\n') {
+            if (!pj_scan_is_eof(&scanner) && *scanner.curptr == '\n') {
                 int str_pos = (int)(str_begin - scanner.begin);
 
                 /* Line already ends with CR, CR_LF is added below */
