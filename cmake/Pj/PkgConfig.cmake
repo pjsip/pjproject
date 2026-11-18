@@ -12,8 +12,9 @@
 # is linked through its library file instead, which
 # pj_pc_remember_imported_targets() records in the directory that found it,
 # where the target is visible: when pkg-config has a module for that same
-# library, the module's own `--static --libs` flags are used, otherwise the
-# file as -L/-l.
+# library, the module's own `--libs` flags are used (with `--static` for a
+# static library), otherwise the file as -L/-l; either is followed by what
+# the target links, for a static library also after the module's flags.
 #
 # Everything is known at configure time, so the .pc is written then, and
 # installed like any other file. Its prefix is relative to the file itself,
@@ -31,6 +32,7 @@ set(_PJ_PC_DEPENDENCIES
   "UUID::UUID|uuid,libuuid|uuid"
   "UPNP::UPNP|libupnp,upnp|upnp,ixml"
   "ALSA::ALSA|alsa|asound"
+  "PortAudio::PortAudio|portaudio-2.0|portaudio"
   "SDL2::SDL2|sdl2|SDL2"
   "OpenGL::GL|gl|GL"
   "OpenGL::GLES2|glesv2|GLESv2"
@@ -65,9 +67,10 @@ set(_PJ_PC_PAIRED_OPTIONS "-framework;-weak_framework;-Xlinker")
 
 # The library files of the imported library target `target`: its file, and
 # the absolute paths it lists in INTERFACE_LINK_LIBRARIES (e.g. libixml for
-# UPNP::UPNP). Nothing else of that list is read: a dependency's targets may
-# use any generator expression.
-function(_pj_pc_target_files out target)
+# UPNP::UPNP). The rest of that list, targets, flags and library names (e.g.
+# OpenSSL::Crypto for a static libsrtp), goes to `others`, without the items
+# holding a generator expression: a dependency's targets may use any.
+function(_pj_pc_target_files out others target)
   set(files "")
   get_target_property(configs ${target} IMPORTED_CONFIGURATIONS)
   set(suffixes _RELEASE _NOCONFIG "")
@@ -89,25 +92,33 @@ function(_pj_pc_target_files out target)
       break()
     endif()
   endforeach()
+  set(rest "")
   get_target_property(items ${target} INTERFACE_LINK_LIBRARIES)
   foreach(item IN LISTS items)
-    if(IS_ABSOLUTE "${item}" AND NOT item MATCHES "\\$<")
+    if(item STREQUAL "" OR item MATCHES "\\$<|-NOTFOUND$")
+      continue()
+    elseif(IS_ABSOLUTE "${item}")
       list(APPEND files "${item}")
+    else()
+      list(APPEND rest "${item}")
     endif()
   endforeach()
   set(${out} "${files}" PARENT_SCOPE)
+  set(${others} "${rest}" PARENT_SCOPE)
 endfunction()
 
-# Records the library files of the imported library targets found in the
-# current directory, while they are visible. To be called at the end of each
-# directory that finds dependencies of the PJSIP libraries.
+# Records the library files and other link items of the imported library
+# targets found in the current directory, while they are visible. To be
+# called at the end of each directory that finds dependencies of the PJSIP
+# libraries.
 function(pj_pc_remember_imported_targets)
   get_directory_property(targets IMPORTED_TARGETS)
   foreach(target IN LISTS targets)
     get_target_property(type ${target} TYPE)
     if(NOT type STREQUAL "INTERFACE_LIBRARY")
-      _pj_pc_target_files(files ${target})
+      _pj_pc_target_files(files others ${target})
       set_property(GLOBAL PROPERTY "_PJ_PC_FILES_${target}" "${files}")
+      set_property(GLOBAL PROPERTY "_PJ_PC_OTHERS_${target}" "${others}")
     endif()
   endforeach()
 endfunction()
@@ -303,19 +314,35 @@ function(_pj_pc_file_flags out path)
   set(${out} "${flags}" PARENT_SCOPE)
 endfunction()
 
-# The `--static --libs` flags of the pkg-config module among `modules` that
-# describes the library at `path`, found by comparing its libdir: a module
-# found elsewhere may describe another copy, e.g. the host's when
-# cross-compiling, or MSYS2's in an MSVC build. Results are cached, keyed on
-# the modules, the path and pkg-config's settings, to keep pkg-config out of
-# every reconfigure.
+# The `--libs` flags of the pkg-config module among `modules` that describes
+# the library at `path`, found by comparing its libdir: a module found
+# elsewhere may describe another copy, e.g. the host's when cross-compiling,
+# or MSYS2's in an MSVC build. `--static` is added only for a static library
+# (or a .lib, which may be one): a shared one links what it needs itself, and
+# its module's private libraries are often not installed (Debian -dev).
+# The .pc files beside the library are searched first, e.g. in a <Pkg>_ROOT,
+# then the usual path, which also serves the modules a .pc requires.
+# Results are cached, keyed on the modules, the path, the options and
+# pkg-config's settings, to keep pkg-config out of every reconfigure.
 function(_pj_pc_module_flags out found modules path)
   set(${found} FALSE PARENT_SCOPE)
   set(${out} "" PARENT_SCOPE)
   if(NOT PKG_CONFIG_EXECUTABLE OR NOT modules)
     return()
   endif()
-  set(key "${modules}|${path}|${PKG_CONFIG_EXECUTABLE}")
+  set(options "--libs")
+  if(path MATCHES "\\.(a|lib)$" AND NOT path MATCHES "\\.dll\\.a$")
+    set(options "--static;--libs")
+  endif()
+  get_filename_component(dir "${path}" DIRECTORY)
+  get_filename_component(prefix "${dir}" DIRECTORY)
+  set(search "")
+  foreach(pcdir IN ITEMS "${dir}/pkgconfig" "${prefix}/share/pkgconfig")
+    if(IS_DIRECTORY "${pcdir}")
+      list(APPEND search "${pcdir}")
+    endif()
+  endforeach()
+  set(key "${modules}|${path}|${options}|${search}|${PKG_CONFIG_EXECUTABLE}")
   foreach(var IN ITEMS PKG_CONFIG_PATH PKG_CONFIG_LIBDIR PKG_CONFIG_SYSROOT_DIR)
     string(APPEND key "|$ENV{${var}}")
   endforeach()
@@ -323,8 +350,20 @@ function(_pj_pc_module_flags out found modules path)
   set(cache "_PJ_PC_MODULE_${key}")
   if(NOT DEFINED CACHE{${cache}})
     set(result "NONE")
-    get_filename_component(want "${path}" DIRECTORY)
-    file(REAL_PATH "${want}" want)
+    file(REAL_PATH "${dir}" want)
+    set(old_path "$ENV{PKG_CONFIG_PATH}")
+    if(search)
+      if(CMAKE_HOST_WIN32)
+        set(sep ";")
+      else()
+        set(sep ":")
+      endif()
+      list(JOIN search "${sep}" pc_path)
+      if(NOT old_path STREQUAL "")
+        string(APPEND pc_path "${sep}${old_path}")
+      endif()
+      set(ENV{PKG_CONFIG_PATH} "${pc_path}")
+    endif()
     foreach(module IN LISTS modules)
       execute_process(
         COMMAND "${PKG_CONFIG_EXECUTABLE}" --variable=libdir "${module}"
@@ -341,7 +380,7 @@ function(_pj_pc_module_flags out found modules path)
         continue()
       endif()
       execute_process(
-        COMMAND "${PKG_CONFIG_EXECUTABLE}" --static --libs "${module}"
+        COMMAND "${PKG_CONFIG_EXECUTABLE}" ${options} "${module}"
         RESULT_VARIABLE status
         OUTPUT_VARIABLE libs
         OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -353,6 +392,7 @@ function(_pj_pc_module_flags out found modules path)
         break()
       endif()
     endforeach()
+    set(ENV{PKG_CONFIG_PATH} "${old_path}")
     set(${cache} "${result}" CACHE INTERNAL "pkg-config result")
   endif()
 
@@ -363,6 +403,13 @@ function(_pj_pc_module_flags out found modules path)
   endif()
   set(flags "")
   foreach(flag IN LISTS result)
+    # What only an application links: SDL's WinMain wrapper, and the GUI
+    # subsystem it comes with on MinGW (sdl2.pc), which would turn the
+    # consumer's console program into a GUI one. pjproject uses SDL with
+    # SDL_MAIN_HANDLED and links only the library.
+    if(flag MATCHES "^-(mwindows|mconsole|lmingw32|lSDL2?main)$")
+      continue()
+    endif()
     if(flag MATCHES "^-([LF])(.+)$")
       _pj_pc_dir_flag(flag "-${CMAKE_MATCH_1}" "${CMAKE_MATCH_2}")
     else()
@@ -390,8 +437,10 @@ function(_pj_pc_dependency target)
   # The library files: recorded where the target was found, or read here
   # when the target is global
   get_property(recorded GLOBAL PROPERTY "_PJ_PC_FILES_${target}" SET)
+  set(others "")
   if(recorded)
     get_property(paths GLOBAL PROPERTY "_PJ_PC_FILES_${target}")
+    get_property(others GLOBAL PROPERTY "_PJ_PC_OTHERS_${target}")
   elseif(TARGET "${target}")
     get_target_property(type ${target} TYPE)
     if(type STREQUAL "INTERFACE_LIBRARY")
@@ -400,7 +449,7 @@ function(_pj_pc_dependency target)
       _pj_pc_visit(${target})
       return()
     endif()
-    _pj_pc_target_files(paths ${target})
+    _pj_pc_target_files(paths others ${target})
   else()
     set(paths "")
   endif()
@@ -437,15 +486,32 @@ function(_pj_pc_dependency target)
         set(static TRUE)
       endif()
     endforeach()
+    list(GET paths 0 first)
     set(found FALSE)
     if(NOT static)
-      list(GET paths 0 first)
       _pj_pc_module_flags(flags found "${modules}" "${first}")
     endif()
     if(NOT found)
       foreach(path IN LISTS paths)
         _pj_pc_file_flags(file_flags "${path}")
         list(APPEND flags ${file_flags})
+      endforeach()
+    endif()
+    # What the target links, after it: without the module's flags, and for
+    # a static library also beside them, as its .pc file may leave out what
+    # the build linked (a static libsrtp's libcrypto). Targets are recorded
+    # before it, as the list is reversed at the end.
+    if(NOT found OR (first MATCHES "\\.(a|lib)$"
+                     AND NOT first MATCHES "\\.dll\\.a$"))
+      _pj_pc_pair_options(others "${others}")
+      foreach(item IN LISTS others)
+        if(item MATCHES "::" OR TARGET "${item}")
+          _pj_pc_dependency("${item}")
+        elseif(item MATCHES "^-")
+          list(APPEND flags "${item}")
+        else()
+          list(APPEND flags "-l${item}")
+        endif()
       endforeach()
     endif()
   else()
@@ -528,6 +594,26 @@ function(_pj_pc_visit target)
   endif()
 endfunction()
 
+# The -l flag of `target`, a library this project builds
+function(_pj_pc_lib_flag out target)
+  get_target_property(name ${target} OUTPUT_NAME)
+  if(NOT name)
+    set(name "${target}")
+  endif()
+  # A PREFIX the platform lacks (lib on MSVC) is part of the -l name
+  get_target_property(prefix ${target} PREFIX)
+  if(prefix AND NOT prefix STREQUAL CMAKE_STATIC_LIBRARY_PREFIX)
+    set(name "${prefix}${name}")
+  endif()
+  # The configuration a multi-config generator puts in the file name, see
+  # "Output directories" in the top-level CMakeLists.txt
+  get_target_property(postfix ${target} PJ_CONFIG_POSTFIX)
+  if(postfix)
+    string(APPEND name "-$<CONFIG>")
+  endif()
+  set(${out} "-l${name}" PARENT_SCOPE)
+endfunction()
+
 # pj_generate_pkgconfig(<pc.in> <destination> <library>...)
 #
 # The libraries are those to list in Libs, in link order.
@@ -583,11 +669,13 @@ function(pj_generate_pkgconfig template destination)
   if(third_party)
     list(APPEND bundled "-L\${libdir}/pjproject/third_party")
     foreach(lib IN LISTS third_party)
-      list(APPEND bundled "-l${lib}")
+      _pj_pc_lib_flag(flag ${lib})
+      list(APPEND bundled "${flag}")
     endforeach()
     foreach(lib IN LISTS pj_libs)
       if(lib IN_LIST third_party_needs)
-        list(APPEND bundled "-l${lib}")
+        _pj_pc_lib_flag(flag ${lib})
+        list(APPEND bundled "${flag}")
       endif()
     endforeach()
   endif()
@@ -612,7 +700,8 @@ function(pj_generate_pkgconfig template destination)
 
   set(PJ_INSTALL_LDFLAGS "-L\${libdir}")
   foreach(lib IN LISTS pj_libs)
-    string(APPEND PJ_INSTALL_LDFLAGS " -l${lib}")
+    _pj_pc_lib_flag(flag ${lib})
+    string(APPEND PJ_INSTALL_LDFLAGS " ${flag}")
   endforeach()
   set(PJ_INSTALL_CFLAGS "-I\${includedir}")
   foreach(def IN LISTS defs)
@@ -633,10 +722,34 @@ function(pj_generate_pkgconfig template destination)
   else()
     set(INCLUDEDIR "\${prefix}/${CMAKE_INSTALL_INCLUDEDIR}")
   endif()
-  set(PJ_VERSION "${PROJECT_VERSION}")
+  set(PJ_VERSION "${PROJECT_VERSION}${PJ_VERSION_SUFFIX}")
 
   file(READ "${template}" content)
   string(CONFIGURE "${content}" content @ONLY)
+  # A multi-config generator names the libraries per configuration, so each
+  # configuration gets its own file, installed by `cmake --install --config`.
+  # The files share a timestamp, which install takes for "up to date", so the
+  # one installed before is removed: the last configuration installed wins.
+  get_property(multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+  if(multi_config)
+    set(output "${PROJECT_BINARY_DIR}/pkgconfig/$<CONFIG>/libpjproject.pc")
+    file(GENERATE OUTPUT "${output}" CONTENT "${content}")
+    if(IS_ABSOLUTE "${destination}")
+      set(installed "${destination}/libpjproject.pc")
+    else()
+      set(installed "\${CMAKE_INSTALL_PREFIX}/${destination}/libpjproject.pc")
+    endif()
+    install(
+      CODE "file(REMOVE \"\$ENV{DESTDIR}${installed}\")"
+      COMPONENT PjDevelopment
+    )
+    install(
+      FILES "${output}"
+      DESTINATION "${destination}"
+      COMPONENT PjDevelopment
+    )
+    return()
+  endif()
   # Written as it is, as a second substitution pass could alter a path with
   # an "@" in it; and only when changed, so it is not rewritten every time.
   # In this project's binary directory, not the top-level one of a project

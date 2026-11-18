@@ -1,7 +1,7 @@
 # ##############################################################################
 # Target
 
-add_library(yuv
+add_library(pj_yuv
   source/compare.cc
   source/compare_common.cc
   source/compare_gcc.cc
@@ -48,7 +48,7 @@ add_library(yuv
 )
 
 # headers
-target_sources(yuv
+target_sources(pj_yuv
   PUBLIC
     FILE_SET HEADERS
     BASE_DIRS
@@ -78,7 +78,7 @@ target_sources(yuv
 )
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-  target_compile_options(yuv
+  target_compile_options(pj_yuv
     PRIVATE
       -fomit-frame-pointer
       -fno-strict-aliasing
@@ -87,7 +87,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
       -Wno-unknown-warning-option
   )
 elseif(MSVC)
-  target_compile_options(yuv PRIVATE /Oy)
+  target_compile_options(pj_yuv PRIVATE /Oy)
 endif()
 
 # ##############################################################################
@@ -101,6 +101,6 @@ if (NOT (WIN32 OR CYGWIN OR MINGW))
   # not look.
   find_library(MATH_LIBRARY m)
   if(MATH_LIBRARY OR CMAKE_SYSTEM_NAME STREQUAL "Generic")
-    target_link_libraries(yuv PRIVATE m)
+    target_link_libraries(pj_yuv PRIVATE m)
   endif()
 endif()

@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_search_module(PC_Resample QUIET resample libresample)
+  pj_pkg_search_module(PC_Resample QUIET resample libresample)
   set(Resample_VERSION ${PC_Resample_VERSION})
 endif()
 
@@ -25,11 +26,21 @@ find_library(Resample_LIBRARY
 )
 mark_as_advanced(Resample_LIBRARY)
 
+if(Resample_INCLUDE_DIR AND Resample_LIBRARY)
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(Resample
+    FUNCTION res_Resample
+    LIBRARIES "${Resample_LIBRARY}"
+    STATIC_LIBS m
+  )
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Resample
   REQUIRED_VARS
     Resample_INCLUDE_DIR
     Resample_LIBRARY
+    Resample_USABLE
   VERSION_VAR
     Resample_VERSION
 )
@@ -46,5 +57,7 @@ if(Resample_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${Resample_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${Resample_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(Resample::Resample Resample_LIBRARY)
   endif()
 endif()

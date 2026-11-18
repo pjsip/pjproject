@@ -1,13 +1,7 @@
+list(APPEND CMAKE_MESSAGE_CONTEXT "pjsip")
+
 # ##############################################################################
 # Module options
-
-include(CMakeDependentOption)
-
-# Include TLS transport support
-cmake_dependent_option(PJSIP_WITH_TLS
-  "Enable TLS transport support" ON
-  "PJLIB_WITH_SSL" OFF
-)
 
 # Include Digest AKAv1/AKAv2 authentication, using the bundled milenage
 option(PJSIP_WITH_DIGEST_AKA_AUTH "Enable Digest AKA authentication" OFF)
@@ -56,8 +50,6 @@ target_sources(pjsip
       include/pjsip/sip_auth_aka.h
       include/pjsip/sip_auth_msg.h
       include/pjsip/sip_auth_parser.h
-      include/pjsip/sip_autoconf.h.cm
-      include/pjsip/sip_autoconf.h.in
       include/pjsip/sip_config.h
       include/pjsip/sip_dialog.h
       include/pjsip/sip_endpoint.h
@@ -86,9 +78,10 @@ target_sources(pjsip
 target_link_libraries(pjsip
   PUBLIC
     pjlib
+    # included by the public headers
+    pjlib-util
   PRIVATE
     pjlib-ssl
-    pjlib-util
 )
 
 if(PJSIP_WITH_DIGEST_AKA_AUTH)
@@ -103,17 +96,11 @@ target_compile_definitions(pjsip
     PJSIP_HAS_DIGEST_AKA_AUTH=$<BOOL:${PJSIP_WITH_DIGEST_AKA_AUTH}>
 )
 
-# configuration
-block(SCOPE_FOR VARIABLES)
-  # G711 codec
-  set(PJSIP_HAS_TLS_TRANSPORT ${PJSIP_WITH_TLS})
-
-  # write configured header
-  configure_file(
-    include/pjsip/sip_autoconf.h.cm
-    include/pjsip/sip_autoconf.h
-  )
-endblock()
+# configuration; the TLS transport follows PJ_HAS_SSL_SOCK, as with autoconf
+configure_file(
+  include/pjsip/sip_autoconf.h.cm
+  include/pjsip/sip_autoconf.h
+)
 
 # add generated file to headers file set
 target_sources(pjsip
@@ -177,7 +164,8 @@ target_sources(pjsip-simple
 )
 
 # dependencies
-target_link_libraries(pjsip-simple PUBLIC pjlib PRIVATE pjlib-util pjsip)
+# PUBLIC: what the public headers include
+target_link_libraries(pjsip-simple PUBLIC pjlib pjlib-util pjsip)
 
 # ##############################################################################
 # pjsip-ua
@@ -213,8 +201,10 @@ target_sources(pjsip-ua
 target_link_libraries(pjsip-ua
   PUBLIC
     pjlib
+    # included by the public headers
+    pjmedia pjsip pjsip-simple
   PRIVATE
-    pjlib-util pjmedia pjsip pjsip-simple
+    pjlib-util
 )
 
 # ##############################################################################
@@ -233,6 +223,9 @@ add_library(pjsua-lib
   src/pjsua-lib/pjsua_vid.c
 )
 
+# libpjsua, as make names it, so a shared build keeps make's libpjsua.so.2
+set_target_properties(pjsua-lib PROPERTIES OUTPUT_NAME pjsua)
+
 # headers
 target_sources(pjsua-lib
   PUBLIC
@@ -249,22 +242,23 @@ target_sources(pjsua-lib
 target_link_libraries(pjsua-lib
   PUBLIC
     pjlib
-  PRIVATE
+    # included by pjsua.h
     pjlib-util
     pjnath
     pjmedia
     pjmedia-codec
-    pjmedia-audiodev
     pjmedia-videodev
     pjsip
     pjsip-simple
     pjsip-ua
+  PRIVATE
+    pjmedia-audiodev
 )
 
 # ##############################################################################
 # pjsua2
 
-if(PJ_WITH_CXX)
+if(PJ_BUILD_PJSUA2)
 add_library(pjsua2
   src/pjsua2/account.cpp
   src/pjsua2/endpoint.cpp
@@ -299,12 +293,17 @@ target_sources(pjsua2
 
 )
 
+# the public headers use C++11
+target_compile_features(pjsua2 PUBLIC cxx_std_11)
+
 # dependencies
 target_link_libraries(pjsua2
   PUBLIC
     pjlib
-  PRIVATE
+    # included by the public headers (pjsua-lib brings the rest)
     pjlib-util
+    pjsua-lib
+  PRIVATE
     pjnath
     pjmedia
     pjmedia-codec
@@ -313,9 +312,21 @@ target_link_libraries(pjsua2
     pjsip
     pjsip-simple
     pjsip-ua
-    pjsua-lib
 )
-endif() # PJ_WITH_CXX
+endif() # PJ_BUILD_PJSUA2
+
+# The other libraries list the source include directory in their own file
+# sets, ahead of the build directory pjsip passes on, so a leftover
+# pjsip/sip_autoconf.h would shadow the generated one there too.
+foreach(_pj_tgt pjsip-simple pjsip-ua pjsua-lib pjsua2)
+  if(TARGET ${_pj_tgt})
+    target_include_directories(${_pj_tgt} BEFORE
+      PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+    )
+  endif()
+endforeach()
+unset(_pj_tgt)
 
 # ##############################################################################
 # Test application
@@ -365,7 +376,11 @@ if(BUILD_TESTING)
       pjsua-lib
   )
 
-  add_test(NAME pjsip-test COMMAND pjsip-test)
+  # Run from pjsip/build, as make
+  add_test(NAME pjsip-test
+    COMMAND pjsip-test
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build"
+  )
 
   # pjsua stress test application
   add_executable(pjsua-stress
@@ -388,7 +403,7 @@ if(BUILD_TESTING)
   )
 
   # pjsua2 test application
-  if(PJ_WITH_CXX)
+  if(PJ_BUILD_PJSUA2)
   add_executable(pjsua2-test
     src/pjsua2-test/main.cpp
     src/pjsua2-test/instant_messaging.cpp
@@ -413,6 +428,10 @@ if(BUILD_TESTING)
       pjsua2
   )
 
-  add_test(NAME pjsua2-test COMMAND pjsua2-test)
-  endif() # PJ_WITH_CXX
+  # Run from pjsip/build, as pjsip-test
+  add_test(NAME pjsua2-test
+    COMMAND pjsua2-test
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build"
+  )
+  endif() # PJ_BUILD_PJSUA2
 endif()

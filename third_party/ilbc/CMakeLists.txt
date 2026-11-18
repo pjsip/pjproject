@@ -1,7 +1,7 @@
 # ##############################################################################
 # Target
 
-add_library(ilbc
+add_library(pj_ilbc
   FrameClassify.c
   LPCdecode.c
   LPCencode.c
@@ -28,7 +28,7 @@ add_library(ilbc
 )
 
 # headers
-target_sources(ilbc
+target_sources(pj_ilbc
   PUBLIC
     FILE_SET HEADERS
       FILES
@@ -69,6 +69,6 @@ if (NOT (WIN32 OR CYGWIN OR MINGW))
   # not look.
   find_library(MATH_LIBRARY m)
   if(MATH_LIBRARY OR CMAKE_SYSTEM_NAME STREQUAL "Generic")
-    target_link_libraries(ilbc PRIVATE m)
+    target_link_libraries(pj_ilbc PRIVATE m)
   endif()
 endif()

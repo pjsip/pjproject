@@ -2,50 +2,48 @@
 # Options
 
 option(SRTP_WITH_OPENSSL "Build SRTP with OpenSSL support" ON)
+set(OPENSSL_HAS_GCM FALSE)
 if(SRTP_WITH_OPENSSL)
-  # Same search order as pjlib, so that both link the same OpenSSL
-  find_package(OpenSSL COMPONENTS Crypto SSL MODULE)
-  if(NOT OPENSSL_FOUND)
-    find_package(OpenSSL COMPONENTS Crypto SSL CONFIG)
-  endif()
+  # srtp only needs libcrypto (EVP and HMAC), not libssl
+  pj_find_openssl(COMPONENTS Crypto ${PJ_FIND_QUIET})
   if(OPENSSL_FOUND)
-    # check GCM support. Under its own cache key: an earlier version of this
-    # probe could fail into OPENSSL_HAS_GCM, and a cached result is never
-    # probed again.
-    include(CheckCSourceCompiles)
-    include(CMakePushCheckState)
-
-    cmake_push_check_state(RESET)
-      set(CMAKE_REQUIRED_LIBRARIES OpenSSL::Crypto)
-      check_c_source_compiles([=[
+    # GCM support, checked again when libcrypto changes. Earlier versions of
+    # this probe kept their result in PJ_SRTP_OPENSSL_HAS_GCM or
+    # OPENSSL_HAS_GCM, and never checked again.
+    unset(PJ_SRTP_OPENSSL_HAS_GCM CACHE)
+    include(Pj/CheckLibraryUsable)
+    pj_check_library_usable(SRTP_OPENSSL_GCM
+      CODE [=[
         #include <openssl/evp.h>
 
         int main(void) {
-          EVP_CIPHER_CTX *ctx;
           EVP_aes_128_gcm();
           return 0;
         }
-      ]=] PJ_SRTP_OPENSSL_HAS_GCM)
-    cmake_pop_check_state()
-    set(OPENSSL_HAS_GCM "${PJ_SRTP_OPENSSL_HAS_GCM}")
+      ]=]
+      LIBRARIES OpenSSL::Crypto
+    )
+    set(OPENSSL_HAS_GCM "${SRTP_OPENSSL_GCM_USABLE}")
   else()
-    set(SRTP_WITH_OPENSSL OFF CACHE BOOL "OpenSSL not found" FORCE)
+    # this configure only: OpenSSL may be found by the next one
+    set(SRTP_WITH_OPENSSL OFF)
   endif()
 endif()
 
 # This links OpenSSL whatever pjlib's SSL backend is, so PjConfig.cmake.in has
-# to re-resolve it on its own; in the cache to be visible outside this
-# directory.
+# to re-resolve it on its own; a global property to be visible outside this
+# directory, and not in the cache, where it would outlive a switch to the
+# system srtp.
 if(SRTP_WITH_OPENSSL AND OPENSSL_HAS_GCM)
-  set(PJ_SRTP_WITH_OPENSSL ON CACHE INTERNAL "Bundled srtp links OpenSSL")
+  set_property(GLOBAL PROPERTY PJ_SRTP_WITH_OPENSSL ON)
 else()
-  set(PJ_SRTP_WITH_OPENSSL OFF CACHE INTERNAL "Bundled srtp links OpenSSL")
+  set_property(GLOBAL PROPERTY PJ_SRTP_WITH_OPENSSL OFF)
 endif()
 
 # ##############################################################################
 # Target
 
-add_library(srtp
+add_library(pj_srtp
   # main
   srtp/srtp.c
   # ciphers
@@ -70,14 +68,14 @@ add_library(srtp
 )
 
 if(SRTP_WITH_OPENSSL AND OPENSSL_HAS_GCM)
-  target_sources(srtp
+  target_sources(pj_srtp
     PRIVATE
       crypto/cipher/aes_icm_ossl.c
       crypto/cipher/aes_gcm_ossl.c
       crypto/hash/hmac_ossl.c
   )
 else()
-  target_sources(srtp
+  target_sources(pj_srtp
     PRIVATE
       crypto/cipher/aes.c
       crypto/cipher/aes_icm.c
@@ -87,7 +85,7 @@ else()
 endif()
 
 # headers
-target_sources(srtp
+target_sources(pj_srtp
   PUBLIC
     FILE_SET HEADERS
       BASE_DIRS
@@ -128,23 +126,23 @@ target_sources(srtp
 # Dependencies
 
 # pjlib - for log overrides
-target_link_libraries(srtp PRIVATE pjlib)
+target_link_libraries(pj_srtp PRIVATE pjlib)
 
 # OpenSSL
 if(SRTP_WITH_OPENSSL AND OPENSSL_HAS_GCM)
-  target_link_libraries(srtp PRIVATE OpenSSL::Crypto OpenSSL::SSL)
-  target_compile_definitions(srtp PRIVATE OPENSSL=1 GCM=1)
+  target_link_libraries(pj_srtp PRIVATE OpenSSL::Crypto)
+  target_compile_definitions(pj_srtp PRIVATE OPENSSL=1 GCM=1)
 endif()
 
 # ##############################################################################
 # Configuration
 
-target_include_directories(srtp BEFORE
+target_include_directories(pj_srtp BEFORE
   PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/../build/srtp"
 )
 
-target_compile_definitions(srtp PRIVATE HAVE_CONFIG_H=1)
+target_compile_definitions(pj_srtp PRIVATE HAVE_CONFIG_H=1)
 
 # For the pkg-config file: the files of the dependencies found here
 pj_pc_remember_imported_targets()

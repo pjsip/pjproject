@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_check_modules(PC_OpenCoreAMRWB QUIET opencore-amrwb)
+  pj_pkg_search_module(PC_OpenCoreAMRWB QUIET opencore-amrwb)
   set(OpenCoreAMRWB_VERSION ${PC_OpenCoreAMRWB_VERSION})
 endif()
 
@@ -22,11 +23,21 @@ find_library(OpenCoreAMRWB_LIBRARY
 )
 mark_as_advanced(OpenCoreAMRWB_LIBRARY)
 
+if(OpenCoreAMRWB_INCLUDE_DIR AND OpenCoreAMRWB_LIBRARY)
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(OpenCoreAMRWB
+    FUNCTION D_IF_init
+    LIBRARIES "${OpenCoreAMRWB_LIBRARY}"
+    STATIC_LIBS m
+  )
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(OpenCoreAMRWB
   REQUIRED_VARS
     OpenCoreAMRWB_LIBRARY
     OpenCoreAMRWB_INCLUDE_DIR
+    OpenCoreAMRWB_USABLE
   VERSION_VAR
     OpenCoreAMRWB_VERSION
 )
@@ -43,5 +54,7 @@ if(OpenCoreAMRWB_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${OpenCoreAMRWB_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${OpenCoreAMRWB_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(OpenCoreAMRWB::OpenCoreAMRWB OpenCoreAMRWB_LIBRARY)
   endif()
 endif()

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -33,6 +33,105 @@
 /* G711 codec */
 #ifndef PJMEDIA_HAS_G711_CODEC
 #cmakedefine01 PJMEDIA_HAS_G711_CODEC
+#endif
+
+/* SRTP */
+#ifndef PJMEDIA_HAS_SRTP
+#cmakedefine01 PJMEDIA_HAS_SRTP
+#endif
+
+/* Speex AEC */
+#ifndef PJMEDIA_HAS_SPEEX_AEC
+#cmakedefine01 PJMEDIA_HAS_SPEEX_AEC
+#endif
+
+/* Video */
+#ifndef PJMEDIA_HAS_VIDEO
+#cmakedefine01 PJMEDIA_HAS_VIDEO
+#endif
+
+/* FFmpeg */
+#ifndef PJMEDIA_HAS_FFMPEG
+#cmakedefine01 PJMEDIA_HAS_FFMPEG
+#endif
+#ifndef PJMEDIA_HAS_LIBAVUTIL
+#cmakedefine01 PJMEDIA_HAS_LIBAVUTIL
+#endif
+#ifndef PJMEDIA_HAS_LIBSWSCALE
+#cmakedefine01 PJMEDIA_HAS_LIBSWSCALE
+#endif
+#ifndef PJMEDIA_HAS_LIBAVCODEC
+#cmakedefine01 PJMEDIA_HAS_LIBAVCODEC
+#endif
+#ifndef PJMEDIA_HAS_LIBAVFORMAT
+#cmakedefine01 PJMEDIA_HAS_LIBAVFORMAT
+#endif
+#ifndef PJMEDIA_HAS_LIBAVDEVICE
+#cmakedefine01 PJMEDIA_HAS_LIBAVDEVICE
+#endif
+
+/* Audio device backends */
+#ifndef PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO
+#cmakedefine01 PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO
+#endif
+#ifndef PJMEDIA_AUDIO_DEV_HAS_ANDROID_JNI
+#cmakedefine01 PJMEDIA_AUDIO_DEV_HAS_ANDROID_JNI
+#endif
+#ifndef PJMEDIA_AUDIO_DEV_HAS_OPENSL
+#cmakedefine01 PJMEDIA_AUDIO_DEV_HAS_OPENSL
+#endif
+#ifndef PJMEDIA_AUDIO_DEV_HAS_OBOE
+#cmakedefine01 PJMEDIA_AUDIO_DEV_HAS_OBOE
+#endif
+#ifndef PJMEDIA_AUDIO_DEV_HAS_COREAUDIO
+#cmakedefine01 PJMEDIA_AUDIO_DEV_HAS_COREAUDIO
+#endif
+#ifndef PJMEDIA_AUDIO_DEV_HAS_ALSA
+#cmakedefine01 PJMEDIA_AUDIO_DEV_HAS_ALSA
+#endif
+#ifndef PJMEDIA_AUDIO_DEV_HAS_WASAPI
+#cmakedefine01 PJMEDIA_AUDIO_DEV_HAS_WASAPI
+#endif
+
+/* Video device backends */
+#ifndef PJMEDIA_VIDEO_DEV_HAS_AVI
+#cmakedefine01 PJMEDIA_VIDEO_DEV_HAS_AVI
+#endif
+#ifndef PJMEDIA_VIDEO_DEV_HAS_OPENGL
+#cmakedefine01 PJMEDIA_VIDEO_DEV_HAS_OPENGL
+#endif
+#ifndef PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES
+#cmakedefine01 PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES
+#endif
+#ifndef PJMEDIA_VIDEO_DEV_HAS_FFMPEG
+#cmakedefine01 PJMEDIA_VIDEO_DEV_HAS_FFMPEG
+#endif
+#ifndef PJMEDIA_VIDEO_DEV_HAS_SDL
+#cmakedefine01 PJMEDIA_VIDEO_DEV_HAS_SDL
+#endif
+#ifndef PJMEDIA_VIDEO_DEV_HAS_DARWIN
+#cmakedefine01 PJMEDIA_VIDEO_DEV_HAS_DARWIN
+#endif
+#ifndef PJMEDIA_VIDEO_DEV_HAS_METAL
+#cmakedefine01 PJMEDIA_VIDEO_DEV_HAS_METAL
+#endif
+#ifndef PJMEDIA_VIDEO_DEV_HAS_QT
+#cmakedefine01 PJMEDIA_VIDEO_DEV_HAS_QT
+#endif
+#ifndef PJMEDIA_VIDEO_DEV_HAS_V4L2
+#cmakedefine01 PJMEDIA_VIDEO_DEV_HAS_V4L2
+#endif
+#ifndef PJMEDIA_VIDEO_DEV_HAS_DSHOW
+#cmakedefine01 PJMEDIA_VIDEO_DEV_HAS_DSHOW
+#endif
+#ifndef PJMEDIA_VIDEO_DEV_HAS_ANDROID
+#cmakedefine01 PJMEDIA_VIDEO_DEV_HAS_ANDROID
+#endif
+#ifndef PJMEDIA_VIDEO_DEV_HAS_ANDROID_OPENGL
+#cmakedefine01 PJMEDIA_VIDEO_DEV_HAS_ANDROID_OPENGL
+#endif
+#ifndef PJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL
+#cmakedefine01 PJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL
 #endif
 
 

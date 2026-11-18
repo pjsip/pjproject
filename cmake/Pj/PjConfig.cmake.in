@@ -1,10 +1,46 @@
 @PACKAGE_INIT@
 
+# block() below needs CMake 3.25; an unknown command would be an error even
+# with find_package(Pj QUIET)
+if(CMAKE_VERSION VERSION_LESS 3.25)
+  set(${CMAKE_FIND_PACKAGE_NAME}_FOUND FALSE)
+  set(${CMAKE_FIND_PACKAGE_NAME}_NOT_FOUND_MESSAGE
+      "needs CMake 3.25 or later, this is ${CMAKE_VERSION}")
+  return()
+endif()
+
+# Found by an earlier call here: its targets are loaded. find_dependency()
+# would skip its searches then, but block() below drops what it keeps for it.
+# Pj::pjlib is in every build, and PjTargets creates all its targets or none.
+if(${CMAKE_FIND_PACKAGE_NAME}_FOUND AND TARGET Pj::pjlib)
+  return()
+endif()
+
 include(CMakeFindDependencyMacro)
 
+# Everything below in a variable scope of its own, so that the variables it
+# sets for the searches (CMAKE_MODULE_PATH, the paths pjproject found) are
+# gone afterwards, also when a find_dependency() fails and returns early.
+# The result goes by the name searched for, e.g. pjproject with NAMES Pj.
+block(SCOPE_FOR VARIABLES PROPAGATE
+  ${CMAKE_FIND_PACKAGE_NAME}_FOUND ${CMAKE_FIND_PACKAGE_NAME}_NOT_FOUND_MESSAGE)
+
 # Add our Find modules to the search path for dependencies below
-set(_pj_saved_module_path "${CMAKE_MODULE_PATH}")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
+
+# Search for each dependency where pjproject found it, unless the consumer
+# already chose (that variable, or a root for its package as a CMake
+# variable, OPENSSL_ROOT_DIR too), or that file is gone, e.g. this install
+# was copied to another machine. Normal variables, so that nothing is left
+# in the consumer's cache for its own find_package() calls.
+include(Pj/PackageRoot)
+function(_pj_use_found package var value)
+  pj_package_root_given(${package} _root)
+  if(NOT _root AND NOT DEFINED ${var} AND EXISTS "${value}")
+    set(${var} "${value}" PARENT_SCOPE)
+  endif()
+endfunction()
+include("${CMAKE_CURRENT_LIST_DIR}/PjFoundPaths.cmake")
 
 # Threading: not needed when pjlib was built with PJLIB_WITH_THREADS=OFF
 if(@PJLIB_WITH_THREADS@)
@@ -16,14 +52,27 @@ if(@PJ_APPLE@)
   find_dependency(AppleFoundation)
 endif()
 
-# SSL/TLS backend (mutually exclusive). OpenSSL is also needed by the bundled
-# srtp, for AES-GCM, whichever backend pjlib uses.
-set(_pj_ssl_backend "@PJLIB_WITH_SSL@")
-if(_pj_ssl_backend STREQUAL "openssl" OR
-   ("@PJ_SRTP_WITH_OPENSSL@" AND "@PJ_DEP_SRTP@" STREQUAL "bundled"))
-  find_package(OpenSSL COMPONENTS Crypto SSL MODULE QUIET)
-  if(NOT OpenSSL_FOUND AND NOT OPENSSL_FOUND)
-    find_dependency(OpenSSL COMPONENTS Crypto SSL)
+# SSL/TLS backend (mutually exclusive). OpenSSL's libcrypto is also needed by
+# the bundled srtp, for AES-GCM, whichever backend pjlib uses.
+set(_pj_ssl_backend "@PJ_SSL_BACKEND@")
+if(_pj_ssl_backend STREQUAL "openssl")
+  set(_pj_openssl_components Crypto SSL)
+elseif("@PJ_SRTP_WITH_OPENSSL@")
+  set(_pj_openssl_components Crypto)
+endif()
+if(_pj_openssl_components)
+  # in pjproject's order: FindOpenSSL, then OpenSSL's own package. When
+  # neither finds it, say so as find_dependency() would, with how to point
+  # at it, rather than search again
+  pj_find_openssl(COMPONENTS ${_pj_openssl_components} QUIET)
+  if(NOT OPENSSL_FOUND)
+    list(JOIN _pj_openssl_components " " _pj_components)
+    set(${CMAKE_FIND_PACKAGE_NAME}_FOUND FALSE)
+    string(CONCAT ${CMAKE_FIND_PACKAGE_NAME}_NOT_FOUND_MESSAGE
+      "${CMAKE_FIND_PACKAGE_NAME} could not be found because dependency "
+      "OpenSSL (${_pj_components}) could not be found. Give its location "
+      "with OPENSSL_ROOT_DIR.")
+    return()
   endif()
 endif()
 if(_pj_ssl_backend STREQUAL "gnutls")
@@ -31,7 +80,6 @@ if(_pj_ssl_backend STREQUAL "gnutls")
 elseif(_pj_ssl_backend STREQUAL "mbedtls")
   find_dependency(MbedTLS CONFIG)
 endif()
-unset(_pj_ssl_backend)
 
 # pjlib platform deps
 if(@PJLIB_WITH_LIBUUID@)
@@ -55,6 +103,9 @@ if(@PJMEDIA_WITH_AUDIODEV_OBOE@)
 endif()
 if(@PJMEDIA_WITH_AUDIODEV_WASAPI@)
   find_dependency(WASAPI)
+endif()
+if(@PJMEDIA_WITH_AUDIODEV_PORTAUDIO@)
+  find_dependency(PortAudio)
 endif()
 
 # Video device backends
@@ -86,11 +137,10 @@ set(_pj_resample "@PJMEDIA_WITH_RESAMPLE@")
 if(_pj_resample STREQUAL "libsamplerate")
   find_dependency(SampleRate)
 endif()
-unset(_pj_resample)
 
 # FFMPEG
 if(@PJMEDIA_WITH_FFMPEG@)
-  find_dependency(FFMPEG)
+  find_dependency(FFMPEG COMPONENTS @PJ_FFMPEG_COMPONENTS@)
 endif()
 
 # Audio/video codecs
@@ -109,6 +159,9 @@ if(@PJMEDIA_WITH_OPUS_CODEC@)
 endif()
 if(@PJMEDIA_WITH_BCG729_CODEC@)
   find_dependency(BCG729)
+endif()
+if(@PJMEDIA_WITH_INTEL_IPP@)
+  find_dependency(IPP)
 endif()
 if(@PJMEDIA_WITH_LYRA_CODEC@)
   find_dependency(Lyra)
@@ -129,11 +182,15 @@ if(@PJ_APPLE@ AND @PJMEDIA_WITH_ILBC_CODEC@)
   find_dependency(AudioToolbox)
 endif()
 
-set(CMAKE_MODULE_PATH "${_pj_saved_module_path}")
-unset(_pj_saved_module_path)
+# System copies of libraries pjproject also bundles (PJ_DEP_<X>=system),
+# searched like the dependencies above before any Pj:: target is created
+include("${CMAKE_CURRENT_LIST_DIR}/PjDeps.cmake")
+_pj_find_system_deps()
 
 # Load exported targets
 include("${CMAKE_CURRENT_LIST_DIR}/@PJ_CMAKE_TARGETS_FILE@")
 
 # Recreate Pj::Dep::* alias targets for bundled/system dependencies
-include("${CMAKE_CURRENT_LIST_DIR}/PjDeps.cmake")
+_pj_add_dep_targets()
+
+endblock()

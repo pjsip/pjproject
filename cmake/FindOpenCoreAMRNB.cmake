@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_check_modules(PC_OpenCoreAMRNB QUIET opencore-amrnb)
+  pj_pkg_search_module(PC_OpenCoreAMRNB QUIET opencore-amrnb)
   set(OpenCoreAMRNB_VERSION ${PC_OpenCoreAMRNB_VERSION})
 endif()
 
@@ -17,16 +18,26 @@ find_library(OpenCoreAMRNB_LIBRARY
   NAMES
     opencore-amrnb
   HINTS
-    ${PC_OpenCoreAMRNB_LIBDIRS}
+    ${PC_OpenCoreAMRNB_LIBDIR}
     ${PC_OpenCoreAMRNB_LIBRARY_DIRS}
 )
 mark_as_advanced(OpenCoreAMRNB_LIBRARY)
+
+if(OpenCoreAMRNB_INCLUDE_DIR AND OpenCoreAMRNB_LIBRARY)
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(OpenCoreAMRNB
+    FUNCTION Encoder_Interface_init
+    LIBRARIES "${OpenCoreAMRNB_LIBRARY}"
+    STATIC_LIBS m
+  )
+endif()
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(OpenCoreAMRNB
   REQUIRED_VARS
     OpenCoreAMRNB_LIBRARY
     OpenCoreAMRNB_INCLUDE_DIR
+    OpenCoreAMRNB_USABLE
   VERSION_VAR
     OpenCoreAMRNB_VERSION
 )
@@ -43,5 +54,7 @@ if(OpenCoreAMRNB_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${OpenCoreAMRNB_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${OpenCoreAMRNB_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(OpenCoreAMRNB::OpenCoreAMRNB OpenCoreAMRNB_LIBRARY)
   endif()
 endif()

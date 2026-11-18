@@ -85,6 +85,29 @@ function(_ffmpeg_find_component component)
     endif()
   endforeach()
 
+  # Link <component>_version(), as autoconf's AC_CHECK_LIB fallback, to reject
+  # a library built for another target, e.g. the host's in a cross build
+  set(_ffmpeg_check_libs "${FFMPEG_${component}_LIBRARY}")
+  foreach(dep IN LISTS arg_NEEDS)
+    list(APPEND _ffmpeg_check_libs "FFMPEG::${dep}")
+  endforeach()
+  include(Pj/CheckLibraryUsable)
+  if(FFMPEG_FIND_QUIETLY)
+    set(_ffmpeg_quiet QUIET)
+  else()
+    set(_ffmpeg_quiet "")
+  endif()
+  pj_check_library_usable(FFMPEG_${component} ${_ffmpeg_quiet}
+    FUNCTION ${component}_version
+    LIBRARIES ${_ffmpeg_check_libs}
+  )
+  if(NOT FFMPEG_${component}_USABLE)
+    _ffmpeg_set_found(${component} FALSE
+      "Found '${FFMPEG_${component}_LIBRARY}' for ${component}, but cannot link it."
+    )
+    return()
+  endif()
+
   _ffmpeg_set_found("${component}" TRUE)
 
   #
@@ -103,6 +126,8 @@ function(_ffmpeg_find_component component)
       INTERFACE_INCLUDE_DIRECTORIES "${FFMPEG_${component}_INCLUDE_DIR}"
       INTERFACE_LINK_LIBRARIES "${_dep_targets}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library("FFMPEG::${component}" "FFMPEG_${component}_LIBRARY")
     unset(_dep_targets)
   endif()
 

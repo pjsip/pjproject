@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_search_module(PC_Speex QUIET speex libspeex)
+  pj_pkg_search_module(PC_Speex QUIET speex libspeex)
 endif()
 
 find_path(Speex_INCLUDE_DIR
@@ -22,6 +23,15 @@ find_library(Speex_LIBRARY
 )
 mark_as_advanced(Speex_LIBRARY)
 
+if(Speex_INCLUDE_DIR AND Speex_LIBRARY)
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(Speex
+    FUNCTION speex_encoder_init
+    LIBRARIES "${Speex_LIBRARY}"
+    STATIC_LIBS m
+  )
+endif()
+
 # Only pkg-config gives the version: speex.h has none, its
 # SPEEX_LIB_GET_*_VERSION are speex_lib_ctl() request codes
 if(DEFINED PC_Speex_VERSION AND NOT PC_Speex_VERSION STREQUAL "")
@@ -34,6 +44,7 @@ find_package_handle_standard_args(Speex
   REQUIRED_VARS
     Speex_INCLUDE_DIR
     Speex_LIBRARY
+    Speex_USABLE
   VERSION_VAR
     Speex_VERSION
 )
@@ -50,5 +61,7 @@ if(Speex_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${Speex_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${Speex_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(Speex::Speex Speex_LIBRARY)
   endif()
 endif()

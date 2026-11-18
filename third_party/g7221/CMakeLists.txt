@@ -1,7 +1,7 @@
 # ##############################################################################
 # Target
 
-add_library(g7221
+add_library(pj_g7221
   common/common.c
   common/huff_tab.c
   common/tables.c
@@ -14,7 +14,7 @@ add_library(g7221
   encode/encoder.c
 )
 
-target_include_directories(g7221 PRIVATE common)
+target_include_directories(pj_g7221 PRIVATE common)
 
 # HACK: Allow inclusion using `g7221` prefix. This is done
 # by linking headers to the binary tree under that prefix,
@@ -29,6 +29,10 @@ if(NOT EXISTS "${g7221_interface_dir}")
 endif()
 
 # link files
+if(POLICY CMP0205)
+  # copy the directory content if linking fails
+  cmake_policy(SET CMP0205 NEW)
+endif()
 foreach(g7221_include IN ITEMS common encode decode)
   if(NOT EXISTS "${g7221_interface_dir}/${g7221_include}")
     if (WIN32 OR MINGW OR CYGWIN)
@@ -48,7 +52,7 @@ foreach(g7221_include IN ITEMS common encode decode)
   endif()
 endforeach()
 
-target_sources(g7221
+target_sources(pj_g7221
   PUBLIC
     FILE_SET HEADERS
       BASE_DIRS
@@ -71,7 +75,7 @@ target_sources(g7221
 # Dependencies
 
 # pjlib - for config
-target_link_libraries(g7221 PRIVATE pjlib)
+target_link_libraries(pj_g7221 PRIVATE pjlib)
 
 if (NOT (WIN32 OR CYGWIN OR MINGW))
   # The codec calls libm functions (round()), a separate library
@@ -81,6 +85,6 @@ if (NOT (WIN32 OR CYGWIN OR MINGW))
   # not look.
   find_library(MATH_LIBRARY m)
   if(MATH_LIBRARY OR CMAKE_SYSTEM_NAME STREQUAL "Generic")
-    target_link_libraries(g7221 PRIVATE m)
+    target_link_libraries(pj_g7221 PRIVATE m)
   endif()
 endif()
