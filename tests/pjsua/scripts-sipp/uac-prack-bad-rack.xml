@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+
+<!-- This program is free software; you can redistribute it and/or      -->
+<!-- modify it under the terms of the GNU General Public License as     -->
+<!-- published by the Free Software Foundation; either version 2 of the -->
+<!-- License, or (at your option) any later version.                    -->
+<!--                                                                    -->
+<!-- This program is distributed in the hope that it will be useful,    -->
+<!-- but WITHOUT ANY WARRANTY; without even the implied warranty of     -->
+<!-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the      -->
+<!-- GNU General Public License for more details.                       -->
+<!--                                                                    -->
+<!-- You should have received a copy of the GNU General Public License  -->
+<!-- along with this program; if not, write to the                      -->
+<!-- Free Software Foundation, Inc.,                                    -->
+<!-- 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             -->
+<!--                                                                    -->
+<!--                 Sipp 'uac' scenario                                -->
+<!--                                                                    -->
+
+<scenario name="UAC sending PRACK with RAck matching no reliable response">
+  <send retrans="500">
+    <![CDATA[
+
+      INVITE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[pid]SIPpTag09[call_number]
+      To: [service] <sip:[service]@[remote_ip]:[remote_port]>
+      Call-ID: [call_id]
+      CSeq: 1 INVITE
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Allow: INVITE, ACK, CANCEL, BYE, PRACK
+      Supported: 100rel
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+      v=0
+      o=user1 53655765 2353687637 IN IP[local_ip_type] [local_ip]
+      s=-
+      c=IN IP[local_ip_type] [local_ip]
+      t=0 0
+      m=audio [media_port] RTP/AVP 0
+      a=rtpmap:0 PCMU/8000
+
+    ]]>
+  </send>
+
+  <recv response="100" optional="true">
+  </recv>
+
+  <recv response="183">
+    <action>
+      <ereg regexp=".*"
+        search_in="hdr"
+        header="RSeq:"
+        assign_to="1"/>
+      <ereg regexp=".*"
+        search_in="hdr"
+        header="CSeq:"
+        assign_to="2"/>
+      <todouble assign_to="3" variable="1"/>
+      <add assign_to="3" value="1"/>
+      <assignstr assign_to="4" value="[$3]"/>
+      <ereg regexp="^[0-9]+" search_in="var" variable="4" assign_to="5"/>
+    </action>
+  </recv>
+
+  <!-- Let PJSUA queue the 180 behind the unacknowledged 183, and finish
+       before the 183 is retransmitted (2*T1) -->
+  <pause milliseconds="300"/>
+
+  <!-- RSeq of the queued, not yet sent, 180: 481 -->
+  <send>
+    <![CDATA[
+
+      PRACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[pid]SIPpTag09[call_number]
+      To: [service] <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 2 PRACK
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      RAck: [$5][$2]
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv response="481">
+  </recv>
+
+  <!-- RSeq never sent (pjsip starts below 32768): 481 -->
+  <send>
+    <![CDATA[
+
+      PRACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[pid]SIPpTag09[call_number]
+      To: [service] <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 3 PRACK
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      RAck: 99999[$2]
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv response="481">
+  </recv>
+
+  <!-- RAck CSeq not the INVITE's: 481 -->
+  <send>
+    <![CDATA[
+
+      PRACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[pid]SIPpTag09[call_number]
+      To: [service] <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 4 PRACK
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      RAck:[$1] 99 INVITE
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv response="481">
+  </recv>
+
+  <!-- RAck method not INVITE: 481 -->
+  <send>
+    <![CDATA[
+
+      PRACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[pid]SIPpTag09[call_number]
+      To: [service] <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 5 PRACK
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      RAck:[$1] 1 UPDATE
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv response="481">
+  </recv>
+
+  <!-- No RAck: 400 -->
+  <send>
+    <![CDATA[
+
+      PRACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[pid]SIPpTag09[call_number]
+      To: [service] <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 6 PRACK
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv response="400">
+  </recv>
+
+  <!-- Matching RAck: the 180 is sent, then 200 -->
+  <send>
+    <![CDATA[
+
+      PRACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[pid]SIPpTag09[call_number]
+      To: [service] <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 7 PRACK
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      RAck:[$1][$2]
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv response="180">
+  </recv>
+
+  <recv response="200">
+  </recv>
+
+  <!-- Already acknowledged: still 200 -->
+  <send>
+    <![CDATA[
+
+      PRACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[pid]SIPpTag09[call_number]
+      To: [service] <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 8 PRACK
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      RAck:[$1][$2]
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+
+  <recv response="200">
+  </recv>
+
+  <!-- The 180, now sent: 200 -->
+  <send>
+    <![CDATA[
+
+      PRACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[pid]SIPpTag09[call_number]
+      To: [service] <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 9 PRACK
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      RAck: [$5][$2]
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv response="200">
+  </recv>
+
+  <recv response="200" rtd="true" crlf="true">
+  </recv>
+
+  <send>
+    <![CDATA[
+
+      ACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[pid]SIPpTag09[call_number]
+      To: [service] <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 1 ACK
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <send retrans="500">
+    <![CDATA[
+
+      BYE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[pid]SIPpTag09[call_number]
+      To: [service] <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 10 BYE
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv response="200" crlf="true">
+  </recv>
+
+  <!-- definition of the response time repartition table (unit is ms)   -->
+  <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>
+
+  <!-- definition of the call length repartition table (unit is ms)     -->
+  <CallLengthRepartition value="10, 50, 100, 500, 1000, 5000, 10000"/>
+
+</scenario>
