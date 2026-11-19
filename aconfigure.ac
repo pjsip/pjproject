@@ -2299,7 +2299,9 @@ AC_ARG_ENABLE(ssl,
             fi
         fi
 
-        if test "x$ac_ssl_backend" = "x"; then
+        if test "x$ac_ssl_backend" = "x" && \
+           { test "x$with_mbedtls" = "xno" || test "x$with_gnutls" != "xno"; }
+        then
             if test "x$with_gnutls" != "xno" -a "x$with_gnutls" != "x"; then
                 CFLAGS="$CFLAGS -I$with_gnutls/include"
                 LDFLAGS="$LDFLAGS -L$with_gnutls/lib"
@@ -2334,7 +2336,9 @@ AC_ARG_ENABLE(ssl,
 
         fi
 
-        if test "x$ac_ssl_backend" = "x"; then
+        if test "x$ac_ssl_backend" = "x" && \
+           { test "x$with_gnutls" = "xno" || test "x$with_mbedtls" != "xno"; }
+        then
             dnl # The pkg-config command for MbedTLS. With a prefix, it only
             dnl # looks there, so that an MbedTLS installed elsewhere cannot
             dnl # supply the flags.
