@@ -1278,6 +1278,98 @@ jobs:
           done
         done
 
+  # The bundled libraries that can come from the system (GSM, Speex with
+  # SpeexDSP, libsrtp2, libyuv, libresample), all from Ubuntu's packages.
+  # Asked for by name, a missing one stops the configure. None may be built
+  # from third_party, and the build and the consumers must load the system
+  # copies.
+  cmake-system-deps:
+    runs-on: ubuntu-latest
+    name: CMake / system GSM, Speex, SRTP, libyuv, libresample
+    env:
+      PJ_SYSTEM_LIBS: gsm speex speexdsp srtp2 yuv resample
+    steps:
+    - uses: actions/checkout@v4
+    - name: install dependencies
+      run: >-
+        sudo apt-get update && sudo apt-get install -y libssl-dev
+        libgsm1-dev libspeex-dev libspeexdsp-dev libsrtp2-dev libyuv-dev
+        libresample1-dev
+    - name: configure
+      run: >-
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        -DPJ_DEP_GSM=system -DPJ_DEP_SPEEX=system -DPJ_DEP_SRTP=system
+        -DPJ_DEP_YUV=system -DPJ_DEP_RESAMPLE=system
+    - name: check options
+      run: |
+        cache=build/CMakeCache.txt
+        failed=0
+        for v in GSM Speex SpeexDSP SRTP YUV Resample; do
+          path=$(sed -n "s/^${v}_LIBRARY:[^=]*=//p" $cache)
+          echo "${v}_LIBRARY=$path"
+          case "$path" in /usr/*) ;; *)
+            echo "::error::${v}_LIBRARY is not a system library"; failed=1 ;;
+          esac
+        done
+        # system Speex has its echo canceller in SpeexDSP
+        grep -x 'PJMEDIA_WITH_SPEEX_AEC:BOOL=ON' $cache || {
+          echo "::error::PJMEDIA_WITH_SPEEX_AEC is not ON"; failed=1; }
+        exit $failed
+    - name: build
+      run: cmake --build build -j $(nproc)
+    - name: check build
+      run: |
+        failed=0
+        for l in gsm speex srtp yuv resample; do
+          if f=$(find build -name "lib$l.a" | grep .); then
+            echo "::error::the bundled $l was built: $f"; failed=1
+          fi
+        done
+        ldd build/pjsip-apps/bin/pjsua
+        for l in $PJ_SYSTEM_LIBS; do
+          ldd build/pjsip-apps/bin/pjsua | grep -q "lib$l\.so.* => /" || {
+            echo "::error::pjsua does not load the system lib$l"; failed=1; }
+        done
+        exit $failed
+    - name: run pjsua
+      run: ./build/pjsip-apps/bin/pjsua --version
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+    - name: check install
+      run: |
+        ls -R ${{ runner.temp }}/pj-install/lib/pjproject/third_party || true
+        for l in gsm speex srtp yuv resample; do
+          if f=$(find ${{ runner.temp }}/pj-install -name "lib$l.a" | grep .); then
+            echo "::error::the bundled $l was installed: $f"; exit 1
+          fi
+        done
+    - name: test find_package
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-consumer --verbose
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+    - name: test pkg-config
+      run: |
+        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        cc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --static --cflags --libs libpjproject)
+        ./pc_consumer
+    - name: check the consumers load the system libraries
+      run: |
+        failed=0
+        for exe in build-consumer/test_consumer build-consumer/test_consumer2 \
+                   pc_consumer; do
+          for l in $PJ_SYSTEM_LIBS; do
+            ldd $exe | grep -q "lib$l\.so.* => /" || {
+              echo "::error::$exe does not load the system lib$l"; failed=1; }
+          done
+        done
+        exit $failed
+
   # Short pjsua-stress runs under ASan/TSan on every PR / push to master.
   # The full weekly run (larger fleet, longer duration) lives in
   # .github/workflows/stress-test.yml.
