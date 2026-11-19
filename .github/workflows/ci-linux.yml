@@ -1370,6 +1370,99 @@ jobs:
         done
         exit $failed
 
+  # The GnuTLS and Mbed TLS backends, with both supported Mbed TLS major
+  # versions built as in the mbedtls job (same cache). Asked for by name, a
+  # backend that is not found stops the configure. The consumers get only
+  # the pjproject install: its package must find the backend again, also
+  # Mbed TLS from its own prefix.
+  cmake-ssl:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - backend: gnutls
+            name: GnuTLS
+          - backend: mbedtls
+            name: Mbed TLS 3.6.7
+            version: 3.6.7
+            sha256: a7e8bcbec0e6f761b4af24f25677626b35f762f68eef79c08677a363212d11f6
+            config_py: scripts/config.py
+          - backend: mbedtls
+            name: Mbed TLS 4.2.0
+            version: 4.2.0
+            sha256: 2bed9d713b4668f76553b097e72b8aa30bc8f112a940d7ae228d524bbde6ffea
+            config_py: tf-psa-crypto/scripts/config.py
+    name: CMake / ${{ matrix.name }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: install GnuTLS
+      if: matrix.backend == 'gnutls'
+      run: sudo apt-get update && sudo apt-get install -y libgnutls28-dev
+    - name: Mbed TLS prefix
+      if: matrix.backend == 'mbedtls'
+      run: |
+        echo "MBEDTLS_PREFIX=$HOME/mbedtls-${{ matrix.version }}" >> $GITHUB_ENV
+        echo "PJ_SSL_ROOT=-DMbedTLS_ROOT=$HOME/mbedtls-${{ matrix.version }}" >> $GITHUB_ENV
+    - name: cache Mbed TLS
+      if: matrix.backend == 'mbedtls'
+      id: cache-mbedtls
+      uses: actions/cache@v4
+      with:
+        path: ~/mbedtls-${{ matrix.version }}
+        # the mbedtls job's key: bump both when the recipe below changes
+        key: mbedtls-${{ matrix.version }}-${{ runner.os }}-threading-1
+    - name: build Mbed TLS
+      if: matrix.backend == 'mbedtls' && steps.cache-mbedtls.outputs.cache-hit != 'true'
+      run: |
+        cd $RUNNER_TEMP
+        curl -sSfL -o mbedtls.tar.bz2 \
+          https://github.com/Mbed-TLS/mbedtls/releases/download/mbedtls-${{ matrix.version }}/mbedtls-${{ matrix.version }}.tar.bz2
+        echo "${{ matrix.sha256 }}  mbedtls.tar.bz2" | sha256sum -c
+        tar xjf mbedtls.tar.bz2
+        cd mbedtls-${{ matrix.version }}
+        # PJSIP's threads share PSA Crypto, which needs the threading layer
+        python3 ${{ matrix.config_py }} set MBEDTLS_THREADING_C
+        python3 ${{ matrix.config_py }} set MBEDTLS_THREADING_PTHREAD
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+              -DENABLE_TESTING=OFF -DENABLE_PROGRAMS=OFF \
+              -DCMAKE_INSTALL_PREFIX=$MBEDTLS_PREFIX
+        cmake --build build -j 3
+        cmake --install build
+    - name: configure
+      run: >-
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        -DPJLIB_WITH_SSL=${{ matrix.backend }} $PJ_SSL_ROOT
+    - name: check backend
+      run: |
+        grep -x 'PJ_SSL_BACKEND:INTERNAL=${{ matrix.backend }}' build/CMakeCache.txt
+        grep -ix '#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_${{ matrix.backend }}' \
+          build/pjlib/include/pj/compat/os_auto.h
+    - name: build
+      run: cmake --build build -j $(nproc)
+    - name: pjlib-test (ssl_sock only)
+      # from pjlib/build, where the test certificates are
+      run: |
+        cd pjlib/build
+        ../../build/pjlib/bin/pjlib-test --ci-mode ssl_sock_test
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+    - name: test find_package
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-consumer --verbose
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+    - name: test pkg-config
+      run: |
+        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        cc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --static --cflags --libs libpjproject)
+        ./pc_consumer
+
   # Short pjsua-stress runs under ASan/TSan on every PR / push to master.
   # The full weekly run (larger fleet, longer duration) lives in
   # .github/workflows/stress-test.yml.
