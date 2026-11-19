@@ -5,11 +5,16 @@ The NDK ships a CMake toolchain file, so no wrapper script is needed:
 ```sh
 cmake -B build-android \
   -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake" \
-  -DANDROID_ABI=arm64-v8a \
-  -DANDROID_PLATFORM=android-23 \
   -DCMAKE_BUILD_TYPE=Release
 cmake --build build-android -j
 ```
+
+That builds what `./configure-android` does by default: `arm64-v8a`, at the
+minimum API level below, with the shared C++ runtime (`libc++_shared.so`,
+which an app then ships beside its native libraries). `-DANDROID_ABI`,
+`-DANDROID_PLATFORM` and `-DANDROID_STL` choose otherwise, e.g.
+`-DANDROID_STL=c++_static`. Without pjproject's defaults the NDK would pick
+`armeabi-v7a`, its own minimum API level and `c++_static`.
 
 Repeat per ABI. `arm64-v8a`, `armeabi-v7a`, `x86_64` and `x86` are all built by
 CI; each needs its own build directory.
@@ -19,7 +24,7 @@ it. Both can build the libraries and the pjsua2 bindings.
 
 ## Minimum API level
 
-**23**, matching `minSdkVersion` in
+**23**, the default, matching `minSdkVersion` in
 `pjsip-apps/src/swig/java/android/pjsua2/build.gradle`. Do not raise the floor
 to work around a build error without checking what it is hiding: bionic gates
 functions on the API level, so a higher `ANDROID_PLATFORM` can make a
@@ -138,7 +143,7 @@ It is off by default: SWIG is a build dependency nothing else here needs.
 A build also copies both into the sample app, as `make -C
 pjsip-apps/src/swig/java` does: `libpjsua2.so` into
 `pjsip-apps/src/swig/java/android/pjsua2/src/main/jniLibs/<abi>`, with
-`libc++_shared.so` when built with `-DANDROID_STL=c++_shared`, and the classes
+`libc++_shared.so` unless built with `-DANDROID_STL=c++_static`, and the classes
 into `java/` beside it. The app then builds from there, in Android Studio or
 with `./gradlew :app:assembleDebug`. Build once per ABI the app should carry.
 `-DPJSUA2_ANDROID_DIR=<dir>` copies into another app's source set instead, and

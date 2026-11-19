@@ -25,6 +25,25 @@ else()
   set(_pj_cmake_version "${_pj_ver_major}.${_pj_ver_minor}")
 endif()
 
+# With the NDK toolchain file, default to what ./configure-android builds:
+# arm64-v8a, API 23 (the minimum supported, see build/android/README.md) and
+# the shared C++ runtime, rather than the NDK's armeabi-v7a, its own minimum
+# API level and c++_static. Set before project(), where the toolchain file
+# reads them, and only when none of the toolchain's alternatives is given.
+if(CMAKE_TOOLCHAIN_FILE MATCHES "(^|/)android\\.toolchain\\.cmake$")
+  if(NOT ANDROID_ABI AND NOT ANDROID_TOOLCHAIN_NAME)
+    set(ANDROID_ABI arm64-v8a CACHE STRING "Android ABI to build for")
+  endif()
+  if(NOT ANDROID_PLATFORM AND NOT ANDROID_NATIVE_API_LEVEL)
+    set(ANDROID_PLATFORM android-23 CACHE STRING
+      "Android API level to build for"
+    )
+  endif()
+  if(NOT DEFINED ANDROID_STL AND NOT DEFINED CMAKE_ANDROID_STL_TYPE)
+    set(ANDROID_STL c++_shared CACHE STRING "Android C++ runtime")
+  endif()
+endif()
+
 project(pjproject
   VERSION ${_pj_cmake_version}
   DESCRIPTION "Multimedia communication library"
