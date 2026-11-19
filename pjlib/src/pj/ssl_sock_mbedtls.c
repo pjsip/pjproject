@@ -604,7 +604,7 @@ static pj_status_t set_cert(pj_ssl_sock_t *ssock)
 {
     mbedtls_sock_t *mssock = (mbedtls_sock_t *)ssock;
     mbedtls_x509_crt *cacert_ = NULL;
-    int authmode = MBEDTLS_SSL_VERIFY_NONE;
+    int authmode;
     int ret = 0;
     pj_ssl_cert_t *cert = ssock->cert;
 
@@ -710,10 +710,13 @@ on_config:
             authmode = MBEDTLS_SSL_VERIFY_OPTIONAL;
         }
     } else {
-        if (cacert_)
+        /* Without a CA list the server certificate cannot be trusted. Still
+         * verify it, so that it is reported as untrusted, not as verified.
+         */
+        if (cacert_ || ssock->param.verify_peer)
             authmode = MBEDTLS_SSL_VERIFY_REQUIRED;
         else
-            PJ_LOG(2, (THIS_FILE, "Peer validation is disabled"));
+            authmode = MBEDTLS_SSL_VERIFY_OPTIONAL;
     }
 
     mbedtls_ssl_conf_verify(&mssock->ssl_config, cert_verify_cb, ssock);
