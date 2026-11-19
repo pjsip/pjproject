@@ -39,8 +39,16 @@ if(CMAKE_TOOLCHAIN_FILE MATCHES "(^|/)android\\.toolchain\\.cmake$")
       "Android API level to build for"
     )
   endif()
-  if(NOT DEFINED ANDROID_STL AND NOT DEFINED CMAKE_ANDROID_STL_TYPE)
-    set(ANDROID_STL c++_shared CACHE STRING "Android C++ runtime")
+  # The NDK's default (legacy) toolchain file ignores CMAKE_ANDROID_STL_TYPE,
+  # so pass one given that way on as ANDROID_STL, which both read
+  if(NOT DEFINED ANDROID_STL)
+    if(DEFINED CMAKE_ANDROID_STL_TYPE)
+      set(_pj_stl "${CMAKE_ANDROID_STL_TYPE}")
+    else()
+      set(_pj_stl c++_shared)
+    endif()
+    set(ANDROID_STL ${_pj_stl} CACHE STRING "Android C++ runtime")
+    unset(_pj_stl)
   endif()
 endif()
 

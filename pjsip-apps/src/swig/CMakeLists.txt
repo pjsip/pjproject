@@ -148,19 +148,38 @@ if(ANDROID AND PJSUA2_ANDROID_DIR)
   )
   add_dependencies(pjsua2jni_android pjsua2jni)
 
-  # Unless SWIG writes there itself, replace the classes rather than merge
-  # them, so that none from an older build is left behind
+  # Unless SWIG writes there itself, sync the classes: remove only those SWIG
+  # no longer generates (an app may keep its own sources in a subpackage, as
+  # the sample's org.pjsip.pjsua2.app), and rewrite only those that changed,
+  # so that Gradle does not recompile them all on every build
   cmake_path(COMPARE "${PJSUA2_JAVA_OUTPUT_DIR}/org/pjsip" EQUAL
     "${_pj_java_dir}" _pj_same_dir
   )
   if(NOT _pj_same_dir)
+    set(_pj_sync_script "${CMAKE_CURRENT_BINARY_DIR}/pjsua2_android_sync.cmake")
+    file(WRITE "${_pj_sync_script}" [[
+file(GLOB _new RELATIVE "${SRC}" "${SRC}/*.java")
+if(NOT _new)
+  message(FATAL_ERROR "No generated classes in ${SRC}")
+endif()
+file(GLOB _old RELATIVE "${DST}" "${DST}/*.java")
+list(REMOVE_ITEM _old ${_new})
+foreach(_f IN LISTS _old)
+  file(REMOVE "${DST}/${_f}")
+endforeach()
+execute_process(
+  COMMAND "${CMAKE_COMMAND}" -E copy_directory_if_different "${SRC}" "${DST}"
+  COMMAND_ERROR_IS_FATAL ANY
+)
+]])
     add_custom_command(TARGET pjsua2jni_android POST_BUILD
-      COMMAND "${CMAKE_COMMAND}" -E rm -rf "${_pj_java_dir}/pjsua2"
-      COMMAND "${CMAKE_COMMAND}" -E copy_directory
-              "${PJSUA2_JAVA_OUTPUT_DIR}/org/pjsip/pjsua2"
-              "${_pj_java_dir}/pjsua2"
+      COMMAND "${CMAKE_COMMAND}"
+              "-DSRC=${PJSUA2_JAVA_OUTPUT_DIR}/org/pjsip/pjsua2"
+              "-DDST=${_pj_java_dir}/pjsua2"
+              -P "${_pj_sync_script}"
       VERBATIM
     )
+    unset(_pj_sync_script)
     if(_pjsua2_helpers)
       add_custom_command(TARGET pjsua2jni_android POST_BUILD
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different

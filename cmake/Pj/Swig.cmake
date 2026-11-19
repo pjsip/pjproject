@@ -56,7 +56,9 @@ endfunction()
 # to empty otherwise.
 function(pj_android_cxx_shared out)
   set(${out} "" PARENT_SCOPE)
-  if(NOT ANDROID_STL STREQUAL "c++_shared")
+  # The toolchain file resolves ANDROID_STL into this one, which can also be
+  # given on its own
+  if(NOT CMAKE_ANDROID_STL_TYPE STREQUAL "c++_shared")
     return()
   endif()
   find_file(PJ_ANDROID_CXX_SHARED libc++_shared.so
