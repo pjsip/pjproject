@@ -892,3 +892,53 @@ jobs:
           done
         done
         exit $failed
+
+  # The Xcode generator: Debug and Release in one build folder, each library
+  # and program with a -<Config> suffix, both installed into one prefix. The
+  # installed programs must still be validly signed and run. A consumer
+  # built with Xcode must link the libraries of its own configuration.
+  cmake-xcode:
+    runs-on: macos-latest
+    name: CMake / Xcode
+    steps:
+    - uses: actions/checkout@v4
+    - name: install dependencies
+      run: brew install openssl pkgconf
+    - name: configure
+      run: cmake -B build -G Xcode
+    - name: build Debug
+      run: cmake --build build --config Debug -- -quiet
+    - name: build Release
+      run: cmake --build build --config Release -- -quiet
+    - name: check build
+      run: |
+        set -o pipefail
+        for c in Debug:1 Release:0; do
+          cfg=${c%:*}; dbg=${c#*:}
+          test -f build/pjlib/lib/libpj-$cfg.a
+          ./build/pjsip-apps/bin/pjsua-$cfg --version | grep -E "PJ_DEBUG +: $dbg\$"
+        done
+    - name: install
+      run: |
+        for c in Debug Release; do
+          cmake --install build --config $c --prefix ${{ runner.temp }}/pj-install
+        done
+        ls ${{ runner.temp }}/pj-install/lib
+    - name: run the installed pjsua
+      run: |
+        for c in Debug Release; do
+          codesign -v ${{ runner.temp }}/pj-install/bin/pjsua-$c
+          ${{ runner.temp }}/pj-install/bin/pjsua-$c --version
+        done
+    - name: test find_package
+      run: |
+        set -o pipefail
+        cmake -B build-consumer tests/cmake -G Xcode \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install
+        for c in Debug Release; do
+          cmake --build build-consumer --config $c | tee build-$c.log
+          grep -q "libpj-$c\.a" build-$c.log || {
+            echo "::error::the $c consumer does not link libpj-$c.a"; exit 1; }
+          ./build-consumer/$c/test_consumer
+          ./build-consumer/$c/test_consumer2
+        done
