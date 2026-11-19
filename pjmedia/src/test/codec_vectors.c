@@ -782,10 +782,16 @@ on_return:
 
 #define OPUS_MAX_TEST_FRAMES    3
 
+/* "ext_frame" value: no padding */
+#define OPUS_EXT_NONE           (-1)
+/* "ext_frame" value: padding with an extension that cannot be parsed */
+#define OPUS_EXT_BAD_LEN        (-2)
+
 /*
  * Build a code 3 VBR packet of "cnt" frames. With "ext_frame" >= 0, the
  * padding holds "ext_frame" frame separators followed by an extension, so
- * the extension belongs to that frame.
+ * the extension belongs to that frame. OPUS_EXT_NONE: no padding;
+ * OPUS_EXT_BAD_LEN: padding holding a malformed extension.
  */
 static unsigned opus_build_pkt(pj_uint8_t *pkt, const pj_uint8_t *pl[],
                                const unsigned len[], unsigned cnt,
@@ -794,8 +800,11 @@ static unsigned opus_build_pkt(pj_uint8_t *pkt, const pj_uint8_t *pl[],
     unsigned i, pos = 0;
 
     pkt[pos++] = OPUS_TOC_CODE3;
-    pkt[pos++] = (pj_uint8_t)(0x80 | (ext_frame >= 0 ? 0x40 : 0) | cnt);
-    if (ext_frame >= 0)
+    pkt[pos++] = (pj_uint8_t)(0x80 | (ext_frame != OPUS_EXT_NONE ? 0x40 : 0) |
+                              cnt);
+    if (ext_frame == OPUS_EXT_BAD_LEN)
+        pkt[pos++] = 2;
+    else if (ext_frame >= 0)
         pkt[pos++] = (pj_uint8_t)(ext_frame + 1);
     for (i = 0; i + 1 < cnt; ++i) {
         pj_assert(len[i] < 252);
@@ -805,7 +814,11 @@ static unsigned opus_build_pkt(pj_uint8_t *pkt, const pj_uint8_t *pl[],
         pj_memcpy(pkt + pos, pl[i], len[i]);
         pos += len[i];
     }
-    if (ext_frame >= 0) {
+    if (ext_frame == OPUS_EXT_BAD_LEN) {
+        /* Long-form ID 32 whose 16-byte length runs past the padding end */
+        pkt[pos++] = 0x41;
+        pkt[pos++] = 0x10;
+    } else if (ext_frame >= 0) {
         for (i = 0; i < (unsigned)ext_frame; ++i)
             pkt[pos++] = 0x02;
         pkt[pos++] = 0xFC;
@@ -835,7 +848,8 @@ static int opus_check_parse(pjmedia_codec *codec, unsigned samples_per_frame,
 
     PJ_TEST_SUCCESS(pjmedia_codec_parse(codec, pkt, pkt_len, &ts,
                                         &frame_cnt, frames),
-                    ext_frame >= 0 ? "with extension" : "no extension",
+                    ext_frame != OPUS_EXT_NONE ? "with padding" :
+                                                 "no padding",
                     return -10);
     PJ_TEST_EQ(frame_cnt, cnt, NULL, return -20);
 
@@ -852,6 +866,11 @@ static int opus_check_parse(pjmedia_codec *codec, unsigned samples_per_frame,
                    return -50);
         PJ_TEST_EQ(pj_memcmp(fr[0], pl[i], len[i]), 0, NULL, return -60);
     }
+
+    /* A frame-0 extension (e.g. DRED) must survive the split */
+    if (ext_frame == 0)
+        PJ_TEST_GT(frames[0].size, len[0] + 1, "frame-0 extension dropped",
+                   return -70);
     return 0;
 }
 
@@ -864,6 +883,7 @@ int codec_opus_parse_test(void)
     pjmedia_codec *codec = NULL;
     pj_pool_t *pool = NULL;
     pj_str_t codec_id = pj_str("opus/48000");
+    static const unsigned len_one[] = {40};
     static const unsigned len_empty0[] = {0, 58};
     static const unsigned len_two[] = {20, 30};
     static const unsigned len_three[] = {20, 30, 40};
@@ -895,11 +915,15 @@ int codec_opus_parse_test(void)
     spf = param.info.clock_rate / 50;
     rc = opus_check_parse(codec, spf, 2, len_empty0, 1);
     if (rc == 0)
+        rc = opus_check_parse(codec, spf, 2, len_two, 0);
+    if (rc == 0)
         rc = opus_check_parse(codec, spf, 2, len_two, 1);
     if (rc == 0)
         rc = opus_check_parse(codec, spf, 3, len_three, 2);
     if (rc == 0)
-        rc = opus_check_parse(codec, spf, 2, len_two, -1);
+        rc = opus_check_parse(codec, spf, 2, len_two, OPUS_EXT_NONE);
+    if (rc == 0)
+        rc = opus_check_parse(codec, spf, 1, len_one, OPUS_EXT_BAD_LEN);
 
     pjmedia_codec_close(codec);
 

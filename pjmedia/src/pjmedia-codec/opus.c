@@ -990,8 +990,10 @@ static pj_status_t  codec_parse( pjmedia_codec *codec,
                                            (opus_int32)
                                            (opus_data->parse_buf_size -
                                             out_pos));
-        if (size == OPUS_BAD_ARG && i == 0) {
-            /* Padding extensions of a later frame block the split */
+        if (size < 0 && size != OPUS_BUFFER_TOO_SMALL && i == 0) {
+            /* A later frame's padding extensions or unparseable padding
+             * block the split; opus_decode() accepts both.
+             */
             opus_int32 unpad_len;
 
             unpad_len = opus_packet_unpad(tmp_buf, (opus_int32)pkt_size);
