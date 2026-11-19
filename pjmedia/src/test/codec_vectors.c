@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -640,3 +640,142 @@ int codec_test_vectors(void)
     return rc_final;
 }
 
+#if PJMEDIA_HAS_OPUS_CODEC
+#include <opus/opus.h>
+
+/* Opus TOC: config 31 (CELT FB 20 ms), mono, code 3 */
+#define OPUS_TOC_CODE3  0xFB
+
+#define OPUS_MAX_TEST_FRAMES    3
+
+/*
+ * Build a code 3 VBR packet of "cnt" frames. With "ext_frame" >= 0, the
+ * padding holds "ext_frame" frame separators followed by an extension, so
+ * the extension belongs to that frame.
+ */
+static unsigned opus_build_pkt(pj_uint8_t *pkt, const pj_uint8_t *pl[],
+                               const unsigned len[], unsigned cnt,
+                               int ext_frame)
+{
+    unsigned i, pos = 0;
+
+    pkt[pos++] = OPUS_TOC_CODE3;
+    pkt[pos++] = (pj_uint8_t)(0x80 | (ext_frame >= 0 ? 0x40 : 0) | cnt);
+    if (ext_frame >= 0)
+        pkt[pos++] = (pj_uint8_t)(ext_frame + 1);
+    for (i = 0; i + 1 < cnt; ++i) {
+        pj_assert(len[i] < 252);
+        pkt[pos++] = (pj_uint8_t)len[i];
+    }
+    for (i = 0; i < cnt; ++i) {
+        pj_memcpy(pkt + pos, pl[i], len[i]);
+        pos += len[i];
+    }
+    if (ext_frame >= 0) {
+        for (i = 0; i < (unsigned)ext_frame; ++i)
+            pkt[pos++] = 0x02;
+        pkt[pos++] = 0xFC;
+    }
+    return pos;
+}
+
+static int opus_check_parse(pjmedia_codec *codec, unsigned samples_per_frame,
+                            unsigned cnt, const unsigned len[],
+                            int ext_frame)
+{
+    pj_uint8_t pl_buf[OPUS_MAX_TEST_FRAMES][64], pkt[256];
+    const pj_uint8_t *pl[OPUS_MAX_TEST_FRAMES];
+    pjmedia_frame frames[4];
+    unsigned i, j, pkt_len, frame_cnt = PJ_ARRAY_SIZE(frames);
+    pj_timestamp ts;
+
+    pj_assert(cnt <= OPUS_MAX_TEST_FRAMES);
+    for (i = 0; i < cnt; ++i) {
+        for (j = 0; j < sizeof(pl_buf[i]); ++j)
+            pl_buf[i][j] = (pj_uint8_t)(0x10 + 0x40 * i + j);
+        pl[i] = pl_buf[i];
+    }
+
+    pkt_len = opus_build_pkt(pkt, pl, len, cnt, ext_frame);
+    ts.u64 = 0;
+
+    PJ_TEST_SUCCESS(pjmedia_codec_parse(codec, pkt, pkt_len, &ts,
+                                        &frame_cnt, frames),
+                    ext_frame >= 0 ? "with extension" : "no extension",
+                    return -10);
+    PJ_TEST_EQ(frame_cnt, cnt, NULL, return -20);
+
+    for (i = 0; i < cnt; ++i) {
+        const unsigned char *fr[48];
+        opus_int16 fsize[48];
+        unsigned char toc;
+
+        PJ_TEST_EQ(opus_packet_parse((const unsigned char*)frames[i].buf,
+                                     (opus_int32)frames[i].size, &toc, fr,
+                                     fsize, NULL), 1, NULL, return -30);
+        PJ_TEST_EQ(fsize[0], len[i], NULL, return -40);
+        PJ_TEST_EQ(frames[i].timestamp.u64, i * samples_per_frame, NULL,
+                   return -50);
+        PJ_TEST_EQ(pj_memcmp(fr[0], pl[i], len[i]), 0, NULL, return -60);
+    }
+    return 0;
+}
+
+int codec_opus_parse_test(void)
+{
+    pjmedia_endpt *endpt;
+    pjmedia_codec_mgr *mgr;
+    const pjmedia_codec_info *info;
+    pjmedia_codec_param param;
+    pjmedia_codec *codec = NULL;
+    pj_pool_t *pool = NULL;
+    pj_str_t codec_id = pj_str("opus/48000");
+    static const unsigned len_empty0[] = {0, 58};
+    static const unsigned len_two[] = {20, 30};
+    static const unsigned len_three[] = {20, 30, 40};
+    unsigned count = 1, spf;
+    int rc = 0;
+
+    PJ_TEST_SUCCESS(pjmedia_endpt_create2(mem, NULL, 0, &endpt), NULL,
+                    return -1);
+    mgr = pjmedia_endpt_get_codec_mgr(endpt);
+
+    PJ_TEST_SUCCESS(pjmedia_codec_opus_init(endpt), NULL,
+                    {rc = -2; goto on_return;});
+    PJ_TEST_SUCCESS(pjmedia_codec_mgr_find_codecs_by_id(mgr, &codec_id,
+                                                        &count, &info,
+                                                        NULL),
+                    NULL, {rc = -3; goto on_return;});
+    PJ_TEST_SUCCESS(pjmedia_codec_mgr_get_default_param(mgr, info, &param),
+                    NULL, {rc = -4; goto on_return;});
+    PJ_TEST_SUCCESS(pjmedia_codec_mgr_alloc_codec(mgr, info, &codec), NULL,
+                    {rc = -5; goto on_return;});
+
+    pool = pj_pool_create(mem, "opusparse", 1000, 1000, NULL);
+    PJ_TEST_NOT_NULL(pool, NULL, {rc = -6; goto on_return;});
+    PJ_TEST_SUCCESS(pjmedia_codec_init(codec, pool), NULL,
+                    {rc = -7; goto on_return;});
+    PJ_TEST_SUCCESS(pjmedia_codec_open(codec, &param), NULL,
+                    {rc = -8; goto on_return;});
+
+    spf = param.info.clock_rate / 50;
+    rc = opus_check_parse(codec, spf, 2, len_empty0, 1);
+    if (rc == 0)
+        rc = opus_check_parse(codec, spf, 2, len_two, 1);
+    if (rc == 0)
+        rc = opus_check_parse(codec, spf, 3, len_three, 2);
+    if (rc == 0)
+        rc = opus_check_parse(codec, spf, 2, len_two, -1);
+
+    pjmedia_codec_close(codec);
+
+on_return:
+    if (codec)
+        pjmedia_codec_mgr_dealloc_codec(mgr, codec);
+    if (pool)
+        pj_pool_release(pool);
+    pjmedia_codec_opus_deinit();
+    pjmedia_endpt_destroy2(endpt);
+    return rc;
+}
+#endif  /* PJMEDIA_HAS_OPUS_CODEC */
