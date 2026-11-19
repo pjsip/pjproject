@@ -3859,6 +3859,7 @@ int ssl_sock_test(void)
         return ret;
 
 #if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL) || \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_GNUTLS) || \
     (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_MBEDTLS)
     PJ_LOG(3,("", "..client without CA test"));
     ret = no_ca_client_test(PJ_FALSE);
