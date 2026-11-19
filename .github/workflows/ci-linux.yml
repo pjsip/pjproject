@@ -1039,6 +1039,69 @@ jobs:
           $(pkg-config --cflags --libs libpjproject) -Wl,-rpath,"$prefix/lib"
         ./pc_consumer
 
+  # PJLIB_WITH_THREADS=OFF: as in the autoconf no-threads job, nothing may
+  # reference pthread. Also the installed package: Pj's config must not ask
+  # for Threads, and consumers built from it stay pthread-free.
+  cmake-no-threads:
+    runs-on: ubuntu-latest
+    name: CMake / no threads
+    steps:
+    - uses: actions/checkout@v4
+    - name: install dependencies
+      run: sudo apt-get update && sudo apt-get install -y libssl-dev
+    - name: configure
+      # libwebrtc uses pthread_once() and is not built without threads.
+      run: >-
+        cmake -B build -DCMAKE_BUILD_TYPE=Release -DPJLIB_WITH_THREADS=OFF
+        -DPJMEDIA_WITH_WEBRTC_AEC=OFF -DPJMEDIA_WITH_WEBRTC_AEC3=OFF
+    - name: build
+      run: cmake --build build -j $(nproc)
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+    - name: build consumers
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-consumer --verbose
+        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        cc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --static --cflags --libs libpjproject)
+    - name: check nothing references pthread
+      run: |
+        rc=0
+        for bin in build/pjlib/bin/pjlib-test \
+                   build/pjlib-util/bin/pjlib-util-test \
+                   build/pjnath/bin/pjnath-test \
+                   build/pjmedia/bin/pjmedia-test \
+                   build/pjsip/bin/pjsip-test \
+                   build/pjsip/bin/pjsua2-test \
+                   build/pjsip-apps/bin/pjsua \
+                   build-consumer/test_consumer \
+                   build-consumer/test_consumer2 \
+                   pc_consumer; do
+          if [ ! -f "$bin" ]; then
+            echo "::error::$bin was not built"
+            rc=1
+            continue
+          fi
+          if nm -D -u "$bin" | grep -E ' U (pthread_|sched_get)'; then
+            echo "::error::$bin references pthread with PJLIB_WITH_THREADS=OFF"
+            rc=1
+          else
+            echo "ok: $bin"
+          fi
+        done
+        exit $rc
+    - name: run
+      run: |
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+        ./pc_consumer
+        cd pjlib-util/build
+        ../../build/pjlib-util/bin/pjlib-util-test --ci-mode resolver_nothreads_test
+
   # Short pjsua-stress runs under ASan/TSan on every PR / push to master.
   # The full weekly run (larger fleet, longer duration) lives in
   # .github/workflows/stress-test.yml.
