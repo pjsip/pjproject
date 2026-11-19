@@ -16,6 +16,13 @@ which an app then ships beside its native libraries). `-DANDROID_ABI`,
 `-DANDROID_STL=c++_static`. Without pjproject's defaults the NDK would pick
 `armeabi-v7a`, its own minimum API level and `c++_static`.
 
+`c++_static` is only for when `libpjsua2.so` (or whichever library PJSIP is
+linked into) is the app's only native library using C++: the NDK does not
+support a static C++ runtime alongside other C++ shared libraries. So it
+cannot be used with the published Oboe AAR, whose `liboboe.so` needs
+`libc++_shared.so`; configure stops on that combination. The AAR from
+`build-aar.sh` is built that way, with Oboe linked in statically.
+
 Repeat per ABI. `arm64-v8a`, `armeabi-v7a`, `x86_64` and `x86` are all built by
 CI; each needs its own build directory.
 
