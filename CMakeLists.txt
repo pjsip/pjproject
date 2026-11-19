@@ -289,9 +289,16 @@ endif()
 # On iOS, build the executables (applications and tests, when turned on) as
 # plain command line programs, as make does, runnable in the Simulator with
 # `xcrun simctl spawn`. CMake would otherwise make each an app bundle, which
-# needs an install destination and a signing team.
+# needs an install destination.
 if(IOS)
   set(CMAKE_MACOSX_BUNDLE OFF)
+endif()
+
+# Xcode's own signing needs a signing team on iOS, and on macOS it breaks
+# when the install rewrites the rpaths, so macOS kills the installed
+# programs at launch. Without it the binaries keep the linker's signature,
+# which the rewrite redoes.
+if(APPLE AND NOT DEFINED CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED)
   set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED NO)
 endif()
 
