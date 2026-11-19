@@ -373,13 +373,19 @@
  */
 #if PJ_CONFIG_ANDROID
 
+    /* Settings that have a CMake option are left to it under PJ_CMAKE,
+     * as they would otherwise override the option.
+     */
+
     /*
      * PJLIB settings.
      */
 
     /* Disable floating point support */
+    #if !defined(PJ_CMAKE) || !PJ_CMAKE
     #undef PJ_HAS_FLOATING_POINT
     #define PJ_HAS_FLOATING_POINT               0
+    #endif
 
     /*
      * PJMEDIA settings
@@ -388,13 +394,17 @@
     /* We have our own OpenSL ES backend */
     #define PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO     0
     #define PJMEDIA_AUDIO_DEV_HAS_WMME          0
+    #if !defined(PJ_CMAKE) || !PJ_CMAKE
     #ifndef PJMEDIA_AUDIO_DEV_HAS_OPENSL
     #define PJMEDIA_AUDIO_DEV_HAS_OPENSL        0
     #endif
     #define PJMEDIA_AUDIO_DEV_HAS_ANDROID_JNI   1
+    #endif
 
     /* Disable some codecs */
+    #if !defined(PJ_CMAKE) || !PJ_CMAKE
     #define PJMEDIA_HAS_L16_CODEC               0
+    #endif
     //#define PJMEDIA_HAS_G722_CODEC            0
 
     /* Fine tune Speex's default settings for best performance/quality */
