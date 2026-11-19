@@ -1373,24 +1373,23 @@ static pj_status_t telnet_sess_send_with_format(cli_telnet_sess *sess,
         while (!pj_scan_is_eof(&scanner)) {
             pj_scan_get_until_ch(&scanner, '\n', &out_str);
             str_len = (int)(scanner.curptr - str_begin);
-            if (*scanner.curptr == '\n') {
-                if ((str_len > 1) && (out_str.ptr[str_len-2] == '\r'))
-                {
-                    continue;
-                } else {
-                    int str_pos = (int)(str_begin - scanner.begin);
+            if (!pj_scan_is_eof(&scanner) && *scanner.curptr == '\n') {
+                int str_pos = (int)(str_begin - scanner.begin);
 
-                    if (str_len > 0) {
-                        pj_str_t s;
-                        pj_strset(&s, &str->ptr[str_pos], str_len);
-                        telnet_sess_send(sess, &s);
-                    }
-                    telnet_sess_send(sess, &CR_LF);
+                /* Line already ends with CR, CR_LF is added below */
+                if ((str_len > 0) && (str_begin[str_len-1] == '\r'))
+                    --str_len;
 
-                    if (!pj_scan_is_eof(&scanner)) {
-                        pj_scan_advance_n(&scanner, 1, PJ_TRUE);
-                        str_begin = scanner.curptr;
-                    }
+                if (str_len > 0) {
+                    pj_str_t s;
+                    pj_strset(&s, &str->ptr[str_pos], str_len);
+                    telnet_sess_send(sess, &s);
+                }
+                telnet_sess_send(sess, &CR_LF);
+
+                if (!pj_scan_is_eof(&scanner)) {
+                    pj_scan_advance_n(&scanner, 1, PJ_TRUE);
+                    str_begin = scanner.curptr;
                 }
             } else {
                 pj_str_t s;
