@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -640,3 +640,138 @@ int codec_test_vectors(void)
     return rc_final;
 }
 
+#if PJMEDIA_HAS_OPUS_CODEC
+static void opus_seed_fmtp(pjmedia_codec_param *param, const char *names[],
+                           unsigned cnt)
+{
+    unsigned i;
+
+    for (i = 0; i < cnt; ++i) {
+        param->setting.dec_fmtp.param[i].name = pj_str((char*)names[i]);
+        param->setting.dec_fmtp.param[i].val = pj_str((char*)names[i]);
+    }
+    param->setting.dec_fmtp.cnt = (pj_uint8_t)cnt;
+}
+
+/* Apply cfg and param, then check the stored decoder fmtp names in order.
+ * On success, param receives the stored default param.
+ */
+static int opus_check_fmtp(pjmedia_codec_mgr *mgr,
+                           const pjmedia_codec_info *info,
+                           const pjmedia_codec_opus_config *cfg,
+                           pjmedia_codec_param *param,
+                           const char *exp_names[], unsigned exp_cnt)
+{
+    pjmedia_codec_param out;
+    unsigned i;
+
+    PJ_TEST_SUCCESS(pjmedia_codec_opus_set_default_param(cfg, param), NULL,
+                    return -100);
+    PJ_TEST_SUCCESS(pjmedia_codec_mgr_get_default_param(mgr, info, &out),
+                    NULL, return -110);
+    PJ_TEST_EQ((unsigned)out.setting.dec_fmtp.cnt, exp_cnt, NULL,
+               return -120);
+    for (i = 0; i < exp_cnt; ++i) {
+        const pj_str_t *got = &out.setting.dec_fmtp.param[i].name;
+        pj_str_t name = pj_str((char*)exp_names[i]);
+        const pj_str_t *want = &name;
+
+        PJ_TEST_STREQ(got, want, NULL, return -130);
+    }
+    *param = out;
+    return 0;
+}
+
+int codec_opus_fmtp_test(void)
+{
+    static const char *seed_first[] = {
+        "maxaveragebitrate", "useinbandfec", "usedtx"
+    };
+    static const char *exp_first[] = { "useinbandfec", "usedtx" };
+    static const char *seed_mid[] = {
+        "useinbandfec", "cbr", "usedtx", "x-test"
+    };
+    static const char *exp_mid[] = { "useinbandfec", "usedtx", "x-test" };
+    static const char *seed_dup[] = { "cbr", "cbr", "usedtx" };
+    static const char *exp_dup[] = { "usedtx", "useinbandfec" };
+    static const char *exp_16k[] = {
+        "maxplaybackrate", "sprop-maxcapturerate", "useinbandfec", "usedtx"
+    };
+    static const char *exp_48k[] = { "useinbandfec", "usedtx" };
+    pjmedia_endpt *endpt;
+    pjmedia_codec_mgr *mgr;
+    const pjmedia_codec_info *info;
+    pjmedia_codec_opus_config def_cfg, cfg;
+    pjmedia_codec_param def_param, param;
+    pj_str_t codec_id = pj_str("opus/48000");
+    pj_str_t xtest_str = pj_str("x-test");
+    unsigned count = 1;
+    int rc = 0;
+
+    PJ_TEST_SUCCESS(pjmedia_endpt_create2(mem, NULL, 0, &endpt), NULL,
+                    return -1);
+    mgr = pjmedia_endpt_get_codec_mgr(endpt);
+
+    PJ_TEST_SUCCESS(pjmedia_codec_opus_init(endpt), NULL,
+                    {rc = -2; goto on_return;});
+    PJ_TEST_SUCCESS(pjmedia_codec_mgr_find_codecs_by_id(mgr, &codec_id,
+                                                        &count, &info,
+                                                        NULL),
+                    NULL, {rc = -3; goto on_return;});
+    PJ_TEST_SUCCESS(pjmedia_codec_opus_get_config(&def_cfg), NULL,
+                    {rc = -4; goto on_return;});
+    PJ_TEST_SUCCESS(pjmedia_codec_mgr_get_default_param(mgr, info,
+                                                        &def_param),
+                    NULL, {rc = -5; goto on_return;});
+
+    cfg = def_cfg;
+    cfg.sample_rate = 48000;
+    cfg.channel_cnt = 1;
+    cfg.bit_rate = 0;
+    cfg.cbr = PJ_FALSE;
+
+    param = def_param;
+    param.setting.plc = 1;
+    param.setting.vad = 1;
+    opus_seed_fmtp(&param, seed_first, PJ_ARRAY_SIZE(seed_first));
+    rc = opus_check_fmtp(mgr, info, &cfg, &param, exp_first,
+                         PJ_ARRAY_SIZE(exp_first));
+    if (rc != 0)
+        goto on_restore;
+
+    opus_seed_fmtp(&param, seed_mid, PJ_ARRAY_SIZE(seed_mid));
+    rc = opus_check_fmtp(mgr, info, &cfg, &param, exp_mid,
+                         PJ_ARRAY_SIZE(exp_mid));
+    if (rc != 0)
+        goto on_restore;
+    /* generate_fmtp() leaves the value of an unrelated entry alone */
+    PJ_TEST_STREQ((&param.setting.dec_fmtp.param[2].val), (&xtest_str), NULL,
+                  {rc = -140; goto on_restore;});
+
+    opus_seed_fmtp(&param, seed_dup, PJ_ARRAY_SIZE(seed_dup));
+    rc = opus_check_fmtp(mgr, info, &cfg, &param, exp_dup,
+                         PJ_ARRAY_SIZE(exp_dup));
+    if (rc != 0)
+        goto on_restore;
+
+    param.setting.dec_fmtp.cnt = 0;
+    cfg.sample_rate = 16000;
+    rc = opus_check_fmtp(mgr, info, &cfg, &param, exp_16k,
+                         PJ_ARRAY_SIZE(exp_16k));
+    if (rc != 0)
+        goto on_restore;
+
+    cfg.sample_rate = 48000;
+    rc = opus_check_fmtp(mgr, info, &cfg, &param, exp_48k,
+                         PJ_ARRAY_SIZE(exp_48k));
+
+on_restore:
+    pjmedia_codec_opus_set_default_param(&def_cfg, &def_param);
+    pjmedia_codec_mgr_set_default_param(mgr, info, NULL);
+
+on_return:
+    pjmedia_codec_opus_deinit();
+    pjmedia_endpt_destroy2(endpt);
+    return rc;
+}
+#endif  /* PJMEDIA_HAS_OPUS_CODEC */

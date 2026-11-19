@@ -312,9 +312,10 @@ static void remove_fmtp(pjmedia_codec_fmtp *fmtp, pj_str_t *name)
         if (pj_stricmp(&fmtp->param[i].name, name) == 0) {
             fmtp->cnt--;
             for (j = i; j < fmtp->cnt; j++) {
-                fmtp->param[i].name = fmtp->param[i+1].name;
-                fmtp->param[i].val = fmtp->param[i+1].val;
+                fmtp->param[j].name = fmtp->param[j+1].name;
+                fmtp->param[j].val = fmtp->param[j+1].val;
             }
+            i--;
         }
     }
 }
