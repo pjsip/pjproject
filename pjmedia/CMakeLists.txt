@@ -342,6 +342,18 @@ cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_OBOE
 )
 pj_find_optional(PJMEDIA_WITH_AUDIODEV_OBOE OFF Oboe)
 
+# The backend uses Oboe's C++ API. The NDK supports a static C++ runtime only
+# in an app's single C++ shared library, so a shared liboboe.so (the published
+# AAR's, which needs libc++_shared.so) cannot go with one.
+if(PJMEDIA_WITH_AUDIODEV_OBOE AND Oboe_LIBRARY MATCHES "\\.so$"
+   AND CMAKE_ANDROID_STL_TYPE STREQUAL "c++_static")
+  message(FATAL_ERROR
+    "Oboe (${Oboe_LIBRARY}) is a shared library, which cannot be used with "
+    "the static C++ runtime (ANDROID_STL=c++_static). Use the default "
+    "c++_shared, a static Oboe built from source as "
+    "build/android/build-aar.sh does, or -DPJMEDIA_WITH_AUDIODEV_OBOE=OFF.")
+endif()
+
 # macOS/iOS CoreAudio backend
 cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_COREAUDIO
   "Enable CoreAudio audio device backend" ON

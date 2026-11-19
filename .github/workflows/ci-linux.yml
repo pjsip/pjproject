@@ -218,7 +218,7 @@ jobs:
         git clone --depth 1 https://github.com/pjsip/cirunner.git
         cirunner/installlinux.sh
     - name: install dependencies
-      run: sudo apt-get install -y libopencore-amrnb-dev
+      run: sudo apt-get update && sudo apt-get install -y libopencore-amrnb-dev libopus-dev
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
@@ -409,6 +409,9 @@ jobs:
               -DCMAKE_INSTALL_PREFIX=$MBEDTLS_PREFIX
         cmake --build build -j 3
         cmake --install build
+    # With GnuTLS also installed, --with-mbedtls must still select Mbed TLS
+    - name: install GnuTLS
+      run: sudo apt-get update && sudo apt-get install -y libgnutls28-dev
     - name: config site
       run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
     - name: configure
@@ -575,7 +578,7 @@ jobs:
         git clone --depth 1 https://github.com/pjsip/cirunner.git
         cirunner/installlinux.sh
     - name: install dependencies
-      run: sudo apt-get update && sudo apt-get install -y nasm libvpx-dev libopencore-amrnb-dev libsdl2-dev
+      run: sudo apt-get update && sudo apt-get install -y nasm libvpx-dev libopencore-amrnb-dev libopus-dev libsdl2-dev
     - name: get openh264
       run: git clone --depth 1 --single-branch --branch openh264v2.1.0 https://github.com/cisco/openh264.git
     - name: build openh264
@@ -836,7 +839,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: install dependencies
-      run: sudo apt-get update && sudo apt-get install -y libssl-dev
+      run: sudo apt-get update && sudo apt-get install -y libssl-dev libopus-dev
     - name: configure
       run: cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
     - name: build

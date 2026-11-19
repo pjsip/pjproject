@@ -557,6 +557,15 @@ if(_pj_ssl)
 else()
   message(STATUS "SSL backend: none")
 endif()
+# A value given with -D would win over the INTERNAL one, and the configured
+# header would then claim a backend that is not built; drop it first
+get_property(_pj_type CACHE PJ_SSL_BACKEND PROPERTY TYPE)
+if(_pj_type AND NOT _pj_type STREQUAL "INTERNAL")
+  message(WARNING "PJ_SSL_BACKEND is ignored; PJLIB_WITH_SSL chooses the SSL "
+    "backend")
+endif()
+unset(_pj_type)
+unset(PJ_SSL_BACKEND CACHE)
 set(PJ_SSL_BACKEND "${_pj_ssl}" CACHE INTERNAL "SSL backend in use")
 unset(_pj_ssl)
 
