@@ -409,6 +409,9 @@ jobs:
               -DCMAKE_INSTALL_PREFIX=$MBEDTLS_PREFIX
         cmake --build build -j 3
         cmake --install build
+    # With GnuTLS also installed, --with-mbedtls must still select Mbed TLS
+    - name: install GnuTLS
+      run: sudo apt-get update && sudo apt-get install -y libgnutls28-dev
     - name: config site
       run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
     - name: configure
