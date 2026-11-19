@@ -1202,3 +1202,48 @@ jobs:
         cmake --build build-consumer --config Release
         ./build-consumer/Release/test_consumer.exe
         ./build-consumer/Release/test_consumer2.exe
+
+  # MinGW-w64 GCC with the UCRT runtime, from MSYS2, and MSYS2's OpenSSL.
+  # No other job builds with MinGW.
+  cmake-mingw:
+    runs-on: windows-2022
+    name: CMake / MinGW UCRT64
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: msys2/setup-msys2@v2
+      with:
+        msystem: UCRT64
+        release: false
+        install: >-
+          mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake
+          mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-pkgconf
+          mingw-w64-ucrt-x86_64-openssl
+    - name: configure
+      run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+    - name: build
+      run: cmake --build build
+    - name: pjlib-test
+      # as in cmake-build; the SSL test certificates are found from pjlib/build
+      run: |
+        cd pjlib/build
+        ../../build/pjlib/bin/pjlib-test --ci-mode sock_test udp_ioqueue_test ssl_sock_test
+    - name: install
+      run: cmake --install build --prefix "$(cygpath -m '${{ runner.temp }}')/pj-install"
+    - name: test find_package
+      run: |
+        prefix="$(cygpath -m '${{ runner.temp }}')/pj-install"
+        cmake -B build-consumer tests/cmake -G Ninja \
+          -DCMAKE_PREFIX_PATH="$prefix" -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-consumer --verbose
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+    - name: test pkg-config
+      run: |
+        export PKG_CONFIG_PATH="$(cygpath -m '${{ runner.temp }}')/pj-install/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        gcc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --static --cflags --libs libpjproject)
+        ./pc_consumer
