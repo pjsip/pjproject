@@ -825,3 +825,70 @@ jobs:
           pkg-config --static --libs-only-L libpjproject | tr ' ' '\n' | grep -- "^-L$root/" || {
             echo "::error::libpjproject.pc has no -L under $root"; exit 1; }
         done
+
+  # A universal (arm64 + x86_64) build. Homebrew's libraries are arm64 only:
+  # OpenSSL, GnuTLS, Opus and libvpx are found but must fail their link
+  # checks and be left out, as WebRTC is, so that both slices link.
+  cmake-universal:
+    runs-on: macos-latest
+    name: CMake / universal arm64+x86_64
+    steps:
+    - uses: actions/checkout@v4
+    - name: install dependencies
+      run: brew install openssl gnutls opus libvpx pkgconf
+    - name: configure
+      run: >-
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"
+    - name: check the arm64-only libraries were left out
+      run: |
+        cache=build/CMakeCache.txt
+        failed=0
+        for v in OPENSSL_SSL_LIBRARY GNUTLS_LIBRARY OPUS_LIBRARY VPX_LIBRARY; do
+          path=$(sed -n "s/^$v:[^=]*=//p" $cache)
+          echo "$v=$path"
+          case "$path" in ''|*-NOTFOUND)
+            echo "::error::$v not found, so its link check did not run"
+            failed=1 ;;
+          esac
+        done
+        for e in PJ_SSL_BACKEND:INTERNAL= PJMEDIA_WITH_OPUS_CODEC:BOOL=OFF \
+                 PJMEDIA_WITH_VPX_CODEC:BOOL=OFF; do
+          grep -qx "$e" $cache || {
+            echo "::error::expected $e, got: $(grep "^${e%%:*}:" $cache)"
+            failed=1; }
+        done
+        exit $failed
+    - name: build
+      run: cmake --build build -j $(sysctl -n hw.ncpu)
+    - name: run pjsua
+      run: ./build/pjsip-apps/bin/pjsua --version
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+    - name: test find_package
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
+          -DCMAKE_BUILD_TYPE=Release "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"
+        cmake --build build-consumer --verbose
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+    - name: test pkg-config
+      run: |
+        export PKG_CONFIG_PATH=${{ runner.temp }}/pj-install/lib/pkgconfig
+        cc -arch arm64 -arch x86_64 tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --static --cflags --libs libpjproject)
+        ./pc_consumer
+    - name: check both architectures
+      run: |
+        failed=0
+        for f in build/pjsip-apps/bin/pjsua \
+                 $(find ${{ runner.temp }}/pj-install -name '*.a') \
+                 build-consumer/test_consumer build-consumer/test_consumer2 \
+                 pc_consumer; do
+          for a in arm64 x86_64; do
+            lipo "$f" -verify_arch $a || {
+              echo "::error::$f has no $a: $(lipo -archs "$f")"; failed=1; }
+          done
+        done
+        exit $failed

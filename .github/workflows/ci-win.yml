@@ -1247,3 +1247,75 @@ jobs:
         gcc tests/cmake/test_consumer.c -o pc_consumer \
           $(pkg-config --static --cflags --libs libpjproject)
         ./pc_consumer
+
+  # A 32-bit (Win32) build. The runner's OpenSSL is 64-bit: given as the
+  # OpenSSL root, it is found but must fail its link check and be left out.
+  # A 64-bit consumer must not accept the 32-bit install.
+  cmake-win32:
+    runs-on: windows-2022
+    name: CMake / Win32
+    env:
+      # as in cmake-build
+      PJ_IGNORE_PREFIX: C:/Strawberry/c;C:/msys64/mingw64;C:/msys64/usr
+    steps:
+    - uses: actions/checkout@v4
+    - name: configure
+      run: >-
+        cmake -B build -G "Visual Studio 17 2022" -A Win32
+        "-DCMAKE_IGNORE_PREFIX_PATH=$env:PJ_IGNORE_PREFIX"
+        "-DOPENSSL_ROOT_DIR=$($env:ProgramFiles -replace '\\','/')/OpenSSL"
+    - name: check 32-bit configuration
+      run: |
+        $cache = Get-Content build/CMakeCache.txt
+        $failed = $false
+        $lib = $cache | Select-String '^OPENSSL_SSL_LIBRARY:[^=]*=(.*)$'
+        $lib = if ($lib) { $lib.Matches[0].Groups[1].Value } else { '' }
+        Write-Host "OPENSSL_SSL_LIBRARY=$lib"
+        if ($lib -eq '' -or $lib -like '*-NOTFOUND') {
+          Write-Host "::error::the x64 OpenSSL was not found, so its link check did not run"
+          $failed = $true
+        }
+        if (-not ($cache -ccontains 'PJ_SSL_BACKEND:INTERNAL=')) {
+          Write-Host "::error::the x64 OpenSSL was used:"
+          $cache | Select-String '^PJ_SSL_BACKEND:'
+          $failed = $true
+        }
+        $h = Get-Content build/pjlib/include/pj/compat/os_auto.h
+        if (-not ($h -ccontains '/* #undef PJ_WIN64 */')) {
+          Write-Host "::error::PJ_WIN64 is set:"
+          $h | Select-String 'PJ_WIN64'
+          $failed = $true
+        }
+        if ($failed) { exit 1 }
+    - name: build
+      run: cmake --build build --config Release --parallel
+    - name: pjlib-test
+      # as in cmake-build
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        New-Item -ItemType Directory -Force pjlib/bin | Out-Null
+        cd pjlib/bin
+        ../../build/pjlib/bin/pjlib-test-Release.exe --ci-mode sock_test udp_ioqueue_test
+    - name: install
+      run: cmake --install build --config Release --prefix "${{ runner.temp }}/pj-install"
+    - name: test find_package
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        cmake -B build-consumer tests/cmake -G "Visual Studio 17 2022" -A Win32 `
+          "-DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install" `
+          "-DCMAKE_IGNORE_PREFIX_PATH=$env:PJ_IGNORE_PREFIX"
+        cmake --build build-consumer --config Release
+        ./build-consumer/Release/test_consumer.exe
+        ./build-consumer/Release/test_consumer2.exe
+    - name: test a 64-bit consumer is refused
+      shell: bash
+      run: |
+        prefix="$(cygpath -m '${{ runner.temp }}')/pj-install"
+        if out=$(cmake -B build-consumer64 tests/cmake -G "Visual Studio 17 2022" \
+                   -A x64 -DCMAKE_PREFIX_PATH="$prefix" 2>&1); then
+          echo "$out"
+          echo "::error::a 64-bit consumer accepted the 32-bit install"
+          exit 1
+        fi
+        echo "$out"
+        echo "$out" | grep -F '(32bit)'
