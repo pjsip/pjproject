@@ -675,3 +675,45 @@ jobs:
         cc tests/cmake/test_consumer.c -o pc_consumer \
           $(pkg-config --static --cflags --libs libpjproject)
         ./pc_consumer
+
+  # A shared install must work on its own: with no DYLD_* variable, the
+  # installed pjsua and the libraries find each other and the bundled ones in
+  # lib/pjproject/third_party through their rpaths, also from a copy of the
+  # install made elsewhere.
+  cmake-shared:
+    runs-on: macos-latest
+    name: CMake / shared
+    steps:
+    - uses: actions/checkout@v4
+    - name: install dependencies
+      run: brew install openssl pkgconf
+    - name: configure
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON
+    - name: build
+      run: cmake --build build -j $(sysctl -n hw.ncpu)
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+    - name: test installed pjsua
+      run: |
+        prefix=${{ runner.temp }}/pj-install
+        test -f "$prefix/lib/libpj.dylib" && test ! -e "$prefix/lib/libpj.a"
+        otool -l "$prefix/bin/pjsua" | grep -A2 LC_RPATH
+        "$prefix/bin/pjsua" --version > /dev/null
+        cp -a "$prefix" "${{ runner.temp }}/pj-moved"
+        "${{ runner.temp }}/pj-moved/bin/pjsua" --version > /dev/null
+    - name: test find_package
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-consumer --verbose
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+    - name: test pkg-config
+      run: |
+        prefix=${{ runner.temp }}/pj-install
+        export PKG_CONFIG_PATH="$prefix/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        cc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --cflags --libs libpjproject) -Wl,-rpath,"$prefix/lib"
+        ./pc_consumer
