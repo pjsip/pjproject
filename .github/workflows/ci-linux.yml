@@ -1102,6 +1102,52 @@ jobs:
         cd pjlib-util/build
         ../../build/pjlib-util/bin/pjlib-util-test --ci-mode resolver_nothreads_test
 
+  # The pjsua2 Python and Java bindings, which no other Linux job builds:
+  # their ctest tests in the build tree, then the installed module and jar
+  # from outside it. In the shared build they find the pjproject libraries
+  # through their rpaths, with no LD_LIBRARY_PATH.
+  cmake-swig:
+    runs-on: ubuntu-latest
+    name: CMake / SWIG Python+Java ${{ matrix.libs }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - libs: static
+            shared: 'OFF'
+          - libs: shared
+            shared: 'ON'
+    steps:
+    - uses: actions/checkout@v4
+    - name: install dependencies
+      run: sudo apt-get update && sudo apt-get install -y libssl-dev swig python3-dev
+    - name: configure
+      run: >-
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        -DBUILD_SHARED_LIBS=${{ matrix.shared }}
+        -DPJ_BUILD_SWIG_PYTHON=ON -DPJ_BUILD_SWIG_JAVA=ON
+    - name: build
+      run: cmake --build build -j $(nproc)
+    - name: test
+      run: cd build && ctest -R '^pjsua2-(python|java)$' --output-on-failure
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+    - name: test installed bindings
+      run: |
+        prefix=${{ runner.temp }}/pj-install
+        pydir=$(dirname "$(find "$prefix" -name pjsua2.py)")
+        javadir=$(dirname "$(find "$prefix" -name pjsua2.jar)")
+        cd "${{ runner.temp }}"
+        # -P: not from test.py's own folder, where make leaves a pjsua2.py
+        PYTHONPATH="$pydir" python3 -P \
+          "${{ github.workspace }}/pjsip-apps/src/swig/python/test.py"
+        mkdir -p java-test
+        javac -d java-test -cp "$javadir/pjsua2.jar" \
+          "${{ github.workspace }}/pjsip-apps/src/swig/java/test.java"
+        java -cp "$javadir/pjsua2.jar:java-test" \
+          -Djava.library.path="$javadir" test | tee java-test.log
+        grep -q 'Hello world' java-test.log
+
   # Short pjsua-stress runs under ASan/TSan on every PR / push to master.
   # The full weekly run (larger fleet, longer duration) lives in
   # .github/workflows/stress-test.yml.
