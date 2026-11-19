@@ -49,13 +49,36 @@ function(pj_swig_install_rpath target install_dir)
   )
 endfunction()
 
-# pj_android_java_helpers(<dir> <out-var>)
+# pj_android_cxx_shared(<out-var>)
 #
-# The Android capture and audio device backends call up into Java. Copy the
-# classes the enabled backends need into <dir>/org/pjsip, package org.pjsip,
-# and set <out-var> to the copies. configure_file(COPYONLY) rather than a
-# build rule so that editing one of them re-runs CMake and refreshes the copy.
-function(pj_android_java_helpers dir out)
+# Set <out-var> to the NDK's libc++_shared.so when the build links the shared
+# C++ runtime, which an app then has to ship beside the bindings' library, and
+# to empty otherwise.
+function(pj_android_cxx_shared out)
+  set(${out} "" PARENT_SCOPE)
+  # The toolchain file resolves ANDROID_STL into this one, which can also be
+  # given on its own
+  if(NOT CMAKE_ANDROID_STL_TYPE STREQUAL "c++_shared")
+    return()
+  endif()
+  find_file(PJ_ANDROID_CXX_SHARED libc++_shared.so
+    PATHS "${CMAKE_SYSROOT}/usr/lib/${CMAKE_LIBRARY_ARCHITECTURE}"
+    NO_DEFAULT_PATH
+  )
+  if(NOT PJ_ANDROID_CXX_SHARED)
+    message(FATAL_ERROR "libc++_shared.so not found in the NDK sysroot")
+  endif()
+  set(${out} "${PJ_ANDROID_CXX_SHARED}" PARENT_SCOPE)
+endfunction()
+
+# pj_android_java_helpers(<target> <dir> <out-var>)
+#
+# The Android capture and audio device backends call up into Java. Add a
+# <target> that copies the classes the enabled backends need into
+# <dir>/org/pjsip, package org.pjsip, and set <out-var> to the copies. A build
+# rule rather than a configure-time copy, so that a copy deleted since (Gradle's
+# clean empties <dir> but keeps the CMake cache) is made again.
+function(pj_android_java_helpers target dir out)
   set(sources "")
   if(PJMEDIA_WITH_VIDEODEV_ANDROID)
     list(APPEND sources
@@ -73,10 +96,15 @@ function(pj_android_java_helpers dir out)
   set(copies "")
   foreach(source IN LISTS sources)
     cmake_path(GET source FILENAME name)
-    configure_file("${PROJECT_SOURCE_DIR}/${source}"
-      "${dir}/org/pjsip/${name}" COPYONLY
+    add_custom_command(
+      OUTPUT "${dir}/org/pjsip/${name}"
+      COMMAND "${CMAKE_COMMAND}" -E copy
+              "${PROJECT_SOURCE_DIR}/${source}" "${dir}/org/pjsip/${name}"
+      DEPENDS "${PROJECT_SOURCE_DIR}/${source}"
+      VERBATIM
     )
     list(APPEND copies "${dir}/org/pjsip/${name}")
   endforeach()
+  add_custom_target(${target} DEPENDS ${copies})
   set(${out} "${copies}" PARENT_SCOPE)
 endfunction()

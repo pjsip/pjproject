@@ -514,24 +514,29 @@ verify_artifact() {
     # new uploads. The NDK only began defaulting to it in r28, and this build
     # accepts whatever NDK it is pointed at, so check the property rather than
     # the toolchain version: every loadable segment must be aligned to at
-    # least 0x4000.
-    local align loads=0
-    for align in $("$ndk_bin/llvm-readelf" -l "$so" |
-                   awk '$1 == "LOAD" { print $NF }'); do
-        loads=$((loads + 1))
-        [ "$((align))" -ge 16384 ] || {
-            echo "error: $abi: a LOAD segment is aligned to $align, need 0x4000" >&2
-            echo "  the NDK in use may predate r28; 16 KB alignment is required" >&2
+    # least 0x4000. Only the 64-bit ABIs: 32-bit devices have 4 KB pages, and
+    # the NDK keeps linking for those.
+    case $abi in
+    arm64-v8a|x86_64)
+        local align loads=0
+        for align in $("$ndk_bin/llvm-readelf" -l "$so" |
+                       awk '$1 == "LOAD" { print $NF }'); do
+            loads=$((loads + 1))
+            [ "$((align))" -ge 16384 ] || {
+                echo "error: $abi: a LOAD segment is aligned to $align, need 0x4000" >&2
+                echo "  the NDK in use may predate r28; 16 KB alignment is required" >&2
+                fail=1
+                break
+            }
+        done
+        # A loop over nothing succeeds. Without this the check reports
+        # alignment it never looked at, which is the opposite of its purpose.
+        [ "$loads" -gt 0 ] || {
+            echo "error: $abi: no LOAD segments found, cannot verify alignment" >&2
             fail=1
-            break
         }
-    done
-    # A loop over nothing succeeds. Without this the check reports alignment
-    # it never looked at, which is the opposite of its purpose.
-    [ "$loads" -gt 0 ] || {
-        echo "error: $abi: no LOAD segments found, cannot verify alignment" >&2
-        fail=1
-    }
+        ;;
+    esac
 
     # Every dependency has to be part of Android itself. Anything else --
     # liboboe.so, libc++_shared.so -- is a library the AAR does not ship and

@@ -5,11 +5,23 @@ The NDK ships a CMake toolchain file, so no wrapper script is needed:
 ```sh
 cmake -B build-android \
   -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake" \
-  -DANDROID_ABI=arm64-v8a \
-  -DANDROID_PLATFORM=android-23 \
   -DCMAKE_BUILD_TYPE=Release
 cmake --build build-android -j
 ```
+
+That builds what `./configure-android` does by default: `arm64-v8a`, at the
+minimum API level below, with the shared C++ runtime (`libc++_shared.so`,
+which an app then ships beside its native libraries). `-DANDROID_ABI`,
+`-DANDROID_PLATFORM` and `-DANDROID_STL` choose otherwise, e.g.
+`-DANDROID_STL=c++_static`. Without pjproject's defaults the NDK would pick
+`armeabi-v7a`, its own minimum API level and `c++_static`.
+
+`c++_static` is only for when `libpjsua2.so` (or whichever library PJSIP is
+linked into) is the app's only native library using C++: the NDK does not
+support a static C++ runtime alongside other C++ shared libraries. So it
+cannot be used with the published Oboe AAR, whose `liboboe.so` needs
+`libc++_shared.so`; configure stops on that combination. The AAR from
+`build-aar.sh` is built that way, with Oboe linked in statically.
 
 Repeat per ABI. `arm64-v8a`, `armeabi-v7a`, `x86_64` and `x86` are all built by
 CI; each needs its own build directory.
@@ -19,7 +31,7 @@ it. Both can build the libraries and the pjsua2 bindings.
 
 ## Minimum API level
 
-**23**, matching `minSdkVersion` in
+**23**, the default, matching `minSdkVersion` in
 `pjsip-apps/src/swig/java/android/pjsua2/build.gradle`. Do not raise the floor
 to work around a build error without checking what it is hiding: bionic gates
 functions on the API level, so a higher `ANDROID_PLATFORM` can make a
@@ -135,6 +147,15 @@ they are yours to compile into the APK alongside the native library, the way
 
 It is off by default: SWIG is a build dependency nothing else here needs.
 
+A build also copies both into the sample app, as `make -C
+pjsip-apps/src/swig/java` does: `libpjsua2.so` into
+`pjsip-apps/src/swig/java/android/pjsua2/src/main/jniLibs/<abi>`, with
+`libc++_shared.so` unless built with `-DANDROID_STL=c++_static`, and the classes
+into `java/` beside it. The app then builds from there, in Android Studio or
+with `./gradlew :app:assembleDebug`. Build once per ABI the app should carry.
+`-DPJSUA2_ANDROID_DIR=<dir>` copies into another app's source set instead, and
+`-DPJSUA2_ANDROID_DIR=` leaves the source tree alone.
+
 To build the AAR, let Gradle drive CMake rather than running it yourself:
 
 ```sh
@@ -148,10 +169,9 @@ hand.
 
 `-PpjBuildWithCMake=true` is required; without it the module behaves as it
 always has and takes `libpjsua2.so` and the Java classes prebuilt out of
-`pjsua2/src/main`, where `make -C pjsip-apps/src/swig/java` puts them. The two
-cannot both be active -- each would supply its own copy of `libc++_shared.so`
-and of every generated class -- so pick one and run `./gradlew clean` when
-switching.
+`pjsua2/src/main`, where `make -C pjsip-apps/src/swig/java` and the CMake
+build above put them. With it, the module ignores those, so what is there
+does not get in the way.
 
 Prerequisites beyond the NDK and SDK: **SWIG 4.0+**, and **Ninja**, which the
 Android Gradle plugin requires for CMake projects. The SDK-managed CMake ships
@@ -343,7 +363,30 @@ it — so this is the same position as any Android app that opens a MediaCodec
 for `audio/3gpp`. Set `PJMEDIA_HAS_AND_MEDIA_AMRNB` and
 `PJMEDIA_HAS_AND_MEDIA_AMRWB` to 0 in `config_site.h` to drop them.
 
+### Using the AAR
+
+The AAR is all an application needs: the other files in `out-android/dist`
+are for Maven Central (see "Publishing" below). It has no dependencies to
+resolve, so a GitHub release can carry it alone. Copy it into the app's
+`libs/` and add:
+
+```gradle
+dependencies {
+    implementation files('libs/pjsua2-<version>.aar')
+}
+```
+
+This works in an application module. The Android Gradle plugin rejects a
+local `.aar` in a library module ("Direct local .aar file dependencies are
+not supported when building an AAR"), so a library that wraps PJSIP has to
+take it from a Maven repository instead, such as one on the local disk.
+
+The licence texts travel inside the AAR, under `META-INF`, and the app
+redistributes them with it.
+
 ### Publishing
+
+A GitHub release needs none of this: attach the AAR, as above.
 
 The script stops at artifacts that are ready to sign; it does not upload, and
 two one-time account steps have to happen before an upload script would have

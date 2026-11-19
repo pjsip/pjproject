@@ -25,6 +25,9 @@
  *        autoconf)
  */
 
+/* Built with CMake rather than autoconf, which also defines PJ_AUTOCONF */
+#define PJ_CMAKE 1
+
 /* Canonical OS name */
 #cmakedefine PJ_OS_NAME "@PJ_OS_NAME@"
 

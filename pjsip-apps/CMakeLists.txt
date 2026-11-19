@@ -101,16 +101,16 @@ endif() # PJ_BUILD_APPS
 # SWIG bindings
 
 # The published Oboe AAR has only a shared liboboe.so: the Java or C#
-# bindings' native library then needs it at run time, and it needs
-# libc++_shared.so. Neither is copied or packaged with the bindings.
+# bindings' native library then needs it at run time, and it is not copied or
+# packaged with the bindings. (libc++_shared.so, which it also needs, is: a
+# shared Oboe implies c++_shared, see pjmedia/CMakeLists.txt.)
 if(ANDROID AND (PJ_BUILD_SWIG_JAVA OR PJ_BUILD_SWIG_CSHARP)
    AND PJMEDIA_WITH_AUDIODEV_OBOE AND Oboe_LIBRARY MATCHES "\\.so$")
   message(WARNING
     "The pjsua2 bindings' native library needs liboboe.so at run time "
-    "(${Oboe_LIBRARY}), which needs libc++_shared.so; neither is packaged "
-    "with it. Use a static Oboe built from source, as "
-    "build/android/build-aar.sh does, or add both libraries to the app (its "
-    "jniLibs, or the MAUI project).")
+    "(${Oboe_LIBRARY}), which is not packaged with it. Add it to the app (its "
+    "jniLibs, or the MAUI project), or use a static Oboe built from source, "
+    "as build/android/build-aar.sh does.")
 endif()
 
 # See PJ_BUILD_SWIG_JAVA in the top-level CMakeLists.txt
