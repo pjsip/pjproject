@@ -717,3 +717,111 @@ jobs:
         cc tests/cmake/test_consumer.c -o pc_consumer \
           $(pkg-config --cflags --libs libpjproject) -Wl,-rpath,"$prefix/lib"
         ./pc_consumer
+
+  # One optional audio codec (Opus) and one video codec (libvpx), from
+  # Homebrew. A library that is not found is dropped without failing
+  # the configure, so assert both were used. The consumers get only the
+  # pjproject install: its package must find both again.
+  cmake-opus-vpx:
+    runs-on: macos-latest
+    name: CMake / Opus + VPX
+    steps:
+    - uses: actions/checkout@v4
+    - name: install dependencies
+      run: brew install openssl pkgconf opus libvpx
+    - name: configure
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+    - name: check options
+      run: |
+        for p in OPUS VPX; do
+          grep "^PJMEDIA_WITH_${p}_CODEC:BOOL=ON$" build/CMakeCache.txt || {
+            echo "::error::PJMEDIA_WITH_${p}_CODEC is not ON"; exit 1; }
+          grep -E "^${p}_(LIBRARY|INCLUDE_DIR):" build/CMakeCache.txt
+        done
+    - name: build
+      run: cmake --build build -j $(sysctl -n hw.ncpu)
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+    - name: test find_package
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-consumer --verbose
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+    - name: test pkg-config
+      run: |
+        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        cc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --static --cflags --libs libpjproject)
+        ./pc_consumer
+
+  # As cmake-opus-vpx, with the build pointed at each library by
+  # <Pkg>_ROOT: Homebrew's folder per package. The copies Homebrew links
+  # into its prefix must not be used: not by the build, and not by the
+  # consumers, which get only the pjproject install.
+  cmake-opus-vpx-root:
+    runs-on: macos-latest
+    name: CMake / Opus + VPX from <Pkg>_ROOT
+    steps:
+    - uses: actions/checkout@v4
+    - name: install dependencies
+      run: brew install openssl pkgconf opus libvpx
+    - name: configure
+      run: >-
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        -DOPUS_ROOT=$(brew --prefix opus) -DVPX_ROOT=$(brew --prefix libvpx)
+    - name: check options
+      # the library and the headers from the root
+      run: |
+        for p in OPUS VPX; do
+          grep "^PJMEDIA_WITH_${p}_CODEC:BOOL=ON$" build/CMakeCache.txt || {
+            echo "::error::PJMEDIA_WITH_${p}_CODEC is not ON"; exit 1; }
+          root=$(sed -n "s/^${p}_ROOT:[A-Z]*=//p" build/CMakeCache.txt)
+          [ -n "$root" ] || { echo "::error::${p}_ROOT is not set"; exit 1; }
+          for v in LIBRARY INCLUDE_DIR; do
+            grep "^${p}_$v:[A-Z]*=$root/" build/CMakeCache.txt || {
+              echo "::error::${p}_$v is not under $root"; exit 1; }
+          done
+        done
+    - name: build
+      run: cmake --build build -j $(sysctl -n hw.ncpu)
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+    - name: test find_package
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-consumer --verbose
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+    - name: test pkg-config
+      run: |
+        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        cc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --static --cflags --libs libpjproject)
+        ./pc_consumer
+    - name: check the consumers used the roots
+      # and not the system's copies, which are installed too
+      run: |
+        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
+        for p in OPUS VPX; do
+          root=$(sed -n "s/^${p}_ROOT:[A-Z]*=//p" build/CMakeCache.txt)
+          found=$(sed -n "s/^FIND_PACKAGE_MESSAGE_DETAILS_${p}:INTERNAL=//p" \
+                  build-consumer/CMakeCache.txt)
+          echo "find_package consumer, $p: $found"
+          paths=$(echo "$found" | grep -o '\[/[^]]*\]' | tr -d '[]')
+          [ -n "$paths" ] || { echo "::error::no $p paths in the consumer"; exit 1; }
+          for f in $paths; do
+            case $f in
+              "$root"/*) ;;
+              *) echo "::error::find_package consumer: $f is not under $root"; exit 1 ;;
+            esac
+          done
+          pkg-config --static --libs-only-L libpjproject | tr ' ' '\n' | grep -- "^-L$root/" || {
+            echo "::error::libpjproject.pc has no -L under $root"; exit 1; }
+        done

@@ -1148,6 +1148,136 @@ jobs:
           -Djava.library.path="$javadir" test | tee java-test.log
         grep -q 'Hello world' java-test.log
 
+  # One optional audio codec (Opus) and one video codec (libvpx), from the
+  # distribution's packages. A library that is not found is dropped without
+  # failing the configure, so assert both were used. The consumers get only
+  # the pjproject install: its package must find both again.
+  cmake-opus-vpx:
+    runs-on: ubuntu-latest
+    name: CMake / Opus + VPX
+    steps:
+    - uses: actions/checkout@v4
+    - name: install dependencies
+      run: sudo apt-get update && sudo apt-get install -y libssl-dev libopus-dev libvpx-dev
+    - name: configure
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+    - name: check options
+      run: |
+        for p in OPUS VPX; do
+          grep "^PJMEDIA_WITH_${p}_CODEC:BOOL=ON$" build/CMakeCache.txt || {
+            echo "::error::PJMEDIA_WITH_${p}_CODEC is not ON"; exit 1; }
+          grep -E "^${p}_(LIBRARY|INCLUDE_DIR):" build/CMakeCache.txt
+        done
+    - name: build
+      run: cmake --build build -j $(nproc)
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+    - name: test find_package
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-consumer --verbose
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+    - name: test pkg-config
+      run: |
+        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        cc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --static --cflags --libs libpjproject)
+        ./pc_consumer
+
+  # As cmake-opus-vpx, with the build pointed at each library by
+  # <Pkg>_ROOT: its packages unpacked into a folder of its own. The system's
+  # copies are installed too, and must not be used: not by the build, and
+  # not by the consumers, which get only the pjproject install.
+  cmake-opus-vpx-root:
+    runs-on: ubuntu-latest
+    name: CMake / Opus + VPX from <Pkg>_ROOT
+    steps:
+    - uses: actions/checkout@v4
+    - name: install dependencies
+      run: sudo apt-get update && sudo apt-get install -y libssl-dev libopus-dev libvpx-dev
+    - name: package roots
+      # the -dev package and the library package it depends on
+      run: |
+        r=${{ runner.temp }}/roots
+        mkdir -p $r/debs
+        cd $r/debs
+        for p in opus vpx; do
+          dev=lib$p-dev
+          lib=$(apt-cache depends $dev |
+                awk -v re="^lib$p[0-9]" '$1 == "Depends:" && $2 ~ re { print $2; exit }')
+          apt-get download $dev $lib
+          for deb in ${dev}_*.deb ${lib}_*.deb; do dpkg -x $deb $r/$p; done
+        done
+        find $r/opus $r/vpx -name 'lib*.so*'
+    - name: configure
+      run: >-
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        -DOPUS_ROOT=${{ runner.temp }}/roots/opus/usr
+        -DVPX_ROOT=${{ runner.temp }}/roots/vpx/usr
+    - name: check options
+      # the library and the headers from the root
+      run: |
+        for p in OPUS VPX; do
+          grep "^PJMEDIA_WITH_${p}_CODEC:BOOL=ON$" build/CMakeCache.txt || {
+            echo "::error::PJMEDIA_WITH_${p}_CODEC is not ON"; exit 1; }
+          root=$(sed -n "s/^${p}_ROOT:[A-Z]*=//p" build/CMakeCache.txt)
+          [ -n "$root" ] || { echo "::error::${p}_ROOT is not set"; exit 1; }
+          for v in LIBRARY INCLUDE_DIR; do
+            grep "^${p}_$v:[A-Z]*=$root/" build/CMakeCache.txt || {
+              echo "::error::${p}_$v is not under $root"; exit 1; }
+          done
+        done
+    - name: build
+      run: cmake --build build -j $(nproc)
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+    - name: test find_package
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-consumer --verbose
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+    - name: test pkg-config
+      run: |
+        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        # the roots are not searched at run time
+        cc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --static --cflags --libs libpjproject) \
+          $(pkg-config --static --libs-only-L libpjproject | sed 's/-L/-Wl,-rpath,/g')
+        ./pc_consumer
+    - name: check the consumers used the roots
+      # and not the system's copies, which are installed too
+      run: |
+        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
+        for p in OPUS VPX; do
+          root=$(sed -n "s/^${p}_ROOT:[A-Z]*=//p" build/CMakeCache.txt)
+          found=$(sed -n "s/^FIND_PACKAGE_MESSAGE_DETAILS_${p}:INTERNAL=//p" \
+                  build-consumer/CMakeCache.txt)
+          echo "find_package consumer, $p: $found"
+          paths=$(echo "$found" | grep -o '\[/[^]]*\]' | tr -d '[]')
+          [ -n "$paths" ] || { echo "::error::no $p paths in the consumer"; exit 1; }
+          for f in $paths; do
+            case $f in
+              "$root"/*) ;;
+              *) echo "::error::find_package consumer: $f is not under $root"; exit 1 ;;
+            esac
+          done
+          pkg-config --static --libs-only-L libpjproject | tr ' ' '\n' | grep -- "^-L$root/" || {
+            echo "::error::libpjproject.pc has no -L under $root"; exit 1; }
+          lib=lib$(echo $p | tr A-Z a-z).so
+          for exe in build-consumer/test_consumer pc_consumer; do
+            ldd $exe | grep "$lib" | grep -- "=> $root/" || {
+              echo "::error::$exe does not load $lib from $root"; exit 1; }
+          done
+        done
+
   # Short pjsua-stress runs under ASan/TSan on every PR / push to master.
   # The full weekly run (larger fleet, longer duration) lives in
   # .github/workflows/stress-test.yml.
