@@ -1282,32 +1282,32 @@ jobs:
         done
 
   # The bundled libraries that can come from the system (GSM, Speex with
-  # SpeexDSP, libsrtp2, libyuv, libresample), all from Ubuntu's packages.
+  # SpeexDSP, libsrtp2, libyuv), all from Ubuntu's packages. Not libresample:
+  # Ubuntu's libresample1-dev is an unrelated library of the same name.
   # Asked for by name, a missing one stops the configure. None may be built
   # from third_party, and the build and the consumers must load the system
   # copies.
   cmake-system-deps:
     runs-on: ubuntu-latest
-    name: CMake / system GSM, Speex, SRTP, libyuv, libresample
+    name: CMake / system GSM, Speex, SRTP, libyuv
     env:
-      PJ_SYSTEM_LIBS: gsm speex speexdsp srtp2 yuv resample
+      PJ_SYSTEM_LIBS: gsm speex speexdsp srtp2 yuv
     steps:
     - uses: actions/checkout@v4
     - name: install dependencies
       run: >-
         sudo apt-get update && sudo apt-get install -y libssl-dev
         libgsm1-dev libspeex-dev libspeexdsp-dev libsrtp2-dev libyuv-dev
-        libresample1-dev
     - name: configure
       run: >-
         cmake -B build -DCMAKE_BUILD_TYPE=Release
         -DPJ_DEP_GSM=system -DPJ_DEP_SPEEX=system -DPJ_DEP_SRTP=system
-        -DPJ_DEP_YUV=system -DPJ_DEP_RESAMPLE=system
+        -DPJ_DEP_YUV=system
     - name: check options
       run: |
         cache=build/CMakeCache.txt
         failed=0
-        for v in GSM Speex SpeexDSP SRTP YUV Resample; do
+        for v in GSM Speex SpeexDSP SRTP YUV; do
           path=$(sed -n "s/^${v}_LIBRARY:[^=]*=//p" $cache)
           echo "${v}_LIBRARY=$path"
           case "$path" in /usr/*) ;; *)
@@ -1323,7 +1323,7 @@ jobs:
     - name: check build
       run: |
         failed=0
-        for l in gsm speex srtp yuv resample; do
+        for l in gsm speex srtp yuv; do
           if f=$(find build -name "lib$l.a" | grep .); then
             echo "::error::the bundled $l was built: $f"; failed=1
           fi
@@ -1341,7 +1341,7 @@ jobs:
     - name: check install
       run: |
         ls -R ${{ runner.temp }}/pj-install/lib/pjproject/third_party || true
-        for l in gsm speex srtp yuv resample; do
+        for l in gsm speex srtp yuv; do
           if f=$(find ${{ runner.temp }}/pj-install -name "lib$l.a" | grep .); then
             echo "::error::the bundled $l was installed: $f"; exit 1
           fi
