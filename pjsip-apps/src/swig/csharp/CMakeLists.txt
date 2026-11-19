@@ -164,22 +164,17 @@ endif()
 # helpers
 set(_pj_helpers "")
 if(ANDROID)
-  if(ANDROID_STL STREQUAL "c++_shared")
-    find_file(PJ_ANDROID_CXX_SHARED libc++_shared.so
-      PATHS "${CMAKE_SYSROOT}/usr/lib/${CMAKE_LIBRARY_ARCHITECTURE}"
-      NO_DEFAULT_PATH
-    )
-    if(NOT PJ_ANDROID_CXX_SHARED)
-      message(FATAL_ERROR "libc++_shared.so not found in the NDK sysroot")
-    endif()
+  pj_android_cxx_shared(_pj_cxx_shared)
+  if(_pj_cxx_shared)
     add_custom_command(TARGET pjsua2_csharp POST_BUILD
       COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-              "${PJ_ANDROID_CXX_SHARED}" "${_pj_lib_dir}"
+              "${_pj_cxx_shared}" "${_pj_lib_dir}"
     )
     list(APPEND _pj_native_files "${_pj_lib_dir}/libc++_shared.so")
   endif()
 
-  pj_android_java_helpers("${_pj_java_dir}" _pj_helpers)
+  pj_android_java_helpers(pjsua2_csharp_helpers "${_pj_java_dir}" _pj_helpers)
+  add_dependencies(pjsua2_csharp pjsua2_csharp_helpers)
 endif()
 
 # ##############################################################################
@@ -269,8 +264,8 @@ else()
     RUNTIME DESTINATION "${PJ_INSTALL_CSHARPDIR}/lib" COMPONENT PjCSharp
     ARCHIVE DESTINATION "${PJ_INSTALL_CSHARPDIR}/lib" COMPONENT PjCSharp
   )
-  if(ANDROID_STL STREQUAL "c++_shared")
-    install(FILES "${PJ_ANDROID_CXX_SHARED}"
+  if(_pj_cxx_shared)
+    install(FILES "${_pj_cxx_shared}"
       DESTINATION "${PJ_INSTALL_CSHARPDIR}/lib"
       COMPONENT PjCSharp
     )
@@ -289,3 +284,4 @@ unset(_pj_java_dir)
 unset(_pj_native_target)
 unset(_pj_native_files)
 unset(_pj_helpers)
+unset(_pj_cxx_shared)

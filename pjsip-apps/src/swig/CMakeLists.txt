@@ -6,8 +6,9 @@
 # see the jniclasscode pragma in pjsua2.i -- so its name is fixed.
 #
 # On Android, Gradle compiles the Java beside it and packages both into the
-# AAR. Elsewhere this builds what java/Makefile does, in this directory of the
-# build tree:
+# AAR, and a build of its own copies both into the sample app (see "The Android
+# sample app" below). Elsewhere this builds what java/Makefile does, in this
+# directory of the build tree:
 #
 #   libpjsua2.so, libpjsua2.jnilib or pjsua2.dll   the JNI library
 #   pjsua2.jar                                      the bindings
@@ -110,7 +111,70 @@ pj_swig_include_pj_headers(pjsua2jni)
 # beside the generated sources -- the android_helpers target in the SWIG
 # Makefile does the same. See Pj/Swig.cmake.
 
-pj_android_java_helpers("${PJSUA2_JAVA_OUTPUT_DIR}" _pjsua2_helpers)
+pj_android_java_helpers(pjsua2jni_helpers "${PJSUA2_JAVA_OUTPUT_DIR}"
+  _pjsua2_helpers
+)
+# Gradle builds only pjsua2jni, and needs the helpers with it
+add_dependencies(pjsua2jni pjsua2jni_helpers)
+
+# ##############################################################################
+# The Android sample app
+#
+# Put the bindings where pjsip-apps/src/swig/java/android takes them prebuilt,
+# as java/Makefile does: the JNI library (and libc++_shared.so) in
+# jniLibs/<abi>, the Java under java/. The C# bindings do the same for the MAUI
+# project. Gradle's own CMake build and build-aar.sh build only pjsua2jni, so
+# they copy nothing.
+
+if(ANDROID)
+  set(PJSUA2_ANDROID_DIR
+    "${PROJECT_SOURCE_DIR}/pjsip-apps/src/swig/java/android/pjsua2/src/main"
+    CACHE PATH
+    "The Android source set to copy the pjsua2 Java bindings into; empty for none"
+  )
+endif()
+
+if(ANDROID AND PJSUA2_ANDROID_DIR)
+  set(_pj_jni_dir "${PJSUA2_ANDROID_DIR}/jniLibs/${ANDROID_ABI}")
+  set(_pj_java_dir "${PJSUA2_ANDROID_DIR}/java/org/pjsip")
+  pj_android_cxx_shared(_pj_cxx_shared)
+
+  add_custom_target(pjsua2jni_android ALL
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${_pj_jni_dir}"
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+            "$<TARGET_FILE:pjsua2jni>" ${_pj_cxx_shared} "${_pj_jni_dir}"
+    COMMENT "Copying the pjsua2 Java bindings into ${PJSUA2_ANDROID_DIR}"
+    VERBATIM
+  )
+  add_dependencies(pjsua2jni_android pjsua2jni)
+
+  # Unless SWIG writes there itself, replace the classes rather than merge
+  # them, so that none from an older build is left behind
+  cmake_path(COMPARE "${PJSUA2_JAVA_OUTPUT_DIR}/org/pjsip" EQUAL
+    "${_pj_java_dir}" _pj_same_dir
+  )
+  if(NOT _pj_same_dir)
+    add_custom_command(TARGET pjsua2jni_android POST_BUILD
+      COMMAND "${CMAKE_COMMAND}" -E rm -rf "${_pj_java_dir}/pjsua2"
+      COMMAND "${CMAKE_COMMAND}" -E copy_directory
+              "${PJSUA2_JAVA_OUTPUT_DIR}/org/pjsip/pjsua2"
+              "${_pj_java_dir}/pjsua2"
+      VERBATIM
+    )
+    if(_pjsua2_helpers)
+      add_custom_command(TARGET pjsua2jni_android POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+                ${_pjsua2_helpers} "${_pj_java_dir}"
+        VERBATIM
+      )
+    endif()
+  endif()
+
+  unset(_pj_jni_dir)
+  unset(_pj_java_dir)
+  unset(_pj_cxx_shared)
+  unset(_pj_same_dir)
+endif()
 unset(_pjsua2_helpers)
 
 if(ANDROID)

@@ -131,6 +131,13 @@ jobs:
         # Copied in beside them when the camera backend is on.
         test -f build/pjsip-apps/src/swig/java/org/pjsip/PjCameraInfo.java \
           || { echo "::error::camera helper classes are missing"; exit 1; }
+        # Both copied into the sample app, which builds from there.
+        main=pjsip-apps/src/swig/java/android/pjsua2/src/main
+        cmp "$so" "$main/jniLibs/${{ matrix.abi }}/libpjsua2.so" \
+          || { echo "::error::libpjsua2.so is not in the sample app"; exit 1; }
+        test -f "$main/java/org/pjsip/pjsua2/pjsua2JNI.java" \
+          && test -f "$main/java/org/pjsip/PjCameraInfo.java" \
+          || { echo "::error::the Java classes are not in the sample app"; exit 1; }
 
     - name: install
       run: cmake --install build --prefix ${{ runner.temp }}/pj-install

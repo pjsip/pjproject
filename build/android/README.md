@@ -135,6 +135,15 @@ they are yours to compile into the APK alongside the native library, the way
 
 It is off by default: SWIG is a build dependency nothing else here needs.
 
+A build also copies both into the sample app, as `make -C
+pjsip-apps/src/swig/java` does: `libpjsua2.so` into
+`pjsip-apps/src/swig/java/android/pjsua2/src/main/jniLibs/<abi>`, with
+`libc++_shared.so` when built with `-DANDROID_STL=c++_shared`, and the classes
+into `java/` beside it. The app then builds from there, in Android Studio or
+with `./gradlew :app:assembleDebug`. Build once per ABI the app should carry.
+`-DPJSUA2_ANDROID_DIR=<dir>` copies into another app's source set instead, and
+`-DPJSUA2_ANDROID_DIR=` leaves the source tree alone.
+
 To build the AAR, let Gradle drive CMake rather than running it yourself:
 
 ```sh
@@ -148,10 +157,9 @@ hand.
 
 `-PpjBuildWithCMake=true` is required; without it the module behaves as it
 always has and takes `libpjsua2.so` and the Java classes prebuilt out of
-`pjsua2/src/main`, where `make -C pjsip-apps/src/swig/java` puts them. The two
-cannot both be active -- each would supply its own copy of `libc++_shared.so`
-and of every generated class -- so pick one and run `./gradlew clean` when
-switching.
+`pjsua2/src/main`, where `make -C pjsip-apps/src/swig/java` and the CMake
+build above put them. With it, the module ignores those, so what is there
+does not get in the way.
 
 Prerequisites beyond the NDK and SDK: **SWIG 4.0+**, and **Ninja**, which the
 Android Gradle plugin requires for CMake projects. The SDK-managed CMake ships
