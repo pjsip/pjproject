@@ -356,7 +356,30 @@ it — so this is the same position as any Android app that opens a MediaCodec
 for `audio/3gpp`. Set `PJMEDIA_HAS_AND_MEDIA_AMRNB` and
 `PJMEDIA_HAS_AND_MEDIA_AMRWB` to 0 in `config_site.h` to drop them.
 
+### Using the AAR
+
+The AAR is all an application needs: the other files in `out-android/dist`
+are for Maven Central (see "Publishing" below). It has no dependencies to
+resolve, so a GitHub release can carry it alone. Copy it into the app's
+`libs/` and add:
+
+```gradle
+dependencies {
+    implementation files('libs/pjsua2-<version>.aar')
+}
+```
+
+This works in an application module. The Android Gradle plugin rejects a
+local `.aar` in a library module ("Direct local .aar file dependencies are
+not supported when building an AAR"), so a library that wraps PJSIP has to
+take it from a Maven repository instead, such as one on the local disk.
+
+The licence texts travel inside the AAR, under `META-INF`, and the app
+redistributes them with it.
+
 ### Publishing
+
+A GitHub release needs none of this: attach the AAR, as above.
 
 The script stops at artifacts that are ready to sign; it does not upload, and
 two one-time account steps have to happen before an upload script would have
