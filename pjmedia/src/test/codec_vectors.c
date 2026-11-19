@@ -867,10 +867,26 @@ static int opus_check_parse(pjmedia_codec *codec, unsigned samples_per_frame,
         PJ_TEST_EQ(pj_memcmp(fr[0], pl[i], len[i]), 0, NULL, return -60);
     }
 
-    /* A frame-0 extension (e.g. DRED) must survive the split */
-    if (ext_frame == 0)
-        PJ_TEST_GT(frames[0].size, len[0] + 1, "frame-0 extension dropped",
-                   return -70);
+    /* A frame-0 extension must come out as libopus emits frame 0: catches an
+     * up-front unpad on libopus >= 1.5; older libopus drops it in both. */
+    if (ext_frame == 0) {
+        OpusRepacketizer *rp;
+        unsigned char ref[256];
+        opus_int32 ref_len = -1;
+
+        rp = opus_repacketizer_create();
+        PJ_TEST_NOT_NULL(rp, NULL, return -70);
+        if (opus_repacketizer_cat(rp, pkt, (opus_int32)pkt_len) == OPUS_OK)
+            ref_len = opus_repacketizer_out_range(rp, 0, 1, ref,
+                                                  sizeof(ref));
+        opus_repacketizer_destroy(rp);
+
+        PJ_TEST_GT(ref_len, 0, "libopus reference", return -70);
+        PJ_TEST_EQ(frames[0].size, (pj_size_t)ref_len,
+                   "frame-0 extension dropped", return -70);
+        PJ_TEST_EQ(pj_memcmp(frames[0].buf, ref, ref_len), 0,
+                   "frame-0 extension changed", return -71);
+    }
     return 0;
 }
 
