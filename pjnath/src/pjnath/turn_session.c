@@ -1240,6 +1240,7 @@ PJ_DEF(pj_status_t) pj_turn_session_connect(pj_turn_session *sess,
                                             unsigned addr_len)
 {
     pj_stun_tx_data *tdata;
+    struct conn_bind_t *conn;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(sess && peer_addr && addr_len, PJ_EINVAL);
@@ -1257,10 +1258,24 @@ PJ_DEF(pj_status_t) pj_turn_session_connect(pj_turn_session *sess,
                                            PJ_STUN_ATTR_XOR_PEER_ADDR,
                                            PJ_TRUE, peer_addr, addr_len);
     if (status != PJ_SUCCESS) goto on_return;
-    status = pj_stun_session_send_msg(sess->stun, (void *)peer_addr, PJ_FALSE,
+
+    /* The token outlives this call, so it must not refer to peer_addr */
+    if (!pj_list_empty(&sess->conn_bind_free)) {
+        conn = sess->conn_bind_free.next;
+        pj_list_erase(conn);
+    } else {
+        conn = PJ_POOL_ZALLOC_T(sess->pool, struct conn_bind_t);
+    }
+    conn->id = 0;
+    pj_sockaddr_cp(&conn->peer_addr, peer_addr);
+    conn->peer_addr_len = addr_len;
+
+    status = pj_stun_session_send_msg(sess->stun, conn, PJ_FALSE,
                                       PJ_FALSE, sess->srv_addr,
                                       pj_sockaddr_get_len(sess->srv_addr),
                                       tdata);
+    if (status != PJ_SUCCESS && status != PJ_EPENDING)
+        pj_list_push_back(&sess->conn_bind_free, conn);
 
 on_return:
     pj_grp_lock_release(sess->grp_lock);
@@ -1829,7 +1844,7 @@ static void stun_on_request_complete(pj_stun_session *stun,
         pj_list_push_back(&sess->conn_bind_free, conn_bind);
     } else if (method == PJ_STUN_CONNECT_METHOD) {
         /* Handle Connct response */
-        struct pj_sockaddr_t *peer_addr = (struct pj_sockaddr_t*)token;
+        struct conn_bind_t *conn = (struct conn_bind_t*)token;
         pj_uint32_t conn_id = 0;
 
         if (status != PJ_SUCCESS ||
@@ -1868,8 +1883,9 @@ static void stun_on_request_complete(pj_stun_session *stun,
         if (sess->cb.on_connect_complete) {
             (*sess->cb.on_connect_complete)
                         (sess, status, conn_id,
-                        peer_addr, pj_sockaddr_get_len(peer_addr));
+                        &conn->peer_addr, conn->peer_addr_len);
         }
+        pj_list_push_back(&sess->conn_bind_free, conn);
     } else {
         PJ_LOG(4,(sess->obj_name, "Unexpected STUN %s response",
                   pj_stun_get_method_name(response->hdr.type)));
