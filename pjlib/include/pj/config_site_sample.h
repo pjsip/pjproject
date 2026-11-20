@@ -301,6 +301,11 @@
  * iPhone sample settings.
  */
 #if PJ_CONFIG_IPHONE
+
+    /* Settings that have a CMake option are left to it under PJ_CMAKE,
+     * as they would otherwise override the option.
+     */
+
     /*
      * PJLIB settings.
      */
@@ -308,7 +313,9 @@
     /* Both armv6 and armv7 has FP hardware support.
      * See https://github.com/pjsip/pjproject/issues/1589 for more info
      */
+    #if !defined(PJ_CMAKE) || !PJ_CMAKE
     #define PJ_HAS_FLOATING_POINT               1
+    #endif
 
     /*
      * PJMEDIA settings
@@ -317,10 +324,14 @@
     /* We have our own native CoreAudio backend */
     #define PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO     0
     #define PJMEDIA_AUDIO_DEV_HAS_WMME          0
+    #if !defined(PJ_CMAKE) || !PJ_CMAKE
     #define PJMEDIA_AUDIO_DEV_HAS_COREAUDIO     1
+    #endif
 
     /* The CoreAudio backend has built-in echo canceller! */
+    #if !defined(PJ_CMAKE) || !PJ_CMAKE
     #define PJMEDIA_HAS_SPEEX_AEC    0
+    #endif
 
     /* Duck other audio based on voice activity, instead of for the whole
      * call (requires iOS 17).
@@ -328,11 +339,15 @@
     #define PJMEDIA_AUDIO_DEV_COREAUDIO_ADVANCED_DUCKING 1
 
     /* Disable some codecs */
+    #if !defined(PJ_CMAKE) || !PJ_CMAKE
     #define PJMEDIA_HAS_L16_CODEC               0
+    #endif
     //#define PJMEDIA_HAS_G722_CODEC            0
 
     /* Use the built-in CoreAudio's iLBC codec (yay!) */
+    #if !defined(PJ_CMAKE) || !PJ_CMAKE
     #define PJMEDIA_HAS_ILBC_CODEC              1
+    #endif
     #define PJMEDIA_ILBC_CODEC_USE_COREAUDIO    1
 
     /* Fine tune Speex's default settings for best performance/quality */
