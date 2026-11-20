@@ -855,9 +855,18 @@ jobs:
     - name: install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libssl-dev libopus-dev ${{ matrix.swig && 'swig python3-dev' || '' }}
+        sudo apt-get install -y libssl-dev libopus-dev libvpx-dev ${{ matrix.swig && 'swig python3-dev' || '' }}
     - name: configure
       run: cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.swig }}
+    - name: check options
+      # an optional library that is not found is dropped without failing the
+      # configure
+      run: |
+        for p in OPUS VPX; do
+          grep "^PJMEDIA_WITH_${p}_CODEC:BOOL=ON$" build/CMakeCache.txt || {
+            echo "::error::PJMEDIA_WITH_${p}_CODEC is not ON"; exit 1; }
+          grep -E "^${p}_(LIBRARY|INCLUDE_DIR):" build/CMakeCache.txt
+        done
     - name: build
       run: cmake --build build -j $(nproc)
     - name: check
@@ -1195,52 +1204,10 @@ jobs:
         cd pjlib-util/build
         ../../build/pjlib-util/bin/pjlib-util-test --ci-mode resolver_nothreads_test
 
-  # One optional audio codec (Opus) and one video codec (libvpx), from the
-  # distribution's packages. A library that is not found is dropped without
-  # failing the configure, so assert both were used. The consumers get only
-  # the pjproject install: its package must find both again.
-  cmake-opus-vpx:
-    needs: [detect-changes]
-    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
-    runs-on: ubuntu-latest
-    name: CMake / Opus + VPX
-    steps:
-    - uses: actions/checkout@v4
-    - name: install dependencies
-      run: sudo apt-get update && sudo apt-get install -y libssl-dev libopus-dev libvpx-dev
-    - name: configure
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
-    - name: check options
-      run: |
-        for p in OPUS VPX; do
-          grep "^PJMEDIA_WITH_${p}_CODEC:BOOL=ON$" build/CMakeCache.txt || {
-            echo "::error::PJMEDIA_WITH_${p}_CODEC is not ON"; exit 1; }
-          grep -E "^${p}_(LIBRARY|INCLUDE_DIR):" build/CMakeCache.txt
-        done
-    - name: build
-      run: cmake --build build -j $(nproc)
-    - name: install
-      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
-    - name: test find_package
-      run: |
-        cmake -B build-consumer tests/cmake \
-          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
-          -DCMAKE_BUILD_TYPE=Release
-        cmake --build build-consumer --verbose
-        ./build-consumer/test_consumer
-        ./build-consumer/test_consumer2
-    - name: test pkg-config
-      run: |
-        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
-        cat "$PKG_CONFIG_PATH/libpjproject.pc"
-        cc tests/cmake/test_consumer.c -o pc_consumer \
-          $(pkg-config --static --cflags --libs libpjproject)
-        ./pc_consumer
-
-  # As cmake-opus-vpx, with the build pointed at each library by
-  # <Pkg>_ROOT: its packages unpacked into a folder of its own. The system's
-  # copies are installed too, and must not be used: not by the build, and
-  # not by the consumers, which get only the pjproject install.
+  # Opus and libvpx, as in cmake-build, with the build pointed at each
+  # library by <Pkg>_ROOT: its packages unpacked into a folder of its own.
+  # The system's copies are installed too, and must not be used: not by the
+  # build, and not by the consumers, which get only the pjproject install.
   cmake-opus-vpx-root:
     needs: [detect-changes]
     if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
