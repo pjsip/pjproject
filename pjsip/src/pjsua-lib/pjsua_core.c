@@ -2376,6 +2376,10 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 
         /* Destroy accounts */
         for (i=0; i<(int)PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
+            if (pjsua_var.acc[i].sa_mirror_pool) {
+                pj_pool_release(pjsua_var.acc[i].sa_mirror_pool);
+                pjsua_var.acc[i].sa_mirror_pool = NULL;
+            }
             if (pjsua_var.acc[i].pool) {
                 /* The shared auth session's lock lives in the pool. */
                 if (pjsua_var.acc[i].shared_auth_sess.endpt) {
