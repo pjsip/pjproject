@@ -36,6 +36,7 @@ jobs:
       pjnath_pjmedia_deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib_util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
       pjnath_pjsip_deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib_util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjsip == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
       any_src: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib_util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.pjsip == 'true' || steps.filter.outputs.pjsip_apps == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
+      cmake: ${{ steps.filter.outputs.cmake == 'true' }}
     steps:
     - uses: actions/checkout@v4
     - uses: dorny/paths-filter@v3
@@ -64,6 +65,12 @@ jobs:
           tests:
             - 'tests/**'
           ci:
+            - '.github/**'
+          cmake:
+            - 'CMakeLists.txt'
+            - '**/CMakeLists.txt'
+            - 'cmake/**'
+            - 'tests/cmake/**'
             - '.github/**'
 
   default-build:
@@ -1005,6 +1012,8 @@ jobs:
   # lib/pjproject/third_party through their RUNPATH, also from a copy of the
   # install made elsewhere.
   cmake-shared:
+    needs: [detect-changes]
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
     runs-on: ubuntu-latest
     name: CMake / shared
     steps:
@@ -1058,6 +1067,8 @@ jobs:
   # reference pthread. Also the installed package: Pj's config must not ask
   # for Threads, and consumers built from it stay pthread-free.
   cmake-no-threads:
+    needs: [detect-changes]
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
     runs-on: ubuntu-latest
     name: CMake / no threads
     steps:
@@ -1133,6 +1144,8 @@ jobs:
   # from outside it. In the shared build they find the pjproject libraries
   # through their rpaths, with no LD_LIBRARY_PATH.
   cmake-swig:
+    needs: [detect-changes]
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
     runs-on: ubuntu-latest
     name: CMake / SWIG Python+Java ${{ matrix.libs }}
     strategy:
@@ -1189,6 +1202,8 @@ jobs:
   # failing the configure, so assert both were used. The consumers get only
   # the pjproject install: its package must find both again.
   cmake-opus-vpx:
+    needs: [detect-changes]
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
     runs-on: ubuntu-latest
     name: CMake / Opus + VPX
     steps:
@@ -1229,6 +1244,8 @@ jobs:
   # copies are installed too, and must not be used: not by the build, and
   # not by the consumers, which get only the pjproject install.
   cmake-opus-vpx-root:
+    needs: [detect-changes]
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
     runs-on: ubuntu-latest
     name: CMake / Opus + VPX from <Pkg>_ROOT
     steps:
@@ -1321,6 +1338,8 @@ jobs:
   # from third_party, and the build and the consumers must load the system
   # copies.
   cmake-system-deps:
+    needs: [detect-changes]
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
     runs-on: ubuntu-latest
     name: CMake / system GSM, Speex, SRTP, libyuv
     env:
@@ -1412,6 +1431,8 @@ jobs:
   # the pjproject install: its package must find the backend again, also
   # Mbed TLS from its own prefix.
   cmake-ssl:
+    needs: [detect-changes]
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -1504,6 +1525,8 @@ jobs:
   # prefix. A consumer built with the same generator must link the
   # libraries of its own configuration.
   cmake-multi-config:
+    needs: [detect-changes]
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
     runs-on: ubuntu-latest
     name: CMake / Ninja Multi-Config
     steps:

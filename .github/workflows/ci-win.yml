@@ -35,6 +35,7 @@ jobs:
       pjnath_pjmedia_deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib_util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
       pjnath_pjsip_deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib_util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjsip == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
       any_src: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib_util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.pjsip == 'true' || steps.filter.outputs.pjsip_apps == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
+      cmake: ${{ steps.filter.outputs.cmake == 'true' }}
     steps:
     - uses: actions/checkout@v4
     - uses: dorny/paths-filter@v3
@@ -63,6 +64,12 @@ jobs:
           tests:
             - 'tests/**'
           ci:
+            - '.github/**'
+          cmake:
+            - 'CMakeLists.txt'
+            - '**/CMakeLists.txt'
+            - 'cmake/**'
+            - 'tests/cmake/**'
             - '.github/**'
 
   default:
@@ -1075,6 +1082,8 @@ jobs:
   # consumers get only the pjproject install: its package must find both
   # again.
   cmake-opus-vpx:
+    needs: [detect-changes]
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
     runs-on: windows-2022
     name: CMake / Opus + VPX
     env:
@@ -1141,6 +1150,8 @@ jobs:
   # <Pkg>_ROOT: vcpkg's folder. The consumers get only the pjproject
   # install: its package must find both where the build did.
   cmake-opus-vpx-root:
+    needs: [detect-changes]
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
     runs-on: windows-2022
     name: CMake / Opus + VPX from <Pkg>_ROOT
     env:
@@ -1206,6 +1217,8 @@ jobs:
   # MinGW-w64 GCC with the UCRT runtime, from MSYS2, and MSYS2's OpenSSL.
   # No other job builds with MinGW.
   cmake-mingw:
+    needs: [detect-changes]
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
     runs-on: windows-2022
     name: CMake / MinGW UCRT64
     defaults:
@@ -1252,6 +1265,8 @@ jobs:
   # OpenSSL root (the runner's own OpenSSL is 64-bit only). A 64-bit
   # consumer must not accept the 32-bit install.
   cmake-win32:
+    needs: [detect-changes]
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
     runs-on: windows-2022
     name: CMake / Win32
     env:
