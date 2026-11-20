@@ -1206,7 +1206,7 @@ static void verify_remote_cert(pj_ssl_sock_t* ssock)
 
     if (err == CERT_TRUST_NO_ERROR) {
         ssock->verify_status = PJ_SUCCESS;
-        return;
+        goto on_return;
     }
 
     if (err & CERT_TRUST_IS_NOT_TIME_VALID)
