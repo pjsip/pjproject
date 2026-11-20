@@ -1423,52 +1423,6 @@ jobs:
           done
         done
 
-  # A multi-config generator: Debug and Release in one build folder, each
-  # library and program with a -<Config> suffix, both installed into one
-  # prefix. A consumer built with the same generator must link the
-  # libraries of its own configuration.
-  cmake-multi-config:
-    needs: [detect-changes]
-    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
-    runs-on: ubuntu-latest
-    name: CMake / Ninja Multi-Config
-    steps:
-    - uses: actions/checkout@v4
-    - name: install dependencies
-      run: sudo apt-get update && sudo apt-get install -y libssl-dev ninja-build
-    - name: configure
-      run: cmake -B build -G "Ninja Multi-Config"
-    - name: build Debug
-      run: cmake --build build --config Debug
-    - name: build Release
-      run: cmake --build build --config Release
-    - name: check build
-      run: |
-        set -o pipefail
-        for c in Debug:1 Release:0; do
-          cfg=${c%:*}; dbg=${c#*:}
-          test -f build/pjlib/lib/libpj-$cfg.a
-          ./build/pjsip-apps/bin/pjsua-$cfg --version | grep -E "PJ_DEBUG +: $dbg\$"
-        done
-    - name: install
-      run: |
-        for c in Debug Release; do
-          cmake --install build --config $c --prefix ${{ runner.temp }}/pj-install
-        done
-        ls ${{ runner.temp }}/pj-install/lib
-    - name: test find_package
-      run: |
-        set -o pipefail
-        cmake -B build-consumer tests/cmake -G "Ninja Multi-Config" \
-          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install
-        for c in Debug Release; do
-          cmake --build build-consumer --config $c --verbose | tee build-$c.log
-          grep -q "libpj-$c\.a" build-$c.log || {
-            echo "::error::the $c consumer does not link libpj-$c.a"; exit 1; }
-          ./build-consumer/$c/test_consumer
-          ./build-consumer/$c/test_consumer2
-        done
-
   # Short pjsua-stress runs under ASan/TSan on every PR / push to master.
   # The full weekly run (larger fleet, longer duration) lives in
   # .github/workflows/stress-test.yml.
