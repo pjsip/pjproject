@@ -54,7 +54,6 @@ jobs:
           -DANDROID_ABI=${{ matrix.abi }} \
           -DANDROID_PLATFORM=android-${ANDROID_API} \
           -DCMAKE_BUILD_TYPE=Release \
-          -DPJ_SKIP_EXPERIMENTAL_NOTICE=ON \
           -DPJ_BUILD_SWIG_JAVA=ON \
           -DPJMEDIA_WITH_AUDIODEV_OPENSL=ON \
           -DOboe_ROOT="${{ runner.temp }}/oboe"

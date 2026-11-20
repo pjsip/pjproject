@@ -57,8 +57,8 @@ Echo cancellation comes from CoreAudio, which has its own. Neither the Speex
 nor the WebRTC canceller is built: Speex is switched off deliberately, and the
 WebRTC one is left out (`PJ_DEP_WEBRTC=none`): it is not needed, and the
 bundled WebRTC cannot be built for both architectures of a slice at once.
-`webrtc_aec3` does not compile on macOS, where `PlatformThreadId` is undefined,
-and the NEON flags break the x86_64 half of a simulator build.
+WebRTC AEC3 is left out too: it is off by default, and likewise cannot be
+built for both architectures of a slice at once.
 
 Excluded, for licensing rather than technical reasons:
 

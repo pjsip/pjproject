@@ -209,25 +209,10 @@ unset(_pj_multi_config)
 # project modules
 list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-# experimental warning notice
-option(PJ_SKIP_EXPERIMENTAL_NOTICE OFF)
-if (NOT PJ_SKIP_EXPERIMENTAL_NOTICE)
-  message(WARNING
-    " ****************************************************\n"
-    " * Building `pjproject` with CMake is experimental  *\n"
-    " *--------------------------------------------------*\n"
-    " * Tested in CI:                                    *\n"
-    " * - Linux x86_64                                   *\n"
-    " * - macOS                                          *\n"
-    " * - Android (arm64-v8a, armeabi-v7a, x86_64, x86)  *\n"
-    " * - Windows x64 (Visual Studio 2022)               *\n"
-    " * Verified manually:                               *\n"
-    " * - iOS (device, simulator)                        *\n"
-    " * - Windows x64 (MinGW-w64)                        *\n"
-    " ****************************************************\n"
-    "Set `PJ_SKIP_EXPERIMENTAL_NOTICE=ON` to disable this warning"
-  )
-endif()
+# PJ_SKIP_EXPERIMENTAL_NOTICE silenced a notice that is gone. Read it, so that
+# builds still passing it get no "not used by the project" warning.
+set(_pj_unused "${PJ_SKIP_EXPERIMENTAL_NOTICE}")
+unset(_pj_unused)
 
 # ##############################################################################
 # Testing support

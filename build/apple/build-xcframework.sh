@@ -83,7 +83,6 @@ BACKUP=$OUTDIR/config_site.h.orig
 # The distribution's configuration. Everything CMake has an option for is set
 # here rather than in config_site.h, so the build is described in one place.
 CMAKE_OPTS=(
-    -DPJ_SKIP_EXPERIMENTAL_NOTICE=ON
     -DBUILD_TESTING=OFF
     # the sample-app staging writes into the source tree; a distribution build
     # must not be influenced by, or leave behind, anything there

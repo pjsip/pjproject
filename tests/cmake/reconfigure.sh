@@ -15,7 +15,6 @@ command -v diff > /dev/null || { echo "diff not found" >&2; exit 2; }
 src=$(cd "$1" && { pwd -W 2> /dev/null || pwd; })
 mkdir -p "$2"
 work=$(cd "$2" && { pwd -W 2> /dev/null || pwd; })
-common="-DPJ_SKIP_EXPERIMENTAL_NOTICE=ON"
 
 # Two copies of the installed libsrtp2 as package roots, for the pairs that
 # add, remove or move SRTP_ROOT; those pairs are skipped without libsrtp2.
@@ -85,14 +84,14 @@ while IFS= read -r pair; do
     second=${pair#*|}
     echo "### $first -> $second"
     rm -rf "$work/fresh" "$work/reconf"
-    cmake -S "$src" -B "$work/fresh" $common $second > /dev/null
+    cmake -S "$src" -B "$work/fresh" $second > /dev/null
     # the snapshot reads flags.make and link.txt
     if ! grep -q '^CMAKE_GENERATOR:INTERNAL=.*Makefiles$' \
             "$work/fresh/CMakeCache.txt"; then
         echo "needs a Makefile generator (set CMAKE_GENERATOR)" >&2
         exit 2
     fi
-    cmake -S "$src" -B "$work/reconf" $common $first > /dev/null
+    cmake -S "$src" -B "$work/reconf" $first > /dev/null
     cmake -S "$src" -B "$work/reconf" $second > /dev/null
     snapshot "$work/fresh" "$work/fresh.snap"
     snapshot "$work/reconf" "$work/reconf.snap"

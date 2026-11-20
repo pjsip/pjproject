@@ -363,7 +363,6 @@ build_abi() {
         -DANDROID_PLATFORM="android-$ANDROID_API" \
         -DANDROID_STL=c++_static \
         -DCMAKE_BUILD_TYPE=Release \
-        -DPJ_SKIP_EXPERIMENTAL_NOTICE=ON \
         -DBUILD_TESTING=OFF \
         -DPJ_BUILD_SWIG_JAVA=ON \
         -DPJSUA2_JAVA_OUTPUT_DIR="$STAGE/java" \
