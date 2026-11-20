@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -177,6 +177,9 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
         pj_memcpy(tmp, PJ_SDK_NAME, pj_ansi_strlen(PJ_SDK_NAME) + 1);
         si.sdk_ver = parse_version(tmp);
         #endif
+
+        /* Avoid compile warning. */
+        goto get_sdk_info;
     }
     #else    
     {
