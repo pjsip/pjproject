@@ -816,6 +816,22 @@ static pj_status_t vpx_codec_decode_(pjmedia_vid_codec *codec,
         vpx_data->need_keyframe = PJ_FALSE;
     }
 
+    /* libvpx can flag a decoded VP8 frame as corrupt (damaged reference
+     * data); treat it like lost input — suppress the picture and keep
+     * asking for a keyframe. VP9 exposes no such control.
+     */
+    if (vpx_data->dec_if == &vpx_codec_vp8_dx) {
+        int corrupted = 0;
+
+        if (vpx_codec_control(&vpx_data->dec, VP8D_GET_FRAME_CORRUPTED,
+                              &corrupted) == VPX_CODEC_OK && corrupted)
+        {
+            PJ_LOG(4, (THIS_FILE, "Decoded VP8 frame is corrupt"));
+            vpx_data->need_keyframe = PJ_TRUE;
+            goto on_return;
+        }
+    }
+
     /* Frames decoded against references lost earlier are corrupt; keep
      * them off the screen and keep asking for a keyframe (throttled).
      */
