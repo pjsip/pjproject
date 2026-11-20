@@ -1,5 +1,5 @@
 /* 
- * Copyright (C)2019 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C)2019-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -56,6 +56,8 @@
 #define DEFAULT_MAX_BITRATE     200000
 
 #define MAX_RX_RES              1200
+
+#define MISSING_KEYFRAME_EV_MIN_INTERVAL  1000
 
 /* VPX VP8 default PT */
 #define VPX_VP8_PT              PJMEDIA_RTP_PT_VP8
@@ -165,6 +167,9 @@ typedef struct vpx_codec_data
     vpx_codec_ctx_t              dec;
     pj_uint8_t                  *dec_buf;
     unsigned                     dec_buf_size;
+    unsigned                     missing_kf_interval;
+    unsigned                     last_missing_kf_event;
+    pj_bool_t                    need_keyframe;
 } vpx_codec_data;
 
 
@@ -489,6 +494,13 @@ static pj_status_t vpx_codec_open(pjmedia_vid_codec *codec,
         return PJMEDIA_CODEC_EFAILED;
     }
 
+    /* Calculate minimum missing keyframe event interval in frames. */
+    vpx_data->missing_kf_interval =
+        (unsigned)((1.0f * param->dec_fmt.det.vid.fps.num /
+        param->dec_fmt.det.vid.fps.denum) *
+        MISSING_KEYFRAME_EV_MIN_INTERVAL/1000);
+    vpx_data->last_missing_kf_event = vpx_data->missing_kf_interval;
+
     /* Parse local fmtp */
     status = pjmedia_vid_codec_vpx_parse_fmtp(&param->dec_fmtp, &vpx_fmtp);
     if (status != PJ_SUCCESS)
@@ -701,8 +713,11 @@ static pj_status_t vpx_codec_decode_(pjmedia_vid_codec *codec,
 {
     struct vpx_codec_data *vpx_data;
     pj_bool_t has_frame = PJ_FALSE;
+    pj_bool_t kf_requested = PJ_FALSE;
+    pj_bool_t input_lost = PJ_FALSE;
     unsigned i, whole_len = 0;
     vpx_codec_iter_t iter = NULL;
+    vpx_codec_stream_info_t si;
     vpx_image_t *img = NULL;
     vpx_codec_err_t res;
     unsigned pos = 0;
@@ -713,6 +728,10 @@ static pj_status_t vpx_codec_decode_(pjmedia_vid_codec *codec,
     PJ_ASSERT_RETURN(output->buf, PJ_EINVAL);
 
     vpx_data = (vpx_codec_data*) codec->codec_data;
+    vpx_data->last_missing_kf_event++;
+    /* Check if we have recently generated missing keyframe event. */
+    if (vpx_data->last_missing_kf_event < vpx_data->missing_kf_interval)
+        kf_requested = PJ_TRUE;
 
     /*
      * Step 1: unpacketize the packets/frames
@@ -720,6 +739,8 @@ static pj_status_t vpx_codec_decode_(pjmedia_vid_codec *codec,
     whole_len = 0;
     if (vpx_data->whole) {
         for (i = 0; i < count; ++i) {
+            if (packets[i].size == 0)
+                input_lost = PJ_TRUE;
             if (whole_len + packets[i].size > vpx_data->dec_buf_size) {
                 PJ_LOG(4,(THIS_FILE, "Decoding buffer overflow [1]"));
                 return PJMEDIA_CODEC_EFRMTOOSHORT;
@@ -740,8 +761,9 @@ static pj_status_t vpx_codec_decode_(pjmedia_vid_codec *codec,
             status = pjmedia_vpx_unpacketize(vpx_data->pktz, packets[i].buf,
                                              packet_size, &desc_len);
             if (status != PJ_SUCCESS) {
-                PJ_LOG(4,(THIS_FILE, "Unpacketize error"));
-                return status;
+                PJ_PERROR(4,(THIS_FILE, status, "Unpacketize error"));
+                input_lost = PJ_TRUE;
+                continue;
             }
 
             packet_size -= desc_len;
@@ -756,12 +778,21 @@ static pj_status_t vpx_codec_decode_(pjmedia_vid_codec *codec,
         }
     }
 
-    /* Decode */
+    /* Decode. Damaged input is skipped; a keyframe is requested below. */
+    if (input_lost)
+        vpx_data->need_keyframe = PJ_TRUE;
+    if (whole_len == 0 || input_lost)
+        goto on_return;
+
     res = vpx_codec_decode(&vpx_data->dec, vpx_data->dec_buf, whole_len,
                            0, VPX_DL_REALTIME);
     if (res) {
         PJ_LOG(4, (THIS_FILE, "Failed to decode frame %s",
                    vpx_codec_error(&vpx_data->dec)));
+        /* libvpx may keep decoding later frames against the corrupted
+         * reference; recover on a keyframe.
+         */
+        vpx_data->need_keyframe = PJ_TRUE;
         goto on_return;
     }
 
@@ -771,6 +802,21 @@ static pj_status_t vpx_codec_decode_(pjmedia_vid_codec *codec,
                    vpx_codec_error(&vpx_data->dec)));
         goto on_return;
     }
+
+    /* A decoded keyframe ends the recovery wait. */
+    si.sz = sizeof(si);
+    if (vpx_codec_peek_stream_info(vpx_data->dec_if(), vpx_data->dec_buf,
+                                   whole_len, &si) == VPX_CODEC_OK &&
+        si.is_kf)
+    {
+        vpx_data->need_keyframe = PJ_FALSE;
+    }
+
+    /* Frames decoded against references lost earlier are corrupt; keep
+     * them off the screen and keep asking for a keyframe (throttled).
+     */
+    if (vpx_data->need_keyframe)
+        goto on_return;
 
     has_frame = PJ_TRUE;
 
@@ -821,7 +867,8 @@ static pj_status_t vpx_codec_decode_(pjmedia_vid_codec *codec,
     output->size = pos;
         
 on_return:
-    if (!has_frame) {
+    /* Request a keyframe when decoding produced no picture. */
+    if (!kf_requested && !has_frame) {
         pjmedia_event event;
 
         /* Broadcast missing keyframe event */
@@ -829,7 +876,10 @@ on_return:
                            &packets[0].timestamp, codec);
         pjmedia_event_publish(NULL, codec, &event,
                               PJMEDIA_EVENT_PUBLISH_DEFAULT);
+        vpx_data->last_missing_kf_event = 0;
+    }
 
+    if (!has_frame) {
         PJ_LOG(4,(THIS_FILE, "Decode couldn't produce picture, "
                   "input nframes=%lu, concatenated size=%d bytes",
                   (unsigned long)count, whole_len));
