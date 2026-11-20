@@ -141,7 +141,7 @@ fi
 #ARCH="-arch armv6"
 export CFLAGS="${CFLAGS} -DPJ_SDK_NAME=\"\\\"`basename $SDKPATH`\\\"\" ${ARCH} -isysroot ${SDKPATH}"
 export LDFLAGS="${LDFLAGS} ${ARCH} -isysroot ${SDKPATH} -framework AudioToolbox -framework Foundation"
-export AR="${TCPATH}/usr/bin/libtool -static -o"
+export AR="${TCPATH}/usr/bin/libtool -static -no_warning_for_no_symbols -o"
 export AR_FLAGS=" "
 export RANLIB="echo ranlib"
 # Use gcc -E as preprocessor instead of cpp, since cpp will find the
