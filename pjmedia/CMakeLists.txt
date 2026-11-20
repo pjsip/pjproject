@@ -90,10 +90,18 @@ if(_pj_doc MATCHES "\\(forced\\)$")
   unset(PJMEDIA_WITH_SPEEX_AEC CACHE)
 endif()
 unset(_pj_doc)
+# Off by default on iOS, as in PJ_CONFIG_IPHONE: CoreAudio cancels echo itself
+if(IOS)
+  set(_pj_speex_aec_default OFF)
+else()
+  set(_pj_speex_aec_default ON)
+endif()
 cmake_dependent_option(PJMEDIA_WITH_SPEEX_AEC
-  "Enable Speex Acoustic Echo Cancellation (AEC) support" ON
+  "Enable Speex Acoustic Echo Cancellation (AEC) support"
+  ${_pj_speex_aec_default}
   "TARGET Pj::Dep::Speex" OFF
 )
+unset(_pj_speex_aec_default)
 # As with the resampler, only system speex needs SpeexDSP for the AEC
 if(PJMEDIA_WITH_SPEEX_AEC)
   get_target_property(_pj_speex_provider Pj::Dep::Speex PJ_DEP_PROVIDER)
@@ -176,8 +184,12 @@ endforeach()
 # G.711 PCMA/PCMU codecs
 option(PJMEDIA_WITH_G711_CODEC "Enable G.711 codec" ON)
 
-# Linear/L16 codec family
-option(PJMEDIA_WITH_L16_CODEC "Enable L16 codec family" ON)
+# Linear/L16 codec family, off by default on iOS as in PJ_CONFIG_IPHONE
+if(IOS)
+  option(PJMEDIA_WITH_L16_CODEC "Enable L16 codec family" OFF)
+else()
+  option(PJMEDIA_WITH_L16_CODEC "Enable L16 codec family" ON)
+endif()
 
 # GSM codec
 cmake_dependent_option(PJMEDIA_WITH_GSM_CODEC

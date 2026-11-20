@@ -21,7 +21,7 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>MinimumOSVersion</key>
-	<string>12.2</string>
+	<string>15.0</string>
 	<key>CFBundleDisplayName</key>
 	<string>pjsua2maui</string>
 	<key>CFBundleIdentifier</key>

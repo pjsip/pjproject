@@ -101,7 +101,7 @@ Run configure with the following flags to build the lib to run on simulator:
 
 ```bash
 
-MIN_IOS="-miphoneos-version-min=12.2" ARCH="-arch x86_64" CFLAGS="-O2 -m32 -mios-simulator-version-min=12.2 -fembed-bitcode" LDFLAGS="-O2 -m32 -mios-simulator-version-min=12.2 -fembed-bitcode" ./configure-iphone
+MIN_IOS="-miphoneos-version-min=15.0" ARCH="-arch x86_64" CFLAGS="-O2 -m32 -mios-simulator-version-min=15.0 -fembed-bitcode" LDFLAGS="-O2 -m32 -mios-simulator-version-min=15.0 -fembed-bitcode" ./configure-iphone
 
 ```
 For run on device: 
