@@ -8954,8 +8954,10 @@ static int th_stun_server_proc(void *arg)
     return 0;
 }
 
-/* Start the STUN server and the resolution */
-static pj_status_t th_stun_start(int answers)
+/* Start the STUN server and, if resolve, the resolution. Otherwise the
+ * server is set as if its last resolution had failed.
+ */
+static pj_status_t th_stun_start2(int answers, pj_bool_t resolve)
 {
     char srv_buf[32];
     pj_str_t srv;
@@ -8978,7 +8980,21 @@ static pj_status_t th_stun_start(int answers)
         return status;
 
     srv = pj_str(srv_buf);
+    if (!resolve) {
+        PJSUA_LOCK();
+        pjsua_var.ua_cfg.stun_srv_cnt = 1;
+        if (pj_strcmp(&pjsua_var.ua_cfg.stun_srv[0], &srv))
+            pj_strdup(pjsua_var.pool, &pjsua_var.ua_cfg.stun_srv[0], &srv);
+        pjsua_var.stun_status = PJNATH_ESTUNTIMEDOUT;
+        PJSUA_UNLOCK();
+        return PJ_SUCCESS;
+    }
     return pjsua_update_stun_servers(1, &srv, PJ_FALSE);
+}
+
+static pj_status_t th_stun_start(int answers)
+{
+    return th_stun_start2(answers, PJ_TRUE);
 }
 
 /* Stop the STUN server. Doesn't touch pjsua, which may be gone. */
@@ -9964,10 +9980,8 @@ static void th_lock_probe_cb(void *user_data)
 
 /* Case B of #5380: make call waits for a pending STUN resolution. The worker
  * must still get the PJSUA lock meanwhile, e.g. for a REGISTER response.
- */
-/* - restart FALSE: make call waits for a resolution already pending.
- * - restart TRUE (with outer_lock): after a failed resolution make call
- *   starts one itself, as PJSUA_STUN_RETRY_ON_FAILURE does.
+ * With restart (and outer_lock), the last resolution failed instead, and make
+ * call starts one itself, as PJSUA_STUN_RETRY_ON_FAILURE does.
  */
 static int th_test_make_call_during_resolution(pj_bool_t outer_lock,
                                                pj_bool_t restart,
@@ -9986,20 +10000,10 @@ static int th_test_make_call_during_resolution(pj_bool_t outer_lock,
                "  worker takes the lock while make call waits for STUN"));
 
     g_th.caller = g_th.callee = PJSUA_INVALID_ID;
-    status = th_stun_start(0);
+    status = th_stun_start2(0, !restart);
     if (status != PJ_SUCCESS) {
         rc = err_base;
         goto on_return;
-    }
-    if (restart) {
-        pjsua_cancel_stun_resolution(NULL, PJ_FALSE);
-        if (!th_wait(&th_stun_sessions_gone, TEST_TIMEOUT_MSEC)) {
-            rc = err_base - 6;
-            goto on_return;
-        }
-        PJSUA_LOCK();
-        pjsua_var.stun_status = PJ_ETIMEDOUT;
-        PJSUA_UNLOCK();
     }
 
     g_th.worker_locked = PJ_FALSE;
