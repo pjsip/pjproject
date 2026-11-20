@@ -997,7 +997,7 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
                      PJ_EINVAL);
     PJ_ASSERT_RETURN(maxlen > 3, PJ_ETOOSMALL);
 
-    status = acquire_call("pjsua_call_dump()", call_id, &call, &dlg);
+    status = acquire_call_dlg("pjsua_call_dump()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
         return status;
 

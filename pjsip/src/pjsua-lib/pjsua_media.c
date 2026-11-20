@@ -561,8 +561,10 @@ static pj_status_t call_resolve_stun_server(pjsua_call *call,
 {
     call_wait_state st;
     pj_time_val deadline;
+    pj_bool_t started;
     pj_status_t status;
 
+    started = (pjsua_var.stun_status != PJ_EPENDING);
     status = resolve_stun_server(PJ_FALSE, retry, options);
     if (status != PJ_EPENDING)
         return status;
@@ -576,10 +578,14 @@ static pj_status_t call_resolve_stun_server(pjsua_call *call,
         status = pjsua_wait_stun_server(&call_wait_stop, call, &deadline);
         call_wait_end(call, &st);
 
-        if (status == PJ_ETIMEDOUT && pjsua_var.ua_cfg.stun_ignore_failure) {
-            /* As for a failed resolution */
-            PJ_LOG(2,(THIS_FILE, "Ignoring STUN resolution timeout (by "
-                                 "setting)"));
+        /* As master: the timeout of a resolution this call started is a
+         * failure like any other, only waiting for one already pending is not
+         */
+        if (status == PJ_ETIMEDOUT && started &&
+            pjsua_var.ua_cfg.stun_ignore_failure)
+        {
+            PJ_LOG(2,(THIS_FILE,
+                      "Ignoring STUN resolution failure (by setting)"));
             return PJ_SUCCESS;
         }
         if (status != PJ_SUCCESS)
@@ -1244,8 +1250,8 @@ static void ice_init_complete_cb(void *user_data)
         pj_bool_t busy;
         pj_status_t status;
 
-        status = acquire_call("ice_init_complete_cb", call_med->call->index,
-                              &call, &dlg);
+        status = acquire_call_dlg("ice_init_complete_cb",
+                                  call_med->call->index, &call, &dlg);
         if (status != PJ_SUCCESS) {
             if (status != PJSIP_ESESSIONTERMINATED) {
                 /* Retry, if call is still active */
@@ -1290,7 +1296,7 @@ static void ice_failed_nego_cb(void *user_data)
     pjsip_dialog *dlg = NULL;
     pj_status_t status;
 
-    status = acquire_call("ice_failed_nego_cb", call_id, &call, &dlg);
+    status = acquire_call_dlg("ice_failed_nego_cb", call_id, &call, &dlg);
     if (status != PJ_SUCCESS) {
         if (status != PJSIP_ESESSIONTERMINATED) {
             /* Retry, if call is still active */

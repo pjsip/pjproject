@@ -9210,10 +9210,10 @@ static int th_test_hangup_during_wait(enum th_wait_point point, int err_base)
         rc = err_base - 18;
         goto on_return;
     }
-    /* The hangup ends the wait (the mapped address query after its 2 s),
-     * not the STUN or ICE timeout
+    /* The hangup ends the ICE wait, not the ICE timeout (about 8 s); the
+     * resolution waits are checked by the resolution's state below
      */
-    {
+    if (point == TH_WAIT_ICE_INIT) {
         pj_time_val now;
 
         pj_gettickcount(&now);
@@ -9773,7 +9773,7 @@ static int th_test_hangup_other_call_during_wait(int err_base)
     pj_mutex_lock(pjsua_var.call_owner_mutex);
     deferred = pjsua_var.calls[g_th.callee].hangup_req.pending;
     pj_mutex_unlock(pjsua_var.call_owner_mutex);
-    if (status != PJ_SUCCESS || PJ_TIME_VAL_MSEC(now) > 4000 ||
+    if (status != PJ_SUCCESS || PJ_TIME_VAL_MSEC(now) > TEST_TIMEOUT_MSEC ||
         !deferred || g_th.reinvite_done)
     {
         PJ_LOG(1, (THIS_FILE, "    hangup: status %d after %ld ms, %s",
@@ -9855,7 +9855,7 @@ static int th_test_ip_change_during_make_call(int err_base)
         rc = err_base - 2;
         goto on_return;
     }
-    if (status != PJ_ECANCELLED || PJ_TIME_VAL_MSEC(now) > 5000) {
+    if (status != PJ_ECANCELLED || PJ_TIME_VAL_MSEC(now) > TEST_TIMEOUT_MSEC) {
         PJ_LOG(1, (THIS_FILE, "    make call: status %d after %ld ms",
                    status, (long)PJ_TIME_VAL_MSEC(now)));
         rc = err_base - 3;
@@ -9921,7 +9921,7 @@ static int th_test_acc_del_during_make_call(int err_base)
         rc = err_base - 2;
         goto on_return;
     }
-    if (status == PJ_SUCCESS || PJ_TIME_VAL_MSEC(now) > 5000) {
+    if (status != PJ_ECANCELLED || PJ_TIME_VAL_MSEC(now) > TEST_TIMEOUT_MSEC) {
         PJ_LOG(1, (THIS_FILE, "    make call: status %d after %ld ms",
                    status, (long)PJ_TIME_VAL_MSEC(now)));
         rc = err_base - 3;
@@ -9965,14 +9965,22 @@ static void th_lock_probe_cb(void *user_data)
 /* Case B of #5380: make call waits for a pending STUN resolution. The worker
  * must still get the PJSUA lock meanwhile, e.g. for a REGISTER response.
  */
+/* - restart FALSE: make call waits for a resolution already pending.
+ * - restart TRUE (with outer_lock): after a failed resolution make call
+ *   starts one itself, as PJSUA_STUN_RETRY_ON_FAILURE does.
+ */
 static int th_test_make_call_during_resolution(pj_bool_t outer_lock,
+                                               pj_bool_t restart,
                                                int err_base)
 {
+    pj_status_t expected;
     pj_bool_t locked;
     pj_status_t status;
     int rc = 0;
 
-    PJ_LOG(3, (THIS_FILE, outer_lock ?
+    PJ_LOG(3, (THIS_FILE, restart ?
+               "  make call keeps the lock and restarts a failed STUN "
+               "resolution" : outer_lock ?
                "  make call keeps the lock its caller holds while it waits "
                "for STUN" :
                "  worker takes the lock while make call waits for STUN"));
@@ -9982,6 +9990,16 @@ static int th_test_make_call_during_resolution(pj_bool_t outer_lock,
     if (status != PJ_SUCCESS) {
         rc = err_base;
         goto on_return;
+    }
+    if (restart) {
+        pjsua_cancel_stun_resolution(NULL, PJ_FALSE);
+        if (!th_wait(&th_stun_sessions_gone, TEST_TIMEOUT_MSEC)) {
+            rc = err_base - 6;
+            goto on_return;
+        }
+        PJSUA_LOCK();
+        pjsua_var.stun_status = PJ_ETIMEDOUT;
+        PJSUA_UNLOCK();
     }
 
     g_th.worker_locked = PJ_FALSE;
@@ -10009,12 +10027,19 @@ static int th_test_make_call_during_resolution(pj_bool_t outer_lock,
         rc = err_base - 2;
         goto on_return;
     }
-    if (status != PJ_SUCCESS) {
-        PJ_LOG(1, (THIS_FILE, "    make call failed (%d)", status));
+    /* With the lock kept, the resolution times out. As on master, the
+     * call fails if it waited for a pending resolution, and goes on with
+     * stun_ignore_failure if it started the resolution itself.
+     */
+    expected = (outer_lock && !restart) ? PJ_ETIMEDOUT : PJ_SUCCESS;
+    if (status != expected) {
+        PJ_LOG(1, (THIS_FILE, "    make call: status %d", status));
         rc = err_base - 3;
         goto on_return;
     }
-    if (!th_wait(&th_calls_confirmed, TEST_TIMEOUT_MSEC)) {
+    if (expected == PJ_SUCCESS &&
+        !th_wait(&th_calls_confirmed, TEST_TIMEOUT_MSEC))
+    {
         rc = err_base - 4;
         goto on_return;
     }
@@ -10155,8 +10180,8 @@ static int th_test_make_call_in_callback(pj_bool_t from_hangup, int err_base)
         goto on_return;
     }
 
-    /* On an app thread the wait keeps the PJSUA lock the worker waits for,
-     * so the resolution times out, as on master
+    /* On an app thread the wait keeps the PJSUA lock, so if the worker
+     * needs it the resolution times out, as on master
      */
     if (!th_wait(&th_cb_call_done, TEST_TIMEOUT_MSEC +
                  (from_hangup ? pjsua_stun_resolve_max_wait() : 0)))
@@ -10164,7 +10189,9 @@ static int th_test_make_call_in_callback(pj_bool_t from_hangup, int err_base)
         rc = err_base - 13;
         goto on_return;
     }
-    if (g_th.cb_call_status != PJ_SUCCESS) {
+    if (g_th.cb_call_status != PJ_SUCCESS &&
+        !(from_hangup && g_th.cb_call_status == PJ_ETIMEDOUT))
+    {
         PJ_LOG(1, (THIS_FILE, "    make call: status %d",
                    g_th.cb_call_status));
         rc = err_base - 14;
@@ -10187,6 +10214,147 @@ on_return:
     if (!th_stun_stop() && rc == 0)
         rc = err_base - 15;
     th_end_calls();
+    return rc;
+}
+
+static pjsua_call_id th_noinv_call;
+
+static pj_bool_t th_noinv_call_freed(void)
+{
+    return pjsua_var.calls[th_noinv_call].inv == NULL &&
+           pjsua_var.calls[th_noinv_call].async_call.dlg == NULL;
+}
+
+/* The call APIs that need an INVITE session refuse a call that has none yet:
+ * one that make call is creating while its STUN wait has released the locks,
+ * or one whose ICE transport is still gathering candidates. Without the
+ * refusal each of them dereferences the NULL INVITE session. Hold, re-INVITE
+ * and UPDATE aren't listed: the pending media init refuses them anyway.
+ */
+static int th_test_api_without_inv(pj_bool_t ice, int err_base)
+{
+    pj_str_t method = pj_str("INFO");
+    pj_str_t dest = pj_str(g_th.callee_uri);
+    pj_str_t text = pj_str("hello");
+    pj_status_t st[7];
+    pj_bool_t acc_modified = PJ_FALSE;
+    pj_pool_t *pool = NULL;
+    pj_thread_t *thread = NULL;
+    pjsua_call_id call_id;
+    pj_status_t status;
+    unsigned i;
+    int rc = 0;
+
+    PJ_LOG(3, (THIS_FILE, "  call APIs refuse a call without INVITE session "
+               "(%s)", ice ? "ICE gathering" : "make call waits for STUN"));
+
+    g_th.caller = g_th.callee = PJSUA_INVALID_ID;
+    g_th.cb_call = PJSUA_INVALID_ID;
+    g_th.cb_call_status = PJ_EUNKNOWN;
+    g_th.cb_call_done = PJ_FALSE;
+    pool = pj_pool_create(&caching_pool.factory, "thnoinv", 1000, 1000, NULL);
+    if (!pool) {
+        rc = err_base;
+        goto on_return;
+    }
+    th_watchdog_start(pool, "call APIs without INVITE session", 60000);
+
+    if (ice) {
+        /* The server answers the resolution, then the ICE gathering goes
+         * unanswered, so make call returns with the media pending.
+         */
+        if (acc_set_ice(g_th.caller_acc, PJ_TRUE) != PJ_SUCCESS) {
+            rc = err_base - 1;
+            goto on_return;
+        }
+        acc_modified = PJ_TRUE;
+        if (th_stun_start(1) != PJ_SUCCESS ||
+            !th_wait(&th_stun_resolved, TEST_TIMEOUT_MSEC) ||
+            pjsua_var.stun_status != PJ_SUCCESS)
+        {
+            rc = err_base - 2;
+            goto on_return;
+        }
+        status = th_make_call(&g_th.caller);
+        if (status != PJ_SUCCESS ||
+            !th_wait(&th_caller_ice_pending, TEST_TIMEOUT_MSEC))
+        {
+            PJ_LOG(1, (THIS_FILE, "    make call: status %d", status));
+            rc = err_base - 3;
+            goto on_return;
+        }
+        call_id = g_th.caller;
+    } else {
+        if (th_stun_start(0) != PJ_SUCCESS) {
+            rc = err_base - 2;
+            goto on_return;
+        }
+        if (pj_thread_create(pool, "thnoinv", &th_make_call_thread, NULL,
+                             0, 0, &thread) != PJ_SUCCESS ||
+            !th_wait(&th_cb_call_waiting, TEST_TIMEOUT_MSEC))
+        {
+            rc = err_base - 3;
+            goto on_return;
+        }
+        call_id = th_make_call_waiting();
+    }
+    if (call_id == PJSUA_INVALID_ID || pjsua_var.calls[call_id].inv) {
+        rc = err_base - 4;
+        goto on_return;
+    }
+
+    st[0] = pjsua_call_send_request(call_id, &method, NULL);
+    st[1] = pjsua_call_xfer(call_id, &dest, NULL);
+    st[2] = pjsua_call_send_im(call_id, NULL, &text, NULL, NULL);
+    st[3] = pjsua_call_send_typing_ind(call_id, PJ_TRUE, NULL);
+    st[4] = pjsua_call_process_redirect(call_id, PJSIP_REDIRECT_REJECT);
+    st[5] = pjsua_call_answer(call_id, 200, NULL, NULL);
+    st[6] = pjsua_call_answer_with_sdp(call_id, NULL, NULL, 200, NULL, NULL);
+    for (i = 0; i < PJ_ARRAY_SIZE(st); ++i) {
+        if (st[i] != PJ_EINVALIDOP) {
+            PJ_LOG(1, (THIS_FILE, "    API %u: status %d", i, st[i]));
+            rc = err_base - 5;
+            goto on_return;
+        }
+    }
+
+    if (pjsua_call_hangup(call_id, 0, NULL, NULL) != PJ_SUCCESS) {
+        rc = err_base - 6;
+        goto on_return;
+    }
+    if (!ice && (!th_wait(&th_cb_call_done, TEST_TIMEOUT_MSEC) ||
+                 g_th.cb_call_status != PJ_ECANCELLED))
+    {
+        PJ_LOG(1, (THIS_FILE, "    make call: status %d",
+                   g_th.cb_call_status));
+        rc = err_base - 7;
+        goto on_return;
+    }
+    /* With ICE, the slot is freed once the gathering times out */
+    th_noinv_call = call_id;
+    if (!th_wait(&th_noinv_call_freed, 3 * TEST_TIMEOUT_MSEC)) {
+        rc = err_base - 8;
+        goto on_return;
+    }
+
+on_return:
+    if (thread) {
+        if (!g_th.cb_call_done)
+            g_th.stun_answers = 100;
+        pj_thread_join(thread);
+        pj_thread_destroy(thread);
+    }
+    th_watchdog_stop();
+    if (pool)
+        pj_pool_release(pool);
+    if (!th_stun_stop() && rc == 0)
+        rc = err_base - 9;
+    th_end_calls();
+    if (acc_modified && acc_set_ice(g_th.caller_acc, PJ_FALSE) != PJ_SUCCESS &&
+        rc == 0)
+    {
+        rc = err_base - 10;
+    }
     return rc;
 }
 
@@ -10236,8 +10404,7 @@ static int th_test_hangup_own_make_call(int err_base)
         rc = err_base - 3;
         goto on_return;
     }
-    /* The resolution itself would last longer */
-    if (!th_wait(&th_cb_call_done, 5000)) {
+    if (!th_wait(&th_cb_call_done, TEST_TIMEOUT_MSEC)) {
         rc = err_base - 4;
         goto on_return;
     }
@@ -10526,15 +10693,21 @@ int pjsua_stun_wait_test(void)
     if (rc == 0)
         rc = th_test_hangup_other_call_during_wait(-9890);
     if (rc == 0)
-        rc = th_test_make_call_during_resolution(PJ_FALSE, -9700);
+        rc = th_test_make_call_during_resolution(PJ_FALSE, PJ_FALSE, -9700);
     if (rc == 0)
-        rc = th_test_make_call_during_resolution(PJ_TRUE, -9880);
+        rc = th_test_make_call_during_resolution(PJ_TRUE, PJ_FALSE, -9880);
+    if (rc == 0)
+        rc = th_test_make_call_during_resolution(PJ_TRUE, PJ_TRUE, -10060);
     if (rc == 0)
         rc = th_test_make_call_in_callback(PJ_FALSE, -9960);
     if (rc == 0)
         rc = th_test_make_call_in_callback(PJ_TRUE, -9980);
     if (rc == 0)
         rc = th_test_hangup_own_make_call(-10000);
+    if (rc == 0)
+        rc = th_test_api_without_inv(PJ_FALSE, -10020);
+    if (rc == 0)
+        rc = th_test_api_without_inv(PJ_TRUE, -10040);
     if (rc == 0)
         rc = th_test_ip_change_during_make_call(-9940);
     if (rc == 0)

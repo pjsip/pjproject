@@ -1200,10 +1200,16 @@ void pjsua_init_tpselector(pjsua_transport_id tp_id,
                            pjsip_tpselector *sel);
 
 pjsip_dialog* on_dlg_forked(pjsip_dialog *first_set, pjsip_rx_data *res);
+/* Lock the call, PJ_EINVALIDOP if it has no INVITE session yet */
 pj_status_t acquire_call(const char *title,
                          pjsua_call_id call_id,
                          pjsua_call **p_call,
                          pjsip_dialog **p_dlg);
+/* Lock the call, also one that has no INVITE session yet */
+pj_status_t acquire_call_dlg(const char *title,
+                             pjsua_call_id call_id,
+                             pjsua_call **p_call,
+                             pjsip_dialog **p_dlg);
 
 /* If the call's user data is still owner, clear it and hang up the call,
  * unless the library is being destroyed. Used by pjsua2 when a Call is

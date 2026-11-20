@@ -1488,7 +1488,11 @@ PJ_DEF(pj_status_t) pjsua_call_make_call2(
         if (status != PJ_SUCCESS)
             goto on_error;
     } else if (status != PJ_EPENDING) {
-        pjsua_perror(THIS_FILE, "Error initializing media channel", status);
+        /* Not when the call ended during the wait, logged there */
+        if (status != PJ_ECANCELLED || !call_media_init_cancelled(call)) {
+            pjsua_perror(THIS_FILE, "Error initializing media channel",
+                         status);
+        }
         pjsip_dlg_dec_session(dlg, &pjsua_var.mod);
         goto on_error;
     }
@@ -1657,7 +1661,7 @@ static pj_status_t process_pending_call_hangup(pjsua_call *call)
                          call->index, call->last_code));
     pj_log_push_indent();
 
-    status = acquire_call("pending_hangup()", call->index, &call, &dlg);
+    status = acquire_call_dlg("pending_hangup()", call->index, &call, &dlg);
     if (status != PJ_SUCCESS) {
         PJ_LOG(3, (THIS_FILE, "Call %d failed to process pending hangup",
                               call->index));
@@ -2971,11 +2975,14 @@ PJ_DEF(pj_bool_t) pjsua_call_is_active(pjsua_call_id call_id)
 }
 
 
-/* Acquire lock to the specified call_id */
-pj_status_t acquire_call(const char *title,
-                                pjsua_call_id call_id,
-                                pjsua_call **p_call,
-                                pjsip_dialog **p_dlg)
+/* Acquire lock to the specified call_id. Unless no_inv_ok, refuse a call that
+ * has no INVITE session yet: make call may still be creating it.
+ */
+static pj_status_t acquire_call_lock(const char *title,
+                                     pjsua_call_id call_id,
+                                     pj_bool_t no_inv_ok,
+                                     pjsua_call **p_call,
+                                     pjsip_dialog **p_dlg)
 {
     unsigned retry;
     pjsua_call *call = NULL;
@@ -3028,6 +3035,14 @@ pj_status_t acquire_call(const char *title,
             continue;
         }
 
+        if (!no_inv_ok && !call->inv) {
+            pjsip_dlg_dec_lock(dlg);
+            PJSUA_UNLOCK();
+            PJ_LOG(3,(THIS_FILE, "Call %d has no INVITE session yet in %s",
+                      call_id, title));
+            return PJ_EINVALIDOP;
+        }
+
         PJSUA_UNLOCK();
 
         break;
@@ -3049,6 +3064,22 @@ pj_status_t acquire_call(const char *title,
     *p_dlg = dlg;
 
     return PJ_SUCCESS;
+}
+
+pj_status_t acquire_call(const char *title,
+                         pjsua_call_id call_id,
+                         pjsua_call **p_call,
+                         pjsip_dialog **p_dlg)
+{
+    return acquire_call_lock(title, call_id, PJ_FALSE, p_call, p_dlg);
+}
+
+pj_status_t acquire_call_dlg(const char *title,
+                             pjsua_call_id call_id,
+                             pjsua_call **p_call,
+                             pjsip_dialog **p_dlg)
+{
+    return acquire_call_lock(title, call_id, PJ_TRUE, p_call, p_dlg);
 }
 
 
@@ -3296,7 +3327,8 @@ PJ_DEF(pjsip_dialog_cap_status) pjsua_call_remote_has_cap(
     pj_status_t status;
     pjsip_dialog_cap_status cap_status;
 
-    status = acquire_call("pjsua_call_peer_has_cap()", call_id, &call, &dlg);
+    status = acquire_call_dlg("pjsua_call_peer_has_cap()", call_id,
+                              &call, &dlg);
     if (status != PJ_SUCCESS)
         return PJSIP_DIALOG_CAP_UNKNOWN;
 
@@ -3636,8 +3668,12 @@ static pj_status_t call_answer_with_pending_sdp(pjsua_call_id call_id,
         } else if (status == PJ_EPENDING) {
             answer_sdp_handed_off = PJ_TRUE;
         } else {
+            /* Not when the call ended during the wait, logged there */
+            if (status != PJ_ECANCELLED || !call_media_init_cancelled(call)) {
+                pjsua_perror(THIS_FILE, "Error initializing media channel",
+                             status);
+            }
             PJSUA_UNLOCK();
-            pjsua_perror(THIS_FILE, "Error initializing media channel", status);
             goto on_return;
         }
     }

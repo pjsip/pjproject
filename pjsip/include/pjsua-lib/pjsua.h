@@ -6773,6 +6773,11 @@ PJ_DECL(pj_status_t) pjsua_enum_calls(pjsua_call_id ids[],
  * the library destroyed, while the media of the call waits for the STUN
  * server, this returns PJ_ECANCELLED.
  *
+ * Until the call has its INVITE session, i.e. while its media is being
+ * created, waiting for the STUN server or for the ICE candidates, the call
+ * functions that need the session, e.g. pjsua_call_send_request(),
+ * pjsua_call_xfer() or pjsua_call_send_im(), return PJ_EINVALIDOP for it.
+ *
  * @param acc_id        The account to be used.
  * @param dst_uri       URI to be put in the To header (normally is the same
  *                      as the target URI).
