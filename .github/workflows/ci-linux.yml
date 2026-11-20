@@ -839,22 +839,37 @@ jobs:
   cmake-build:
     runs-on: ubuntu-latest
     name: CMake / ${{ matrix.build_type }}
+    env:
+      # test.py: only the test that needs no endpoint or sound device
+      PJSUA2_TEST_QUICK: 1
     strategy:
       fail-fast: false
       matrix:
         build_type: [Debug, Release]
+        include:
+          # the Python and Java bindings
+          - build_type: Release
+            swig: -DPJ_BUILD_SWIG_PYTHON=ON -DPJ_BUILD_SWIG_JAVA=ON
     steps:
     - uses: actions/checkout@v4
     - name: install dependencies
-      run: sudo apt-get update && sudo apt-get install -y libssl-dev libopus-dev
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libssl-dev libopus-dev ${{ matrix.swig && 'swig python3-dev' || '' }}
     - name: configure
-      run: cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+      run: cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.swig }}
     - name: build
       run: cmake --build build -j $(nproc)
     - name: check
       run: |
         file build/pjsip-apps/bin/pjsua
         ldd build/pjsip-apps/bin/pjsua
+    - name: test bindings
+      if: matrix.swig
+      run: |
+        cd build
+        ctest --no-tests=error -R '^pjsua2-python$' --output-on-failure
+        ctest --no-tests=error -R '^pjsua2-java$' --output-on-failure
     - name: install
       run: cmake --install build --prefix ${{ runner.temp }}/pj-install
     - name: test find_package
@@ -885,6 +900,22 @@ jobs:
         cc tests/cmake/test_consumer.c -o pc_consumer \
           $(pkg-config --static --cflags --libs libpjproject)
         ./pc_consumer
+    - name: test installed bindings
+      if: matrix.swig
+      run: |
+        set -o pipefail
+        prefix=${{ runner.temp }}/pj-install
+        pydir=$(dirname "$(find "$prefix" -name pjsua2.py)")
+        javadir=$(dirname "$(find "$prefix" -name pjsua2.jar)")
+        cd "${{ runner.temp }}"
+        # -P: not from test.py's own folder, where make leaves a pjsua2.py
+        PYTHONPATH="$pydir" python3 -P \
+          "${{ github.workspace }}/pjsip-apps/src/swig/python/test.py"
+        mkdir -p java-test
+        javac -d java-test -cp "$javadir/pjsua2.jar" \
+          "${{ github.workspace }}/pjsip-apps/src/swig/java/test.java"
+        java -cp "$javadir/pjsua2.jar:java-test" \
+          -Djava.library.path="$javadir" test | grep 'Hello world'
 
   # The pure C configuration: everything that needs C++ is left out, and
   # nothing left in may reference it.
@@ -1010,20 +1041,30 @@ jobs:
   # A shared install must work on its own: with no LD_LIBRARY_PATH, the
   # installed pjsua and the libraries find each other and the bundled ones in
   # lib/pjproject/third_party through their RUNPATH, also from a copy of the
-  # install made elsewhere.
+  # install made elsewhere. So must the installed Python and Java bindings.
   cmake-shared:
     needs: [detect-changes]
     if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
     runs-on: ubuntu-latest
     name: CMake / shared
+    env:
+      # test.py: only the test that needs no endpoint or sound device
+      PJSUA2_TEST_QUICK: 1
     steps:
     - uses: actions/checkout@v4
     - name: install dependencies
-      run: sudo apt-get update && sudo apt-get install -y libssl-dev
+      run: sudo apt-get update && sudo apt-get install -y libssl-dev swig python3-dev
     - name: configure
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON
+      run: >-
+        cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON
+        -DPJ_BUILD_SWIG_PYTHON=ON -DPJ_BUILD_SWIG_JAVA=ON
     - name: build
       run: cmake --build build -j $(nproc)
+    - name: test bindings
+      run: |
+        cd build
+        ctest --no-tests=error -R '^pjsua2-python$' --output-on-failure
+        ctest --no-tests=error -R '^pjsua2-java$' --output-on-failure
     - name: install
       run: cmake --install build --prefix ${{ runner.temp }}/pj-install
     - name: test installed pjsua
@@ -1062,6 +1103,21 @@ jobs:
         cc tests/cmake/test_consumer.c -o pc_consumer \
           $(pkg-config --cflags --libs libpjproject) -Wl,-rpath,"$prefix/lib"
         ./pc_consumer
+    - name: test installed bindings
+      run: |
+        set -o pipefail
+        prefix=${{ runner.temp }}/pj-install
+        pydir=$(dirname "$(find "$prefix" -name pjsua2.py)")
+        javadir=$(dirname "$(find "$prefix" -name pjsua2.jar)")
+        cd "${{ runner.temp }}"
+        # -P: not from test.py's own folder, where make leaves a pjsua2.py
+        PYTHONPATH="$pydir" python3 -P \
+          "${{ github.workspace }}/pjsip-apps/src/swig/python/test.py"
+        mkdir -p java-test
+        javac -d java-test -cp "$javadir/pjsua2.jar" \
+          "${{ github.workspace }}/pjsip-apps/src/swig/java/test.java"
+        java -cp "$javadir/pjsua2.jar:java-test" \
+          -Djava.library.path="$javadir" test | grep 'Hello world'
 
   # PJLIB_WITH_THREADS=OFF: as in the autoconf no-threads job, nothing may
   # reference pthread. Also the installed package: Pj's config must not ask
@@ -1138,64 +1194,6 @@ jobs:
         ./pc_consumer
         cd pjlib-util/build
         ../../build/pjlib-util/bin/pjlib-util-test --ci-mode resolver_nothreads_test
-
-  # The pjsua2 Python and Java bindings, which no other Linux job builds:
-  # their ctest tests in the build tree, then the installed module and jar
-  # from outside it. In the shared build they find the pjproject libraries
-  # through their rpaths, with no LD_LIBRARY_PATH.
-  cmake-swig:
-    needs: [detect-changes]
-    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
-    runs-on: ubuntu-latest
-    name: CMake / SWIG Python+Java ${{ matrix.libs }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - libs: static
-            shared: 'OFF'
-          - libs: shared
-            shared: 'ON'
-    steps:
-    - uses: actions/checkout@v4
-    - name: install dependencies
-      run: sudo apt-get update && sudo apt-get install -y libssl-dev swig python3-dev
-    - name: configure
-      # test.py needs a sound device; the runner has none
-      run: >-
-        cmake -B build -DCMAKE_BUILD_TYPE=Release
-        -DBUILD_SHARED_LIBS=${{ matrix.shared }}
-        -DPJ_BUILD_SWIG_PYTHON=ON -DPJ_BUILD_SWIG_JAVA=ON
-        -DPJMEDIA_WITH_AUDIODEV_NULL=ON
-    - name: build
-      run: cmake --build build -j $(nproc)
-    - name: test
-      run: |
-        cd build
-        n=$(ctest -N -R '^pjsua2-(python|java)$' | grep -cE 'Test +#[0-9]+: pjsua2-(python|java)$')
-        if [ "$n" != 2 ]; then
-          echo "::error::expected the pjsua2-python and pjsua2-java tests, found $n"
-          exit 1
-        fi
-        ctest -R '^pjsua2-(python|java)$' --output-on-failure
-    - name: install
-      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
-    - name: test installed bindings
-      run: |
-        set -o pipefail
-        prefix=${{ runner.temp }}/pj-install
-        pydir=$(dirname "$(find "$prefix" -name pjsua2.py)")
-        javadir=$(dirname "$(find "$prefix" -name pjsua2.jar)")
-        cd "${{ runner.temp }}"
-        # -P: not from test.py's own folder, where make leaves a pjsua2.py
-        PYTHONPATH="$pydir" python3 -P \
-          "${{ github.workspace }}/pjsip-apps/src/swig/python/test.py"
-        mkdir -p java-test
-        javac -d java-test -cp "$javadir/pjsua2.jar" \
-          "${{ github.workspace }}/pjsip-apps/src/swig/java/test.java"
-        java -cp "$javadir/pjsua2.jar:java-test" \
-          -Djava.library.path="$javadir" test | tee java-test.log
-        grep -q 'Hello world' java-test.log
 
   # One optional audio codec (Opus) and one video codec (libvpx), from the
   # distribution's packages. A library that is not found is dropped without
