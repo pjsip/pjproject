@@ -6236,6 +6236,250 @@ on_return:
 }
 
 
+
+////////////////////////////////////////////////////////////////////////////
+/* What a cancel tells about the callback, see pj_dns_srv_cancel_query() */
+#define DOMAIN5     "cancelstate.test"
+
+struct cancel_job
+{
+    pj_pool_t               *pool;
+    pj_dns_srv_async_query  *q;
+    volatile int             cb_count;
+    pj_status_t              cb_status;
+    pj_status_t              cancel_status;
+    pj_bool_t                cancel_in_cb;
+};
+
+static pj_dns_async_query *busy_q;
+static volatile int busy_cb_count;
+static pj_bool_t busy_in_cb;
+
+static void busy_cb(void *user_data, pj_status_t status,
+                    pj_dns_parsed_packet *resp)
+{
+    pj_dns_cancel_query_param prm;
+
+    PJ_UNUSED_ARG(user_data);
+    PJ_UNUSED_ARG(status);
+    PJ_UNUSED_ARG(resp);
+
+    /* Our own callback is running, so it is reported busy */
+    pj_bzero(&prm, sizeof(prm));
+    pj_dns_resolver_cancel_query2(busy_q, &prm);
+    busy_in_cb = prm.cb_busy;
+    busy_cb_count++;
+}
+
+/* The application may release the query once the callback is called. As
+ * an application does, the test serializes that with its cancel.
+ */
+static void cancel_job_cb(void *user_data, pj_status_t status,
+                          const pj_dns_srv_record *rec)
+{
+    struct cancel_job *job = (struct cancel_job*)user_data;
+
+    PJ_UNUSED_ARG(rec);
+
+    lock();
+    if (job->cancel_in_cb)
+        job->cancel_status = pj_dns_srv_cancel_query(job->q, PJ_FALSE);
+
+    job->cb_status = status;
+    pj_pool_release(job->pool);
+    job->pool = NULL;
+    job->cb_count++;
+    unlock();
+}
+
+static int cancel_job_start(struct cancel_job *job, pj_dns_resolver *res,
+                            const char *host, pj_bool_t cancel_in_cb)
+{
+    pj_str_t res_name = pj_str("_stun._udp.");
+    pj_str_t domain;
+
+    pj_bzero(job, sizeof(*job));
+    job->cancel_status = -1;
+    job->cancel_in_cb = cancel_in_cb;
+    job->pool = pj_pool_create(mem, "canceljob", 4000, 4000, NULL);
+    pj_strdup2_with_null(job->pool, &domain, host);
+    return pj_dns_srv_resolve(&domain, &res_name, 3478, job->pool, res,
+                              PJ_DNS_SRV_FALLBACK_A, job, &cancel_job_cb,
+                              &job->q);
+}
+
+static int srv_resolver_cancel_state_test(void)
+{
+    enum { RACE_COUNT = 16 };
+    pj_str_t name = pj_str("busy." DOMAIN5);
+    pj_str_t ns = pj_str("127.0.0.1");
+    pj_uint16_t port = g_server[0].port;
+    pj_dns_resolver *res = NULL, *res2 = NULL;
+    struct cancel_job job, jobs[RACE_COUNT];
+    pj_dns_cancel_query_param cancel_prm;
+    unsigned i, j, pending_cnt = 0;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  srv_resolve(): what a cancel tells about the "
+                         "callback"));
+
+    pj_bzero(&job, sizeof(job));
+    pj_bzero(jobs, sizeof(jobs));
+    hold_armed = PJ_FALSE;
+    g_server[0].action = ACTION_CB;
+    g_server[0].action_cb = &action4_hold;
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_create(mem, NULL, 0, timer_heap,
+                                           ioqueue, &res),
+                    NULL, {rc = -2800; goto on_return;});
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(res, 1, &ns, &port), NULL,
+                    {rc = -2801; goto on_return;});
+
+    /* A pending DNS query: cancelled, and cancelled already */
+    busy_cb_count = 0;
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name, PJ_DNS_TYPE_A, 0,
+                                                &busy_cb, NULL, &busy_q),
+                    NULL, {rc = -2802; goto on_return;});
+    for (i = 0; i < 2; ++i) {
+        pj_bzero(&cancel_prm, sizeof(cancel_prm));
+        cancel_prm.cb_busy = PJ_TRUE;
+        PJ_TEST_SUCCESS(pj_dns_resolver_cancel_query2(busy_q, &cancel_prm),
+                        NULL, {rc = -2803; goto on_return;});
+        PJ_TEST_EQ(cancel_prm.cb_busy, PJ_FALSE, NULL,
+                   {rc = -2804; goto on_return;});
+    }
+    PJ_TEST_EQ(wait_cached_count(res, 1), 0, NULL,
+               {rc = -2805; goto on_return;});
+    PJ_TEST_EQ(busy_cb_count, 0, NULL, {rc = -2806; goto on_return;});
+
+    /* A DNS query whose callback is running */
+    name = pj_str("busy2." DOMAIN5);
+    busy_in_cb = PJ_FALSE;
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name, PJ_DNS_TYPE_A, 0,
+                                                &busy_cb, NULL, &busy_q),
+                    NULL, {rc = -2807; goto on_return;});
+    for (i = 0; busy_cb_count == 0 && i < 500; ++i)
+        pj_thread_sleep(10);
+    PJ_TEST_EQ(busy_cb_count, 1, NULL, {rc = -2808; goto on_return;});
+    PJ_TEST_EQ(busy_in_cb, PJ_TRUE, NULL, {rc = -2809; goto on_return;});
+
+    /* A resolution cancelled from its own callback has completed */
+    PJ_TEST_SUCCESS(cancel_job_start(&job, res, "incb." DOMAIN5, PJ_TRUE),
+                    NULL, {rc = -2810; goto on_return;});
+    PJ_TEST_NOT_NULL(job.q, NULL, {rc = -2811; goto on_return;});
+    for (i = 0; job.cb_count == 0 && i < 500; ++i)
+        pj_thread_sleep(10);
+    PJ_TEST_EQ(job.cb_count, 1, NULL, {rc = -2812; goto on_return;});
+    PJ_TEST_EQ(job.cb_status, PJ_SUCCESS, NULL,
+               {rc = -2813; goto on_return;});
+    PJ_TEST_EQ(job.cancel_status, PJ_EINVALIDOP, NULL,
+               {rc = -2814; goto on_return;});
+
+    /* A resolution can be cancelled after its resolver is destroyed */
+    PJ_TEST_SUCCESS(pj_dns_resolver_create(mem, NULL, 0, timer_heap,
+                                           ioqueue, &res2),
+                    NULL, {rc = -2820; goto on_return;});
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(res2, 1, &ns, &port), NULL,
+                    {rc = -2821; goto on_return;});
+    PJ_TEST_SUCCESS(cancel_job_start(&job, res2, "gone." DOMAIN5, PJ_FALSE),
+                    NULL, {rc = -2822; goto on_return;});
+    PJ_TEST_NOT_NULL(job.q, NULL, {rc = -2823; goto on_return;});
+    pj_dns_resolver_destroy(res2, PJ_FALSE);
+    res2 = NULL;
+    pj_thread_sleep(100);
+    lock();
+    if (job.cb_count == 0) {
+        job.cancel_status = pj_dns_srv_cancel_query(job.q, PJ_FALSE);
+        pj_pool_release(job.pool);
+        job.pool = NULL;
+    }
+    unlock();
+    PJ_TEST_EQ(job.cb_count, 0, NULL, {rc = -2825; goto on_return;});
+    PJ_TEST_EQ(job.cancel_status, PJ_SUCCESS, NULL,
+               {rc = -2824; goto on_return;});
+
+    /* Cancels racing the answers. Whatever a cancel returns, it tells
+     * whether the callback is called, and the query is released as soon as
+     * that allows.
+     */
+    for (i = 0; i < RACE_COUNT; ++i) {
+        char host[64];
+        unsigned sent = g_server[0].pkt_count;
+
+        pj_ansi_snprintf(host, sizeof(host), "race%u." DOMAIN5, i);
+        PJ_TEST_SUCCESS(cancel_job_start(&jobs[i], res, host, PJ_FALSE),
+                        NULL, {rc = -2830; goto on_return;});
+        PJ_TEST_NOT_NULL(jobs[i].q, NULL, {rc = -2831; goto on_return;});
+
+        /* The answer comes about 50 msec after the server takes a query,
+         * of which there are two, for the SRV and for the A record.
+         */
+        for (j = 0; g_server[0].pkt_count < sent + 2 && j < 500; ++j)
+            pj_thread_sleep(10);
+        PJ_TEST_GTE(g_server[0].pkt_count, sent + 2, NULL,
+                    {rc = -2832; goto on_return;});
+        pj_thread_sleep(40 + i % 4);
+
+        lock();
+        if (jobs[i].cb_count) {
+            /* Nothing left to cancel */
+            jobs[i].cancel_status = PJ_EINVALIDOP;
+        } else {
+            jobs[i].cancel_status = pj_dns_srv_cancel_query(jobs[i].q,
+                                                            PJ_FALSE);
+        }
+        if (jobs[i].cancel_status == PJ_SUCCESS) {
+            pj_pool_release(jobs[i].pool);
+            jobs[i].pool = NULL;
+        } else {
+            ++pending_cnt;
+        }
+        unlock();
+    }
+
+    for (i = 0; i < RACE_COUNT; ++i) {
+        unsigned expected = (jobs[i].cancel_status == PJ_SUCCESS) ? 0 : 1;
+
+        for (j = 0; (unsigned)jobs[i].cb_count != expected && j < 500; ++j)
+            pj_thread_sleep(10);
+        PJ_TEST_EQ(jobs[i].cb_count, (int)expected, NULL,
+                   {rc = -2833; goto on_return;});
+        if (jobs[i].cancel_status == PJ_EPENDING) {
+            PJ_TEST_EQ(jobs[i].cb_status, PJ_ECANCELLED, NULL,
+                       {rc = -2834; goto on_return;});
+        } else if (jobs[i].cancel_status != PJ_SUCCESS) {
+            PJ_TEST_EQ(jobs[i].cancel_status, PJ_EINVALIDOP, NULL,
+                       {rc = -2835; goto on_return;});
+        }
+    }
+
+    /* Let the late answers of the cancelled ones be cached */
+    pj_thread_sleep(200);
+    for (i = 0; i < RACE_COUNT; ++i) {
+        PJ_TEST_EQ(jobs[i].cb_count,
+                   (jobs[i].cancel_status == PJ_SUCCESS) ? 0 : 1, NULL,
+                   {rc = -2836; goto on_return;});
+    }
+    PJ_LOG(3,(THIS_FILE, "    %u of %u resolutions were not cancelled "
+                         "before their callback", pending_cnt,
+                         (unsigned)RACE_COUNT));
+
+on_return:
+    if (res2)
+        pj_dns_resolver_destroy(res2, PJ_FALSE);
+    if (res)
+        pj_dns_resolver_destroy(res, PJ_FALSE);
+    pj_thread_sleep(100);
+    if (job.pool)
+        pj_pool_release(job.pool);
+    for (i = 0; i < RACE_COUNT; ++i) {
+        if (jobs[i].pool)
+            pj_pool_release(jobs[i].pool);
+    }
+    return rc;
+}
+
+
 int resolver_test(void)
 {
     int rc;
@@ -6297,6 +6541,11 @@ int resolver_test(void)
 
     PJ_LOG(3,(THIS_FILE, "srv_resolver_cached_cancel_test"));
     rc = srv_resolver_cached_cancel_test();
+    if (rc != 0)
+        goto on_error;
+
+    PJ_LOG(3,(THIS_FILE, "srv_resolver_cancel_state_test"));
+    rc = srv_resolver_cancel_state_test();
     if (rc != 0)
         goto on_error;
 

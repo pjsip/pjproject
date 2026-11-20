@@ -167,6 +167,8 @@ struct pj_dns_async_query
     unsigned             options;       /**< Query options.                 */
     void                *user_data;     /**< Application data.              */
     pj_dns_callback     *cb;            /**< Callback to be called.         */
+    pj_bool_t            cb_dropped;    /**< Callback is cleared without
+                                             anyone going to call it.       */
     struct query_head    child_head;    /**< Child queries list head.       */
     unsigned             cache_gen;     /**< cache_gen of the resolver when
                                              the query started.             */
@@ -685,6 +687,8 @@ PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
         pj_grp_lock_acquire(resolver->grp_lock);
         cb = q->cb;
         q->cb = NULL;
+        if (cb && !notify)
+            q->cb_dropped = PJ_TRUE;
         pj_grp_lock_release(resolver->grp_lock);
 
         if (notify && cb)
@@ -698,6 +702,8 @@ PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
             pj_grp_lock_acquire(resolver->grp_lock);
             ccb = cq->cb;
             cq->cb = NULL;
+            if (ccb && !notify)
+                cq->cb_dropped = PJ_TRUE;
             pj_grp_lock_release(resolver->grp_lock);
 
             if (notify && ccb)
@@ -892,6 +898,7 @@ static pj_dns_async_query *alloc_qnode(pj_dns_resolver *resolver,
     q->options = options;
     q->user_data = user_data;
     q->cb = cb;
+    q->cb_dropped = (cb == NULL);
     q->cache_gen = resolver->cache_gen;
     pj_list_init(&q->child_head);
 
@@ -1879,11 +1886,24 @@ on_return:
 PJ_DEF(pj_status_t) pj_dns_resolver_cancel_query(pj_dns_async_query *query,
                                                  pj_bool_t notify)
 {
+    pj_dns_cancel_query_param prm;
+
+    pj_bzero(&prm, sizeof(prm));
+    prm.notify = notify;
+    return pj_dns_resolver_cancel_query2(query, &prm);
+}
+
+PJ_DEF(pj_status_t) pj_dns_resolver_cancel_query2(
+                                        pj_dns_async_query *query,
+                                        pj_dns_cancel_query_param *prm)
+{
     pj_grp_lock_t *grp_lock;
     pj_dns_callback *cb;
     void *user_data;
 
-    PJ_ASSERT_RETURN(query, PJ_EINVAL);
+    PJ_ASSERT_RETURN(query && prm, PJ_EINVAL);
+
+    prm->cb_busy = PJ_FALSE;
 
     grp_lock = query->resolver->grp_lock;
     pj_grp_lock_acquire(grp_lock);
@@ -1898,17 +1918,34 @@ PJ_DEF(pj_status_t) pj_dns_resolver_cancel_query(pj_dns_async_query *query,
     user_data = query->user_data;
     query->cb = NULL;
 
+    /* A callback which is neither pending nor dropped has been taken by a
+     * delivery site, which calls it without holding the lock.
+     */
+    if (cb)
+        query->cb_dropped = PJ_TRUE;
+    else if (!query->cb_dropped)
+        prm->cb_busy = PJ_TRUE;
+
     pj_grp_lock_release(grp_lock);
 
     /* Invoke the callback unlocked, as the other delivery sites do. */
-    if (notify && cb)
+    if (prm->notify && cb)
         (*cb)(user_data, PJ_ECANCELLED, NULL);
 
     return PJ_SUCCESS;
 }
 
 
-/* 
+/*
+ * Get the group lock.
+ */
+PJ_DEF(pj_grp_lock_t*) pj_dns_resolver_get_grp_lock(pj_dns_resolver *resolver)
+{
+    PJ_ASSERT_RETURN(resolver, NULL);
+    return resolver->grp_lock;
+}
+
+/*
  * DNS response containing A packet. 
  */
 PJ_DEF(pj_status_t) pj_dns_parse_a_response(const pj_dns_parsed_packet *pkt,
