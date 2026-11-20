@@ -3217,7 +3217,9 @@ PJ_DECL(pj_status_t) pjsua_start(void);
  * server, terminate presense subscription, and hangup active calls), however,
  * this function will do all of these if it finds there are active sessions
  * that need to be terminated. This function will approximately block for
- * one second to wait for replies from remote.
+ * one second to wait for replies from remote. If another thread is creating
+ * the media of a call and waiting for the STUN server, it also waits for that
+ * to end (the STUN query takes up to two seconds; at most 10 seconds).
  *
  * Application.may safely call this function more than once if it doesn't
  * keep track of it's state.
@@ -6767,6 +6769,14 @@ PJ_DECL(pj_status_t) pjsua_enum_calls(pjsua_call_id ids[],
 
 /**
  * Make outgoing call to the specified URI using the specified account.
+ * If the call is hung up, its account deleted or its IP address changed, or
+ * the library destroyed, while the media of the call waits for the STUN
+ * server, this returns PJ_ECANCELLED.
+ *
+ * Until the call has its INVITE session, i.e. while its media is being
+ * created, waiting for the STUN server or for the ICE candidates, the call
+ * functions that need the session, e.g. pjsua_call_send_request(),
+ * pjsua_call_xfer() or pjsua_call_send_im(), return PJ_EINVALIDOP for it.
  *
  * @param acc_id        The account to be used.
  * @param dst_uri       URI to be put in the To header (normally is the same
@@ -7104,6 +7114,14 @@ PJ_DECL(pj_status_t) pjsua_call_send_ack(pjsua_call_id call_id,
  * and would like to check if there are any free slots remaining, it can
  * query the number of free slots using the APIs:
  * pjsua_call_get_max_count()-pjsua_call_get_count()
+ *
+ * If the call can't be locked in time because the media of the call, or of
+ * another call during an IP change, is being created and waits for the
+ * STUN server, this function returns PJ_SUCCESS and the call is hung up as
+ * above once it can be, from another thread. A wait of the call itself
+ * ends for the hangup, apart from a running STUN query (up to two
+ * seconds) and the wait of an incoming call not answered yet; another
+ * call's wait goes on, up to the STUN timeout.
  *
  * Note that on_call_tsx_state() will not be called when using this API.
  *
