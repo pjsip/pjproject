@@ -1265,12 +1265,15 @@ jobs:
         "-DCMAKE_IGNORE_PREFIX_PATH=$env:PJ_IGNORE_PREFIX"
         "-DOPENSSL_ROOT_DIR=$($env:ProgramFiles -replace '\\','/')/OpenSSL"
     - name: check 32-bit configuration
+      # On MSVC, FindOpenSSL caches the library as SSL_EAY_RELEASE
       run: |
+        Get-ChildItem "$env:ProgramFiles/OpenSSL/lib" -Recurse -Filter *.lib |
+          ForEach-Object { Write-Host $_.FullName }
         $cache = Get-Content build/CMakeCache.txt
         $failed = $false
-        $lib = $cache | Select-String '^OPENSSL_SSL_LIBRARY:[^=]*=(.*)$'
+        $lib = $cache | Select-String '^SSL_EAY_RELEASE:[^=]*=(.*)$'
         $lib = if ($lib) { $lib.Matches[0].Groups[1].Value } else { '' }
-        Write-Host "OPENSSL_SSL_LIBRARY=$lib"
+        Write-Host "SSL_EAY_RELEASE=$lib"
         if ($lib -eq '' -or $lib -like '*-NOTFOUND') {
           Write-Host "::error::the x64 OpenSSL was not found, so its link check did not run"
           $failed = $true

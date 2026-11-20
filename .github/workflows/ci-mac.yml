@@ -699,6 +699,10 @@ jobs:
         test -f "$prefix/lib/libpj.dylib"
         test ! -e "$prefix/lib/libpj.a"
         otool -l "$prefix/bin/pjsua" | grep -A2 LC_RPATH
+        if otool -l "$prefix/bin/pjsua" "$prefix"/lib/*.dylib | grep -F "${{ github.workspace }}"; then
+          echo "::error::the install refers to the build tree"
+          exit 1
+        fi
         "$prefix/bin/pjsua" --version > /dev/null
         mv "$prefix" "${{ runner.temp }}/pj-moved"
         "${{ runner.temp }}/pj-moved/bin/pjsua" --version > /dev/null

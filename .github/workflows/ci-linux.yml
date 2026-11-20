@@ -1023,6 +1023,10 @@ jobs:
         test -f "$prefix/lib/libpj.so"
         test ! -e "$prefix/lib/libpj.a"
         readelf -d "$prefix/bin/pjsua" "$prefix/lib/libpjmedia.so" | grep -E 'RUNPATH|RPATH'
+        if readelf -d "$prefix/bin/pjsua" "$prefix"/lib/*.so | grep -F "${{ github.workspace }}"; then
+          echo "::error::the install refers to the build tree"
+          exit 1
+        fi
         "$prefix/bin/pjsua" --version > /dev/null
         mv "$prefix" "${{ runner.temp }}/pj-moved"
         "${{ runner.temp }}/pj-moved/bin/pjsua" --version > /dev/null
@@ -1138,10 +1142,12 @@ jobs:
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y libssl-dev swig python3-dev
     - name: configure
+      # test.py needs a sound device; the runner has none
       run: >-
         cmake -B build -DCMAKE_BUILD_TYPE=Release
         -DBUILD_SHARED_LIBS=${{ matrix.shared }}
         -DPJ_BUILD_SWIG_PYTHON=ON -DPJ_BUILD_SWIG_JAVA=ON
+        -DPJMEDIA_WITH_AUDIODEV_NULL=ON
     - name: build
       run: cmake --build build -j $(nproc)
     - name: test
@@ -1157,6 +1163,7 @@ jobs:
       run: cmake --install build --prefix ${{ runner.temp }}/pj-install
     - name: test installed bindings
       run: |
+        set -o pipefail
         prefix=${{ runner.temp }}/pj-install
         pydir=$(dirname "$(find "$prefix" -name pjsua2.py)")
         javadir=$(dirname "$(find "$prefix" -name pjsua2.jar)")
