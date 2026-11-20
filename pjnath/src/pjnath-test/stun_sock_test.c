@@ -846,7 +846,8 @@ enum dns_destroy_mode
 {
     DNS_OWN_LOCK,
     DNS_SHARED_LOCK,
-    DNS_SHARED_LOCK_NO_RESOLVER
+    DNS_SHARED_LOCK_NO_RESOLVER,
+    DNS_OWN_LOCK_RESOLVER_FIRST
 };
 
 static int dns_pending_destroy_test(pj_stun_config *cfg,
@@ -914,6 +915,20 @@ static int dns_pending_destroy_test(pj_stun_config *cfg,
     PJ_TEST_SUCCESS(pj_stun_sock_start(client->sock, &host, PJ_STUN_PORT,
                                        res),
                     NULL, {ret = -808; goto on_return;});
+
+    if (mode == DNS_OWN_LOCK_RESOLVER_FIRST) {
+        /* The socket cancels its query after the resolver is destroyed */
+        pj_dns_resolver_destroy(res, PJ_FALSE);
+        res = NULL;
+        pj_stun_sock_destroy(client->sock);
+        client->sock = NULL;
+        for (i = 0; i < 10; ++i)
+            handle_events(cfg, 50);
+        PJ_TEST_EQ(client->on_status_cnt, 0, "callback after destroy",
+                   {ret = -813; goto on_return;});
+        goto on_return;
+    }
+
     pj_stun_sock_destroy(client->sock);
     client->sock = NULL;
 
@@ -983,6 +998,8 @@ int stun_sock_test(void)
 
     DO_TEST(dns_pending_destroy_test(&app_sess.stun_cfg, DNS_OWN_LOCK));
     DO_TEST(dns_pending_destroy_test(&app_sess.stun_cfg, DNS_SHARED_LOCK));
+    DO_TEST(dns_pending_destroy_test(&app_sess.stun_cfg,
+                                     DNS_OWN_LOCK_RESOLVER_FIRST));
     DO_TEST(dns_pending_destroy_test(&app_sess.stun_cfg,
                                      DNS_SHARED_LOCK_NO_RESOLVER));
 

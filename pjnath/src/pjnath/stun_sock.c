@@ -425,11 +425,17 @@ PJ_DEF(pj_status_t) pj_stun_sock_start( pj_stun_sock *stun_sock,
             opt = PJ_DNS_SRV_FALLBACK_A;
 
         stun_sock->last_err = PJ_SUCCESS;
+
+        /* The query uses the socket until its callback is called, or it is
+         * cancelled before that.
+         */
+        pj_grp_lock_add_ref(stun_sock->grp_lock);
         status = pj_dns_srv_resolve(domain, &res_name, default_port, 
                                     stun_sock->pool, resolver, opt,
                                     stun_sock, &dns_srv_resolver_cb, 
                                     &stun_sock->q);
         if (status != PJ_SUCCESS) {
+            pj_grp_lock_dec_ref(stun_sock->grp_lock);
             PJ_PERROR(4,(stun_sock->obj_name, status,
                          "Failed in pj_dns_srv_resolve()"));
         } else {
@@ -484,11 +490,6 @@ static void stun_sock_destructor(void *obj)
 {
     pj_stun_sock *stun_sock = (pj_stun_sock*)obj;
 
-    if (stun_sock->q) {
-        pj_dns_srv_cancel_query(stun_sock->q, PJ_FALSE);
-        stun_sock->q = NULL;
-    }
-
     /*
     if (stun_sock->stun_sess) {
         pj_stun_session_destroy(stun_sock->stun_sess);
@@ -519,9 +520,13 @@ PJ_DEF(pj_status_t) pj_stun_sock_destroy(pj_stun_sock *stun_sock)
     pj_timer_heap_cancel_if_active(stun_sock->stun_cfg.timer_heap,
                                    &stun_sock->ka_timer, 0);
 
-    /* The group lock may outlive the socket and the resolver (e.g. ICE) */
+    /* Release the reference of the DNS query, unless its callback is still
+     * to be called, i.e. another thread is processing a DNS answer.
+     */
     if (stun_sock->q) {
-        pj_dns_srv_cancel_query(stun_sock->q, PJ_FALSE);
+        if (pj_dns_srv_cancel_query(stun_sock->q, PJ_FALSE) == PJ_SUCCESS)
+            pj_grp_lock_dec_ref(stun_sock->grp_lock);
+        stun_sock->q = NULL;
     }
 
     if (stun_sock->active_sock != NULL) {
@@ -592,17 +597,14 @@ static void dns_srv_resolver_cb(void *user_data,
     /* Clear query */
     stun_sock->q = NULL;
 
-    if (stun_sock->is_destroying) {
-        pj_grp_lock_release(stun_sock->grp_lock);
-        return;
-    }
+    if (stun_sock->is_destroying)
+        goto on_return;
 
     /* Handle error */
     if (status != PJ_SUCCESS) {
         stun_sock->last_err = status;
         sess_fail(stun_sock, PJ_STUN_SOCK_DNS_OP, status);
-        pj_grp_lock_release(stun_sock->grp_lock);
-        return;
+        goto on_return;
     }
 
     pj_assert(rec->count);
@@ -623,7 +625,11 @@ static void dns_srv_resolver_cb(void *user_data,
     /* Start sending Binding request */
     stun_sock->last_err = get_mapped_addr(stun_sock);
 
+on_return:
     pj_grp_lock_release(stun_sock->grp_lock);
+
+    /* The reference of the DNS query, see pj_stun_sock_start() */
+    pj_grp_lock_dec_ref(stun_sock->grp_lock);
 }
 
 
