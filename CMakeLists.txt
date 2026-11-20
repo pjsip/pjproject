@@ -321,9 +321,15 @@ endif()
 # Xcode's own signing needs a signing team on iOS, and on macOS it breaks
 # when the install rewrites the rpaths, so macOS kills the installed
 # programs at launch. Without it the binaries keep the linker's signature,
-# which the rewrite redoes.
-if(APPLE AND NOT DEFINED CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED)
-  set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED NO)
+# which the rewrite redoes. On macOS, a signing team or identity given asks
+# for Xcode's signing.
+if(APPLE)
+  if(NOT DEFINED CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED AND
+     NOT(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND
+        (CMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM OR
+         CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY)))
+    set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED NO)
+  endif()
 endif()
 
 # A cross toolchain searches only under its sysroot, a given <X>_ROOT included.
