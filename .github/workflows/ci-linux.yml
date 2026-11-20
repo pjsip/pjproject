@@ -1020,11 +1020,13 @@ jobs:
     - name: test installed pjsua
       run: |
         prefix=${{ runner.temp }}/pj-install
-        test -f "$prefix/lib/libpj.so" && test ! -e "$prefix/lib/libpj.a"
+        test -f "$prefix/lib/libpj.so"
+        test ! -e "$prefix/lib/libpj.a"
         readelf -d "$prefix/bin/pjsua" "$prefix/lib/libpjmedia.so" | grep -E 'RUNPATH|RPATH'
         "$prefix/bin/pjsua" --version > /dev/null
-        cp -a "$prefix" "${{ runner.temp }}/pj-moved"
+        mv "$prefix" "${{ runner.temp }}/pj-moved"
         "${{ runner.temp }}/pj-moved/bin/pjsua" --version > /dev/null
+        mv "${{ runner.temp }}/pj-moved" "$prefix"
     - name: test find_package
       run: |
         cmake -B build-consumer tests/cmake \
@@ -1071,6 +1073,17 @@ jobs:
         cat "$PKG_CONFIG_PATH/libpjproject.pc"
         cc tests/cmake/test_consumer.c -o pc_consumer \
           $(pkg-config --static --cflags --libs libpjproject)
+    - name: check the install does not ask for threads
+      # glibc has pthread in libc, so the nm check below misses these
+      run: |
+        if grep '^FIND_PACKAGE_MESSAGE_DETAILS_Threads' build-consumer/CMakeCache.txt; then
+          echo "::error::the installed Pj package looks up Threads"
+          exit 1
+        fi
+        if grep -E -- '-l?pthread' "${{ runner.temp }}/pj-install/lib/pkgconfig/libpjproject.pc"; then
+          echo "::error::libpjproject.pc links pthread"
+          exit 1
+        fi
     - name: check nothing references pthread
       run: |
         rc=0
@@ -1132,7 +1145,14 @@ jobs:
     - name: build
       run: cmake --build build -j $(nproc)
     - name: test
-      run: cd build && ctest -R '^pjsua2-(python|java)$' --output-on-failure
+      run: |
+        cd build
+        n=$(ctest -N -R '^pjsua2-(python|java)$' | grep -cE 'Test +#[0-9]+: pjsua2-(python|java)$')
+        if [ "$n" != 2 ]; then
+          echo "::error::expected the pjsua2-python and pjsua2-java tests, found $n"
+          exit 1
+        fi
+        ctest -R '^pjsua2-(python|java)$' --output-on-failure
     - name: install
       run: cmake --install build --prefix ${{ runner.temp }}/pj-install
     - name: test installed bindings

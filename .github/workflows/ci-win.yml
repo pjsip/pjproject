@@ -1088,7 +1088,6 @@ jobs:
         & "$env:VCPKG_INSTALLATION_ROOT/vcpkg" install opus libvpx --triplet x64-windows
         $prefix = "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows" -replace '\\', '/'
         Add-Content $env:GITHUB_ENV "VCPKG_PREFIX=$prefix"
-        Add-Content $env:GITHUB_PATH "$prefix/bin"
     - name: configure
       run: >-
         cmake -B build -G "Visual Studio 17 2022" -A x64
@@ -1134,6 +1133,7 @@ jobs:
           "-DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install" `
           "-DCMAKE_IGNORE_PREFIX_PATH=$env:PJ_IGNORE_PREFIX"
         cmake --build build-consumer --config Release
+        $env:PATH = "$env:VCPKG_PREFIX/bin;$env:PATH"
         ./build-consumer/Release/test_consumer.exe
         ./build-consumer/Release/test_consumer2.exe
 
@@ -1154,7 +1154,6 @@ jobs:
         & "$env:VCPKG_INSTALLATION_ROOT/vcpkg" install opus libvpx --triplet x64-windows
         $prefix = "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows" -replace '\\', '/'
         Add-Content $env:GITHUB_ENV "VCPKG_PREFIX=$prefix"
-        Add-Content $env:GITHUB_PATH "$prefix/bin"
     - name: configure
       run: >-
         cmake -B build -G "Visual Studio 17 2022" -A x64
@@ -1200,6 +1199,7 @@ jobs:
           "-DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install" `
           "-DCMAKE_IGNORE_PREFIX_PATH=$env:PJ_IGNORE_PREFIX"
         cmake --build build-consumer --config Release
+        $env:PATH = "$env:VCPKG_PREFIX/bin;$env:PATH"
         ./build-consumer/Release/test_consumer.exe
         ./build-consumer/Release/test_consumer2.exe
 

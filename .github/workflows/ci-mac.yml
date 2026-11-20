@@ -696,11 +696,13 @@ jobs:
     - name: test installed pjsua
       run: |
         prefix=${{ runner.temp }}/pj-install
-        test -f "$prefix/lib/libpj.dylib" && test ! -e "$prefix/lib/libpj.a"
+        test -f "$prefix/lib/libpj.dylib"
+        test ! -e "$prefix/lib/libpj.a"
         otool -l "$prefix/bin/pjsua" | grep -A2 LC_RPATH
         "$prefix/bin/pjsua" --version > /dev/null
-        cp -a "$prefix" "${{ runner.temp }}/pj-moved"
+        mv "$prefix" "${{ runner.temp }}/pj-moved"
         "${{ runner.temp }}/pj-moved/bin/pjsua" --version > /dev/null
+        mv "${{ runner.temp }}/pj-moved" "$prefix"
     - name: test find_package
       run: |
         cmake -B build-consumer tests/cmake \
