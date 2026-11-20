@@ -240,8 +240,8 @@ static int guard_tests(void)
 
 /* Update-detection coverage, observed through pool usage. A read that
  * does not reclaim allocates only when it refreshes, so it shows whether
- * a refresh happened; a reclaiming read resets the pool first, so
- * repeated refreshes must not grow it. */
+ * a refresh happened; a reclaiming read resets the pool only when it
+ * refreshes, so repeated refreshes must not grow it. */
 static int refresh_tests(void)
 {
     static const pj_uint8_t longser_first20[20] = {
@@ -270,6 +270,11 @@ static int refresh_tests(void)
         get_cert_info(info_pool, &ci, cert, PJ_FALSE);
     PJ_TEST_EQ(pj_pool_get_used_size(info_pool), used0,
                "unchanged cert must not refresh", rc = -11; goto on_return);
+    for (i = 0; i < 20; i++)
+        get_cert_info(info_pool, &ci, cert, PJ_TRUE);
+    PJ_TEST_EQ(pj_pool_get_used_size(info_pool), used0,
+               "unchanged cert must not reset the pool",
+               rc = -12; goto on_return);
     CFRelease(cert);
 
     /* Overlong serial: first 20 octets stored, and each read refreshes —
