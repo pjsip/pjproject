@@ -1022,8 +1022,14 @@ jobs:
         prefix=${{ runner.temp }}/pj-install
         test -f "$prefix/lib/libpj.so"
         test ! -e "$prefix/lib/libpj.a"
-        readelf -d "$prefix/bin/pjsua" "$prefix/lib/libpjmedia.so" | grep -E 'RUNPATH|RPATH'
-        if readelf -d "$prefix/bin/pjsua" "$prefix"/lib/*.so | grep -F "${{ github.workspace }}"; then
+        for f in "$prefix/bin/pjsua" "$prefix"/lib/*.so "$prefix"/lib/pjproject/third_party/*.so; do
+          if ! readelf -d "$f" | grep -E '\((RUNPATH|RPATH)\)'; then
+            echo "::error::$f has no RUNPATH"
+            exit 1
+          fi
+        done
+        if readelf -d "$prefix/bin/pjsua" "$prefix"/lib/*.so "$prefix"/lib/pjproject/third_party/*.so |
+            grep -F "${{ github.workspace }}"; then
           echo "::error::the install refers to the build tree"
           exit 1
         fi

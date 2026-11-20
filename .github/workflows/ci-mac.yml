@@ -698,8 +698,14 @@ jobs:
         prefix=${{ runner.temp }}/pj-install
         test -f "$prefix/lib/libpj.dylib"
         test ! -e "$prefix/lib/libpj.a"
-        otool -l "$prefix/bin/pjsua" | grep -A2 LC_RPATH
-        if otool -l "$prefix/bin/pjsua" "$prefix"/lib/*.dylib | grep -F "${{ github.workspace }}"; then
+        for f in "$prefix/bin/pjsua" "$prefix"/lib/*.dylib "$prefix"/lib/pjproject/third_party/*.dylib; do
+          if ! otool -l "$f" | grep -A2 LC_RPATH; then
+            echo "::error::$f has no LC_RPATH"
+            exit 1
+          fi
+        done
+        if otool -l "$prefix/bin/pjsua" "$prefix"/lib/*.dylib "$prefix"/lib/pjproject/third_party/*.dylib |
+            grep -F "${{ github.workspace }}"; then
           echo "::error::the install refers to the build tree"
           exit 1
         fi
