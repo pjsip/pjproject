@@ -28,14 +28,15 @@
  *
  * The existing fuzz-dns target only exercises the stateless packet parser;
  * the resolver object itself (query state machine, retransmission, cache,
- * nameserver failover state, SRV fallback, CNAME chasing, TCP requery) was
- * never driven by any harness. This target runs a real pj_dns_resolver
- * against a fake nameserver: a harness-owned UDP socket on 127.0.0.1. Each
- * iteration starts a query for a fixed name, waits for the query packet,
- * and answers it with fuzzer-controlled response bytes (patched with the
- * real transaction ID so the anti-spoofing source/matching checks pass and
+ * nameserver failover state, and cancellation) was never driven by any
+ * harness. This target runs a real pj_dns_resolver against a fake
+ * nameserver: a harness-owned UDP socket on 127.0.0.1. Each iteration
+ * starts a query for a fixed name, waits for the query packet, and answers
+ * it with fuzzer-controlled response bytes (patched with the real
+ * transaction ID and echoed question so the anti-spoofing checks pass and
  * the parsing layer is reached). Joined queries, cache reuse, cancellation
- * and timeout paths are exercised via the control byte. DNS responses are
+ * and timeout paths are exercised via the control byte. Callbacks run from
+ * pj_dns_resolver_handle_events() on the harness thread. DNS responses are
  * attacker-controllable in the wild (malicious resolver, spoofing, forged
  * replies), which is exactly the threat this models.
  *
@@ -53,24 +54,60 @@
 
 #define MEM_SIZE            (2*1024*1024)
 #define QUERY_NAME          "fuzz.example.com"
-#define ANSWER_MAX          2048
+#define ANSWER_MAX          PJ_DNS_RESOLVER_MAX_UDP_SIZE
 
 static pj_caching_pool caching_pool;
 static pj_dns_resolver *resolver;
 static pj_sock_t ns_sock = PJ_INVALID_SOCKET;
 static pj_uint16_t ns_port;
 
-/* Touched from the resolver's worker thread; single flags, benign races. */
+/* Incremented from on_dns_response on the harness thread. */
 static volatile unsigned g_cb_count;
+
+typedef struct {
+    pj_bool_t done;
+} fuzz_qdata;
 
 static void on_dns_response(void *user_data,
                             pj_status_t status,
                             pj_dns_parsed_packet *response)
 {
-    PJ_UNUSED_ARG(user_data);
     PJ_UNUSED_ARG(status);
     PJ_UNUSED_ARG(response);
+    if (user_data)
+        ((fuzz_qdata*)user_data)->done = PJ_TRUE;
     g_cb_count++;
+}
+
+/* Drop any unread datagrams left by a prior query/cancel. */
+static void drain_ns_sock(void)
+{
+    uint8_t buf[ANSWER_MAX];
+    unsigned i;
+
+    for (i = 0; i < 32; ++i) {
+        pj_fd_set_t rset;
+        pj_time_val delay = {0, 0};
+        pj_ssize_t rx = sizeof(buf);
+        pj_sockaddr src;
+        int srclen = sizeof(src);
+
+        PJ_FD_ZERO(&rset);
+        PJ_FD_SET(ns_sock, &rset);
+        if (pj_sock_select((int)ns_sock + 1, &rset, NULL, NULL, &delay) <= 0)
+            break;
+        if (pj_sock_recvfrom(ns_sock, buf, &rx, 0, &src, &srclen) != PJ_SUCCESS)
+            break;
+    }
+}
+
+/* Clear cache, restore nameserver health, and empty the fake-NS socket so
+ * each input starts from a clean resolver state. */
+static void reset_resolver_state(void)
+{
+    pj_dns_resolver_clear_cache(resolver);
+    pj_dns_resolver_reset_ns_state(resolver);
+    drain_ns_sock();
 }
 
 static pj_bool_t query_wait_readable(void)
@@ -97,7 +134,7 @@ static void serve_queries(const uint8_t *payload, pj_size_t len,
                           unsigned max_rounds, unsigned base_cb)
 {
     uint8_t rbuf[ANSWER_MAX];
-    uint8_t qbuf[512];
+    uint8_t qbuf[ANSWER_MAX];
     unsigned round;
 
     if (len > sizeof(rbuf))
@@ -107,7 +144,7 @@ static void serve_queries(const uint8_t *payload, pj_size_t len,
         pj_ssize_t rx = sizeof(qbuf);
         pj_sockaddr src;
         int srclen = sizeof(src);
-        pj_size_t qlen, rlen;
+        pj_size_t qlen, rlen, qbody;
         pj_status_t status;
         unsigned wait;
 
@@ -142,17 +179,20 @@ static void serve_queries(const uint8_t *payload, pj_size_t len,
             rbuf[1] = qbuf[1];
             rbuf[4] = 0;
             rbuf[5] = 1; /* qdcount = 1 */
-            if (rlen < 12 + qlen)
-                rlen = 12 + qlen;
+            /* qlen is the end offset of the question; copy only the body. */
+            qbody = qlen - 12;
+            if (rlen < qlen)
+                rlen = qlen;
             if (rlen > sizeof(rbuf))
                 rlen = sizeof(rbuf);
-            pj_memcpy(rbuf + 12, qbuf + 12, qlen);
+            if (12 + qbody <= sizeof(rbuf))
+                pj_memcpy(rbuf + 12, qbuf + 12, qbody);
         }
 
         rx = (pj_ssize_t)rlen;
         pj_sock_sendto(ns_sock, rbuf, &rx, 0, &src, srclen);
 
-        /* Pump the resolver so it reads the reply; it has no own thread. */
+        /* Pump the resolver so it reads the reply. */
         for (wait = 0; wait < 40 && g_cb_count <= base_cb; ++wait) {
             pj_time_val d = {0, 1};
             pj_dns_resolver_handle_events(resolver, &d);
@@ -172,6 +212,14 @@ static void wait_callbacks(unsigned target, unsigned max_ms)
         pj_time_val d = {0, 1};
         pj_dns_resolver_handle_events(resolver, &d);
     }
+}
+
+/* Cancel only if the callback has not fired yet (avoids stale recycled
+ * handles once a completed query node is reused). */
+static void cancel_if_pending(pj_dns_async_query *q, fuzz_qdata *qd)
+{
+    if (q && qd && !qd->done)
+        pj_dns_resolver_cancel_query(q, PJ_TRUE);
 }
 
 int LLVMFuzzerInitialize(int *argc, char ***argv)
@@ -242,37 +290,43 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     int qtype;
     pj_str_t name = pj_str(QUERY_NAME);
     pj_dns_async_query *q1 = NULL, *q2 = NULL, *qx = NULL;
+    fuzz_qdata qd1, qd2, qdx;
     unsigned expected_cb = 1;
     pj_status_t status;
 
-    if (Size < 20)
+    if (Size < 2)
         return 0;
 
     ctl = Data[0];
     payload = Data + 1;
     payload_len = Size - 1;
+    if (payload_len > ANSWER_MAX)
+        payload_len = ANSWER_MAX;
     qtype = (ctl & 0x01) ? PJ_DNS_TYPE_SRV : PJ_DNS_TYPE_A;
     g_cb_count = 0;
+    pj_bzero(&qd1, sizeof(qd1));
+    pj_bzero(&qd2, sizeof(qd2));
+    pj_bzero(&qdx, sizeof(qdx));
+
+    reset_resolver_state();
 
     status = pj_dns_resolver_start_query(resolver, &name, qtype, 0,
-                                         &on_dns_response, NULL, &q1);
+                                         &on_dns_response, &qd1, &q1);
     if (status == PJ_SUCCESS && q1 != NULL) {
-        /* Asynchronous: serve the query from the fake nameserver. */
-        serve_queries(payload, payload_len, 6, 0);
-
+        /* Start the joined query before serving so it becomes a child of
+         * q1 rather than a post-completion cache hit or fresh query. */
         if (ctl & 0x02) {
             expected_cb = 2;
             pj_dns_resolver_start_query(resolver, &name, qtype, 0,
-                                        &on_dns_response, NULL, &q2);
-            serve_queries(payload, payload_len, 4, 1);
+                                        &on_dns_response, &qd2, &q2);
         }
+
+        serve_queries(payload, payload_len, 6, expected_cb - 1);
 
         wait_callbacks(expected_cb, 300);
         if (g_cb_count < expected_cb) {
-            if (q1)
-                pj_dns_resolver_cancel_query(q1, PJ_TRUE);
-            if (q2)
-                pj_dns_resolver_cancel_query(q2, PJ_TRUE);
+            cancel_if_pending(q1, &qd1);
+            cancel_if_pending(q2, &qd2);
             wait_callbacks(expected_cb, 100);
         }
     }
@@ -281,13 +335,14 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     if (ctl & 0x04) {
         /* Repeat: served from cache when the previous reply was cached. */
         g_cb_count = 0;
+        pj_bzero(&qdx, sizeof(qdx));
         status = pj_dns_resolver_start_query(resolver, &name, qtype, 0,
-                                             &on_dns_response, NULL, &qx);
+                                             &on_dns_response, &qdx, &qx);
         if (status == PJ_SUCCESS && qx != NULL) {
             serve_queries(payload, payload_len, 4, 0);
             wait_callbacks(1, 200);
-            if (g_cb_count < 1 && qx) {
-                pj_dns_resolver_cancel_query(qx, PJ_TRUE);
+            if (g_cb_count < 1) {
+                cancel_if_pending(qx, &qdx);
                 wait_callbacks(1, 100);
             }
         }
@@ -296,13 +351,17 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     if (ctl & 0x08) {
         /* Cancel path: callback must fire with PJ_ECANCELLED. */
         g_cb_count = 0;
+        pj_bzero(&qdx, sizeof(qdx));
         status = pj_dns_resolver_start_query(resolver, &name, qtype, 0,
-                                             &on_dns_response, NULL, &qx);
+                                             &on_dns_response, &qdx, &qx);
         if (status == PJ_SUCCESS && qx != NULL) {
-            pj_dns_resolver_cancel_query(qx, PJ_TRUE);
+            cancel_if_pending(qx, &qdx);
             wait_callbacks(1, 100);
         }
     }
+
+    /* Leave no pending query packets or BAD/cache state for the next run. */
+    reset_resolver_state();
 
     return 0;
 }
