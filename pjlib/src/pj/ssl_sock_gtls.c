@@ -300,9 +300,10 @@ static int tls_cert_verify_cb(gnutls_session_t session)
     ssock = (pj_ssl_sock_t *)gnutls_session_get_ptr(session);
     pj_assert(ssock);
 
+    ssock->verify_status = PJ_SSL_CERT_ESUCCESS;
+
     /* Support only x509 format */
-    ret = gnutls_certificate_type_get(session) != GNUTLS_CRT_X509;
-    if (ret < 0) {
+    if (gnutls_certificate_type_get(session) != GNUTLS_CRT_X509) {
         ssock->verify_status |= PJ_SSL_CERT_EINVALID_FORMAT;
         return GNUTLS_E_CERTIFICATE_ERROR;
     }
@@ -339,49 +340,8 @@ static int tls_cert_verify_cb(gnutls_session_t session)
             return GNUTLS_E_CERTIFICATE_ERROR;
     }
 
-    if (ssock->param.verify_peer && ssock->param.server_name.slen) {
-        gnutls_x509_crt_t cert;
-        unsigned int cert_list_size;
-        const gnutls_datum_t *cert_list;
-        int ret2;
-
-        ret2 = gnutls_x509_crt_init(&cert);
-        if (ret2 < 0)
-            goto out;
-
-        cert_list = gnutls_certificate_get_peers(session, &cert_list_size);
-        if (cert_list == NULL) {
-            ret = GNUTLS_E_NO_CERTIFICATE_FOUND;
-            goto out;
-        }
-
-        /* TODO: verify whole chain perhaps? */
-        ret = gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER);
-        if (ret < 0)
-            ret = gnutls_x509_crt_import(cert, &cert_list[0],
-                                         GNUTLS_X509_FMT_PEM);
-        if (ret < 0) {
-            ssock->verify_status |= PJ_SSL_CERT_EINVALID_FORMAT;
-            goto out;
-        }
-        ret = gnutls_x509_crt_check_hostname(cert,
-                                             ssock->param.server_name.ptr);
-        if (ret < 0)
-            goto out;
-
-        gnutls_x509_crt_deinit(cert);
-
-        /* notify GnuTLS to continue handshake normally */
-        return GNUTLS_E_SUCCESS;
-
-out:
-        tls_last_error = ret;
-        ssock->verify_status |= PJ_SSL_CERT_EUNKNOWN;
-        return GNUTLS_E_CERTIFICATE_ERROR;
-    }
-
-    /* verify_peer is false: allow the handshake to complete. Upper layers
-     * will read ssock->verify_status to enforce their own policy. */
+    /* The peer identity is not checked here (see pj_ssl_cert_verify_name()).
+     * Upper layers read ssock->verify_status to enforce their own policy. */
     return GNUTLS_E_SUCCESS;
 }
 
@@ -740,10 +700,15 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
         goto out;
     gnutls_certificate_set_verify_function(gssock->xcred, tls_cert_verify_cb);
 
-    /* Load system trust file(s) */
-    status = tls_trust_set(ssock);
-    if (status != PJ_SUCCESS)
-        return status;
+    /* Load system trust file(s) on client sockets when no CA is configured */
+    if (!ssock->is_server &&
+        (!cert || (!cert->CA_file.slen && !cert->CA_path.slen &&
+                   !cert->CA_buf.slen)))
+    {
+        status = tls_trust_set(ssock);
+        if (status != PJ_SUCCESS)
+            return status;
+    }
 
     /* Load user-provided CA, certificate and key if available */
     if (cert) {

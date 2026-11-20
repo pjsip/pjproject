@@ -728,7 +728,7 @@ typedef pj_bool_t pjsip_auth_clt_async_on_challenge(
 /**
  * Asynchronous client authentication settings.
  */
-typedef struct pjsip_auth_clt_async_setting
+struct pjsip_auth_clt_async_setting
 {
     /**
      * Callback to notify the application when a challenge is received.
@@ -741,7 +741,7 @@ typedef struct pjsip_auth_clt_async_setting
      */
     void                               *user_data;
 
-} pjsip_auth_clt_async_setting;
+};
 
 
 /**

@@ -59,6 +59,18 @@ project(pjproject
   LANGUAGES C
 )
 
+# For iOS, default to the deployment target ./configure-iphone builds for
+# (15.0, the oldest the current Xcode supports) rather than CMake's, the SDK
+# version, which apps targeting any older iOS warn about when linking. Set
+# after project(), so that it also covers iOS set by a toolchain file, and
+# only on a build folder's first configure, when none was given.
+if(IOS AND pjproject_IS_TOP_LEVEL AND NOT CMAKE_OSX_DEPLOYMENT_TARGET AND
+   NOT DEFINED _PJ_CONFIGURED_CMAKE_OSX_DEPLOYMENT_TARGET)
+  set(CMAKE_OSX_DEPLOYMENT_TARGET 15.0 CACHE STRING
+    "Minimum iOS version to build for" FORCE
+  )
+endif()
+
 # By default each optional library prints one line, "Checking if <X> is
 # available - yes/no". --log-level=VERBOSE (or CMAKE_MESSAGE_LOG_LEVEL) adds
 # what each search found and its link test.
@@ -197,25 +209,10 @@ unset(_pj_multi_config)
 # project modules
 list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-# experimental warning notice
-option(PJ_SKIP_EXPERIMENTAL_NOTICE OFF)
-if (NOT PJ_SKIP_EXPERIMENTAL_NOTICE)
-  message(WARNING
-    " ****************************************************\n"
-    " * Building `pjproject` with CMake is experimental  *\n"
-    " *--------------------------------------------------*\n"
-    " * Tested in CI:                                    *\n"
-    " * - Linux x86_64                                   *\n"
-    " * - macOS                                          *\n"
-    " * - Android (arm64-v8a, armeabi-v7a, x86_64, x86)  *\n"
-    " * - Windows x64 (Visual Studio 2022)               *\n"
-    " * Verified manually:                               *\n"
-    " * - iOS (device, simulator)                        *\n"
-    " * - Windows x64 (MinGW-w64)                        *\n"
-    " ****************************************************\n"
-    "Set `PJ_SKIP_EXPERIMENTAL_NOTICE=ON` to disable this warning"
-  )
-endif()
+# PJ_SKIP_EXPERIMENTAL_NOTICE silenced a notice that is gone. Read it, so that
+# builds still passing it get no "not used by the project" warning.
+set(_pj_unused "${PJ_SKIP_EXPERIMENTAL_NOTICE}")
+unset(_pj_unused)
 
 # ##############################################################################
 # Testing support

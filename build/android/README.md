@@ -173,11 +173,10 @@ always has and takes `libpjsua2.so` and the Java classes prebuilt out of
 build above put them. With it, the module ignores those, so what is there
 does not get in the way.
 
-Prerequisites beyond the NDK and SDK: **SWIG 4.0+**, and **Ninja**, which the
-Android Gradle plugin requires for CMake projects. The SDK-managed CMake ships
-one, but this project needs CMake 3.28 or newer, above what the SDK provides,
-so a CMake from elsewhere on `PATH` is used and Ninja has to be installed
-separately.
+Prerequisites beyond the NDK and SDK: **SWIG 4.0+**, **CMake 3.28** or newer,
+and **Ninja**, which the Android Gradle plugin requires for CMake projects. The
+SDK Manager offers CMake 3.30.3 and newer, which ship Ninja; with a CMake from
+elsewhere on `PATH`, Ninja has to be installed separately.
 
 ## Finding dependencies outside the NDK
 

@@ -944,7 +944,7 @@ jobs:
       run: |
         cmake -B build-cross --toolchain cmake/toolchains/arm-none-eabi.cmake \
           -DPJ_WITH_CXX=OFF -DPJ_BUILD_APPS=OFF -DBUILD_TESTING=OFF \
-          -DPJLIB_WITH_SSL= -DPJ_SKIP_EXPERIMENTAL_NOTICE=ON
+          -DPJLIB_WITH_SSL=
     - name: check
       # the toolchain's libm rather than the host's, no C++ compiler, and
       # the SIMD probe kept NEON away from Cortex-M
@@ -984,7 +984,7 @@ jobs:
         cmake -B build-cross-fpu --toolchain cmake/toolchains/arm-none-eabi.cmake \
           "-DPJ_TARGET_CPU_FLAGS=-mcpu=cortex-m33 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard" \
           -DPJ_WITH_CXX=OFF -DPJ_BUILD_APPS=OFF -DBUILD_TESTING=OFF \
-          -DPJLIB_WITH_SSL= -DPJ_SKIP_EXPERIMENTAL_NOTICE=ON \
+          -DPJLIB_WITH_SSL= \
           -D_pj_detected_simd_ext:INTERNAL=neon \
           -D_pj_detected_simd_ext_flags:INTERNAL=-mfpu=neon \
           -D_simd_supported:INTERNAL=1
@@ -995,7 +995,7 @@ jobs:
       run: |
         cmake -B build-cross-min --toolchain cmake/toolchains/arm-none-eabi.cmake \
           -DPJ_WITH_CXX=OFF -DPJ_BUILD_APPS=OFF -DBUILD_TESTING=OFF \
-          -DPJLIB_WITH_SSL= -DPJ_SKIP_EXPERIMENTAL_NOTICE=ON \
+          -DPJLIB_WITH_SSL= \
           -DPJ_DEP_G7221=none -DPJ_DEP_GSM=none -DPJ_DEP_ILBC=none \
           -DPJ_DEP_RESAMPLE=none -DPJ_DEP_SPEEX=none -DPJ_DEP_SRTP=none \
           -DPJ_DEP_WEBRTC=none -DPJMEDIA_WITH_VIDEO=OFF
