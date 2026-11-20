@@ -32,6 +32,7 @@ struct test_result
     unsigned    conn_status_cnt;
     pj_status_t last_conn_status;
     pj_uint32_t last_conn_id;
+    pj_sockaddr last_conn_peer;
 };
 
 struct test_session
@@ -310,7 +311,6 @@ static void turn_on_connection_status(pj_turn_sock *turn_sock,
 {
     struct test_session *sess;
 
-    PJ_UNUSED_ARG(peer_addr);
     PJ_UNUSED_ARG(addr_len);
 
     sess = (struct test_session*) pj_turn_sock_get_user_data(turn_sock);
@@ -320,6 +320,7 @@ static void turn_on_connection_status(pj_turn_sock *turn_sock,
     sess->result.conn_status_cnt++;
     sess->result.last_conn_status = status;
     sess->result.last_conn_id = conn_id;
+    pj_sockaddr_cp(&sess->result.last_conn_peer, peer_addr);
 
     if (sess->destroy_on_conn_status && !sess->destroy_called) {
         sess->destroy_called = PJ_TRUE;
@@ -995,7 +996,7 @@ static int conn_bind_test(pj_stun_config *stun_cfg,
     enum { TIMEOUT = 60 };
     pj_turn_session_info info;
     struct test_session *sess;
-    pj_sockaddr peer_addr;
+    pj_sockaddr peer_addr, connect_addr;
     pj_time_val tstart;
     int rc;
 
@@ -1055,6 +1056,10 @@ static int conn_bind_test(pj_stun_config *stun_cfg,
         return -310;
     }
 
+    /* The caller may reuse its peer address once connect returns */
+    pj_sockaddr_cp(&connect_addr, &peer_addr);
+    pj_sockaddr_set_port(&peer_addr, 4321);
+
     /* Connect succeeds, then the server answers the data connection's
      * ConnectionBind.
      */
@@ -1079,6 +1084,18 @@ static int conn_bind_test(pj_stun_config *stun_cfg,
                   sess->result.last_conn_status));
         destroy_session(sess);
         return -320;
+    }
+
+    if (pj_sockaddr_cmp(&sess->result.last_conn_peer, &connect_addr) != 0) {
+        char addr1[PJ_INET6_ADDRSTRLEN+10], addr2[PJ_INET6_ADDRSTRLEN+10];
+
+        PJ_LOG(3,("", "    error: connection status for peer %s, "
+                  "expecting %s",
+                  pj_sockaddr_print(&sess->result.last_conn_peer, addr1,
+                                    sizeof(addr1), 3),
+                  pj_sockaddr_print(&connect_addr, addr2, sizeof(addr2), 3)));
+        destroy_session(sess);
+        return -325;
     }
 
     if (stale_nonce &&
