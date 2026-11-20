@@ -59,6 +59,18 @@ project(pjproject
   LANGUAGES C
 )
 
+# For iOS, default to the deployment target ./configure-iphone builds for
+# (15.0, the oldest the current Xcode supports) rather than CMake's, the SDK
+# version, which apps targeting any older iOS warn about when linking. Set
+# after project(), so that it also covers iOS set by a toolchain file, and
+# only on a build folder's first configure, when none was given.
+if(IOS AND pjproject_IS_TOP_LEVEL AND NOT CMAKE_OSX_DEPLOYMENT_TARGET AND
+   NOT DEFINED _PJ_CONFIGURED_CMAKE_OSX_DEPLOYMENT_TARGET)
+  set(CMAKE_OSX_DEPLOYMENT_TARGET 15.0 CACHE STRING
+    "Minimum iOS version to build for" FORCE
+  )
+endif()
+
 # By default each optional library prints one line, "Checking if <X> is
 # available - yes/no". --log-level=VERBOSE (or CMAKE_MESSAGE_LOG_LEVEL) adds
 # what each search found and its link test.
