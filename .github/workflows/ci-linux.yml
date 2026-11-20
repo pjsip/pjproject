@@ -1000,6 +1000,549 @@ jobs:
           -DPJ_DEP_RESAMPLE=none -DPJ_DEP_SPEEX=none -DPJ_DEP_SRTP=none \
           -DPJ_DEP_WEBRTC=none -DPJMEDIA_WITH_VIDEO=OFF
 
+  # A shared install must work on its own: with no LD_LIBRARY_PATH, the
+  # installed pjsua and the libraries find each other and the bundled ones in
+  # lib/pjproject/third_party through their RUNPATH, also from a copy of the
+  # install made elsewhere.
+  cmake-shared:
+    runs-on: ubuntu-latest
+    name: CMake / shared
+    steps:
+    - uses: actions/checkout@v4
+    - name: install dependencies
+      run: sudo apt-get update && sudo apt-get install -y libssl-dev
+    - name: configure
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON
+    - name: build
+      run: cmake --build build -j $(nproc)
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+    - name: test installed pjsua
+      run: |
+        prefix=${{ runner.temp }}/pj-install
+        test -f "$prefix/lib/libpj.so"
+        test ! -e "$prefix/lib/libpj.a"
+        for f in "$prefix/bin/pjsua" "$prefix"/lib/*.so "$prefix"/lib/pjproject/third_party/*.so; do
+          if ! readelf -d "$f" | grep -E '\((RUNPATH|RPATH)\)'; then
+            echo "::error::$f has no RUNPATH"
+            exit 1
+          fi
+        done
+        if readelf -d "$prefix/bin/pjsua" "$prefix"/lib/*.so "$prefix"/lib/pjproject/third_party/*.so |
+            grep -F "${{ github.workspace }}"; then
+          echo "::error::the install refers to the build tree"
+          exit 1
+        fi
+        "$prefix/bin/pjsua" --version > /dev/null
+        mv "$prefix" "${{ runner.temp }}/pj-moved"
+        "${{ runner.temp }}/pj-moved/bin/pjsua" --version > /dev/null
+        mv "${{ runner.temp }}/pj-moved" "$prefix"
+    - name: test find_package
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-consumer --verbose
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+    - name: test pkg-config
+      run: |
+        prefix=${{ runner.temp }}/pj-install
+        export PKG_CONFIG_PATH="$prefix/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        cc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --cflags --libs libpjproject) -Wl,-rpath,"$prefix/lib"
+        ./pc_consumer
+
+  # PJLIB_WITH_THREADS=OFF: as in the autoconf no-threads job, nothing may
+  # reference pthread. Also the installed package: Pj's config must not ask
+  # for Threads, and consumers built from it stay pthread-free.
+  cmake-no-threads:
+    runs-on: ubuntu-latest
+    name: CMake / no threads
+    steps:
+    - uses: actions/checkout@v4
+    - name: install dependencies
+      run: sudo apt-get update && sudo apt-get install -y libssl-dev
+    - name: configure
+      # libwebrtc uses pthread_once() and is not built without threads.
+      run: >-
+        cmake -B build -DCMAKE_BUILD_TYPE=Release -DPJLIB_WITH_THREADS=OFF
+        -DPJMEDIA_WITH_WEBRTC_AEC=OFF -DPJMEDIA_WITH_WEBRTC_AEC3=OFF
+    - name: build
+      run: cmake --build build -j $(nproc)
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+    - name: build consumers
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-consumer --verbose
+        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        cc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --static --cflags --libs libpjproject)
+    - name: check the install does not ask for threads
+      # glibc has pthread in libc, so the nm check below misses these
+      run: |
+        if grep '^FIND_PACKAGE_MESSAGE_DETAILS_Threads' build-consumer/CMakeCache.txt; then
+          echo "::error::the installed Pj package looks up Threads"
+          exit 1
+        fi
+        if grep -E -- '-l?pthread' "${{ runner.temp }}/pj-install/lib/pkgconfig/libpjproject.pc"; then
+          echo "::error::libpjproject.pc links pthread"
+          exit 1
+        fi
+    - name: check nothing references pthread
+      run: |
+        rc=0
+        for bin in build/pjlib/bin/pjlib-test \
+                   build/pjlib-util/bin/pjlib-util-test \
+                   build/pjnath/bin/pjnath-test \
+                   build/pjmedia/bin/pjmedia-test \
+                   build/pjsip/bin/pjsip-test \
+                   build/pjsip/bin/pjsua2-test \
+                   build/pjsip-apps/bin/pjsua \
+                   build-consumer/test_consumer \
+                   build-consumer/test_consumer2 \
+                   pc_consumer; do
+          if [ ! -f "$bin" ]; then
+            echo "::error::$bin was not built"
+            rc=1
+            continue
+          fi
+          if nm -D -u "$bin" | grep -E ' U (pthread_|sched_get)'; then
+            echo "::error::$bin references pthread with PJLIB_WITH_THREADS=OFF"
+            rc=1
+          else
+            echo "ok: $bin"
+          fi
+        done
+        exit $rc
+    - name: run
+      run: |
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+        ./pc_consumer
+        cd pjlib-util/build
+        ../../build/pjlib-util/bin/pjlib-util-test --ci-mode resolver_nothreads_test
+
+  # The pjsua2 Python and Java bindings, which no other Linux job builds:
+  # their ctest tests in the build tree, then the installed module and jar
+  # from outside it. In the shared build they find the pjproject libraries
+  # through their rpaths, with no LD_LIBRARY_PATH.
+  cmake-swig:
+    runs-on: ubuntu-latest
+    name: CMake / SWIG Python+Java ${{ matrix.libs }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - libs: static
+            shared: 'OFF'
+          - libs: shared
+            shared: 'ON'
+    steps:
+    - uses: actions/checkout@v4
+    - name: install dependencies
+      run: sudo apt-get update && sudo apt-get install -y libssl-dev swig python3-dev
+    - name: configure
+      # test.py needs a sound device; the runner has none
+      run: >-
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        -DBUILD_SHARED_LIBS=${{ matrix.shared }}
+        -DPJ_BUILD_SWIG_PYTHON=ON -DPJ_BUILD_SWIG_JAVA=ON
+        -DPJMEDIA_WITH_AUDIODEV_NULL=ON
+    - name: build
+      run: cmake --build build -j $(nproc)
+    - name: test
+      run: |
+        cd build
+        n=$(ctest -N -R '^pjsua2-(python|java)$' | grep -cE 'Test +#[0-9]+: pjsua2-(python|java)$')
+        if [ "$n" != 2 ]; then
+          echo "::error::expected the pjsua2-python and pjsua2-java tests, found $n"
+          exit 1
+        fi
+        ctest -R '^pjsua2-(python|java)$' --output-on-failure
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+    - name: test installed bindings
+      run: |
+        set -o pipefail
+        prefix=${{ runner.temp }}/pj-install
+        pydir=$(dirname "$(find "$prefix" -name pjsua2.py)")
+        javadir=$(dirname "$(find "$prefix" -name pjsua2.jar)")
+        cd "${{ runner.temp }}"
+        # -P: not from test.py's own folder, where make leaves a pjsua2.py
+        PYTHONPATH="$pydir" python3 -P \
+          "${{ github.workspace }}/pjsip-apps/src/swig/python/test.py"
+        mkdir -p java-test
+        javac -d java-test -cp "$javadir/pjsua2.jar" \
+          "${{ github.workspace }}/pjsip-apps/src/swig/java/test.java"
+        java -cp "$javadir/pjsua2.jar:java-test" \
+          -Djava.library.path="$javadir" test | tee java-test.log
+        grep -q 'Hello world' java-test.log
+
+  # One optional audio codec (Opus) and one video codec (libvpx), from the
+  # distribution's packages. A library that is not found is dropped without
+  # failing the configure, so assert both were used. The consumers get only
+  # the pjproject install: its package must find both again.
+  cmake-opus-vpx:
+    runs-on: ubuntu-latest
+    name: CMake / Opus + VPX
+    steps:
+    - uses: actions/checkout@v4
+    - name: install dependencies
+      run: sudo apt-get update && sudo apt-get install -y libssl-dev libopus-dev libvpx-dev
+    - name: configure
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+    - name: check options
+      run: |
+        for p in OPUS VPX; do
+          grep "^PJMEDIA_WITH_${p}_CODEC:BOOL=ON$" build/CMakeCache.txt || {
+            echo "::error::PJMEDIA_WITH_${p}_CODEC is not ON"; exit 1; }
+          grep -E "^${p}_(LIBRARY|INCLUDE_DIR):" build/CMakeCache.txt
+        done
+    - name: build
+      run: cmake --build build -j $(nproc)
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+    - name: test find_package
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-consumer --verbose
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+    - name: test pkg-config
+      run: |
+        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        cc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --static --cflags --libs libpjproject)
+        ./pc_consumer
+
+  # As cmake-opus-vpx, with the build pointed at each library by
+  # <Pkg>_ROOT: its packages unpacked into a folder of its own. The system's
+  # copies are installed too, and must not be used: not by the build, and
+  # not by the consumers, which get only the pjproject install.
+  cmake-opus-vpx-root:
+    runs-on: ubuntu-latest
+    name: CMake / Opus + VPX from <Pkg>_ROOT
+    steps:
+    - uses: actions/checkout@v4
+    - name: install dependencies
+      run: sudo apt-get update && sudo apt-get install -y libssl-dev libopus-dev libvpx-dev
+    - name: package roots
+      # the -dev package and the library package it depends on
+      run: |
+        r=${{ runner.temp }}/roots
+        mkdir -p $r/debs
+        cd $r/debs
+        for p in opus vpx; do
+          dev=lib$p-dev
+          lib=$(apt-cache depends $dev |
+                awk -v re="^lib$p[0-9]" '$1 == "Depends:" && $2 ~ re { print $2; exit }')
+          apt-get download $dev $lib
+          for deb in ${dev}_*.deb ${lib}_*.deb; do dpkg -x $deb $r/$p; done
+        done
+        find $r/opus $r/vpx -name 'lib*.so*'
+    - name: configure
+      run: >-
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        -DOPUS_ROOT=${{ runner.temp }}/roots/opus/usr
+        -DVPX_ROOT=${{ runner.temp }}/roots/vpx/usr
+    - name: check options
+      # the library and the headers from the root
+      run: |
+        for p in OPUS VPX; do
+          grep "^PJMEDIA_WITH_${p}_CODEC:BOOL=ON$" build/CMakeCache.txt || {
+            echo "::error::PJMEDIA_WITH_${p}_CODEC is not ON"; exit 1; }
+          root=$(sed -n "s/^${p}_ROOT:[A-Z]*=//p" build/CMakeCache.txt)
+          [ -n "$root" ] || { echo "::error::${p}_ROOT is not set"; exit 1; }
+          for v in LIBRARY INCLUDE_DIR; do
+            grep "^${p}_$v:[A-Z]*=$root/" build/CMakeCache.txt || {
+              echo "::error::${p}_$v is not under $root"; exit 1; }
+          done
+        done
+    - name: build
+      run: cmake --build build -j $(nproc)
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+    - name: test find_package
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-consumer --verbose
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+    - name: test pkg-config
+      run: |
+        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        # the roots are not searched at run time
+        cc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --static --cflags --libs libpjproject) \
+          $(pkg-config --static --libs-only-L libpjproject | sed 's/-L/-Wl,-rpath,/g')
+        ./pc_consumer
+    - name: check the consumers used the roots
+      # and not the system's copies, which are installed too
+      run: |
+        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
+        for p in OPUS VPX; do
+          root=$(sed -n "s/^${p}_ROOT:[A-Z]*=//p" build/CMakeCache.txt)
+          found=$(sed -n "s/^FIND_PACKAGE_MESSAGE_DETAILS_${p}:INTERNAL=//p" \
+                  build-consumer/CMakeCache.txt)
+          echo "find_package consumer, $p: $found"
+          paths=$(echo "$found" | grep -o '\[/[^]]*\]' | tr -d '[]')
+          [ -n "$paths" ] || { echo "::error::no $p paths in the consumer"; exit 1; }
+          for f in $paths; do
+            case $f in
+              "$root"/*) ;;
+              *) echo "::error::find_package consumer: $f is not under $root"; exit 1 ;;
+            esac
+          done
+          pkg-config --static --libs-only-L libpjproject | tr ' ' '\n' | grep -- "^-L$root/" || {
+            echo "::error::libpjproject.pc has no -L under $root"; exit 1; }
+          lib=lib$(echo $p | tr A-Z a-z).so
+          for exe in build-consumer/test_consumer pc_consumer; do
+            ldd $exe | grep "$lib" | grep -- "=> $root/" || {
+              echo "::error::$exe does not load $lib from $root"; exit 1; }
+          done
+        done
+
+  # The bundled libraries that can come from the system (GSM, Speex with
+  # SpeexDSP, libsrtp2, libyuv), all from Ubuntu's packages. Not libresample:
+  # Ubuntu's libresample1-dev is an unrelated library of the same name.
+  # Asked for by name, a missing one stops the configure. None may be built
+  # from third_party, and the build and the consumers must load the system
+  # copies.
+  cmake-system-deps:
+    runs-on: ubuntu-latest
+    name: CMake / system GSM, Speex, SRTP, libyuv
+    env:
+      PJ_SYSTEM_LIBS: gsm speex speexdsp srtp2 yuv
+    steps:
+    - uses: actions/checkout@v4
+    - name: install dependencies
+      run: >-
+        sudo apt-get update && sudo apt-get install -y libssl-dev
+        libgsm1-dev libspeex-dev libspeexdsp-dev libsrtp2-dev libyuv-dev
+    - name: configure
+      run: >-
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        -DPJ_DEP_GSM=system -DPJ_DEP_SPEEX=system -DPJ_DEP_SRTP=system
+        -DPJ_DEP_YUV=system
+    - name: check options
+      run: |
+        cache=build/CMakeCache.txt
+        failed=0
+        for v in GSM Speex SpeexDSP SRTP YUV; do
+          path=$(sed -n "s/^${v}_LIBRARY:[^=]*=//p" $cache)
+          echo "${v}_LIBRARY=$path"
+          case "$path" in /usr/*) ;; *)
+            echo "::error::${v}_LIBRARY is not a system library"; failed=1 ;;
+          esac
+        done
+        # system Speex has its echo canceller in SpeexDSP
+        grep -x 'PJMEDIA_WITH_SPEEX_AEC:BOOL=ON' $cache || {
+          echo "::error::PJMEDIA_WITH_SPEEX_AEC is not ON"; failed=1; }
+        exit $failed
+    - name: build
+      run: cmake --build build -j $(nproc)
+    - name: check build
+      run: |
+        failed=0
+        for l in gsm speex srtp yuv; do
+          if f=$(find build -name "lib$l.a" | grep .); then
+            echo "::error::the bundled $l was built: $f"; failed=1
+          fi
+        done
+        ldd build/pjsip-apps/bin/pjsua
+        for l in $PJ_SYSTEM_LIBS; do
+          ldd build/pjsip-apps/bin/pjsua | grep -q "lib$l\.so.* => /" || {
+            echo "::error::pjsua does not load the system lib$l"; failed=1; }
+        done
+        exit $failed
+    - name: run pjsua
+      run: ./build/pjsip-apps/bin/pjsua --version
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+    - name: check install
+      run: |
+        ls -R ${{ runner.temp }}/pj-install/lib/pjproject/third_party || true
+        for l in gsm speex srtp yuv; do
+          if f=$(find ${{ runner.temp }}/pj-install -name "lib$l.a" | grep .); then
+            echo "::error::the bundled $l was installed: $f"; exit 1
+          fi
+        done
+    - name: test find_package
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-consumer --verbose
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+    - name: test pkg-config
+      run: |
+        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        cc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --static --cflags --libs libpjproject)
+        ./pc_consumer
+    - name: check the consumers load the system libraries
+      run: |
+        failed=0
+        for exe in build-consumer/test_consumer build-consumer/test_consumer2 \
+                   pc_consumer; do
+          for l in $PJ_SYSTEM_LIBS; do
+            ldd $exe | grep -q "lib$l\.so.* => /" || {
+              echo "::error::$exe does not load the system lib$l"; failed=1; }
+          done
+        done
+        exit $failed
+
+  # The GnuTLS and Mbed TLS backends, with both supported Mbed TLS major
+  # versions built as in the mbedtls job (same cache). Asked for by name, a
+  # backend that is not found stops the configure. The consumers get only
+  # the pjproject install: its package must find the backend again, also
+  # Mbed TLS from its own prefix.
+  cmake-ssl:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - backend: gnutls
+            name: GnuTLS
+          - backend: mbedtls
+            name: Mbed TLS 3.6.7
+            version: 3.6.7
+            sha256: a7e8bcbec0e6f761b4af24f25677626b35f762f68eef79c08677a363212d11f6
+            config_py: scripts/config.py
+          - backend: mbedtls
+            name: Mbed TLS 4.2.0
+            version: 4.2.0
+            sha256: 2bed9d713b4668f76553b097e72b8aa30bc8f112a940d7ae228d524bbde6ffea
+            config_py: tf-psa-crypto/scripts/config.py
+    name: CMake / ${{ matrix.name }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: install GnuTLS
+      if: matrix.backend == 'gnutls'
+      run: sudo apt-get update && sudo apt-get install -y libgnutls28-dev
+    - name: Mbed TLS prefix
+      if: matrix.backend == 'mbedtls'
+      run: |
+        echo "MBEDTLS_PREFIX=$HOME/mbedtls-${{ matrix.version }}" >> $GITHUB_ENV
+        echo "PJ_SSL_ROOT=-DMbedTLS_ROOT=$HOME/mbedtls-${{ matrix.version }}" >> $GITHUB_ENV
+    - name: cache Mbed TLS
+      if: matrix.backend == 'mbedtls'
+      id: cache-mbedtls
+      uses: actions/cache@v4
+      with:
+        path: ~/mbedtls-${{ matrix.version }}
+        # the mbedtls job's key: bump both when the recipe below changes
+        key: mbedtls-${{ matrix.version }}-${{ runner.os }}-threading-1
+    - name: build Mbed TLS
+      if: matrix.backend == 'mbedtls' && steps.cache-mbedtls.outputs.cache-hit != 'true'
+      run: |
+        cd $RUNNER_TEMP
+        curl -sSfL -o mbedtls.tar.bz2 \
+          https://github.com/Mbed-TLS/mbedtls/releases/download/mbedtls-${{ matrix.version }}/mbedtls-${{ matrix.version }}.tar.bz2
+        echo "${{ matrix.sha256 }}  mbedtls.tar.bz2" | sha256sum -c
+        tar xjf mbedtls.tar.bz2
+        cd mbedtls-${{ matrix.version }}
+        # PJSIP's threads share PSA Crypto, which needs the threading layer
+        python3 ${{ matrix.config_py }} set MBEDTLS_THREADING_C
+        python3 ${{ matrix.config_py }} set MBEDTLS_THREADING_PTHREAD
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+              -DENABLE_TESTING=OFF -DENABLE_PROGRAMS=OFF \
+              -DCMAKE_INSTALL_PREFIX=$MBEDTLS_PREFIX
+        cmake --build build -j 3
+        cmake --install build
+    - name: configure
+      run: >-
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        -DPJLIB_WITH_SSL=${{ matrix.backend }} $PJ_SSL_ROOT
+    - name: check backend
+      run: |
+        grep -x 'PJ_SSL_BACKEND:INTERNAL=${{ matrix.backend }}' build/CMakeCache.txt
+        grep -ix '#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_${{ matrix.backend }}' \
+          build/pjlib/include/pj/compat/os_auto.h
+    - name: build
+      run: cmake --build build -j $(nproc)
+    - name: pjlib-test (ssl_sock only)
+      # from pjlib/build, where the test certificates are
+      run: |
+        cd pjlib/build
+        ../../build/pjlib/bin/pjlib-test --ci-mode ssl_sock_test
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+    - name: test find_package
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-consumer --verbose
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+    - name: test pkg-config
+      run: |
+        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        cc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --static --cflags --libs libpjproject)
+        ./pc_consumer
+
+  # A multi-config generator: Debug and Release in one build folder, each
+  # library and program with a -<Config> suffix, both installed into one
+  # prefix. A consumer built with the same generator must link the
+  # libraries of its own configuration.
+  cmake-multi-config:
+    runs-on: ubuntu-latest
+    name: CMake / Ninja Multi-Config
+    steps:
+    - uses: actions/checkout@v4
+    - name: install dependencies
+      run: sudo apt-get update && sudo apt-get install -y libssl-dev ninja-build
+    - name: configure
+      run: cmake -B build -G "Ninja Multi-Config"
+    - name: build Debug
+      run: cmake --build build --config Debug
+    - name: build Release
+      run: cmake --build build --config Release
+    - name: check build
+      run: |
+        set -o pipefail
+        for c in Debug:1 Release:0; do
+          cfg=${c%:*}; dbg=${c#*:}
+          test -f build/pjlib/lib/libpj-$cfg.a
+          ./build/pjsip-apps/bin/pjsua-$cfg --version | grep -E "PJ_DEBUG +: $dbg\$"
+        done
+    - name: install
+      run: |
+        for c in Debug Release; do
+          cmake --install build --config $c --prefix ${{ runner.temp }}/pj-install
+        done
+        ls ${{ runner.temp }}/pj-install/lib
+    - name: test find_package
+      run: |
+        set -o pipefail
+        cmake -B build-consumer tests/cmake -G "Ninja Multi-Config" \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install
+        for c in Debug Release; do
+          cmake --build build-consumer --config $c --verbose | tee build-$c.log
+          grep -q "libpj-$c\.a" build-$c.log || {
+            echo "::error::the $c consumer does not link libpj-$c.a"; exit 1; }
+          ./build-consumer/$c/test_consumer
+          ./build-consumer/$c/test_consumer2
+        done
+
   # Short pjsua-stress runs under ASan/TSan on every PR / push to master.
   # The full weekly run (larger fleet, longer duration) lives in
   # .github/workflows/stress-test.yml.

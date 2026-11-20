@@ -1068,3 +1068,264 @@ jobs:
         cmake --build build-consumer --config Release
         ./build-consumer/Release/test_consumer.exe
         ./build-consumer/Release/test_consumer2.exe
+
+  # One optional audio codec (Opus) and one video codec (libvpx), from
+  # vcpkg, found through CMAKE_PREFIX_PATH. A library that is not found is
+  # dropped without failing the configure, so assert both were used. The
+  # consumers get only the pjproject install: its package must find both
+  # again.
+  cmake-opus-vpx:
+    runs-on: windows-2022
+    name: CMake / Opus + VPX
+    env:
+      # as in cmake-build
+      PJ_IGNORE_PREFIX: C:/Strawberry/c;C:/msys64/mingw64;C:/msys64/usr
+    steps:
+    - uses: actions/checkout@v4
+    - name: install dependencies
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        & "$env:VCPKG_INSTALLATION_ROOT/vcpkg" install opus libvpx --triplet x64-windows
+        $prefix = "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows" -replace '\\', '/'
+        Add-Content $env:GITHUB_ENV "VCPKG_PREFIX=$prefix"
+    - name: configure
+      run: >-
+        cmake -B build -G "Visual Studio 17 2022" -A x64
+        "-DCMAKE_IGNORE_PREFIX_PATH=$env:PJ_IGNORE_PREFIX"
+        "-DCMAKE_PREFIX_PATH=$env:VCPKG_PREFIX"
+    - name: check options
+      # the library and the headers from vcpkg
+      run: |
+        $cache = Get-Content build/CMakeCache.txt
+        foreach ($p in 'OPUS', 'VPX') {
+          if (-not ($cache -match "^PJMEDIA_WITH_${p}_CODEC:BOOL=ON$")) {
+            Write-Host "::error::PJMEDIA_WITH_${p}_CODEC is not ON"
+            exit 1
+          }
+          foreach ($v in 'LIBRARY', 'INCLUDE_DIR') {
+            $line = $cache -match "^${p}_${v}:"
+            Write-Host $line
+            if (-not ($line -like "*=$env:VCPKG_PREFIX/*")) {
+              Write-Host "::error::${p}_$v is not from $env:VCPKG_PREFIX"
+              exit 1
+            }
+          }
+        }
+    - name: OpenSSL runtime
+      # as in cmake-build
+      run: |
+        $m = cmake -LA -N build | Select-String '^OPENSSL_INCLUDE_DIR:PATH=(.+)$'
+        if ($m) {
+          $bin = Join-Path (Split-Path $m.Matches[0].Groups[1].Value) bin
+          if (Test-Path $bin) {
+            Write-Host "OpenSSL: $bin"
+            Add-Content $env:GITHUB_PATH $bin
+          }
+        }
+    - name: build
+      run: cmake --build build --config Release --parallel
+    - name: install
+      run: cmake --install build --config Release --prefix "${{ runner.temp }}/pj-install"
+    - name: test find_package
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        cmake -B build-consumer tests/cmake -G "Visual Studio 17 2022" -A x64 `
+          "-DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install" `
+          "-DCMAKE_IGNORE_PREFIX_PATH=$env:PJ_IGNORE_PREFIX"
+        cmake --build build-consumer --config Release
+        $env:PATH = "$env:VCPKG_PREFIX/bin;$env:PATH"
+        ./build-consumer/Release/test_consumer.exe
+        ./build-consumer/Release/test_consumer2.exe
+
+  # As cmake-opus-vpx, with the build pointed at each library by
+  # <Pkg>_ROOT: vcpkg's folder. The consumers get only the pjproject
+  # install: its package must find both where the build did.
+  cmake-opus-vpx-root:
+    runs-on: windows-2022
+    name: CMake / Opus + VPX from <Pkg>_ROOT
+    env:
+      # as in cmake-build
+      PJ_IGNORE_PREFIX: C:/Strawberry/c;C:/msys64/mingw64;C:/msys64/usr
+    steps:
+    - uses: actions/checkout@v4
+    - name: install dependencies
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        & "$env:VCPKG_INSTALLATION_ROOT/vcpkg" install opus libvpx --triplet x64-windows
+        $prefix = "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows" -replace '\\', '/'
+        Add-Content $env:GITHUB_ENV "VCPKG_PREFIX=$prefix"
+    - name: configure
+      run: >-
+        cmake -B build -G "Visual Studio 17 2022" -A x64
+        "-DCMAKE_IGNORE_PREFIX_PATH=$env:PJ_IGNORE_PREFIX"
+        "-DOPUS_ROOT=$env:VCPKG_PREFIX" "-DVPX_ROOT=$env:VCPKG_PREFIX"
+    - name: check options
+      # the library and the headers from vcpkg
+      run: |
+        $cache = Get-Content build/CMakeCache.txt
+        foreach ($p in 'OPUS', 'VPX') {
+          if (-not ($cache -match "^PJMEDIA_WITH_${p}_CODEC:BOOL=ON$")) {
+            Write-Host "::error::PJMEDIA_WITH_${p}_CODEC is not ON"
+            exit 1
+          }
+          foreach ($v in 'LIBRARY', 'INCLUDE_DIR') {
+            $line = $cache -match "^${p}_${v}:"
+            Write-Host $line
+            if (-not ($line -like "*=$env:VCPKG_PREFIX/*")) {
+              Write-Host "::error::${p}_$v is not from $env:VCPKG_PREFIX"
+              exit 1
+            }
+          }
+        }
+    - name: OpenSSL runtime
+      # as in cmake-build
+      run: |
+        $m = cmake -LA -N build | Select-String '^OPENSSL_INCLUDE_DIR:PATH=(.+)$'
+        if ($m) {
+          $bin = Join-Path (Split-Path $m.Matches[0].Groups[1].Value) bin
+          if (Test-Path $bin) {
+            Write-Host "OpenSSL: $bin"
+            Add-Content $env:GITHUB_PATH $bin
+          }
+        }
+    - name: build
+      run: cmake --build build --config Release --parallel
+    - name: install
+      run: cmake --install build --config Release --prefix "${{ runner.temp }}/pj-install"
+    - name: test find_package
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        cmake -B build-consumer tests/cmake -G "Visual Studio 17 2022" -A x64 `
+          "-DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install" `
+          "-DCMAKE_IGNORE_PREFIX_PATH=$env:PJ_IGNORE_PREFIX"
+        cmake --build build-consumer --config Release
+        $env:PATH = "$env:VCPKG_PREFIX/bin;$env:PATH"
+        ./build-consumer/Release/test_consumer.exe
+        ./build-consumer/Release/test_consumer2.exe
+
+  # MinGW-w64 GCC with the UCRT runtime, from MSYS2, and MSYS2's OpenSSL.
+  # No other job builds with MinGW.
+  cmake-mingw:
+    runs-on: windows-2022
+    name: CMake / MinGW UCRT64
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: msys2/setup-msys2@v2
+      with:
+        msystem: UCRT64
+        release: false
+        install: >-
+          mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake
+          mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-pkgconf
+          mingw-w64-ucrt-x86_64-openssl
+    - name: configure
+      run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+    - name: build
+      run: cmake --build build
+    - name: pjlib-test
+      # as in cmake-build; the SSL test certificates are found from pjlib/build
+      run: |
+        cd pjlib/build
+        ../../build/pjlib/bin/pjlib-test --ci-mode sock_test udp_ioqueue_test ssl_sock_test
+    - name: install
+      run: cmake --install build --prefix "$(cygpath -m '${{ runner.temp }}')/pj-install"
+    - name: test find_package
+      run: |
+        prefix="$(cygpath -m '${{ runner.temp }}')/pj-install"
+        cmake -B build-consumer tests/cmake -G Ninja \
+          -DCMAKE_PREFIX_PATH="$prefix" -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-consumer --verbose
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+    - name: test pkg-config
+      run: |
+        export PKG_CONFIG_PATH="$(cygpath -m '${{ runner.temp }}')/pj-install/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        gcc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --static --cflags --libs libpjproject)
+        ./pc_consumer
+
+  # A 32-bit (Win32) build with a 32-bit OpenSSL from vcpkg, given as the
+  # OpenSSL root (the runner's own OpenSSL is 64-bit only). A 64-bit
+  # consumer must not accept the 32-bit install.
+  cmake-win32:
+    runs-on: windows-2022
+    name: CMake / Win32
+    env:
+      # as in cmake-build
+      PJ_IGNORE_PREFIX: C:/Strawberry/c;C:/msys64/mingw64;C:/msys64/usr
+    steps:
+    - uses: actions/checkout@v4
+    - name: install OpenSSL
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        & "$env:VCPKG_INSTALLATION_ROOT/vcpkg" install openssl --triplet x86-windows
+        $prefix = "$env:VCPKG_INSTALLATION_ROOT/installed/x86-windows" -replace '\\', '/'
+        Add-Content $env:GITHUB_ENV "OPENSSL_PREFIX=$prefix"
+    - name: configure
+      run: >-
+        cmake -B build -G "Visual Studio 17 2022" -A Win32
+        "-DCMAKE_IGNORE_PREFIX_PATH=$env:PJ_IGNORE_PREFIX"
+        "-DOPENSSL_ROOT_DIR=$env:OPENSSL_PREFIX"
+    - name: check 32-bit configuration
+      # On MSVC, FindOpenSSL caches the library as SSL_EAY_RELEASE
+      run: |
+        $cache = Get-Content build/CMakeCache.txt
+        $failed = $false
+        $lib = $cache | Select-String '^SSL_EAY_RELEASE:[^=]*=(.*)$'
+        $lib = if ($lib) { $lib.Matches[0].Groups[1].Value } else { '' }
+        Write-Host "SSL_EAY_RELEASE=$lib"
+        if (-not ($lib -like "$env:OPENSSL_PREFIX/*")) {
+          Write-Host "::error::OpenSSL is not from $env:OPENSSL_PREFIX"
+          $failed = $true
+        }
+        if (-not ($cache -ccontains 'PJ_SSL_BACKEND:INTERNAL=openssl')) {
+          Write-Host "::error::OpenSSL is not the SSL backend:"
+          $cache | Select-String '^PJ_SSL_BACKEND:'
+          $failed = $true
+        }
+        $h = Get-Content build/pjlib/include/pj/compat/os_auto.h
+        if (-not ($h -ccontains '/* #undef PJ_WIN64 */')) {
+          Write-Host "::error::PJ_WIN64 is set:"
+          $h | Select-String 'PJ_WIN64'
+          $failed = $true
+        }
+        if ($failed) { exit 1 }
+    - name: build
+      run: cmake --build build --config Release --parallel
+    - name: pjlib-test
+      # as in cmake-build
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        New-Item -ItemType Directory -Force pjlib/bin | Out-Null
+        cd pjlib/bin
+        $env:PATH = "$env:OPENSSL_PREFIX/bin;$env:PATH"
+        ../../build/pjlib/bin/pjlib-test-Release.exe --ci-mode sock_test udp_ioqueue_test ssl_sock_test
+    - name: install
+      run: cmake --install build --config Release --prefix "${{ runner.temp }}/pj-install"
+    - name: test find_package
+      # the install's package must find OpenSSL again by itself
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        cmake -B build-consumer tests/cmake -G "Visual Studio 17 2022" -A Win32 `
+          "-DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install" `
+          "-DCMAKE_IGNORE_PREFIX_PATH=$env:PJ_IGNORE_PREFIX"
+        cmake --build build-consumer --config Release
+        $env:PATH = "$env:OPENSSL_PREFIX/bin;$env:PATH"
+        ./build-consumer/Release/test_consumer.exe
+        ./build-consumer/Release/test_consumer2.exe
+    - name: test a 64-bit consumer is refused
+      shell: bash
+      run: |
+        prefix="$(cygpath -m '${{ runner.temp }}')/pj-install"
+        if out=$(cmake -B build-consumer64 tests/cmake -G "Visual Studio 17 2022" \
+                   -A x64 -DCMAKE_PREFIX_PATH="$prefix" 2>&1); then
+          echo "$out"
+          echo "::error::a 64-bit consumer accepted the 32-bit install"
+          exit 1
+        fi
+        echo "$out"
+        echo "$out" | grep -F '(32bit)'
