@@ -1134,6 +1134,98 @@ static int conn_bind_test(pj_stun_config *stun_cfg,
 
 /////////////////////////////////////////////////////////////////////
 
+/////////////////////////////////////////////////////////////////////
+
+/* The resolver is destroyed, without notifying its queries, while the
+ * TURN session is resolving the server: the session doesn't wait for a DNS
+ * answer which never comes.
+ */
+static int resolver_gone_test(pj_stun_config *stun_cfg,
+                              pj_bool_t destroy_sock_first)
+{
+    pj_str_t domain = pj_str("turn.example.test");
+    pj_str_t ns = pj_str("127.0.0.1");
+    pj_dns_resolver *resolver = NULL;
+    pj_turn_sock *turn_sock = NULL;
+    pj_sock_t ns_sock = PJ_INVALID_SOCKET;
+    pj_turn_sock_cb turn_sock_cb;
+    pj_turn_session_info info;
+    pj_stun_auth_cred cred;
+    pj_sockaddr_in ns_addr;
+    pjlib_state pjlib_state;
+    pj_uint16_t ns_port;
+    int namelen = sizeof(ns_addr);
+    int rc = 0;
+
+    PJ_LOG(3,("", "  resolver destroyed while resolving test (%s first)",
+                  destroy_sock_first? "socket" : "resolver"));
+
+    capture_pjlib_state(stun_cfg, &pjlib_state);
+
+    /* A nameserver which doesn't answer */
+    PJ_TEST_SUCCESS(pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0,
+                                   &ns_sock),
+                    NULL, {rc = -400; goto on_return;});
+    pj_sockaddr_in_init(&ns_addr, &ns, 0);
+    PJ_TEST_SUCCESS(pj_sock_bind(ns_sock, &ns_addr, sizeof(ns_addr)), NULL,
+                    {rc = -401; goto on_return;});
+    PJ_TEST_SUCCESS(pj_sock_getsockname(ns_sock, &ns_addr, &namelen), NULL,
+                    {rc = -402; goto on_return;});
+    ns_port = pj_ntohs(ns_addr.sin_port);
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_create(mem, "resolver", 0,
+                                           stun_cfg->timer_heap,
+                                           stun_cfg->ioqueue, &resolver),
+                    NULL, {rc = -403; goto on_return;});
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(resolver, 1, &ns, &ns_port), NULL,
+                    {rc = -404; goto on_return;});
+
+    pj_bzero(&turn_sock_cb, sizeof(turn_sock_cb));
+    PJ_TEST_SUCCESS(pj_turn_sock_create(stun_cfg, pj_AF_INET(),
+                                        PJ_TURN_TP_UDP, &turn_sock_cb, NULL,
+                                        NULL, &turn_sock),
+                    NULL, {rc = -405; goto on_return;});
+
+    pj_bzero(&cred, sizeof(cred));
+    cred.type = PJ_STUN_AUTH_CRED_STATIC;
+    cred.data.static_cred.realm = pj_str(SRV_DOMAIN);
+    cred.data.static_cred.username = pj_str(TURN_USERNAME);
+    cred.data.static_cred.data_type = PJ_STUN_PASSWD_PLAIN;
+    cred.data.static_cred.data = pj_str(TURN_PASSWD);
+
+    PJ_TEST_SUCCESS(pj_turn_sock_alloc(turn_sock, &domain, 3478, resolver,
+                                       &cred, NULL),
+                    NULL, {rc = -406; goto on_return;});
+    PJ_TEST_SUCCESS(pj_turn_sock_get_info(turn_sock, &info), NULL,
+                    {rc = -407; goto on_return;});
+    PJ_TEST_EQ(info.state, PJ_TURN_STATE_RESOLVING, NULL,
+               {rc = -408; goto on_return;});
+
+    if (destroy_sock_first) {
+        pj_turn_sock_destroy(turn_sock);
+        turn_sock = NULL;
+    }
+    pj_dns_resolver_destroy(resolver, PJ_FALSE);
+    resolver = NULL;
+
+on_return:
+    if (turn_sock)
+        pj_turn_sock_destroy(turn_sock);
+    if (resolver)
+        pj_dns_resolver_destroy(resolver, PJ_FALSE);
+    poll_events(stun_cfg, 1000, PJ_FALSE);
+    if (ns_sock != PJ_INVALID_SOCKET)
+        pj_sock_close(ns_sock);
+
+    if (rc == 0) {
+        rc = check_pjlib_state(stun_cfg, &pjlib_state);
+        if (rc != 0)
+            PJ_LOG(3,("", "    error: memory/timer-heap leak detected"));
+    }
+    return rc;
+}
+
+
 int turn_sock_test(void *p)
 {
     unsigned n = (int)(intptr_t)p;
@@ -1179,6 +1271,14 @@ int turn_sock_test(void *p)
         int j;
         for (j=0; j<=1; ++j) {
             rc = destroy_test(&app_sess.stun_cfg, i, j, USE_IPV6, tp_type);
+            if (rc != 0)
+                goto on_return;
+        }
+    }
+
+    if (tp_type == PJ_TURN_TP_UDP) {
+        for (i=0; i<=1; ++i) {
+            rc = resolver_gone_test(&app_sess.stun_cfg, i);
             if (rc != 0)
                 goto on_return;
         }

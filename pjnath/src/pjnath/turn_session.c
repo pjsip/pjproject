@@ -127,6 +127,7 @@ struct pj_turn_session
     pj_turn_state_t      state;
     pj_status_t          last_status;
     pj_bool_t            pending_destroy;
+    pj_dns_srv_async_query *q;          /* Pending DNS resolution.  */
 
     pj_stun_session     *stun;
 
@@ -391,6 +392,7 @@ static void sess_shutdown(pj_turn_session *sess,
                           pj_status_t status)
 {
     pj_bool_t can_destroy = PJ_TRUE;
+    pj_bool_t dns_cancelled = PJ_FALSE;
 
     PJ_LOG(4,(sess->obj_name, "Request to shutdown in state %s, cause:%d",
               state_names[sess->state], status));
@@ -398,16 +400,28 @@ static void sess_shutdown(pj_turn_session *sess,
     if (sess->last_status == PJ_SUCCESS && status != PJ_SUCCESS)
         sess->last_status = status;
 
+    /* Stop the DNS resolution. Its callback may never be called, e.g. when
+     * the resolver is destroyed, unless a DNS answer is being processed.
+     */
+    if (sess->q) {
+        dns_cancelled = (pj_dns_srv_cancel_query(sess->q, PJ_FALSE) ==
+                         PJ_SUCCESS);
+        sess->q = NULL;
+    }
+
     switch (sess->state) {
     case PJ_TURN_STATE_NULL:
         break;
     case PJ_TURN_STATE_RESOLVING:
-        /* Wait for DNS callback invoked, it will call the this function
-         * again. If the callback happens to get pending_destroy==FALSE,
-         * the TURN allocation will call this function again.
+        /* Unless the DNS resolution is cancelled, wait for DNS callback
+         * invoked, it will call the this function again. If the callback
+         * happens to get pending_destroy==FALSE, the TURN allocation will
+         * call this function again.
          */
-        sess->pending_destroy = PJ_TRUE;
-        can_destroy = PJ_FALSE;
+        if (!dns_cancelled) {
+            sess->pending_destroy = PJ_TRUE;
+            can_destroy = PJ_FALSE;
+        }
         break;
     case PJ_TURN_STATE_RESOLVED:
         break;
@@ -448,6 +462,10 @@ static void sess_shutdown(pj_turn_session *sess,
                                           &delay, TIMER_DESTROY,
                                           sess->grp_lock);
     }
+
+    /* The reference of the DNS resolution, see dns_srv_resolver_cb() */
+    if (dns_cancelled)
+        pj_grp_lock_dec_ref(sess->grp_lock);
 }
 
 
@@ -655,7 +673,7 @@ PJ_DEF(pj_status_t) pj_turn_session_set_server( pj_turn_session *sess,
 
         status = pj_dns_srv_resolve(domain, &res_name, default_port, 
                                     sess->pool, resolver, opt, sess, 
-                                    &dns_srv_resolver_cb, NULL);
+                                    &dns_srv_resolver_cb, &sess->q);
         if (status != PJ_SUCCESS) {
             set_state(sess, PJ_TURN_STATE_NULL);
             pj_grp_lock_dec_ref(sess->grp_lock);
@@ -2000,12 +2018,19 @@ static void dns_srv_resolver_cb(void *user_data,
     pj_turn_session *sess = (pj_turn_session*) user_data;
     unsigned i, cnt, tot_cnt;
 
+    pj_grp_lock_acquire(sess->grp_lock);
+
+    sess->q = NULL;
+
+    /* The session was shut down while this answer was on its way */
+    if (sess->state != PJ_TURN_STATE_RESOLVING)
+        goto on_return;
+
     /* Check failure */
     if (status != PJ_SUCCESS || sess->pending_destroy) {
         set_state(sess, PJ_TURN_STATE_DESTROYING);
         sess_shutdown(sess, status);
-        pj_grp_lock_dec_ref(sess->grp_lock);
-        return;
+        goto on_return;
     }
 
     /* Calculate total number of server entries in the response */
@@ -2059,6 +2084,10 @@ static void dns_srv_resolver_cb(void *user_data,
             on_session_fail(sess, PJ_STUN_ALLOCATE_METHOD, status2, NULL);
     }
 
+on_return:
+    pj_grp_lock_release(sess->grp_lock);
+
+    /* The reference of the DNS resolution */
     pj_grp_lock_dec_ref(sess->grp_lock);
 }
 
