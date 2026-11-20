@@ -789,6 +789,10 @@ static pj_status_t vpx_codec_decode_(pjmedia_vid_codec *codec,
     if (res) {
         PJ_LOG(4, (THIS_FILE, "Failed to decode frame %s",
                    vpx_codec_error(&vpx_data->dec)));
+        /* libvpx may keep decoding later frames against the corrupted
+         * reference; recover on a keyframe.
+         */
+        vpx_data->need_keyframe = PJ_TRUE;
         goto on_return;
     }
 
