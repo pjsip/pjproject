@@ -1248,9 +1248,9 @@ jobs:
           $(pkg-config --static --cflags --libs libpjproject)
         ./pc_consumer
 
-  # A 32-bit (Win32) build. The runner's OpenSSL is 64-bit: given as the
-  # OpenSSL root, it is found but must fail its link check and be left out.
-  # A 64-bit consumer must not accept the 32-bit install.
+  # A 32-bit (Win32) build with a 32-bit OpenSSL from vcpkg, given as the
+  # OpenSSL root (the runner's own OpenSSL is 64-bit only). A 64-bit
+  # consumer must not accept the 32-bit install.
   cmake-win32:
     runs-on: windows-2022
     name: CMake / Win32
@@ -1259,27 +1259,31 @@ jobs:
       PJ_IGNORE_PREFIX: C:/Strawberry/c;C:/msys64/mingw64;C:/msys64/usr
     steps:
     - uses: actions/checkout@v4
+    - name: install OpenSSL
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        & "$env:VCPKG_INSTALLATION_ROOT/vcpkg" install openssl --triplet x86-windows
+        $prefix = "$env:VCPKG_INSTALLATION_ROOT/installed/x86-windows" -replace '\\', '/'
+        Add-Content $env:GITHUB_ENV "OPENSSL_PREFIX=$prefix"
     - name: configure
       run: >-
         cmake -B build -G "Visual Studio 17 2022" -A Win32
         "-DCMAKE_IGNORE_PREFIX_PATH=$env:PJ_IGNORE_PREFIX"
-        "-DOPENSSL_ROOT_DIR=$($env:ProgramFiles -replace '\\','/')/OpenSSL"
+        "-DOPENSSL_ROOT_DIR=$env:OPENSSL_PREFIX"
     - name: check 32-bit configuration
       # On MSVC, FindOpenSSL caches the library as SSL_EAY_RELEASE
       run: |
-        Get-ChildItem "$env:ProgramFiles/OpenSSL/lib" -Recurse -Filter *.lib |
-          ForEach-Object { Write-Host $_.FullName }
         $cache = Get-Content build/CMakeCache.txt
         $failed = $false
         $lib = $cache | Select-String '^SSL_EAY_RELEASE:[^=]*=(.*)$'
         $lib = if ($lib) { $lib.Matches[0].Groups[1].Value } else { '' }
         Write-Host "SSL_EAY_RELEASE=$lib"
-        if ($lib -eq '' -or $lib -like '*-NOTFOUND') {
-          Write-Host "::error::the x64 OpenSSL was not found, so its link check did not run"
+        if (-not ($lib -like "$env:OPENSSL_PREFIX/*")) {
+          Write-Host "::error::OpenSSL is not from $env:OPENSSL_PREFIX"
           $failed = $true
         }
-        if (-not ($cache -ccontains 'PJ_SSL_BACKEND:INTERNAL=')) {
-          Write-Host "::error::the x64 OpenSSL was used:"
+        if (-not ($cache -ccontains 'PJ_SSL_BACKEND:INTERNAL=openssl')) {
+          Write-Host "::error::OpenSSL is not the SSL backend:"
           $cache | Select-String '^PJ_SSL_BACKEND:'
           $failed = $true
         }
@@ -1298,16 +1302,19 @@ jobs:
         $PSNativeCommandUseErrorActionPreference = $true
         New-Item -ItemType Directory -Force pjlib/bin | Out-Null
         cd pjlib/bin
-        ../../build/pjlib/bin/pjlib-test-Release.exe --ci-mode sock_test udp_ioqueue_test
+        $env:PATH = "$env:OPENSSL_PREFIX/bin;$env:PATH"
+        ../../build/pjlib/bin/pjlib-test-Release.exe --ci-mode sock_test udp_ioqueue_test ssl_sock_test
     - name: install
       run: cmake --install build --config Release --prefix "${{ runner.temp }}/pj-install"
     - name: test find_package
+      # the install's package must find OpenSSL again by itself
       run: |
         $PSNativeCommandUseErrorActionPreference = $true
         cmake -B build-consumer tests/cmake -G "Visual Studio 17 2022" -A Win32 `
           "-DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install" `
           "-DCMAKE_IGNORE_PREFIX_PATH=$env:PJ_IGNORE_PREFIX"
         cmake --build build-consumer --config Release
+        $env:PATH = "$env:OPENSSL_PREFIX/bin;$env:PATH"
         ./build-consumer/Release/test_consumer.exe
         ./build-consumer/Release/test_consumer2.exe
     - name: test a 64-bit consumer is refused
