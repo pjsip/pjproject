@@ -1594,6 +1594,20 @@ static pj_bool_t check_ice_complete(pj_ice_sess *ice)
         for (i=0; i<ice->clist.count; ++i) {
             pj_ice_sess_check *c = &ice->clist.checks[i];
             if (c->state < PJ_ICE_SESS_CHECK_STATE_SUCCEEDED) {
+                if (ice->is_nominating && !ice->opt.aggressive &&
+                    (c->state == PJ_ICE_SESS_CHECK_STATE_FROZEN ||
+                     c->state == PJ_ICE_SESS_CHECK_STATE_WAITING))
+                {
+                    const pj_ice_sess_check *vc =
+                        ice->comp[c->lcand->comp_id - 1].valid_check;
+                    if (c->state == PJ_ICE_SESS_CHECK_STATE_FROZEN ||
+                        !vc ||
+                        c->lcand->transport_id != vc->lcand->transport_id ||
+                        c->rcand != vc->rcand)
+                    {
+                        continue;
+                    }
+                }
                 break;
             }
         }
@@ -2383,6 +2397,12 @@ static pj_status_t perform_check(pj_ice_sess *ice,
          dump_check(ice->tmp.txt, sizeof(ice->tmp.txt), clist, check)));
     pj_log_push_indent();
 
+    /* Cancel any previous STUN transaction still active on this check */
+    if (check->tdata) {
+        pj_stun_session_cancel_req(comp->stun_sess, check->tdata, PJ_FALSE, 0);
+        check->tdata = NULL;
+    }
+
     /* Create request */
     status = pj_stun_session_create_req(comp->stun_sess, 
                                         PJ_STUN_BINDING_REQUEST, PJ_STUN_MAGIC,
@@ -2507,6 +2527,8 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
         for (i=0; i<ice->comp_cnt && !check; ++i) {
             unsigned j;
             const pj_ice_sess_check *vc = ice->comp[i].valid_check;
+            if (!vc || ice->comp[i].nominated_check)
+                continue;
             for (j=0; j<ice->clist.count; ++j) {
                 pj_ice_sess_check *c = &ice->clist.checks[j];
                 if (c->state == PJ_ICE_SESS_CHECK_STATE_WAITING &&
@@ -2515,7 +2537,11 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
                 {
                     check = c;
                     check_idx = j;
-                    break;
+                    if (pj_sockaddr_cmp(&c->lcand->base_addr,
+                                        &vc->lcand->base_addr) == 0)
+                    {
+                        break;
+                    }
                 }
             }
         }
@@ -2603,26 +2629,44 @@ static void start_nominated_check(pj_ice_sess *ice)
      */
     for (i=0; i<ice->comp_cnt; ++i) {
         unsigned j;
+        pj_ice_sess_check *target = NULL;
         const pj_ice_sess_check *vc = ice->comp[i].valid_check;
 
-        pj_assert(ice->comp[i].nominated_check == NULL);
-        pj_assert(vc->err_code == PJ_SUCCESS);
+        if (ice->comp[i].nominated_check != NULL)
+            continue;
+        pj_assert(vc != NULL && vc->err_code == PJ_SUCCESS);
 
         for (j=0; j<ice->clist.count; ++j) {
             pj_ice_sess_check *c = &ice->clist.checks[j];
             if (c->lcand->transport_id == vc->lcand->transport_id &&
                 c->rcand == vc->rcand)
             {
-                pj_assert(c->err_code == PJ_SUCCESS);
-                c->state = PJ_ICE_SESS_CHECK_STATE_FROZEN;
-                check_set_state(ice, c, PJ_ICE_SESS_CHECK_STATE_WAITING, 
-                                PJ_SUCCESS);
-                break;
+                if (c->state == PJ_ICE_SESS_CHECK_STATE_SUCCEEDED &&
+                    pj_sockaddr_cmp(&c->lcand->base_addr,
+                                    &vc->lcand->base_addr) == 0)
+                {
+                    target = c;
+                    break;
+                }
+                if (!target || c->state == PJ_ICE_SESS_CHECK_STATE_SUCCEEDED) {
+                    target = c;
+                }
             }
         }
 
-        /* Make sure the valid pair is found the checklist */
-        pj_assert(j < ice->clist.count);
+        /* Make sure the valid pair is found in the checklist */
+        pj_assert(target != NULL);
+        if (target) {
+            if (target->tdata) {
+                pj_ice_sess_comp *comp = find_comp(ice, target->lcand->comp_id);
+                pj_stun_session_cancel_req(comp->stun_sess, target->tdata,
+                                           PJ_FALSE, 0);
+                target->tdata = NULL;
+            }
+            target->state = PJ_ICE_SESS_CHECK_STATE_FROZEN;
+            check_set_state(ice, target, PJ_ICE_SESS_CHECK_STATE_WAITING, 
+                            PJ_SUCCESS);
+        }
     }
 
     /* And (re)start the periodic check */
@@ -2859,20 +2903,30 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
     }
 
     /* Verify check (check ID may change as trickle ICE re-sort the list */
-    if (tdata != check->tdata) {
-        /* Okay, it was re-sorted, lookup using lcand & rcand */
+    if (ckid >= clist->count || tdata != check->tdata) {
+        /* Okay, it was re-sorted, lookup using tdata first, then lcand & rcand */
         for (i = 0; i < clist->count; ++i) {
-            if (clist->checks[i].lcand == msg_data->data.req.lcand &&
-                clist->checks[i].rcand == msg_data->data.req.rcand)
-            {
+            if (clist->checks[i].tdata == tdata) {
                 check = &clist->checks[i];
                 ckid = i;
                 break;
             }
         }
         if (i == clist->count) {
-            /* The check may have been pruned (due to low prio) */
-            check->tdata = NULL;
+            for (i = 0; i < clist->count; ++i) {
+                if (clist->checks[i].lcand == msg_data->data.req.lcand &&
+                    clist->checks[i].rcand == msg_data->data.req.rcand)
+                {
+                    check = &clist->checks[i];
+                    ckid = i;
+                    break;
+                }
+            }
+        }
+        if (i == clist->count ||
+            (check->tdata != NULL && check->tdata != tdata))
+        {
+            /* The check may have been pruned or its transaction replaced */
             pj_grp_lock_release(ice->grp_lock);
             return;
         }
@@ -2881,7 +2935,8 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
     /* Mark STUN transaction as complete */
     // Find 'corner case ...'.
     //pj_assert(tdata == check->tdata);
-    check->tdata = NULL;
+    if (check->tdata == tdata)
+        check->tdata = NULL;
 
     /* Init lcand to NULL. lcand will be found from the mapped address
      * found in the response.
