@@ -32,14 +32,15 @@
  *
  * Drives whole call lifetimes through the loop transport: a UAC dialog is
  * created from fuzz URIs, pjsip_inv_create_uac() is given a fuzz SDP offer
- * and the INVITE is sent. The loop transport feeds the request back into
- * this same endpoint, where an application module creates the UAS leg and
- * answers with a fuzz-selected code. Responses loop back to the UAC, so
- * offer/answer negotiation, provisional responses with 100rel, session
- * timer negotiation, re-INVITE/UPDATE and BYE teardown all run inside
- * pjsip_inv_usage on attacker-shaped input. Every untrusted string (URIs,
- * SDP bytes) comes from the fuzzer, mirroring what a malicious remote peer
- * controls on the wire.
+ * and the INVITE is sent. A stub resolver maps every target to the loop
+ * transport so the request is fed back into this same endpoint, where an
+ * application module creates the UAS leg and answers with a fuzz-selected
+ * code. Responses loop back to the UAC, so offer/answer negotiation,
+ * provisional responses with 100rel, session timer negotiation,
+ * re-INVITE/UPDATE and BYE teardown all run inside pjsip_inv_usage on
+ * attacker-shaped input. Every untrusted string (URIs, SDP bytes) comes
+ * from the fuzzer, mirroring what a malicious remote peer controls on the
+ * wire.
  *
  * Input layout:
  *   data[0]        control byte:
@@ -49,8 +50,9 @@
  *                    bit3: PJSIP_INV_SUPPORT_UPDATE
  *                    bits4-6: UAS answer selector {200, 183, 486, 488, 500}
  *                    bit7: mid-call re-INVITE (UPDATE if supported)
- *   data[1..]      split into three strings: remote URI (<=50 bytes),
+ *   data[1..]      NUL-separated fields: remote URI (<=50 bytes),
  *                  target URI (<=50 bytes), SDP offer text (remainder).
+ *                  Inputs without NULs fall back to equal thirds.
  */
 
 pjsip_endpoint *endpt;
@@ -72,6 +74,10 @@ static const char *str_answer_sdp =
     "m=audio 4000 RTP/AVP 0\r\n"
     "a=rtpmap:0 PCMU/8000\r\n";
 
+/* Parsed once in LLVMFuzzerInitialize(); callees clone as needed. */
+static pj_pool_t *g_sdp_pool;
+static pjmedia_sdp_session *g_answer_sdp;
+
 typedef enum job_type {
     ESTABLISH_CALL,     /* UAS: answer 200 to complete the call   */
     MID_CALL_OFFER,     /* UAC: re-INVITE/UPDATE, offerless       */
@@ -87,8 +93,36 @@ static pjsip_inv_session *g_uac, *g_uas;
 static pj_bool_t         g_done;
 static unsigned          g_answer_code;
 static pj_bool_t         g_answer_183;
+static pj_bool_t         g_do_mid_call;
 static job_t             g_jobs[MAX_JOBS];
 static unsigned          g_job_cnt;
+
+/* Stub resolver: map every target to loopback on the loop transport so the
+ * fuzzer never blocks in getaddrinfo() and INVITEs always reach the UAS. */
+static void fuzz_resolve(pjsip_resolver_t *resolver, pj_pool_t *pool,
+                         const pjsip_host_info *target, void *token,
+                         pjsip_resolver_callback *cb)
+{
+    pjsip_server_addresses svr_addr;
+    pj_uint16_t port;
+
+    PJ_UNUSED_ARG(resolver);
+    PJ_UNUSED_ARG(pool);
+
+    port = (pj_uint16_t)(target->addr.port ? target->addr.port : 5060);
+
+    pj_bzero(&svr_addr, sizeof(svr_addr));
+    svr_addr.count = 1;
+    svr_addr.entry[0].name = target->addr.host;
+    svr_addr.entry[0].type = PJSIP_TRANSPORT_LOOP_DGRAM;
+    pj_sockaddr_in_init(&svr_addr.entry[0].addr.ipv4, NULL, port);
+    svr_addr.entry[0].addr.ipv4.sin_addr.s_addr = pj_htonl(0x7F000001);
+    svr_addr.entry[0].addr_len = sizeof(pj_sockaddr_in);
+
+    (*cb)(PJ_SUCCESS, token, &svr_addr);
+}
+
+static pjsip_ext_resolver fuzz_ext_resolver = { &fuzz_resolve };
 
 static char* alloc_str_from_data(pj_pool_t *pool, const uint8_t *data,
                                  size_t offset, size_t len)
@@ -119,9 +153,55 @@ static pjmedia_sdp_session *parse_sdp(pj_pool_t *pool, const char *text,
     return sdp;
 }
 
-static pjmedia_sdp_session *answer_sdp(pj_pool_t *pool)
+/* Split payload into remote URI, target URI, and SDP. Prefer NUL separators
+ * (seed layout); fall back to equal thirds for mutated inputs without NULs. */
+static void split_fields(pj_pool_t *pool, const uint8_t *data, size_t size,
+                         pj_str_t *remote, pj_str_t *target,
+                         const uint8_t **sdp_ptr, size_t *sdp_len)
 {
-    return parse_sdp(pool, str_answer_sdp, strlen(str_answer_sdp));
+    const uint8_t *n1, *n2;
+    size_t len1, len2, len3;
+
+    n1 = size ? (const uint8_t*)memchr(data, 0, size) : NULL;
+    if (n1) {
+        len1 = (size_t)(n1 - data);
+        if (len1 > 50)
+            len1 = 50;
+        n2 = (n1 + 1 < data + size)
+           ? (const uint8_t*)memchr(n1 + 1, 0, (size_t)(data + size - (n1 + 1)))
+           : NULL;
+        if (n2) {
+            len2 = (size_t)(n2 - (n1 + 1));
+            if (len2 > 50)
+                len2 = 50;
+            *sdp_ptr = n2 + 1;
+            *sdp_len = (size_t)(data + size - (n2 + 1));
+        } else {
+            len2 = (size_t)(data + size - (n1 + 1));
+            if (len2 > 50)
+                len2 = 50;
+            *sdp_ptr = n1 + 1 + len2;
+            *sdp_len = (size_t)(data + size - (n1 + 1 + len2));
+        }
+        remote->ptr = alloc_str_from_data(pool, data, 0, len1);
+        remote->slen = (pj_ssize_t)len1;
+        target->ptr = alloc_str_from_data(pool, n1 + 1, 0, len2);
+        target->slen = (pj_ssize_t)len2;
+        return;
+    }
+
+    len1 = size / 3;
+    len2 = size / 3;
+    if (len1 > 50) len1 = 50;
+    if (len2 > 50) len2 = 50;
+    len3 = size - len1 - len2;
+
+    remote->ptr = alloc_str_from_data(pool, data, 0, len1);
+    remote->slen = (pj_ssize_t)len1;
+    target->ptr = alloc_str_from_data(pool, data, len1, len2);
+    target->slen = (pj_ssize_t)len2;
+    *sdp_ptr = data + len1 + len2;
+    *sdp_len = len3;
 }
 
 static void enqueue_job(job_type type)
@@ -145,14 +225,14 @@ static void on_rx_offer(pjsip_inv_session *inv,
 {
     PJ_UNUSED_ARG(offer);
     /* Always answer with the fixed valid SDP. */
-    pjsip_inv_set_sdp_answer(inv, answer_sdp(inv->dlg->pool));
+    pjsip_inv_set_sdp_answer(inv, g_answer_sdp);
 }
 
 static void on_create_offer(pjsip_inv_session *inv,
                             pjmedia_sdp_session **p_offer)
 {
     PJ_UNUSED_ARG(inv);
-    *p_offer = answer_sdp(inv->dlg->pool);
+    *p_offer = g_answer_sdp;
 }
 
 static void on_new_session(pjsip_inv_session *inv, pjsip_event *e)
@@ -165,15 +245,19 @@ static void on_state_changed(pjsip_inv_session *inv, pjsip_event *e)
 {
     PJ_UNUSED_ARG(e);
 
+    /* Only the current iteration's UAC may mark the pump done, so a late
+     * disconnect from a prior iteration cannot truncate this run. */
     if (inv->state == PJSIP_INV_STATE_DISCONNECTED) {
-        g_done = PJ_TRUE;
+        if (inv == g_uac)
+            g_done = PJ_TRUE;
         return;
     }
 
     if (inv->state == PJSIP_INV_STATE_CONFIRMED && inv == g_uac) {
         /* Mid-call surface is queued from here and drained from the event
          * loop, never re-entrantly inside the callback. */
-        enqueue_job(MID_CALL_OFFER);
+        if (g_do_mid_call)
+            enqueue_job(MID_CALL_OFFER);
         enqueue_job(HANGUP);
     }
 }
@@ -202,27 +286,43 @@ static pj_bool_t on_rx_request(pjsip_rx_data *rdata)
     if (status != PJ_SUCCESS)
         return PJ_TRUE; /* handled: keep the loop transport flow clean */
 
-    status = pjsip_inv_create_uas(dlg, rdata, NULL, options, &inv);
+    /* Pass fixed answer SDP so the initial offer is negotiated; on_rx_offer
+     * only fires for subsequent re-INVITE/UPDATE offers. */
+    status = pjsip_inv_create_uas(dlg, rdata, g_answer_sdp, options, &inv);
     if (status != PJ_SUCCESS) {
+        tdata = NULL;
+        if (pjsip_dlg_create_response(dlg, rdata, 500, NULL, &tdata)
+                == PJ_SUCCESS && tdata)
+        {
+            pjsip_dlg_send_response(dlg, pjsip_rdata_get_tsx(rdata), tdata);
+        }
         pjsip_dlg_dec_lock(dlg);
         return PJ_TRUE;
     }
     g_uas = inv;
     pjsip_dlg_dec_lock(dlg);
 
+    /* First response must use pjsip_inv_initial_answer() (final codes too). */
     if (g_answer_183) {
         /* Reliable provisional path: 183 with SDP, then 200 via job. */
         status = pjsip_inv_initial_answer(inv, rdata, 183, NULL,
-                                          answer_sdp(rdata->tp_info.pool),
-                                          &tdata);
+                                          g_answer_sdp, &tdata);
         if (status == PJ_SUCCESS && tdata) {
             pjsip_inv_send_msg(inv, tdata);
             enqueue_job(ESTABLISH_CALL);
+        } else {
+            pjsip_inv_terminate(inv, PJSIP_SC_INTERNAL_SERVER_ERROR, PJ_FALSE);
+            g_uas = NULL;
         }
     } else {
-        status = pjsip_inv_answer(inv, g_answer_code, NULL, NULL, &tdata);
-        if (status == PJ_SUCCESS && tdata)
+        status = pjsip_inv_initial_answer(inv, rdata, g_answer_code, NULL,
+                                          NULL, &tdata);
+        if (status == PJ_SUCCESS && tdata) {
             pjsip_inv_send_msg(inv, tdata);
+        } else {
+            pjsip_inv_terminate(inv, PJSIP_SC_INTERNAL_SERVER_ERROR, PJ_FALSE);
+            g_uas = NULL;
+        }
     }
 
     return PJ_TRUE;
@@ -357,8 +457,19 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
      * leaving loop_transport dangling (same as the sibling targets). */
     pjsip_transport_add_ref(loop_transport);
 
+    status = pjsip_endpt_set_ext_resolver(endpt, &fuzz_ext_resolver);
+    if (status != PJ_SUCCESS)
+        return 1;
+
     status = pjsip_endpt_register_module(endpt, &mod_inv_fuzz);
     if (status != PJ_SUCCESS)
+        return 1;
+
+    g_sdp_pool = pjsip_endpt_create_pool(endpt, "inv-sdp", 1024, 1024);
+    if (!g_sdp_pool)
+        return 1;
+    g_answer_sdp = parse_sdp(g_sdp_pool, str_answer_sdp, strlen(str_answer_sdp));
+    if (!g_answer_sdp)
         return 1;
 
     return 0;
@@ -375,7 +486,8 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     pj_status_t status;
     unsigned options;
     uint8_t ctl;
-    size_t len1, len2, len3;
+    const uint8_t *sdp_ptr;
+    size_t sdp_len;
 
     if (Size < 4)
         return 0;
@@ -385,20 +497,13 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
         return 0;
 
     ctl = Data[0];
-    len1 = (Size - 1) / 3;
-    len2 = (Size - 1) / 3;
-    len3 = (Size - 1) - len1 - len2;
-    if (len1 > 50) len1 = 50;
-    if (len2 > 50) len2 = 50;
+    split_fields(pool, Data + 1, Size - 1, &remote_uri, &target,
+                 &sdp_ptr, &sdp_len);
 
-    remote_uri.ptr = alloc_str_from_data(pool, Data, 1, len1);
-    remote_uri.slen = (pj_ssize_t)len1;
-    target.ptr = alloc_str_from_data(pool, Data, 1 + len1, len2);
-    target.slen = (pj_ssize_t)len2;
     local_uri = pj_str("sip:inv-fuzzer@127.0.0.1");
     contact = pj_str("sip:inv-fuzzer@127.0.0.1:5060");
 
-    offer = parse_sdp(pool, (const char*)Data + 1 + len1 + len2, len3);
+    offer = parse_sdp(pool, (const char*)sdp_ptr, sdp_len);
 
     options = 0;
     if (ctl & 0x01) options |= PJSIP_INV_SUPPORT_100REL;
@@ -412,9 +517,11 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
             PJSIP_SC_OK, 183, PJSIP_SC_BUSY_HERE,
             PJSIP_SC_NOT_ACCEPTABLE_HERE, PJSIP_SC_INTERNAL_SERVER_ERROR
         };
-        g_answer_code = codes[(ctl >> 4) % 5];
+        /* bits 4-6 only; bit7 is mid-call and must not affect the code. */
+        g_answer_code = codes[((ctl >> 4) & 0x07) % 5];
     }
     g_answer_183 = (g_answer_code == 183);
+    g_do_mid_call = (ctl & 0x80) != 0;
     g_done = PJ_FALSE;
     g_uac = NULL;
     g_uas = NULL;
@@ -424,11 +531,18 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
                                   &remote_uri, &target, &dlg);
     if (status == PJ_SUCCESS && dlg) {
         status = pjsip_inv_create_uac(dlg, offer, options, &inv);
-        if (status == PJ_SUCCESS && inv) {
+        if (status != PJ_SUCCESS) {
+            pjsip_dlg_terminate(dlg);
+            dlg = NULL;
+        } else if (inv) {
             g_uac = inv;
 
             status = pjsip_inv_invite(inv, &tdata);
-            if (status == PJ_SUCCESS && tdata) {
+            if (status != PJ_SUCCESS) {
+                pjsip_inv_terminate(inv, PJSIP_SC_INTERNAL_SERVER_ERROR,
+                                    PJ_FALSE);
+                g_uac = NULL;
+            } else if (tdata) {
                 pjsip_inv_send_msg(inv, tdata);
                 pump_events(MAX_PUMPS);
             }
