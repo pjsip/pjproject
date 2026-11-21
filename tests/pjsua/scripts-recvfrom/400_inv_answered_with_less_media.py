@@ -20,7 +20,7 @@ a=fmtp:101 0-15
 """
 
 req = sip.RecvfromTransaction("Receiving 2 media lines, answer with 1 media line", 200,
-				include=["m=audio \d+ RTP/AVP", "m=audio \d+ RTP/AVP"], 
+				include=[r"m=audio \d+ RTP/AVP", r"m=audio \d+ RTP/AVP"],
 				exclude=[],
                                 resp_hdr=["Content-type: application/sdp"],
                                 resp_body=sdp,
