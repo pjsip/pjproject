@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -615,8 +615,8 @@ static int fingerprint_test_vector()
         char print[1500];
         pj_str_t key;
 
-        PJ_LOG(3,(THIS_FILE, "    Running test %d/%lu", i, 
-                  PJ_ARRAY_SIZE(test_vectors)));
+        PJ_LOG(3,(THIS_FILE, "    Running test %d/%lu", i,
+                  (unsigned long)PJ_ARRAY_SIZE(test_vectors)));
 
         v = &test_vectors[i];
 

@@ -133,7 +133,7 @@ static int server_thread(void *p)
                                        "HTTP/1.0 200 OK\r\n");
             PJ_ASSERT_ON_FAIL(pkt_len>0, {
                 PJ_LOG(2, (THIS_FILE, "Error creating response, pkt_len=%ld",
-                           pkt_len));
+                           (long)pkt_len));
                 pj_sock_close(newsock);
                 continue;
             })
@@ -145,7 +145,7 @@ static int server_thread(void *p)
             pkt_len = pj_ansi_strxcat(pkt, "\r\n", srv->buf_size);
             if (pkt_len < 0) {
                 PJ_LOG(2, (THIS_FILE, "Error creating response 2, pkt_len=%ld",
-                           pkt_len));
+                           (long)pkt_len));
                 pj_sock_close(newsock);
                 continue;
             }

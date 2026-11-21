@@ -1851,7 +1851,7 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
         PJ_LOG(5,(srtp->pool->obj_name,
                   "Failed to unprotect SRTP, pkt size=%ld, SSRC=%u, "
                   "seq=%u, err=%s",
-                  size, rx_ssrc, ntohs(((pjmedia_rtp_hdr*)pkt)->seq),
+                  (long)size, rx_ssrc, ntohs(((pjmedia_rtp_hdr*)pkt)->seq),
                   get_libsrtp_errstr(err)));
     } else {
         cb = srtp->rtp_cb;
@@ -1966,7 +1966,7 @@ static void srtp_rtcp_cb( void *user_data, void *pkt, pj_ssize_t size)
     if (err != srtp_err_status_ok) {
         PJ_LOG(5,(srtp->pool->obj_name,
                   "Failed to unprotect SRTCP, pkt size=%ld, err=%s",
-                  size, get_libsrtp_errstr(err)));
+                  (long)size, get_libsrtp_errstr(err)));
     } else {
         cb = srtp->rtcp_cb;
         cb_data = srtp->user_data;

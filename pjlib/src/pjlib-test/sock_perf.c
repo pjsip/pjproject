@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -101,13 +101,14 @@ static int sock_producer_consumer(int sock_type,
             }
             if (part_received <= 0) {
                 PJ_LOG(3,("", "...error: socket has closed (part_received=%ld)!",
-                          part_received));
+                          (long)part_received));
                 return -73;
             }
             if ((pj_size_t)part_received != buf_size-received) {
                 if (sock_type != pj_SOCK_STREAM()) {
                     PJ_LOG(3,("", "...error: expecting %lu bytes, got %lu bytes",
-                              buf_size-received, part_received));
+                              (unsigned long)(buf_size-received),
+                              (unsigned long)part_received));
                     return -76;
                 }
             }

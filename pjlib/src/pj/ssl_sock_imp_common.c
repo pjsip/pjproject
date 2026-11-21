@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2019-2019 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2019-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -153,29 +153,34 @@ static void circ_read_cancel(circ_buf_t* cb, pj_size_t len)
 static pj_status_t circ_write(circ_buf_t *cb,
                               const pj_uint8_t *src, pj_size_t len)
 {
+    pj_size_t size_after, tbc, rem;
+
     /* Overflow condition: resize */
     if (len > circ_avail(cb)) {
         /* Minimum required capacity */
         pj_size_t min_cap = len + cb->size;
+        pj_pool_t *pool;
+        pj_uint8_t *buf;
+        pj_size_t old_size;
 
         /* Round-up minimum capacity */
         min_cap = next_pow2(min_cap);
 
         /* Create a new pool to hold a bigger buffer, using the same factory */
-        pj_pool_t *pool = pj_pool_create(cb->pool->factory, "tls-circ%p",
-                                         min_cap, min_cap, NULL);
+        pool = pj_pool_create(cb->pool->factory, "tls-circ%p",
+                              min_cap, min_cap, NULL);
         if (!pool)
             return PJ_ENOMEM;
 
         /* Allocate our new buffer */
-        pj_uint8_t *buf = pj_pool_alloc(pool, min_cap);
+        buf = pj_pool_alloc(pool, min_cap);
         if (!buf) {
             pj_pool_release(pool);
             return PJ_ENOMEM;
         }
 
         /* Save old size, which we shall restore after the next read */
-        pj_size_t old_size = cb->size;
+        old_size = cb->size;
 
         /* Copy old data into beginning of new buffer */
         circ_read(cb, buf, cb->size);
@@ -194,9 +199,9 @@ static pj_status_t circ_write(circ_buf_t *cb,
         cb->cap = min_cap;
     }
 
-    pj_size_t size_after = cb->cap - cb->writep;
-    pj_size_t tbc = PJ_MIN(size_after, len);
-    pj_size_t rem = len - tbc;
+    size_after = cb->cap - cb->writep;
+    tbc = PJ_MIN(size_after, len);
+    rem = len - tbc;
 
     pj_memcpy(cb->buf + cb->writep, src, tbc);
     pj_memcpy(cb->buf, src + tbc, rem);
