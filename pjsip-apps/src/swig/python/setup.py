@@ -1,7 +1,7 @@
 #
 # pjsua2 Setup script.
 #
-# Copyright (C)2012 Teluu Inc. (http://www.teluu.com)
+# Copyright (C)2012-2026 Teluu Inc. (http://www.teluu.com)
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -78,6 +78,14 @@ MAKE = os.environ.get('MAKE') or "make"
 f = os.popen("%s --no-print-directory -f helper.mak target_name" % MAKE)
 pj_target_name = f.read().rstrip("\r\n")
 f.close()
+
+# On macOS, a universal2 Python builds for all of its archs, but the pjproject
+# libraries are built for the target arch only.
+if platform.system() == 'Darwin' and 'ARCHFLAGS' not in os.environ:
+    pj_arch = pj_target_name.split('-')[0]
+    if pj_arch == 'aarch64':
+        pj_arch = 'arm64'
+    os.environ['ARCHFLAGS'] = '-arch ' + pj_arch
 
 # Fill in extra_compile_args
 extra_compile_args = []
