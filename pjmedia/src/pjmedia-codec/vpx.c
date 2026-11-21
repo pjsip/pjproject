@@ -880,9 +880,13 @@ on_return:
     }
 
     if (!has_frame) {
-        PJ_LOG(4,(THIS_FILE, "Decode couldn't produce picture, "
-                  "input nframes=%lu, concatenated size=%d bytes",
-                  (unsigned long)count, whole_len));
+        /* Pictures held back while waiting for a keyframe are routine;
+         * every other no-picture path above already logged its reason.
+         */
+        if (!vpx_data->need_keyframe)
+            PJ_LOG(4,(THIS_FILE, "Decode couldn't produce picture, "
+                      "input nframes=%lu, concatenated size=%d bytes",
+                      (unsigned long)count, whole_len));
 
         output->type = PJMEDIA_FRAME_TYPE_NONE;
         output->size = 0;
