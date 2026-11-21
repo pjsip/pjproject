@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -128,6 +128,7 @@ PJ_INLINE(void) pj_math_stat_update(pj_math_stat *stat, int val)
 {
 #if PJ_HAS_FLOATING_POINT
     float            delta;
+    pj_highprec_t    mean;
 #else
     int              delta;
 #endif
@@ -148,9 +149,15 @@ PJ_INLINE(void) pj_math_stat_update(pj_math_stat *stat, int val)
     stat->fmean_ += delta/(float)stat->n;
     
     /* Return mean value with 'rounding' */
-    stat->mean = (int) (stat->fmean_ + 0.5);
+    mean = stat->fmean_ + 0.5;
+    if (mean > PJ_MAXINT32)
+        stat->mean = PJ_MAXINT32;
+    else if (mean < -PJ_MAXINT32-1)
+        stat->mean = -PJ_MAXINT32-1;
+    else
+        stat->mean = (int)mean;
 
-    stat->m2_ += (int)(delta * ((float)val-stat->fmean_));
+    stat->m2_ += (pj_highprec_t)(delta * ((float)val-stat->fmean_));
 #else
     delta = val - stat->mean;
     stat->mean += delta/stat->n;
@@ -163,7 +170,7 @@ PJ_INLINE(void) pj_math_stat_update(pj_math_stat *stat, int val)
         stat->mean_res_ += stat->n;
     }
 
-    stat->m2_ += delta * (val-stat->mean);
+    stat->m2_ += (pj_highprec_t)delta * (val-stat->mean);
 #endif
 }
 
@@ -176,8 +183,17 @@ PJ_INLINE(void) pj_math_stat_update(pj_math_stat *stat, int val)
  */
 PJ_INLINE(unsigned) pj_math_stat_get_stddev(const pj_math_stat *stat)
 {
+    pj_highprec_t    var;
+
     if (stat->n == 0) return 0;
-    return (pj_isqrt((unsigned)(stat->m2_/stat->n)));
+
+    var = stat->m2_ / stat->n;
+    if (var <= 0)
+        return 0;
+    /* Saturate at isqrt(UINT_MAX) */
+    if (var / 65536 >= 65536)
+        return 65535;
+    return (pj_isqrt((unsigned)var));
 }
 
 /**
@@ -193,7 +209,10 @@ PJ_INLINE(void) pj_math_stat_set_stddev(pj_math_stat *stat, unsigned dev)
 {
     if (stat->n == 0) 
         stat->n = 1;
-    stat->m2_ = dev*dev*stat->n;
+    /* get_stddev() saturates at isqrt(UINT_MAX) */
+    if (dev > 65535)
+        dev = 65535;
+    stat->m2_ = (pj_highprec_t)dev * dev * stat->n;
 }
 
 /** @} */
