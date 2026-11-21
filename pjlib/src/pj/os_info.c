@@ -41,7 +41,7 @@
 #   include <limits.h>
 #endif
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) || defined(__MINGW32__)
 /* For all Windows including mobile */
 #   include <windows.h>
 #endif
@@ -96,6 +96,8 @@ static char *ver_info(pj_uint32_t ver, char *buf, unsigned buf_size)
     return buf;
 }
 
+#if (defined(PJ_HAS_UNAME) && PJ_HAS_UNAME) || \
+    (defined(PJ_SYMBIAN) && PJ_SYMBIAN != 0)
 static pj_uint32_t parse_version(char *str)
 {    
     int i, maxtok;
@@ -125,6 +127,7 @@ static pj_uint32_t parse_version(char *str)
     
     return version;
 }
+#endif
 
 PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
 {
@@ -197,7 +200,7 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
         si.os_ver = parse_version(u.release);
     }
     #endif
-#elif defined(_MSC_VER)
+#elif defined(_MSC_VER) || defined(__MINGW32__)
     {
     #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
         si.os_name = pj_str("winphone");

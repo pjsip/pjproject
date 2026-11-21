@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -175,7 +175,7 @@ void dump_pool_usage( const char *app_name, pj_caching_pool *cp )
     }
 
     PJ_LOG(3, (app_name, "Total pool memory allocated=%lu KB, used=%lu KB",
-               total_alloc / 1000,
-               total_used / 1000));
+               (unsigned long)(total_alloc / 1000),
+               (unsigned long)(total_used / 1000)));
 #endif
 }
