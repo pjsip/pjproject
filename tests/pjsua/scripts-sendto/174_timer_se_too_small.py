@@ -17,7 +17,7 @@ a=fmtp:101 0-15
 
 pjsua_args = "--null-audio --auto-answer 200 --timer-min-se 2000 --timer-se 2000"
 extra_headers = "Supported: timer\nSession-Expires: 1800\n"
-include = ["Min-SE:\s*2000"]
+include = [r"Min-SE:\s*2000"]
 exclude = []
 sendto_cfg = sip.SendtoCfg("Session Timer SE too small", pjsua_args, sdp, 422, 
 			   extra_headers=extra_headers,

@@ -1,7 +1,7 @@
 #
 # pjsua Python GUI Demo
 #
-# Copyright (C)2013 Teluu Inc. (http://www.teluu.com)
+# Copyright (C)2013-2026 Teluu Inc. (http://www.teluu.com)
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@ import endpoint as ep
 import pjsua2 as pj
 import re
 
-SipUriRegex = re.compile('(sip|sips):([^:;>\@]*)@?([^:;>]*):?([^:;>]*)')
+SipUriRegex = re.compile(r'(sip|sips):([^:;>\@]*)@?([^:;>]*):?([^:;>]*)')
 ConfIdx = 1
 write=sys.stdout.write
 
