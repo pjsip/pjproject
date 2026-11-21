@@ -65,6 +65,10 @@ jobs:
     # ✏️ If the Autobuild fails above, remove it and uncomment the following three lines
     #    and modify them (or add more) to build your code if your project
     #    uses a compiled language
+    - name: config site
+      if: matrix.build-mode == 'manual'
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
+
     - if: matrix.build-mode == 'manual'
       run: |
        ./configure --disable-libyuv --disable-libwebrtc --disable-speex-codec --disable-speex-aec

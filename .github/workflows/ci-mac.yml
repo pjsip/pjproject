@@ -638,6 +638,8 @@ jobs:
     name: CMake / Debug+Release
     steps:
     - uses: actions/checkout@v5
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
     - name: install dependencies
       run: brew install openssl pkgconf
     - name: configure Debug

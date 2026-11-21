@@ -838,6 +838,8 @@ jobs:
         build_type: [Debug, Release]
     steps:
     - uses: actions/checkout@v5
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y libssl-dev libopus-dev
     - name: configure
@@ -886,6 +888,8 @@ jobs:
     name: CMake / C only
     steps:
     - uses: actions/checkout@v5
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y libssl-dev
     - name: configure

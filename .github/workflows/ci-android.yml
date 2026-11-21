@@ -33,6 +33,8 @@ jobs:
         abi: [arm64-v8a, armeabi-v7a, x86_64, x86]
     steps:
     - uses: actions/checkout@v5
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
 
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y swig
