@@ -2663,6 +2663,17 @@ static pj_bool_t parse_ossl_asn1_time(pj_time_val *tv, pj_bool_t *gmt,
     utc = ASN1_STRING_type(tm) == V_ASN1_UTCTIME;
     p = (char*)M_ASN1_STRING_data(tm);
     len = M_ASN1_STRING_length(tm);
+
+    /* A UTCTime holds at least "YYMMDDHHMMZ" and a GeneralizedTime at least
+     * "YYYYMMDDHHMMZ". OpenSSL keeps the raw ASN.1 bytes without checking the
+     * time format, so a crafted peer certificate can present a shorter field;
+     * reject it rather than read before the buffer or past its end below.
+     */
+    if ((int)len < (utc ? 11 : 13)) {
+        pj_bzero(tv, sizeof(*tv));
+        *gmt = PJ_FALSE;
+        return PJ_FALSE;
+    }
     end = p + len - 1;
 
     /* GMT */
