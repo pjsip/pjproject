@@ -59,7 +59,18 @@ FULL_SRCS = $(foreach file, $($(APP)_OBJS), $(SRCDIR)/$(basename $(file)).m $(SR
 #
 #DEPFLAGS = $($(APP)_CXXFLAGS) $($(APP)_CFLAGS)
 DEPCFLAGS =  $($(APP)_CFLAGS)
-DEPCXXFLAGS = $($(APP)_CXXFLAGS)
+DEPCXXFLAGS = $(TARGET_CXXFLAGS)
+
+#
+# The C++ flags include CFLAGS, so drop the C-only options from them, which
+# the C++ compiler warns about or rejects.
+#
+C_ONLY_FLAGS = -std=c89 -std=c90 -std=c99 -std=c11 -std=c17 -std=c18 \
+	       -std=c2x -std=c23 -std=gnu89 -std=gnu90 -std=gnu99 -std=gnu11 \
+	       -std=gnu17 -std=gnu18 -std=gnu2x -std=gnu23 -std=iso9899% \
+	       -Wdeclaration-after-statement \
+	       -Werror=declaration-after-statement
+TARGET_CXXFLAGS = $(filter-out $(C_ONLY_FLAGS),$($(APP)_CXXFLAGS))
 
 # Dependency file
 DEP_FILE := .$(app)-$(TARGET_NAME).depend
@@ -170,17 +181,17 @@ $(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.S | $(@D)
 		$(subst /,$(HOST_PSEP),$<) 
 
 $(OBJDIR)/dshowclasses.o: $(SRCDIR)/dshowclasses.cpp | $(@D)
-	$(CXX) $($(APP)_CXXFLAGS) $(CC_DEPFLAGS) -I$(SRCDIR)/../../../third_party/BaseClasses -fpermissive \
+	$(CXX) $(TARGET_CXXFLAGS) $(CC_DEPFLAGS) -I$(SRCDIR)/../../../third_party/BaseClasses -fpermissive \
 		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
 		$(subst /,$(HOST_PSEP),$<)
 
 $(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.cpp | $(@D)
-	$(CXX) $($(APP)_CXXFLAGS) $(CC_DEPFLAGS) \
+	$(CXX) $(TARGET_CXXFLAGS) $(CC_DEPFLAGS) \
 		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
 		$(subst /,$(HOST_PSEP),$<)
 
 $(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.cc | $(@D)
-	$(CXX) $($(APP)_CXXFLAGS) $(CC_DEPFLAGS) \
+	$(CXX) $(TARGET_CXXFLAGS) $(CC_DEPFLAGS) \
 		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
 		$(subst /,$(HOST_PSEP),$<)
 
