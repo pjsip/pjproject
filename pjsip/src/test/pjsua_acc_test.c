@@ -1376,7 +1376,7 @@ static int abandon_window_test(pjsua_transport_id tp_id, int port,
     pj_thread_t     *thread = NULL;
     char             reg_uri[64];
     int              base = answered? -4110 : -4100;
-    int              log_level;
+    int              prev_log_level;
     pj_status_t      status;
     int              rc = 0;
 
@@ -1423,8 +1423,8 @@ static int abandon_window_test(pjsua_transport_id tp_id, int port,
     g_ctx.reg_done = PJ_FALSE;
     g_abandon_reported = PJ_FALSE;
     g_abandon_ignored = PJ_FALSE;
-    log_level = pj_log_get_level();
-    g_log_level = PJ_MAX(log_level, 4);
+    prev_log_level = pj_log_get_level();
+    g_log_level = PJ_MAX(prev_log_level, 4);
     g_log_func = pj_log_get_log_func();
     pj_log_set_level(5);
     pj_log_set_log_func(&abandon_log_func);
@@ -1452,7 +1452,7 @@ static int abandon_window_test(pjsua_transport_id tp_id, int port,
         g_defer.pending = PJ_FALSE;
     }
     pj_log_set_log_func(g_log_func);
-    pj_log_set_level(log_level);
+    pj_log_set_level(prev_log_level);
     if (status != PJ_SUCCESS) {
         rc = base - 4;
         goto on_return;
