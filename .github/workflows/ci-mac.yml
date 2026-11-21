@@ -43,8 +43,8 @@ jobs:
       # Only run full Mac test suite for changes to platform-specific areas.
       mac_full_tests: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
     steps:
-    - uses: actions/checkout@v4
-    - uses: dorny/paths-filter@v3
+    - uses: actions/checkout@v5
+    - uses: dorny/paths-filter@v4
       if: github.event_name == 'pull_request'
       id: filter
       with:
@@ -77,7 +77,7 @@ jobs:
     runs-on: macos-latest
     name: Default / build only
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -90,7 +90,7 @@ jobs:
       run: $MAKE_FAST
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -102,7 +102,7 @@ jobs:
     runs-on: macos-latest
     name: Default / pjmedia,pjnath
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -123,7 +123,7 @@ jobs:
       run: make pjnath-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -134,7 +134,7 @@ jobs:
     runs-on: macos-latest
     name: Default / pjsua-test
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -142,7 +142,7 @@ jobs:
     - name: install dependencies
       run: brew install openssl opencore-amr vo-amrwbenc swig sipp
     - name: set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: '3.10'
     - name: Install PESQ and Dependencies
@@ -175,7 +175,7 @@ jobs:
       run: make pjsua-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -186,7 +186,7 @@ jobs:
     runs-on: macos-latest
     name: Default / pjlib,util,pjsip-test
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -209,7 +209,7 @@ jobs:
       run: make pjsip-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -220,7 +220,7 @@ jobs:
     runs-on: macos-latest
     name: OpenSSL / pjlib,util,pjnath,pjmedia
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -234,7 +234,7 @@ jobs:
     - name: make
       run: $MAKE_FAST
     - name: set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: '3.10'
     - name: swig bindings
@@ -265,7 +265,7 @@ jobs:
     #   run: make pjnath-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -276,7 +276,7 @@ jobs:
     runs-on: macos-latest
     name: OpenSSL / pjsip
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -299,7 +299,7 @@ jobs:
       run: make pjsip-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -310,7 +310,7 @@ jobs:
     runs-on: macos-latest
     name: GnuTLS / pjlib,util,pjmedia,pjnath
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -324,7 +324,7 @@ jobs:
     - name: make
       run: $MAKE_FAST
     - name: set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: '3.10'
     - name: swig bindings
@@ -353,7 +353,7 @@ jobs:
     #   run: make pjnath-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -364,7 +364,7 @@ jobs:
     runs-on: macos-latest
     name: GnuTLS / pjsip-test
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -385,7 +385,7 @@ jobs:
       run: make pjsip-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -396,7 +396,7 @@ jobs:
     runs-on: macos-latest
     name: Openh264+VPX / pjsua
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -415,7 +415,7 @@ jobs:
     - name: pjmedia-test conf_test
       run: cd pjmedia/build && $CI_RUNNER ../bin/pjmedia-test-`make -s -C ../.. infotarget` $CI_MODE $CI_ARGS conf_test
     - name: set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: '3.10'
     - name: Install PESQ and Dependencies
@@ -436,7 +436,7 @@ jobs:
       run: make pjsua-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -451,7 +451,7 @@ jobs:
 #    runs-on: macos-latest
 #    name: Openh264+VPX / pjlib,util,pjnath
 #    steps:
-#    - uses: actions/checkout@v2
+#    - uses: actions/checkout@v5
 #    - name: install cirunner
 #      run: |
 #        git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -474,7 +474,7 @@ jobs:
 #      run: make pjnath-test
 #    - name: upload artifacts on failure
 #      if: ${{ failure() }}
-#      uses: actions/upload-artifact@v4
+#      uses: actions/upload-artifact@v6
 #      with:
 #        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
 #        path: artifacts
@@ -485,7 +485,7 @@ jobs:
     runs-on: macos-latest
     name: Openh264+VPX / pjmedia,pjsip
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -506,7 +506,7 @@ jobs:
       run: make pjsip-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -517,7 +517,7 @@ jobs:
     runs-on: macos-latest
     name: FFMPEG+VPX+x264 / pjmedia
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -537,7 +537,7 @@ jobs:
     - name: make
       run: $MAKE_FAST
     - name: set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: '3.10'
     - name: swig bindings
@@ -546,7 +546,7 @@ jobs:
       run: make pjmedia-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -557,7 +557,7 @@ jobs:
     runs-on: macos-latest
     name: VPX+VidToolbox / pjmedia
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -571,7 +571,7 @@ jobs:
     - name: make
       run: $MAKE_FAST
     - name: set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: '3.10'
     - name: swig bindings
@@ -580,7 +580,7 @@ jobs:
       run: make pjmedia-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -591,7 +591,7 @@ jobs:
     runs-on: macos-latest
     name: ioq-cb-with-lock / pjlib,pjsua
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -599,7 +599,7 @@ jobs:
     - name: install dependencies
       run: brew install openssl opencore-amr vo-amrwbenc sipp
     - name: set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: '3.10'
     - name: Install PESQ and Dependencies
@@ -628,7 +628,7 @@ jobs:
       run: make pjsua-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -637,7 +637,7 @@ jobs:
     runs-on: macos-latest
     name: CMake / Debug+Release
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: install dependencies
       run: brew install openssl pkgconf
     - name: configure Debug
