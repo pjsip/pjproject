@@ -994,8 +994,7 @@ static int unreg_start_report_test(pjsua_transport_id tp_id, int port)
     pjsua_acc_del(acc_id);
     acc_id = PJSUA_INVALID_ID;
     for (i = 0; i < 200 &&
-         g_mock_reg.req_count - g_mock_reg.reg_count == before; ++i)
-    {
+         g_mock_reg.req_count - g_mock_reg.reg_count == before; ++i) {
         pjsua_handle_events(10);
     }
     if (g_ctx.unreg_started != 1 || g_ctx.unreg_done ||
