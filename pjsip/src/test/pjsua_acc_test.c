@@ -62,6 +62,10 @@
  *      but not into the next REGISTER, which keeps the account proxy.
  *      Also with a server affinity UDP pin, whose hidden Route leads the
  *      account route set.
+ *  15. The un-REGISTER PJSUA_CONTACT_REWRITE_UNREGISTER sends before
+ *      destroying the regc is best-effort: it must not reach
+ *      on_reg_started2(), nor must the one pjsua_acc_del() sends, while
+ *      an un-REGISTER whose regc stays alive still is.
  */
 
 #include "test.h"
@@ -338,6 +342,8 @@ static struct {
     unsigned    reg_ok_count;
     pj_int32_t  reg_ok_cseq;    /* CSeq of the last 2xx reported */
     pj_bool_t   unreg_done;     /* an unregistration was answered */
+    unsigned    reg_started;    /* on_reg_started2 for a REGISTER */
+    unsigned    unreg_started;  /* on_reg_started2 for an un-REGISTER */
     int         ipc_update_cnt; /* ACC_UPDATE_CONTACT reports */
     int         ipc_done_cnt;   /* COMPLETED reports */
     pj_bool_t   published;      /* still published after a refused unreg */
@@ -356,6 +362,17 @@ static void on_reg_state2(pjsua_acc_id acc_id, pjsua_reg_info *info)
         g_ctx.reg_ok_cseq = info->cbparam->cseq;
         g_ctx.reg_done = PJ_TRUE;
     }
+}
+
+
+static void on_reg_started2(pjsua_acc_id acc_id, pjsua_reg_info *info)
+{
+    PJ_UNUSED_ARG(acc_id);
+
+    if (info->renew)
+        g_ctx.reg_started++;
+    else
+        g_ctx.unreg_started++;
 }
 
 
@@ -827,6 +844,99 @@ on_return:
     g_mock_reg.received = NULL;
     g_fail_tx.host = NULL;
     pjsua_acc_del(acc_id);
+    pjsua_handle_events(500);
+    return rc;
+}
+
+
+/* The un-REGISTER PJSUA_CONTACT_REWRITE_UNREGISTER sends before tearing
+ * the regc down is best-effort: the session is destroyed before its
+ * answer can arrive, so reporting its start would leave the application
+ * a start no on_reg_state2() will ever follow. The un-REGISTER
+ * pjsua_acc_del() sends is the same. A un-REGISTER whose regc stays
+ * alive, like the application's own, must still be reported.
+ */
+static int unreg_start_report_test(pjsua_transport_id tp_id, int port)
+{
+    pjsua_acc_config acc_cfg;
+    pjsua_acc_id     acc_id = PJSUA_INVALID_ID;
+    char             reg_uri[64];
+    int              rc = 0;
+
+    PJ_LOG(3, (THIS_FILE, "  pjsua acc: un-REGISTER start not reported"));
+
+    pj_bzero(&g_ctx, sizeof(g_ctx));
+    g_mock_reg.received  = "1.2.3.4";
+    g_mock_reg.req_count = 0;
+
+    pj_ansi_snprintf(reg_uri, sizeof(reg_uri), "sip:127.0.0.1:%d", port);
+
+    pjsua_acc_config_default(&acc_cfg);
+    acc_cfg.id       = pj_str("sip:" TEST_USER "@pjsip.org");
+    acc_cfg.reg_uri  = pj_str(reg_uri);
+    acc_cfg.transport_id = tp_id;
+    acc_cfg.register_on_acc_add = PJ_FALSE;
+    acc_cfg.allow_contact_rewrite = 2;
+    acc_cfg.allow_via_rewrite = PJ_FALSE;
+    acc_cfg.contact_rewrite_method = PJSUA_CONTACT_REWRITE_UNREGISTER;
+
+    if (pjsua_acc_add(&acc_cfg, PJ_FALSE, &acc_id) != PJ_SUCCESS ||
+        pjsua_acc_set_registration(acc_id, PJ_TRUE) != PJ_SUCCESS ||
+        wait_reg(10000) != 0)
+    {
+        rc = -4200;
+        goto on_return;
+    }
+
+    /* The first 2xx rewrote the Contact: the registrar saw the
+     * un-REGISTER, the regc was destroyed and the new REGISTER
+     * completed. Only the two REGISTERs may have been reported.
+     */
+    pump_events(2000, NULL, PJ_TRUE);
+    if (g_ctx.reg_started != 2 || g_ctx.unreg_started != 0 ||
+        g_ctx.unreg_done || g_mock_reg.req_count != 3)
+    {
+        PJ_LOG(3, (THIS_FILE, "    error: reported starts %u reg / %u "
+                   "unreg, unreg state %d, %u requests, expected 2/0, "
+                   "no state, 3", g_ctx.reg_started, g_ctx.unreg_started,
+                   (int)g_ctx.unreg_done, g_mock_reg.req_count));
+        rc = -4201;
+        goto on_return;
+    }
+
+    /* An un-REGISTER whose regc stays alive is still reported */
+    g_ctx.reg_done = PJ_FALSE;
+    g_ctx.unreg_done = PJ_FALSE;
+    if (pjsua_acc_set_registration(acc_id, PJ_FALSE) != PJ_SUCCESS ||
+        wait_reg(5000) != 0)
+    {
+        rc = -4202;
+        goto on_return;
+    }
+    if (g_ctx.unreg_started != 1 || !g_ctx.unreg_done) {
+        PJ_LOG(3, (THIS_FILE, "    error: live un-REGISTER reported %u "
+                   "starts, state %d", g_ctx.unreg_started,
+                   (int)g_ctx.unreg_done));
+        rc = -4203;
+        goto on_return;
+    }
+
+    /* Deleting the account sends another best-effort un-REGISTER, which
+     * must not be reported either.
+     */
+    pjsua_acc_del(acc_id);
+    acc_id = PJSUA_INVALID_ID;
+    pjsua_handle_events(500);
+    if (g_ctx.unreg_started != 1) {
+        PJ_LOG(3, (THIS_FILE, "    error: account deletion reported %u "
+                   "un-REGISTER starts", g_ctx.unreg_started));
+        rc = -4204;
+    }
+
+on_return:
+    g_mock_reg.received = NULL;
+    if (acc_id != PJSUA_INVALID_ID)
+        pjsua_acc_del(acc_id);
     pjsua_handle_events(500);
     return rc;
 }
@@ -1696,6 +1806,7 @@ int pjsua_acc_test(void)
 
     pjsua_config_default(&ua_cfg);
     ua_cfg.cb.on_reg_state2 = &on_reg_state2;
+    ua_cfg.cb.on_reg_started2 = &on_reg_started2;
     ua_cfg.cb.on_ip_change_progress = &on_ip_change_progress;
     ua_cfg.cb.on_auth_challenge = &on_auth_challenge;
     /* No worker threads: everything runs from pjsua_handle_events() so
@@ -1842,6 +1953,9 @@ int pjsua_acc_test(void)
     }
 
     rc = rewrite_send_fail_test(tp_id, (int)port);
+    if (rc != 0) goto on_return;
+
+    rc = unreg_start_report_test(tp_id, (int)port);
     if (rc != 0) goto on_return;
 
     rc = service_route_test(tp_id, (int)port, PJ_FALSE, -2550);
