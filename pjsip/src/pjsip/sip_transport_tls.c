@@ -1842,8 +1842,8 @@ static pj_bool_t on_data_sent(pj_ssl_sock_t *ssock,
     if (bytes_sent <= 0) {
         pj_status_t status;
 
-        PJ_LOG(5,(tls->base.obj_name, "TLS send() error, sent=%ld", 
-                  bytes_sent));
+        PJ_LOG(5,(tls->base.obj_name, "TLS send() error, sent=%ld",
+                  (long)bytes_sent));
 
         status = (bytes_sent == 0) ? PJ_RETURN_OS_ERROR(OSERR_ENOTCONN) :
                                      (pj_status_t)-bytes_sent;
@@ -1984,8 +1984,8 @@ static pj_status_t tls_send_msg(pjsip_transport *transport,
             /* Shutdown transport on closure/errors */
             if (size <= 0) {
 
-                PJ_LOG(5,(tls->base.obj_name, "TLS send() error, sent=%ld", 
-                          size));
+                PJ_LOG(5,(tls->base.obj_name, "TLS send() error, sent=%ld",
+                          (long)size));
 
                 if (status == PJ_SUCCESS) 
                     status = PJ_RETURN_OS_ERROR(OSERR_ENOTCONN);

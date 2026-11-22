@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -94,7 +94,8 @@ static void on_complete(pj_http_req *hreq, pj_status_t status,
         PJ_PERROR(1, (THIS_FILE, status, "HTTP request completed with error"));
         return;
     }
-    PJ_LOG(3, (THIS_FILE, "Data completed: %ld bytes", resp->size));
+    PJ_LOG(3, (THIS_FILE, "Data completed: %ld bytes",
+               (long)resp->size));
     if (resp->size > 0 && resp->data) {
 #ifdef VERBOSE
         printf("%.*s\n", (int)resp->size, (char *)resp->data);

@@ -2910,7 +2910,7 @@ static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
 
     PJ_LOG(5,(THIS_FILE, 
               "Sending %ld bytes keep-alive packet for acc %d to %s",
-              acc->cfg.ka_data.slen, acc->index,
+              (long)acc->cfg.ka_data.slen, acc->index,
               pj_sockaddr_print(&acc->ka_target, addrtxt, sizeof(addrtxt),3)));
 
     /* Send raw packet */

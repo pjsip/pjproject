@@ -402,7 +402,8 @@ static int server_thread(void *p)
             continue;
         }
 
-        PJ_LOG(5,(THIS_FILE, "Server %ld processing packet", srv - &g_server[0]));
+        PJ_LOG(5,(THIS_FILE, "Server %ld processing packet",
+                  (long)(srv - &g_server[0])));
 
         lock();
         rc = pj_dns_parse_packet(pool, pkt, (unsigned)pkt_len, &req);
