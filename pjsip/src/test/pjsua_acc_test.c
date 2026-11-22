@@ -861,6 +861,8 @@ static int unreg_start_report_test(pjsua_transport_id tp_id, int port)
     pjsua_acc_config acc_cfg;
     pjsua_acc_id     acc_id = PJSUA_INVALID_ID;
     char             reg_uri[64];
+    char             local_host[PJ_INET6_ADDRSTRLEN + 16];
+    unsigned         before;
     int              rc = 0;
 
     PJ_LOG(3, (THIS_FILE, "  pjsua acc: un-REGISTER start not reported"));
@@ -868,6 +870,7 @@ static int unreg_start_report_test(pjsua_transport_id tp_id, int port)
     pj_bzero(&g_ctx, sizeof(g_ctx));
     g_mock_reg.received  = "1.2.3.4";
     g_mock_reg.req_count = 0;
+    g_mock_reg.reg_count = 0;
 
     pj_ansi_snprintf(reg_uri, sizeof(reg_uri), "sip:127.0.0.1:%d", port);
 
@@ -881,9 +884,21 @@ static int unreg_start_report_test(pjsua_transport_id tp_id, int port)
     acc_cfg.contact_rewrite_method = PJSUA_CONTACT_REWRITE_UNREGISTER;
 
     if (pjsua_acc_add(&acc_cfg, PJ_FALSE, &acc_id) != PJ_SUCCESS ||
-        pjsua_acc_set_registration(acc_id, PJ_TRUE) != PJ_SUCCESS ||
-        wait_reg(10000) != 0)
+        pjsua_acc_set_registration(acc_id, PJ_TRUE) != PJ_SUCCESS)
     {
+        rc = -4200;
+        goto on_return;
+    }
+
+    /* The Contact the account generates locally: feeding it back as the
+     * Via received param later keeps the Contact stable, so that only
+     * the un-REGISTERs under test go out.
+     */
+    if (get_acc_contact_host(acc_id, local_host, sizeof(local_host)) != 0) {
+        rc = -4210;
+        goto on_return;
+    }
+    if (wait_reg(10000) != 0) {
         rc = -4200;
         goto on_return;
     }
@@ -891,46 +906,98 @@ static int unreg_start_report_test(pjsua_transport_id tp_id, int port)
     /* The first 2xx rewrote the Contact: the registrar saw the
      * un-REGISTER, the regc was destroyed and the new REGISTER
      * completed. Only the two REGISTERs may have been reported.
+     * req_count - reg_count counts the requests that add no binding,
+     * i.e. the un-REGISTERs.
      */
     pump_events(2000, NULL, PJ_TRUE);
     if (g_ctx.reg_started != 2 || g_ctx.unreg_started != 0 ||
-        g_ctx.unreg_done || g_mock_reg.req_count != 3)
+        g_ctx.unreg_done || g_mock_reg.req_count != 3 ||
+        g_mock_reg.req_count - g_mock_reg.reg_count != 1)
     {
         PJ_LOG(3, (THIS_FILE, "    error: reported starts %u reg / %u "
-                   "unreg, unreg state %d, %u requests, expected 2/0, "
-                   "no state, 3", g_ctx.reg_started, g_ctx.unreg_started,
-                   (int)g_ctx.unreg_done, g_mock_reg.req_count));
+                   "unreg, unreg state %d, %u requests, %u un-REGISTERs, "
+                   "expected 2/0, no state, 3, 1", g_ctx.reg_started,
+                   g_ctx.unreg_started, (int)g_ctx.unreg_done,
+                   g_mock_reg.req_count,
+                   g_mock_reg.req_count - g_mock_reg.reg_count));
         rc = -4201;
         goto on_return;
     }
 
+    /* Modify the account while it is still registered: unreg_first's
+     * un-REGISTER is best-effort too and must not be reported, though
+     * the registrar must see it go out. The received param now matches
+     * the local Contact, so no Contact rewrite adds requests of its
+     * own.
+     */
+    g_mock_reg.received = local_host;
+    before = g_mock_reg.req_count - g_mock_reg.reg_count;
+    acc_cfg.id = pj_str("sip:" TEST_USER "@pjsip.net");
+    g_ctx.reg_done = PJ_FALSE;
+    if (pjsua_acc_modify(acc_id, &acc_cfg) != PJ_SUCCESS ||
+        wait_reg(10000) != 0)
+    {
+        rc = -4204;
+        goto on_return;
+    }
+    if (g_mock_reg.req_count - g_mock_reg.reg_count != before + 1 ||
+        g_ctx.unreg_started != 0)
+    {
+        PJ_LOG(3, (THIS_FILE, "    error: modify sent %u un-REGISTERs "
+                   "and %u un-REGISTER starts, expected 1 and 0",
+                   g_mock_reg.req_count - g_mock_reg.reg_count - before,
+                   g_ctx.unreg_started));
+        rc = -4205;
+        goto on_return;
+    }
+
     /* An un-REGISTER whose regc stays alive is still reported */
+    before = g_mock_reg.req_count - g_mock_reg.reg_count;
     g_ctx.reg_done = PJ_FALSE;
     g_ctx.unreg_done = PJ_FALSE;
     if (pjsua_acc_set_registration(acc_id, PJ_FALSE) != PJ_SUCCESS ||
         wait_reg(5000) != 0)
     {
-        rc = -4202;
+        rc = -4206;
         goto on_return;
     }
-    if (g_ctx.unreg_started != 1 || !g_ctx.unreg_done) {
+    if (g_ctx.unreg_started != 1 || !g_ctx.unreg_done ||
+        g_mock_reg.req_count - g_mock_reg.reg_count != before + 1)
+    {
         PJ_LOG(3, (THIS_FILE, "    error: live un-REGISTER reported %u "
-                   "starts, state %d", g_ctx.unreg_started,
-                   (int)g_ctx.unreg_done));
-        rc = -4203;
+                   "starts, state %d, sent %u un-REGISTERs",
+                   g_ctx.unreg_started, (int)g_ctx.unreg_done,
+                   g_mock_reg.req_count - g_mock_reg.reg_count - before));
+        rc = -4207;
+        goto on_return;
+    }
+
+    /* Register again so that deleting the account has a regc to send
+     * its best-effort un-REGISTER through.
+     */
+    g_ctx.reg_done = PJ_FALSE;
+    if (pjsua_acc_set_registration(acc_id, PJ_TRUE) != PJ_SUCCESS ||
+        wait_reg(10000) != 0)
+    {
+        rc = -4208;
         goto on_return;
     }
 
     /* Deleting the account sends another best-effort un-REGISTER, which
      * must not be reported either.
      */
+    before = g_mock_reg.req_count - g_mock_reg.reg_count;
     pjsua_acc_del(acc_id);
     acc_id = PJSUA_INVALID_ID;
     pjsua_handle_events(500);
-    if (g_ctx.unreg_started != 1) {
-        PJ_LOG(3, (THIS_FILE, "    error: account deletion reported %u "
-                   "un-REGISTER starts", g_ctx.unreg_started));
-        rc = -4204;
+    if (g_ctx.unreg_started != 1 ||
+        g_mock_reg.req_count - g_mock_reg.reg_count != before + 1)
+    {
+        PJ_LOG(3, (THIS_FILE, "    error: account deletion sent %u "
+                   "un-REGISTERs and %u un-REGISTER starts, expected 1 "
+                   "and 1", g_mock_reg.req_count - g_mock_reg.reg_count -
+                   before, g_ctx.unreg_started));
+        rc = -4209;
     }
 
 on_return:
