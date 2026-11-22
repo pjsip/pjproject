@@ -785,7 +785,6 @@ static int echo_test_with_certs(pj_ssl_sock_proto srv_proto,
     pj_sockaddr addr, listen_addr;
     pj_ssl_cipher ciphers[1];
     pj_ssl_cert_t *cert = NULL;
-    pj_ssl_cert_t *cli_cert = NULL;
     pj_status_t status;
 
 #if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_SCHANNEL)
@@ -988,7 +987,7 @@ static int echo_test_with_certs(pj_ssl_sock_proto srv_proto,
     }
 #else
     {
-        cli_cert = cert;
+        pj_ssl_cert_t *cli_cert = cert;
 
         if (!client_provide_cert) {
             pj_str_t ca_file = pj_str(CERT_CA_FILE);
@@ -3009,6 +3008,7 @@ static pj_bool_t serial_on_connect(pj_ssl_sock_t *ssock, pj_status_t status)
                               pj_ssl_sock_get_user_data(ssock);
     pj_ssl_sock_info info;
 
+    pj_bzero(&info, sizeof(info));
     if (status == PJ_SUCCESS)
         status = pj_ssl_sock_get_info(ssock, &info);
     if (status == PJ_SUCCESS)
@@ -3281,6 +3281,8 @@ static int untrusted_chain_test(void)
 
     pj_bzero(&state_serv, sizeof(state_serv));
     pj_bzero(&state_cli, sizeof(state_cli));
+    pj_bzero(&cli_buf, sizeof(cli_buf));
+    pj_bzero(&issuer_buf, sizeof(issuer_buf));
 
     pool = pj_pool_create(mem, "ssl_chain", 512, 512, NULL);
     state_serv.pool = state_cli.pool = pool;

@@ -681,8 +681,9 @@ static void send_prompt_str(cli_telnet_sess *sess)
  * instead of writing an attacker-influenced number of spaces into a
  * fixed-size stack buffer. Shared by send_err_arg() and send_ambi_arg().
  */
-static const unsigned char SPACES[64] =
+static const unsigned char SPACES[] =
     "                                                                ";
+#define SPACES_LEN  (sizeof(SPACES) - 1)
 
 /*
  * This method is used to send error message to client, including
@@ -712,8 +713,7 @@ static void send_err_arg(cli_telnet_sess *sess,
 
     remaining = len;
     while (remaining > 0) {
-        pj_size_t chunk = (remaining > sizeof(SPACES)) ? sizeof(SPACES)
-                                                       : remaining;
+        pj_size_t chunk = (remaining > SPACES_LEN) ? SPACES_LEN : remaining;
         telnet_sess_send2(sess, SPACES, (int)chunk);
         remaining -= chunk;
     }
@@ -808,8 +808,7 @@ static void send_ambi_arg(cli_telnet_sess *sess,
 
     remaining = len;
     while (remaining > 0) {
-        pj_size_t chunk = (remaining > sizeof(SPACES)) ? sizeof(SPACES)
-                                                       : remaining;
+        pj_size_t chunk = (remaining > SPACES_LEN) ? SPACES_LEN : remaining;
         telnet_sess_send2(sess, SPACES, (int)chunk);
         remaining -= chunk;
     }

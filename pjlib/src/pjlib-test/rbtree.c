@@ -25,7 +25,7 @@
 #define LOOP        32
 #define MIN_COUNT   64
 #define MAX_COUNT   (LOOP * MIN_COUNT)
-#define STRSIZE     16
+#define STRSIZE     17
 #define THIS_FILE   "rbtree_test"
 
 typedef struct node_key

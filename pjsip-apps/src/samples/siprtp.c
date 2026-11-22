@@ -1400,7 +1400,7 @@ static void call_on_media_update( pjsip_inv_session *inv,
 {
     struct call *call;
     struct media_stream *audio;
-    const pjmedia_sdp_session *local_sdp, *remote_sdp;
+    const pjmedia_sdp_session *local_sdp, *remote_sdp = NULL;
     struct codec *codec_desc = NULL;
     unsigned i;
 
