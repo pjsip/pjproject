@@ -2591,8 +2591,9 @@ public:
      * and unregistration. Once registration session is active, subsequent
      * refresh will not cause this callback to be called. Each reported
      * start is followed by onRegState() for that REGISTER or for a
-     * newer one. An un-REGISTER sent only to tear the registration down
-     * before destroying it is not reported.
+     * newer one, unless the account is deleted or its registration
+     * client is destroyed first. An un-REGISTER sent only to tear the
+     * registration down before destroying it is not reported.
      *
      * @param prm           Callback parameter.
      */
