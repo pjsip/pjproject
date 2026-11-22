@@ -651,6 +651,10 @@ static pj_status_t vp8_encode_frame(pjmedia_vid_codec *codec,
     if (status != PJ_SUCCESS)
         return status;
 
+    /* The encoder dropped the frame (rate control). */
+    if (packets[cnt].size == 0)
+        return PJMEDIA_CODEC_EFAILED;
+
     p += packets[cnt].size;
     left -= (unsigned)packets[cnt].size;
     ++cnt;
