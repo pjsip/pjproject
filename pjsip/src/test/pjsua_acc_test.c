@@ -863,6 +863,7 @@ static int unreg_start_report_test(pjsua_transport_id tp_id, int port)
     char             reg_uri[64];
     char             local_host[PJ_INET6_ADDRSTRLEN + 16];
     unsigned         before;
+    unsigned         i;
     int              rc = 0;
 
     PJ_LOG(3, (THIS_FILE, "  pjsua acc: un-REGISTER start not reported"));
@@ -941,12 +942,13 @@ static int unreg_start_report_test(pjsua_transport_id tp_id, int port)
         goto on_return;
     }
     if (g_mock_reg.req_count - g_mock_reg.reg_count != before + 1 ||
-        g_ctx.unreg_started != 0)
+        g_ctx.unreg_started != 0 || g_ctx.unreg_done)
     {
-        PJ_LOG(3, (THIS_FILE, "    error: modify sent %u un-REGISTERs "
-                   "and %u un-REGISTER starts, expected 1 and 0",
+        PJ_LOG(3, (THIS_FILE, "    error: modify sent %u un-REGISTERs, "
+                   "%u un-REGISTER starts and unreg state %d, expected "
+                   "1, 0 and none",
                    g_mock_reg.req_count - g_mock_reg.reg_count - before,
-                   g_ctx.unreg_started));
+                   g_ctx.unreg_started, (int)g_ctx.unreg_done));
         rc = -4205;
         goto on_return;
     }
@@ -984,19 +986,26 @@ static int unreg_start_report_test(pjsua_transport_id tp_id, int port)
     }
 
     /* Deleting the account sends another best-effort un-REGISTER, which
-     * must not be reported either.
+     * must not be reported either. It goes out asynchronously: pump
+     * until the registrar sees it.
      */
     before = g_mock_reg.req_count - g_mock_reg.reg_count;
+    g_ctx.unreg_done = PJ_FALSE;
     pjsua_acc_del(acc_id);
     acc_id = PJSUA_INVALID_ID;
-    pjsua_handle_events(500);
-    if (g_ctx.unreg_started != 1 ||
+    for (i = 0; i < 200 &&
+         g_mock_reg.req_count - g_mock_reg.reg_count == before; ++i)
+    {
+        pjsua_handle_events(10);
+    }
+    if (g_ctx.unreg_started != 1 || g_ctx.unreg_done ||
         g_mock_reg.req_count - g_mock_reg.reg_count != before + 1)
     {
         PJ_LOG(3, (THIS_FILE, "    error: account deletion sent %u "
-                   "un-REGISTERs and %u un-REGISTER starts, expected 1 "
-                   "and 1", g_mock_reg.req_count - g_mock_reg.reg_count -
-                   before, g_ctx.unreg_started));
+                   "un-REGISTERs, %u un-REGISTER starts and unreg state "
+                   "%d, expected 1, 1 and none",
+                   g_mock_reg.req_count - g_mock_reg.reg_count - before,
+                   g_ctx.unreg_started, (int)g_ctx.unreg_done));
         rc = -4209;
     }
 
