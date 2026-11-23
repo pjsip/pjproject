@@ -2352,9 +2352,32 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
             if (pjsip_uri_cmp(PJSIP_URI_IN_REQ_URI, notify->line.req.uri,
                               sub->dlg->target))
             {
+                pjsip_hdr *h;
+
                 notify->line.req.uri = (pjsip_uri*)
                     pjsip_uri_clone(sub->pending_notify->pool,
                                     sub->dlg->target);
+
+                /* Redo the authorization headers, which have the URI */
+                while ((h = (pjsip_hdr*)
+                            pjsip_msg_find_hdr(notify, PJSIP_H_AUTHORIZATION,
+                                               NULL)) != NULL)
+                {
+                    pj_list_erase(h);
+                }
+                while ((h = (pjsip_hdr*)
+                            pjsip_msg_find_hdr(notify,
+                                               PJSIP_H_PROXY_AUTHORIZATION,
+                                               NULL)) != NULL)
+                {
+                    pj_list_erase(h);
+                }
+                status = pjsip_auth_clt_init_req(&sub->dlg->auth_sess,
+                                                 sub->pending_notify);
+                if (status != PJ_SUCCESS) {
+                    PJ_PERROR(4,(sub->obj_name, status,
+                                 "Error updating NOTIFY authorization"));
+                }
             }
 
             status = pjsip_evsub_send_request(sub, sub->pending_notify);
