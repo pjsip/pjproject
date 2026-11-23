@@ -499,57 +499,6 @@ PJ_DECL(pj_status_t) pj_dns_resolver_cancel_query(pj_dns_async_query *query,
                                                   pj_bool_t notify);
 
 /**
- * Parameters for function pj_dns_resolver_cancel_query2(). Application
- * should initialize this structure with zeroes before setting its input
- * fields.
- */
-typedef struct pj_dns_cancel_query_param
-{
-    /**
-     * Input: if non-zero, the callback will be called with failure status
-     * to notify that the query has been cancelled, unless the query has
-     * already completed and its callback has already been invoked.
-     */
-    pj_bool_t   notify;
-
-    /**
-     * Output: PJ_TRUE if the callback has been taken to be called, e.g.
-     * another thread is processing the answer or the timeout of the query.
-     * The callback may be running, also in this thread, or may still be
-     * called once. PJ_FALSE means that the callback will not be called
-     * after the function returns.
-     */
-    pj_bool_t   cb_busy;
-
-} pj_dns_cancel_query_param;
-
-/**
- * Cancel a pending query like #pj_dns_resolver_cancel_query(), with the
- * input and output parameters given in a structure. It also tells whether
- * the callback of the query can still be called after this function returns.
- *
- * @param query     The pending asynchronous query to be cancelled.
- * @param prm       The parameters.
- *
- * @return          PJ_SUCCESS on success, or the appropriate error code,
- */
-PJ_DECL(pj_status_t) pj_dns_resolver_cancel_query2(
-                                        pj_dns_async_query *query,
-                                        pj_dns_cancel_query_param *prm);
-
-/**
- * Get the group lock of the resolver. The memory of the resolver, including
- * its pending queries, is kept until the last reference of this lock is
- * released, also after #pj_dns_resolver_destroy().
- *
- * @param resolver  The resolver instance.
- *
- * @return          The group lock.
- */
-PJ_DECL(pj_grp_lock_t*) pj_dns_resolver_get_grp_lock(
-                                                pj_dns_resolver *resolver);
-
-/**
  * A utility function to parse a DNS response containing A records into 
  * DNS A record.
  *

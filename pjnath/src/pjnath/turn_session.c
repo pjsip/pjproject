@@ -503,10 +503,15 @@ PJ_DEF(pj_status_t) pj_turn_session_destroy( pj_turn_session *sess,
 {
     PJ_ASSERT_RETURN(sess, PJ_EINVAL);
 
+    pj_grp_lock_acquire(sess->grp_lock);
+
     if (last_err != PJ_SUCCESS && sess->last_status == PJ_SUCCESS)
         sess->last_status = last_err;
     set_state(sess, PJ_TURN_STATE_DEALLOCATED);
     sess_shutdown(sess, PJ_SUCCESS);
+
+    pj_grp_lock_release(sess->grp_lock);
+
     return PJ_SUCCESS;
 }
 

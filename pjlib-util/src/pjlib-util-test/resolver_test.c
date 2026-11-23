@@ -19,6 +19,7 @@
 #include <pjlib-util.h>
 #include <pjlib.h>
 #include "test.h"
+#include "../pjlib-util/resolver_internal.h"
 
 
 #define THIS_FILE   "resolver_test.c"
@@ -6249,7 +6250,17 @@ struct cancel_job
     pj_status_t              cb_status;
     pj_status_t              cancel_status;
     pj_bool_t                cancel_in_cb;
+    pj_bool_t                res_gone_in_cb;
 };
+
+/* Set once the memory of a destroyed resolver is released */
+static volatile pj_bool_t res_gone;
+
+static void on_res_gone(void *member)
+{
+    PJ_UNUSED_ARG(member);
+    res_gone = PJ_TRUE;
+}
 
 static pj_dns_async_query *busy_q;
 static volatile int busy_cb_count;
@@ -6282,7 +6293,8 @@ static void cancel_job_cb(void *user_data, pj_status_t status,
     PJ_UNUSED_ARG(rec);
 
     lock();
-    if (job->cancel_in_cb)
+    job->res_gone_in_cb = res_gone;
+    if (job->cancel_in_cb && !res_gone)
         job->cancel_status = pj_dns_srv_cancel_query(job->q, PJ_FALSE);
 
     job->cb_status = status;
@@ -6352,6 +6364,23 @@ static int srv_resolver_cancel_state_test(void)
                {rc = -2805; goto on_return;});
     PJ_TEST_EQ(busy_cb_count, 0, NULL, {rc = -2806; goto on_return;});
 
+    /* A DNS query cancelled with notify: its callback is running */
+    name = pj_str("busy1." DOMAIN5);
+    busy_in_cb = PJ_FALSE;
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(res, &name, PJ_DNS_TYPE_A, 0,
+                                                &busy_cb, NULL, &busy_q),
+                    NULL, {rc = -2840; goto on_return;});
+    pj_bzero(&cancel_prm, sizeof(cancel_prm));
+    cancel_prm.notify = PJ_TRUE;
+    PJ_TEST_SUCCESS(pj_dns_resolver_cancel_query2(busy_q, &cancel_prm),
+                    NULL, {rc = -2841; goto on_return;});
+    PJ_TEST_EQ(busy_cb_count, 1, NULL, {rc = -2842; goto on_return;});
+    PJ_TEST_EQ(busy_in_cb, PJ_TRUE, NULL, {rc = -2843; goto on_return;});
+    PJ_TEST_EQ(wait_cached_count(res, 2), 0, NULL,
+               {rc = -2844; goto on_return;});
+    PJ_TEST_EQ(busy_cb_count, 1, NULL, {rc = -2845; goto on_return;});
+    busy_cb_count = 0;
+
     /* A DNS query whose callback is running */
     name = pj_str("busy2." DOMAIN5);
     busy_in_cb = PJ_FALSE;
@@ -6397,6 +6426,38 @@ static int srv_resolver_cancel_state_test(void)
     PJ_TEST_EQ(job.cb_count, 0, NULL, {rc = -2825; goto on_return;});
     PJ_TEST_EQ(job.cancel_status, PJ_SUCCESS, NULL,
                {rc = -2824; goto on_return;});
+
+    /* The same with notify: the resolver memory is kept for the callback,
+     * which may still cancel the resolution.
+     */
+    PJ_TEST_SUCCESS(pj_dns_resolver_create(mem, NULL, 0, timer_heap,
+                                           ioqueue, &res2),
+                    NULL, {rc = -2850; goto on_return;});
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(res2, 1, &ns, &port), NULL,
+                    {rc = -2851; goto on_return;});
+    res_gone = PJ_FALSE;
+    PJ_TEST_SUCCESS(pj_grp_lock_add_handler(
+                        pj_dns_resolver_get_grp_lock(res2), NULL, NULL,
+                        &on_res_gone),
+                    NULL, {rc = -2852; goto on_return;});
+    PJ_TEST_SUCCESS(cancel_job_start(&job, res2, "gone2." DOMAIN5, PJ_TRUE),
+                    NULL, {rc = -2853; goto on_return;});
+    PJ_TEST_NOT_NULL(job.q, NULL, {rc = -2854; goto on_return;});
+    pj_dns_resolver_destroy(res2, PJ_FALSE);
+    res2 = NULL;
+    pj_thread_sleep(100);
+    PJ_TEST_EQ(job.cb_count, 0, NULL, {rc = -2855; goto on_return;});
+    PJ_TEST_EQ(res_gone, PJ_FALSE, NULL, {rc = -2856; goto on_return;});
+    PJ_TEST_SUCCESS(pj_dns_srv_cancel_query(job.q, PJ_TRUE), NULL,
+                    {rc = -2857; goto on_return;});
+    PJ_TEST_EQ(job.cb_count, 1, NULL, {rc = -2858; goto on_return;});
+    PJ_TEST_EQ(job.cb_status, PJ_ECANCELLED, NULL,
+               {rc = -2859; goto on_return;});
+    PJ_TEST_EQ(job.res_gone_in_cb, PJ_FALSE, NULL,
+               {rc = -2860; goto on_return;});
+    PJ_TEST_EQ(job.cancel_status, PJ_EINVALIDOP, NULL,
+               {rc = -2861; goto on_return;});
+    PJ_TEST_EQ(res_gone, PJ_TRUE, NULL, {rc = -2862; goto on_return;});
 
     /* Cancels racing the answers. Whatever a cancel returns, it tells
      * whether the callback is called, and the query is released as soon as

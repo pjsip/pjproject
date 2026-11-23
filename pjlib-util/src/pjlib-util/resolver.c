@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjlib-util/resolver.h>
+#include "resolver_internal.h"
 #include <pjlib-util/errno.h>
 #include <pjlib-util/hmac_sha1.h>
 #include <pj/compat/socket.h>
@@ -1922,7 +1923,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_cancel_query2(
      * delivery site, which calls it without holding the lock.
      */
     if (cb)
-        query->cb_dropped = PJ_TRUE;
+        query->cb_dropped = !prm->notify;
     else if (!query->cb_dropped)
         prm->cb_busy = PJ_TRUE;
 

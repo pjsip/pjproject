@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjlib-util/srv_resolver.h>
+#include "resolver_internal.h"
 #include <pjlib-util/errno.h>
 #include <pj/array.h>
 #include <pj/assert.h>
@@ -241,6 +242,7 @@ static void leave_job(pj_dns_srv_async_query *query_job)
         void *token = query_job->token;
         pj_status_t status = query_job->final_status;
         pj_bool_t silent = query_job->silent;
+        pj_bool_t has_ref = query_job->has_ref;
         pj_dns_srv_record srv_rec;
         pj_bool_t has_rec = PJ_FALSE;
 
@@ -251,14 +253,15 @@ static void leave_job(pj_dns_srv_async_query *query_job)
             has_rec = PJ_TRUE;
         }
 
-        if (query_job->has_ref) {
-            query_job->has_ref = PJ_FALSE;
-            pj_grp_lock_dec_ref(lock);
-        }
+        query_job->has_ref = PJ_FALSE;
         pj_grp_lock_release(lock);
 
         if (!silent)
             (*cb)(token, status, has_rec ? &srv_rec : NULL);
+
+        /* Released last: the callback may still cancel the query */
+        if (has_ref)
+            pj_grp_lock_dec_ref(lock);
         return;
     }
 
