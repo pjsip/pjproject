@@ -76,6 +76,8 @@ jobs:
             - 'CMakeLists.txt'
             - '**/CMakeLists.txt'
             - 'cmake/**'
+            - '**/*.cm'
+            - 'libpjproject.pc.in'
             - 'tests/cmake/**'
             - '.github/**'
 
