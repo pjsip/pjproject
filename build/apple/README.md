@@ -245,9 +245,8 @@ pinned checksum.
 and `SLICES="ios-device ios-simulator macos"` one with all three slices. The
 release does not include macOS, so such a build gets no manifests.
 
-An application links the frameworks listed under "Consuming it", with AppKit
-and CoreAudio in place of OpenGLES and UIKit. `verify-xcframework.sh --tier 1`
-checks a macOS slice; tiers 2 and 3 need the simulator slice.
+`verify-xcframework.sh --tier 1` checks a macOS slice; tiers 2 and 3 need the
+simulator slice.
 
 ## Verifying
 
@@ -352,7 +351,8 @@ pod 'PJSIP', :podspec =>
 **Manually** — unzip, drag the framework in, set it to **Do Not Embed** (it is a
 static library), and add the frameworks yourself: AVFoundation, AudioToolbox,
 CoreGraphics, CoreMedia, CoreVideo, Foundation, Metal, MetalKit, Network,
-QuartzCore, Security, VideoToolbox, OpenGLES and UIKit, and `-lc++`.
+QuartzCore, Security, VideoToolbox, plus OpenGLES and UIKit on iOS or AppKit and
+CoreAudio on macOS, and `-lc++`.
 
 On every route, add `NSMicrophoneUsageDescription` and
 `NSCameraUsageDescription` to your `Info.plist`, plus the `audio` and `voip`
@@ -362,7 +362,6 @@ and is reachable only from Objective-C++ or C++ sources.
 
 ## Known limitations
 
-- **No macOS binary in the release.** Build the macOS slice with `SLICES`.
 - **No DTLS-SRTP**, so no WebRTC interoperability.
 - **H.264 is the only video codec.**
 - **No AMR or G.729**, for the licensing reasons above.
