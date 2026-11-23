@@ -289,8 +289,9 @@ PYEOF
     bin=$(cd "$w" && swift build "${swift_args[@]}" --show-bin-path)
 
     udid=$(boot_device) || { fail "no available iPhone simulator"; return; }
-    out=$(xcrun simctl spawn "$udid" "$bin/App" 2>&1 || true)
-    if echo "$out" | grep -q VERIFY-OK; then
+    # spawn passes on the exit status, so a crash after VERIFY-OK still fails
+    if out=$(xcrun simctl spawn "$udid" "$bin/App" 2>&1) \
+            && echo "$out" | grep -q VERIFY-OK; then
         pass "$(echo "$out" | grep -m1 VERIFY-OK)"
     else
         fail "consumer run"
