@@ -1157,8 +1157,9 @@ PJ_DEF(pj_status_t) pjsua_acc_del2(pjsua_acc_id acc_id,
 
     /* Delete registration */
     if (acc->regc != NULL) {
-        /* Best-effort un-REGISTER: its start is not reported, the regc
-         * is destroyed before the answer can arrive.
+        /* Best-effort un-REGISTER: its start is not reported, and its
+         * result usually is not either — the regc is destroyed right
+         * after the send.
          */
         acc_set_registration(acc_id, PJ_FALSE, PJ_FALSE, PJ_FALSE,
                              PJ_FALSE);
@@ -1997,8 +1998,9 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     /* Unregister first */
     if (unreg_first) {
         if (acc->regc && !cfg->disable_reg_on_modify) {
-            /* Best-effort un-REGISTER: its start is not reported, the
-             * regc is destroyed before the answer can arrive.
+            /* Best-effort un-REGISTER: its start is not reported, and
+             * its result usually is not either — the regc is destroyed
+             * right after the send.
              */
             status = acc_set_registration(acc->index, PJ_FALSE, PJ_FALSE,
                                           PJ_FALSE, PJ_FALSE);
@@ -2735,7 +2737,8 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
         if (contact_rewrite_method == PJSUA_CONTACT_REWRITE_UNREGISTER) {
             /* Unregister current contact. Must be done before acc->contact
              * is replaced, as the unregister uses the old Contact. Its
-             * start is not reported: the regc is destroyed right after.
+             * start is not reported, and its result usually is not
+             * either: the regc is destroyed right after the send.
              */
             acc_set_registration(acc->index, PJ_FALSE, PJ_FALSE, PJ_FALSE,
                                  PJ_FALSE);
@@ -4084,7 +4087,7 @@ static pj_status_t acc_set_registration(pjsua_acc_id acc_id, pj_bool_t renew,
         //pjsua_var.acc[acc_id].auto_rereg.reg_tp = reg_info.transport;
 
         /* Callers that destroy the regc right after the send pass
-         * notify=PJ_FALSE: the transaction's answer can never be
+         * notify=PJ_FALSE: the transaction's answer is normally never
          * reported, so its start must not be either.
          */
         if (notify) {
@@ -5601,7 +5604,8 @@ static void auto_rereg_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
                  * pending transaction (PJSIP_EBUSY), defer to the
                  * next retry rather than abandon the in-flight tsx
                  * and race a second REGISTER against it. Its start is
-                 * not reported: the regc is destroyed right after.
+                 * not reported, and its result usually is not either:
+                 * the regc is destroyed right after the send.
                  */
                 status = acc_set_registration(acc->index, PJ_FALSE,
                                               PJ_FALSE, PJ_FALSE,

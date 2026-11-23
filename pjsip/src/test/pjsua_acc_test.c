@@ -900,7 +900,7 @@ static int unreg_start_report_test(pjsua_transport_id tp_id, int port)
         goto on_return;
     }
     if (wait_reg(10000) != 0) {
-        rc = -4200;
+        rc = -4211;
         goto on_return;
     }
 
