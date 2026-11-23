@@ -68,7 +68,8 @@ PJ_DECL(int) pj_rand(void);
  * as pj_ssl_rand_bytes(); the application chooses which one to use.
  *
  * The OS generators used are:
- *  - Windows: BCryptGenRandom() with the system preferred RNG.
+ *  - Windows: BCryptGenRandom() with the system preferred RNG when
+ *    targeting Windows 7 or later, otherwise RtlGenRandom().
  *  - Linux, Android (API 28 and later) and other systems with
  *    getrandom(): getrandom(), or /dev/urandom when the kernel does not
  *    provide the system call.

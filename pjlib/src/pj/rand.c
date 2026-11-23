@@ -25,11 +25,22 @@
 /* OS secure generator behind pj_csrand_bytes(), by preference */
 #if defined(PJ_WIN32) && PJ_WIN32 != 0 && \
     !(defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE != 0)
-#   define CSRAND_BCRYPT        1
+#   define CSRAND_WIN32         1
 #   include <windows.h>
-#   include <bcrypt.h>
-#   if defined(_MSC_VER)
-#       pragma comment(lib, "bcrypt.lib")
+#   if defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x0601
+#       define CSRAND_BCRYPT    1
+#       include <bcrypt.h>
+#       if defined(_MSC_VER)
+#           pragma comment(lib, "bcrypt.lib")
+#       endif
+#   else
+        /* RtlGenRandom(): unlike bcrypt.dll, it exists since XP */
+#       if defined(_MSC_VER)
+#           pragma comment(lib, "advapi32.lib")
+#       endif
+        PJ_BEGIN_DECL
+        BOOLEAN NTAPI SystemFunction036(PVOID buf, ULONG len);
+        PJ_END_DECL
 #   endif
 #elif defined(PJ_HAS_GETRANDOM) && PJ_HAS_GETRANDOM != 0
     /* /dev/urandom stays as the fallback for kernels without the syscall */
@@ -135,14 +146,17 @@ static pj_status_t getrandom_fill(pj_uint8_t *p, pj_size_t len)
 }
 #endif
 
-#if defined(CSRAND_BCRYPT)
-static pj_status_t bcrypt_fill(pj_uint8_t *p, pj_size_t len)
+#if defined(CSRAND_WIN32)
+static pj_status_t win32_fill(pj_uint8_t *p, pj_size_t len)
 {
     while (len > 0) {
         ULONG n = (len > 0x40000000) ? 0x40000000 : (ULONG)len;
-        NTSTATUS st = BCryptGenRandom(NULL, p, n,
-                                      BCRYPT_USE_SYSTEM_PREFERRED_RNG);
-        if (!BCRYPT_SUCCESS(st))
+#if defined(CSRAND_BCRYPT)
+        if (!BCRYPT_SUCCESS(BCryptGenRandom(NULL, p, n,
+                                            BCRYPT_USE_SYSTEM_PREFERRED_RNG)))
+#else
+        if (!SystemFunction036(p, n))
+#endif
             return PJ_EUNKNOWN;
         p += n;
         len -= n;
@@ -159,8 +173,8 @@ PJ_DEF(pj_status_t) pj_csrand_bytes(void *buf, pj_size_t len)
     if (len == 0)
         return PJ_SUCCESS;
 
-#if defined(CSRAND_BCRYPT)
-    return bcrypt_fill((pj_uint8_t*)buf, len);
+#if defined(CSRAND_WIN32)
+    return win32_fill((pj_uint8_t*)buf, len);
 #elif defined(CSRAND_GETRANDOM)
     return getrandom_fill((pj_uint8_t*)buf, len);
 #elif defined(CSRAND_ARC4RANDOM)
