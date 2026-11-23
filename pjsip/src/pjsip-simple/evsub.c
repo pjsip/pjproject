@@ -2357,6 +2357,7 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
                 notify->line.req.uri = (pjsip_uri*)
                     pjsip_uri_clone(sub->pending_notify->pool,
                                     sub->dlg->target);
+                pjsip_tx_data_invalidate_msg(sub->pending_notify);
 
                 /* Redo the authorization headers, which have the URI */
                 while ((h = (pjsip_hdr*)

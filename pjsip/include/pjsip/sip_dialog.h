@@ -156,9 +156,6 @@ struct pjsip_dialog
     pjsip_dlg_party     local;      /**< Local party info.                  */
     pjsip_dlg_party     remote;     /**< Remote party info.                 */
     pjsip_hdr           rem_cap_hdr;/**< List of remote capability header.  */
-    pj_list             rem_target_pending; /**< Remote target updates of
-                                         incoming target refresh requests
-                                         not answered yet (internal).       */
     pjsip_role_e        role;       /**< Initial role.                      */
     pj_bool_t           uac_has_2xx;/**< UAC has received 2xx response?     */
     pj_bool_t           secure;     /**< Use secure transport?              */
@@ -198,6 +195,12 @@ struct pjsip_dialog
      */
     pjsip_host_port     via_addr;   /**< Via address.                       */
     const void         *via_tp;     /**< Via transport.                     */
+
+    /**
+     * Remote target updates of incoming target refresh requests that are
+     * not answered yet. Internal.
+     */
+    pj_list             rem_target_pending;
 };
 
 /**

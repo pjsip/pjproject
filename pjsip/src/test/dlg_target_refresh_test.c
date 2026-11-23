@@ -67,7 +67,8 @@
  * Case 10 covers the provisional responses to a re-INVITE: only a reliable
  * one updates the target, and a later error response does not undo that.
  * Case 11 has two target refreshes pending at once, the second with a
- * Contact equal to the current target, accepted in order.
+ * Contact equal to the current target, accepted in order. Cases 12 and 13
+ * accept two pending refreshes in reverse order: the newer request wins.
  */
 
 static char contact_buf[80];
@@ -879,6 +880,65 @@ int dlg_target_refresh_test(void)
     PJ_TEST_EQ(pj_strcmp2(&target_after, "<sip:heidi@127.0.0.1:44453>"), 0,
               "target was not updated by the second accepted refresh",
               { rc = -256; goto on_return; });
+    release_held();
+
+    /*
+     * Case 12: two target refreshes pending, the newer one accepted
+     * first. The older one, accepted after it, must not bring its Contact
+     * back.
+     */
+    dlg_tr_test.hold = PJ_TRUE;
+
+    PJ_TEST_SUCCESS(send_update_with_contact(uac_dlg,
+                                             "sip:judy@127.0.0.1:44455"),
+                    NULL, { rc = -260; goto on_return; });
+    flush_events(300);
+    PJ_TEST_SUCCESS(send_update_with_contact(uac_dlg,
+                                             "sip:kim@127.0.0.1:44456"),
+                    NULL, { rc = -261; goto on_return; });
+    flush_events(300);
+    PJ_TEST_EQ(dlg_tr_test.held_cnt, 2, "UPDATEs were not received",
+              { rc = -262; goto on_return; });
+
+    PJ_TEST_SUCCESS(send_held(1, 200, PJ_FALSE), NULL,
+                    { rc = -263; goto on_return; });
+    PJ_TEST_SUCCESS(send_held(0, 200, PJ_FALSE), NULL,
+                    { rc = -264; goto on_return; });
+    flush_events(200);
+    target_after = print_target(dlg_tr_test.uas_dlg, legit_buf,
+                                sizeof(legit_buf));
+    PJ_TEST_EQ(pj_strcmp2(&target_after, "<sip:kim@127.0.0.1:44456>"), 0,
+              "the older refresh, accepted last, replaced the newer target",
+              { rc = -265; goto on_return; });
+    release_held();
+
+    /*
+     * Case 13: same, where the newer request has the Contact that is the
+     * current target.
+     */
+    dlg_tr_test.hold = PJ_TRUE;
+
+    PJ_TEST_SUCCESS(send_update_with_contact(uac_dlg,
+                                             "sip:leo@127.0.0.1:44457"),
+                    NULL, { rc = -270; goto on_return; });
+    flush_events(300);
+    PJ_TEST_SUCCESS(send_update_with_contact(uac_dlg,
+                                             "sip:kim@127.0.0.1:44456"),
+                    NULL, { rc = -271; goto on_return; });
+    flush_events(300);
+    PJ_TEST_EQ(dlg_tr_test.held_cnt, 2, "UPDATEs were not received",
+              { rc = -272; goto on_return; });
+
+    PJ_TEST_SUCCESS(send_held(1, 200, PJ_FALSE), NULL,
+                    { rc = -273; goto on_return; });
+    PJ_TEST_SUCCESS(send_held(0, 200, PJ_FALSE), NULL,
+                    { rc = -274; goto on_return; });
+    flush_events(200);
+    target_after = print_target(dlg_tr_test.uas_dlg, legit_buf,
+                                sizeof(legit_buf));
+    PJ_TEST_EQ(pj_strcmp2(&target_after, "<sip:kim@127.0.0.1:44456>"), 0,
+              "the older refresh, accepted last, replaced the current target",
+              { rc = -275; goto on_return; });
 
 on_return:
     release_held();

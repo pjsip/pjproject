@@ -55,6 +55,7 @@ typedef struct dlg_target_refresh
 {
     PJ_DECL_LIST_MEMBER(struct dlg_target_refresh);
     pjsip_transaction   *tsx;
+    pj_int32_t           cseq;
     pjsip_contact_hdr   *contact;
     pjsip_fromto_hdr    *info;
 } dlg_target_refresh;
@@ -1918,6 +1919,20 @@ static void dlg_on_target_refresh_tsx_state(pjsip_dialog *dlg,
 
     r->tsx = NULL;
 
+    if (accepted) {
+        /* This request supersedes the older ones still pending, whatever
+         * the order they are answered in.
+         */
+        dlg_target_refresh *old;
+
+        old = (dlg_target_refresh*)dlg->rem_target_pending.next;
+        while (old != (dlg_target_refresh*)&dlg->rem_target_pending) {
+            if (old->tsx && old->cseq < r->cseq)
+                old->tsx = NULL;
+            old = old->next;
+        }
+    }
+
     if (accepted &&
         (dlg->remote.contact==NULL ||
          pjsip_uri_cmp(PJSIP_URI_IN_REQ_URI, dlg->remote.contact->uri,
@@ -2143,6 +2158,7 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
                 pj_list_push_back(&dlg->rem_target_pending, r);
             }
             r->tsx = tsx;
+            r->cseq = rdata->msg_info.cseq->cseq;
             r->contact = (pjsip_contact_hdr*)
                          pjsip_hdr_clone(tsx->pool, contact);
             r->info = (pjsip_fromto_hdr*)
