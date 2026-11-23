@@ -55,9 +55,14 @@
  * request-line method, but the target-refresh block itself keys on the
  * CSeq header's method, and ACK -- which never creates a UAS transaction
  * -- skips whatever would otherwise catch a CSeq/request-line method
- * mismatch. A forged ACK with a spoofed CSeq method reaches the
- * target-refresh block directly, where dlg_target_refresh_allowed() is
- * still applied as a fallback (ignore, since ACK can't be answered).
+ * mismatch. A forged ACK with a spoofed CSeq method must not update the
+ * target (ACK can't be answered, so it can't be accepted either).
+ *
+ * Cases 6-9 cover RFC 6141 Section 4.6 on a non-secure dialog: the remote
+ * target is updated only when the target refresh request is accepted, so
+ * a rejected request (by a usage, or unhandled by all usages) and a
+ * forged ACK leave it unchanged, and a later accepted request
+ * still updates it.
  */
 
 static char contact_buf[80];
@@ -75,6 +80,11 @@ static struct dlg_tr_test_t
      * gate (Case 4).
      */
     const char      *uas_response_contact;
+
+    /* When non-zero, the usage answers the UPDATE with this status code
+     * instead of 200, or (if negative) leaves the UPDATE unhandled.
+     */
+    int              uas_response_code;
 
     /* Status code of the last response to an in-dialog UPDATE seen by
      * the UAC side (0 if none yet), set by on_rx_response() below.
@@ -277,11 +287,16 @@ static pj_bool_t usage_on_rx_request(pjsip_rx_data *rdata)
     }
 
     tsx = pjsip_rdata_get_tsx(rdata);
-    if (!tsx)
+    if (!tsx || dlg_tr_test.uas_response_code < 0)
         return PJ_FALSE;
 
-    if (pjsip_dlg_create_response(dlg, rdata, 200, NULL, &tdata) != PJ_SUCCESS)
+    if (pjsip_dlg_create_response(dlg, rdata,
+                                  dlg_tr_test.uas_response_code?
+                                  dlg_tr_test.uas_response_code : 200,
+                                  NULL, &tdata) != PJ_SUCCESS)
+    {
         return PJ_FALSE;
+    }
 
     /* pjsip_dlg_create_response() doesn't add a Contact header on its
      * own (unlike pjsip_dlg_modify_response()); add one here so the
@@ -594,9 +609,7 @@ int dlg_target_refresh_test(void)
      * downgrade the UAS's secure dialog either. ACK never creates a UAS
      * transaction, so it skips the request-path reject-with-400 check
      * (which keys on the request line method and can't apply here
-     * anyway, since ACK can't be answered); this exercises
-     * dlg_target_refresh_allowed() being applied at the target-refresh
-     * block itself as the fallback for this case.
+     * anyway, since ACK can't be answered).
      */
     dlg_tr_test.uas_dlg->secure = PJ_TRUE;
     dlg_tr_test.target_before = print_target(dlg_tr_test.uas_dlg,
@@ -615,6 +628,93 @@ int dlg_target_refresh_test(void)
               "secure dialog target was downgraded by a non-SIPS Contact "
               "in a forged ACK (request-line ACK, CSeq method INVITE)",
               { rc = -150; goto on_return; });
+
+    /*
+     * Case 6: a target refresh rejected by the dialog usage must not
+     * update the target (RFC 6141 Section 4.6).
+     */
+    dlg_tr_test.uas_dlg->secure = PJ_FALSE;
+    uac_dlg->secure = PJ_FALSE;
+    dlg_tr_test.uas_response_contact = NULL;
+    dlg_tr_test.uas_response_code = 488;
+    dlg_tr_test.last_update_status = 0;
+
+    /* Step over the CSeq of the forged ACK. */
+    uac_dlg->local.cseq = 100000;
+
+    PJ_TEST_SUCCESS(send_update_with_contact(uac_dlg,
+                                             "sip:dave@127.0.0.1:44449"),
+                    NULL, { rc = -160; goto on_return; });
+
+    flush_events(500);
+
+    target_after = print_target(dlg_tr_test.uas_dlg, legit_buf,
+                                sizeof(legit_buf));
+    PJ_TEST_EQ(dlg_tr_test.last_update_status, 488,
+              "UPDATE was not rejected with 488",
+              { rc = -170; goto on_return; });
+    PJ_TEST_EQ(pj_strcmp(&target_after, &dlg_tr_test.target_before), 0,
+              "target was updated by a rejected target refresh",
+              { rc = -171; goto on_return; });
+
+    /*
+     * Case 7: same, for a target refresh that no usage handles, which
+     * the dialog answers with 500.
+     */
+    dlg_tr_test.uas_response_code = -1;
+    dlg_tr_test.last_update_status = 0;
+
+    PJ_TEST_SUCCESS(send_update_with_contact(uac_dlg,
+                                             "sip:erin@127.0.0.1:44450"),
+                    NULL, { rc = -180; goto on_return; });
+
+    flush_events(500);
+
+    target_after = print_target(dlg_tr_test.uas_dlg, legit_buf,
+                                sizeof(legit_buf));
+    PJ_TEST_EQ(dlg_tr_test.last_update_status, 500,
+              "unhandled UPDATE was not answered with 500",
+              { rc = -190; goto on_return; });
+    PJ_TEST_EQ(pj_strcmp(&target_after, &dlg_tr_test.target_before), 0,
+              "target was updated by an unhandled target refresh",
+              { rc = -191; goto on_return; });
+
+    /*
+     * Case 8: the forged ACK of Case 5, on a non-secure dialog.
+     */
+    PJ_TEST_SUCCESS(send_forged_ack_with_contact(uac_dlg,
+                                                 "sip:frank@127.0.0.1:44451"),
+                    NULL, { rc = -200; goto on_return; });
+
+    flush_events(500);
+
+    target_after = print_target(dlg_tr_test.uas_dlg, legit_buf,
+                                sizeof(legit_buf));
+    PJ_TEST_EQ(pj_strcmp(&target_after, &dlg_tr_test.target_before), 0,
+              "target was updated by a forged ACK",
+              { rc = -210; goto on_return; });
+
+    /*
+     * Case 9: an accepted target refresh still updates the target after
+     * the rejected ones.
+     */
+    dlg_tr_test.uas_response_code = 0;
+    dlg_tr_test.last_update_status = 0;
+
+    PJ_TEST_SUCCESS(send_update_with_contact(uac_dlg,
+                                             "sip:grace@127.0.0.1:44452"),
+                    NULL, { rc = -220; goto on_return; });
+
+    flush_events(500);
+
+    target_after = print_target(dlg_tr_test.uas_dlg, legit_buf,
+                                sizeof(legit_buf));
+    PJ_TEST_EQ(dlg_tr_test.last_update_status, 200,
+              "UPDATE was not answered with 200",
+              { rc = -230; goto on_return; });
+    PJ_TEST_EQ(pj_strcmp2(&target_after, "<sip:grace@127.0.0.1:44452>"), 0,
+              "target was not updated by an accepted target refresh",
+              { rc = -231; goto on_return; });
 
 on_return:
     pjsip_dlg_dec_session(uac_dlg, &mod_dlg_tr_test);

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -156,6 +156,9 @@ struct pjsip_dialog
     pjsip_dlg_party     local;      /**< Local party info.                  */
     pjsip_dlg_party     remote;     /**< Remote party info.                 */
     pjsip_hdr           rem_cap_hdr;/**< List of remote capability header.  */
+    pj_list             rem_target_pending; /**< Remote target updates of
+                                         incoming target refresh requests
+                                         not answered yet (internal).       */
     pjsip_role_e        role;       /**< Initial role.                      */
     pj_bool_t           uac_has_2xx;/**< UAC has received 2xx response?     */
     pj_bool_t           secure;     /**< Use secure transport?              */
