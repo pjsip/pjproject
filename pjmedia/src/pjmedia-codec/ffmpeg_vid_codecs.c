@@ -2081,7 +2081,7 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
 }
 
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && PJMEDIA_AUTO_LINK_FFMPEG_LIBS
 #   pragma comment( lib, "avcodec.lib")
 #endif
 

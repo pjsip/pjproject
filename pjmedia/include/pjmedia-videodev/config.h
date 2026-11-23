@@ -271,7 +271,7 @@ PJ_BEGIN_DECL
 /**
  * Link with the SDL library via pragma comment on Visual Studio. Disable
  * this when the application links SDL itself, e.g. when SDL is part of a
- * combined library.
+ * combined library. PJMEDIA_SDL_LIB has no effect when this is 0.
  *
  * Default: 1
  */

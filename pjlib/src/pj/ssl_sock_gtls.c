@@ -65,7 +65,7 @@
 #include <gnutls/x509.h>
 #include <gnutls/abstract.h>
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && PJ_AUTO_LINK_SSL_LIBS
 #  pragma comment( lib, "libgnutls")
 #endif
 
