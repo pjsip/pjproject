@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -239,6 +239,7 @@ static int features_tests(int argc, char *argv[])
 
 #if INCLUDE_RAND_TEST
     UT_ADD_TEST(&test_app.ut_app, rand_test, 0);
+    UT_ADD_TEST(&test_app.ut_app, csrand_test, 0);
 #endif
 
 #if INCLUDE_POOL_PERF_TEST

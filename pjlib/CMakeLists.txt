@@ -253,8 +253,9 @@ if(WIN32 OR CYGWIN OR MINGW)
   set(PJ_HAS_MSWSOCK_H "${PJ_HAS_WINSOCK2_MSWSOCK_H}")
   check_include_file(ws2tcpip.h PJ_HAS_WS2TCPIP_H)
 
-  # iphlpapi for ip_helper_win32.c, mswsock for AcceptEx() in ioqueue_winnt.c
-  target_link_libraries(pjlib PRIVATE ole32 winmm iphlpapi)
+  # iphlpapi for ip_helper_win32.c, mswsock for AcceptEx() in ioqueue_winnt.c,
+  # bcrypt for BCryptGenRandom() in rand.c
+  target_link_libraries(pjlib PRIVATE ole32 winmm iphlpapi bcrypt)
   if(PJ_HAS_MSWSOCK_H)
     target_link_libraries(pjlib PRIVATE mswsock)
   endif()
@@ -547,6 +548,9 @@ block(SCOPE_FOR VARIABLES)
 
   include(CheckSymbolExists)
   check_symbol_exists(localtime_r time.h PJ_HAS_LOCALTIME_R)
+  # OS secure random generators for pj_csrand_bytes()
+  check_symbol_exists(getrandom sys/random.h PJ_HAS_GETRANDOM)
+  check_symbol_exists(arc4random_buf stdlib.h PJ_HAS_ARC4RANDOM_BUF)
   # The header alone is not enough: bionic ships <ifaddrs.h> at every API
   # level but declares getifaddrs() only from API 24.
   #

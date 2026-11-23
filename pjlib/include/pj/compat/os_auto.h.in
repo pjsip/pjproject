@@ -175,6 +175,12 @@
 /* Is localtime_r() available? */
 #undef PJ_HAS_LOCALTIME_R
 
+/* Is getrandom() available? */
+#undef PJ_HAS_GETRANDOM
+
+/* Is arc4random_buf() available? */
+#undef PJ_HAS_ARC4RANDOM_BUF
+
 /* Unicode? */
 #undef PJ_NATIVE_STRING_IS_UNICODE
 

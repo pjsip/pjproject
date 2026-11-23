@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2017-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -125,11 +125,25 @@ static pj_status_t generate_crypto_attr_value(pj_pool_t *pool,
                          PJ_ETOOSMALL);
 
         do {
+            /* The OS generator first, then the SSL library's. The
+             * timing-mixed stand-in below is only for when neither
+             * exists; a real failure of either fails key generation.
+             */
+            status = pj_csrand_bytes(key,
+                                     crypto_suites[cs_idx].cipher_key_len);
 #if defined(PJ_HAS_SSL_SOCK) && (PJ_HAS_SSL_SOCK != 0)
-            status = pj_ssl_rand_bytes(key,
-                                       crypto_suites[cs_idx].cipher_key_len);
-#else
-            status = PJ_ENOTSUP;
+            if (status != PJ_SUCCESS) {
+                pj_status_t ssl_status;
+
+                if (status != PJ_ENOTSUP) {
+                    PJ_PERROR(3,(THIS_FILE, status, "OS random generator "
+                                 "failed, trying the SSL library's"));
+                }
+                ssl_status = pj_ssl_rand_bytes(key,
+                                         crypto_suites[cs_idx].cipher_key_len);
+                if (ssl_status != PJ_ENOTSUP || status == PJ_ENOTSUP)
+                    status = ssl_status;
+            }
 #endif
             if (status == PJ_ENOTSUP) {
                 PJ_LOG(3,(THIS_FILE, "Warning: simple random generator is "
