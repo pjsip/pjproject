@@ -11,9 +11,7 @@ tmp/
 *.resw
 .vs/
 .vscode/
-**/build/**/*.vcproj.*.user
 **/build/**/*.vcxproj.*.user
-**/build/**/*.vcproj.user
 **/build/**/*.vcxproj.user
 **/Win32/Debug
 **/x64/Debug
