@@ -1257,22 +1257,34 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 
             status = pjmedia_vid_dev_get_info(call_med->strm.v.cap_dev,
                                               &dev_info);
-            if (status != PJ_SUCCESS)
-                goto on_error;
+            if (status != PJ_SUCCESS) {
+                /* The capture device may be (temporarily) unavailable.
+                 * This is only an optimization to match the encoder
+                 * format with the capture device, so don't fail the
+                 * media update; any real capture failure will be
+                 * reported when setting up the capture.
+                 */
+                PJ_PERROR(4,(THIS_FILE, status,
+                             "Call %d media %d: cannot get info of video "
+                             "capture device %d, format matching skipped",
+                             call->index, call_med->idx,
+                             call_med->strm.v.cap_dev));
+                status = PJ_SUCCESS;
+            } else {
+                /* Find matched format ID */
+                for (i = 0; i < codec_info->dec_fmt_id_cnt; ++i) {
+                    for (j = 0; j < dev_info.fmt_cnt; ++j) {
+                        if (codec_info->dec_fmt_id[i] ==
+                            (pjmedia_format_id)dev_info.fmt[j].id)
+                        {
+                            /* Apply the matched format ID to the codec */
+                            si->codec_param->dec_fmt.id =
+                                                    codec_info->dec_fmt_id[i];
 
-            /* Find matched format ID */
-            for (i = 0; i < codec_info->dec_fmt_id_cnt; ++i) {
-                for (j = 0; j < dev_info.fmt_cnt; ++j) {
-                    if (codec_info->dec_fmt_id[i] == 
-                        (pjmedia_format_id)dev_info.fmt[j].id)
-                    {
-                        /* Apply the matched format ID to the codec */
-                        si->codec_param->dec_fmt.id = 
-                                                codec_info->dec_fmt_id[i];
-
-                        /* Force outer loop to break */
-                        i = codec_info->dec_fmt_id_cnt;
-                        break;
+                            /* Force outer loop to break */
+                            i = codec_info->dec_fmt_id_cnt;
+                            break;
+                        }
                     }
                 }
             }
