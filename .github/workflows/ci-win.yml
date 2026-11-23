@@ -1094,7 +1094,7 @@ jobs:
       # as in cmake-build
       PJ_IGNORE_PREFIX: C:/Strawberry/c;C:/msys64/mingw64;C:/msys64/usr
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: vcpkg paths
       id: vcpkg
       run: |
@@ -1107,7 +1107,7 @@ jobs:
     - name: cache vcpkg packages
       # vcpkg's binary cache: packages are named by an ABI hash, so a stale
       # entry is only a miss. The runner image updates vcpkg's ports.
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ${{ runner.temp }}/vcpkg-cache
         key: vcpkg-x64-windows-opus-libvpx-${{ steps.vcpkg.outputs.image }}
@@ -1176,7 +1176,7 @@ jobs:
       run:
         shell: msys2 {0}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - uses: msys2/setup-msys2@v2
       with:
         msystem: UCRT64
@@ -1226,7 +1226,7 @@ jobs:
       # as in cmake-build
       PJ_IGNORE_PREFIX: C:/Strawberry/c;C:/msys64/mingw64;C:/msys64/usr
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: configure
       run: >-
         cmake -B build -G "Visual Studio 17 2022" -A Win32

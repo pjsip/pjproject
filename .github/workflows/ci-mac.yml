@@ -712,7 +712,7 @@ jobs:
     runs-on: macos-latest
     name: CMake / shared; Opus + VPX from <Pkg>_ROOT
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: install dependencies
       run: brew install openssl pkgconf opus libvpx
     - name: configure
@@ -802,7 +802,7 @@ jobs:
     runs-on: macos-latest
     name: CMake / universal arm64+x86_64
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: install dependencies
       run: brew install openssl gnutls opus libvpx pkgconf
     - name: configure
@@ -872,7 +872,7 @@ jobs:
     runs-on: macos-latest
     name: CMake / Xcode
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: install dependencies
       run: brew install openssl pkgconf
     - name: configure

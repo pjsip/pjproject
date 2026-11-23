@@ -1130,7 +1130,7 @@ jobs:
       # test.py: only the test that needs no endpoint or sound device
       PJSUA2_TEST_QUICK: 1
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y libssl-dev swig python3-dev
     - name: configure
@@ -1207,7 +1207,7 @@ jobs:
     runs-on: ubuntu-latest
     name: CMake / no threads
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y libssl-dev
     - name: configure
@@ -1292,7 +1292,7 @@ jobs:
     env:
       PJ_SYSTEM_LIBS: gsm speex speexdsp srtp2 yuv
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: install dependencies
       run: >-
         sudo apt-get update && sudo apt-get install -y libssl-dev
