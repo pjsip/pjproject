@@ -342,6 +342,8 @@ jobs:
     name: GnuTLS / pjlib,pjnath,pjsip + CMake
     steps:
     - uses: actions/checkout@v5
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -380,8 +382,6 @@ jobs:
         cc tests/cmake/test_consumer.c -o pc_consumer \
           $(pkg-config --static --cflags --libs libpjproject)
         ./pc_consumer
-    - name: config site
-      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
     - name: configure
       run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --with-gnutls=/usr/
     - name: make
@@ -424,6 +424,8 @@ jobs:
     name: Mbed TLS ${{ matrix.version }} / pjlib,pjnath,pjsua + CMake
     steps:
     - uses: actions/checkout@v5
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
     - name: Mbed TLS prefix
       run: echo "MBEDTLS_PREFIX=$HOME/mbedtls-${{ matrix.version }}" >> $GITHUB_ENV
     - name: cache Mbed TLS
@@ -485,8 +487,6 @@ jobs:
         cc tests/cmake/test_consumer.c -o pc_consumer \
           $(pkg-config --static --cflags --libs libpjproject)
         ./pc_consumer
-    - name: config site
-      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
     - name: configure
       run: ./configure --with-mbedtls=$MBEDTLS_PREFIX
     - name: make
@@ -1131,6 +1131,8 @@ jobs:
       PJSUA2_TEST_QUICK: 1
     steps:
     - uses: actions/checkout@v5
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y libssl-dev swig python3-dev
     - name: configure
@@ -1208,6 +1210,8 @@ jobs:
     name: CMake / no threads
     steps:
     - uses: actions/checkout@v5
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y libssl-dev
     - name: configure
@@ -1293,6 +1297,8 @@ jobs:
       PJ_SYSTEM_LIBS: gsm speex speexdsp srtp2 yuv
     steps:
     - uses: actions/checkout@v5
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
     - name: install dependencies
       run: >-
         sudo apt-get update && sudo apt-get install -y libssl-dev

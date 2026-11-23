@@ -1185,6 +1185,8 @@ jobs:
           mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake
           mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-pkgconf
           mingw-w64-ucrt-x86_64-openssl
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
     - name: configure
       run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
     - name: build
