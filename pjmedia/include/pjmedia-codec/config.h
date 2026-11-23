@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -724,6 +724,18 @@
  */
 #ifndef PJMEDIA_HAS_VPX_CODEC_VP9
 #   define PJMEDIA_HAS_VPX_CODEC_VP9            0
+#endif
+
+/**
+ * Link with libvpx via pragma comment on Visual Studio. Disable this when
+ * the application links libvpx itself, e.g. when libvpx is part of a
+ * combined library. This option only makes sense if PJMEDIA_HAS_VPX_CODEC
+ * is enabled.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_AUTO_LINK_VPX_LIBS
+#   define PJMEDIA_AUTO_LINK_VPX_LIBS           1
 #endif
 
 /**

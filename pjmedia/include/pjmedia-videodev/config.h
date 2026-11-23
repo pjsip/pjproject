@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -266,6 +266,17 @@ PJ_BEGIN_DECL
  */
 #ifndef PJMEDIA_SDL_LIB
 #   undef PJMEDIA_SDL_LIB
+#endif
+
+/**
+ * Link with the SDL library via pragma comment on Visual Studio. Disable
+ * this when the application links SDL itself, e.g. when SDL is part of a
+ * combined library.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_AUTO_LINK_SDL_LIBS
+#   define PJMEDIA_AUTO_LINK_SDL_LIBS           1
 #endif
 
 #endif /* defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0) */
