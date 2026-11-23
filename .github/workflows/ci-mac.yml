@@ -646,7 +646,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: install dependencies
-      run: brew install openssl pkgconf
+      run: brew install openssl pkgconf opus libvpx
     - name: configure Debug
       run: cmake -B build-debug -DCMAKE_BUILD_TYPE=Debug
     - name: build Debug
@@ -657,6 +657,17 @@ jobs:
         otool -L build-debug/pjsip-apps/bin/pjsua
     - name: configure Release
       run: cmake -B build-release -DCMAKE_BUILD_TYPE=Release
+    - name: check options
+      # an optional library that is not found is dropped without failing the
+      # configure
+      run: |
+        for b in build-debug build-release; do
+          for p in OPUS VPX; do
+            grep "^PJMEDIA_WITH_${p}_CODEC:BOOL=ON$" $b/CMakeCache.txt || {
+              echo "::error::$b: PJMEDIA_WITH_${p}_CODEC is not ON"; exit 1; }
+            grep -E "^${p}_(LIBRARY|INCLUDE_DIR):" $b/CMakeCache.txt
+          done
+        done
     - name: build Release
       run: cmake --build build-release -j $(sysctl -n hw.ncpu)
     - name: check Release
@@ -739,52 +750,10 @@ jobs:
           $(pkg-config --cflags --libs libpjproject) -Wl,-rpath,"$prefix/lib"
         ./pc_consumer
 
-  # One optional audio codec (Opus) and one video codec (libvpx), from
-  # Homebrew. A library that is not found is dropped without failing
-  # the configure, so assert both were used. The consumers get only the
-  # pjproject install: its package must find both again.
-  cmake-opus-vpx:
-    needs: [detect-changes]
-    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
-    runs-on: macos-latest
-    name: CMake / Opus + VPX
-    steps:
-    - uses: actions/checkout@v4
-    - name: install dependencies
-      run: brew install openssl pkgconf opus libvpx
-    - name: configure
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
-    - name: check options
-      run: |
-        for p in OPUS VPX; do
-          grep "^PJMEDIA_WITH_${p}_CODEC:BOOL=ON$" build/CMakeCache.txt || {
-            echo "::error::PJMEDIA_WITH_${p}_CODEC is not ON"; exit 1; }
-          grep -E "^${p}_(LIBRARY|INCLUDE_DIR):" build/CMakeCache.txt
-        done
-    - name: build
-      run: cmake --build build -j $(sysctl -n hw.ncpu)
-    - name: install
-      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
-    - name: test find_package
-      run: |
-        cmake -B build-consumer tests/cmake \
-          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
-          -DCMAKE_BUILD_TYPE=Release
-        cmake --build build-consumer --verbose
-        ./build-consumer/test_consumer
-        ./build-consumer/test_consumer2
-    - name: test pkg-config
-      run: |
-        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
-        cat "$PKG_CONFIG_PATH/libpjproject.pc"
-        cc tests/cmake/test_consumer.c -o pc_consumer \
-          $(pkg-config --static --cflags --libs libpjproject)
-        ./pc_consumer
-
-  # As cmake-opus-vpx, with the build pointed at each library by
-  # <Pkg>_ROOT: Homebrew's folder per package. The copies Homebrew links
-  # into its prefix must not be used: not by the build, and not by the
-  # consumers, which get only the pjproject install.
+  # Opus and libvpx, as in cmake-build, with the build pointed at each
+  # library by <Pkg>_ROOT: Homebrew's folder per package. The copies
+  # Homebrew links into its prefix must not be used: not by the build, and
+  # not by the consumers, which get only the pjproject install.
   cmake-opus-vpx-root:
     needs: [detect-changes]
     if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
