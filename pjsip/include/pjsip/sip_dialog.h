@@ -150,7 +150,11 @@ struct pjsip_dialog
 
     /* Dialog's session properties. */
     pjsip_dialog_state  state;      /**< Dialog state.                      */
-    pjsip_uri          *target;     /**< Current target.                    */
+    pjsip_uri          *target;     /**< Current target. A new Contact in
+                                         an incoming target refresh request
+                                         is applied when the request is
+                                         accepted, i.e. when 2xx or reliable
+                                         1xx response is sent.              */
     pjsip_target_set    target_set; /**< Target set, for UAC only.          */
     pjsip_hdr           inv_hdr;    /**< Headers from hparam in dest URL    */
     pjsip_dlg_party     local;      /**< Local party info.                  */

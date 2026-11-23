@@ -100,6 +100,7 @@ static struct dlg_tr_test_t
     struct {
         pj_str_t         tsx_key;
         pjsip_tx_data   *tdata;
+        pj_bool_t        answered;
     } held[2];
 
     /* Status code of the last response to an in-dialog UPDATE seen by
@@ -340,6 +341,7 @@ static pj_bool_t usage_on_rx_request(pjsip_rx_data *rdata)
         pj_strdup(tdata->pool, &dlg_tr_test.held[idx].tsx_key,
                   &tsx->transaction_key);
         dlg_tr_test.held[idx].tdata = tdata;
+        dlg_tr_test.held[idx].answered = PJ_FALSE;
         dlg_tr_test.held_cnt++;
         return PJ_TRUE;
     }
@@ -399,13 +401,19 @@ static pj_status_t send_held(unsigned idx, int code, pj_bool_t reliable)
     status = pjsip_dlg_modify_response(dlg_tr_test.uas_dlg, tdata, code,
                                        NULL);
     if (status == PJ_SUCCESS) {
-        if (reliable) {
-            const pj_str_t rseq = { "RSeq", 4 };
-            const pj_str_t val = { "1", 1 };
+        const pj_str_t rseq = { "RSeq", 4 };
+        const pj_str_t val = { "1", 1 };
+        pjsip_hdr *h;
 
+        h = (pjsip_hdr*) pjsip_msg_find_hdr_by_name(tdata->msg, &rseq, NULL);
+        if (h)
+            pj_list_erase(h);
+        if (reliable) {
             pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)
                 pjsip_generic_string_hdr_create(tdata->pool, &rseq, &val));
         }
+        if (code >= 200)
+            dlg_tr_test.held[idx].answered = PJ_TRUE;
         status = pjsip_dlg_send_response(dlg_tr_test.uas_dlg, tsx, tdata);
     }
     pj_grp_lock_release(tsx->grp_lock);
@@ -416,8 +424,12 @@ static void release_held(void)
 {
     unsigned i;
 
-    for (i = 0; i < dlg_tr_test.held_cnt; ++i)
+    for (i = 0; i < dlg_tr_test.held_cnt; ++i) {
+        /* Don't leave the transaction unanswered when a case has failed */
+        if (!dlg_tr_test.held[i].answered)
+            send_held(i, 500, PJ_FALSE);
         pjsip_tx_data_dec_ref(dlg_tr_test.held[i].tdata);
+    }
     dlg_tr_test.held_cnt = 0;
     dlg_tr_test.hold = PJ_FALSE;
 }
