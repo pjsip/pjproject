@@ -1336,6 +1336,15 @@ struct AccountVideoConfig : public PersistentObject
      * transmission will be started as soon as response to these requests
      * is sent (or received).
      *
+     * The setting is also re-applied whenever the video stream is
+     * recreated, e.g. by a re-INVITE or UPDATE that changes the media,
+     * including for local re-INVITEs. This overrides an earlier
+     * PJSUA_CALL_VID_STRM_STOP_TRANSMIT, which only pauses the current
+     * stream locally and is not signalled to the remote party. If the
+     * capture device cannot be set up when the stream is recreated,
+     * outgoing video stays paused while the media remains up for
+     * receiving.
+     *
      * Regardless of the value of this setting, application can start and
      * stop outgoing video transmission with pjsua_call_set_vid_strm().
      *

@@ -5028,6 +5028,15 @@ typedef struct pjsua_acc_config
      * transmission will be started as soon as response to these requests
      * is sent (or received).
      *
+     * The setting is also re-applied whenever the video stream is
+     * recreated, e.g. by a re-INVITE or UPDATE that changes the media,
+     * including for local re-INVITEs. This overrides an earlier
+     * #PJSUA_CALL_VID_STRM_STOP_TRANSMIT, which only pauses the current
+     * stream locally and is not signalled to the remote party. If the
+     * capture device cannot be set up when the stream is recreated,
+     * outgoing video stays paused while the media remains up for
+     * receiving.
+     *
      * Regardless of the value of this setting, application can start and
      * stop outgoing video transmission with #pjsua_call_set_vid_strm().
      *
@@ -6547,7 +6556,9 @@ typedef enum pjsua_call_vid_strm_op
      * Start transmitting video stream. This will cause previously
      * stopped stream to start transmitting again. Note that no
      * re-INVITE/UPDATE is to be transmitted to remote since this
-     * operation only operates on local stream.
+     * operation only operates on local stream. This can also be used
+     * to retry outgoing video transmission after the capture device
+     * could not be set up during stream (re)creation.
      */
     PJSUA_CALL_VID_STRM_START_TRANSMIT,
 
@@ -6556,6 +6567,12 @@ typedef enum pjsua_call_vid_strm_op
      * be paused in TX direction, causing it to stop sending any video
      * packets. No re-INVITE/UPDATE is to be transmitted to remote
      * with this operation.
+     *
+     * The pause only applies to the current stream: it is not signalled
+     * to the remote party and is overridden when the video stream is
+     * recreated (e.g. by a re-INVITE or UPDATE) while the account's
+     * \a vid_out_auto_transmit setting is enabled, which starts
+     * outgoing video transmission again.
      */
     PJSUA_CALL_VID_STRM_STOP_TRANSMIT,
 
