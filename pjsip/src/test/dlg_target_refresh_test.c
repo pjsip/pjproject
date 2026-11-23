@@ -63,6 +63,11 @@
  * a rejected request (by a usage, or unhandled by all usages) and a
  * forged ACK leave it unchanged, and a later accepted request
  * still updates it.
+ *
+ * Case 10 covers the provisional responses to a re-INVITE: only a reliable
+ * one updates the target, and a later error response does not undo that.
+ * Case 11 has two target refreshes pending at once, the second with a
+ * Contact equal to the current target, accepted in order.
  */
 
 static char contact_buf[80];
@@ -85,6 +90,16 @@ static struct dlg_tr_test_t
      * instead of 200, or (if negative) leaves the UPDATE unhandled.
      */
     int              uas_response_code;
+
+    /* When set, the usage keeps its response instead of sending it, for
+     * the test to send with send_held().
+     */
+    pj_bool_t        hold;
+    unsigned         held_cnt;
+    struct {
+        pj_str_t         tsx_key;
+        pjsip_tx_data   *tdata;
+    } held[2];
 
     /* Status code of the last response to an in-dialog UPDATE seen by
      * the UAC side (0 if none yet), set by on_rx_response() below.
@@ -281,7 +296,8 @@ static pj_bool_t usage_on_rx_request(pjsip_rx_data *rdata)
         return PJ_FALSE;
 
     if (pj_stricmp2(&rdata->msg_info.msg->line.req.method.name,
-                    "UPDATE") != 0)
+                    "UPDATE") != 0 &&
+        rdata->msg_info.msg->line.req.method.id != PJSIP_INVITE_METHOD)
     {
         return PJ_FALSE;
     }
@@ -312,6 +328,20 @@ static pj_bool_t usage_on_rx_request(pjsip_rx_data *rdata)
         contact->uri = pjsip_parse_uri(tdata->pool, buf, len, 0);
     }
     pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)contact);
+
+    if (dlg_tr_test.hold) {
+        unsigned idx = dlg_tr_test.held_cnt;
+
+        if (idx >= PJ_ARRAY_SIZE(dlg_tr_test.held)) {
+            pjsip_tx_data_dec_ref(tdata);
+            return PJ_FALSE;
+        }
+        pj_strdup(tdata->pool, &dlg_tr_test.held[idx].tsx_key,
+                  &tsx->transaction_key);
+        dlg_tr_test.held[idx].tdata = tdata;
+        dlg_tr_test.held_cnt++;
+        return PJ_TRUE;
+    }
 
     r = PJ_POOL_ALLOC_T(tdata->pool, struct dlg_tr_deferred_response);
     pj_strdup(tdata->pool, &r->tsx_key, &tsx->transaction_key);
@@ -350,6 +380,51 @@ static pjsip_module mod_dlg_usage =
 
 /**************** THE TEST ******************/
 
+/* Send a response kept by the usage, with the given status code. A
+ * reliable provisional response is only marked as such (RSeq header),
+ * which is what the dialog looks at.
+ */
+static pj_status_t send_held(unsigned idx, int code, pj_bool_t reliable)
+{
+    pjsip_tx_data *tdata = dlg_tr_test.held[idx].tdata;
+    pjsip_transaction *tsx;
+    pj_status_t status;
+
+    tsx = pjsip_tsx_layer_find_tsx(&dlg_tr_test.held[idx].tsx_key, PJ_TRUE);
+    if (!tsx)
+        return PJ_ENOTFOUND;
+
+    /* This adds a reference, which the send consumes */
+    status = pjsip_dlg_modify_response(dlg_tr_test.uas_dlg, tdata, code,
+                                       NULL);
+    if (status == PJ_SUCCESS) {
+        if (reliable) {
+            const pj_str_t rseq = { "RSeq", 4 };
+            const pj_str_t val = { "1", 1 };
+
+            pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)
+                pjsip_generic_string_hdr_create(tdata->pool, &rseq, &val));
+        }
+        status = pjsip_dlg_send_response(dlg_tr_test.uas_dlg, tsx, tdata);
+    }
+    pj_grp_lock_release(tsx->grp_lock);
+    return status;
+}
+
+static void release_held(void)
+{
+    unsigned i;
+
+    for (i = 0; i < dlg_tr_test.held_cnt; ++i)
+        pjsip_tx_data_dec_ref(dlg_tr_test.held[i].tdata);
+    dlg_tr_test.held_cnt = 0;
+    dlg_tr_test.hold = PJ_FALSE;
+}
+
+static pj_status_t send_refresh_with_contact(pjsip_dialog *uac_dlg,
+                                             const pjsip_method *method,
+                                             const char *contact_uri_str);
+
 /* Send an in-dialog UPDATE from uac_dlg with the given Contact URI, and
  * wait for it to be processed by the UAS dialog.
  */
@@ -358,15 +433,22 @@ static pj_status_t send_update_with_contact(pjsip_dialog *uac_dlg,
 {
     pjsip_method method;
     pj_str_t update_str = { "UPDATE", 6 };
+
+    pjsip_method_init_np(&method, &update_str);
+    return send_refresh_with_contact(uac_dlg, &method, contact_uri_str);
+}
+
+static pj_status_t send_refresh_with_contact(pjsip_dialog *uac_dlg,
+                                             const pjsip_method *method,
+                                             const char *contact_uri_str)
+{
     pjsip_tx_data *tdata;
     pjsip_contact_hdr *contact;
     char *uri_buf;
     pj_size_t uri_len;
     pj_status_t status;
 
-    pjsip_method_init_np(&method, &update_str);
-
-    status = pjsip_dlg_create_request(uac_dlg, &method, -1, &tdata);
+    status = pjsip_dlg_create_request(uac_dlg, method, -1, &tdata);
     if (status != PJ_SUCCESS)
         return status;
 
@@ -716,7 +798,90 @@ int dlg_target_refresh_test(void)
               "target was not updated by an accepted target refresh",
               { rc = -231; goto on_return; });
 
+    /*
+     * Case 10: re-INVITE with a new Contact. A plain provisional response
+     * leaves the target, a reliable one updates it, and the error response
+     * after that does not undo it (RFC 6141 Section 4.3 and 4.6).
+     */
+    dlg_tr_test.hold = PJ_TRUE;
+    dlg_tr_test.target_before = print_target(dlg_tr_test.uas_dlg,
+                                             dlg_tr_test.target_buf,
+                                             sizeof(dlg_tr_test.target_buf));
+
+    PJ_TEST_SUCCESS(send_refresh_with_contact(uac_dlg,
+                                              pjsip_get_invite_method(),
+                                              "sip:heidi@127.0.0.1:44453"),
+                    NULL, { rc = -240; goto on_return; });
+    flush_events(500);
+    PJ_TEST_EQ(dlg_tr_test.held_cnt, 1, "re-INVITE was not received",
+              { rc = -241; goto on_return; });
+
+    PJ_TEST_SUCCESS(send_held(0, 183, PJ_FALSE), NULL,
+                    { rc = -242; goto on_return; });
+    flush_events(200);
+    target_after = print_target(dlg_tr_test.uas_dlg, legit_buf,
+                                sizeof(legit_buf));
+    PJ_TEST_EQ(pj_strcmp(&target_after, &dlg_tr_test.target_before), 0,
+              "target was updated by a non-reliable provisional response",
+              { rc = -243; goto on_return; });
+
+    PJ_TEST_SUCCESS(send_held(0, 183, PJ_TRUE), NULL,
+                    { rc = -244; goto on_return; });
+    flush_events(200);
+    target_after = print_target(dlg_tr_test.uas_dlg, legit_buf,
+                                sizeof(legit_buf));
+    PJ_TEST_EQ(pj_strcmp2(&target_after, "<sip:heidi@127.0.0.1:44453>"), 0,
+              "target was not updated by a reliable provisional response",
+              { rc = -245; goto on_return; });
+
+    PJ_TEST_SUCCESS(send_held(0, 488, PJ_FALSE), NULL,
+                    { rc = -246; goto on_return; });
+    flush_events(500);
+    target_after = print_target(dlg_tr_test.uas_dlg, legit_buf,
+                                sizeof(legit_buf));
+    PJ_TEST_EQ(pj_strcmp2(&target_after, "<sip:heidi@127.0.0.1:44453>"), 0,
+              "target update was undone by the final error response",
+              { rc = -247; goto on_return; });
+    release_held();
+
+    /*
+     * Case 11: two target refreshes pending at once, the second with a
+     * Contact equal to the current target. Accepted in order, the target
+     * follows the first and then returns with the second.
+     */
+    dlg_tr_test.hold = PJ_TRUE;
+
+    PJ_TEST_SUCCESS(send_update_with_contact(uac_dlg,
+                                             "sip:ivan@127.0.0.1:44454"),
+                    NULL, { rc = -250; goto on_return; });
+    flush_events(300);
+    PJ_TEST_SUCCESS(send_update_with_contact(uac_dlg,
+                                             "sip:heidi@127.0.0.1:44453"),
+                    NULL, { rc = -251; goto on_return; });
+    flush_events(300);
+    PJ_TEST_EQ(dlg_tr_test.held_cnt, 2, "UPDATEs were not received",
+              { rc = -252; goto on_return; });
+
+    PJ_TEST_SUCCESS(send_held(0, 200, PJ_FALSE), NULL,
+                    { rc = -253; goto on_return; });
+    flush_events(200);
+    target_after = print_target(dlg_tr_test.uas_dlg, legit_buf,
+                                sizeof(legit_buf));
+    PJ_TEST_EQ(pj_strcmp2(&target_after, "<sip:ivan@127.0.0.1:44454>"), 0,
+              "target was not updated by the first accepted refresh",
+              { rc = -254; goto on_return; });
+
+    PJ_TEST_SUCCESS(send_held(1, 200, PJ_FALSE), NULL,
+                    { rc = -255; goto on_return; });
+    flush_events(200);
+    target_after = print_target(dlg_tr_test.uas_dlg, legit_buf,
+                                sizeof(legit_buf));
+    PJ_TEST_EQ(pj_strcmp2(&target_after, "<sip:heidi@127.0.0.1:44453>"), 0,
+              "target was not updated by the second accepted refresh",
+              { rc = -256; goto on_return; });
+
 on_return:
+    release_held();
     pjsip_dlg_dec_session(uac_dlg, &mod_dlg_tr_test);
     if (dlg_tr_test.uas_dlg)
         pjsip_dlg_dec_session(dlg_tr_test.uas_dlg, &mod_dlg_tr_test);

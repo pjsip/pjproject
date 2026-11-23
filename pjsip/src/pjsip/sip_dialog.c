@@ -1875,6 +1875,19 @@ static dlg_target_refresh *dlg_find_target_refresh(pjsip_dialog *dlg,
 }
 
 
+static pj_bool_t dlg_has_target_refresh(pjsip_dialog *dlg)
+{
+    dlg_target_refresh *r = (dlg_target_refresh*)dlg->rem_target_pending.next;
+
+    while (r != (dlg_target_refresh*)&dlg->rem_target_pending) {
+        if (r->tsx)
+            return PJ_TRUE;
+        r = r->next;
+    }
+    return PJ_FALSE;
+}
+
+
 /* Apply or drop the remote target update of an incoming target refresh
  * request, according to the response sent (RFC 6141 Section 4.6): 2xx and
  * reliable provisional responses update the target, error responses must
@@ -1905,7 +1918,11 @@ static void dlg_on_target_refresh_tsx_state(pjsip_dialog *dlg,
 
     r->tsx = NULL;
 
-    if (accepted) {
+    if (accepted &&
+        (dlg->remote.contact==NULL ||
+         pjsip_uri_cmp(PJSIP_URI_IN_REQ_URI, dlg->remote.contact->uri,
+                       r->contact->uri)))
+    {
         char buf[PJSIP_MAX_URL_SIZE];
         pj_str_t tmp;
         pj_ssize_t len;
@@ -2109,11 +2126,15 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
         contact = (pjsip_contact_hdr*)
                   pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT,
                                      NULL);
+        /* A Contact equal to the current target is noted too when another
+         * update is pending, as that one may be applied first.
+         */
         if (contact && contact->uri &&
             (dlg->remote.contact==NULL ||
              pjsip_uri_cmp(PJSIP_URI_IN_REQ_URI,
                            dlg->remote.contact->uri,
-                           contact->uri)) &&
+                           contact->uri) ||
+             dlg_has_target_refresh(dlg)) &&
             dlg_target_refresh_allowed(dlg, contact))
         {
             r = dlg_find_target_refresh(dlg, NULL);

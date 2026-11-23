@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -2344,6 +2344,19 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
         //pj_assert(sub->pending_notify);
         /* Make sure that pending_notify is set. */
         if (sub->pending_notify) {
+            pjsip_msg *notify = sub->pending_notify->msg;
+
+            /* It was created before the response was sent, i.e. before
+             * a new Contact in this SUBSCRIBE became the remote target.
+             */
+            if (pjsip_uri_cmp(PJSIP_URI_IN_REQ_URI, notify->line.req.uri,
+                              sub->dlg->target))
+            {
+                notify->line.req.uri = (pjsip_uri*)
+                    pjsip_uri_clone(sub->pending_notify->pool,
+                                    sub->dlg->target);
+            }
+
             status = pjsip_evsub_send_request(sub, sub->pending_notify);
             sub->pending_notify = NULL;
         }
