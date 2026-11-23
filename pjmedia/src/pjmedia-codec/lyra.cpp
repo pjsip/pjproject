@@ -1,5 +1,5 @@
 /*
- * Copyright (C)2024 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2024-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -719,7 +719,7 @@ pjmedia_codec_lyra_set_config(const pjmedia_codec_lyra_config *cfg)
     return PJ_SUCCESS;
 }
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && PJMEDIA_AUTO_LINK_LYRA_LIBS
 #   pragma comment(lib, "liblyra")
 #endif
 

@@ -25,7 +25,7 @@
             PJMEDIA_HAS_VPX_CODEC != 0 && \
     defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && PJMEDIA_AUTO_LINK_VPX_LIBS
 #   pragma comment( lib, "vpx.lib")
 #endif
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2010-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -194,7 +194,7 @@ pj_status_t CodecID_to_pjmedia_format_id(unsigned codec_id,
 }
 
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && PJMEDIA_AUTO_LINK_FFMPEG_LIBS
 #   pragma comment( lib, "avformat.lib")
 #   pragma comment( lib, "avutil.lib")
 #endif

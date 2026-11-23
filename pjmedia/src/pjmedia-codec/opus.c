@@ -1319,7 +1319,7 @@ static pj_status_t  codec_recover( pjmedia_codec *codec,
     return PJ_SUCCESS;
 }
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && PJMEDIA_AUTO_LINK_OPUS_LIBS
 #   pragma comment(lib, PJMEDIA_CODEC_OPUS_LIB_NAME)
 #endif
 

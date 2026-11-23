@@ -1,5 +1,5 @@
 /* 
- * Copyright (C)2014 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2014-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +27,9 @@
 
 #ifdef _MSC_VER
 #   include <stdint.h>
-#   pragma comment( lib, "openh264.lib")
+#   if PJMEDIA_AUTO_LINK_OPENH264_LIBS
+#       pragma comment( lib, "openh264.lib")
+#   endif
 #endif
 
 /* OpenH264: */
