@@ -5,14 +5,15 @@
 # The framework lists are not written down here: they are parsed out of
 # build/apple/Package.swift.in, so a framework that the manifest forgets to
 # declare fails these tests rather than silently working for whoever happens
-# to link it by hand.
+# to link it by hand. The manifest is iOS only; the extra frameworks of the
+# experimental macOS slice are listed in MACOS_FRAMEWORKS below.
 #
 #   tier 1  per slice, with no -D flags: the shipped headers assert the exact
 #           configuration, the public API and the Clang module both compile,
 #           the archive links beside a consumer that defines the same
 #           third-party symbols, and nothing outside the pj API is exported
-#   tier 2  a SwiftPM consumer on macOS that links the real manifest's linker
-#           settings and runs
+#   tier 2  a SwiftPM consumer, built for the iOS simulator, that links the
+#           real manifest's linker settings and runs on a booted simulator
 #   tier 3  a real iOS app bundle installed on a booted simulator, covering
 #           the audio and video device backends and a live TLS listener
 #
@@ -21,7 +22,7 @@
 #
 # Options:
 #   --tier N        run only this tier; repeatable (default: 1 2 3)
-#   --device NAME   simulator name or UDID for tier 3 (default: first
+#   --device NAME   simulator name or UDID for tiers 2 and 3 (default: first
 #                   available iPhone)
 #   --keep          keep the scratch directory for inspection
 #
@@ -45,7 +46,7 @@ while [ $# -gt 0 ]; do
     --tier)   TIERS="$TIERS $2"; shift 2 ;;
     --device) DEVICE=$2; shift 2 ;;
     --keep)   KEEP=1; shift ;;
-    -h|--help) sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,31p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *)        XCFRAMEWORK=$1; shift ;;
     esac
 done
@@ -56,6 +57,10 @@ TIERS=${TIERS:-"1 2 3"}
 # Must match KEEP_SYMBOLS in build-xcframework.sh: the C API, the pj namespace,
 # and std:: template instantiations. Anything else exported is a leak.
 KEEP_SYMBOLS='^_pj|^_PJ|^__Z[A-Za-z]*2pj|^__Z[A-Za-z]*St[0-9]|^__ZSt'
+
+# The macOS slice is experimental and not in the manifest, so the frameworks
+# it needs beyond the common ones are listed here.
+MACOS_FRAMEWORKS="AppKit CoreAudio"
 
 die() { echo "error: $*" >&2; exit 1; }
 pass() { printf '  \033[32mok\033[0m   %s\n' "$*"; }
@@ -75,13 +80,16 @@ manifest_frameworks() {
     case $scope in
     common) grep -o '\.linkedFramework("[A-Za-z]*")' "$manifest" ;;
     ios)    grep -o '\.linkedFramework("[A-Za-z]*", \.when(platforms: \[\.iOS\]))' "$manifest" ;;
-    macos)  grep -o '\.linkedFramework("[A-Za-z]*", \.when(platforms: \[\.macOS\]))' "$manifest" ;;
     esac | sed 's/.*("\([A-Za-z]*\)".*/\1/'
 }
 
 link_flags() {
-    local platform=$1 f out=""
-    for f in $(manifest_frameworks common) $(manifest_frameworks "$platform"); do
+    local platform=$1 f out="" extra
+    case $platform in
+    ios)   extra=$(manifest_frameworks ios) ;;
+    macos) extra=$MACOS_FRAMEWORKS ;;
+    esac
+    for f in $(manifest_frameworks common) $extra; do
         out="$out -framework $f"
     done
     echo "$out -lc++"
@@ -121,6 +129,8 @@ slice_dir() {
         macos*) [ "$want" = macos ] && { echo "${d%/}"; return; } ;;
         esac
     done
+    # a missing slice is not an error; callers test for empty output
+    return 0
 }
 
 # ------------------------------------------------------------------ tier 1 --
@@ -208,53 +218,7 @@ run_tier1() {
     fi
 }
 
-# ------------------------------------------------------------------ tier 2 --
-run_tier2() {
-    head1 "tier 2  SwiftPM consumer on macOS"
-    local w=$WORK/t2 settings
-    [ -n "$(slice_dir macos)" ] || { fail "no macos slice to test"; return; }
-
-    mkdir -p "$w/Shim/include"
-    cp -R "$SELF_DIR/tier2/Sources" "$w/"
-    cp "$APPLE_DIR/spm/Sources/PJSIPLinkerSettings/shim.c" "$w/Shim/"
-    cp "$APPLE_DIR/spm/Sources/PJSIPLinkerSettings/include/PJSIPLinkerSettings.h" \
-       "$w/Shim/include/"
-    cp -R "$XCFRAMEWORK" "$w/PJSIP.xcframework"
-
-    # Copy the real manifest's linkerSettings block verbatim, so the test
-    # exercises the settings that ship rather than a second copy of them.
-    sed -n '/linkerSettings: \[/,/^            \]/p' \
-        "$APPLE_DIR/Package.swift.in" | sed '1d;$d' > "$w/settings.txt"
-    [ -s "$w/settings.txt" ] || { fail "could not read linkerSettings from the manifest"; return; }
-
-    python3 - "$SELF_DIR/tier2/Package.swift.template" "$w/settings.txt" \
-             "$w/Package.swift" <<'PYEOF'
-import pathlib, sys
-tpl, settings, out = sys.argv[1:4]
-text = pathlib.Path(tpl).read_text()
-text = text.replace("@XCFRAMEWORK@", "PJSIP.xcframework")
-text = text.replace("@LINKER_SETTINGS@",
-                    pathlib.Path(settings).read_text().rstrip("\n"))
-pathlib.Path(out).write_text(text)
-PYEOF
-
-    if (cd "$w" && swift build >"$w/build.log" 2>&1); then
-        pass "package builds against the shipped linker settings"
-    else
-        fail "package build"
-        grep -m4 error "$w/build.log" | sed 's/^/       /' || true
-        return
-    fi
-
-    if (cd "$w" && ./.build/debug/App >"$w/run.log" 2>&1) && grep -q VERIFY-OK "$w/run.log"; then
-        pass "$(grep -m1 VERIFY-OK "$w/run.log")"
-    else
-        fail "consumer run"
-        tail -4 "$w/run.log" | sed 's/^/       /'
-    fi
-}
-
-# ------------------------------------------------------------------ tier 3 --
+# --------------------------------------------------------------- simulator --
 pick_device() {
     if [ -n "$DEVICE" ]; then echo "$DEVICE"; return; fi
     xcrun simctl list devices available -j 2>/dev/null | python3 -c '
@@ -270,14 +234,78 @@ for runtime, devices in data.items():
 print(best or "")'
 }
 
+# Boots the device if needed and prints its UDID.
+boot_device() {
+    local udid
+    udid=$(pick_device)
+    [ -n "$udid" ] || return 1
+    xcrun simctl bootstatus "$udid" -b >/dev/null 2>&1 || xcrun simctl boot "$udid" >/dev/null 2>&1 || true
+    xcrun simctl bootstatus "$udid" -b >/dev/null 2>&1 || true
+    echo "$udid"
+}
+
+# ------------------------------------------------------------------ tier 2 --
+run_tier2() {
+    head1 "tier 2  SwiftPM consumer on the iOS simulator"
+    local w=$WORK/t2 dir minos udid sdk bin out
+    dir=$(slice_dir simulator)
+    [ -n "$dir" ] || { fail "no simulator slice to test"; return; }
+    minos=$(slice_minos "$dir/libpjproject.a" "$HOST_ARCH")
+
+    mkdir -p "$w/Shim/include"
+    cp -R "$SELF_DIR/tier2/Sources" "$w/"
+    cp "$APPLE_DIR/spm/Sources/PJSIPLinkerSettings/shim.c" "$w/Shim/"
+    cp "$APPLE_DIR/spm/Sources/PJSIPLinkerSettings/include/PJSIPLinkerSettings.h" \
+       "$w/Shim/include/"
+    cp -R "$XCFRAMEWORK" "$w/PJSIP.xcframework"
+
+    # Copy the real manifest's linkerSettings block verbatim, so the test
+    # exercises the settings that ship rather than a second copy of them.
+    sed -n '/linkerSettings: \[/,/^            \]/p' \
+        "$APPLE_DIR/Package.swift.in" | sed '1d;$d' > "$w/settings.txt"
+    [ -s "$w/settings.txt" ] || { fail "could not read linkerSettings from the manifest"; return; }
+
+    python3 - "$SELF_DIR/tier2/Package.swift.template" "$w/settings.txt" \
+             "$w/Package.swift" "$minos" <<'PYEOF'
+import pathlib, sys
+tpl, settings, out, minos = sys.argv[1:5]
+text = pathlib.Path(tpl).read_text()
+text = text.replace("@XCFRAMEWORK@", "PJSIP.xcframework")
+text = text.replace("@IOS_MIN@", minos)
+text = text.replace("@LINKER_SETTINGS@",
+                    pathlib.Path(settings).read_text().rstrip("\n"))
+pathlib.Path(out).write_text(text)
+PYEOF
+
+    sdk=$(xcrun --sdk iphonesimulator --show-sdk-path)
+    local swift_args=(--triple "$HOST_ARCH-apple-ios$minos-simulator" --sdk "$sdk")
+    if (cd "$w" && swift build "${swift_args[@]}" >"$w/build.log" 2>&1); then
+        pass "package builds against the shipped linker settings"
+    else
+        fail "package build"
+        grep -m4 error "$w/build.log" | sed 's/^/       /' || true
+        return
+    fi
+    bin=$(cd "$w" && swift build "${swift_args[@]}" --show-bin-path)
+
+    udid=$(boot_device) || { fail "no available iPhone simulator"; return; }
+    out=$(xcrun simctl spawn "$udid" "$bin/App" 2>&1 || true)
+    if echo "$out" | grep -q VERIFY-OK; then
+        pass "$(echo "$out" | grep -m1 VERIFY-OK)"
+    else
+        fail "consumer run"
+        echo "$out" | tail -4 | sed 's/^/       /'
+    fi
+}
+
+# ------------------------------------------------------------------ tier 3 --
 run_tier3() {
     head1 "tier 3  iOS app on a booted simulator"
     local w=$WORK/t3 dir udid app out
     dir=$(slice_dir simulator)
     [ -n "$dir" ] || { fail "no simulator slice to test"; return; }
 
-    udid=$(pick_device)
-    [ -n "$udid" ] || { fail "no available iPhone simulator"; return; }
+    udid=$(boot_device) || { fail "no available iPhone simulator"; return; }
 
     app=$w/VerifyPJSIP.app
     mkdir -p "$app"
@@ -301,9 +329,6 @@ run_tier3() {
         return
     fi
     pass "app bundle builds"
-
-    xcrun simctl bootstatus "$udid" -b >/dev/null 2>&1 || xcrun simctl boot "$udid" >/dev/null 2>&1 || true
-    xcrun simctl bootstatus "$udid" -b >/dev/null 2>&1 || true
 
     if ! xcrun simctl install "$udid" "$app" >"$w.install.log" 2>&1; then
         fail "install on simulator"
