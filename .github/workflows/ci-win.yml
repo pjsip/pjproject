@@ -993,23 +993,18 @@ jobs:
           - name: default
             options: ''
             expect: ''
-            vcpkg: ''
             tests: sock_test udp_ioqueue_test
-          # Opus and libvpx from vcpkg, found through <Pkg>_ROOT
-          - name: IOCP, schannel, WASAPI, DShow, AKA, Opus + VPX
+          - name: IOCP, schannel, WASAPI, DShow, AKA
             options: >-
               -DPJLIB_WITH_IOQUEUE=iocp -DPJLIB_WITH_SSL=schannel
               -DPJMEDIA_WITH_AUDIODEV_WASAPI=ON
               -DPJMEDIA_WITH_VIDEODEV_DSHOW=ON
               -DPJSIP_WITH_DIGEST_AKA_AUTH=ON
-              "-DOPUS_ROOT=$env:VCPKG_PREFIX" "-DVPX_ROOT=$env:VCPKG_PREFIX"
             expect: >-
               PJLIB_WITH_IOQUEUE=iocp PJLIB_WITH_SSL=schannel
               PJMEDIA_WITH_AUDIODEV_WASAPI=ON
               PJMEDIA_WITH_VIDEODEV_DSHOW=ON
               PJSIP_WITH_DIGEST_AKA_AUTH=ON
-              PJMEDIA_WITH_OPUS_CODEC=ON PJMEDIA_WITH_VPX_CODEC=ON
-            vcpkg: opus libvpx
             tests: sock_test udp_ioqueue_test iocp_unregister_test ssl_sock_test
     env:
       # Strawberry Perl and MSYS2 ship mingw builds of OpenSSL and other
@@ -1017,30 +1012,6 @@ jobs:
       PJ_IGNORE_PREFIX: C:/Strawberry/c;C:/msys64/mingw64;C:/msys64/usr
     steps:
     - uses: actions/checkout@v4
-    - name: vcpkg paths
-      if: matrix.vcpkg != ''
-      id: vcpkg
-      run: |
-        $prefix = "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows" -replace '\\', '/'
-        $cache = "${{ runner.temp }}/vcpkg-cache" -replace '\\', '/'
-        New-Item -ItemType Directory -Force $cache | Out-Null
-        Add-Content $env:GITHUB_ENV "VCPKG_PREFIX=$prefix"
-        Add-Content $env:GITHUB_ENV "VCPKG_DEFAULT_BINARY_CACHE=$cache"
-        Add-Content $env:GITHUB_OUTPUT "image=$env:ImageVersion"
-    - name: cache vcpkg packages
-      # vcpkg's binary cache: packages are named by an ABI hash, so a stale
-      # entry is only a miss. The runner image updates vcpkg's ports.
-      if: matrix.vcpkg != ''
-      uses: actions/cache@v4
-      with:
-        path: ${{ runner.temp }}/vcpkg-cache
-        key: vcpkg-x64-windows-opus-libvpx-${{ steps.vcpkg.outputs.image }}
-        restore-keys: vcpkg-x64-windows-opus-libvpx-
-    - name: install dependencies
-      if: matrix.vcpkg != ''
-      run: |
-        $PSNativeCommandUseErrorActionPreference = $true
-        & "$env:VCPKG_INSTALLATION_ROOT/vcpkg" install ${{ matrix.vcpkg }} --triplet x64-windows
     - name: configure
       run: >-
         cmake -B build -G "Visual Studio 17 2022" -A x64
@@ -1065,21 +1036,6 @@ jobs:
           }
         }
         if ($failed) { exit 1 }
-    - name: check the roots
-      # Opus and libvpx: the library and the headers from vcpkg
-      if: matrix.vcpkg != ''
-      run: |
-        $cache = Get-Content build/CMakeCache.txt
-        foreach ($p in 'OPUS', 'VPX') {
-          foreach ($v in 'LIBRARY', 'INCLUDE_DIR') {
-            $line = $cache -match "^${p}_${v}:"
-            Write-Host $line
-            if (-not ($line -like "*=$env:VCPKG_PREFIX/*")) {
-              Write-Host "::error::${p}_$v is not from $env:VCPKG_PREFIX"
-              exit 1
-            }
-          }
-        }
     - name: OpenSSL runtime
       # The runner's OpenSSL is used whenever found (by pjlib, or by srtp for
       # AES-GCM), and its DLLs are needed to run anything linked to it.
@@ -1119,7 +1075,93 @@ jobs:
           "-DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install" `
           "-DCMAKE_IGNORE_PREFIX_PATH=$env:PJ_IGNORE_PREFIX"
         cmake --build build-consumer --config Release
-        if ($env:VCPKG_PREFIX) { $env:PATH = "$env:VCPKG_PREFIX/bin;$env:PATH" }
+        ./build-consumer/Release/test_consumer.exe
+        ./build-consumer/Release/test_consumer2.exe
+
+  # One optional audio codec (Opus) and one video codec (libvpx), from
+  # vcpkg, found through <Pkg>_ROOT. A library that is not found is dropped
+  # without failing the configure, so assert both were used. The consumers
+  # get only the pjproject install: its package must find both where the
+  # build did. vcpkg's vpx.lib is built with /GL, which makes every Release
+  # program linking pjmedia relink with /LTCG, so this is not part of the
+  # ungated cmake-build.
+  cmake-opus-vpx:
+    needs: [detect-changes]
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
+    runs-on: windows-2022
+    name: CMake / Opus + VPX from <Pkg>_ROOT
+    env:
+      # as in cmake-build
+      PJ_IGNORE_PREFIX: C:/Strawberry/c;C:/msys64/mingw64;C:/msys64/usr
+    steps:
+    - uses: actions/checkout@v4
+    - name: vcpkg paths
+      id: vcpkg
+      run: |
+        $prefix = "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows" -replace '\\', '/'
+        $cache = "${{ runner.temp }}/vcpkg-cache" -replace '\\', '/'
+        New-Item -ItemType Directory -Force $cache | Out-Null
+        Add-Content $env:GITHUB_ENV "VCPKG_PREFIX=$prefix"
+        Add-Content $env:GITHUB_ENV "VCPKG_DEFAULT_BINARY_CACHE=$cache"
+        Add-Content $env:GITHUB_OUTPUT "image=$env:ImageVersion"
+    - name: cache vcpkg packages
+      # vcpkg's binary cache: packages are named by an ABI hash, so a stale
+      # entry is only a miss. The runner image updates vcpkg's ports.
+      uses: actions/cache@v4
+      with:
+        path: ${{ runner.temp }}/vcpkg-cache
+        key: vcpkg-x64-windows-opus-libvpx-${{ steps.vcpkg.outputs.image }}
+        restore-keys: vcpkg-x64-windows-opus-libvpx-
+    - name: install dependencies
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        & "$env:VCPKG_INSTALLATION_ROOT/vcpkg" install opus libvpx --triplet x64-windows
+    - name: configure
+      run: >-
+        cmake -B build -G "Visual Studio 17 2022" -A x64
+        "-DCMAKE_IGNORE_PREFIX_PATH=$env:PJ_IGNORE_PREFIX"
+        "-DOPUS_ROOT=$env:VCPKG_PREFIX" "-DVPX_ROOT=$env:VCPKG_PREFIX"
+    - name: check the roots
+      # both codecs on, the library and the headers from vcpkg
+      run: |
+        $cache = Get-Content build/CMakeCache.txt
+        foreach ($p in 'OPUS', 'VPX') {
+          if (-not ($cache -ccontains "PJMEDIA_WITH_${p}_CODEC:BOOL=ON")) {
+            Write-Host "::error::PJMEDIA_WITH_${p}_CODEC is not ON"
+            exit 1
+          }
+          foreach ($v in 'LIBRARY', 'INCLUDE_DIR') {
+            $line = $cache -match "^${p}_${v}:"
+            Write-Host $line
+            if (-not ($line -like "*=$env:VCPKG_PREFIX/*")) {
+              Write-Host "::error::${p}_$v is not from $env:VCPKG_PREFIX"
+              exit 1
+            }
+          }
+        }
+    - name: OpenSSL runtime
+      # as in cmake-build
+      run: |
+        $m = cmake -LA -N build | Select-String '^OPENSSL_INCLUDE_DIR:PATH=(.+)$'
+        if ($m) {
+          $bin = Join-Path (Split-Path $m.Matches[0].Groups[1].Value) bin
+          if (Test-Path $bin) {
+            Write-Host "OpenSSL: $bin"
+            Add-Content $env:GITHUB_PATH $bin
+          }
+        }
+    - name: build
+      run: cmake --build build --config Release --parallel
+    - name: install
+      run: cmake --install build --config Release --prefix "${{ runner.temp }}/pj-install"
+    - name: test find_package
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        cmake -B build-consumer tests/cmake -G "Visual Studio 17 2022" -A x64 `
+          "-DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install" `
+          "-DCMAKE_IGNORE_PREFIX_PATH=$env:PJ_IGNORE_PREFIX"
+        cmake --build build-consumer --config Release
+        $env:PATH = "$env:VCPKG_PREFIX/bin;$env:PATH"
         ./build-consumer/Release/test_consumer.exe
         ./build-consumer/Release/test_consumer2.exe
 
