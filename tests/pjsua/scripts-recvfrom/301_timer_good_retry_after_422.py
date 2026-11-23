@@ -8,7 +8,7 @@ pjsua = "--null-audio sip:127.0.0.1:$PORT --timer-min-se 100 --timer-se 1000 --n
 
 # First INVITE with timer rejected with 422
 req1 = sip.RecvfromTransaction("INVITE with SE too small", 422,
-				include=["Session-Expires:\s*1000"], 
+				include=[r"Session-Expires:\s*1000"],
 				exclude=[],
 				resp_hdr=["Min-SE: 2000"]
 			  	)
@@ -18,7 +18,7 @@ req2 = sip.RecvfromTransaction("Wait ACK", 0, include=["ACK sip"])
 
 # New INVITE with SE >= Min-SE
 req3 = sip.RecvfromTransaction("Retrying with acceptable SE", 200,
-				include=["Session-Expires:\s*2000", "Min-SE:\s*2000"], 
+				include=[r"Session-Expires:\s*2000", r"Min-SE:\s*2000"],
 				exclude=[],
 				resp_hdr=["Session-Expires: 2000;refresher=uac"]
 			  	)

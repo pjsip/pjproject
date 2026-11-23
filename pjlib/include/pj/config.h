@@ -1349,6 +1349,17 @@
 #   endif
 #endif
 
+/**
+ * Link with the OpenSSL or GnuTLS libraries via pragma comment on Visual
+ * Studio. Disable this when the application links them itself, e.g. when
+ * they are part of a combined library. System libraries are still linked.
+ *
+ * Default: 1
+ */
+#ifndef PJ_AUTO_LINK_SSL_LIBS
+#   define PJ_AUTO_LINK_SSL_LIBS            1
+#endif
+
 
 /* Secure socket is connection oriented, i.e. it is implemented on top of
  * TCP, so it cannot be built when TCP support is disabled. Reject the

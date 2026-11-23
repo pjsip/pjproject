@@ -727,7 +727,8 @@ static int scenario_dtls_fprint(pj_pool_t *pool, pjmedia_endpt *endpt,
     pj_status_t status;
     int rc = 0;
 
-    a.tp = b.tp = NULL;
+    pj_bzero(&a, sizeof(a));
+    pj_bzero(&b, sizeof(b));
 
     status = dtls_peer_create(endpt, "dtlsA", &a);
     if (status == PJ_SUCCESS)

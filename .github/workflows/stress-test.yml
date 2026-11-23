@@ -28,7 +28,7 @@ jobs:
     timeout-minutes: 60
     name: ${{ matrix.sanitizer }}-sanitizer
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y nasm gdb
@@ -121,7 +121,7 @@ jobs:
 
       - name: Upload log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: stress-${{ matrix.sanitizer }}-log
           path: pjsip/bin/stress.log

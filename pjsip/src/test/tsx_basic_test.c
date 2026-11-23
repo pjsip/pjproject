@@ -467,7 +467,7 @@ static int terminate_async_test(unsigned tid, enum terminate_async_case tc)
     int prev_failure;
     unsigned t1 = pjsip_cfg()->tsx.t1;
     unsigned waited, elapsed;
-    pj_time_val term_time, end_time;
+    pj_time_val term_time = {0, 0}, end_time;
     pj_status_t status;
     int rc = 0;
 

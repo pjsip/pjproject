@@ -37,8 +37,8 @@ jobs:
       any_src: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib_util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.pjsip == 'true' || steps.filter.outputs.pjsip_apps == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
       cmake: ${{ steps.filter.outputs.cmake == 'true' }}
     steps:
-    - uses: actions/checkout@v4
-    - uses: dorny/paths-filter@v3
+    - uses: actions/checkout@v5
+    - uses: dorny/paths-filter@v4
       if: github.event_name == 'pull_request'
       id: filter
       with:
@@ -118,7 +118,7 @@ jobs:
       shell: cmd
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -193,7 +193,7 @@ jobs:
       shell: powershell
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -270,7 +270,7 @@ jobs:
         Expand-Archive -LiteralPath .\visqol_win.zip -DestinationPath tests\pjsua\tools
       shell: powershell
     - name: set up Python 3.10 for pjsua test
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: '3.10'
     - name: Install PESQ and Dependencies
@@ -299,7 +299,7 @@ jobs:
       shell: powershell
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -360,7 +360,7 @@ jobs:
       shell: powershell
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -414,7 +414,7 @@ jobs:
       shell: cmd
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -539,7 +539,7 @@ jobs:
       shell: powershell
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -643,7 +643,7 @@ jobs:
         Expand-Archive -LiteralPath .\visqol_win.zip -DestinationPath tests\pjsua\tools
       shell: powershell
     - name: set up Python 3.10 for pjsua test
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: '3.10'
     - name: Install PESQ and Dependencies
@@ -663,7 +663,7 @@ jobs:
       shell: powershell
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -751,7 +751,7 @@ jobs:
       shell: powershell
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -825,7 +825,7 @@ jobs:
   #     shell: cmd
   #   - name: upload artifacts on failure
   #     if: ${{ failure() }}
-  #     uses: actions/upload-artifact@v4
+  #     uses: actions/upload-artifact@v6
   #     with:
   #       name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
   #       path: artifacts
@@ -864,7 +864,7 @@ jobs:
       shell: powershell
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -958,7 +958,7 @@ jobs:
         Expand-Archive -LiteralPath .\visqol_win.zip -DestinationPath tests\pjsua\tools
       shell: powershell
     - name: set up Python 3.10 for pjsua test
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: '3.10'
     - name: Install PESQ and Dependencies
@@ -978,7 +978,7 @@ jobs:
       shell: powershell
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -1011,7 +1011,7 @@ jobs:
       # packages, which must not be picked up by an MSVC build.
       PJ_IGNORE_PREFIX: C:/Strawberry/c;C:/msys64/mingw64;C:/msys64/usr
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: configure
       run: >-
         cmake -B build -G "Visual Studio 17 2022" -A x64

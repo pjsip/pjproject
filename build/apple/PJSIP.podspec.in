@@ -10,7 +10,7 @@ Pod::Spec.new do |s|
   s.version          = '@VERSION@'
   s.summary          = 'Open source multimedia communication library (SIP, SDP, RTP, STUN, TURN, ICE).'
   s.description      = <<-DESC
-                       PJSIP built for Apple platforms with TLS provided by the
+                       PJSIP built for iOS with TLS provided by the
                        Network framework rather than OpenSSL. DTLS-SRTP is not
                        available in this build. Codecs with patent or copyleft
                        encumbrance are excluded. Opus is included, and video is enabled
@@ -24,12 +24,10 @@ Pod::Spec.new do |s|
   s.source           = { :http => '@URL@', :sha256 => '@CHECKSUM@' }
 
   s.ios.deployment_target = '@IOS_MIN_RAW@'
-  s.osx.deployment_target = '@MACOS_MIN_RAW@'
 
   s.vendored_frameworks = 'PJSIP.xcframework'
 
   s.libraries    = 'c++'
   s.frameworks   = 'AVFoundation', 'AudioToolbox', 'CoreGraphics', 'CoreMedia', 'CoreVideo', 'Foundation', 'Metal', 'MetalKit', 'Network', 'QuartzCore', 'Security', 'VideoToolbox'
   s.ios.frameworks = 'OpenGLES', 'UIKit'
-  s.osx.frameworks = 'AppKit', 'CoreAudio'
 end

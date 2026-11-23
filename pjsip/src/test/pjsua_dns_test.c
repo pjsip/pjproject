@@ -150,7 +150,7 @@ static int update_ns(unsigned count, const char *entries[],
                      pj_status_t expected_status,
                      unsigned expected_count, const char *expected_first)
 {
-    pj_str_t srv[8];
+    pj_str_t srv[8] = {{NULL, 0}};
     pj_status_t status;
     unsigned i;
 
@@ -198,7 +198,7 @@ static pj_status_t start_pjsua(pj_bool_t with_servers,
     pjsua_logging_config log_cfg;
     char ns_buf[2][48];
     pj_str_t ns_any = pj_str("127.0.0.1");
-    pj_uint16_t port_a, port_b;
+    pj_uint16_t port_a = 0, port_b = 0;
     pj_status_t status;
 
     status = pjsua_create();

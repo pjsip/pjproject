@@ -1123,7 +1123,7 @@ static void handle_events_for(unsigned msec)
         pjsua_handle_events(50);
         pj_gettickcount(&now);
         PJ_TIME_VAL_SUB(now, t0);
-    } while (PJ_TIME_VAL_MSEC(now) < msec);
+    } while (PJ_TIME_VAL_MSEC(now) < (long)msec);
 }
 
 static void test_call_end(test_call_t *tc)
@@ -1593,7 +1593,7 @@ static int staged_offer_test(pjsua_transport_id tp_id, int port,
     test_call_t                tc;
     pjsip_inv_session         *inv;
     const pjmedia_sdp_session *active;
-    pjsip_tx_data             *tdata;
+    pjsip_tx_data             *tdata = NULL;
     answered_t                 a;
     offer_state_t              st;
     pj_status_t                staged;

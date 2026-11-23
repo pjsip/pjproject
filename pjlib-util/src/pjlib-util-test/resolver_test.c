@@ -402,7 +402,8 @@ static int server_thread(void *p)
             continue;
         }
 
-        PJ_LOG(5,(THIS_FILE, "Server %ld processing packet", srv - &g_server[0]));
+        PJ_LOG(5,(THIS_FILE, "Server %ld processing packet",
+                  (long)(srv - &g_server[0])));
 
         lock();
         rc = pj_dns_parse_packet(pool, pkt, (unsigned)pkt_len, &req);
@@ -3066,7 +3067,7 @@ static void join_action(const pj_dns_parsed_packet *pkt,
 {
     pj_dns_parsed_packet *res = NULL;
     int act = ACTION_IGNORE;
-    unsigned i;
+    unsigned i = 0;
 
     lock();
     if (join_srv.name && pj_strcmp2(&pkt->q[0].name, join_srv.name) == 0) {

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -534,6 +534,18 @@
 #   define PJMEDIA_CODEC_OPUS_LIB_NAME                  "opus.lib"
 #endif
 
+/**
+ * Link with the Opus library via pragma comment on Visual Studio. Disable
+ * this when the application links Opus itself, e.g. when Opus is part of a
+ * combined library. PJMEDIA_CODEC_OPUS_LIB_NAME has no effect when this is
+ * 0. This option only makes sense if PJMEDIA_HAS_OPUS_CODEC is enabled.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_AUTO_LINK_OPUS_LIBS
+#   define PJMEDIA_AUTO_LINK_OPUS_LIBS                  1
+#endif
+
 
 /**
  * OPUS default encoding complexity, which is an integer from
@@ -573,6 +585,18 @@
   */
 #ifndef PJMEDIA_HAS_LYRA_CODEC
 #   define PJMEDIA_HAS_LYRA_CODEC                       0
+#endif
+
+/**
+ * Link with liblyra via pragma comment on Visual Studio. Disable this when
+ * the application links Lyra itself, e.g. when Lyra is part of a combined
+ * library. This option only makes sense if PJMEDIA_HAS_LYRA_CODEC is
+ * enabled.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_AUTO_LINK_LYRA_LIBS
+#   define PJMEDIA_AUTO_LINK_LYRA_LIBS                  1
 #endif
 
 /**
@@ -709,6 +733,18 @@
 #endif
 
 /**
+ * Link with OpenH264 via pragma comment on Visual Studio. Disable this when
+ * the application links OpenH264 itself, e.g. when OpenH264 is part of a
+ * combined library. This option only makes sense if
+ * PJMEDIA_HAS_OPENH264_CODEC is enabled.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_AUTO_LINK_OPENH264_LIBS
+#   define PJMEDIA_AUTO_LINK_OPENH264_LIBS      1
+#endif
+
+/**
  * Enable VPX VP8 codec.
  *
  * Default: 1
@@ -724,6 +760,18 @@
  */
 #ifndef PJMEDIA_HAS_VPX_CODEC_VP9
 #   define PJMEDIA_HAS_VPX_CODEC_VP9            0
+#endif
+
+/**
+ * Link with libvpx via pragma comment on Visual Studio. Disable this when
+ * the application links libvpx itself, e.g. when libvpx is part of a
+ * combined library. This option only makes sense if PJMEDIA_HAS_VPX_CODEC
+ * is enabled.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_AUTO_LINK_VPX_LIBS
+#   define PJMEDIA_AUTO_LINK_VPX_LIBS           1
 #endif
 
 /**

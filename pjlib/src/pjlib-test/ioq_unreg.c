@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -341,7 +341,7 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
     pj_sock_close(sock_data.csock);
 
     PJ_LOG(3,(THIS_FILE, "....%s: done (%ld KB/s)",
-              title, sock_data.received * 1000 / MSEC / 1000));
+              title, (long)(sock_data.received * 1000 / MSEC / 1000)));
     return 0;
 }
 
