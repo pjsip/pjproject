@@ -1157,11 +1157,18 @@ static pj_status_t setup_vid_capture(pjsua_call_media *call_med)
     return PJ_SUCCESS;
 
 on_error:
+    if (w) {
 #if ENABLE_EVENT
-    if (w)
         media_event_unsubscribe(NULL, &call_media_on_event, call_med,
                                 w->vp_cap);
 #endif
+        /* Undo the capture->encoder connection if it was queued or
+         * established, so that a retry or a capture device change does
+         * not see stale state (the call never acquired the window).
+         */
+        pjsua_vid_conf_disconnect(w->cap_slot,
+                                  call_med->strm.v.strm_enc_slot);
+    }
     PJSUA_UNLOCK();
     return status;
 }
