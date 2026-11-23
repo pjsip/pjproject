@@ -1,7 +1,7 @@
 #
 # pjsua2 Setup script.
 #
-# Copyright (C)2012 Teluu Inc. (http://www.teluu.com)
+# Copyright (C)2012-2026 Teluu Inc. (http://www.teluu.com)
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@ except ImportError:
    from distutils.core import setup, Extension
 
 import os
+import re
 import sys
 import platform
 
@@ -85,6 +86,37 @@ f = os.popen("%s --no-print-directory -f helper.mak cflags" % MAKE)
 for line in f:
     extra_compile_args.append(line.rstrip("\r\n"))
 f.close()
+
+# On macOS, a universal2 Python builds for all of its archs, but the pjproject
+# libraries are built for the target arch only, unless built with -arch.
+if platform.system() == 'Darwin' and 'ARCHFLAGS' not in os.environ and \
+   '-arch' not in " ".join(extra_compile_args).split():
+    pj_arch = pj_target_name.split('-')[0]
+    if pj_arch == 'aarch64':
+        pj_arch = 'arm64'
+    os.environ['ARCHFLAGS'] = '-arch ' + pj_arch
+
+# On macOS, link for the deployment target the pjproject libraries were built
+# for, which is usually newer than the one Python was built for.
+if platform.system() == 'Darwin' and \
+   'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
+    f = os.popen("%s --no-print-directory -f helper.mak cxx" % MAKE)
+    pj_cxx = f.read().strip()
+    f.close()
+    f = os.popen("%s %s -x c++ -dM -E - < /dev/null" %
+                 (pj_cxx, " ".join(extra_compile_args)))
+    m = re.search(r"__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ (\d+)",
+                  f.read())
+    f.close()
+    if m:
+        v = int(m.group(1))
+        if v >= 100000:
+            ver = [v // 10000, v // 100 % 100, v % 100]
+        else:
+            ver = [v // 100, v // 10 % 10, v % 10]
+        if not ver[2]:
+            ver.pop()
+        os.environ['MACOSX_DEPLOYMENT_TARGET'] = ".".join(map(str, ver))
 
 # Fill in libraries
 libraries = []

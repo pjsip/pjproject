@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2011-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2011-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -149,6 +149,6 @@ pjmedia_codec_register_audio_codecs(pjmedia_endpt *endpt,
         return status;
 #endif
 
-    return PJ_SUCCESS;
+    return status;
 }
 

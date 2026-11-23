@@ -1401,7 +1401,7 @@ static pj_uint32_t verify_err_to_status(long err)
     /* Unknown errors */
     case X509_V_ERR_OUT_OF_MEM:
     default:
-        status = PJ_SSL_CERT_EUNKNOWN;
+        status = (pj_uint32_t)PJ_SSL_CERT_EUNKNOWN;
         break;
     }
 
@@ -2364,6 +2364,8 @@ static void ssl_free_cert(pj_ssl_cert_t *cert)
         X509_free(cert->direct.cert);
         cert->direct.cert = NULL;
     }
+#else
+    PJ_UNUSED_ARG(cert);
 #endif
 }
 

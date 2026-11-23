@@ -17,7 +17,7 @@ m=audio 4000 RTP/AVP 0
 pjsua_args = "--null-audio --auto-answer 200"
 extra_headers = ""
 include = ["Content-Type: application/sdp",	# response must include SDP
-	   "m=audio 0 RTP/AVP[\s\S]+m=audio [1-9]+[0-9]* RTP/AVP"
+	   r"m=audio 0 RTP/AVP[\s\S]+m=audio [1-9]+[0-9]* RTP/AVP"
 	   ]
 exclude = []
 

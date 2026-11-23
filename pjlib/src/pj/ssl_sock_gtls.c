@@ -657,11 +657,9 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     cert = ssock->cert;
 
     /* Initialize GnuTLS library (idempotent) */
-    {
-        pj_status_t status = tls_init();
-        if (status != PJ_SUCCESS)
-            return status;
-    }
+    status = tls_init();
+    if (status != PJ_SUCCESS)
+        return status;
 
     /* Start this socket session */
     ret = gnutls_init(&gssock->session, ssock->is_server ? GNUTLS_SERVER

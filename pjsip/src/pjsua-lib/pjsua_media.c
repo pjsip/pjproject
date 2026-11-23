@@ -1402,7 +1402,7 @@ static pj_status_t create_ice_media_transport(
         pj_bool_t has_pjsua_lock = PJSUA_LOCK_IS_LOCKED();
         pjsip_dialog *dlg = call_med->call->inv ?
                                 call_med->call->inv->dlg : NULL;
-        pj_time_val deadline;
+        pj_time_val deadline = {0, 0};
         pj_bool_t use_deadline = (PJSUA_ICE_TRANSPORT_INIT_TIMEOUT > 0);
         if (use_deadline) {
             pj_gettickcount(&deadline);
@@ -3771,6 +3771,8 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
 }
 
 
+#if PJSUA_MEDIA_HAS_PJMEDIA || PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO
+
 /* Match codec fmtp. This will compare the values and the order. */
 static pj_bool_t match_codec_fmtp(const pjmedia_codec_fmtp *fmtp1,
                                   const pjmedia_codec_fmtp *fmtp2)
@@ -3789,8 +3791,6 @@ static pj_bool_t match_codec_fmtp(const pjmedia_codec_fmtp *fmtp1,
 
     return PJ_TRUE;
 }
-
-#if PJSUA_MEDIA_HAS_PJMEDIA || PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO
 
 static pj_bool_t is_ice_running(pjmedia_transport *tp)
 {

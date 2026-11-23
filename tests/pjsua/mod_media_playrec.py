@@ -51,11 +51,11 @@ def test_func(t):
     endpt.trace("Output file = " + output_filename)
 
     # Find appropriate clock rate for the input file
-    clock_rate = re.compile(".+(\.\d+\.wav)$").match(output_filename).group(1)
+    clock_rate = re.compile(r".+(\.\d+\.wav)$").match(output_filename).group(1)
     if (clock_rate==None):
         endpt.trace("Cannot compare input & output, incorrect output filename format")
         return
-    input_filename = re.sub("\.\d+\.wav$", clock_rate, input_filename)
+    input_filename = re.sub(r"\.\d+\.wav$", clock_rate, input_filename)
     endpt.trace("WAV file to be compared with output = " + input_filename)
 
     # Connect input-output file
@@ -88,7 +88,7 @@ def post_func(t):
 
     # Parse similarity ouput
     line = cmp_proc.stdout.readline()
-    mo_sim_val = re.match(".+=\s+(\d+)", line)
+    mo_sim_val = re.match(r".+=\s+(\d+)", line)
     if (mo_sim_val == None):
         raise TestError("Error comparing WAV files")
         return

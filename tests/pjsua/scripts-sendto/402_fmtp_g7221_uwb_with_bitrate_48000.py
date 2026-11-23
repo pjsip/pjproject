@@ -23,8 +23,8 @@ a=fmtp:101 0-15
 
 pjsua_args = "--null-audio --auto-answer 200 --add-codec G7221"
 extra_headers = ""
-include = ["a=rtpmap:[\d]+ G7221/32000",  # response must choose G722.1 32kHz
-	   "fmtp:[\d]+ bitrate=48000"	  # response must choose the same bitrate
+include = [r"a=rtpmap:[\d]+ G7221/32000",  # response must choose G722.1 32kHz
+	   r"fmtp:[\d]+ bitrate=48000"	  # response must choose the same bitrate
 	  ]
 exclude = []
 
