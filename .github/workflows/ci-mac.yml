@@ -698,17 +698,36 @@ jobs:
   # installed pjsua and the libraries find each other and the bundled ones in
   # lib/pjproject/third_party through their rpaths, also from a copy of the
   # install made elsewhere.
+  # Also Opus and libvpx, as in cmake-build, with the build pointed at each
+  # library by <Pkg>_ROOT: Homebrew's folder per package. The copies
+  # Homebrew links into its prefix must not be used: not by the build, and
+  # not by the consumers, which get only the pjproject install.
   cmake-shared:
     needs: [detect-changes]
     if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
     runs-on: macos-latest
-    name: CMake / shared
+    name: CMake / shared; Opus + VPX from <Pkg>_ROOT
     steps:
     - uses: actions/checkout@v4
     - name: install dependencies
-      run: brew install openssl pkgconf
+      run: brew install openssl pkgconf opus libvpx
     - name: configure
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON
+      run: >-
+        cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON
+        -DOPUS_ROOT=$(brew --prefix opus) -DVPX_ROOT=$(brew --prefix libvpx)
+    - name: check the roots
+      # Opus and libvpx: the library and the headers from the root
+      run: |
+        for p in OPUS VPX; do
+          grep "^PJMEDIA_WITH_${p}_CODEC:BOOL=ON$" build/CMakeCache.txt || {
+            echo "::error::PJMEDIA_WITH_${p}_CODEC is not ON"; exit 1; }
+          root=$(sed -n "s/^${p}_ROOT:[A-Z]*=//p" build/CMakeCache.txt)
+          [ -n "$root" ] || { echo "::error::${p}_ROOT is not set"; exit 1; }
+          for v in LIBRARY INCLUDE_DIR; do
+            grep "^${p}_$v:[A-Z]*=$root/" build/CMakeCache.txt || {
+              echo "::error::${p}_$v is not under $root"; exit 1; }
+          done
+        done
     - name: build
       run: cmake --build build -j $(sysctl -n hw.ncpu)
     - name: install
@@ -748,56 +767,6 @@ jobs:
         cat "$PKG_CONFIG_PATH/libpjproject.pc"
         cc tests/cmake/test_consumer.c -o pc_consumer \
           $(pkg-config --cflags --libs libpjproject) -Wl,-rpath,"$prefix/lib"
-        ./pc_consumer
-
-  # Opus and libvpx, as in cmake-build, with the build pointed at each
-  # library by <Pkg>_ROOT: Homebrew's folder per package. The copies
-  # Homebrew links into its prefix must not be used: not by the build, and
-  # not by the consumers, which get only the pjproject install.
-  cmake-opus-vpx-root:
-    needs: [detect-changes]
-    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
-    runs-on: macos-latest
-    name: CMake / Opus + VPX from <Pkg>_ROOT
-    steps:
-    - uses: actions/checkout@v4
-    - name: install dependencies
-      run: brew install openssl pkgconf opus libvpx
-    - name: configure
-      run: >-
-        cmake -B build -DCMAKE_BUILD_TYPE=Release
-        -DOPUS_ROOT=$(brew --prefix opus) -DVPX_ROOT=$(brew --prefix libvpx)
-    - name: check options
-      # the library and the headers from the root
-      run: |
-        for p in OPUS VPX; do
-          grep "^PJMEDIA_WITH_${p}_CODEC:BOOL=ON$" build/CMakeCache.txt || {
-            echo "::error::PJMEDIA_WITH_${p}_CODEC is not ON"; exit 1; }
-          root=$(sed -n "s/^${p}_ROOT:[A-Z]*=//p" build/CMakeCache.txt)
-          [ -n "$root" ] || { echo "::error::${p}_ROOT is not set"; exit 1; }
-          for v in LIBRARY INCLUDE_DIR; do
-            grep "^${p}_$v:[A-Z]*=$root/" build/CMakeCache.txt || {
-              echo "::error::${p}_$v is not under $root"; exit 1; }
-          done
-        done
-    - name: build
-      run: cmake --build build -j $(sysctl -n hw.ncpu)
-    - name: install
-      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
-    - name: test find_package
-      run: |
-        cmake -B build-consumer tests/cmake \
-          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
-          -DCMAKE_BUILD_TYPE=Release
-        cmake --build build-consumer --verbose
-        ./build-consumer/test_consumer
-        ./build-consumer/test_consumer2
-    - name: test pkg-config
-      run: |
-        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
-        cat "$PKG_CONFIG_PATH/libpjproject.pc"
-        cc tests/cmake/test_consumer.c -o pc_consumer \
-          $(pkg-config --static --cflags --libs libpjproject)
         ./pc_consumer
     - name: check the consumers used the roots
       # and not the system's copies, which are installed too
