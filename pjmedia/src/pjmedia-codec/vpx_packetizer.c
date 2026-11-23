@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2020 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2020-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -117,8 +117,7 @@ PJ_DEF(pj_status_t) pjmedia_vpx_packetize(const pjmedia_vpx_packetizer *pktz,
         bits[2] = ((pktz->picture_id & 0x7f00) >> 8) | 0x80;
         bits[3] = pktz->picture_id & 0xff;
 
-        /* Set N: Non-reference frame */
-        if (!is_keyframe) bits[0] |= 0x20;
+        /* Leave N=0: reference status of the frame is unknown (RFC 7741). */
     } else if (pktz->cfg.fmt_id == PJMEDIA_FORMAT_VP9) {
         /* Set P: Inter-picture predicted frame */
         if (!is_keyframe) bits[0] |= 0x40;
