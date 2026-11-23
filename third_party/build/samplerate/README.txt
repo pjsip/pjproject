@@ -48,10 +48,10 @@ Visual Studio Build
    linking with the static library, and configure your project
    to link with libsamplerate DLL library.
  
-   To build libresample static library with Visual Studio:
-
-      - Open third_party/build/samplerate/libsamplerate_static.dsp
-      - Build the project for both Debug and Release build
+   PJSIP no longer ships a Visual Studio project for libsamplerate.
+   Build it as a static library with libsamplerate's own build
+   system (recent versions use CMake), for both Debug and Release
+   build, with the same C run-time option as PJSIP.
 
 
    libresample dynamic library can be produced by following the
