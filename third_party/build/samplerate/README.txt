@@ -51,7 +51,12 @@ Visual Studio Build
    PJSIP no longer ships a Visual Studio project for libsamplerate.
    Build it as a static library with libsamplerate's own build
    system (recent versions use CMake), for both Debug and Release
-   build, with the same C run-time option as PJSIP.
+   build, with the same C run-time option as PJSIP. Then copy the
+   libraries to third_party/lib, with the names that
+   pjmedia/src/pjmedia/resample_libsamplerate.c links with:
+
+      - libsamplerate-i386-win32-vc-debug.lib for Debug build
+      - libsamplerate-i386-win32-vc-release.lib for Release build
 
 
    libresample dynamic library can be produced by following the
