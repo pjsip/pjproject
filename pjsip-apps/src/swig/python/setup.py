@@ -98,7 +98,8 @@ if platform.system() == 'Darwin' and 'ARCHFLAGS' not in os.environ and \
 
 # On macOS, link for the deployment target the pjproject libraries were built
 # for, which is usually newer than the one Python was built for.
-if platform.system() == 'Darwin' and 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
+if platform.system() == 'Darwin' and \
+   'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
     f = os.popen("%s --no-print-directory -f helper.mak cxx" % MAKE)
     pj_cxx = f.read().strip()
     f.close()

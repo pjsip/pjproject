@@ -1098,7 +1098,8 @@ static pj_status_t pubc_send(pjsip_publishc *pubc, pjsip_tx_data *tdata)
          * created. If it has run, or another request has been sent since,
          * the counter or the CSeq has changed (see also #1936).
          */
-        no_tsx = (pubc->pending_tsx == 1 && cseq == (pj_uint32_t)pubc->cseq_hdr->cseq);
+        no_tsx = (pubc->pending_tsx == 1 &&
+                  cseq == (pj_uint32_t)pubc->cseq_hdr->cseq);
     }
 
     if (no_tsx) {
