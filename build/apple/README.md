@@ -1,9 +1,9 @@
-# PJSIP XCFramework for iOS
+# PJSIP XCFramework for Apple platforms
 
-Tooling that builds PJSIP as a binary `PJSIP.xcframework` covering iOS and the
-iOS simulator, together with the SwiftPM and CocoaPods manifests that
-distribute it. A macOS slice can be built too, but it is experimental and not
-distributed; see "macOS (experimental)".
+Tooling that builds PJSIP as a binary `PJSIP.xcframework` covering iOS, the iOS
+simulator and macOS, together with the SwiftPM and CocoaPods manifests that
+distribute it. The release distributes the iOS slices only, and those are what
+the script builds by default; see "macOS".
 
 This directory produces a **distribution**, not a build of the library for local
 use. If you are building PJSIP to develop against it, use `configure-iphone` and
@@ -95,7 +95,7 @@ autoconf; both are `config_site.h` decisions.
 | `macos-arm64_x86_64` | arm64, x86_64 | macOS 11.0 |
 
 The distribution holds the two iOS slices. The macOS slice is built only when
-`SLICES` asks for it, and is experimental.
+`SLICES` asks for it.
 
 Anything below iOS 14.0 is not honoured for the simulator: clang records a floor
 of 14.0 with the current Xcode SDK no matter what is requested, so a lower value
@@ -201,7 +201,7 @@ code, so the checks that matter for control flow remain.
 
 | Variable | Default | Effect |
 |---|---|---|
-| `SLICES` | `ios-device ios-simulator` | also `macos`, which is experimental |
+| `SLICES` | `ios-device ios-simulator` | also `macos` |
 | `IOS_DEPLOYMENT_TARGET` | `15.0` | below 14.0 is not honoured for the simulator |
 | `MACOS_DEPLOYMENT_TARGET` | `11.0` | for the `macos` slice |
 | `CODESIGN_ID` | unset | signs the framework and verifies the signature |
@@ -239,14 +239,11 @@ manifest), if configure did not pick up Opus, if the build macros cannot be
 frozen into the shipped headers, or if the Opus tarball does not match its
 pinned checksum.
 
-### macOS (experimental)
+### macOS
 
-`SLICES=macos` builds a framework with the macOS slice only, in a few minutes.
-It is experimental and provided for reference purposes only: macOS is not part
-of the distribution, so no manifests are generated, and the script builds the
-one configuration above without PJSIP's other customization options. To build
-PJSIP for a macOS application with a configuration of your own, use
-`./configure` and `make`, or CMake.
+`SLICES=macos` builds a framework with the macOS slice only, in a few minutes,
+and `SLICES="ios-device ios-simulator macos"` one with all three slices. The
+release does not include macOS, so such a build gets no manifests.
 
 An application links the frameworks listed under "Consuming it", with AppKit
 and CoreAudio in place of OpenGLES and UIKit. `verify-xcframework.sh --tier 1`
@@ -365,7 +362,7 @@ and is reachable only from Objective-C++ or C++ sources.
 
 ## Known limitations
 
-- **iOS only.** The macOS slice is experimental and not distributed.
+- **No macOS binary in the release.** Build the macOS slice with `SLICES`.
 - **No DTLS-SRTP**, so no WebRTC interoperability.
 - **H.264 is the only video codec.**
 - **No AMR or G.729**, for the licensing reasons above.

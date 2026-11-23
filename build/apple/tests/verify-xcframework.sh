@@ -5,8 +5,8 @@
 # The framework lists are not written down here: they are parsed out of
 # build/apple/Package.swift.in, so a framework that the manifest forgets to
 # declare fails these tests rather than silently working for whoever happens
-# to link it by hand. The manifest is iOS only; the extra frameworks of the
-# experimental macOS slice are listed in MACOS_FRAMEWORKS below.
+# to link it by hand. The manifest is iOS only; the extra frameworks a macOS
+# slice needs are listed in MACOS_FRAMEWORKS below.
 #
 #   tier 1  per slice, with no -D flags: the shipped headers assert the exact
 #           configuration, the public API and the Clang module both compile,
@@ -58,8 +58,8 @@ TIERS=${TIERS:-"1 2 3"}
 # and std:: template instantiations. Anything else exported is a leak.
 KEEP_SYMBOLS='^_pj|^_PJ|^__Z[A-Za-z]*2pj|^__Z[A-Za-z]*St[0-9]|^__ZSt'
 
-# The macOS slice is experimental and not in the manifest, so the frameworks
-# it needs beyond the common ones are listed here.
+# The manifest does not cover macOS, so the frameworks a macOS slice needs
+# beyond the common ones are listed here.
 MACOS_FRAMEWORKS="AppKit CoreAudio"
 
 die() { echo "error: $*" >&2; exit 1; }

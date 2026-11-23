@@ -1,10 +1,10 @@
 #!/bin/bash
 #
-# Build PJSIP as an XCFramework for binary distribution on iOS.
+# Build PJSIP as a multi-platform XCFramework for binary distribution.
 #
-# The distribution covers iOS and the iOS simulator. A macOS slice can be
-# added with SLICES for local use; it is experimental, and a build that
-# includes it gets no manifests, since macOS is not distributed.
+# By default it builds the iOS slices, which are what the release distributes.
+# The macOS slice is built when SLICES asks for it; the release does not
+# include it, so a build with it gets no manifests.
 #
 # TLS comes from Apple's Network framework, so the artifact links no OpenSSL
 # and has no DTLS-SRTP. Codecs with patent or copyleft encumbrance are left
@@ -793,7 +793,7 @@ package() {
         # match the artifact.
         rm -f "$DIST/Package.swift" "$DIST/$NAME.podspec"
         if [ -n "$MACOS_BUILD" ]; then
-            echo "note: the macOS slice is experimental and not distributed, so no manifests were generated"
+            echo "note: the release does not include macOS, so no manifests were generated"
         else
             echo "note: this is an iteration build, so no manifests were generated"
         fi
