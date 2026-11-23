@@ -117,8 +117,14 @@ static pj_status_t getrandom_fill(pj_uint8_t *p, pj_size_t len)
         } else if (n < 0 && (errno == ENOSYS || errno == EPERM) &&
                    p == start)
         {
-            /* Kernel without the syscall, or a seccomp filter denying it */
-            return urandom_fill(start, total);
+            /* Kernel without the syscall, or a seccomp filter denying it.
+             * A denied generator is a failure, not a missing one.
+             */
+            int err = errno;
+            pj_status_t status = urandom_fill(start, total);
+            if (status == PJ_ENOTSUP && err == EPERM)
+                status = PJ_STATUS_FROM_OS(err);
+            return status;
         } else if (n < 0 && errno == EINTR && !retried) {
             retried = PJ_TRUE;
         } else {
