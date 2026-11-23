@@ -2359,7 +2359,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
 
             PJ_LOG(3,(tsx->obj_name,
                       "Failed to send %s! err=%ld (%s)",
-                      pjsip_tx_data_get_info(send_state->tdata), -sent,
+                      pjsip_tx_data_get_info(send_state->tdata), (long)-sent,
                       errmsg));
 
             /* Clear pending transport flag. */

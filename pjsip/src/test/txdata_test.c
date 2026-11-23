@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -470,7 +470,7 @@ static int txdata_test_uri_params(void)
 
     PJ_LOG(5,(THIS_FILE, "%ld bytes request created:--begin-msg--\n"
                          "%s\n"
-                         "--end-msg--", len, msgbuf));
+                         "--end-msg--", (long)len, msgbuf));
 
     /* Now parse the message. */
     pj_list_init(&err_list);

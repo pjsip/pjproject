@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -61,14 +61,17 @@ static void print_menu(const char *indent, char *menu_id, gui_menu *menu)
     char child_indent[16];
     unsigned i;
 
-    pj_ansi_snprintf(child_indent, sizeof(child_indent), "%s  ", indent);
+    pj_ansi_strxcpy(child_indent, indent, sizeof(child_indent));
+    pj_ansi_strxcat(child_indent, "  ", sizeof(child_indent));
 
     printf("%s%s: %s\n", indent, menu_id, menu->title);
 
     for (i=0; i<menu->submenu_cnt; ++i) {
-        char child_id[32];
+        char child_id[32], idx[12];
 
-        pj_ansi_snprintf(child_id, sizeof(child_id), "%s%u", menu_id, i);
+        pj_ansi_snprintf(idx, sizeof(idx), "%u", i);
+        pj_ansi_strxcpy(child_id, menu_id, sizeof(child_id));
+        pj_ansi_strxcat(child_id, idx, sizeof(child_id));
 
         if (!menu->submenus[i])
             puts("");

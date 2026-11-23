@@ -157,7 +157,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                 if (!IS_ERROR_SILENCED(rc)) {
                     pj_strerror(rc, errmsg, sizeof(errmsg));
                     PJ_LOG(3,(THIS_FILE,"...error: read error, bytes_read=%ld (%s)",
-                              bytes_read, errmsg));
+                              (long)bytes_read, errmsg));
                     PJ_LOG(3,(THIS_FILE,
                               ".....additional info: type=%s, total read=%lu, "
                               "total sent=%lu",
@@ -225,7 +225,7 @@ static void on_write_complete(pj_ioqueue_key_t *key,
     } else if (!IS_ERROR_SILENCED(-bytes_sent)) {
         PJ_PERROR(3, (THIS_FILE, (pj_status_t)-bytes_sent,
                       "...error: sending stopped. bytes_sent=%ld",
-                      -bytes_sent));
+                      (long)-bytes_sent));
     }
 
     if (pj_atomic_dec_and_get(item->send_req) > 0)
