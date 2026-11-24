@@ -51,7 +51,7 @@ void app_set_sock_nb(pj_sock_t sock)
         fcntl(sock, F_SETFL, flags | O_NONBLOCK);
 #else
     pj_uint32_t value = 1;
-    ioctl(sock, FIONBIO, &value);
+    ioctl((int)sock, FIONBIO, &value);
 #endif
 }
 

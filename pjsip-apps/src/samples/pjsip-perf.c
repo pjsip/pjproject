@@ -1165,7 +1165,7 @@ static void usage(void)
 static int my_atoi(const char *s)
 {
     pj_str_t ss = pj_str((char*)s);
-    return pj_strtoul(&ss);
+    return (int)pj_strtoul(&ss);
 }
 
 
@@ -1607,7 +1607,7 @@ static int server_thread(void *arg)
 
                 tmp = now;
                 PJ_TIME_VAL_SUB(tmp, last_report);
-                msec = PJ_TIME_VAL_MSEC(tmp);
+                msec = (unsigned)PJ_TIME_VAL_MSEC(tmp);
 
                 last_report = now;
                 next_report = last_report;
@@ -1737,7 +1737,7 @@ int main(int argc, char *argv[])
             pj_time_val duration;
             duration = app.client.last_completion;
             PJ_TIME_VAL_SUB(duration, app.client.first_request);
-            msec_res = PJ_TIME_VAL_MSEC(duration);
+            msec_res = (unsigned)PJ_TIME_VAL_MSEC(duration);
         } else {
             msec_res = app.client.timeout * 1000;
         }
@@ -1748,7 +1748,7 @@ int main(int argc, char *argv[])
             pj_time_val duration;
             duration = app.client.requests_sent;
             PJ_TIME_VAL_SUB(duration, app.client.first_request);
-            msec_req = PJ_TIME_VAL_MSEC(duration);
+            msec_req = (unsigned)PJ_TIME_VAL_MSEC(duration);
         } else {
             msec_req = app.client.timeout * 1000;
         }

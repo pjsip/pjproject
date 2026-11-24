@@ -330,6 +330,13 @@ if(APPLE)
          CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY)))
     set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED NO)
   endif()
+
+  # Sources for other platforms compile to empty objects, which Xcode's
+  # libtool warns about. The ar and ranlib of the other generators do not,
+  # and take these flags as ar's.
+  if(CMAKE_GENERATOR STREQUAL "Xcode")
+    string(APPEND CMAKE_STATIC_LINKER_FLAGS " -no_warning_for_no_symbols")
+  endif()
 endif()
 
 # A cross toolchain searches only under its sysroot, a given <X>_ROOT included.

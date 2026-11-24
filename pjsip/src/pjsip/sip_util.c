@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1064,7 +1064,8 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
         pjsip_transport_type_e tp_type = PJSIP_TRANSPORT_UNSPECIFIED;
 
         if (tdata->tp_sel.type == PJSIP_TPSELECTOR_TRANSPORT)
-            tp_type = tdata->tp_sel.u.transport->key.type;
+            tp_type = (pjsip_transport_type_e)
+                      tdata->tp_sel.u.transport->key.type;
         else if (tdata->tp_sel.type == PJSIP_TPSELECTOR_LISTENER)
             tp_type = tdata->tp_sel.u.listener->type;
 

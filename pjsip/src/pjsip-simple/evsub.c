@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1349,12 +1349,12 @@ static pjsip_sub_state_hdr* sub_state_create( pj_pool_t *pool,
     case PJSIP_EVSUB_STATE_ACCEPTED:
     case PJSIP_EVSUB_STATE_PENDING:
         sub_state->sub_state = STR_PENDING;
-        sub_state->expires_param = delay.sec;
+        sub_state->expires_param = (unsigned)delay.sec;
         break;
 
     case PJSIP_EVSUB_STATE_ACTIVE:
         sub_state->sub_state = STR_ACTIVE;
-        sub_state->expires_param = delay.sec;
+        sub_state->expires_param = (unsigned)delay.sec;
         break;
 
     case PJSIP_EVSUB_STATE_TERMINATED:

@@ -1099,6 +1099,7 @@ jobs:
       # an older probe recorded for this target; it must be discarded.
       run: |
         cmake -B build-cross-fpu --toolchain cmake/toolchains/arm-none-eabi.cmake \
+          --no-warn-unused-cli \
           "-DPJ_TARGET_CPU_FLAGS=-mcpu=cortex-m33 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard" \
           -DPJ_WITH_CXX=OFF -DPJ_BUILD_APPS=OFF -DBUILD_TESTING=OFF \
           -DPJLIB_WITH_SSL= \

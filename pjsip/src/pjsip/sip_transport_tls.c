@@ -1647,7 +1647,7 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
             if (new_ssock &&
                 pj_ssl_sock_get_info(new_ssock, &ssi) == PJ_SUCCESS)
             {
-                param.last_native_err = ssi.last_native_err;
+                param.last_native_err = (pj_status_t)ssi.last_native_err;
             }
 
             (*listener->tls_setting.on_accept_fail_cb) (&param);

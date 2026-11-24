@@ -171,7 +171,7 @@ static pj_status_t handle_events(unsigned max_msec, unsigned *p_count)
         c = pj_ioqueue_poll( icedemo.ice_cfg.stun_cfg.ioqueue, &timeout);
         if (c < 0) {
             pj_status_t err = pj_get_netos_error();
-            pj_thread_sleep(PJ_TIME_VAL_MSEC(timeout));
+            pj_thread_sleep((unsigned)PJ_TIME_VAL_MSEC(timeout));
             if (p_count)
                 *p_count = count;
             return err;

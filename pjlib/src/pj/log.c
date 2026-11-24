@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -108,7 +108,7 @@ PJ_DEF(void) pj_log_set_indent(int indent)
 
 static int log_get_raw_indent(void)
 {
-    return (long)(pj_ssize_t)pj_thread_local_get(thread_indent_tls_id);
+    return (int)(pj_ssize_t)pj_thread_local_get(thread_indent_tls_id);
 }
 
 #else

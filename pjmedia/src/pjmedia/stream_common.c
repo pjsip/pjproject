@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2011-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -427,7 +427,7 @@ static pj_status_t parse_redundancy(pj_pool_t *pool,
         if (pjmedia_sdp_attr_get_rtpmap(attr, &r) != PJ_SUCCESS)
             continue;
         if (pj_strcmp(&r.enc_name, &ID_REDUNDANCY) == 0) {
-            pt = pj_strtoul(&r.pt);
+            pt = (unsigned)pj_strtoul(&r.pt);
             break;
         }
     }
@@ -439,7 +439,7 @@ static pj_status_t parse_redundancy(pj_pool_t *pool,
         return status;
 
     for (i = 0; i < fmtp.cnt; i++, level++) {
-        unsigned med_pt = pj_strtoul(&fmtp.param[i].val);
+        unsigned med_pt = (unsigned)pj_strtoul(&fmtp.param[i].val);
 
         if (med_pt != media_pt)
             return PJMEDIA_SDP_EINFMTP;

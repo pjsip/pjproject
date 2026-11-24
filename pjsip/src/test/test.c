@@ -182,7 +182,8 @@ static pj_status_t init_report(void)
 
     /* Write timestamp */
     pj_gettimeofday(&timestamp);
-    report_ival("timestamp", timestamp.sec, "", "System timestamp of the test");
+    report_ival("timestamp", (int)timestamp.sec, "",
+                "System timestamp of the test");
 
 
     /* Write time of day */

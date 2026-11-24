@@ -81,7 +81,7 @@ static int thread_proc(void *data)
     pj_status_t rc;
     counter_t *pcounter = (counter_t *)data;
 
-    id = *pcounter;
+    id = (unsigned)*pcounter;
     PJ_UNUSED_ARG(id); /* Warning about unused var if TRACE__ is disabled */
     TRACE__((THIS_FILE, "     thread %d running..", id));
 

@@ -58,6 +58,11 @@ target_sources(pj_ilbc
         syntFilter.h
 )
 
+# Warnings in the bundled code, which is kept as upstream has it
+target_compile_options(pj_ilbc
+  PRIVATE $<$<C_COMPILER_ID:Clang,AppleClang>:-Wno-shorten-64-to-32>
+)
+
 # ##############################################################################
 # Dependencies
 

@@ -3897,7 +3897,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
 
                             pj_gettimeofday(&now);
                             PJ_TIME_VAL_SUB(now, ice->time_completed);
-                            duration = PJ_TIME_VAL_MSEC(now);
+                            duration = (pj_uint32_t)PJ_TIME_VAL_MSEC(now);
 
                             if (duration > PJ_ICE_SESS_SET_RADDR_DELAY) {
                                 char psrc_addr[PJ_INET6_ADDRSTRLEN] = {0};

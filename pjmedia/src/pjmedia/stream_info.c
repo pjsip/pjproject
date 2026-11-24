@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -87,7 +87,7 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
 
         if ( !pj_isdigit(*local_m->desc.fmt[fmti].ptr) )
             return PJMEDIA_EINVALIDPT;
-        pt = pj_strtoul(&local_m->desc.fmt[fmti]);
+        pt = (unsigned)pj_strtoul(&local_m->desc.fmt[fmti]);
 
         if (pt < 96) {
             /* This is known static PT. Skip rtpmap checking because it is
@@ -137,7 +137,7 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
         /* Build codec format info: */
         if (has_rtpmap) {
             si->fmt.type = si->type;
-            si->fmt.pt = pj_strtoul(&local_m->desc.fmt[fmti]);
+            si->fmt.pt = (unsigned)pj_strtoul(&local_m->desc.fmt[fmti]);
             pj_strdup(pool, &si->fmt.encoding_name, &rtpmap->enc_name);
             si->fmt.clock_rate = rtpmap->clock_rate;
 
@@ -196,7 +196,7 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
         /* Build codec format info: */
 
         si->fmt.type = si->type;
-        si->fmt.pt = pj_strtoul(&local_m->desc.fmt[fmti]);
+        si->fmt.pt = (unsigned)pj_strtoul(&local_m->desc.fmt[fmti]);
         si->fmt.encoding_name = rtpmap->enc_name;
         si->fmt.clock_rate = rtpmap->clock_rate;
 
@@ -240,7 +240,7 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
                 PJ_SUCCESS)
             {
                 /* Found matched codec. */
-                si->tx_pt = pj_strtoul(&rem_m->desc.fmt[i]);
+                si->tx_pt = (unsigned)pj_strtoul(&rem_m->desc.fmt[i]);
                 break;
             }
         }
@@ -296,9 +296,9 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
         pj_strltrim(&tmp_val);
 
         /* Round up ptime when the specified is not multiple of frm_ptime */
-        frm_per_pkt = (pj_strtoul(&tmp_val) +
-                      si->param->info.frm_ptime/2) /
-                      si->param->info.frm_ptime;
+        frm_per_pkt = (unsigned)((pj_strtoul(&tmp_val) +
+                                 si->param->info.frm_ptime/2) /
+                                 si->param->info.frm_ptime);
         if (frm_per_pkt != 0) {
             si->param->setting.frm_per_pkt = (pj_uint8_t)frm_per_pkt;
         }
@@ -311,7 +311,7 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
         pj_str_t tmp_val = attr->value;
 
         pj_strltrim(&tmp_val);
-        si->tx_maxptime = pj_strtoul(&tmp_val);
+        si->tx_maxptime = (unsigned)pj_strtoul(&tmp_val);
     }
 
     /* When direction is NONE (it means SDP negotiation has failed) we don't
@@ -336,7 +336,7 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
         if (pjmedia_sdp_attr_get_rtpmap(attr, &r) != PJ_SUCCESS)
             continue;
         if (pj_strcmp(&r.enc_name, &ID_TELEPHONE_EVENT) == 0) {
-            si->rx_event_pt = pj_strtoul(&r.pt);
+            si->rx_event_pt = (int)pj_strtoul(&r.pt);
             rx_ev_clock_rate = r.clock_rate;
             break;
         }
@@ -355,10 +355,10 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
         if (pj_strcmp(&r.enc_name, &ID_TELEPHONE_EVENT) == 0) {
             /* Check if the clock rate matches local event's clock rate. */
             if (r.clock_rate == rx_ev_clock_rate) {
-                si->tx_event_pt = pj_strtoul(&r.pt);
+                si->tx_event_pt = (int)pj_strtoul(&r.pt);
                 break;
             } else if (si->tx_event_pt == -1) {
-                si->tx_event_pt = pj_strtoul(&r.pt);
+                si->tx_event_pt = (int)pj_strtoul(&r.pt);
             }
         }
     }

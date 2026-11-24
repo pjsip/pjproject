@@ -478,7 +478,7 @@ static void console_main(void)
 
             pj_ansi_strxcpy(input, "Hello from client", sizeof(input));
             status = pj_turn_sock_sendto(g.relay, (const pj_uint8_t*)input, 
-                                        strlen(input)+1, 
+                                        (unsigned)(strlen(input)+1), 
                                         &peer->mapped_addr, 
                                         pj_sockaddr_get_len(&peer->mapped_addr));
             if (status != PJ_SUCCESS && status != PJ_EPENDING)
@@ -529,7 +529,8 @@ static void console_main(void)
             peer = &g.peer[input[0]-'0'];
             pj_ansi_snprintf(input, sizeof(input),
                             "Hello from peer%d", input[0]-'0');
-            pj_stun_sock_sendto(peer->stun_sock, NULL, input, strlen(input)+1, 0,
+            pj_stun_sock_sendto(peer->stun_sock, NULL, input,
+                                (unsigned)(strlen(input)+1), 0,
                                 &g.relay_addr, pj_sockaddr_get_len(&g.relay_addr));
             break;
         case 'q':

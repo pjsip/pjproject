@@ -1892,7 +1892,7 @@ static void parse_generic_int_hdr( pjsip_generic_int_hdr *hdr,
 {
     pj_str_t tmp;
     pj_scan_get( scanner, &pconst.pjsip_DIGIT_SPEC, &tmp);
-    hdr->ivalue = pj_strtoul(&tmp);
+    hdr->ivalue = (pj_uint32_t)pj_strtoul(&tmp);
     parse_hdr_end(scanner);
 }
 
@@ -1964,7 +1964,7 @@ static void int_parse_contact_param( pjsip_contact_hdr *hdr,
         } else if (!parser_stricmp(pname, pconst.pjsip_EXPIRES_STR) && 
                    pvalue.slen) 
         {
-            hdr->expires = pj_strtoul(&pvalue);
+            hdr->expires = (pj_uint32_t)pj_strtoul(&pvalue);
             if (hdr->expires == PJSIP_EXPIRES_NOT_SPECIFIED)
                 hdr->expires--;
             //if (hdr->expires > PJSIP_MAX_EXPIRES)

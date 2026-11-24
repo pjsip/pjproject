@@ -772,7 +772,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_handle_events2(pjsip_endpoint *endpt,
         if (c < 0) {
             pj_status_t err = pj_get_netos_error();
 #if PJSIP_HANDLE_EVENTS_HAS_SLEEP_ON_ERR
-            unsigned msec = PJ_TIME_VAL_MSEC(timeout);
+            unsigned msec = (unsigned)PJ_TIME_VAL_MSEC(timeout);
             pj_thread_sleep(PJ_MIN(msec, MAX_TIMEOUT_ON_ERR));
 #endif
 

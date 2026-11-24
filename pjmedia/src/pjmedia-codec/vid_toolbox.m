@@ -1,5 +1,5 @@
 /* 
- * Copyright (C)2017 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C)2017-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -488,7 +488,7 @@ static void encode_cb(void *outputCallbackRefCon,
         buf_pos += avcc_size + data_length;
         offset += avcc_size + data_length;
     }
-    vtool_data->enc_frame_size = offset;
+    vtool_data->enc_frame_size = (unsigned)offset;
 }
 
 
@@ -653,7 +653,7 @@ static pj_status_t vtool_codec_open(pjmedia_vid_codec *codec,
 
         vtool_data->enc_wxh = codec_param->enc_fmt.det.vid.size.w *
                               codec_param->enc_fmt.det.vid.size.h;
-        vtool_data->enc_input_size = enc_vafp.framebytes;
+        vtool_data->enc_input_size = (unsigned)enc_vafp.framebytes;
         if (!vtool_data->whole) {
             vtool_data->enc_buf_size = (unsigned)enc_vafp.framebytes;
             vtool_data->enc_buf = pj_pool_alloc(vtool_data->pool,
@@ -674,8 +674,8 @@ static pj_status_t vtool_codec_open(pjmedia_vid_codec *codec,
         const int code_size = PJ_ARRAY_SIZE(start_code);
         unsigned i, j;
         
-        for (i = h264_fmtp.sprop_param_sets_len-code_size; i >= code_size;
-             i--)
+        for (i = (unsigned)(h264_fmtp.sprop_param_sets_len-code_size);
+             i >= code_size; i--)
         {
             for (j = 0; j < code_size; j++) {
                 if (h264_fmtp.sprop_param_sets[i+j] != start_code[j]) {
@@ -690,8 +690,8 @@ static pj_status_t vtool_codec_open(pjmedia_vid_codec *codec,
                       &h264_fmtp.sprop_param_sets[code_size],
                       vtool_data->dec_sps_size);
 
-            vtool_data->dec_pps_size = h264_fmtp.sprop_param_sets_len - 
-                                       code_size-i;
+            vtool_data->dec_pps_size =
+                (unsigned)(h264_fmtp.sprop_param_sets_len - code_size-i);
             pj_memcpy(vtool_data->dec_pps,
                       &h264_fmtp.sprop_param_sets[i + code_size],
                       vtool_data->dec_pps_size);
@@ -1032,7 +1032,7 @@ static int process_i420(CVImageBufferRef src_buf, pj_uint8_t *dst)
         }
     }
     
-    return (pdst - dst);
+    return (int)(pdst - dst);
 }
 
 
@@ -1065,8 +1065,8 @@ static void decode_cb(void *decompressionOutputRefCon,
         height != vtool_data->prm->dec_fmt.det.vid.size.h)
     {
         vtool_data->dec_fmt_change = PJ_TRUE;
-        vtool_data->prm->dec_fmt.det.vid.size.w = width;
-        vtool_data->prm->dec_fmt.det.vid.size.h = height;
+        vtool_data->prm->dec_fmt.det.vid.size.w = (unsigned)width;
+        vtool_data->prm->dec_fmt.det.vid.size.h = (unsigned)height;
     } else {
         vtool_data->dec_fmt_change = PJ_FALSE;
     }

@@ -96,7 +96,12 @@ PJ_DEF(int) pj_sock_select( int n,
 
     if (timeout) {
         os_timeout.tv_sec = timeout->sec;
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+        /* tv_usec is an int on Apple platforms */
+        os_timeout.tv_usec = (int)(timeout->msec * 1000);
+#else
         os_timeout.tv_usec = timeout->msec * 1000;
+#endif
         p_os_timeout = &os_timeout;
     } else {
         p_os_timeout = NULL;

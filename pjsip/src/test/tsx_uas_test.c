@@ -1160,7 +1160,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 
                 PJ_TIME_VAL_SUB(now, g[tid].recv_last);
 
-                msec = now.sec*1000 + now.msec;
+                msec = (unsigned)(now.sec*1000 + now.msec);
                 msec_expected = (1 << (g[tid].recv_count-2)) * pjsip_cfg()->tsx.t1;
                 if (msec_expected > pjsip_cfg()->tsx.t2)
                     msec_expected = pjsip_cfg()->tsx.t2;
@@ -1230,7 +1230,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 
                 PJ_TIME_VAL_SUB(now, g[tid].recv_last);
 
-                msec = now.sec*1000 + now.msec;
+                msec = (unsigned)(now.sec*1000 + now.msec);
                 msec_expected = (1 << (g[tid].recv_count-2)) * pjsip_cfg()->tsx.t1;
                 if (msec_expected > pjsip_cfg()->tsx.t2)
                     msec_expected = pjsip_cfg()->tsx.t2;

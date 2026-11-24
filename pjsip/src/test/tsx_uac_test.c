@@ -752,7 +752,7 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
             //pj_gettimeofday(&now);
             now = rdata->pkt_info.timestamp;
             PJ_TIME_VAL_SUB(now, g[tid].recv_last);
-            msec_elapsed = now.sec*1000 + now.msec;
+            msec_elapsed = (unsigned)(now.sec*1000 + now.msec);
 
             ++g[tid].recv_count;
             msec_expected = (1<<(g[tid].recv_count-2))*pjsip_cfg()->tsx.t1;
@@ -1206,7 +1206,7 @@ static int perform_tsx_test(unsigned tid, int dummy, char *target_uri,
             pj_time_val interval;
             interval = timeout;
             PJ_TIME_VAL_SUB(interval, now);
-            flush_events(PJ_TIME_VAL_MSEC(interval));
+            flush_events((unsigned)PJ_TIME_VAL_MSEC(interval));
         }
     }
 
