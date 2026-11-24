@@ -2034,7 +2034,10 @@ static void dns_srv_resolver_cb(void *user_data,
     /* Check failure */
     if (status != PJ_SUCCESS || sess->pending_destroy) {
         set_state(sess, PJ_TURN_STATE_DESTROYING);
-        sess_shutdown(sess, status);
+        /* A pending_destroy is an application-requested shutdown, so report
+         * its success, not the PJ_ECANCELLED the cancelled SRV job reports.
+         */
+        sess_shutdown(sess, sess->pending_destroy ? PJ_SUCCESS : status);
         goto on_return;
     }
 
