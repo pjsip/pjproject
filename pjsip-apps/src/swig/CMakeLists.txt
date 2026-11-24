@@ -264,7 +264,16 @@ install(TARGETS pjsua2jni
   LIBRARY DESTINATION "${PJ_INSTALL_JAVADIR}" COMPONENT PjJava
   RUNTIME DESTINATION "${PJ_INSTALL_JAVADIR}" COMPONENT PjJava
 )
-install_jar(pjsua2_jar DESTINATION "${PJ_INSTALL_JAVADIR}" COMPONENT PjJava)
+# CMake 4.5 warns when install_jar() installs the jar, which it cannot tell
+# is built by pjsua2_jar
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.5)
+  install(FILES "$<TARGET_PROPERTY:pjsua2_jar,JAR_FILE>"
+    DESTINATION "${PJ_INSTALL_JAVADIR}" COMPONENT PjJava
+    BUILD_DEPENDS pjsua2_jar
+  )
+else()
+  install_jar(pjsua2_jar DESTINATION "${PJ_INSTALL_JAVADIR}" COMPONENT PjJava)
+endif()
 
 # ##############################################################################
 # Test: test.java, run against the build tree, as make test
