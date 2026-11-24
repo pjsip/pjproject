@@ -385,6 +385,12 @@ PJ_DEF(pj_status_t) pj_dns_srv_cancel_query(pj_dns_srv_async_query *query,
 {
     PJ_ASSERT_RETURN(query, PJ_EINVAL);
 
+    /* Once reported, the query no longer keeps the resolver, which may be
+     * destroyed by now, so its lock must not be used.
+     */
+    if (query->reported)
+        return PJ_EINVALIDOP;
+
     enter_job(query);
 
     if (query->reported) {

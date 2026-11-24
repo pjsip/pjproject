@@ -1731,10 +1731,9 @@ static int cancel_unlocked_probe_thread(void *arg)
 }
 
 
-/* Callback delivered by pj_dns_resolver_cancel_query(): signals the probe
- * thread, then waits for it to acquire the resolver lock. The probe can only
- * succeed while this callback is running if the lock was released before the
- * callback was invoked.
+/* Signals the probe thread, then waits for it to acquire the resolver lock.
+ * The probe can only succeed while this callback is running if the lock was
+ * released before the callback was invoked.
  */
 static void dns_callback_cancel_unlocked(void *user_data,
                                          pj_status_t status,
@@ -1827,6 +1826,92 @@ static int dns_cancel_unlocked_test(void)
     PJ_TEST_EQ(cancel_unlocked_probe_seen, PJ_TRUE, NULL, return -767);
 
     return 0;
+}
+
+/* An answer is delivered with the resolver lock released also by an
+ * ioqueue without concurrency, which may hold the key lock, i.e. the
+ * resolver lock, around its callbacks (PJ_IOQUEUE_CALLBACK_NO_LOCK=0).
+ */
+static int dns_answer_unlocked_test(void)
+{
+    pj_str_t name = pj_str("name_answer_unlocked");
+    pj_str_t nameservers[2];
+    pj_uint16_t ports[2];
+    pj_ioqueue_cfg ioq_cfg;
+    pj_ioqueue_t *ioq = NULL;
+    pj_dns_async_query *q = NULL;
+    pj_thread_t *probe = NULL;
+    unsigned i;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  answer delivered unlocked without ioqueue "
+                         "concurrency test"));
+
+    cancel_unlocked_res = NULL;
+    cancel_unlocked_entered = cancel_unlocked_probed = NULL;
+    cancel_unlocked_count = 0;
+    cancel_unlocked_probe_seen = PJ_FALSE;
+
+    g_server[0].action = PJ_DNS_RCODE_NXDOMAIN;
+    g_server[1].action = PJ_DNS_RCODE_NXDOMAIN;
+
+    nameservers[0] = nameservers[1] = pj_str("127.0.0.1");
+    ports[0] = g_server[0].port;
+    ports[1] = g_server[1].port;
+
+    pj_ioqueue_cfg_default(&ioq_cfg);
+    ioq_cfg.default_concurrency = PJ_FALSE;
+    PJ_TEST_SUCCESS(pj_ioqueue_create2(pool, 4, &ioq_cfg, &ioq), NULL,
+                    {rc = -770; goto on_return;});
+    PJ_TEST_SUCCESS(pj_dns_resolver_create(mem, NULL, 0, timer_heap, ioq,
+                                           &cancel_unlocked_res),
+                    NULL, {rc = -771; goto on_return;});
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(cancel_unlocked_res, 2,
+                                           nameservers, ports),
+                    NULL, {rc = -772; goto on_return;});
+
+    PJ_TEST_SUCCESS(pj_sem_create(pool, NULL, 0, 1, &cancel_unlocked_entered),
+                    NULL, {rc = -773; goto on_return;});
+    PJ_TEST_SUCCESS(pj_sem_create(pool, NULL, 0, 1, &cancel_unlocked_probed),
+                    NULL, {rc = -774; goto on_return;});
+    PJ_TEST_SUCCESS(pj_thread_create(pool, NULL, &cancel_unlocked_probe_thread,
+                                     NULL, 0, 0, &probe),
+                    NULL, {rc = -775; goto on_return;});
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(
+                        cancel_unlocked_res, &name, PJ_DNS_TYPE_A, 0,
+                        &dns_callback_cancel_unlocked, NULL, &q),
+                    NULL, {rc = -776; goto on_return;});
+
+    /* The answer is delivered by this thread */
+    for (i = 0; cancel_unlocked_count == 0 && i < 500; ++i) {
+        pj_time_val timeout = {0, 10};
+        pj_ioqueue_poll(ioq, &timeout);
+    }
+
+    PJ_TEST_EQ(cancel_unlocked_count, 1, NULL, {rc = -777; goto on_return;});
+    PJ_TEST_EQ(cancel_unlocked_probe_seen, PJ_TRUE, NULL,
+               {rc = -778; goto on_return;});
+
+on_return:
+    if (probe) {
+        /* Let the probe finish if the answer never came */
+        if (cancel_unlocked_count == 0)
+            pj_sem_post(cancel_unlocked_entered);
+        pj_thread_join(probe);
+        pj_thread_destroy(probe);
+    }
+    if (cancel_unlocked_entered)
+        pj_sem_destroy(cancel_unlocked_entered);
+    if (cancel_unlocked_probed)
+        pj_sem_destroy(cancel_unlocked_probed);
+    if (cancel_unlocked_res)
+        pj_dns_resolver_destroy(cancel_unlocked_res, PJ_FALSE);
+    cancel_unlocked_res = NULL;
+    if (ioq)
+        pj_ioqueue_destroy(ioq);
+
+    return rc;
 }
 
 /* DNS test */
@@ -6250,6 +6335,7 @@ struct cancel_job
     pj_status_t              cb_status;
     pj_status_t              cancel_status;
     pj_bool_t                cancel_in_cb;
+    pj_bool_t                keep_pool;
     pj_bool_t                res_gone_in_cb;
 };
 
@@ -6298,14 +6384,17 @@ static void cancel_job_cb(void *user_data, pj_status_t status,
         job->cancel_status = pj_dns_srv_cancel_query(job->q, PJ_FALSE);
 
     job->cb_status = status;
-    pj_pool_release(job->pool);
-    job->pool = NULL;
+    if (!job->keep_pool) {
+        pj_pool_release(job->pool);
+        job->pool = NULL;
+    }
     job->cb_count++;
     unlock();
 }
 
 static int cancel_job_start(struct cancel_job *job, pj_dns_resolver *res,
-                            const char *host, pj_bool_t cancel_in_cb)
+                            const char *host, pj_bool_t cancel_in_cb,
+                            pj_bool_t keep_pool)
 {
     pj_str_t res_name = pj_str("_stun._udp.");
     pj_str_t domain;
@@ -6313,6 +6402,7 @@ static int cancel_job_start(struct cancel_job *job, pj_dns_resolver *res,
     pj_bzero(job, sizeof(*job));
     job->cancel_status = -1;
     job->cancel_in_cb = cancel_in_cb;
+    job->keep_pool = keep_pool;
     job->pool = pj_pool_create(mem, "canceljob", 4000, 4000, NULL);
     pj_strdup2_with_null(job->pool, &domain, host);
     return pj_dns_srv_resolve(&domain, &res_name, 3478, job->pool, res,
@@ -6393,7 +6483,8 @@ static int srv_resolver_cancel_state_test(void)
     PJ_TEST_EQ(busy_in_cb, PJ_TRUE, NULL, {rc = -2809; goto on_return;});
 
     /* A resolution cancelled from its own callback has completed */
-    PJ_TEST_SUCCESS(cancel_job_start(&job, res, "incb." DOMAIN5, PJ_TRUE),
+    PJ_TEST_SUCCESS(cancel_job_start(&job, res, "incb." DOMAIN5, PJ_TRUE,
+                                     PJ_FALSE),
                     NULL, {rc = -2810; goto on_return;});
     PJ_TEST_NOT_NULL(job.q, NULL, {rc = -2811; goto on_return;});
     for (i = 0; job.cb_count == 0 && i < 500; ++i)
@@ -6410,7 +6501,8 @@ static int srv_resolver_cancel_state_test(void)
                     NULL, {rc = -2820; goto on_return;});
     PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(res2, 1, &ns, &port), NULL,
                     {rc = -2821; goto on_return;});
-    PJ_TEST_SUCCESS(cancel_job_start(&job, res2, "gone." DOMAIN5, PJ_FALSE),
+    PJ_TEST_SUCCESS(cancel_job_start(&job, res2, "gone." DOMAIN5, PJ_FALSE,
+                                     PJ_FALSE),
                     NULL, {rc = -2822; goto on_return;});
     PJ_TEST_NOT_NULL(job.q, NULL, {rc = -2823; goto on_return;});
     pj_dns_resolver_destroy(res2, PJ_FALSE);
@@ -6440,7 +6532,8 @@ static int srv_resolver_cancel_state_test(void)
                         pj_dns_resolver_get_grp_lock(res2), NULL, NULL,
                         &on_res_gone),
                     NULL, {rc = -2852; goto on_return;});
-    PJ_TEST_SUCCESS(cancel_job_start(&job, res2, "gone2." DOMAIN5, PJ_TRUE),
+    PJ_TEST_SUCCESS(cancel_job_start(&job, res2, "gone2." DOMAIN5, PJ_TRUE,
+                                     PJ_FALSE),
                     NULL, {rc = -2853; goto on_return;});
     PJ_TEST_NOT_NULL(job.q, NULL, {rc = -2854; goto on_return;});
     pj_dns_resolver_destroy(res2, PJ_FALSE);
@@ -6459,6 +6552,39 @@ static int srv_resolver_cancel_state_test(void)
                {rc = -2861; goto on_return;});
     PJ_TEST_EQ(res_gone, PJ_TRUE, NULL, {rc = -2862; goto on_return;});
 
+    /* A resolution can be cancelled after its callback, once its resolver
+     * is destroyed: the query no longer keeps the resolver.
+     */
+    PJ_TEST_SUCCESS(pj_dns_resolver_create(mem, NULL, 0, timer_heap,
+                                           ioqueue, &res2),
+                    NULL, {rc = -2870; goto on_return;});
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(res2, 1, &ns, &port), NULL,
+                    {rc = -2871; goto on_return;});
+    res_gone = PJ_FALSE;
+    PJ_TEST_SUCCESS(pj_grp_lock_add_handler(
+                        pj_dns_resolver_get_grp_lock(res2), NULL, NULL,
+                        &on_res_gone),
+                    NULL, {rc = -2872; goto on_return;});
+    PJ_TEST_SUCCESS(cancel_job_start(&job, res2, "done." DOMAIN5, PJ_FALSE,
+                                     PJ_TRUE),
+                    NULL, {rc = -2873; goto on_return;});
+    PJ_TEST_NOT_NULL(job.q, NULL, {rc = -2874; goto on_return;});
+    for (i = 0; job.cb_count == 0 && i < 500; ++i)
+        pj_thread_sleep(10);
+    PJ_TEST_EQ(job.cb_count, 1, NULL, {rc = -2875; goto on_return;});
+    PJ_TEST_EQ(job.cb_status, PJ_SUCCESS, NULL,
+               {rc = -2876; goto on_return;});
+    pj_dns_resolver_destroy(res2, PJ_FALSE);
+    res2 = NULL;
+    for (i = 0; !res_gone && i < 500; ++i)
+        pj_thread_sleep(10);
+    PJ_TEST_EQ(res_gone, PJ_TRUE, NULL, {rc = -2877; goto on_return;});
+    job.cancel_status = pj_dns_srv_cancel_query(job.q, PJ_FALSE);
+    PJ_TEST_EQ(job.cancel_status, PJ_EINVALIDOP, NULL,
+               {rc = -2878; goto on_return;});
+    pj_pool_release(job.pool);
+    job.pool = NULL;
+
     /* Cancels racing the answers. Whatever a cancel returns, it tells
      * whether the callback is called, and the query is released as soon as
      * that allows.
@@ -6468,7 +6594,8 @@ static int srv_resolver_cancel_state_test(void)
         unsigned sent = g_server[0].pkt_count;
 
         pj_ansi_snprintf(host, sizeof(host), "race%u." DOMAIN5, i);
-        PJ_TEST_SUCCESS(cancel_job_start(&jobs[i], res, host, PJ_FALSE),
+        PJ_TEST_SUCCESS(cancel_job_start(&jobs[i], res, host, PJ_FALSE,
+                                         PJ_FALSE),
                         NULL, {rc = -2830; goto on_return;});
         PJ_TEST_NOT_NULL(jobs[i].q, NULL, {rc = -2831; goto on_return;});
 
@@ -6627,6 +6754,11 @@ int resolver_test(void)
 
     PJ_LOG(3,(THIS_FILE, "dns_cancel_unlocked_test"));
     rc = dns_cancel_unlocked_test();
+    if (rc != 0)
+        goto on_error;
+
+    PJ_LOG(3,(THIS_FILE, "dns_answer_unlocked_test"));
+    rc = dns_answer_unlocked_test();
     if (rc != 0)
         goto on_error;
 

@@ -379,6 +379,14 @@ static pj_status_t init_sock(pj_dns_resolver *resv)
     if (status != PJ_SUCCESS)
         return status;
 
+    /* Answers are delivered with the lock released, see on_read_complete().
+     * Without concurrency, the ioqueue may hold the key lock, which is that
+     * lock, around the callback.
+     */
+    status = pj_ioqueue_set_concurrency(resv->udp_key, PJ_TRUE);
+    if (status != PJ_SUCCESS)
+        return status;
+
     pj_ioqueue_op_key_init(&resv->udp_op_rx_key, sizeof(resv->udp_op_rx_key));
     pj_ioqueue_op_key_init(&resv->udp_op_tx_key, sizeof(resv->udp_op_tx_key));
 
@@ -423,6 +431,10 @@ static pj_status_t init_sock(pj_dns_resolver *resv)
     status = pj_ioqueue_register_sock2(resv->pool, resv->ioqueue,
                                        resv->udp6_sock, resv->grp_lock,
                                        resv, &socket_cb, &resv->udp6_key);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    status = pj_ioqueue_set_concurrency(resv->udp6_key, PJ_TRUE);
     if (status != PJ_SUCCESS)
         return status;
 
