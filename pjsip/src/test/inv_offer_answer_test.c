@@ -650,25 +650,25 @@ static int perform_test(inv_test_param_t *param)
         pjsip_tx_data *reinv;
         int i;
 
-        /* Keep both dialogs alive past the hangup, and keep the UAS
-         * invite session alive (disconnected) the way the 2xx
-         * absorb-retransmission transaction does in a real call.
+        /* Keep both dialogs alive past the hangup, as the transaction
+         * absorbing 2xx retransmissions does in a real call. The invite
+         * sessions are destroyed when they disconnect.
          */
         pjsip_dlg_inc_session(uac_dlg, &mod_inv_oa_test);
         pjsip_dlg_inc_session(uas_dlg, &mod_inv_oa_test);
-        pjsip_inv_add_ref(inv_test.uas);
 
         TRACE_((THIS_FILE, "    Disconnecting call before the re-INVITE"));
-        status = pjsip_inv_end_session(inv_test.uas, PJSIP_SC_DECLINE, 0,
-                                       &tdata);
-        pj_assert(status == PJ_SUCCESS);
-        if (tdata)
-            pjsip_inv_send_msg(inv_test.uas, tdata);
+        PJ_TEST_SUCCESS(pjsip_inv_end_session(inv_test.uas, PJSIP_SC_DECLINE,
+                                              0, &tdata),
+                        NULL, { rc = -74; goto reinv_cleanup; });
+        if (tdata) {
+            PJ_TEST_SUCCESS(pjsip_inv_send_msg(inv_test.uas, tdata),
+                            NULL, { rc = -75; goto reinv_cleanup; });
+        }
         flush_events(500);
 
-        /* The UAS invite session is now DISCONNECTED but still attached
-         * to its (still alive) dialog. A re-INVITE must get a final
-         * response, not be silently dropped.
+        /* The UAS invite session has ended but its dialog is still alive.
+         * A re-INVITE must be answered with 481, not silently dropped.
          */
         capture_disc_reinvite = PJ_TRUE;
         disc_reinvite_code = 0;
@@ -686,19 +686,11 @@ static int perform_test(inv_test_param_t *param)
             pjsip_endpt_handle_events(endpt, &delay);
         }
 
-        if (disc_reinvite_code == 0) {
-            PJ_LOG(1, (THIS_FILE, "    re-INVITE after disconnect got no "
-                                  "response"));
-            rc = -72;
-        } else if (disc_reinvite_code < 200) {
-            PJ_LOG(1, (THIS_FILE, "    re-INVITE after disconnect got a "
-                                  "non-final response %d", disc_reinvite_code));
-            rc = -73;
-        }
+        PJ_TEST_EQ(disc_reinvite_code, PJSIP_SC_CALL_TSX_DOES_NOT_EXIST,
+                   "re-INVITE after disconnect", { rc = -72; });
 
 reinv_cleanup:
         capture_disc_reinvite = PJ_FALSE;
-        pjsip_inv_dec_ref(inv_test.uas);
         pjsip_dlg_dec_session(uac_dlg, &mod_inv_oa_test);
         pjsip_dlg_dec_session(uas_dlg, &mod_inv_oa_test);
         flush_events(500);
