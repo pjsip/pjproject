@@ -35,6 +35,15 @@
 
 #define THIS_FILE       "sock_bsd.c"
 
+/* The handle the socket API takes: a Winsock SOCKET is as wide as a
+ * pointer, a descriptor elsewhere is an int.
+ */
+#if defined(PJ_WIN32) && PJ_WIN32!=0
+#   define OS_SOCK(s)   (s)
+#else
+#   define OS_SOCK(s)   ((int)(s))
+#endif
+
 /*
  * Address families conversion.
  * The values here are indexed based on pj_addr_family.
@@ -664,7 +673,7 @@ PJ_DEF(pj_status_t) pj_sock_bind( pj_sock_t sock,
 
     CHECK_ADDR_LEN(addr, len);
 
-    if (bind((int)sock, (struct sockaddr*)addr, len) != 0)
+    if (bind(OS_SOCK(sock), (struct sockaddr*)addr, len) != 0)
         return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else
         return PJ_SUCCESS;
@@ -722,7 +731,7 @@ PJ_DEF(pj_status_t) pj_sock_getpeername( pj_sock_t sock,
                                          int *namelen)
 {
     PJ_CHECK_STACK();
-    if (getpeername((int)sock, (struct sockaddr*)addr,
+    if (getpeername(OS_SOCK(sock), (struct sockaddr*)addr,
                     (socklen_t*)namelen) != 0)
         return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else {
@@ -739,7 +748,7 @@ PJ_DEF(pj_status_t) pj_sock_getsockname( pj_sock_t sock,
                                          int *namelen)
 {
     PJ_CHECK_STACK();
-    if (getsockname((int)sock, (struct sockaddr*)addr,
+    if (getsockname(OS_SOCK(sock), (struct sockaddr*)addr,
                     (socklen_t*)namelen) != 0)
         return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else {
@@ -764,7 +773,7 @@ PJ_DEF(pj_status_t) pj_sock_send(pj_sock_t sock,
     flags |= MSG_NOSIGNAL;
 #endif
 
-    *len = send((int)sock, (const char*)buf, (int)(*len), flags);
+    *len = send(OS_SOCK(sock), (const char*)buf, (int)(*len), flags);
 
     if (*len < 0)
         return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
@@ -793,7 +802,7 @@ PJ_DEF(pj_status_t) pj_sock_sendto(pj_sock_t sock,
     flags |= MSG_NOSIGNAL;
 #endif
 
-    *len = sendto((int)sock, (const char*)buf, (int)(*len), flags, 
+    *len = sendto(OS_SOCK(sock), (const char*)buf, (int)(*len), flags, 
                   (const struct sockaddr*)to, tolen);
 
     if (*len < 0) 
@@ -813,7 +822,7 @@ PJ_DEF(pj_status_t) pj_sock_recv(pj_sock_t sock,
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(buf && len, PJ_EINVAL);
 
-    *len = recv((int)sock, (char*)buf, (int)(*len), flags);
+    *len = recv(OS_SOCK(sock), (char*)buf, (int)(*len), flags);
 
     if (*len < 0) 
         return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
@@ -834,7 +843,7 @@ PJ_DEF(pj_status_t) pj_sock_recvfrom(pj_sock_t sock,
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(buf && len, PJ_EINVAL);
 
-    *len = recvfrom((int)sock, (char*)buf, (int)(*len), flags, 
+    *len = recvfrom(OS_SOCK(sock), (char*)buf, (int)(*len), flags, 
                     (struct sockaddr*)from, (socklen_t*)fromlen);
 
     if (*len < 0) 
@@ -859,7 +868,7 @@ PJ_DEF(pj_status_t) pj_sock_getsockopt( pj_sock_t sock,
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(optval && optlen, PJ_EINVAL);
 
-    if (getsockopt((int)sock, level, optname, (char*)optval,
+    if (getsockopt(OS_SOCK(sock), level, optname, (char*)optval,
                    (socklen_t*)optlen) != 0)
         return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else
@@ -885,7 +894,8 @@ PJ_DEF(pj_status_t) pj_sock_setsockopt( pj_sock_t sock,
                      ((optname&0xff00)==0xff00)?(int)optname|0xffff0000:optname,                     
                      (const char*)optval, optlen);
 #else
-    status = setsockopt((int)sock, level, optname, (const char*)optval, optlen);
+    status = setsockopt(OS_SOCK(sock), level, optname, (const char*)optval,
+                        optlen);
     TRACE_((THIS_FILE, "setsockopt %ld level:%d name:%d val:%d(%d)->%d", sock,
             level, optname, *((const char *)optval), optlen, status));
 #endif
@@ -932,7 +942,7 @@ PJ_DEF(pj_status_t) pj_sock_connect( pj_sock_t sock,
                                      int namelen)
 {
     PJ_CHECK_STACK();
-    if (connect((int)sock, (struct sockaddr*)addr, namelen) != 0)
+    if (connect(OS_SOCK(sock), (struct sockaddr*)addr, namelen) != 0)
         return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else
         return PJ_SUCCESS;
@@ -947,7 +957,7 @@ PJ_DEF(pj_status_t) pj_sock_shutdown( pj_sock_t sock,
                                       int how)
 {
     PJ_CHECK_STACK();
-    if (shutdown((int)sock, how) != 0)
+    if (shutdown(OS_SOCK(sock), how) != 0)
         return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else
         return PJ_SUCCESS;
@@ -960,7 +970,7 @@ PJ_DEF(pj_status_t) pj_sock_listen( pj_sock_t sock,
                                     int backlog)
 {
     PJ_CHECK_STACK();
-    if (listen((int)sock, backlog) != 0)
+    if (listen(OS_SOCK(sock), backlog) != 0)
         return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else
         return PJ_SUCCESS;
@@ -983,7 +993,7 @@ PJ_DEF(pj_status_t) pj_sock_accept( pj_sock_t serverfd,
     }
 #endif
     
-    *newsock = accept((int)serverfd, (struct sockaddr*)addr,
+    *newsock = accept(OS_SOCK(serverfd), (struct sockaddr*)addr,
                       (socklen_t*)addrlen);
     if (*newsock==PJ_INVALID_SOCKET)
         return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
