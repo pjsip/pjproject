@@ -1756,11 +1756,13 @@ public:
      * Make outgoing call to the specified URI. If the call is hung up, its
      * account deleted or its IP address changed, or the library destroyed,
      * while the media of the call waits for the STUN server, this fails with
-     * PJ_ECANCELLED.
+     * PJ_ECANCELLED. Before that, onCallState() may already have reported
+     * the call disconnected.
      * Until the call has its INVITE session, i.e. while its media is being
-     * created, waiting for the STUN server or for the ICE candidates, the
-     * call methods that need the session, e.g. sendRequest(), xfer() or
-     * sendInstantMessage(), fail with PJ_EINVALIDOP.
+     * created, waiting for the STUN server or for the ICE candidates,
+     * Endpoint::hangupAllCalls() skips the call, and the call methods that
+     * need the session, e.g. sendRequest(), xfer() or sendInstantMessage(),
+     * fail with PJ_EINVALIDOP.
      *
      * @param dst_uri       URI to be put in the To header (normally is the same
      *                      as the target URI).

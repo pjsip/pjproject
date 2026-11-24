@@ -6771,10 +6771,13 @@ PJ_DECL(pj_status_t) pjsua_enum_calls(pjsua_call_id ids[],
  * Make outgoing call to the specified URI using the specified account.
  * If the call is hung up, its account deleted or its IP address changed, or
  * the library destroyed, while the media of the call waits for the STUN
- * server, this returns PJ_ECANCELLED.
+ * server, this returns PJ_ECANCELLED. Before that, on_call_state() may
+ * already have reported the call disconnected, for a call ID this function
+ * doesn't return.
  *
  * Until the call has its INVITE session, i.e. while its media is being
- * created, waiting for the STUN server or for the ICE candidates, the call
+ * created, waiting for the STUN server or for the ICE candidates,
+ * pjsua_enum_calls() and pjsua_call_hangup_all() skip the call, and the call
  * functions that need the session, e.g. pjsua_call_send_request(),
  * pjsua_call_xfer() or pjsua_call_send_im(), return PJ_EINVALIDOP for it.
  *
