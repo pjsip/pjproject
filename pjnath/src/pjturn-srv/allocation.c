@@ -775,7 +775,7 @@ static void send_reply_ok(pj_turn_allocation *alloc,
     if (alloc->relay.lifetime != 0) {
         pj_time_val now;
         pj_gettimeofday(&now);
-        interval = alloc->relay.expiry.sec - now.sec;
+        interval = (unsigned)(alloc->relay.expiry.sec - now.sec);
     } else {
         interval = 0;
     }
@@ -1066,7 +1066,7 @@ static void handle_peer_pkt(pj_turn_allocation *alloc,
                                       src_addr, pj_sockaddr_get_len(src_addr));
         pj_stun_msg_add_binary_attr(tdata->pool, tdata->msg,
                                     PJ_STUN_ATTR_DATA,
-                                    (const pj_uint8_t*)pkt, len);
+                                    (const pj_uint8_t*)pkt, (unsigned)len);
 
         pj_stun_session_send_msg(alloc->sess, NULL, PJ_FALSE,
                                  PJ_FALSE, &alloc->hkey.clt_addr,

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -300,7 +300,7 @@ int main(int argc, char *argv[])
             puts("Connect source port to destination port");
             if (!input("Enter source port number", tmp1, sizeof(tmp1)) )
                 continue;
-            src = strtol(tmp1, &err, 10);
+            src = (int)strtol(tmp1, &err, 10);
             if (*err || src < 0 || src >= port_count) {
                 puts("Invalid slot number");
                 continue;
@@ -308,7 +308,7 @@ int main(int argc, char *argv[])
 
             if (!input("Enter destination port number", tmp2, sizeof(tmp2)) )
                 continue;
-            dst = strtol(tmp2, &err, 10);
+            dst = (int)strtol(tmp2, &err, 10);
             if (*err || dst < 0 || dst >= port_count) {
                 puts("Invalid slot number");
                 continue;
@@ -325,7 +325,7 @@ int main(int argc, char *argv[])
             puts("Disconnect port connection");
             if (!input("Enter source port number", tmp1, sizeof(tmp1)) )
                 continue;
-            src = strtol(tmp1, &err, 10);
+            src = (int)strtol(tmp1, &err, 10);
             if (*err || src < 0 || src >= port_count) {
                 puts("Invalid slot number");
                 continue;
@@ -333,7 +333,7 @@ int main(int argc, char *argv[])
 
             if (!input("Enter destination port number", tmp2, sizeof(tmp2)) )
                 continue;
-            dst = strtol(tmp2, &err, 10);
+            dst = (int)strtol(tmp2, &err, 10);
             if (*err || dst < 0 || dst >= port_count) {
                 puts("Invalid slot number");
                 continue;
@@ -351,7 +351,7 @@ int main(int argc, char *argv[])
             puts("Adjust transmit level of a port");
             if (!input("Enter port number", tmp1, sizeof(tmp1)) )
                 continue;
-            src = strtol(tmp1, &err, 10);
+            src = (int)strtol(tmp1, &err, 10);
             if (*err || src < 0 || src >= port_count) {
                 puts("Invalid slot number");
                 continue;
@@ -360,7 +360,7 @@ int main(int argc, char *argv[])
             if (!input("Enter level (-128 to >127, 0 for normal)", 
                               tmp2, sizeof(tmp2)) )
                 continue;
-            level = strtol(tmp2, &err, 10);
+            level = (int)strtol(tmp2, &err, 10);
             if (*err || level < -128) {
                 puts("Invalid level");
                 continue;
@@ -377,7 +377,7 @@ int main(int argc, char *argv[])
             puts("Adjust receive level of a port");
             if (!input("Enter port number", tmp1, sizeof(tmp1)) )
                 continue;
-            src = strtol(tmp1, &err, 10);
+            src = (int)strtol(tmp1, &err, 10);
             if (*err || src < 0 || src >= port_count) {
                 puts("Invalid slot number");
                 continue;
@@ -386,7 +386,7 @@ int main(int argc, char *argv[])
             if (!input("Enter level (-128 to >127, 0 for normal)", 
                               tmp2, sizeof(tmp2)) )
                 continue;
-            level = strtol(tmp2, &err, 10);
+            level = (int)strtol(tmp2, &err, 10);
             if (*err || level < -128) {
                 puts("Invalid level");
                 continue;
@@ -402,7 +402,7 @@ int main(int argc, char *argv[])
             puts("Display VU meter");
             if (!input("Enter port number to monitor", tmp1, sizeof(tmp1)) )
                 continue;
-            src = strtol(tmp1, &err, 10);
+            src = (int)strtol(tmp1, &err, 10);
             if (*err || src < 0 || src >= port_count) {
                 puts("Invalid slot number");
                 continue;
@@ -417,7 +417,7 @@ int main(int argc, char *argv[])
 
             if (!input("Duration to monitor (in seconds)", tmp1, sizeof(tmp1)) )
                 continue;
-            dur = strtol(tmp1, &err, 10);
+            dur = (int)strtol(tmp1, &err, 10);
             if (*err) {
                 puts("Invalid duration number");
                 continue;

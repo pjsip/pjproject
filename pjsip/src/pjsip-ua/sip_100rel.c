@@ -439,7 +439,7 @@ static void parse_rack(const pj_str_t *rack,
     while (p < end && pj_isdigit(*p))
         ++p;
     token.slen = p - token.ptr;
-    *p_rseq = pj_strtoul(&token);
+    *p_rseq = (pj_uint32_t)pj_strtoul(&token);
 
     while (p < end && pj_isspace(*p))
         ++p;
@@ -447,7 +447,7 @@ static void parse_rack(const pj_str_t *rack,
     while (p < end && pj_isdigit(*p))
         ++p;
     token.slen = p - token.ptr;
-    *p_seq = pj_strtoul(&token);
+    *p_seq = (pj_int32_t)pj_strtoul(&token);
 
     while (p < end && pj_isspace(*p))
         ++p;

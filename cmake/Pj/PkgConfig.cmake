@@ -169,6 +169,14 @@ function(_pj_pc_eval out value)
     elseif(name STREQUAL "")
       # What remains of a condition already dropped below
       set(r "")
+    elseif(name STREQUAL "LINK_LANGUAGE" AND NOT arg STREQUAL "")
+      # As for a link from C, the language pkg-config users are assumed to
+      # link with
+      if(arg MATCHES "(^|,)C(,|$)")
+        set(r 1)
+      else()
+        set(r 0)
+      endif()
     elseif(name STREQUAL "UPPER_CASE")
       set(r "${uarg}")
     elseif(name STREQUAL "LOWER_CASE")
@@ -664,7 +672,12 @@ function(pj_generate_pkgconfig template destination)
     endif()
   endforeach()
 
-  # The bundled libraries, then the PJSIP ones they need, in Libs order
+  # The bundled libraries, then the PJSIP ones they need, in Libs order.
+  # Apple's linker searches the libraries in any order, and warns about the
+  # repeated ones.
+  if(APPLE)
+    set(third_party_needs "")
+  endif()
   set(bundled "")
   if(third_party)
     list(APPEND bundled "-L\${libdir}/pjproject/third_party")

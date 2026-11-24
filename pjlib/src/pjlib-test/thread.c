@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -79,7 +79,7 @@ static int thread_proc(void *data)
     pj_status_t rc;
     counter_t *pcounter = (counter_t *)data;
 
-    id = *pcounter;
+    id = (unsigned)*pcounter;
     PJ_UNUSED_ARG(id); /* Warning about unused var if TRACE__ is disabled */
     TRACE__((THIS_FILE, "     thread %d running..", id));
 

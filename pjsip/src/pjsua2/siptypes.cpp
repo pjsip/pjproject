@@ -279,7 +279,7 @@ void TlsConfig::fromPj(const pjsip_tls_setting &prm)
     this->verifyServer  = PJ2BOOL(prm.verify_server);
     this->verifyClient  = PJ2BOOL(prm.verify_client);
     this->requireClientCert = PJ2BOOL(prm.require_client_cert);
-    this->msecTimeout   = PJ_TIME_VAL_MSEC(prm.timeout);
+    this->msecTimeout   = (unsigned)PJ_TIME_VAL_MSEC(prm.timeout);
     this->qosType       = prm.qos_type;
     this->qosParams     = prm.qos_params;
     this->qosIgnoreError = PJ2BOOL(prm.qos_ignore_error);
@@ -438,7 +438,7 @@ void TlsConfig::fromTurnPj(const pj_turn_sock_tls_cfg &prm)
         this->ciphers   = IntVector(sp.ciphers, sp.ciphers+sp.ciphers_num);
     else
         this->ciphers.clear();
-    this->msecTimeout   = PJ_TIME_VAL_MSEC(sp.timeout);
+    this->msecTimeout   = (unsigned)PJ_TIME_VAL_MSEC(sp.timeout);
     this->sockOptParams.fromPj(sp.sockopt_params);
     this->sockOptIgnoreError = PJ2BOOL(sp.sockopt_ignore_error);
     this->enableRenegotiation = PJ2BOOL(sp.enable_renegotiation);

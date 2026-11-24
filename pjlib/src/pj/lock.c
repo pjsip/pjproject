@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -551,7 +551,7 @@ static pj_status_t grp_lock_add_ref(pj_grp_lock_t *glock)
 static pj_status_t grp_lock_dec_ref(pj_grp_lock_t *glock)
 {
     int cnt; /* for debugging */
-    if ((cnt=pj_atomic_dec_and_get(glock->ref_cnt)) == 0) {
+    if ((cnt=(int)pj_atomic_dec_and_get(glock->ref_cnt)) == 0) {
         grp_lock_destroy(glock);
         return PJ_EGONE;
     }
@@ -649,7 +649,7 @@ PJ_DEF(pj_status_t) pj_grp_lock_dec_ref(pj_grp_lock_t *glock)
 
 PJ_DEF(int) pj_grp_lock_get_ref(pj_grp_lock_t *glock)
 {
-    return pj_atomic_get(glock->ref_cnt);
+    return (int)pj_atomic_get(glock->ref_cnt);
 }
 
 PJ_DEF(pj_status_t) pj_grp_lock_chain_lock( pj_grp_lock_t *glock,

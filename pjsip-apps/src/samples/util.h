@@ -99,7 +99,7 @@ pj_status_t get_snd_options(const char *app_name,
                 PJ_LOG(3,(app_name, "Error: invalid value for device id"));
                 return PJ_EINVAL;
             }
-            *dev_id = val;
+            *dev_id = (int)val;
             break;
 
         case 'r':
@@ -109,7 +109,7 @@ pj_status_t get_snd_options(const char *app_name,
                 PJ_LOG(3,(app_name, "Error: invalid value for clock rate"));
                 return PJ_EINVAL;
             }
-            *clock_rate = val;
+            *clock_rate = (int)val;
             break;
 
         case 'c':
@@ -119,7 +119,7 @@ pj_status_t get_snd_options(const char *app_name,
                 PJ_LOG(3,(app_name, "Error: invalid channel count"));
                 return PJ_EINVAL;
             }
-            *channel_count = val;
+            *channel_count = (int)val;
             break;
 
         case 'f':
@@ -129,7 +129,7 @@ pj_status_t get_snd_options(const char *app_name,
                 PJ_LOG(3,(app_name, "Error: invalid samples per frame"));
                 return PJ_EINVAL;
             }
-            *samples_per_frame = val;
+            *samples_per_frame = (int)val;
             break;
 
         case 'b':
@@ -139,7 +139,7 @@ pj_status_t get_snd_options(const char *app_name,
                 PJ_LOG(3,(app_name, "Error: invalid samples bits per sample"));
                 return PJ_EINVAL;
             }
-            *bits_per_sample = val;
+            *bits_per_sample = (int)val;
             break;
 
         default:

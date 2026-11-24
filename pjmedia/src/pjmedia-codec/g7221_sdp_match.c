@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -33,7 +33,7 @@
         } \
         pj_strset(&s, p + param.slen, fmtp.fmt_param.slen - \
                   (p - fmtp.fmt_param.ptr) - param.slen); \
-        ival = pj_strtoul2(&s, NULL, base); \
+        ival = (unsigned)pj_strtoul2(&s, NULL, base); \
     } while (0)
 
 #define GET_FMTP_IVAL(ival, fmtp, param, default_val) \

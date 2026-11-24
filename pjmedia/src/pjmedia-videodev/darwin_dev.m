@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -440,15 +440,15 @@ static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f)
                         fmt = &qdi->info.fmt[qdi->info.fmt_cnt++];
                         pjmedia_format_init_video(fmt,
                                 darwin_fmts[l].pjmedia_format,
-                                darwin_sizes[m].supported_size_w,
-                                darwin_sizes[m].supported_size_h,
+                                (unsigned)darwin_sizes[m].supported_size_w,
+                                (unsigned)darwin_sizes[m].supported_size_h,
                                 DEFAULT_FPS, 1);
                         /* Portrait video */
                         fmt = &qdi->info.fmt[qdi->info.fmt_cnt++];
                         pjmedia_format_init_video(fmt,
                                 darwin_fmts[l].pjmedia_format,
-                                darwin_sizes[m].supported_size_h,
-                                darwin_sizes[m].supported_size_w,
+                                (unsigned)darwin_sizes[m].supported_size_h,
+                                (unsigned)darwin_sizes[m].supported_size_w,
                                 DEFAULT_FPS, 1);
                     }
                 }                
@@ -625,7 +625,7 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
             if ((stream->vid_size.w > stream->vid_size.h && stride < height) ||
                 (stream->vid_size.h > stream->vid_size.w && stride > height))
             {
-                pj_size_t w = stream->vid_size.w;
+                unsigned w = stream->vid_size.w;
                 stream->vid_size.w = stream->vid_size.h;
                 stream->vid_size.h = w;
             }
@@ -909,11 +909,11 @@ static pj_status_t darwin_factory_create_stream(
          * our natural orientation portrait (or landscape) as well.
          */
         if (vfd->size.w > vfd->size.h) {
-            vfd->size.w = darwin_sizes[i].supported_size_w;
-            vfd->size.h = darwin_sizes[i].supported_size_h;
+            vfd->size.w = (unsigned)darwin_sizes[i].supported_size_w;
+            vfd->size.h = (unsigned)darwin_sizes[i].supported_size_h;
         } else {
-            vfd->size.h = darwin_sizes[i].supported_size_w;
-            vfd->size.w = darwin_sizes[i].supported_size_h;
+            vfd->size.h = (unsigned)darwin_sizes[i].supported_size_w;
+            vfd->size.w = (unsigned)darwin_sizes[i].supported_size_h;
         }
         strm->size = vfd->size;
         strm->vid_size = vfd->size;

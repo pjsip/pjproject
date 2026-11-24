@@ -1314,7 +1314,7 @@ static int media_thread(void *arg)
 
         /* Wait for next interval */
         //if (timeout.sec!=0 && timeout.msec!=0) {
-            pj_thread_sleep(PJ_TIME_VAL_MSEC(timeout));
+            pj_thread_sleep((unsigned)PJ_TIME_VAL_MSEC(timeout));
             if (strm->thread_quit_flag)
                 break;
         //}
@@ -1642,7 +1642,7 @@ static void print_avg_stat(void)
 
         /* Duration */
         call_get_duration(i, &dur);
-        msec_dur = PJ_TIME_VAL_MSEC(dur);
+        msec_dur = (unsigned)PJ_TIME_VAL_MSEC(dur);
 
         MIN_(call_dur.min, msec_dur);
         MAX_(call_dur.max, msec_dur);
@@ -1652,7 +1652,7 @@ static void print_avg_stat(void)
         if (call->connect_time.sec) {
             pj_time_val t = call->connect_time;
             PJ_TIME_VAL_SUB(t, call->start_time);
-            msec_dur = PJ_TIME_VAL_MSEC(t);
+            msec_dur = (unsigned)PJ_TIME_VAL_MSEC(t);
         } else {
             msec_dur = 10;
         }

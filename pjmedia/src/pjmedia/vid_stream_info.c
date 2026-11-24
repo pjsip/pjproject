@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2011-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,7 +38,7 @@ static pj_status_t get_video_codec_info_param(pjmedia_vid_stream_info *si,
     const pjmedia_vid_codec_info *p_info;
     pj_status_t status;
 
-    pt = pj_strtoul(&local_m->desc.fmt[0]);
+    pt = (unsigned)pj_strtoul(&local_m->desc.fmt[0]);
 
     /* Get payload type for receiving direction */
     si->rx_pt = pt;
@@ -74,7 +74,7 @@ static pj_status_t get_video_codec_info_param(pjmedia_vid_stream_info *si,
                 PJ_SUCCESS)
             {
                 /* Found matched codec. */
-                si->tx_pt = pj_strtoul(&rem_m->desc.fmt[i]);
+                si->tx_pt = (unsigned)pj_strtoul(&rem_m->desc.fmt[i]);
                 break;
             }
         }

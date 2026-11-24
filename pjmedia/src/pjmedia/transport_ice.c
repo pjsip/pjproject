@@ -1255,7 +1255,7 @@ static pj_status_t parse_cand(const char *obj_name,
         TRACE__((obj_name, "Expecting ICE priority in candidate"));
         goto on_return;
     }
-    cand->prio = pj_strtoul(&token);
+    cand->prio = (pj_uint32_t)pj_strtoul(&token);
 
     /* Host */
     found_idx = pj_strtok(orig_input, &delim, &host, found_idx + token.slen);

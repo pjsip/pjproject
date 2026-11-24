@@ -98,7 +98,6 @@
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>..\..\pjlib\include;..\..\pjlib-util\include;..\..\pjmedia\include;..\..\pjsip\include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;PY_PJSUA_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PrecompiledHeaderOutputFile>$(OutDir)python_pjsua.pch</PrecompiledHeaderOutputFile>
@@ -143,7 +142,6 @@
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>..\..\pjlib\include;..\..\pjlib-util\include;..\..\pjmedia\include;..\..\pjsip\include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;PY_PJSUA_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PrecompiledHeaderOutputFile>$(OutDir)python_pjsua.pch</PrecompiledHeaderOutputFile>
