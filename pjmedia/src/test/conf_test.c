@@ -129,6 +129,21 @@ static int check_state(pjmedia_conf *conf, unsigned slot1, unsigned slot2,
     return 0;
 }
 
+/* The bridge parameters shared by the tests, with an explicit worker_threads
+ * count (see conf_test() for the modes exercised).
+ */
+static void conf_param(pjmedia_conf_param *param, unsigned worker_threads)
+{
+    pjmedia_conf_param_default(param);
+    param->max_slots = 8;
+    param->sampling_rate = CLOCK_RATE;
+    param->channel_count = CHANNELS;
+    param->samples_per_frame = SPF;
+    param->bits_per_sample = BPS;
+    param->options = PJMEDIA_CONF_NO_DEVICE;
+    param->worker_threads = worker_threads;
+}
+
 /*
  * Verify that pjmedia_conf_detach_port()/pjmedia_conf_replace_port() preserve
  * the slot id, its connections, and its level/mute settings across a port swap
@@ -137,10 +152,11 @@ static int check_state(pjmedia_conf *conf, unsigned slot1, unsigned slot2,
  * Returns 0 on success, 1 if the backend does not support the APIs (skipped),
  * or a negative error code on failure.
  */
-static int detach_replace_test(void)
+static int detach_replace_test(unsigned worker_threads)
 {
     pj_pool_t *pool = NULL;
     pjmedia_conf *conf = NULL;
+    pjmedia_conf_param param;
     pjmedia_port *master, *p1 = NULL, *p2 = NULL, *p2b = NULL;
     unsigned slot1 = 0, slot2 = 0;
     int rc = 0;
@@ -151,8 +167,8 @@ static int detach_replace_test(void)
     pool = pj_pool_create(mem, "conf_test", 4000, 4000, NULL);
     if (!pool) return -5;
 
-    status = pjmedia_conf_create(pool, 8, CLOCK_RATE, CHANNELS, SPF, BPS,
-                                 PJMEDIA_CONF_NO_DEVICE, &conf);
+    conf_param(&param, worker_threads);
+    status = pjmedia_conf_create2(pool, &param, &conf);
     if (status != PJ_SUCCESS) { rc = -10; goto on_return; }
     master = pjmedia_conf_get_master_port(conf);
 
@@ -393,10 +409,11 @@ static test_port *create_test_port(pj_pool_t *pool, unsigned rate,
  *
  * Returns 0 on success, 1 if unsupported (skipped), negative on failure.
  */
-static int flow_test(void)
+static int flow_test(unsigned worker_threads)
 {
     pj_pool_t *pool = NULL;
     pjmedia_conf *conf = NULL;
+    pjmedia_conf_param param;
     pjmedia_port *master;
     test_port *src, *b1, *b2, *b3, *s;
     unsigned slot_src = 0, slot_b = 0, base;
@@ -408,8 +425,8 @@ static int flow_test(void)
     pool = pj_pool_create(mem, "conf_flow", 4000, 4000, NULL);
     if (!pool) return -200;
 
-    status = pjmedia_conf_create(pool, 8, CLOCK_RATE, CHANNELS, SPF, BPS,
-                                 PJMEDIA_CONF_NO_DEVICE, &conf);
+    conf_param(&param, worker_threads);
+    status = pjmedia_conf_create2(pool, &param, &conf);
     if (status != PJ_SUCCESS) { rc = -201; goto on_return; }
     master = pjmedia_conf_get_master_port(conf);
 
@@ -503,10 +520,11 @@ on_return:
  *
  * Returns 0 on success, negative on failure.
  */
-static int master_capture_test(void)
+static int master_capture_test(unsigned worker_threads)
 {
     pj_pool_t *pool = NULL;
     pjmedia_conf *conf = NULL;
+    pjmedia_conf_param param;
     pjmedia_port *master;
     test_port *sink;
     unsigned slot_sink = 0, i;
@@ -518,8 +536,8 @@ static int master_capture_test(void)
     pool = pj_pool_create(mem, "conf_cap", 4000, 4000, NULL);
     if (!pool) return -300;
 
-    status = pjmedia_conf_create(pool, 8, CLOCK_RATE, CHANNELS, SPF, BPS,
-                                 PJMEDIA_CONF_NO_DEVICE, &conf);
+    conf_param(&param, worker_threads);
+    status = pjmedia_conf_create2(pool, &param, &conf);
     if (status != PJ_SUCCESS) { rc = -301; goto on_return; }
     master = pjmedia_conf_get_master_port(conf);
 
@@ -597,10 +615,11 @@ static pj_status_t tick_at(pjmedia_port *master, pj_uint64_t ts)
  * one, and must still replace, not add to, the sink's previous mix. A sink
  * with no transmitter at that timestamp must not get its previous mix again.
  */
-static int clock_restart_test(unsigned src_cnt)
+static int clock_restart_test(unsigned src_cnt, unsigned worker_threads)
 {
     pj_pool_t *pool = NULL;
     pjmedia_conf *conf = NULL;
+    pjmedia_conf_param param;
     pjmedia_port *master;
     test_port *src[2], *sink;
     unsigned slot_src[2], slot_sink, i;
@@ -615,8 +634,8 @@ static int clock_restart_test(unsigned src_cnt)
     pool = pj_pool_create(mem, "conf_clk", 4000, 4000, NULL);
     if (!pool) return -600;
 
-    status = pjmedia_conf_create(pool, 8, CLOCK_RATE, CHANNELS, SPF, BPS,
-                                 PJMEDIA_CONF_NO_DEVICE, &conf);
+    conf_param(&param, worker_threads);
+    status = pjmedia_conf_create2(pool, &param, &conf);
     if (status != PJ_SUCCESS) { rc = -601; goto on_return; }
     master = pjmedia_conf_get_master_port(conf);
 
@@ -709,14 +728,9 @@ static int worker_prio_test(void)
     pool = pj_pool_create(mem, "conf_prio", 4000, 4000, NULL);
     if (!pool) return -400;
 
-    pjmedia_conf_param_default(&param);
-    param.max_slots = 8;
-    param.sampling_rate = CLOCK_RATE;
-    param.channel_count = CHANNELS;
-    param.samples_per_frame = SPF;
-    param.bits_per_sample = BPS;
-    param.options = PJMEDIA_CONF_NO_DEVICE;
-    param.worker_threads = 2;
+    /* A priority only applies to worker threads, so this test keeps its own
+     * worker_threads=2 instead of following conf_test()'s modes. */
+    conf_param(&param, 2);
 
     /* On an unprivileged POSIX host pj_thread_get_prio_max() reports the
      * SCHED_OTHER maximum, i.e. zero, which the bridge reads as "leave the
@@ -796,7 +810,7 @@ static void reset_ops(pjmedia_conf *conf)
  * queued operations, the cancelled operations and the synchronous removal
  * of a port whose add-op is still queued, and the removals on destroy.
  */
-static int op_user_data_test(void)
+static int op_user_data_test(unsigned worker_threads)
 {
     pj_pool_t *pool = NULL;
     pjmedia_conf *conf = NULL;
@@ -811,13 +825,7 @@ static int op_user_data_test(void)
     pool = pj_pool_create(mem, "conf_op_ud", 4000, 4000, NULL);
     if (!pool) return -500;
 
-    pjmedia_conf_param_default(&param);
-    param.max_slots = 8;
-    param.sampling_rate = CLOCK_RATE;
-    param.channel_count = CHANNELS;
-    param.samples_per_frame = SPF;
-    param.bits_per_sample = BPS;
-    param.options = PJMEDIA_CONF_NO_DEVICE;
+    conf_param(&param, worker_threads);
     param.user_data = &g_op_user_data;
     status = pjmedia_conf_create2(pool, &param, &conf);
     if (status != PJ_SUCCESS) { rc = -501; goto on_return; }
@@ -897,47 +905,77 @@ on_return:
 int conf_test(void)
 {
     int rc;
+    unsigned i;
 
-    /* Runs on every backend: it does not depend on detach/replace support,
-     * which the probes below may skip out of. */
-    rc = master_capture_test();
-    if (rc != 0) {
-        PJ_LOG(1,(THIS_FILE, "  conf master capture test failed (rc=%d)", rc));
-        return rc;
-    }
-
-#if PJMEDIA_CONF_BACKEND != PJMEDIA_CONF_SWITCH_BOARD_BACKEND
-    rc = clock_restart_test(1);
-    if (rc == 0)
-        rc = clock_restart_test(2);
-    if (rc != 0) {
-        PJ_LOG(1,(THIS_FILE, "  conf clock restart test failed (rc=%d)", rc));
-        return rc;
-    }
-
-    rc = op_user_data_test();
-    if (rc != 0) {
-        PJ_LOG(1,(THIS_FILE, "  conf op user data test failed (rc=%d)", rc));
-        return rc;
-    }
+#if PJMEDIA_CONF_BACKEND == PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND
+    /* 0 mixes sequentially in the get_frame() thread - the configuration
+     * iOS and Android builds get. The second value is the default worker
+     * count pjmedia_conf_create() uses (PJMEDIA_CONF_THREADS-1), or 2 on
+     * builds whose default leaves fewer workers. The serial and switchboard
+     * backends have no worker threads and ignore the setting.
+     */
+    static const unsigned worker_threads[] = {
+        0, PJMEDIA_CONF_THREADS > 2 ? PJMEDIA_CONF_THREADS-1 : 2
+    };
+#else
+    static const unsigned worker_threads[] = { 0 };
 #endif
 
-    rc = detach_replace_test();
-    if (rc == 1) {
-        /* Skipped (backend unsupported) - treat as pass. */
-        return 0;
-    }
-    if (rc != 0) {
-        PJ_LOG(1,(THIS_FILE, "  conf detach/replace test failed (rc=%d)", rc));
-        return rc;
-    }
+    for (i = 0; i < PJ_ARRAY_SIZE(worker_threads); ++i) {
+        PJ_LOG(3, (THIS_FILE, "conf bridge tests, worker_threads=%u",
+                   worker_threads[i]));
 
-    rc = flow_test();
-    if (rc == 1)
-        return 0;   /* unsupported backend - skip */
-    if (rc != 0) {
-        PJ_LOG(1,(THIS_FILE, "  conf replace flow test failed (rc=%d)", rc));
-        return rc;
+        /* Runs on every backend: it does not depend on detach/replace
+         * support, which the probes below may skip out of. */
+        rc = master_capture_test(worker_threads[i]);
+        if (rc != 0) {
+            PJ_LOG(1,(THIS_FILE, "  conf master capture test failed"
+                              " (rc=%d, worker_threads=%u)",
+                      rc, worker_threads[i]));
+            return rc;
+        }
+
+#if PJMEDIA_CONF_BACKEND != PJMEDIA_CONF_SWITCH_BOARD_BACKEND
+        rc = clock_restart_test(1, worker_threads[i]);
+        if (rc == 0)
+            rc = clock_restart_test(2, worker_threads[i]);
+        if (rc != 0) {
+            PJ_LOG(1,(THIS_FILE, "  conf clock restart test failed"
+                              " (rc=%d, worker_threads=%u)",
+                      rc, worker_threads[i]));
+            return rc;
+        }
+
+        rc = op_user_data_test(worker_threads[i]);
+        if (rc != 0) {
+            PJ_LOG(1,(THIS_FILE, "  conf op user data test failed"
+                              " (rc=%d, worker_threads=%u)",
+                      rc, worker_threads[i]));
+            return rc;
+        }
+#endif
+
+        rc = detach_replace_test(worker_threads[i]);
+        if (rc == 1) {
+            /* Skipped (backend unsupported) - treat as pass. */
+            return 0;
+        }
+        if (rc != 0) {
+            PJ_LOG(1,(THIS_FILE, "  conf detach/replace test failed"
+                              " (rc=%d, worker_threads=%u)",
+                      rc, worker_threads[i]));
+            return rc;
+        }
+
+        rc = flow_test(worker_threads[i]);
+        if (rc == 1)
+            return 0;   /* unsupported backend - skip */
+        if (rc != 0) {
+            PJ_LOG(1,(THIS_FILE, "  conf replace flow test failed"
+                              " (rc=%d, worker_threads=%u)",
+                      rc, worker_threads[i]));
+            return rc;
+        }
     }
 
     rc = worker_prio_test();

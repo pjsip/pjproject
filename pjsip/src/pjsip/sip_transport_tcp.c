@@ -1188,7 +1188,7 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
                                 listener->factory.addr_name.port, addr_buf, 
                                 sizeof(addr_buf), 1),
               pj_sockaddr_print(src_addr, addr, sizeof(addr), 3),
-              sock));
+              (long)sock));
 
     /* Set close-on-exec flag */
     pj_set_cloexec_flag((int)sock);
@@ -1298,8 +1298,8 @@ static pj_bool_t on_data_sent(pj_activesock_t *asock,
     if (bytes_sent <= 0) {
         pj_status_t status;
 
-        PJ_LOG(5,(tcp->base.obj_name, "TCP send() error, sent=%ld", 
-                  bytes_sent));
+        PJ_LOG(5,(tcp->base.obj_name, "TCP send() error, sent=%ld",
+                  (long)bytes_sent));
 
         status = (bytes_sent == 0) ? PJ_RETURN_OS_ERROR(OSERR_ENOTCONN) :
                                      (pj_status_t)-bytes_sent;
@@ -1403,8 +1403,8 @@ static pj_status_t tcp_send_msg(pjsip_transport *transport,
             /* Shutdown transport on closure/errors */
             if (size <= 0) {
 
-                PJ_LOG(5,(tcp->base.obj_name, "TCP send() error, sent=%ld", 
-                          size));
+                PJ_LOG(5,(tcp->base.obj_name, "TCP send() error, sent=%ld",
+                          (long)size));
 
                 if (status == PJ_SUCCESS) 
                     status = PJ_RETURN_OS_ERROR(OSERR_ENOTCONN);

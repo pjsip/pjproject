@@ -5,23 +5,33 @@ The NDK ships a CMake toolchain file, so no wrapper script is needed:
 ```sh
 cmake -B build-android \
   -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake" \
-  -DANDROID_ABI=arm64-v8a \
-  -DANDROID_PLATFORM=android-23 \
   -DCMAKE_BUILD_TYPE=Release
 cmake --build build-android -j
 ```
+
+That builds what `./configure-android` does by default: `arm64-v8a`, at the
+minimum API level below, with the shared C++ runtime (`libc++_shared.so`,
+which an app then ships beside its native libraries). `-DANDROID_ABI`,
+`-DANDROID_PLATFORM` and `-DANDROID_STL` choose otherwise, e.g.
+`-DANDROID_STL=c++_static`. Without pjproject's defaults the NDK would pick
+`armeabi-v7a`, its own minimum API level and `c++_static`.
+
+`c++_static` is only for when `libpjsua2.so` (or whichever library PJSIP is
+linked into) is the app's only native library using C++: the NDK does not
+support a static C++ runtime alongside other C++ shared libraries. So it
+cannot be used with the published Oboe AAR, whose `liboboe.so` needs
+`libc++_shared.so`; configure stops on that combination. The AAR from
+`build-aar.sh` is built that way, with Oboe linked in statically.
 
 Repeat per ABI. `arm64-v8a`, `armeabi-v7a`, `x86_64` and `x86` are all built by
 CI; each needs its own build directory.
 
 This is an alternative to `./configure-android && make`, not a replacement for
-it. Both can build the libraries and the pjsua2 bindings; the autotools build
-additionally covers the desktop Java, Python and C# bindings, which CMake does
-not.
+it. Both can build the libraries and the pjsua2 bindings.
 
 ## Minimum API level
 
-**23**, matching `minSdkVersion` in
+**23**, the default, matching `minSdkVersion` in
 `pjsip-apps/src/swig/java/android/pjsua2/build.gradle`. Do not raise the floor
 to work around a build error without checking what it is hiding: bionic gates
 functions on the API level, so a higher `ANDROID_PLATFORM` can make a
@@ -61,8 +71,57 @@ cmake -B build-android ... -DOboe_ROOT=$PWD/oboe
 ```
 
 The AAR's Prefab layout is the same one `./aconfigure --with-oboe=<prefix>`
-expects, so a prefix that works for one works for the other. Without it the
-backend switches itself off and the build falls back to the JNI audio device.
+expects, so a prefix that works for one works for the other. Oboe found in
+CMake's default search paths is used too. If it is not found, or cannot be
+linked (e.g. it was built for another ABI), the backend switches itself off
+and the build falls back to the JNI audio device.
+
+`cmake/FindOboe.cmake` looks for `oboe/Oboe.h` and `liboboe` for the ABI being
+built in three layouts:
+
+| Layout | Header | Library |
+|---|---|---|
+| Unpacked AAR (Prefab) | `prefab/modules/oboe/include` | `prefab/modules/oboe/libs/android.<abi>` |
+| Oboe built and installed from source | `include` | `lib/<abi>` |
+| Plain prefix | `include` | `lib` |
+
+Instead of `Oboe_ROOT`, the prefix can come from `CMAKE_PREFIX_PATH`, or the
+files can be named directly with `-DOboe_INCLUDE_DIR=...` and
+`-DOboe_LIBRARY=...`. The NDK sysroot is not searched for Oboe, and the
+`oboeConfig.cmake` package that Gradle's Prefab support generates is not used.
+
+### Other libraries
+
+Android builds of OpenSSL, Opus, OpenH264 and the like are found from a
+`<Pkg>_ROOT` as on desktop:
+
+```sh
+cmake -B build-android ... -DOPUS_ROOT=$OPUS -DOPENSSL_ROOT_DIR=$OPENSSL
+```
+
+The NDK toolchain file has CMake search only under `CMAKE_FIND_ROOT_PATH` (the
+NDK), and it moves every search path there, a `<Pkg>_ROOT` included. So that a
+root is still searched as given, pjproject adds each `<Pkg>_ROOT` (and
+`OPENSSL_ROOT_DIR`) to `CMAKE_FIND_ROOT_PATH` for its own configure and lists
+them ("Package roots added to CMAKE_FIND_ROOT_PATH"). Other search paths stay
+inside the NDK, and each library found is test-linked, so a host library
+reached through a wrong root is rejected rather than used.
+
+`-DPJ_USE_ROOTS_IN_FIND=OFF` keeps CMake's own behaviour: a root outside
+`CMAKE_FIND_ROOT_PATH` is not searched, and configure warns about it. Each
+root then has to be given in `CMAKE_FIND_ROOT_PATH` too, several as a list:
+
+```sh
+cmake -B build-android ... -DPJ_USE_ROOTS_IN_FIND=OFF \
+      -DOPUS_ROOT=$OPUS -DOPENSSL_ROOT_DIR=$OPENSSL \
+      -DCMAKE_FIND_ROOT_PATH="$OPUS;$OPENSSL"
+```
+
+This is not specific to Android: other cross toolchains that limit searches to
+a sysroot the same way (`CMAKE_FIND_ROOT_PATH_MODE_*=ONLY`, as embedded Linux
+SDKs such as Yocto's usually do) behave the same. pkg-config is not redirected
+the same way, so a `Could NOT find` line may quote the version of the host's
+library; that library is not used.
 
 ### Java helper classes
 
@@ -88,6 +147,15 @@ they are yours to compile into the APK alongside the native library, the way
 
 It is off by default: SWIG is a build dependency nothing else here needs.
 
+A build also copies both into the sample app, as `make -C
+pjsip-apps/src/swig/java` does: `libpjsua2.so` into
+`pjsip-apps/src/swig/java/android/pjsua2/src/main/jniLibs/<abi>`, with
+`libc++_shared.so` unless built with `-DANDROID_STL=c++_static`, and the classes
+into `java/` beside it. The app then builds from there, in Android Studio or
+with `./gradlew :app:assembleDebug`. Build once per ABI the app should carry.
+`-DPJSUA2_ANDROID_DIR=<dir>` copies into another app's source set instead, and
+`-DPJSUA2_ANDROID_DIR=` leaves the source tree alone.
+
 To build the AAR, let Gradle drive CMake rather than running it yourself:
 
 ```sh
@@ -101,29 +169,30 @@ hand.
 
 `-PpjBuildWithCMake=true` is required; without it the module behaves as it
 always has and takes `libpjsua2.so` and the Java classes prebuilt out of
-`pjsua2/src/main`, where `make -C pjsip-apps/src/swig/java` puts them. The two
-cannot both be active -- each would supply its own copy of `libc++_shared.so`
-and of every generated class -- so pick one and run `./gradlew clean` when
-switching.
+`pjsua2/src/main`, where `make -C pjsip-apps/src/swig/java` and the CMake
+build above put them. With it, the module ignores those, so what is there
+does not get in the way.
 
-Prerequisites beyond the NDK and SDK: **SWIG 4.0+**, and **Ninja**, which the
-Android Gradle plugin requires for CMake projects. The SDK-managed CMake ships
-one, but this project needs CMake 3.28 or newer, above what the SDK provides,
-so a CMake from elsewhere on `PATH` is used and Ninja has to be installed
-separately.
+Prerequisites beyond the NDK and SDK: **SWIG 4.0+**, **CMake 3.28** or newer,
+and **Ninja**, which the Android Gradle plugin requires for CMake projects. The
+SDK Manager offers CMake 3.30.3 and newer, which ship Ninja; with a CMake from
+elsewhere on `PATH`, Ninja has to be installed separately.
 
 ## Finding dependencies outside the NDK
 
 The NDK toolchain file sets `CMAKE_FIND_ROOT_PATH_MODE_*` to `ONLY`, which
-confines `find_package` to the sysroot. A dependency built separately for
-Android is therefore invisible until its prefix is added to the search roots,
-and `<Package>_ROOT` alone is not enough:
+confines `find_package` to the sysroot. pjproject adds each `<Package>_ROOT`
+given to the search roots (see "Other libraries" above), so the root alone is
+enough:
 
 ```sh
 cmake -B build-android ... \
-  -DCMAKE_FIND_ROOT_PATH="$OPENSSL_PREFIX;$OPENH264_PREFIX" \
-  -DOPENSSL_ROOT_DIR="$OPENSSL_PREFIX"
+  -DOPENSSL_ROOT_DIR="$OPENSSL_PREFIX" -DOpenH264_ROOT="$OPENH264_PREFIX"
 ```
+
+A project using the installed pjproject is in the same position for its own
+`find_package(Pj)`: give the install prefix in `CMAKE_FIND_ROOT_PATH` as well
+as in `CMAKE_PREFIX_PATH`.
 
 `Oboe_ROOT` is the exception: `cmake/FindOboe.cmake` lifts the filter itself,
 because an unpacked AAR is never inside a sysroot.
@@ -131,14 +200,11 @@ because an unpacked AAR is never inside a sysroot.
 ## Things the Android build does not have
 
 - **No TLS unless you supply OpenSSL.** Android has no system OpenSSL; build
-  one for the NDK and point the search roots at it as above. Otherwise the
+  one for the NDK and give its root as above (`OPENSSL_ROOT_DIR`). Otherwise the
   build silently comes out with `PJLIB_WITH_SSL` empty.
-- **No desktop Java, Python or C# bindings.** Those are still built by
-  `pjsip-apps/src/swig/*/Makefile`; they need a JDK probe, javac steps and
-  sample runners that no CMake consumer is asking for.
 - **No video codecs beyond MediaCodec.** OpenH264 and VPX are not bundled and
-  have no Android packages to find. Build them for the NDK and add their
-  prefixes to `CMAKE_FIND_ROOT_PATH`.
+  have no Android packages to find. Build them for the NDK and give their
+  roots (`OpenH264_ROOT`, `VPX_ROOT`).
 
 ## Binary distribution (AAR)
 
@@ -296,7 +362,30 @@ it — so this is the same position as any Android app that opens a MediaCodec
 for `audio/3gpp`. Set `PJMEDIA_HAS_AND_MEDIA_AMRNB` and
 `PJMEDIA_HAS_AND_MEDIA_AMRWB` to 0 in `config_site.h` to drop them.
 
+### Using the AAR
+
+The AAR is all an application needs: the other files in `out-android/dist`
+are for Maven Central (see "Publishing" below). It has no dependencies to
+resolve, so a GitHub release can carry it alone. Copy it into the app's
+`libs/` and add:
+
+```gradle
+dependencies {
+    implementation files('libs/pjsua2-<version>.aar')
+}
+```
+
+This works in an application module. The Android Gradle plugin rejects a
+local `.aar` in a library module ("Direct local .aar file dependencies are
+not supported when building an AAR"), so a library that wraps PJSIP has to
+take it from a Maven repository instead, such as one on the local disk.
+
+The licence texts travel inside the AAR, under `META-INF`, and the app
+redistributes them with it.
+
 ### Publishing
+
+A GitHub release needs none of this: attach the AAR, as above.
 
 The script stops at artifacts that are ready to sign; it does not upload, and
 two one-time account steps have to happen before an upload script would have

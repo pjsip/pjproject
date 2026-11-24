@@ -1,7 +1,7 @@
 # ##############################################################################
 # Target
 
-add_library(webrtc
+add_library(pj_webrtc
   src/webrtc/modules/audio_processing/aec/aec_core.c
   src/webrtc/modules/audio_processing/aec/aec_rdft.c
   src/webrtc/modules/audio_processing/aec/aec_resampler.c
@@ -34,17 +34,17 @@ add_library(webrtc
 )
 
 include(DetectWebRTCParameters)
-target_compile_options(webrtc PRIVATE ${WEBRTC_COMPILE_OPTIONS})
-target_compile_definitions(webrtc PRIVATE ${WEBRTC_COMPILE_DEFINITIONS})
+target_compile_options(pj_webrtc PRIVATE ${WEBRTC_COMPILE_OPTIONS})
+target_compile_definitions(pj_webrtc PRIVATE ${WEBRTC_COMPILE_DEFINITIONS})
 
 # As third_party/build/webrtc/libwebrtc.vcxproj
 if(MSVC)
-  target_compile_options(webrtc PRIVATE /wd4100 /wd4127 /wd4244)
+  target_compile_options(pj_webrtc PRIVATE /wd4100 /wd4127 /wd4244)
 endif()
 
 # include SIMD source files
 if(WEBRTC_ARCH_SIMD STREQUAL "neon")
-  target_sources(webrtc
+  target_sources(pj_webrtc
     PRIVATE
       src/webrtc/modules/audio_processing/aec/aec_core_neon.c
       src/webrtc/modules/audio_processing/aec/aec_rdft_neon.c
@@ -57,7 +57,7 @@ if(WEBRTC_ARCH_SIMD STREQUAL "neon")
       src/webrtc/common_audio/signal_processing/min_max_operations_neon.c
   )
 elseif(WEBRTC_ARCH_SIMD STREQUAL "sse2")
-  target_sources(webrtc
+  target_sources(pj_webrtc
     PRIVATE
       src/webrtc/modules/audio_processing/aec/aec_core_sse2.c
       src/webrtc/modules/audio_processing/aec/aec_rdft_sse2.c
@@ -66,7 +66,7 @@ elseif(WEBRTC_ARCH_SIMD STREQUAL "sse2")
       src/webrtc/system_wrappers/source/cpu_features.cc
   )
 elseif(WEBRTC_ARCH_SIMD STREQUAL "mips")
-  target_sources(webrtc
+  target_sources(pj_webrtc
     PRIVATE
       src/webrtc/modules/audio_processing/aec/aec_core_mips.c
       src/webrtc/modules/audio_processing/aec/aec_rdft_mips.c
@@ -77,7 +77,7 @@ elseif(WEBRTC_ARCH_SIMD STREQUAL "mips")
       src/webrtc/common_audio/signal_processing/min_max_operations_mips.c
   )
 else()
-  target_sources(webrtc
+  target_sources(pj_webrtc
     PRIVATE
       src/webrtc/modules/audio_processing/aecm/aecm_core_c.c
       src/webrtc/modules/audio_processing/ns/nsx_core_c.c
@@ -86,7 +86,7 @@ else()
 endif()
 
 # headers
-target_sources(webrtc
+target_sources(pj_webrtc
   PUBLIC
     FILE_SET HEADERS
       BASE_DIRS
@@ -141,6 +141,6 @@ if (NOT (WIN32 OR CYGWIN OR MINGW))
   # not look.
   find_library(MATH_LIBRARY m)
   if(MATH_LIBRARY OR CMAKE_SYSTEM_NAME STREQUAL "Generic")
-    target_link_libraries(webrtc PRIVATE m)
+    target_link_libraries(pj_webrtc PRIVATE m)
   endif()
 endif()

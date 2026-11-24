@@ -23,10 +23,12 @@
 #    if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
 #      include <openssl/opensslv.h>
 #      if OPENSSL_VERSION_NUMBER >= 0x10100000L
-#        pragma comment(lib, "libcrypto")
-#        pragma comment(lib, "libssl")
+#        if PJ_AUTO_LINK_SSL_LIBS
+#          pragma comment(lib, "libcrypto")
+#          pragma comment(lib, "libssl")
+#        endif
 #        pragma comment(lib, "crypt32")
-#      else
+#      elif PJ_AUTO_LINK_SSL_LIBS
 #        pragma comment(lib, "libeay32")
 #        pragma comment(lib, "ssleay32")
 #      endif

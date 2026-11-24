@@ -335,6 +335,9 @@ static pj_status_t apply_msg_options(pj_stun_session *sess,
     return PJ_SUCCESS;
 }
 
+/* Returns error only when retrying the request fails, in which case the
+ * request is to be completed with that error.
+ */
 static pj_status_t handle_auth_challenge(pj_stun_session *sess,
                                          const pj_stun_tx_data *request,
                                          const pj_stun_msg *response,
@@ -359,12 +362,8 @@ static pj_status_t handle_auth_challenge(pj_stun_session *sess,
 
     ea = (const pj_stun_errcode_attr*)
          pj_stun_msg_find_attr(response, PJ_STUN_ATTR_ERROR_CODE, 0);
-    if (!ea) {
-        PJ_LOG(4,(SNAME(sess), "Invalid error response: no ERROR-CODE"
-                  " attribute"));
-        *notify_user = PJ_FALSE;
-        return PJNATH_EINSTUNMSG;
-    }
+    if (!ea)
+        return PJ_SUCCESS;
 
     if (ea->err_code == PJ_STUN_SC_UNAUTHORIZED || 
         ea->err_code == PJ_STUN_SC_STALE_NONCE)
@@ -378,9 +377,9 @@ static pj_status_t handle_auth_challenge(pj_stun_session *sess,
         anonce = (const pj_stun_nonce_attr*)
                  pj_stun_msg_find_attr(response, PJ_STUN_ATTR_NONCE, 0);
         if (!anonce) {
+            /* Cannot retry, the request fails with this response */
             PJ_LOG(4,(SNAME(sess), "Invalid response: missing NONCE"));
-            *notify_user = PJ_FALSE;
-            return PJNATH_EINSTUNMSG;
+            return PJ_SUCCESS;
         }
 
         /* Bail out if we've supplied the correct nonce */
@@ -392,7 +391,7 @@ static pj_status_t handle_auth_challenge(pj_stun_session *sess,
         if (++sess->auth_retry > 3) {
             PJ_LOG(4,(SNAME(sess), "Error: authentication failed (too "
                       "many retries)"));
-            return PJ_STATUS_FROM_STUN_CODE(401);
+            return PJ_SUCCESS;
         }
 
         /* Save next_nonce */
@@ -436,17 +435,17 @@ static pj_status_t handle_auth_challenge(pj_stun_session *sess,
                 pj_stun_attr_clone(tdata->pool, asrc);
         }
 
-        /* Will retry the request with authentication, no need to
-         * notify user.
-         */
-        *notify_user = PJ_FALSE;
-
         PJ_LOG(4,(SNAME(sess), "Retrying request with new authentication"));
 
         /* Retry the request */
         status = pj_stun_session_send_msg(sess, request->token, PJ_TRUE, 
                                           request->retransmit, src_addr, 
                                           src_addr_len, tdata);
+        if (status != PJ_SUCCESS && status != PJ_EPENDING)
+            return status;
+
+        /* The request is being retried, no need to notify user. */
+        *notify_user = PJ_FALSE;
 
     } else {
         sess->auth_retry = 0;
@@ -464,6 +463,7 @@ static void stun_tsx_on_complete(pj_stun_client_tsx *tsx,
     pj_stun_session *sess;
     pj_bool_t notify_user = PJ_TRUE;
     pj_stun_tx_data *tdata;
+    pj_status_t auth_status;
 
     tdata = (pj_stun_tx_data*) pj_stun_client_tsx_get_data(tsx);
     sess = tdata->sess;
@@ -477,8 +477,15 @@ static void stun_tsx_on_complete(pj_stun_client_tsx *tsx,
     }
 
     /* Handle authentication challenge */
-    handle_auth_challenge(sess, tdata, response, src_addr,
-                          src_addr_len, &notify_user);
+    auth_status = handle_auth_challenge(sess, tdata, response, src_addr,
+                                        src_addr_len, &notify_user);
+    if (auth_status != PJ_SUCCESS) {
+        /* The retry could not be sent, this is what fails the request */
+        status = auth_status;
+        response = NULL;
+        src_addr = NULL;
+        src_addr_len = 0;
+    }
 
     if (notify_user && sess->cb.on_request_complete) {
         (*sess->cb.on_request_complete)(sess, status, tdata->token, tdata, 

@@ -10129,7 +10129,9 @@ printf "%s\n" "** OpenSSL libraries not found **" >&6; }
             fi
         fi
 
-        if test "x$ac_ssl_backend" = "x"; then
+        if test "x$ac_ssl_backend" = "x" && \
+           { test "x$with_mbedtls" = "xno" || test "x$with_gnutls" != "xno"; }
+        then
             if test "x$with_gnutls" != "xno" -a "x$with_gnutls" != "x"; then
                 CFLAGS="$CFLAGS -I$with_gnutls/include"
                 LDFLAGS="$LDFLAGS -L$with_gnutls/lib"
@@ -10223,7 +10225,9 @@ printf "%s\n" "** No GnuTLS libraries found, disabling SSL support **" >&6; }
 
         fi
 
-        if test "x$ac_ssl_backend" = "x"; then
+        if test "x$ac_ssl_backend" = "x" && \
+           { test "x$with_gnutls" = "xno" || test "x$with_mbedtls" != "xno"; }
+        then
                                                 mbedtls_pkg_config="$PKG_CONFIG"
             if test "x$with_mbedtls" != "xno" -a "x$with_mbedtls" != "x"; then
                 mbedtls_pkg_config="env PKG_CONFIG_PATH= PKG_CONFIG_LIBDIR=$with_mbedtls/lib/pkgconfig:$with_mbedtls/lib64/pkgconfig $PKG_CONFIG"

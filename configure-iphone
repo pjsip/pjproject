@@ -20,8 +20,8 @@ if test "$*" = "--help" -o "$*" = "-h"; then
   echo "  ARCH       Optional flags to specify target architecture, e.g."
   echo "             ARCH=\"-arch armv7\". Default is arm64."
   echo "  MIN_IOS    Optional flags to specify minimum supported iOS"
-  echo "             versions, e.g. MIN_IOS=\"-miphoneos-version-min=11.0\". "
-  echo "             Default is 11.0."
+  echo "             versions, e.g. MIN_IOS=\"-miphoneos-version-min=16.0\". "
+  echo "             Default is 15.0."
   echo ""
   exit 0
 fi
@@ -123,7 +123,7 @@ if test "${ARCH_VAL}" = "arm64e"; then
 fi 
 
 if test "${MIN_IOS}" = ""; then
-  MIN_IOS_VER="11.0"
+  MIN_IOS_VER="15.0"
   echo "$F: MIN_IOS is not specified, choosing ${MIN_IOS_VER}"
   MIN_IOS="-miphoneos-version-min=${MIN_IOS_VER}"
 fi
@@ -141,7 +141,7 @@ fi
 #ARCH="-arch armv6"
 export CFLAGS="${CFLAGS} -DPJ_SDK_NAME=\"\\\"`basename $SDKPATH`\\\"\" ${ARCH} -isysroot ${SDKPATH}"
 export LDFLAGS="${LDFLAGS} ${ARCH} -isysroot ${SDKPATH} -framework AudioToolbox -framework Foundation"
-export AR="${TCPATH}/usr/bin/libtool -static -o"
+export AR="${TCPATH}/usr/bin/libtool -static -no_warning_for_no_symbols -o"
 export AR_FLAGS=" "
 export RANLIB="echo ranlib"
 # Use gcc -E as preprocessor instead of cpp, since cpp will find the

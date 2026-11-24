@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -96,6 +96,8 @@ static char *ver_info(pj_uint32_t ver, char *buf, unsigned buf_size)
     return buf;
 }
 
+#if (defined(PJ_HAS_UNAME) && PJ_HAS_UNAME) || \
+    (defined(PJ_SYMBIAN) && PJ_SYMBIAN != 0)
 static pj_uint32_t parse_version(char *str)
 {    
     int i, maxtok;
@@ -125,6 +127,7 @@ static pj_uint32_t parse_version(char *str)
     
     return version;
 }
+#endif
 
 PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
 {
@@ -177,6 +180,9 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
         pj_memcpy(tmp, PJ_SDK_NAME, pj_ansi_strlen(PJ_SDK_NAME) + 1);
         si.sdk_ver = parse_version(tmp);
         #endif
+
+        /* Avoid compile warning. */
+        goto get_sdk_info;
     }
     #else    
     {
@@ -270,6 +276,9 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
         /* Avoid compile warning on Symbian. */
         goto get_sdk_info;
     }
+#else
+    /* Avoid unused label warning, e.g. on MinGW. */
+    goto get_sdk_info;
 #endif
 
     /*

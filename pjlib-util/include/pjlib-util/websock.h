@@ -180,7 +180,8 @@ typedef struct pj_websock_param
      * to use defaults. Ignored for ws:// connections. Only SSL-specific
      * fields (ciphers, certificates, verify mode, etc.) are used;
      * infrastructure fields (ioqueue, timer_heap, cb, user_data) are
-     * overridden internally by the WebSocket layer.
+     * overridden internally by the WebSocket layer. When verify_peer is
+     * set, the server certificate must also match the URL host.
      */
     pj_ssl_sock_param   *ssl_param;
 

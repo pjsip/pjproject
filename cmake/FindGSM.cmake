@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_search_module(PC_GSM QUIET gsm libgsm)
+  pj_pkg_search_module(PC_GSM QUIET gsm libgsm)
   set(GSM_VERSION ${PC_GSM_VERSION})
 endif()
 
@@ -25,11 +26,24 @@ find_library(GSM_LIBRARY
 )
 mark_as_advanced(GSM_LIBRARY)
 
+if(GSM_INCLUDE_DIR AND GSM_LIBRARY)
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(GSM
+    CODE "
+#include <gsm.h>
+int main(void) { gsm g = gsm_create(); gsm_destroy(g); return 0; }
+"
+    INCLUDE_DIRS ${GSM_INCLUDE_DIR}
+    LIBRARIES ${GSM_LIBRARY}
+  )
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(GSM
   REQUIRED_VARS
     GSM_INCLUDE_DIR
     GSM_LIBRARY
+    GSM_USABLE
   VERSION_VAR
     GSM_VERSION
 )
@@ -46,5 +60,7 @@ if(GSM_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${GSM_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${GSM_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(GSM::GSM GSM_LIBRARY)
   endif()
 endif()

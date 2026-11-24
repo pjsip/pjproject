@@ -1,3 +1,5 @@
+list(APPEND CMAKE_MESSAGE_CONTEXT "pjlib-util")
+
 # ##############################################################################
 # Target
 
@@ -88,6 +90,7 @@ target_sources(pjlib-util-test-sources INTERFACE
   src/pjlib-util-test/json_test.c
   src/pjlib-util-test/http_client.c
   src/pjlib-util-test/websock_test.c
+  src/pjlib-util-test/cli_telnet_test.c
 )
 
 if(BUILD_TESTING)
@@ -95,5 +98,9 @@ if(BUILD_TESTING)
 
   target_link_libraries(pjlib-util-test PRIVATE pjlib-util-test-sources pjlib pjlib-util)
 
-  add_test(NAME pjlib-util-test COMMAND pjlib-util-test)
+  # Run from pjlib-util/build, as make
+  add_test(NAME pjlib-util-test
+    COMMAND pjlib-util-test
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build"
+  )
 endif()

@@ -186,7 +186,7 @@ static void send_msg_callback(pjsip_send_state *stateless_data,
     if (sent < 1) {
         /* Obtain the error code. */
         PJ_LOG(3,(THIS_FILE, "   Sending %s got callback error %ld",
-                  stateless_data->tdata->info, -sent));
+                  stateless_data->tdata->info, (long)-sent));
         sr_g[tid].send_status = (int)-sent;
     } else {
         sr_g[tid].send_status = PJ_SUCCESS;

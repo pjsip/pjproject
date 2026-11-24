@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -211,7 +211,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool_,
 {
     avi_reader_streams *streams = NULL;
     pjmedia_avi_hdr avi_hdr;
-    struct avi_reader_port *fport[PJMEDIA_AVI_MAX_NUM_STREAMS];
+    struct avi_reader_port *fport[PJMEDIA_AVI_MAX_NUM_STREAMS] = { NULL };
     pj_off_t pos;
     unsigned i, nstr = 0;
     pj_pool_t *pool = NULL;

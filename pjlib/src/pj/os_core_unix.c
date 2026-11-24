@@ -1968,7 +1968,9 @@ PJ_DEF(pj_status_t) pj_mutex_destroy(pj_mutex_t *mutex)
 {
     enum { RETRY = 4 };
     int status = 0;
+#if PJ_HAS_THREADS
     unsigned retry;
+#endif
 
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(mutex, PJ_EINVAL);

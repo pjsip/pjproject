@@ -69,6 +69,7 @@ struct pj_websock
 
     /* Transport */
     pj_ssl_sock_t          *ssl_sock;
+    pj_bool_t               verify_peer;
     pj_activesock_t        *asock;
     pj_ioqueue_op_key_t     send_key;
     pj_bool_t               send_pending;
@@ -584,6 +585,29 @@ static pj_bool_t ssl_on_connect_complete(pj_ssl_sock_t *ssock,
                                          pj_status_t status)
 {
     pj_websock *ws = (pj_websock*)pj_ssl_sock_get_user_data(ssock);
+
+    /* The SSL socket does not verify the server identity */
+    if (status == PJ_SUCCESS && ws->verify_peer) {
+        pj_ssl_sock_info info;
+
+        status = pj_ssl_sock_get_info(ssock, &info);
+        if (status == PJ_SUCCESS &&
+            (!info.remote_cert_info || !info.remote_cert_info->version ||
+             pj_ssl_cert_verify_name(info.remote_cert_info, &ws->host, 0)
+                                                        != PJ_SUCCESS))
+        {
+            PJ_LOG(2, (THIS_FILE, "Server certificate does not match "
+                       "host %.*s", (int)ws->host.slen, ws->host.ptr));
+            status = PJ_EINVAL;
+        }
+        if (status != PJ_SUCCESS) {
+            pj_grp_lock_acquire(ws->grp_lock);
+            pj_ssl_sock_close(ssock);
+            ws->ssl_sock = NULL;
+            pj_grp_lock_release(ws->grp_lock);
+        }
+    }
+
     on_transport_connected(ws, status);
     return (status == PJ_SUCCESS) ? PJ_TRUE : PJ_FALSE;
 }
@@ -1370,6 +1394,7 @@ PJ_DEF(pj_status_t) pj_websock_connect(
         ssl_prm.sock_af = rem_addr.addr.sa_family;
         ssl_prm.sock_type = pj_SOCK_STREAM();
         ssl_prm.grp_lock = ws->grp_lock;
+        ws->verify_peer = ssl_prm.verify_peer;
 
         status = pj_ssl_sock_create(ws->pool, &ssl_prm, &ws->ssl_sock);
         if (status != PJ_SUCCESS) {

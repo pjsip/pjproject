@@ -1,14 +1,19 @@
+list(APPEND CMAKE_MESSAGE_CONTEXT "pjnath")
+
 # ##############################################################################
 # Options
 
+include(Pj/Option)
+
 # Include UPnP (Universal Plug and Play) support
-option(PJNATH_WITH_UPNP "Enable UPnP support" ON)
-if(PJNATH_WITH_UPNP)
-  find_package(UPNP)
-  if(NOT UPNP_FOUND)
-    set(PJNATH_WITH_UPNP OFF CACHE BOOL "Enable UPnP support (not found)" FORCE)
-  endif()
+# an earlier version of this file forced it off without a way back
+get_property(_pj_doc CACHE PJNATH_WITH_UPNP PROPERTY HELPSTRING)
+if(_pj_doc MATCHES "\\(not found\\)$")
+  unset(PJNATH_WITH_UPNP CACHE)
 endif()
+unset(_pj_doc)
+option(PJNATH_WITH_UPNP "Enable UPnP support" ON)
+pj_find_optional(PJNATH_WITH_UPNP OFF UPNP)
 
 # ##############################################################################
 # Target
@@ -57,7 +62,8 @@ target_sources(pjnath
 # ##############################################################################
 # Dependencies
 
-target_link_libraries(pjnath PUBLIC pjlib PRIVATE pjlib-util)
+# PUBLIC: what the public headers include
+target_link_libraries(pjnath PUBLIC pjlib pjlib-util)
 
 # upnp
 if(PJNATH_WITH_UPNP)
@@ -67,9 +73,16 @@ if(PJNATH_WITH_UPNP)
 endif()
 
 # ##############################################################################
+# TURN client and server, built with the other applications as make does
+
+if(NOT PJ_BUILD_APPS)
+  set(_pj_turn_exclude EXCLUDE_FROM_ALL)
+endif()
+
+# ##############################################################################
 # Client application
 
-add_executable(pjturn-client EXCLUDE_FROM_ALL
+add_executable(pjturn-client ${_pj_turn_exclude}
   src/pjturn-client/client_main.c
 )
 
@@ -78,7 +91,7 @@ target_link_libraries(pjturn-client PRIVATE pjlib pjlib-util pjnath)
 # ##############################################################################
 # Server application
 
-add_executable(pjturn-srv EXCLUDE_FROM_ALL
+add_executable(pjturn-srv ${_pj_turn_exclude}
   src/pjturn-srv/allocation.c
   src/pjturn-srv/auth.c
   src/pjturn-srv/listener_udp.c
@@ -88,6 +101,7 @@ add_executable(pjturn-srv EXCLUDE_FROM_ALL
 )
 
 target_link_libraries(pjturn-srv PRIVATE pjlib pjlib-util pjnath)
+unset(_pj_turn_exclude)
 
 # ##############################################################################
 # Test application
@@ -107,11 +121,16 @@ target_sources(pjnath-test-sources INTERFACE
 )
 
 if(BUILD_TESTING)
-  add_executable(pjnath-test src/pjnath-test/${PJ_TEST_MAIN})
+  # main.c for every target, as make: pjnath has no main_rtems.c
+  add_executable(pjnath-test src/pjnath-test/main.c)
 
   target_link_libraries(pjnath-test PRIVATE pjnath-test-sources pjlib pjlib-util pjnath)
 
-  add_test(NAME pjnath-test COMMAND pjnath-test)
+  # Run from pjnath/build, as make
+  add_test(NAME pjnath-test
+    COMMAND pjnath-test
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build"
+  )
 endif()
 
 # For the pkg-config file: the files of the dependencies found here

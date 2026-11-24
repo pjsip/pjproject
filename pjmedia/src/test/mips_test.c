@@ -720,6 +720,7 @@ static pjmedia_port* large_filt_resample( pj_pool_t *pool,
 /***************************************************************************/
 /* Codec encode/decode */
 
+#if HAS_AUDIO_CODECS
 struct codec_port
 {
     pjmedia_port     base;
@@ -780,7 +781,6 @@ static pj_status_t codec_on_destroy(struct pjmedia_port *this_port)
     return PJ_SUCCESS;
 }
 
-#if HAS_AUDIO_CODECS
 static pjmedia_port* codec_encode_decode( pj_pool_t *pool,
                                           const char *codec,
                                           pj_status_t (*codec_init)(pjmedia_endpt*),
@@ -1751,6 +1751,7 @@ static pjmedia_port* create_tonegen2(pj_pool_t *pool,
 /***************************************************************************/
 /* Stream */
 
+#if HAS_AUDIO_CODECS
 struct stream_port
 {
     pjmedia_port         base;
@@ -1772,7 +1773,6 @@ static void stream_port_custom_deinit(struct test_entry *te)
 
 }
 
-#if HAS_AUDIO_CODECS
 static pjmedia_port* create_stream( pj_pool_t *pool,
                                     const char *codec,
                                     pj_status_t (*codec_init)(pjmedia_endpt*),
@@ -2369,7 +2369,8 @@ static pjmedia_port* delaybuf_n20(pj_pool_t *pool,
 
 
 /* The hundred-call entries: a hundred streams of pools and jitter buffers */
-#if PJTEST_TARGET_RAM_KB >= 2048
+#if PJTEST_TARGET_RAM_KB >= 2048 && \
+    (PJMEDIA_HAS_G711_CODEC || PJMEDIA_HAS_SPEEX_CODEC)
 /***************************************************************************/
 
 static pjmedia_stream* create_call_stream(  pjmedia_endpt *endpt,
@@ -2635,8 +2636,7 @@ static pjmedia_port* conf100_pcmu_noparallel_test_init(pj_pool_t *pool,
                           samples_per_frame, PJ_FALSE, PJ_FALSE, PJ_FALSE,
                           PJ_TRUE, flags, te);
 }
-
-#endif  /* PJMEDIA_HAS_G711_CODEC */
+#endif
 
 #if PJMEDIA_HAS_SPEEX_CODEC
 /***************************************************************************/
@@ -2653,8 +2653,7 @@ static pjmedia_port* conf100_speex_test_init(pj_pool_t *pool,
                           samples_per_frame, PJ_FALSE, PJ_FALSE, PJ_FALSE,
                           PJ_FALSE, flags, te);
 }
-
-#endif  /* PJMEDIA_HAS_SPEEX_CODEC */
+#endif
 
 #if PJMEDIA_HAS_G711_CODEC
 /***************************************************************************/
@@ -2671,10 +2670,9 @@ static pjmedia_port* conf100_pcmu_srtp80auth_test_init(pj_pool_t *pool,
                           samples_per_frame, PJ_TRUE, PJ_TRUE, PJ_TRUE,
                           PJ_FALSE, flags, te);
 }
+#endif
 
-
-#endif  /* PJMEDIA_HAS_G711_CODEC */
-#endif  /* PJTEST_TARGET_RAM_KB >= 2048 */
+#endif  /* PJTEST_TARGET_RAM_KB >= 2048 && (G711 || SPEEX) */
 
 /***************************************************************************/
 /* Run test entry, return elapsed time */

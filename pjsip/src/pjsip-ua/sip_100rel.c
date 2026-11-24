@@ -94,6 +94,8 @@ typedef struct tx_data_list_t
 typedef struct uas_state_t
 {
         pj_int32_t       cseq;
+        pj_uint32_t      first_rseq;
+        pj_uint32_t      last_sent_rseq;
         pj_uint32_t      rseq;  /* Initialized to -1 */
         tx_data_list_t   tx_data_list;
         unsigned         retransmit_count;
@@ -439,21 +441,20 @@ static void parse_rack(const pj_str_t *rack,
     token.slen = p - token.ptr;
     *p_rseq = pj_strtoul(&token);
 
-    ++p;
+    while (p < end && pj_isspace(*p))
+        ++p;
     token.ptr = (char*)p;
     while (p < end && pj_isdigit(*p))
         ++p;
     token.slen = p - token.ptr;
     *p_seq = pj_strtoul(&token);
 
-    ++p;
-    if (p < end) {
-        p_method->ptr = (char*)p;
-        p_method->slen = end - p;
-    } else {
-        p_method->ptr = NULL;
-        p_method->slen = 0;
-    }
+    while (p < end && pj_isspace(*p))
+        ++p;
+    p_method->ptr = (char*)p;
+    while (p < end && !pj_isspace(*p))
+        ++p;
+    p_method->slen = p - p_method->ptr;
 }
 
 
@@ -493,29 +494,34 @@ PJ_DEF(pj_status_t) pjsip_100rel_on_rx_prack( pjsip_inv_session *inv,
         return PJSIP_ENOTINITIALIZED;
     }
 
-    /* Ignore if we don't have pending transmission */
-    if (dd->uas_state == NULL || pj_list_empty(&dd->uas_state->tx_data_list)) {
-        PJ_LOG(4,(dd->inv->dlg->obj_name, 
-                  "PRACK ignored - no pending response"));
-        return PJ_EIGNORED;
-    }
-
     /* Find RAck header */
     rack_hdr = (pjsip_generic_string_hdr*)
                pjsip_msg_find_hdr_by_name(msg, &RACK, NULL);
     if (!rack_hdr) {
         /* RAck header not found */
         PJ_LOG(4,(dd->inv->dlg->obj_name, "No RAck header"));
-        return PJSIP_EMISSINGHDR;
+        return PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_BAD_REQUEST);
     }
 
     /* Parse RAck header */
     parse_rack(&rack_hdr->hvalue, &rseq, &cseq, &method);
 
+    /* RFC 3262 section 3: reject a PRACK that matches no reliable
+     * provisional response we have sent.
+     */
+    if (dd->uas_state == NULL || cseq != dd->uas_state->cseq ||
+        pj_strcmp(&method, &pjsip_invite_method.name) != 0 ||
+        rseq < dd->uas_state->first_rseq ||
+        rseq > dd->uas_state->last_sent_rseq)
+    {
+        PJ_LOG(4,(dd->inv->dlg->obj_name, 
+                 "Rx PRACK with no matching reliable response"));
+        return PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_CALL_TSX_DOES_NOT_EXIST);
+    }
 
     /* Match RAck against outgoing transmission */
-    if (rseq == dd->uas_state->tx_data_list.next->rseq &&
-        cseq == dd->uas_state->cseq)
+    if (!pj_list_empty(&dd->uas_state->tx_data_list) &&
+        rseq == dd->uas_state->tx_data_list.next->rseq)
     {
         /* 
          * Yes this PRACK matches outgoing transmission.
@@ -543,9 +549,9 @@ PJ_DEF(pj_status_t) pjsip_100rel_on_rx_prack( pjsip_inv_session *inv,
         }
 
     } else {
-        /* No it doesn't match */
+        /* Already acknowledged, or dropped by a final response */
         PJ_LOG(4,(dd->inv->dlg->obj_name, 
-                 "Rx PRACK with no matching reliable response"));
+                  "PRACK ignored - no pending response"));
         return PJ_EIGNORED;
     }
 
@@ -610,10 +616,18 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
     final = tdata->msg->line.status.code >= 200;
 
     if (dd->uas_state->retransmit_count == 1) {
+        pj_uint32_t last_sent_rseq = dd->uas_state->last_sent_rseq;
         pj_status_t status;
         
+        /* Before sending: the PRACK may be processed before the send
+         * returns, and tl may be freed by then.
+         */
+        if (!final)
+            dd->uas_state->last_sent_rseq = tl->rseq;
+
         status = pjsip_tsx_send_msg(invite_tsx, tdata);
         if (status != PJ_SUCCESS) {
+            dd->uas_state->last_sent_rseq = last_sent_rseq;
             PJ_PERROR(3, (THIS_FILE, status,
                          "Failed to send message"));
             return;
@@ -630,6 +644,10 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
         clear_all_responses(dd);
         return;
     }
+
+    /* Cleared while sending, e.g. by a 2xx sent from a callback */
+    if (pj_list_empty(&dd->uas_state->tx_data_list))
+        return;
 
     /* Schedule next retransmission */
     if (dd->uas_state->retransmit_count < 6) {
@@ -861,6 +879,8 @@ PJ_DEF(pj_status_t) pjsip_100rel_tx_response(pjsip_inv_session *inv,
                                              uas_state_t);
             dd->uas_state->cseq = cseq_hdr->cseq;
             dd->uas_state->rseq = (pj_rand() % 0x7FFF) + 1;
+            dd->uas_state->first_rseq = dd->uas_state->rseq;
+            dd->uas_state->last_sent_rseq = dd->uas_state->rseq - 1;
             pj_list_init(&dd->uas_state->tx_data_list);
             dd->uas_state->retransmit_timer.user_data = dd;
             dd->uas_state->retransmit_timer.cb = &on_retransmit;

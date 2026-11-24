@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_search_module(PC_SampleRate QUIET samplerate libsamplerate)
+  pj_pkg_search_module(PC_SampleRate QUIET samplerate libsamplerate)
   set(SampleRate_VERSION ${PC_SampleRate_VERSION})
 endif()
 
@@ -23,11 +24,21 @@ find_library(SampleRate_LIBRARY
 )
 mark_as_advanced(SampleRate_LIBRARY)
 
+if(SampleRate_INCLUDE_DIR AND SampleRate_LIBRARY)
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(SampleRate
+    FUNCTION src_new
+    LIBRARIES "${SampleRate_LIBRARY}"
+    STATIC_LIBS m
+  )
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(SampleRate
   REQUIRED_VARS
     SampleRate_LIBRARY
     SampleRate_INCLUDE_DIR
+    SampleRate_USABLE
   VERSION_VAR
     SampleRate_VERSION
 )
@@ -44,5 +55,7 @@ if(SampleRate_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${SampleRate_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${SampleRate_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(SampleRate::SampleRate SampleRate_LIBRARY)
   endif()
 endif()

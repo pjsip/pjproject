@@ -1727,7 +1727,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_clear_key( pj_ioqueue_key_t *key )
             /* Timeout after ~1 second */
             if (++counter > 100) {
                 PJ_LOG(1,(THIS_FILE, "Timeout waiting for read callback "
-                                     "to finish on socket=%ld", key->fd));
+                                     "to finish on socket=%ld", (long)key->fd));
                 break;
             }
         }
@@ -1753,7 +1753,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_clear_key( pj_ioqueue_key_t *key )
             /* Timeout after ~1 second */
             if (++counter > 100) {
                 PJ_LOG(1,(THIS_FILE, "Timeout waiting for write callback "
-                                     "to finish on socket=%ld", key->fd));
+                                     "to finish on socket=%ld", (long)key->fd));
                 break;
             }
         }

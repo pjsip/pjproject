@@ -785,7 +785,6 @@ static int echo_test_with_certs(pj_ssl_sock_proto srv_proto,
     pj_sockaddr addr, listen_addr;
     pj_ssl_cipher ciphers[1];
     pj_ssl_cert_t *cert = NULL;
-    pj_ssl_cert_t *cli_cert = NULL;
     pj_status_t status;
 
 #if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_SCHANNEL)
@@ -988,7 +987,7 @@ static int echo_test_with_certs(pj_ssl_sock_proto srv_proto,
     }
 #else
     {
-        cli_cert = cert;
+        pj_ssl_cert_t *cli_cert = cert;
 
         if (!client_provide_cert) {
             pj_str_t ca_file = pj_str(CERT_CA_FILE);
@@ -3009,6 +3008,7 @@ static pj_bool_t serial_on_connect(pj_ssl_sock_t *ssock, pj_status_t status)
                               pj_ssl_sock_get_user_data(ssock);
     pj_ssl_sock_info info;
 
+    pj_bzero(&info, sizeof(info));
     if (status == PJ_SUCCESS)
         status = pj_ssl_sock_get_info(ssock, &info);
     if (status == PJ_SUCCESS)
@@ -3191,6 +3191,396 @@ static int cert_serial_test(void)
     }
 
 on_return:
+    if (timer)
+        pj_timer_heap_destroy(timer);
+    if (ioqueue)
+        pj_ioqueue_destroy(ioqueue);
+    pj_pool_release(pool);
+
+    return (status == PJ_SUCCESS) ? 0 : -1;
+}
+
+struct chain_state
+{
+    pj_pool_t      *pool;
+    pj_bool_t       done;           /* handshake completed or failed      */
+    pj_status_t     err;
+    pj_bool_t       got_cert;       /* server: client sent a certificate  */
+    pj_uint32_t     verify_status;  /* server: client cert verify status  */
+    pj_uint8_t      read_buf[64];
+};
+
+static pj_bool_t chain_on_accept(pj_ssl_sock_t *ssock,
+                                 pj_ssl_sock_t *newsock,
+                                 const pj_sockaddr_t *src_addr,
+                                 int src_addr_len,
+                                 pj_status_t accept_status)
+{
+    struct chain_state *st = (struct chain_state*)
+                             pj_ssl_sock_get_user_data(ssock);
+    pj_ssl_sock_info info;
+    void *read_buf[1];
+
+    PJ_UNUSED_ARG(src_addr);
+    PJ_UNUSED_ARG(src_addr_len);
+
+    st->done = PJ_TRUE;
+    st->err = accept_status;
+    if (accept_status != PJ_SUCCESS)
+        return PJ_TRUE;
+
+    if (pj_ssl_sock_get_info(newsock, &info) == PJ_SUCCESS) {
+        st->got_cert = (info.remote_cert_info &&
+                        info.remote_cert_info->subject.info.slen);
+        st->verify_status = info.verify_status;
+    }
+
+    /* Read so we notice the client closing (EOF). */
+    read_buf[0] = st->read_buf;
+    if (pj_ssl_sock_start_read2(newsock, st->pool, sizeof(st->read_buf),
+                                read_buf, 0) != PJ_SUCCESS)
+    {
+        pj_ssl_sock_close(newsock);
+    }
+    return PJ_TRUE;
+}
+
+static pj_bool_t chain_on_connect(pj_ssl_sock_t *ssock, pj_status_t status)
+{
+    struct chain_state *st = (struct chain_state*)
+                             pj_ssl_sock_get_user_data(ssock);
+
+    st->err = status;
+    st->done = PJ_TRUE;
+    return PJ_TRUE;
+}
+
+/* A client certificate whose chain ends at a CA the server doesn't trust
+ * must not be reported as verified, also when the client sends that CA.
+ * The client certificate is optional, so the handshake itself succeeds.
+ */
+static int untrusted_chain_test(void)
+{
+    pj_pool_t *pool;
+    pj_ioqueue_t *ioqueue = NULL;
+    pj_timer_heap_t *timer = NULL;
+    pj_ssl_sock_t *ssock_serv = NULL;
+    pj_ssl_sock_t *ssock_cli = NULL;
+    pj_ssl_sock_param param;
+    pj_ssl_sock_info info;
+    pj_ssl_cert_t *cert = NULL;
+    pj_ssl_cert_t *cli_cert = NULL;
+    pj_ssl_cert_buffer ca_buf, cert_buf, key_buf, cli_buf, issuer_buf;
+    pj_ssl_cert_buffer chain_buf;
+    pj_str_t file, pass = pj_str(CERT_PRIVKEY_PASS);
+    struct chain_state state_serv, state_cli;
+    pj_sockaddr bind_addr, listen_addr;
+    pj_str_t tmp_st;
+    unsigned loop;
+    pj_status_t status;
+
+    pj_bzero(&state_serv, sizeof(state_serv));
+    pj_bzero(&state_cli, sizeof(state_cli));
+    pj_bzero(&cli_buf, sizeof(cli_buf));
+    pj_bzero(&issuer_buf, sizeof(issuer_buf));
+
+    pool = pj_pool_create(mem, "ssl_chain", 512, 512, NULL);
+    state_serv.pool = state_cli.pool = pool;
+    status = pj_ioqueue_create(pool, 8, &ioqueue);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+    status = pj_timer_heap_create(pool, 8, &timer);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    status = load_cert_to_buf(pool, pj_cstr(&file, CERT_CA_FILE), &ca_buf);
+    if (status == PJ_SUCCESS)
+        status = load_cert_to_buf(pool, pj_cstr(&file, CERT_FILE), &cert_buf);
+    if (status == PJ_SUCCESS)
+        status = load_cert_to_buf(pool, pj_cstr(&file, CERT_PRIVKEY_FILE),
+                                  &key_buf);
+    if (status == PJ_SUCCESS)
+        status = load_cert_to_buf(pool, pj_cstr(&file, CERT_CLI_FILE),
+                                  &cli_buf);
+    /* Issuer of CERT_CLI_FILE, PEM so it can be appended to the chain */
+    if (status == PJ_SUCCESS)
+        status = load_cert_to_buf(pool, pj_cstr(&file, CERT_DIR "cacert.pem"),
+                                  &issuer_buf);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    pj_ssl_sock_param_default(&param);
+    param.cb.on_accept_complete2 = &chain_on_accept;
+    param.cb.on_connect_complete = &chain_on_connect;
+    param.cb.on_data_read = &serial_on_read;
+    param.ioqueue = ioqueue;
+    param.timer_heap = timer;
+
+    /* === SERVER: trusts no CA === */
+    param.user_data = &state_serv;
+    status = pj_ssl_sock_create(pool, &param, &ssock_serv);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    status = pj_ssl_cert_load_from_buffer(pool, NULL, &cert_buf, &key_buf,
+                                          &pass, &cert);
+    if (status == PJ_SUCCESS)
+        status = pj_ssl_sock_set_certificate(ssock_serv, pool, cert);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    pj_sockaddr_init(PJ_AF_INET, &listen_addr,
+                     pj_strset2(&tmp_st, "127.0.0.1"), 0);
+    status = pj_ssl_sock_start_accept(ssock_serv, pool, &listen_addr,
+                                      pj_sockaddr_get_len(&listen_addr));
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    pj_ssl_sock_get_info(ssock_serv, &info);
+    pj_sockaddr_cp(&listen_addr, &info.local_addr);
+
+    /* === CLIENT: sends its certificate followed by its issuer === */
+    param.user_data = &state_cli;
+    param.server_name = pj_str("127.0.0.1");
+    status = pj_ssl_sock_create(pool, &param, &ssock_cli);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    chain_buf.ptr = (char*)pj_pool_zalloc(pool, cli_buf.slen +
+                                                issuer_buf.slen + 1);
+    pj_memcpy(chain_buf.ptr, cli_buf.ptr, cli_buf.slen);
+    pj_memcpy(chain_buf.ptr + cli_buf.slen, issuer_buf.ptr, issuer_buf.slen);
+    chain_buf.slen = cli_buf.slen + issuer_buf.slen;
+
+    status = load_cert_to_buf(pool, pj_cstr(&file, CERT_CLI_PRIVKEY_FILE),
+                              &key_buf);
+    if (status == PJ_SUCCESS)
+        status = pj_ssl_cert_load_from_buffer(pool, &ca_buf, &chain_buf,
+                                              &key_buf, &pass, &cli_cert);
+    if (status == PJ_SUCCESS)
+        status = pj_ssl_sock_set_certificate(ssock_cli, pool, cli_cert);
+    if (status != PJ_SUCCESS) {
+        pj_ssl_sock_close(ssock_cli);
+        goto on_return;
+    }
+
+    pj_sockaddr_init(PJ_AF_INET, &bind_addr,
+                     pj_strset2(&tmp_st, "127.0.0.1"), 0);
+    status = pj_ssl_sock_start_connect(ssock_cli, pool, &bind_addr,
+                                       &listen_addr,
+                                       pj_sockaddr_get_len(&listen_addr));
+    if (status == PJ_SUCCESS) {
+        chain_on_connect(ssock_cli, PJ_SUCCESS);
+    } else if (status != PJ_EPENDING) {
+        pj_ssl_sock_close(ssock_cli);
+        goto on_return;
+    }
+
+    loop = 0;
+    while ((!state_cli.done || !state_serv.done) && loop++ < 1000) {
+        pj_time_val delay = {0, 100};
+        pj_ioqueue_poll(ioqueue, &delay);
+        pj_timer_heap_poll(timer, NULL);
+    }
+
+    pj_ssl_sock_close(ssock_cli);
+    if (!state_serv.done) {
+        status = PJ_ETIMEDOUT;
+        goto on_return;
+    }
+
+    status = PJ_SUCCESS;
+#if PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_GNUTLS
+    /* This backend requests the optional client certificate */
+    if (state_serv.err != PJ_SUCCESS || !state_serv.got_cert) {
+        PJ_LOG(1, ("", "...ERROR: handshake failed or no client "
+                       "certificate received"));
+        status = PJ_EBUG;
+    }
+#endif
+    if (state_serv.err == PJ_SUCCESS && state_serv.got_cert &&
+        (state_serv.verify_status & (PJ_SSL_CERT_EUNTRUSTED |
+                                     PJ_SSL_CERT_EISSUER_NOT_FOUND)) == 0)
+    {
+        PJ_LOG(1, ("", "...ERROR: untrusted client certificate chain "
+                       "reported as verified"));
+        status = PJ_EBUG;
+    }
+
+on_return:
+    if (ssock_serv)
+        pj_ssl_sock_close(ssock_serv);
+
+    /* Let the accepted socket observe the client close. */
+    if (ioqueue && timer) {
+        pj_time_val delay = {0, 500};
+        loop = 0;
+        while (pj_ioqueue_poll(ioqueue, &delay) > 0 && loop++ < 100)
+            ;
+        pj_timer_heap_poll(timer, NULL);
+    }
+
+    if (status != PJ_SUCCESS)
+        app_perror("...ERROR untrusted_chain_test()", status);
+    if (timer)
+        pj_timer_heap_destroy(timer);
+    if (ioqueue)
+        pj_ioqueue_destroy(ioqueue);
+    pj_pool_release(pool);
+
+    return (status == PJ_SUCCESS) ? 0 : -1;
+}
+
+static pj_bool_t no_ca_on_connect(pj_ssl_sock_t *ssock, pj_status_t status)
+{
+    struct chain_state *st = (struct chain_state*)
+                             pj_ssl_sock_get_user_data(ssock);
+    pj_ssl_sock_info info;
+
+    st->err = status;
+    if (status == PJ_SUCCESS &&
+        pj_ssl_sock_get_info(ssock, &info) == PJ_SUCCESS)
+    {
+        st->verify_status = info.verify_status;
+    }
+    st->done = PJ_TRUE;
+    return PJ_TRUE;
+}
+
+/* A client without any CA cannot trust the server certificate. With
+ * verify_peer the handshake must fail, without it the handshake succeeds
+ * and the certificate must not be reported as verified.
+ */
+static int no_ca_client_test(pj_bool_t verify_peer)
+{
+    pj_pool_t *pool;
+    pj_ioqueue_t *ioqueue = NULL;
+    pj_timer_heap_t *timer = NULL;
+    pj_ssl_sock_t *ssock_serv = NULL;
+    pj_ssl_sock_t *ssock_cli = NULL;
+    pj_ssl_sock_param param;
+    pj_ssl_sock_info info;
+    pj_ssl_cert_t *cert = NULL;
+    pj_ssl_cert_buffer cert_buf, key_buf;
+    pj_str_t file, pass = pj_str(CERT_PRIVKEY_PASS);
+    struct chain_state state_serv, state_cli;
+    pj_sockaddr bind_addr, listen_addr;
+    pj_str_t tmp_st;
+    unsigned loop;
+    pj_status_t status;
+
+    pj_bzero(&state_serv, sizeof(state_serv));
+    pj_bzero(&state_cli, sizeof(state_cli));
+
+    pool = pj_pool_create(mem, "ssl_noca", 512, 512, NULL);
+    state_serv.pool = state_cli.pool = pool;
+    status = pj_ioqueue_create(pool, 8, &ioqueue);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+    status = pj_timer_heap_create(pool, 8, &timer);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    status = load_cert_to_buf(pool, pj_cstr(&file, CERT_FILE), &cert_buf);
+    if (status == PJ_SUCCESS)
+        status = load_cert_to_buf(pool, pj_cstr(&file, CERT_PRIVKEY_FILE),
+                                  &key_buf);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    pj_ssl_sock_param_default(&param);
+    param.cb.on_accept_complete2 = &chain_on_accept;
+    param.cb.on_connect_complete = &no_ca_on_connect;
+    param.cb.on_data_read = &serial_on_read;
+    param.ioqueue = ioqueue;
+    param.timer_heap = timer;
+
+    /* === SERVER === */
+    param.user_data = &state_serv;
+    status = pj_ssl_sock_create(pool, &param, &ssock_serv);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    status = pj_ssl_cert_load_from_buffer(pool, NULL, &cert_buf, &key_buf,
+                                          &pass, &cert);
+    if (status == PJ_SUCCESS)
+        status = pj_ssl_sock_set_certificate(ssock_serv, pool, cert);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    pj_sockaddr_init(PJ_AF_INET, &listen_addr,
+                     pj_strset2(&tmp_st, "127.0.0.1"), 0);
+    status = pj_ssl_sock_start_accept(ssock_serv, pool, &listen_addr,
+                                      pj_sockaddr_get_len(&listen_addr));
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    pj_ssl_sock_get_info(ssock_serv, &info);
+    pj_sockaddr_cp(&listen_addr, &info.local_addr);
+
+    /* === CLIENT: no certificate, no CA === */
+    param.user_data = &state_cli;
+    param.verify_peer = verify_peer;
+    status = pj_ssl_sock_create(pool, &param, &ssock_cli);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    pj_sockaddr_init(PJ_AF_INET, &bind_addr,
+                     pj_strset2(&tmp_st, "127.0.0.1"), 0);
+    status = pj_ssl_sock_start_connect(ssock_cli, pool, &bind_addr,
+                                       &listen_addr,
+                                       pj_sockaddr_get_len(&listen_addr));
+    if (status == PJ_SUCCESS) {
+        no_ca_on_connect(ssock_cli, PJ_SUCCESS);
+    } else if (status != PJ_EPENDING) {
+        pj_ssl_sock_close(ssock_cli);
+        goto on_return;
+    }
+
+    loop = 0;
+    while ((!state_cli.done || !state_serv.done) && loop++ < 1000) {
+        pj_time_val delay = {0, 100};
+        pj_ioqueue_poll(ioqueue, &delay);
+        pj_timer_heap_poll(timer, NULL);
+    }
+
+    pj_ssl_sock_close(ssock_cli);
+    if (!state_cli.done || !state_serv.done) {
+        status = PJ_ETIMEDOUT;
+        goto on_return;
+    }
+
+    status = PJ_SUCCESS;
+    if (verify_peer) {
+        if (state_cli.err == PJ_SUCCESS) {
+            PJ_LOG(1, ("", "...ERROR: handshake succeeded with an untrusted "
+                           "server certificate"));
+            status = PJ_EBUG;
+        }
+    } else if (state_cli.err != PJ_SUCCESS) {
+        PJ_LOG(1, ("", "...ERROR: handshake failed"));
+        status = state_cli.err;
+    } else if (state_cli.verify_status == 0) {
+        PJ_LOG(1, ("", "...ERROR: untrusted server certificate reported "
+                       "as verified"));
+        status = PJ_EBUG;
+    }
+
+on_return:
+    if (ssock_serv)
+        pj_ssl_sock_close(ssock_serv);
+
+    /* Let the accepted socket observe the client close. */
+    if (ioqueue && timer) {
+        pj_time_val delay = {0, 500};
+        loop = 0;
+        while (pj_ioqueue_poll(ioqueue, &delay) > 0 && loop++ < 100)
+            ;
+        pj_timer_heap_poll(timer, NULL);
+    }
+
+    if (status != PJ_SUCCESS)
+        app_perror("...ERROR no_ca_client_test()", status);
     if (timer)
         pj_timer_heap_destroy(timer);
     if (ioqueue)
@@ -3390,6 +3780,23 @@ int ssl_sock_test(void)
     ret = cert_serial_test();
     if (ret != 0)
         return ret;
+
+    PJ_LOG(3,("", "..untrusted client certificate chain test"));
+    ret = untrusted_chain_test();
+    if (ret != 0)
+        return ret;
+
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL) || \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_MBEDTLS)
+    PJ_LOG(3,("", "..client without CA test"));
+    ret = no_ca_client_test(PJ_FALSE);
+    if (ret == 0)
+        ret = no_ca_client_test(PJ_TRUE);
+    if (ret != 0)
+        return ret;
+#else
+    PJ_UNUSED_ARG(no_ca_client_test);
+#endif
 #endif
 
     PJ_LOG(3,("", "..large message test"));

@@ -617,7 +617,7 @@ static int send_recv_test(int sock_type,
         if (received != BIG_DATA_LEN-total_received) {
             if (sock_type != pj_SOCK_STREAM()) {
                 PJ_LOG(3,("", "...error: expecting %lu bytes, got %lu bytes",
-                          (unsigned long)BIG_DATA_LEN-total_received,
+                          (unsigned long)(BIG_DATA_LEN-total_received),
                           (unsigned long)received));
                 rc = -176; goto on_error;
             }

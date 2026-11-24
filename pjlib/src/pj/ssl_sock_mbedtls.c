@@ -512,46 +512,67 @@ static int cert_verify_cb(void *data, mbedtls_x509_crt *crt,
         PJ_LOG(5, (THIS_FILE, "Certificate info:\n%s", buf));
     }
 
-    /* Peer cert depth = 0 */
-    if (depth > 0)
-        return 0;
-
+    /* Errors of an issuer, e.g: an untrusted root sent by the peer, are
+     * flagged on the issuer, so map the flags at every depth.
+     */
     if (((*flags) & MBEDTLS_X509_BADCERT_EXPIRED) != 0) {
-        PJ_LOG(3, (THIS_FILE, "Server certificate has expired!"));
+        PJ_LOG(3, (THIS_FILE, "Certificate at depth %d has expired", depth));
+        ssock->verify_status |= PJ_SSL_CERT_EVALIDITY_PERIOD;
+    }
+
+    if (((*flags) & MBEDTLS_X509_BADCERT_FUTURE) != 0) {
+        PJ_LOG(3, (THIS_FILE, "Certificate at depth %d is not yet valid",
+                   depth));
         ssock->verify_status |= PJ_SSL_CERT_EVALIDITY_PERIOD;
     }
 
     if (((*flags) & MBEDTLS_X509_BADCERT_REVOKED) != 0) {
-        PJ_LOG(3, (THIS_FILE, "Server certificate has been revoked!"));
+        PJ_LOG(3, (THIS_FILE, "Certificate at depth %d has been revoked",
+                   depth));
         ssock->verify_status |= PJ_SSL_CERT_EREVOKED;
     }
 
     if (((*flags) & MBEDTLS_X509_BADCERT_CN_MISMATCH) != 0) {
-        PJ_LOG(3, (THIS_FILE, "CN mismatch!"));
+        PJ_LOG(3, (THIS_FILE, "Certificate at depth %d CN mismatch", depth));
         ssock->verify_status |= PJ_SSL_CERT_EIDENTITY_NOT_MATCH;
     }
 
     if (((*flags) & MBEDTLS_X509_BADCERT_NOT_TRUSTED) != 0) {
-        PJ_LOG(3, (THIS_FILE, "Self-signed or not signed by a trusted CA!"));
+        PJ_LOG(3, (THIS_FILE, "Certificate at depth %d is self-signed or "
+                              "not signed by a trusted CA", depth));
         ssock->verify_status |= PJ_SSL_CERT_EUNTRUSTED;
     }
 
     if (((*flags) & MBEDTLS_X509_BADCRL_NOT_TRUSTED) != 0) {
-        PJ_LOG(3, (THIS_FILE, "CRL not trusted!"));
+        PJ_LOG(3, (THIS_FILE, "CRL for certificate at depth %d is not "
+                              "trusted", depth));
         ssock->verify_status |= PJ_SSL_CERT_EUNTRUSTED;
     }
 
     if (((*flags) & MBEDTLS_X509_BADCRL_EXPIRED) != 0) {
-        PJ_LOG(3, (THIS_FILE, "CRL expired!"));
+        PJ_LOG(3, (THIS_FILE, "CRL for certificate at depth %d has expired",
+                   depth));
         ssock->verify_status |= PJ_SSL_CERT_EVALIDITY_PERIOD;
     }
 
-    if (((*flags) & MBEDTLS_X509_BADCERT_OTHER) != 0) {
-        PJ_LOG(3, (THIS_FILE, "other (unknown) flags!"));
+    if (((*flags) & ~(MBEDTLS_X509_BADCERT_EXPIRED |
+                      MBEDTLS_X509_BADCERT_FUTURE |
+                      MBEDTLS_X509_BADCERT_REVOKED |
+                      MBEDTLS_X509_BADCERT_CN_MISMATCH |
+                      MBEDTLS_X509_BADCERT_NOT_TRUSTED |
+                      MBEDTLS_X509_BADCRL_NOT_TRUSTED |
+                      MBEDTLS_X509_BADCRL_EXPIRED)) != 0)
+    {
+        PJ_LOG(3, (THIS_FILE, "Certificate at depth %d has other error, "
+                              "flags 0x%x", depth, (unsigned)*flags));
         ssock->verify_status |= PJ_SSL_CERT_EUNKNOWN;
     }
 
-    if ((*flags) == 0) {
+    /* Peer cert depth = 0, called last */
+    if (depth > 0)
+        return 0;
+
+    if (ssock->verify_status == 0) {
         PJ_LOG(5, (THIS_FILE, "Certificate verified without error flags"));
     } else {
         update_cert_info(crt, ssock->pool, &ssock->remote_cert_info);
@@ -583,7 +604,7 @@ static pj_status_t set_cert(pj_ssl_sock_t *ssock)
 {
     mbedtls_sock_t *mssock = (mbedtls_sock_t *)ssock;
     mbedtls_x509_crt *cacert_ = NULL;
-    int authmode = MBEDTLS_SSL_VERIFY_NONE;
+    int authmode;
     int ret = 0;
     pj_ssl_cert_t *cert = ssock->cert;
 
@@ -689,10 +710,13 @@ on_config:
             authmode = MBEDTLS_SSL_VERIFY_OPTIONAL;
         }
     } else {
-        if (cacert_)
+        /* Without a CA list the server certificate cannot be trusted. Still
+         * verify it, so that it is reported as untrusted, not as verified.
+         */
+        if (cacert_ || ssock->param.verify_peer)
             authmode = MBEDTLS_SSL_VERIFY_REQUIRED;
         else
-            PJ_LOG(2, (THIS_FILE, "Peer validation is disabled"));
+            authmode = MBEDTLS_SSL_VERIFY_OPTIONAL;
     }
 
     mbedtls_ssl_conf_verify(&mssock->ssl_config, cert_verify_cb, ssock);
@@ -927,6 +951,7 @@ static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
 {
     mbedtls_sock_t *mssock = (mbedtls_sock_t *)ssock;
     const mbedtls_x509_crt *crt;
+    uint32_t flags;
 
     pj_assert(ssock->ssl_state == SSL_STATE_ESTABLISHED);
 
@@ -934,6 +959,25 @@ static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
     crt = mbedtls_ssl_get_peer_cert(&mssock->ssl_ctx);
     if (crt) {
         update_cert_info(crt, ssock->pool, &ssock->remote_cert_info);
+    }
+
+    /* Key usage and EC curve checks run after cert_verify_cb() */
+    flags = mbedtls_ssl_get_verify_result(&mssock->ssl_ctx);
+    if (flags == (uint32_t)-1)
+        return;
+
+    if ((flags & (MBEDTLS_X509_BADCERT_KEY_USAGE |
+                  MBEDTLS_X509_BADCERT_EXT_KEY_USAGE |
+                  MBEDTLS_X509_BADCERT_NS_CERT_TYPE)) != 0)
+    {
+        PJ_LOG(3, (THIS_FILE, "Peer certificate is not valid for this "
+                              "purpose, flags 0x%x", (unsigned)flags));
+        ssock->verify_status |= PJ_SSL_CERT_EINVALID_PURPOSE;
+    }
+
+    if ((flags & MBEDTLS_X509_BADCERT_BAD_KEY) != 0) {
+        PJ_LOG(3, (THIS_FILE, "Peer certificate key is not acceptable"));
+        ssock->verify_status |= PJ_SSL_CERT_EUNKNOWN;
     }
 }
 

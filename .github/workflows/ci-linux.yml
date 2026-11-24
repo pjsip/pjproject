@@ -36,9 +36,10 @@ jobs:
       pjnath_pjmedia_deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib_util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
       pjnath_pjsip_deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib_util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjsip == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
       any_src: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib_util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.pjsip == 'true' || steps.filter.outputs.pjsip_apps == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
+      cmake: ${{ steps.filter.outputs.cmake == 'true' }}
     steps:
-    - uses: actions/checkout@v4
-    - uses: dorny/paths-filter@v3
+    - uses: actions/checkout@v5
+    - uses: dorny/paths-filter@v4
       if: github.event_name == 'pull_request'
       id: filter
       with:
@@ -65,13 +66,21 @@ jobs:
             - 'tests/**'
           ci:
             - '.github/**'
+          cmake:
+            - 'CMakeLists.txt'
+            - '**/CMakeLists.txt'
+            - 'cmake/**'
+            - '**/*.cm'
+            - 'libpjproject.pc.in'
+            - 'tests/cmake/**'
+            - '.github/**'
 
   default-build:
     # checking pure lib source distribution with plain configure & make
     runs-on: ubuntu-latest
     name: Default / build only
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -102,7 +111,7 @@ jobs:
       run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep -E 'PJ_SSL_SOCK_IMP\s+:\s+1'
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -114,7 +123,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Default / pjsua
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -136,7 +145,7 @@ jobs:
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
     - name: set up Python 3.10 for pjsua test
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v6
       with:
         python-version: '3.10'
     - name: Install PESQ and Dependencies
@@ -167,7 +176,7 @@ jobs:
       run: make pjsua-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -178,7 +187,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Default / pjlib,util,pjnath
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -201,7 +210,7 @@ jobs:
       run: make pjnath-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -212,13 +221,13 @@ jobs:
     runs-on: ubuntu-latest
     name: Default / pjmedia,pjsip
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
         cirunner/installlinux.sh
     - name: install dependencies
-      run: sudo apt-get install -y libopencore-amrnb-dev
+      run: sudo apt-get update && sudo apt-get install -y libopencore-amrnb-dev libopus-dev
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
@@ -231,7 +240,7 @@ jobs:
       run: make pjsip-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -242,7 +251,7 @@ jobs:
     runs-on: ubuntu-latest
     name: No SSL / pjlib,pjsip
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -263,7 +272,7 @@ jobs:
       run: make pjsip-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -276,7 +285,7 @@ jobs:
     runs-on: ubuntu-latest
     name: No threads / pjlib
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -318,7 +327,7 @@ jobs:
       run: cd pjlib-util/build && ../bin/pjlib-util-test-`make -s -C ../.. infotarget` $CI_MODE resolver_nothreads_test
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -330,17 +339,49 @@ jobs:
     needs: [detect-changes]
     if: github.event_name != 'pull_request' || needs.detect-changes.outputs.pjnath_pjsip_deps == 'true'
     runs-on: ubuntu-latest
-    name: GnuTLS / pjlib,pjnath,pjsip
+    name: GnuTLS / pjlib,pjnath,pjsip + CMake
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
         cirunner/installlinux.sh
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y --fix-missing swig libgnutls28-dev
-    - name: config site
-      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
+    # The same backend with CMake, before the autotools build writes its
+    # headers into the source tree. Asked for by name, a backend that is not
+    # found stops the configure. The consumers get only the pjproject
+    # install: its package must find the backend again.
+    - name: cmake configure
+      run: >-
+        cmake -B build-cmake -DCMAKE_BUILD_TYPE=Release
+        -DPJLIB_WITH_SSL=gnutls
+    - name: cmake check backend
+      run: |
+        grep -x 'PJ_SSL_BACKEND:INTERNAL=gnutls' build-cmake/CMakeCache.txt
+        grep -ix '#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_gnutls' \
+          build-cmake/pjlib/include/pj/compat/os_auto.h
+    - name: cmake build
+      run: cmake --build build-cmake -j $(nproc)
+    - name: cmake install
+      run: cmake --install build-cmake --prefix ${{ runner.temp }}/pj-install
+    - name: cmake test find_package
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-consumer --verbose
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+    - name: cmake test pkg-config
+      run: |
+        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        cc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --static --cflags --libs libpjproject)
+        ./pc_consumer
     - name: configure
       run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --with-gnutls=/usr/
     - name: make
@@ -359,7 +400,7 @@ jobs:
       run: make pjsip-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -380,14 +421,16 @@ jobs:
           - version: 4.2.0
             sha256: 2bed9d713b4668f76553b097e72b8aa30bc8f112a940d7ae228d524bbde6ffea
             config_py: tf-psa-crypto/scripts/config.py
-    name: Mbed TLS ${{ matrix.version }} / pjlib,pjnath,pjsua
+    name: Mbed TLS ${{ matrix.version }} / pjlib,pjnath,pjsua + CMake
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
     - name: Mbed TLS prefix
       run: echo "MBEDTLS_PREFIX=$HOME/mbedtls-${{ matrix.version }}" >> $GITHUB_ENV
     - name: cache Mbed TLS
       id: cache-mbedtls
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/mbedtls-${{ matrix.version }}
         # Bump the suffix when the build recipe below changes
@@ -409,8 +452,41 @@ jobs:
               -DCMAKE_INSTALL_PREFIX=$MBEDTLS_PREFIX
         cmake --build build -j 3
         cmake --install build
-    - name: config site
-      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
+    # With GnuTLS also installed, --with-mbedtls must still select Mbed TLS
+    - name: install GnuTLS
+      run: sudo apt-get update && sudo apt-get install -y libgnutls28-dev
+    # The same backend with CMake, before the autotools build writes its
+    # headers into the source tree. Asked for by name, a backend that is not
+    # found stops the configure. The consumers get only the pjproject
+    # install: its package must find the backend again.
+    - name: cmake configure
+      run: >-
+        cmake -B build-cmake -DCMAKE_BUILD_TYPE=Release
+        -DPJLIB_WITH_SSL=mbedtls -DMbedTLS_ROOT=$MBEDTLS_PREFIX
+    - name: cmake check backend
+      run: |
+        grep -x 'PJ_SSL_BACKEND:INTERNAL=mbedtls' build-cmake/CMakeCache.txt
+        grep -ix '#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_mbedtls' \
+          build-cmake/pjlib/include/pj/compat/os_auto.h
+    - name: cmake build
+      run: cmake --build build-cmake -j $(nproc)
+    - name: cmake install
+      run: cmake --install build-cmake --prefix ${{ runner.temp }}/pj-install
+    - name: cmake test find_package
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-consumer --verbose
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+    - name: cmake test pkg-config
+      run: |
+        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        cc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --static --cflags --libs libpjproject)
+        ./pc_consumer
     - name: configure
       run: ./configure --with-mbedtls=$MBEDTLS_PREFIX
     - name: make
@@ -424,7 +500,7 @@ jobs:
     - name: pjnath-test (turn_sock_test only)
       run: cd pjnath/build && ../bin/pjnath-test-`make -s -C ../.. infotarget` $CI_MODE $CI_ARGS turn_sock_test
     - name: set up Python 3.10 for pjsua test
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v6
       with:
         python-version: '3.10'
     # pjsip-test has no TLS tests. These are SIP calls over TLS between two
@@ -438,7 +514,7 @@ jobs:
         done
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ matrix.version }}-${{ github.run_id }}
         path: artifacts
@@ -449,7 +525,7 @@ jobs:
     runs-on: ubuntu-latest
     name: OpenH264+VPX / pjsua
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -469,7 +545,7 @@ jobs:
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
     - name: set up Python 3.10 for pjsua test
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: '3.10'
     - name: Install PESQ and Dependencies
@@ -513,7 +589,7 @@ jobs:
         make pjsua-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -524,7 +600,7 @@ jobs:
     runs-on: ubuntu-latest
     name: OpenH264+VPX / pjlib,util,pjnath
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -558,7 +634,7 @@ jobs:
         make pjnath-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -569,13 +645,13 @@ jobs:
     runs-on: ubuntu-latest
     name: OpenH264+VPX / pjmedia,pjsip
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
         cirunner/installlinux.sh
     - name: install dependencies
-      run: sudo apt-get update && sudo apt-get install -y nasm libvpx-dev libopencore-amrnb-dev libsdl2-dev
+      run: sudo apt-get update && sudo apt-get install -y nasm libvpx-dev libopencore-amrnb-dev libopus-dev libsdl2-dev
     - name: get openh264
       run: git clone --depth 1 --single-branch --branch openh264v2.1.0 https://github.com/cisco/openh264.git
     - name: build openh264
@@ -609,7 +685,7 @@ jobs:
         make pjsip-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -620,7 +696,7 @@ jobs:
     runs-on: ubuntu-latest
     name: FFMPEG+x264 / pjmedia
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -666,7 +742,7 @@ jobs:
       run: export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH && make pjmedia-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -677,7 +753,7 @@ jobs:
     runs-on: ubuntu-latest
     name: ioq-epoll-cb-with-lock-conf-thread / pjlib,pjsua
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -695,7 +771,7 @@ jobs:
     - name: pjsip-test
       run: cd pjsip/build && ../bin/pjsip-test-`make -s -C ../.. infotarget` $CI_MODE $CI_ARGS resolve_test inv_offer_answer_test transport_udp_test transport_tcp_test regc_test tsx_destroy_test
     - name: set up Python 3.10 for pjsua test
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v6
       with:
         python-version: '3.10'
     - name: Install PESQ and Dependencies
@@ -712,7 +788,7 @@ jobs:
       run: make pjsua-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -742,7 +818,7 @@ jobs:
             install_deps: "sudo apt-get update && sudo apt-get install -y libgnutls28-dev"
     name: ioq-no-fast-track / ${{ matrix.name }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -765,7 +841,7 @@ jobs:
         cd pjlib/build && ../bin/pjlib-test-`make -s -C ../.. infotarget` $CI_MODE $CI_ARGS udp_ioqueue_test tcp_ioqueue_test udp_ioqueue_unreg_test activesock_test ssl_sock_test ssl_sock_stress_test
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ matrix.name }}-${{ github.run_id }}
         path: artifacts
@@ -778,7 +854,7 @@ jobs:
     runs-on: ubuntu-latest
     name: alt_pjsua / 3rdparty media
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -790,7 +866,7 @@ jobs:
     - name: configure
       run: |
         CFLAGS="-g -fPIC -Wno-unused-label" CXXFLAGS="-g -fPIC" LDFLAGS="-rdynamic" \
-        ./configure --enable-ext-sound --disable-speex-aec \
+        ./configure --enable-ext-sound --disable-speex-aec --disable-resample \
           --disable-g711-codec --disable-l16-codec --disable-gsm-codec \
           --disable-g722-codec --disable-g7221-codec --disable-speex-codec \
           --disable-ilbc-codec --disable-opencore-amrnb \
@@ -800,7 +876,7 @@ jobs:
     - name: build alt_pjsua
       run: cd pjsip-apps/src/3rdparty_media_sample && make
     - name: set up Python 3.10 for pjsua test
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v6
       with:
         python-version: '3.10'
     - name: alt_pjsua-test
@@ -821,7 +897,7 @@ jobs:
         python3 run.py --exe ../../pjsip-apps/src/3rdparty_media_sample/alt_pjsua mod_sipp.py scripts-sipp/alt-pjsua-uas-late-offer-dummy-codecs.xml
     - name: upload artifacts on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
@@ -829,22 +905,48 @@ jobs:
   cmake-build:
     runs-on: ubuntu-latest
     name: CMake / ${{ matrix.build_type }}
+    env:
+      # test.py: only the test that needs no endpoint or sound device
+      PJSUA2_TEST_QUICK: 1
     strategy:
       fail-fast: false
       matrix:
         build_type: [Debug, Release]
+        include:
+          # the Python and Java bindings
+          - build_type: Release
+            swig: -DPJ_BUILD_SWIG_PYTHON=ON -DPJ_BUILD_SWIG_JAVA=ON
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
     - name: install dependencies
-      run: sudo apt-get update && sudo apt-get install -y libssl-dev
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libssl-dev libopus-dev libvpx-dev ${{ matrix.swig && 'swig python3-dev' || '' }}
     - name: configure
-      run: cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+      run: cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.swig }}
+    - name: check options
+      # an optional library that is not found is dropped without failing the
+      # configure
+      run: |
+        for p in OPUS VPX; do
+          grep "^PJMEDIA_WITH_${p}_CODEC:BOOL=ON$" build/CMakeCache.txt || {
+            echo "::error::PJMEDIA_WITH_${p}_CODEC is not ON"; exit 1; }
+          grep -E "^${p}_(LIBRARY|INCLUDE_DIR):" build/CMakeCache.txt
+        done
     - name: build
       run: cmake --build build -j $(nproc)
     - name: check
       run: |
-        file build/pjsip-apps/pjsua
-        ldd build/pjsip-apps/pjsua
+        file build/pjsip-apps/bin/pjsua
+        ldd build/pjsip-apps/bin/pjsua
+    - name: test bindings
+      if: matrix.swig
+      run: |
+        cd build
+        ctest --no-tests=error -R '^pjsua2-python$' --output-on-failure
+        ctest --no-tests=error -R '^pjsua2-java$' --output-on-failure
     - name: install
       run: cmake --install build --prefix ${{ runner.temp }}/pj-install
     - name: test find_package
@@ -855,15 +957,42 @@ jobs:
         cmake --build build-consumer --verbose
         ./build-consumer/test_consumer
         ./build-consumer/test_consumer2
+    # The same consumer with pjproject built inside it, as add_subdirectory()
+    # or FetchContent does: there the headers of each library sit in their own
+    # directory, so a library a public header needs must be linked PUBLIC.
+    - name: test add_subdirectory
+      run: |
+        cmake -B build-subdir tests/cmake \
+          -DTEST_PJ_SOURCE_DIR=${{ github.workspace }} \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        cmake --build build-subdir -j $(nproc) --target test_consumer test_consumer2
+        ./build-subdir/test_consumer
+        ./build-subdir/test_consumer2
     - name: test pkg-config
       run: |
         prefix=${{ runner.temp }}/pj-install
-        test -f "$prefix/lib/libpjlib.a" && test ! -e "$prefix/bin/libpjlib.a"
+        test -f "$prefix/lib/libpj.a" && test ! -e "$prefix/bin/libpj.a"
         export PKG_CONFIG_PATH="$prefix/lib/pkgconfig"
         cat "$PKG_CONFIG_PATH/libpjproject.pc"
         cc tests/cmake/test_consumer.c -o pc_consumer \
           $(pkg-config --static --cflags --libs libpjproject)
         ./pc_consumer
+    - name: test installed bindings
+      if: matrix.swig
+      run: |
+        set -o pipefail
+        prefix=${{ runner.temp }}/pj-install
+        pydir=$(dirname "$(find "$prefix" -name pjsua2.py)")
+        javadir=$(dirname "$(find "$prefix" -name pjsua2.jar)")
+        cd "${{ runner.temp }}"
+        # -P: not from test.py's own folder, where make leaves a pjsua2.py
+        PYTHONPATH="$pydir" python3 -P \
+          "${{ github.workspace }}/pjsip-apps/src/swig/python/test.py"
+        mkdir -p java-test
+        javac -d java-test -cp "$javadir/pjsua2.jar" \
+          "${{ github.workspace }}/pjsip-apps/src/swig/java/test.java"
+        java -cp "$javadir/pjsua2.jar:java-test" \
+          -Djava.library.path="$javadir" test | grep 'Hello world'
 
   # The pure C configuration: everything that needs C++ is left out, and
   # nothing left in may reference it.
@@ -871,7 +1000,9 @@ jobs:
     runs-on: ubuntu-latest
     name: CMake / C only
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y libssl-dev
     - name: configure
@@ -908,9 +1039,9 @@ jobs:
     runs-on: ubuntu-latest
     name: CMake / reconfigure
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: install dependencies
-      run: sudo apt-get update && sudo apt-get install -y libssl-dev
+      run: sudo apt-get update && sudo apt-get install -y libssl-dev libsrtp2-dev
     - name: reconfigure vs fresh configure
       run: tests/cmake/reconfigure.sh . ${{ runner.temp }}/reconfigure
 
@@ -923,26 +1054,28 @@ jobs:
     runs-on: ubuntu-latest
     name: CMake / cross arm-none-eabi
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: install toolchain
       run: sudo apt-get update && sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi
     - name: configure
       run: |
         cmake -B build-cross --toolchain cmake/toolchains/arm-none-eabi.cmake \
           -DPJ_WITH_CXX=OFF -DPJ_BUILD_APPS=OFF -DBUILD_TESTING=OFF \
-          -DPJLIB_WITH_SSL= -DPJ_SKIP_EXPERIMENTAL_NOTICE=ON
+          -DPJLIB_WITH_SSL=
     - name: check
       # the toolchain's libm rather than the host's, no C++ compiler, and
       # the SIMD probe kept NEON away from Cortex-M
       run: |
         grep '^MATH_LIBRARY:FILEPATH=/usr/lib/arm-none-eabi/' build-cross/CMakeCache.txt
         if grep '^CMAKE_CXX_COMPILER' build-cross/CMakeCache.txt; then exit 1; fi
-        if grep -e WEBRTC_HAS_NEON -e -mfpu=neon build-cross/third_party/webrtc/CMakeFiles/webrtc.dir/flags.make; then exit 1; fi
+        flags=build-cross/third_party/webrtc/CMakeFiles/pj_webrtc.dir/flags.make
+        test -f "$flags"
+        if grep -e WEBRTC_HAS_NEON -e -mfpu=neon "$flags"; then exit 1; fi
     - name: build
-      run: cmake --build build-cross --target resample -j $(nproc)
+      run: cmake --build build-cross --target pj_resample -j $(nproc)
     - name: check target
       run: |
-        arm-none-eabi-readelf -A build-cross/third_party/resample/libresample.a | grep 'Tag_CPU_name: "8-M.MAIN"'
+        arm-none-eabi-readelf -A build-cross/third_party/lib/libresample.a | grep 'Tag_CPU_name: "8-M.MAIN"'
     - name: build pjlib (libc-only files)
       # Compile only, nothing links. The files that include pj/sock.h need a
       # socket API and os_core_unix.c needs pthreads, which an RTOS supplies;
@@ -968,19 +1101,339 @@ jobs:
         cmake -B build-cross-fpu --toolchain cmake/toolchains/arm-none-eabi.cmake \
           "-DPJ_TARGET_CPU_FLAGS=-mcpu=cortex-m33 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard" \
           -DPJ_WITH_CXX=OFF -DPJ_BUILD_APPS=OFF -DBUILD_TESTING=OFF \
-          -DPJLIB_WITH_SSL= -DPJ_SKIP_EXPERIMENTAL_NOTICE=ON \
+          -DPJLIB_WITH_SSL= \
           -D_pj_detected_simd_ext:INTERNAL=neon \
           -D_pj_detected_simd_ext_flags:INTERNAL=-mfpu=neon \
           -D_simd_supported:INTERNAL=1
-        if grep -e WEBRTC_HAS_NEON -e -mfpu=neon build-cross-fpu/third_party/webrtc/CMakeFiles/webrtc.dir/flags.make; then exit 1; fi
+        flags=build-cross-fpu/third_party/webrtc/CMakeFiles/pj_webrtc.dir/flags.make
+        test -f "$flags"
+        if grep -e WEBRTC_HAS_NEON -e -mfpu=neon "$flags"; then exit 1; fi
     - name: configure without bundled dependencies
       run: |
         cmake -B build-cross-min --toolchain cmake/toolchains/arm-none-eabi.cmake \
           -DPJ_WITH_CXX=OFF -DPJ_BUILD_APPS=OFF -DBUILD_TESTING=OFF \
-          -DPJLIB_WITH_SSL= -DPJ_SKIP_EXPERIMENTAL_NOTICE=ON \
+          -DPJLIB_WITH_SSL= \
           -DPJ_DEP_G7221=none -DPJ_DEP_GSM=none -DPJ_DEP_ILBC=none \
           -DPJ_DEP_RESAMPLE=none -DPJ_DEP_SPEEX=none -DPJ_DEP_SRTP=none \
           -DPJ_DEP_WEBRTC=none -DPJMEDIA_WITH_VIDEO=OFF
+
+  # A shared install must work on its own: with no LD_LIBRARY_PATH, the
+  # installed pjsua and the libraries find each other and the bundled ones in
+  # lib/pjproject/third_party through their RUNPATH, also from a copy of the
+  # install made elsewhere. So must the installed Python and Java bindings.
+  cmake-shared:
+    needs: [detect-changes]
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
+    runs-on: ubuntu-latest
+    name: CMake / shared
+    env:
+      # test.py: only the test that needs no endpoint or sound device
+      PJSUA2_TEST_QUICK: 1
+    steps:
+    - uses: actions/checkout@v5
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
+    - name: install dependencies
+      run: sudo apt-get update && sudo apt-get install -y libssl-dev swig python3-dev
+    - name: configure
+      run: >-
+        cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON
+        -DPJ_BUILD_SWIG_PYTHON=ON -DPJ_BUILD_SWIG_JAVA=ON
+    - name: build
+      run: cmake --build build -j $(nproc)
+    - name: test bindings
+      run: |
+        cd build
+        ctest --no-tests=error -R '^pjsua2-python$' --output-on-failure
+        ctest --no-tests=error -R '^pjsua2-java$' --output-on-failure
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+    - name: test installed pjsua
+      run: |
+        prefix=${{ runner.temp }}/pj-install
+        test -f "$prefix/lib/libpj.so"
+        test ! -e "$prefix/lib/libpj.a"
+        for f in "$prefix/bin/pjsua" "$prefix"/lib/*.so "$prefix"/lib/pjproject/third_party/*.so; do
+          if ! readelf -d "$f" | grep -E '\((RUNPATH|RPATH)\)'; then
+            echo "::error::$f has no RUNPATH"
+            exit 1
+          fi
+        done
+        if readelf -d "$prefix/bin/pjsua" "$prefix"/lib/*.so "$prefix"/lib/pjproject/third_party/*.so |
+            grep -F "${{ github.workspace }}"; then
+          echo "::error::the install refers to the build tree"
+          exit 1
+        fi
+        "$prefix/bin/pjsua" --version > /dev/null
+        mv "$prefix" "${{ runner.temp }}/pj-moved"
+        "${{ runner.temp }}/pj-moved/bin/pjsua" --version > /dev/null
+        mv "${{ runner.temp }}/pj-moved" "$prefix"
+    - name: test find_package
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-consumer --verbose
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+    - name: test pkg-config
+      run: |
+        prefix=${{ runner.temp }}/pj-install
+        export PKG_CONFIG_PATH="$prefix/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        cc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --cflags --libs libpjproject) -Wl,-rpath,"$prefix/lib"
+        ./pc_consumer
+    - name: test installed bindings
+      run: |
+        set -o pipefail
+        prefix=${{ runner.temp }}/pj-install
+        pydir=$(dirname "$(find "$prefix" -name pjsua2.py)")
+        javadir=$(dirname "$(find "$prefix" -name pjsua2.jar)")
+        cd "${{ runner.temp }}"
+        # -P: not from test.py's own folder, where make leaves a pjsua2.py
+        PYTHONPATH="$pydir" python3 -P \
+          "${{ github.workspace }}/pjsip-apps/src/swig/python/test.py"
+        mkdir -p java-test
+        javac -d java-test -cp "$javadir/pjsua2.jar" \
+          "${{ github.workspace }}/pjsip-apps/src/swig/java/test.java"
+        java -cp "$javadir/pjsua2.jar:java-test" \
+          -Djava.library.path="$javadir" test | grep 'Hello world'
+
+  # PJLIB_WITH_THREADS=OFF: as in the autoconf no-threads job, nothing may
+  # reference pthread. Also the installed package: Pj's config must not ask
+  # for Threads, and consumers built from it stay pthread-free.
+  cmake-no-threads:
+    needs: [detect-changes]
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
+    runs-on: ubuntu-latest
+    name: CMake / no threads
+    steps:
+    - uses: actions/checkout@v5
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
+    - name: install dependencies
+      run: sudo apt-get update && sudo apt-get install -y libssl-dev
+    - name: configure
+      # libwebrtc uses pthread_once() and is not built without threads.
+      run: >-
+        cmake -B build -DCMAKE_BUILD_TYPE=Release -DPJLIB_WITH_THREADS=OFF
+        -DPJMEDIA_WITH_WEBRTC_AEC=OFF -DPJMEDIA_WITH_WEBRTC_AEC3=OFF
+    - name: build
+      run: cmake --build build -j $(nproc)
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+    - name: build consumers
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-consumer --verbose
+        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        cc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --static --cflags --libs libpjproject)
+    - name: check the install does not ask for threads
+      # glibc has pthread in libc, so the nm check below misses these
+      run: |
+        if grep '^FIND_PACKAGE_MESSAGE_DETAILS_Threads' build-consumer/CMakeCache.txt; then
+          echo "::error::the installed Pj package looks up Threads"
+          exit 1
+        fi
+        if grep -E -- '-l?pthread' "${{ runner.temp }}/pj-install/lib/pkgconfig/libpjproject.pc"; then
+          echo "::error::libpjproject.pc links pthread"
+          exit 1
+        fi
+    - name: check nothing references pthread
+      run: |
+        rc=0
+        for bin in build/pjlib/bin/pjlib-test \
+                   build/pjlib-util/bin/pjlib-util-test \
+                   build/pjnath/bin/pjnath-test \
+                   build/pjmedia/bin/pjmedia-test \
+                   build/pjsip/bin/pjsip-test \
+                   build/pjsip/bin/pjsua2-test \
+                   build/pjsip-apps/bin/pjsua \
+                   build-consumer/test_consumer \
+                   build-consumer/test_consumer2 \
+                   pc_consumer; do
+          if [ ! -f "$bin" ]; then
+            echo "::error::$bin was not built"
+            rc=1
+            continue
+          fi
+          if nm -D -u "$bin" | grep -E ' U (pthread_|sched_get)'; then
+            echo "::error::$bin references pthread with PJLIB_WITH_THREADS=OFF"
+            rc=1
+          else
+            echo "ok: $bin"
+          fi
+        done
+        exit $rc
+    - name: run
+      run: |
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+        ./pc_consumer
+        cd pjlib-util/build
+        ../../build/pjlib-util/bin/pjlib-util-test --ci-mode resolver_nothreads_test
+
+  # The bundled libraries that can come from the system (GSM, Speex with
+  # SpeexDSP, libsrtp2, libyuv), all from Ubuntu's packages. Not libresample:
+  # Ubuntu's libresample1-dev is an unrelated library of the same name.
+  # Asked for by name, a missing one stops the configure. None may be built
+  # from third_party, and the build and the consumers must load the system
+  # copies.
+  # Also Opus and libvpx, as in cmake-build, with the build pointed at each
+  # library by <Pkg>_ROOT: its packages unpacked into a folder of its own.
+  # The system's copies are installed too, and must not be used: not by the
+  # build, and not by the consumers, which get only the pjproject install.
+  cmake-system-deps:
+    needs: [detect-changes]
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
+    runs-on: ubuntu-latest
+    name: CMake / system GSM, Speex, SRTP, libyuv; Opus + VPX from <Pkg>_ROOT
+    env:
+      PJ_SYSTEM_LIBS: gsm speex speexdsp srtp2 yuv
+    steps:
+    - uses: actions/checkout@v5
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
+    - name: install dependencies
+      run: >-
+        sudo apt-get update && sudo apt-get install -y libssl-dev
+        libgsm1-dev libspeex-dev libspeexdsp-dev libsrtp2-dev libyuv-dev
+        libopus-dev libvpx-dev
+    - name: package roots
+      # the -dev package and the library package it depends on
+      run: |
+        r=${{ runner.temp }}/roots
+        mkdir -p $r/debs
+        cd $r/debs
+        for p in opus vpx; do
+          dev=lib$p-dev
+          lib=$(apt-cache depends $dev |
+                awk -v re="^lib$p[0-9]" '$1 == "Depends:" && $2 ~ re { print $2; exit }')
+          apt-get download $dev $lib
+          for deb in ${dev}_*.deb ${lib}_*.deb; do dpkg -x $deb $r/$p; done
+        done
+        find $r/opus $r/vpx -name 'lib*.so*'
+    - name: configure
+      run: >-
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        -DPJ_DEP_GSM=system -DPJ_DEP_SPEEX=system -DPJ_DEP_SRTP=system
+        -DPJ_DEP_YUV=system
+        -DOPUS_ROOT=${{ runner.temp }}/roots/opus/usr
+        -DVPX_ROOT=${{ runner.temp }}/roots/vpx/usr
+    - name: check options
+      run: |
+        cache=build/CMakeCache.txt
+        failed=0
+        for v in GSM Speex SpeexDSP SRTP YUV; do
+          path=$(sed -n "s/^${v}_LIBRARY:[^=]*=//p" $cache)
+          echo "${v}_LIBRARY=$path"
+          case "$path" in /usr/*) ;; *)
+            echo "::error::${v}_LIBRARY is not a system library"; failed=1 ;;
+          esac
+        done
+        # system Speex has its echo canceller in SpeexDSP
+        grep -x 'PJMEDIA_WITH_SPEEX_AEC:BOOL=ON' $cache || {
+          echo "::error::PJMEDIA_WITH_SPEEX_AEC is not ON"; failed=1; }
+        exit $failed
+    - name: check the roots
+      # Opus and libvpx: the library and the headers from the root
+      run: |
+        for p in OPUS VPX; do
+          grep "^PJMEDIA_WITH_${p}_CODEC:BOOL=ON$" build/CMakeCache.txt || {
+            echo "::error::PJMEDIA_WITH_${p}_CODEC is not ON"; exit 1; }
+          root=$(sed -n "s/^${p}_ROOT:[A-Z]*=//p" build/CMakeCache.txt)
+          [ -n "$root" ] || { echo "::error::${p}_ROOT is not set"; exit 1; }
+          for v in LIBRARY INCLUDE_DIR; do
+            grep "^${p}_$v:[A-Z]*=$root/" build/CMakeCache.txt || {
+              echo "::error::${p}_$v is not under $root"; exit 1; }
+          done
+        done
+    - name: build
+      run: cmake --build build -j $(nproc)
+    - name: check build
+      run: |
+        failed=0
+        for l in gsm speex srtp yuv; do
+          if f=$(find build -name "lib$l.a" | grep .); then
+            echo "::error::the bundled $l was built: $f"; failed=1
+          fi
+        done
+        ldd build/pjsip-apps/bin/pjsua
+        for l in $PJ_SYSTEM_LIBS; do
+          ldd build/pjsip-apps/bin/pjsua | grep -q "lib$l\.so.* => /" || {
+            echo "::error::pjsua does not load the system lib$l"; failed=1; }
+        done
+        exit $failed
+    - name: run pjsua
+      run: ./build/pjsip-apps/bin/pjsua --version
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+    - name: check install
+      run: |
+        ls -R ${{ runner.temp }}/pj-install/lib/pjproject/third_party || true
+        for l in gsm speex srtp yuv; do
+          if f=$(find ${{ runner.temp }}/pj-install -name "lib$l.a" | grep .); then
+            echo "::error::the bundled $l was installed: $f"; exit 1
+          fi
+        done
+    - name: test find_package
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-consumer --verbose
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+    - name: test pkg-config
+      run: |
+        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        # the roots are not searched at run time
+        cc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --static --cflags --libs libpjproject) \
+          $(pkg-config --static --libs-only-L libpjproject | sed 's/-L/-Wl,-rpath,/g')
+        ./pc_consumer
+    - name: check the consumers load the system libraries
+      run: |
+        failed=0
+        for exe in build-consumer/test_consumer build-consumer/test_consumer2 \
+                   pc_consumer; do
+          for l in $PJ_SYSTEM_LIBS; do
+            ldd $exe | grep -q "lib$l\.so.* => /" || {
+              echo "::error::$exe does not load the system lib$l"; failed=1; }
+          done
+        done
+        exit $failed
+    - name: check the consumers used the roots
+      # and not the system's copies, which are installed too
+      run: |
+        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
+        for p in OPUS VPX; do
+          root=$(sed -n "s/^${p}_ROOT:[A-Z]*=//p" build/CMakeCache.txt)
+          found=$(sed -n "s/^FIND_PACKAGE_MESSAGE_DETAILS_${p}:INTERNAL=//p" \
+                  build-consumer/CMakeCache.txt)
+          echo "find_package consumer, $p: $found"
+          paths=$(echo "$found" | grep -o '\[/[^]]*\]' | tr -d '[]')
+          [ -n "$paths" ] || { echo "::error::no $p paths in the consumer"; exit 1; }
+          for f in $paths; do
+            case $f in
+              "$root"/*) ;;
+              *) echo "::error::find_package consumer: $f is not under $root"; exit 1 ;;
+            esac
+          done
+          pkg-config --static --libs-only-L libpjproject | tr ' ' '\n' | grep -- "^-L$root/" || {
+            echo "::error::libpjproject.pc has no -L under $root"; exit 1; }
+          lib=lib$(echo $p | tr A-Z a-z).so
+          for exe in build-consumer/test_consumer pc_consumer; do
+            ldd $exe | grep "$lib" | grep -- "=> $root/" || {
+              echo "::error::$exe does not load $lib from $root"; exit 1; }
+          done
+        done
 
   # Short pjsua-stress runs under ASan/TSan on every PR / push to master.
   # The full weekly run (larger fleet, longer duration) lives in
@@ -992,7 +1445,7 @@ jobs:
     name: stress / asan
     timeout-minutes: 45
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y nasm gdb
     - name: get openh264
@@ -1075,7 +1528,7 @@ jobs:
         fi
     - name: upload log
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: stress-asan-log-${{ github.run_id }}
         path: pjsip/bin/stress.log
@@ -1087,7 +1540,7 @@ jobs:
     name: stress / tsan
     timeout-minutes: 45
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y nasm gdb
     - name: get openh264
@@ -1170,7 +1623,7 @@ jobs:
         fi
     - name: upload log
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: stress-tsan-log-${{ github.run_id }}
         path: pjsip/bin/stress.log

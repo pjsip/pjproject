@@ -681,8 +681,9 @@ static void send_prompt_str(cli_telnet_sess *sess)
  * instead of writing an attacker-influenced number of spaces into a
  * fixed-size stack buffer. Shared by send_err_arg() and send_ambi_arg().
  */
-static const unsigned char SPACES[64] =
+static const unsigned char SPACES[] =
     "                                                                ";
+#define SPACES_LEN  (sizeof(SPACES) - 1)
 
 /*
  * This method is used to send error message to client, including
@@ -712,8 +713,7 @@ static void send_err_arg(cli_telnet_sess *sess,
 
     remaining = len;
     while (remaining > 0) {
-        pj_size_t chunk = (remaining > sizeof(SPACES)) ? sizeof(SPACES)
-                                                       : remaining;
+        pj_size_t chunk = (remaining > SPACES_LEN) ? SPACES_LEN : remaining;
         telnet_sess_send2(sess, SPACES, (int)chunk);
         remaining -= chunk;
     }
@@ -808,8 +808,7 @@ static void send_ambi_arg(cli_telnet_sess *sess,
 
     remaining = len;
     while (remaining > 0) {
-        pj_size_t chunk = (remaining > sizeof(SPACES)) ? sizeof(SPACES)
-                                                       : remaining;
+        pj_size_t chunk = (remaining > SPACES_LEN) ? SPACES_LEN : remaining;
         telnet_sess_send2(sess, SPACES, (int)chunk);
         remaining -= chunk;
     }
@@ -1373,24 +1372,23 @@ static pj_status_t telnet_sess_send_with_format(cli_telnet_sess *sess,
         while (!pj_scan_is_eof(&scanner)) {
             pj_scan_get_until_ch(&scanner, '\n', &out_str);
             str_len = (int)(scanner.curptr - str_begin);
-            if (*scanner.curptr == '\n') {
-                if ((str_len > 1) && (out_str.ptr[str_len-2] == '\r'))
-                {
-                    continue;
-                } else {
-                    int str_pos = (int)(str_begin - scanner.begin);
+            if (!pj_scan_is_eof(&scanner) && *scanner.curptr == '\n') {
+                int str_pos = (int)(str_begin - scanner.begin);
 
-                    if (str_len > 0) {
-                        pj_str_t s;
-                        pj_strset(&s, &str->ptr[str_pos], str_len);
-                        telnet_sess_send(sess, &s);
-                    }
-                    telnet_sess_send(sess, &CR_LF);
+                /* Line already ends with CR, CR_LF is added below */
+                if ((str_len > 0) && (str_begin[str_len-1] == '\r'))
+                    --str_len;
 
-                    if (!pj_scan_is_eof(&scanner)) {
-                        pj_scan_advance_n(&scanner, 1, PJ_TRUE);
-                        str_begin = scanner.curptr;
-                    }
+                if (str_len > 0) {
+                    pj_str_t s;
+                    pj_strset(&s, &str->ptr[str_pos], str_len);
+                    telnet_sess_send(sess, &s);
+                }
+                telnet_sess_send(sess, &CR_LF);
+
+                if (!pj_scan_is_eof(&scanner)) {
+                    pj_scan_advance_n(&scanner, 1, PJ_TRUE);
+                    str_begin = scanner.curptr;
                 }
             } else {
                 pj_str_t s;

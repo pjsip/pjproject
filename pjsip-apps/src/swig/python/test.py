@@ -391,6 +391,9 @@ def ua_pending_job_test():
 #
 if __name__ == "__main__":
     ua_data_test()
+    # only the test that needs no endpoint, e.g. to check the module loads
+    if os.environ.get("PJSUA2_TEST_QUICK"):
+        sys.exit(0)
     ua_run_test_exception()
     ua_run_log_test()
     ua_run_ua_test()

@@ -5108,9 +5108,18 @@ static void inv_respond_incoming_prack(pjsip_inv_session *inv,
     if (status == PJSIP_ENOTINITIALIZED)
         return;
 
-    /* Even if something wrong, anyway reply with 200/OK for PRACK
-     * Keeping the same behaviour, that was in sip_100rel.c
-     */
+    /* Missing RAck, or RAck matching no reliable provisional response */
+    if (status == PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_BAD_REQUEST) ||
+        status == PJSIP_ERRNO_FROM_SIP_STATUS(
+                                    PJSIP_SC_CALL_TSX_DOES_NOT_EXIST))
+    {
+        status = pjsip_dlg_create_response(inv->dlg, rdata,
+                                           PJSIP_ERRNO_TO_SIP_STATUS(status),
+                                           NULL, &tdata);
+        goto on_return;
+    }
+
+    /* PRACK for a response that is no longer pending, reply with 200/OK */
     if (status != PJ_SUCCESS) {
         status = pjsip_dlg_create_response(inv->dlg, rdata, PJSIP_SC_OK, NULL,
                                            &tdata);

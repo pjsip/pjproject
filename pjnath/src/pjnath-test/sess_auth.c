@@ -47,11 +47,74 @@ static struct server
     unsigned             recv_count;
     pj_stun_auth_type    auth_type;
 
+    /* Reply with a malformed error response instead (BAD_RES_*) */
+    int                  bad_res;
+
     pj_sock_t            sock;
 
     pj_bool_t            quit;
     pj_thread_t         *thread;
 } *server;
+
+
+/* Malformed error responses */
+enum
+{
+    BAD_RES_NONE,
+    BAD_RES_NO_ERRCODE,         /* error response without ERROR-CODE    */
+    BAD_RES_ERRCODE_100,        /* error response with ERROR-CODE 100   */
+    BAD_RES_401_NO_NONCE,       /* 401 without NONCE                    */
+    BAD_RES_438_NO_NONCE        /* 438 without NONCE                    */
+};
+
+/* Reply to the request with the malformed error response */
+static void server_send_bad_res(const char *pkt, pj_size_t pkt_len,
+                                const pj_sockaddr_t *dst_addr,
+                                unsigned addr_len)
+{
+    pj_pool_t *pool;
+    pj_stun_msg *req, *res = NULL;
+    pj_uint8_t buf[200];
+    pj_size_t len = 0;
+    pj_ssize_t sent;
+    pj_status_t status;
+
+    pool = pj_pool_create(mem, "badres", 1000, 1000, NULL);
+
+    status = pj_stun_msg_decode(pool, (const pj_uint8_t*)pkt, pkt_len,
+                                PJ_STUN_IS_DATAGRAM, &req, NULL, NULL);
+    if (status != PJ_SUCCESS || !PJ_STUN_IS_REQUEST(req->hdr.type))
+        goto on_return;
+
+    if (server->bad_res == BAD_RES_NO_ERRCODE) {
+        status = pj_stun_msg_create(pool, req->hdr.type |
+                                          PJ_STUN_ERROR_RESPONSE_BIT,
+                                    req->hdr.magic, req->hdr.tsx_id, &res);
+    } else {
+        int code = PJ_STUN_SC_STALE_NONCE;
+        pj_str_t realm = pj_str(REALM);
+
+        if (server->bad_res == BAD_RES_ERRCODE_100)
+            code = 100;
+        else if (server->bad_res == BAD_RES_401_NO_NONCE)
+            code = PJ_STUN_SC_UNAUTHORIZED;
+
+        status = pj_stun_msg_create_response(pool, req, code, NULL, &res);
+        if (status == PJ_SUCCESS) {
+            status = pj_stun_msg_add_string_attr(pool, res,
+                                                 PJ_STUN_ATTR_REALM, &realm);
+        }
+    }
+    if (status == PJ_SUCCESS)
+        status = pj_stun_msg_encode(res, buf, sizeof(buf), 0, NULL, &len);
+    if (status == PJ_SUCCESS) {
+        sent = len;
+        pj_sock_sendto(server->sock, buf, &sent, 0, dst_addr, addr_len);
+    }
+
+on_return:
+    pj_pool_release(pool);
+}
 
 
 static pj_status_t server_send_msg(pj_stun_session *sess,
@@ -195,6 +258,11 @@ static int server_thread(void *unused)
             if (!server->responding)
                 continue;
 
+            if (server->bad_res != BAD_RES_NONE) {
+                server_send_bad_res(pkt, len, &src_addr, src_addr_len);
+                continue;
+            }
+
             pj_stun_session_on_rx_pkt(server->sess, pkt, len, 
                                       PJ_STUN_CHECK_PACKET | PJ_STUN_IS_DATAGRAM,
                                       NULL, NULL, &src_addr, src_addr_len);
@@ -335,10 +403,34 @@ static struct client
 
     pj_status_t      response_status;
     pj_stun_msg     *response;
+    unsigned         complete_count;
+
+    /* Fail sending the requests that carry NONCE, i.e. the retries, with
+     * PJ_EUNKNOWN
+     */
+    pj_bool_t        fail_retry;
 
     pj_bool_t        quit;
     pj_thread_t     *thread;
 } *client;
+
+
+/* Whether the STUN packet has the attribute */
+static pj_bool_t pkt_has_attr(const pj_uint8_t *pkt, pj_size_t size,
+                              unsigned attr_type)
+{
+    pj_size_t pos = 20;
+
+    while (pos + 4 <= size) {
+        unsigned type = (pkt[pos] << 8) | pkt[pos+1];
+        unsigned len = (pkt[pos+2] << 8) | pkt[pos+3];
+
+        if (type == attr_type)
+            return PJ_TRUE;
+        pos += 4 + ((len + 3) & ~3U);
+    }
+    return PJ_FALSE;
+}
 
 
 static pj_status_t client_send_msg(pj_stun_session *sess,
@@ -352,6 +444,12 @@ static pj_status_t client_send_msg(pj_stun_session *sess,
 
     PJ_UNUSED_ARG(sess);
     PJ_UNUSED_ARG(token);
+
+    if (client->fail_retry &&
+        pkt_has_attr((const pj_uint8_t*)pkt, pkt_size, PJ_STUN_ATTR_NONCE))
+    {
+        return PJ_EUNKNOWN;
+    }
 
     return pj_sock_sendto(client->sock, pkt, &len, 0, dst_addr, addr_len);
 }
@@ -372,6 +470,7 @@ static void client_on_request_complete( pj_stun_session *sess,
     PJ_UNUSED_ARG(src_addr_len);
 
     client->response_status = status;
+    client->complete_count++;
     if (response)
         client->response = pj_stun_msg_clone(client->pool, response);
 
@@ -723,6 +822,155 @@ done:
                              more_check);
     }
 
+    return rc;
+}
+
+
+/* A request that cannot be retried after an authentication challenge must
+ * still be completed, with an error.
+ */
+static int run_bad_res_test(const char *title,
+                            pj_stun_auth_type client_auth_type,
+                            int bad_res,
+                            pj_bool_t fail_retry,
+                            pj_status_t expected_code,
+                            pj_bool_t expected_response)
+{
+    pj_pool_t *pool;
+    pj_stun_session_cb sess_cb;
+    pj_stun_tx_data *tdata;
+    pj_status_t status;
+    pj_sockaddr addr;
+    unsigned i;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "   %s test", title));
+
+    /* Create client */
+    pool = pj_pool_create(mem, "client", 1000, 1000, NULL);
+    client = PJ_POOL_ZALLOC_T(pool, struct client);
+    client->pool = pool;
+    client->responding = PJ_TRUE;
+    client->fail_retry = fail_retry;
+
+    pj_bzero(&sess_cb, sizeof(sess_cb));
+    sess_cb.on_request_complete = &client_on_request_complete;
+    sess_cb.on_send_msg = &client_send_msg;
+    status = pj_stun_session_create(&stun_cfg, "client", &sess_cb, PJ_FALSE,
+                                    NULL, &client->sess);
+    if (status != PJ_SUCCESS) {
+        destroy_client_server();
+        return -1100;
+    }
+
+    status = pj_sem_create(pool, "client", 0, 1, &client->test_complete);
+    if (status != PJ_SUCCESS) {
+        destroy_client_server();
+        return -1105;
+    }
+
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &client->sock);
+    if (status != PJ_SUCCESS) {
+        destroy_client_server();
+        return -1110;
+    }
+
+    pj_sockaddr_init(pj_AF_INET(), &addr, NULL, 0);
+    status = pj_sock_bind(client->sock, &addr, pj_sockaddr_get_len(&addr));
+    if (status != PJ_SUCCESS) {
+        destroy_client_server();
+        return -1120;
+    }
+
+    status = pj_thread_create(pool, "client", &client_thread, NULL, 0, 0,
+                              &client->thread);
+    if (status != PJ_SUCCESS) {
+        destroy_client_server();
+        return -1130;
+    }
+
+    if (client_auth_type != PJ_STUN_AUTH_NONE) {
+        pj_stun_auth_cred cred;
+
+        pj_bzero(&cred, sizeof(cred));
+        cred.type = PJ_STUN_AUTH_CRED_STATIC;
+        cred.data.static_cred.realm = pj_str(REALM);
+        cred.data.static_cred.username = pj_str(USERNAME);
+        cred.data.static_cred.data = pj_str(PASSWORD);
+        cred.data.static_cred.data_type = PJ_STUN_PASSWD_PLAIN;
+        status = pj_stun_session_set_credential(client->sess,
+                                                client_auth_type, &cred);
+        if (status != PJ_SUCCESS) {
+            destroy_client_server();
+            return -1140;
+        }
+    }
+
+    rc = create_std_server(PJ_STUN_AUTH_LONG_TERM, PJ_TRUE, PJ_FALSE);
+    if (rc != 0) {
+        destroy_client_server();
+        return rc;
+    }
+    server->bad_res = bad_res;
+
+    status = pj_stun_session_create_req(client->sess, PJ_STUN_BINDING_REQUEST,
+                                        PJ_STUN_MAGIC, NULL, &tdata);
+    if (status != PJ_SUCCESS) {
+        destroy_client_server();
+        return -1150;
+    }
+
+    status = pj_stun_session_send_msg(client->sess, NULL, PJ_FALSE, PJ_TRUE,
+                                      &server->addr,
+                                      pj_sockaddr_get_len(&server->addr),
+                                      tdata);
+    if (status != PJ_SUCCESS) {
+        destroy_client_server();
+        return -1160;
+    }
+
+    /* The response ends the transaction, so nothing completes the request
+     * later if the session does not.
+     */
+    for (i = 0; i < 500; ++i) {
+        if (pj_sem_trywait(client->test_complete) == PJ_SUCCESS)
+            break;
+        pj_thread_sleep(10);
+    }
+    if (i == 500) {
+        PJ_LOG(3,(THIS_FILE, "    err: request was never completed"));
+        rc = -1170;
+        goto done;
+    }
+
+    if (client->response_status != expected_code) {
+        char e1[PJ_ERR_MSG_SIZE], e2[PJ_ERR_MSG_SIZE];
+
+        pj_strerror(expected_code, e1, sizeof(e1));
+        pj_strerror(client->response_status, e2, sizeof(e2));
+        PJ_LOG(3,(THIS_FILE, "    err: expecting %d (%s) but got %d (%s)",
+                  expected_code, e1, client->response_status, e2));
+        rc = -1180;
+        goto done;
+    }
+
+    if ((client->response != NULL) != (expected_response != PJ_FALSE)) {
+        PJ_LOG(3,(THIS_FILE, "    err: response is %s",
+                  client->response ? "not expected" : "expected"));
+        rc = -1190;
+        goto done;
+    }
+
+    /* Must be completed only once */
+    pj_thread_sleep(100);
+    if (client->complete_count != 1) {
+        PJ_LOG(3,(THIS_FILE, "    err: request completed %u times",
+                  client->complete_count));
+        rc = -1195;
+    }
+
+done:
+    destroy_client_server();
     return rc;
 }
 
@@ -1148,6 +1396,45 @@ int sess_auth_test(void)
     if (rc != 0) {
         goto done;
     }
+
+    /*
+     * A challenge that cannot be answered must still complete the request
+     */
+    rc = run_bad_res_test("Error response without ERROR-CODE (long term)",
+                          PJ_STUN_AUTH_LONG_TERM, BAD_RES_NO_ERRCODE, PJ_FALSE,
+                          PJNATH_EINSTUNMSG, PJ_FALSE);
+    if (rc != 0)
+        goto done;
+
+    rc = run_bad_res_test("Error response without ERROR-CODE (no auth)",
+                          PJ_STUN_AUTH_NONE, BAD_RES_NO_ERRCODE, PJ_FALSE,
+                          PJNATH_EINSTUNMSG, PJ_FALSE);
+    if (rc != 0)
+        goto done;
+
+    rc = run_bad_res_test("Error response with ERROR-CODE 100 (long term)",
+                          PJ_STUN_AUTH_LONG_TERM, BAD_RES_ERRCODE_100,
+                          PJ_FALSE, PJNATH_EINSTUNMSG, PJ_FALSE);
+    if (rc != 0)
+        goto done;
+
+    rc = run_bad_res_test("401 without NONCE (long term)",
+                          PJ_STUN_AUTH_LONG_TERM, BAD_RES_401_NO_NONCE,
+                          PJ_FALSE, PJ_STATUS_FROM_STUN_CODE(401), PJ_TRUE);
+    if (rc != 0)
+        goto done;
+
+    rc = run_bad_res_test("438 without NONCE (long term)",
+                          PJ_STUN_AUTH_LONG_TERM, BAD_RES_438_NO_NONCE,
+                          PJ_FALSE, PJ_STATUS_FROM_STUN_CODE(438), PJ_TRUE);
+    if (rc != 0)
+        goto done;
+
+    rc = run_bad_res_test("Failure sending the retry (long term)",
+                          PJ_STUN_AUTH_LONG_TERM, BAD_RES_NONE, PJ_TRUE,
+                          PJ_EUNKNOWN, PJ_FALSE);
+    if (rc != 0)
+        goto done;
 
     /*
      * (our own) Extended tests for long term credential

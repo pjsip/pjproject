@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2015-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2012-2015 Zaark Technology AB
  *
  * This program is free software; you can redistribute it and/or modify
@@ -249,6 +249,9 @@ PJ_BEGIN_DECL
     #define PJMEDIA_CODEC_OPUS_LIB_NAME  "libopus.a"
     #define PJMEDIA_HAS_OPUS_CODEC       1
  \endcode
+ *
+ * If the application links Opus itself, e.g. as part of a combined library,
+ * set #PJMEDIA_AUTO_LINK_OPUS_LIBS to 0 to turn the automatic linking off.
  *
  */
 

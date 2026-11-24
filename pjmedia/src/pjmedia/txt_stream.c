@@ -1144,9 +1144,7 @@ static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
         deferred_char_len = stream->tx_buf[0].length;
         pj_memcpy(deferred_char_buf, stream->tx_buf[0].buf, deferred_char_len);
 
-        stream->tx_buf[0].buf[0] = (char) 0xEF;
-        stream->tx_buf[0].buf[1] = (char) 0xBB;
-        stream->tx_buf[0].buf[2] = (char) 0xBF;
+        pj_memcpy(stream->tx_buf[0].buf, "\xEF\xBB\xBF", 3);
         stream->tx_buf[0].length = 3;
         has_deferred_char = PJ_TRUE;
         max_pass = 2; /* Need a second pass for the user data */
@@ -1366,7 +1364,7 @@ static void check_idle_ka(pjmedia_txt_stream *stream)
                    PJMEDIA_TXT_STREAM_MAX_RED_LEVELS * 4 + 1];
     unsigned pt = channel->pt;
     int red_len = 0;
-    const void *rtphdr;
+    const void *rtphdr = NULL;
     int hdrlen;
     unsigned elapsed;
     pj_timestamp now;
@@ -1580,7 +1578,7 @@ static pj_status_t get_codec_info(pjmedia_txt_stream_info *si, pj_pool_t *pool,
                 }
 
                 p = red_fmtp.param[i].val.ptr;
-                for (r = 0; r < red_fmtp.param[i].val.slen; ++r) {
+                for (r = 0; r < (unsigned)red_fmtp.param[i].val.slen; ++r) {
                     if (p[r] == '/')
                         si->tx_red_level++;
                 }

@@ -1769,13 +1769,20 @@ public:
      * Depending on the status code specified as parameter, this function may
      * send provisional response, establish the call, or terminate the call.
      * Notes about call setting:
-     *  - if call setting is changed in the subsequent call to this function,
-     *    only the first call setting supplied will applied. So normally
-     *    application will not supply call setting before getting confirmation
-     *    from the user.
+     *  - only the first call setting supplied with a 1xx or 2xx response is
+     *    applied; a call setting supplied in a later call to this function
+     *    is ignored. So normally the application should not supply a call
+     *    setting before getting confirmation from the user, since a call
+     *    setting sent with a 180 cannot be changed when the call is then
+     *    accepted with a 200.
+     *  - a call setting is supplied whenever prm.opt is not empty, e.g. with
+     *    CallOpParam(true). To answer with 180 without supplying one, use a
+     *    default-constructed CallOpParam.
      *  - if no call setting is supplied when SDP has to be sent, i.e: answer
      *    with status code 183 or 2xx, the default call setting will be used,
-     *    check CallSetting for its default values.
+     *    check CallSetting for its default values. If the incoming INVITE
+     *    has no SDP offer, the default call setting then becomes the applied
+     *    one, and a call setting supplied later is ignored.
      *
      * @param prm.opt       Optional call setting.
      * @param prm.statusCode   Status code, (>= PJSIP_SC_TRYING (100)).

@@ -554,12 +554,6 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)",
-					"\"$(SRCROOT)/../../../../pjlib/lib\"",
-					"\"$(SRCROOT)/../../../../pjlib-util/lib\"",
-					"\"$(SRCROOT)/../../../../pjmedia/lib\"",
-					"\"$(SRCROOT)/../../../../pjnath/lib\"",
-					"\"$(SRCROOT)/../../../../pjsip/lib\"",
-					"\"$(SRCROOT)/../../../../third_party/lib\"",
 					"$(PROJECT_DIR)",
 				);
 				ONLY_ACTIVE_ARCH = YES;
@@ -600,12 +594,6 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)",
-					"\"$(SRCROOT)/../../../../pjlib/lib\"",
-					"\"$(SRCROOT)/../../../../pjlib-util/lib\"",
-					"\"$(SRCROOT)/../../../../pjmedia/lib\"",
-					"\"$(SRCROOT)/../../../../pjnath/lib\"",
-					"\"$(SRCROOT)/../../../../pjsip/lib\"",
-					"\"$(SRCROOT)/../../../../third_party/lib\"",
 					"$(PROJECT_DIR)",
 				);
 				ONLY_ACTIVE_ARCH = YES;

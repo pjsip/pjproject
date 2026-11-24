@@ -472,7 +472,7 @@ static int txdata_test_uri_params(void)
 
     PJ_LOG(5,(THIS_FILE, "%ld bytes request created:--begin-msg--\n"
                          "%s\n"
-                         "--end-msg--", len, msgbuf));
+                         "--end-msg--", (long)len, msgbuf));
 
     /* Now parse the message. */
     pj_list_init(&err_list);

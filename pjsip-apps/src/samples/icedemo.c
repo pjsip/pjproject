@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -227,7 +227,7 @@ static void cb_on_rx_data(pj_ice_strans *ice_st,
     //((char*)pkt)[size] = '\0';
 
     PJ_LOG(3,(THIS_FILE, "Component %d: received %ld bytes data from %s: \"%.*s\"",
-              comp_id, size,
+              comp_id, (long)size,
               pj_sockaddr_print(src_addr, ipstr, sizeof(ipstr), 3),
               (unsigned)size,
               (char*)pkt));

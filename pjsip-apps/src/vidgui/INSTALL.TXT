@@ -17,7 +17,7 @@ Build instructions:
     -------------
       - Run this to generate Visual Studio project file:
          c:> qmake -tp vc
-      - Open vidgui.vcproj and build the app
+      - Open the generated project and build the app
 
 
     Mac OS X

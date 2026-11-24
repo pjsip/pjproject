@@ -195,8 +195,9 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
         if (bytes_read != -12345 && bytes_read <= 0 && !IGNORE_ERROR(-bytes_read)) {
             TRACE((THIS_FILE, "op_key:%p: stopping due to read=%ld",
-                               op_key, bytes_read));
-            PJ_PERROR(1,(THIS_FILE, (pj_status_t)-bytes_read, "%ld is", -bytes_read));
+                               op_key, (long)bytes_read));
+            PJ_PERROR(1,(THIS_FILE, (pj_status_t)-bytes_read, "%ld is",
+                         (long)-bytes_read));
             okud->server.status = (bytes_read == 0)? PJ_RETURN_OS_ERROR(OSERR_ENOTCONN) :
                                   (pj_status_t)-bytes_read;
             break;
@@ -320,7 +321,7 @@ static void on_write_complete(pj_ioqueue_key_t *key,
 
     if (bytes_sent != -12345 && bytes_sent <= 0 && !IGNORE_ERROR(-bytes_sent)) {
         TRACE((THIS_FILE, "op_key:%p: stopping due to sent=%ld",
-                           op_key, bytes_sent));
+                           op_key, (long)bytes_sent));
         okud->client.status = (bytes_sent == 0)? PJ_RETURN_OS_ERROR(OSERR_ENOTCONN) :
                               (pj_status_t)-bytes_sent;
         return;

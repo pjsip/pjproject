@@ -1,6 +1,7 @@
+include(Pj/PackageRoot)
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-  pkg_search_module(PC_SpeexDSP QUIET speexdsp libspeexdsp)
+  pj_pkg_search_module(PC_SpeexDSP QUIET speexdsp libspeexdsp)
 endif()
 
 find_path(SpeexDSP_INCLUDE_DIR
@@ -22,11 +23,21 @@ find_library(SpeexDSP_LIBRARY
 )
 mark_as_advanced(SpeexDSP_LIBRARY)
 
+if(SpeexDSP_INCLUDE_DIR AND SpeexDSP_LIBRARY)
+  include(Pj/CheckLibraryUsable)
+  pj_check_library_usable(SpeexDSP
+    FUNCTION speex_echo_state_init
+    LIBRARIES "${SpeexDSP_LIBRARY}"
+    STATIC_LIBS m
+  )
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(SpeexDSP
   REQUIRED_VARS
     SpeexDSP_INCLUDE_DIR
     SpeexDSP_LIBRARY
+    SpeexDSP_USABLE
   VERSION_VAR
     SpeexDSP_VERSION
 )
@@ -43,5 +54,7 @@ if(SpeexDSP_FOUND)
       INTERFACE_INCLUDE_DIRECTORIES "${SpeexDSP_INCLUDE_DIRS}"
       INTERFACE_COMPILE_OPTIONS "${SpeexDSP_DEFINITIONS}"
     )
+    include(Pj/DebugLibrary)
+    pj_import_debug_library(SpeexDSP::SpeexDSP SpeexDSP_LIBRARY)
   endif()
 endif()
