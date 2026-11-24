@@ -5392,7 +5392,7 @@ static pj_bool_t is_non_av_fmt(const pjmedia_sdp_media *m,
     const pj_str_t STR_RED = {"red", 3};
     unsigned pt;
 
-    pt = pj_strtoul(fmt);
+    pt = (unsigned)pj_strtoul(fmt);
 
     /* Check for comfort noise */
     if (pt == PJMEDIA_RTP_PT_CN)
@@ -8169,7 +8169,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
                             {
                                 val_str.ptr = ptr;
                                 val_str.slen = input.slen - (ptr - input.ptr);
-                                info.duration = pj_strtoul(&val_str);
+                                info.duration = (unsigned)pj_strtoul(&val_str);
                             } else {
                                 info.duration = PJSUA_UNKNOWN_DTMF_DURATION;
                                 is_handled = PJ_FALSE;

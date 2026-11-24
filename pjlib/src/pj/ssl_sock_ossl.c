@@ -1265,7 +1265,8 @@ static pj_status_t init_openssl(void)
     /* Create OpenSSL application data index for SSL socket */
     sslsock_idx = SSL_get_ex_new_index(0, "SSL socket", NULL, NULL, NULL);
     if (sslsock_idx == -1) {
-        status = STATUS_FROM_SSL_ERR2("Init", NULL, -1, ERR_get_error(), 0);
+        status = STATUS_FROM_SSL_ERR2("Init", NULL, -1,
+                                      (int)ERR_get_error(), 0);
         PJ_LOG(1,(THIS_FILE,
                "Fatal error: failed to get application data index for "
                "SSL socket"));
@@ -2598,13 +2599,13 @@ static pj_status_t set_curves_list(pj_ssl_sock_t *ssock)
     }
 
     if( SSL_is_server(ossock->ossl_ssl) ) {
-        ret = SSL_set1_curves(ossock->ossl_ssl, curves,
-                              ssock->param.curves_num);
+        ret = (int)SSL_set1_curves(ossock->ossl_ssl, curves,
+                                   ssock->param.curves_num);
         if (ret < 1)
             return GET_SSL_STATUS(ssock);
     } else {
-        ret = SSL_CTX_set1_curves(ossock->ossl_ctx, curves,
-                                  ssock->param.curves_num);
+        ret = (int)SSL_CTX_set1_curves(ossock->ossl_ctx, curves,
+                                       ssock->param.curves_num);
         if (ret < 1)
             return GET_SSL_STATUS(ssock);
     }
@@ -2623,11 +2624,11 @@ static pj_status_t set_sigalgs(pj_ssl_sock_t *ssock)
     if (ssock->param.sigalgs.ptr && ssock->param.sigalgs.slen) {
 #if !USING_BORINGSSL
         if (ssock->is_server) {
-            ret = SSL_set1_client_sigalgs_list(ossock->ossl_ssl,
-                                               ssock->param.sigalgs.ptr);
+            ret = (int)SSL_set1_client_sigalgs_list(ossock->ossl_ssl,
+                                                    ssock->param.sigalgs.ptr);
         } else {
-            ret = SSL_set1_sigalgs_list(ossock->ossl_ssl,
-                                        ssock->param.sigalgs.ptr);
+            ret = (int)SSL_set1_sigalgs_list(ossock->ossl_ssl,
+                                             ssock->param.sigalgs.ptr);
         }
 #else
         ret = SSL_set1_sigalgs_list(ossock->ossl_ssl,
@@ -2716,15 +2717,15 @@ static pj_bool_t parse_ossl_asn1_time(pj_time_val *tv, pj_bool_t *gmt,
     }
 
     /* encode parts to pj_time_val */
-    pt.year = parts[0];
+    pt.year = (int)parts[0];
     if (utc)
         pt.year += (pt.year < 50)? 2000:1900;
-    pt.mon = parts[1] - 1;
-    pt.day = parts[2];
-    pt.hour = parts[3];
-    pt.min = parts[4];
-    pt.sec = parts[5];
-    pt.msec = parts[6];
+    pt.mon = (int)parts[1] - 1;
+    pt.day = (int)parts[2];
+    pt.hour = (int)parts[3];
+    pt.min = (int)parts[4];
+    pt.sec = (int)parts[5];
+    pt.msec = (int)parts[6];
 
     pj_time_encode(&pt, tv);
 
@@ -2811,7 +2812,7 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci, X509 *x,
     pj_bzero(ci, sizeof(pj_ssl_cert_info));
 
     /* Version */
-    ci->version = X509_get_version(x) + 1;
+    ci->version = (unsigned)(X509_get_version(x) + 1);
 
     /* Issuer */
     pj_strdup2(pool, &ci->issuer.info, buf);

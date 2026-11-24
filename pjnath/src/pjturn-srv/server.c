@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -235,7 +235,7 @@ static void srv_handle_events(pj_turn_srv *srv, const pj_time_val *max_timeout)
     do {
         c = pj_ioqueue_poll( srv->core.ioqueue, &timeout);
         if (c < 0) {
-            pj_thread_sleep(PJ_TIME_VAL_MSEC(timeout));
+            pj_thread_sleep((unsigned)PJ_TIME_VAL_MSEC(timeout));
             return;
         } else if (c == 0) {
             break;

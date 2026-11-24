@@ -414,7 +414,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
     defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
     if (ioctlsocket(sock, FIONBIO, &value)) {
 #else
-    if (ioctl(sock, FIONBIO, &value)) {
+    if (ioctl((int)sock, FIONBIO, &value)) {
 #endif
         rc = pj_get_netos_error();
         goto on_return;
@@ -1000,7 +1000,7 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
         pj_lock_release(ioqueue->lock);
         TRACE__((THIS_FILE, "     poll: no fd is set"));
         if (timeout)
-            pj_thread_sleep(PJ_TIME_VAL_MSEC(*timeout));
+            pj_thread_sleep((unsigned)PJ_TIME_VAL_MSEC(*timeout));
         return 0;
     }
 

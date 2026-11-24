@@ -276,12 +276,12 @@ static pjsip_hdr* parse_hdr_sub_state( pjsip_parse_ctx *ctx )
             hdr->reason_param = pvalue;
 
         } else if (pj_stricmp(&pname, &expires) == 0) {
-            hdr->expires_param = pj_strtoul(&pvalue);
+            hdr->expires_param = (unsigned)pj_strtoul(&pvalue);
             if (hdr->expires_param == PJSIP_EXPIRES_NOT_SPECIFIED)
                 hdr->expires_param--;
 
         } else if (pj_stricmp(&pname, &retry_after) == 0) {
-            hdr->retry_after = pj_strtoul(&pvalue);
+            hdr->retry_after = (int)pj_strtoul(&pvalue);
 
         } else {
             pjsip_param *param = PJ_POOL_ALLOC_T(ctx->pool, pjsip_param);

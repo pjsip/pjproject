@@ -224,7 +224,7 @@ static pj_status_t parse_attr_crypto(pj_pool_t *pool,
             return PJMEDIA_SDP_EINATTR;
 
     /* Get tag value. */
-    *tag = pj_strtoul(&token);
+    *tag = (int)pj_strtoul(&token);
 
     /* Crypto-suite */
     found_idx = pj_strtok(&attr->value, &delim, &token, found_idx+token.slen);

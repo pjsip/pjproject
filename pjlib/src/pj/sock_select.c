@@ -96,7 +96,7 @@ PJ_DEF(int) pj_sock_select( int n,
 
     if (timeout) {
         os_timeout.tv_sec = timeout->sec;
-        os_timeout.tv_usec = timeout->msec * 1000;
+        os_timeout.tv_usec = (int)(timeout->msec * 1000);
         p_os_timeout = &os_timeout;
     } else {
         p_os_timeout = NULL;

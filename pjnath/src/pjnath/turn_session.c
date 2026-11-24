@@ -507,7 +507,7 @@ PJ_DEF(pj_status_t) pj_turn_session_get_info( pj_turn_session *sess,
 
     info->state = sess->state;
     info->conn_type = sess->conn_type;
-    info->lifetime = sess->expiry.sec - now.sec;
+    info->lifetime = (int)(sess->expiry.sec - now.sec);
     info->last_status = sess->last_status;
 
     if (sess->srv_addr)

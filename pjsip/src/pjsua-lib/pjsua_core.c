@@ -3184,7 +3184,7 @@ PJ_DEF(pj_status_t) pjsua_transport_get_info( pjsua_transport_id id,
         info->addr_len = tp->addr_len;
         info->local_addr = tp->local_addr;
         info->local_name = tp->local_name;
-        info->usage_count = pj_atomic_get(tp->ref_cnt);
+        info->usage_count = (unsigned)pj_atomic_get(tp->ref_cnt);
 
         status = PJ_SUCCESS;
 
@@ -3413,7 +3413,8 @@ PJ_DEF(pj_status_t) pjsua_transport_lis_restart(pjsua_transport_id id,
         af = pjsip_transport_type_get_af(factory->type);
     } else if (tp_type == PJSIP_TRANSPORT_UDP) {
         pjsip_transport *transport = pjsua_var.tpdata[id].data.tp;
-        af = pjsip_transport_type_get_af(transport->key.type);
+        af = pjsip_transport_type_get_af(
+                    (pjsip_transport_type_e)transport->key.type);
     } else {
         return PJ_EINVAL;
     }
