@@ -778,6 +778,7 @@
     <ClInclude Include="..\include\pjlib-util\scanner_cis_uint.h" />
     <ClInclude Include="..\include\pjlib-util\sha1.h" />
     <ClInclude Include="..\include\pjlib-util\srv_resolver.h" />
+    <ClInclude Include="..\src\pjlib-util\resolver_internal.h" />
     <ClInclude Include="..\include\pjlib-util\string.h" />
     <ClInclude Include="..\include\pjlib-util\stun_simple.h" />
     <ClInclude Include="..\include\pjlib-util\types.h" />

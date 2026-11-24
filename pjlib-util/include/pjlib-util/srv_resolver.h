@@ -208,6 +208,13 @@ PJ_DECL(pj_status_t) pj_dns_srv_resolve(const pj_str_t *domain_name,
  * The memory of the query must be kept until this function returns
  * PJ_SUCCESS or the callback has been called.
  *
+ * This must not be called while the query's callback is running in another
+ * thread: serialize the two with a lock the callback also takes, as the
+ * STUN socket and the TURN session do. Once the callback has been called,
+ * the query no longer keeps the resolver alive, so a cancel racing the end
+ * of the callback could reach a resolver that another thread has already
+ * destroyed.
+ *
  * @param query     The pending asynchronous query to be cancelled.
  * @param notify    If non-zero, the callback will be called with failure
  *                  status to notify that the query has been cancelled.
@@ -218,9 +225,8 @@ PJ_DECL(pj_status_t) pj_dns_srv_resolve(const pj_str_t *domain_name,
  *                  PJ_EPENDING if another thread is processing a DNS answer
  *                  of the query: the callback will still be called once,
  *                  with a failure status, regardless of \a notify.
- *                  PJ_EINVALIDOP if the resolution has completed: the
- *                  callback has been called, or is being called by another
- *                  thread.
+ *                  PJ_EINVALIDOP if the resolution has completed and the
+ *                  callback has been called.
  */
 PJ_DECL(pj_status_t) pj_dns_srv_cancel_query(pj_dns_srv_async_query *query,
                                              pj_bool_t notify);
