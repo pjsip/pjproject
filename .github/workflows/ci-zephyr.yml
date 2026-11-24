@@ -34,8 +34,8 @@ jobs:
       # workflow. On a push the filter is skipped and everything runs.
       zephyr_deps: ${{ github.event_name != 'pull_request' || steps.filter.outputs.src == 'true' }}
     steps:
-    - uses: actions/checkout@v4
-    - uses: dorny/paths-filter@v3
+    - uses: actions/checkout@v5
+    - uses: dorny/paths-filter@v4
       if: github.event_name == 'pull_request'
       id: filter
       with:
@@ -65,10 +65,10 @@ jobs:
         platform: [native_sim/native/64, mps2/an521/cpu0]
     name: build ${{ matrix.platform }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         path: pjproject
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v6
       with:
         python-version: '3.12'
     - name: Set up the Zephyr workspace and SDK
@@ -84,7 +84,7 @@ jobs:
         west twister -T pjproject/zephyr -p ${{ matrix.platform }} --build-only -v --inline-logs -O twister-out
     - name: Upload the logs
       if: failure()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: build-${{ strategy.job-index }}
         path: twister-out/**/*.log
@@ -100,10 +100,10 @@ jobs:
         scenario: [pjsip.pjlib, pjsip.pjlib.threads]
     name: ${{ matrix.scenario }} on native_sim
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         path: pjproject
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v6
       with:
         python-version: '3.12'
     - name: Set up the Zephyr workspace and SDK
@@ -119,7 +119,7 @@ jobs:
         west twister -T pjproject/zephyr/tests/pjlib -p native_sim/native/64 -s ${{ matrix.scenario }} -v --inline-logs -O twister-out
     - name: Upload the logs
       if: failure()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ matrix.scenario }}
         path: twister-out/**/*.log
