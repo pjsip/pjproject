@@ -35,6 +35,7 @@ jobs:
       pjnath_pjmedia_deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib_util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
       pjnath_pjsip_deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib_util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjsip == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
       any_src: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib_util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.pjsip == 'true' || steps.filter.outputs.pjsip_apps == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
+      cmake: ${{ steps.filter.outputs.cmake == 'true' }}
     steps:
     - uses: actions/checkout@v5
     - uses: dorny/paths-filter@v4
@@ -63,6 +64,14 @@ jobs:
           tests:
             - 'tests/**'
           ci:
+            - '.github/**'
+          cmake:
+            - 'CMakeLists.txt'
+            - '**/CMakeLists.txt'
+            - 'cmake/**'
+            - '**/*.cm'
+            - 'libpjproject.pc.in'
+            - 'tests/cmake/**'
             - '.github/**'
 
   default:
@@ -1063,6 +1072,194 @@ jobs:
       run: |
         $PSNativeCommandUseErrorActionPreference = $true
         cmake -B build-consumer tests/cmake -G "Visual Studio 17 2022" -A x64 `
+          "-DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install" `
+          "-DCMAKE_IGNORE_PREFIX_PATH=$env:PJ_IGNORE_PREFIX"
+        cmake --build build-consumer --config Release
+        ./build-consumer/Release/test_consumer.exe
+        ./build-consumer/Release/test_consumer2.exe
+
+  # One optional audio codec (Opus) and one video codec (libvpx), from
+  # vcpkg, found through <Pkg>_ROOT. A library that is not found is dropped
+  # without failing the configure, so assert both were used. The consumers
+  # get only the pjproject install: its package must find both where the
+  # build did. vcpkg's vpx.lib is built with /GL, which makes every Release
+  # program linking pjmedia relink with /LTCG, so this is not part of the
+  # ungated cmake-build.
+  cmake-opus-vpx:
+    needs: [detect-changes]
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
+    runs-on: windows-2022
+    name: CMake / Opus + VPX from <Pkg>_ROOT
+    env:
+      # as in cmake-build
+      PJ_IGNORE_PREFIX: C:/Strawberry/c;C:/msys64/mingw64;C:/msys64/usr
+    steps:
+    - uses: actions/checkout@v5
+    - name: vcpkg paths
+      id: vcpkg
+      run: |
+        $prefix = "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows" -replace '\\', '/'
+        $cache = "${{ runner.temp }}/vcpkg-cache" -replace '\\', '/'
+        New-Item -ItemType Directory -Force $cache | Out-Null
+        Add-Content $env:GITHUB_ENV "VCPKG_PREFIX=$prefix"
+        Add-Content $env:GITHUB_ENV "VCPKG_DEFAULT_BINARY_CACHE=$cache"
+        Add-Content $env:GITHUB_OUTPUT "image=$env:ImageVersion"
+    - name: cache vcpkg packages
+      # vcpkg's binary cache: packages are named by an ABI hash, so a stale
+      # entry is only a miss. The runner image updates vcpkg's ports.
+      uses: actions/cache@v5
+      with:
+        path: ${{ runner.temp }}/vcpkg-cache
+        key: vcpkg-x64-windows-opus-libvpx-${{ steps.vcpkg.outputs.image }}
+        restore-keys: vcpkg-x64-windows-opus-libvpx-
+    - name: install dependencies
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        & "$env:VCPKG_INSTALLATION_ROOT/vcpkg" install opus libvpx --triplet x64-windows
+    - name: configure
+      run: >-
+        cmake -B build -G "Visual Studio 17 2022" -A x64
+        "-DCMAKE_IGNORE_PREFIX_PATH=$env:PJ_IGNORE_PREFIX"
+        "-DOPUS_ROOT=$env:VCPKG_PREFIX" "-DVPX_ROOT=$env:VCPKG_PREFIX"
+    - name: check the roots
+      # both codecs on, the library and the headers from vcpkg
+      run: |
+        $cache = Get-Content build/CMakeCache.txt
+        foreach ($p in 'OPUS', 'VPX') {
+          if (-not ($cache -ccontains "PJMEDIA_WITH_${p}_CODEC:BOOL=ON")) {
+            Write-Host "::error::PJMEDIA_WITH_${p}_CODEC is not ON"
+            exit 1
+          }
+          foreach ($v in 'LIBRARY', 'INCLUDE_DIR') {
+            $line = $cache -match "^${p}_${v}:"
+            Write-Host $line
+            if (-not ($line -like "*=$env:VCPKG_PREFIX/*")) {
+              Write-Host "::error::${p}_$v is not from $env:VCPKG_PREFIX"
+              exit 1
+            }
+          }
+        }
+    - name: OpenSSL runtime
+      # as in cmake-build
+      run: |
+        $m = cmake -LA -N build | Select-String '^OPENSSL_INCLUDE_DIR:PATH=(.+)$'
+        if ($m) {
+          $bin = Join-Path (Split-Path $m.Matches[0].Groups[1].Value) bin
+          if (Test-Path $bin) {
+            Write-Host "OpenSSL: $bin"
+            Add-Content $env:GITHUB_PATH $bin
+          }
+        }
+    - name: build
+      run: cmake --build build --config Release --parallel
+    - name: install
+      run: cmake --install build --config Release --prefix "${{ runner.temp }}/pj-install"
+    - name: test find_package
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        cmake -B build-consumer tests/cmake -G "Visual Studio 17 2022" -A x64 `
+          "-DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install" `
+          "-DCMAKE_IGNORE_PREFIX_PATH=$env:PJ_IGNORE_PREFIX"
+        cmake --build build-consumer --config Release
+        $env:PATH = "$env:VCPKG_PREFIX/bin;$env:PATH"
+        ./build-consumer/Release/test_consumer.exe
+        ./build-consumer/Release/test_consumer2.exe
+
+  # MinGW-w64 GCC with the UCRT runtime, from MSYS2, and MSYS2's OpenSSL.
+  # No other job builds with MinGW.
+  cmake-mingw:
+    needs: [detect-changes]
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
+    runs-on: windows-2022
+    name: CMake / MinGW UCRT64
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+    - uses: actions/checkout@v5
+    - uses: msys2/setup-msys2@v2
+      with:
+        msystem: UCRT64
+        release: false
+        install: >-
+          mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake
+          mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-pkgconf
+          mingw-w64-ucrt-x86_64-openssl
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
+    - name: configure
+      run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+    - name: build
+      run: cmake --build build
+    - name: pjlib-test
+      # as in cmake-build; the SSL test certificates are found from pjlib/build
+      run: |
+        cd pjlib/build
+        ../../build/pjlib/bin/pjlib-test --ci-mode sock_test udp_ioqueue_test ssl_sock_test
+    - name: install
+      run: cmake --install build --prefix "$(cygpath -m '${{ runner.temp }}')/pj-install"
+    - name: test find_package
+      run: |
+        prefix="$(cygpath -m '${{ runner.temp }}')/pj-install"
+        cmake -B build-consumer tests/cmake -G Ninja \
+          -DCMAKE_PREFIX_PATH="$prefix" -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-consumer --verbose
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+    - name: test pkg-config
+      run: |
+        export PKG_CONFIG_PATH="$(cygpath -m '${{ runner.temp }}')/pj-install/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        gcc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --static --cflags --libs libpjproject)
+        ./pc_consumer
+
+  # A 32-bit (Win32) build, for CMake's 32-bit x86 branches that no other
+  # job takes: the architecture detected as i386, WebRTC's SSE2 sources
+  # built with /arch:SSE2, and os_auto.h without PJ_WIN64 and with 4-byte
+  # pool alignment. The MSVC project jobs build Win32 without CMake and run
+  # its tests.
+  cmake-win32:
+    needs: [detect-changes]
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
+    runs-on: windows-2022
+    name: CMake / Win32
+    env:
+      # as in cmake-build
+      PJ_IGNORE_PREFIX: C:/Strawberry/c;C:/msys64/mingw64;C:/msys64/usr
+    steps:
+    - uses: actions/checkout@v5
+    - name: configure
+      run: >-
+        cmake -B build -G "Visual Studio 17 2022" -A Win32
+        "-DCMAKE_IGNORE_PREFIX_PATH=$env:PJ_IGNORE_PREFIX"
+    - name: check 32-bit configuration
+      run: |
+        $failed = $false
+        $cache = Get-Content build/CMakeCache.txt
+        foreach ($e in '_pj_detected_arch:INTERNAL=i386',
+                       '_pj_detected_simd_ext_flags:INTERNAL=/arch:SSE2',
+                       'PJMEDIA_WITH_WEBRTC_AEC:BOOL=ON') {
+          $name = $e.Split(':')[0]
+          if ($cache -ccontains $e) { Write-Host $e; continue }
+          Write-Host "::error::expected $e, got: $($cache -match "^${name}:")"
+          $failed = $true
+        }
+        $h = Get-Content build/pjlib/include/pj/compat/os_auto.h
+        foreach ($e in '/* #undef PJ_WIN64 */', '#define PJ_POOL_ALIGNMENT 4') {
+          if ($h -ccontains $e) { Write-Host $e; continue }
+          Write-Host "::error::os_auto.h has no '$e'"
+          $failed = $true
+        }
+        if ($failed) { exit 1 }
+    - name: build
+      run: cmake --build build --config Release --parallel
+    - name: install
+      run: cmake --install build --config Release --prefix "${{ runner.temp }}/pj-install"
+    - name: test find_package
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        cmake -B build-consumer tests/cmake -G "Visual Studio 17 2022" -A Win32 `
           "-DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install" `
           "-DCMAKE_IGNORE_PREFIX_PATH=$env:PJ_IGNORE_PREFIX"
         cmake --build build-consumer --config Release

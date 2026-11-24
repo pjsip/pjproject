@@ -42,6 +42,7 @@ jobs:
       # are platform-independent protocol logic already covered by Linux CI.
       # Only run full Mac test suite for changes to platform-specific areas.
       mac_full_tests: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
+      cmake: ${{ steps.filter.outputs.cmake == 'true' }}
     steps:
     - uses: actions/checkout@v5
     - uses: dorny/paths-filter@v4
@@ -70,6 +71,14 @@ jobs:
           tests:
             - 'tests/**'
           ci:
+            - '.github/**'
+          cmake:
+            - 'CMakeLists.txt'
+            - '**/CMakeLists.txt'
+            - 'cmake/**'
+            - '**/*.cm'
+            - 'libpjproject.pc.in'
+            - 'tests/cmake/**'
             - '.github/**'
 
   default-build:
@@ -641,7 +650,7 @@ jobs:
     - name: config site
       run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
     - name: install dependencies
-      run: brew install openssl pkgconf
+      run: brew install openssl pkgconf opus libvpx
     - name: configure Debug
       run: cmake -B build-debug -DCMAKE_BUILD_TYPE=Debug
     - name: build Debug
@@ -652,6 +661,17 @@ jobs:
         otool -L build-debug/pjsip-apps/bin/pjsua
     - name: configure Release
       run: cmake -B build-release -DCMAKE_BUILD_TYPE=Release
+    - name: check options
+      # an optional library that is not found is dropped without failing the
+      # configure
+      run: |
+        for b in build-debug build-release; do
+          for p in OPUS VPX; do
+            grep "^PJMEDIA_WITH_${p}_CODEC:BOOL=ON$" $b/CMakeCache.txt || {
+              echo "::error::$b: PJMEDIA_WITH_${p}_CODEC is not ON"; exit 1; }
+            grep -E "^${p}_(LIBRARY|INCLUDE_DIR):" $b/CMakeCache.txt
+          done
+        done
     - name: build Release
       run: cmake --build build-release -j $(sysctl -n hw.ncpu)
     - name: check Release
@@ -677,3 +697,225 @@ jobs:
         cc tests/cmake/test_consumer.c -o pc_consumer \
           $(pkg-config --static --cflags --libs libpjproject)
         ./pc_consumer
+
+  # A shared install must work on its own: with no DYLD_* variable, the
+  # installed pjsua and the libraries find each other and the bundled ones in
+  # lib/pjproject/third_party through their rpaths, also from a copy of the
+  # install made elsewhere.
+  # Also Opus and libvpx, as in cmake-build, with the build pointed at each
+  # library by <Pkg>_ROOT: Homebrew's folder per package. The copies
+  # Homebrew links into its prefix must not be used: not by the build, and
+  # not by the consumers, which get only the pjproject install.
+  cmake-shared:
+    needs: [detect-changes]
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
+    runs-on: macos-latest
+    name: CMake / shared; Opus + VPX from <Pkg>_ROOT
+    steps:
+    - uses: actions/checkout@v5
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
+    - name: install dependencies
+      run: brew install openssl pkgconf opus libvpx
+    - name: configure
+      run: >-
+        cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON
+        -DOPUS_ROOT=$(brew --prefix opus) -DVPX_ROOT=$(brew --prefix libvpx)
+    - name: check the roots
+      # Opus and libvpx: the library and the headers from the root
+      run: |
+        for p in OPUS VPX; do
+          grep "^PJMEDIA_WITH_${p}_CODEC:BOOL=ON$" build/CMakeCache.txt || {
+            echo "::error::PJMEDIA_WITH_${p}_CODEC is not ON"; exit 1; }
+          root=$(sed -n "s/^${p}_ROOT:[A-Z]*=//p" build/CMakeCache.txt)
+          [ -n "$root" ] || { echo "::error::${p}_ROOT is not set"; exit 1; }
+          for v in LIBRARY INCLUDE_DIR; do
+            grep "^${p}_$v:[A-Z]*=$root/" build/CMakeCache.txt || {
+              echo "::error::${p}_$v is not under $root"; exit 1; }
+          done
+        done
+    - name: build
+      run: cmake --build build -j $(sysctl -n hw.ncpu)
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+    - name: test installed pjsua
+      run: |
+        prefix=${{ runner.temp }}/pj-install
+        test -f "$prefix/lib/libpj.dylib"
+        test ! -e "$prefix/lib/libpj.a"
+        for f in "$prefix/bin/pjsua" "$prefix"/lib/*.dylib "$prefix"/lib/pjproject/third_party/*.dylib; do
+          if ! otool -l "$f" | grep -A2 LC_RPATH; then
+            echo "::error::$f has no LC_RPATH"
+            exit 1
+          fi
+        done
+        if otool -l "$prefix/bin/pjsua" "$prefix"/lib/*.dylib "$prefix"/lib/pjproject/third_party/*.dylib |
+            grep -F "${{ github.workspace }}"; then
+          echo "::error::the install refers to the build tree"
+          exit 1
+        fi
+        "$prefix/bin/pjsua" --version > /dev/null
+        mv "$prefix" "${{ runner.temp }}/pj-moved"
+        "${{ runner.temp }}/pj-moved/bin/pjsua" --version > /dev/null
+        mv "${{ runner.temp }}/pj-moved" "$prefix"
+    - name: test find_package
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-consumer --verbose
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+    - name: test pkg-config
+      run: |
+        prefix=${{ runner.temp }}/pj-install
+        export PKG_CONFIG_PATH="$prefix/lib/pkgconfig"
+        cat "$PKG_CONFIG_PATH/libpjproject.pc"
+        cc tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --cflags --libs libpjproject) -Wl,-rpath,"$prefix/lib"
+        ./pc_consumer
+    - name: check the consumers used the roots
+      # and not the system's copies, which are installed too
+      run: |
+        export PKG_CONFIG_PATH="${{ runner.temp }}/pj-install/lib/pkgconfig"
+        for p in OPUS VPX; do
+          root=$(sed -n "s/^${p}_ROOT:[A-Z]*=//p" build/CMakeCache.txt)
+          found=$(sed -n "s/^FIND_PACKAGE_MESSAGE_DETAILS_${p}:INTERNAL=//p" \
+                  build-consumer/CMakeCache.txt)
+          echo "find_package consumer, $p: $found"
+          paths=$(echo "$found" | grep -o '\[/[^]]*\]' | tr -d '[]')
+          [ -n "$paths" ] || { echo "::error::no $p paths in the consumer"; exit 1; }
+          for f in $paths; do
+            case $f in
+              "$root"/*) ;;
+              *) echo "::error::find_package consumer: $f is not under $root"; exit 1 ;;
+            esac
+          done
+          pkg-config --static --libs-only-L libpjproject | tr ' ' '\n' | grep -- "^-L$root/" || {
+            echo "::error::libpjproject.pc has no -L under $root"; exit 1; }
+        done
+
+  # A universal (arm64 + x86_64) build. Homebrew's libraries are arm64 only:
+  # OpenSSL, GnuTLS, Opus and libvpx are found but must fail their link
+  # checks and be left out, as WebRTC is, so that both slices link.
+  cmake-universal:
+    needs: [detect-changes]
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
+    runs-on: macos-latest
+    name: CMake / universal arm64+x86_64
+    steps:
+    - uses: actions/checkout@v5
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
+    - name: install dependencies
+      run: brew install openssl gnutls opus libvpx pkgconf
+    - name: configure
+      run: >-
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"
+    - name: check the arm64-only libraries were left out
+      run: |
+        cache=build/CMakeCache.txt
+        failed=0
+        for v in OPENSSL_SSL_LIBRARY GNUTLS_LIBRARY OPUS_LIBRARY VPX_LIBRARY; do
+          path=$(sed -n "s/^$v:[^=]*=//p" $cache)
+          echo "$v=$path"
+          case "$path" in ''|*-NOTFOUND)
+            echo "::error::$v not found, so its link check did not run"
+            failed=1 ;;
+          esac
+        done
+        for e in PJ_SSL_BACKEND:INTERNAL= PJMEDIA_WITH_OPUS_CODEC:BOOL=OFF \
+                 PJMEDIA_WITH_VPX_CODEC:BOOL=OFF; do
+          grep -qx "$e" $cache || {
+            echo "::error::expected $e, got: $(grep "^${e%%:*}:" $cache)"
+            failed=1; }
+        done
+        exit $failed
+    - name: build
+      run: cmake --build build -j $(sysctl -n hw.ncpu)
+    - name: run pjsua
+      run: ./build/pjsip-apps/bin/pjsua --version
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+    - name: test find_package
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
+          -DCMAKE_BUILD_TYPE=Release "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"
+        cmake --build build-consumer --verbose
+        ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2
+    - name: test pkg-config
+      run: |
+        export PKG_CONFIG_PATH=${{ runner.temp }}/pj-install/lib/pkgconfig
+        cc -arch arm64 -arch x86_64 tests/cmake/test_consumer.c -o pc_consumer \
+          $(pkg-config --static --cflags --libs libpjproject)
+        ./pc_consumer
+    - name: check both architectures
+      run: |
+        failed=0
+        for f in build/pjsip-apps/bin/pjsua \
+                 $(find ${{ runner.temp }}/pj-install -name '*.a') \
+                 build-consumer/test_consumer build-consumer/test_consumer2 \
+                 pc_consumer; do
+          for a in arm64 x86_64; do
+            lipo "$f" -verify_arch $a || {
+              echo "::error::$f has no $a: $(lipo -archs "$f")"; failed=1; }
+          done
+        done
+        exit $failed
+
+  # The Xcode generator: Debug and Release in one build folder, each library
+  # and program with a -<Config> suffix, both installed into one prefix. The
+  # installed programs must still be validly signed and run. A consumer
+  # built with Xcode must link the libraries of its own configuration.
+  cmake-xcode:
+    needs: [detect-changes]
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.cmake == 'true'
+    runs-on: macos-latest
+    name: CMake / Xcode
+    steps:
+    - uses: actions/checkout@v5
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
+    - name: install dependencies
+      run: brew install openssl pkgconf
+    - name: configure
+      run: cmake -B build -G Xcode
+    - name: build Debug
+      run: cmake --build build --config Debug -- -quiet
+    - name: build Release
+      run: cmake --build build --config Release -- -quiet
+    - name: check build
+      run: |
+        set -o pipefail
+        for c in Debug:1 Release:0; do
+          cfg=${c%:*}; dbg=${c#*:}
+          test -f build/pjlib/lib/libpj-$cfg.a
+          ./build/pjsip-apps/bin/pjsua-$cfg --version | grep -E "PJ_DEBUG +: $dbg\$"
+        done
+    - name: install
+      run: |
+        for c in Debug Release; do
+          cmake --install build --config $c --prefix ${{ runner.temp }}/pj-install
+        done
+        ls ${{ runner.temp }}/pj-install/lib
+    - name: run the installed pjsua
+      run: |
+        for c in Debug Release; do
+          codesign -v ${{ runner.temp }}/pj-install/bin/pjsua-$c
+          ${{ runner.temp }}/pj-install/bin/pjsua-$c --version
+        done
+    - name: test find_package
+      run: |
+        set -o pipefail
+        cmake -B build-consumer tests/cmake -G Xcode \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install
+        for c in Debug Release; do
+          cmake --build build-consumer --config $c | tee build-$c.log
+          grep -q "libpj-$c\.a" build-$c.log || {
+            echo "::error::the $c consumer does not link libpj-$c.a"; exit 1; }
+          ./build-consumer/$c/test_consumer
+          ./build-consumer/$c/test_consumer2
+        done
