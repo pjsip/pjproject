@@ -663,20 +663,24 @@ PJ_DEF(pj_status_t) pj_sock_bind( pj_sock_t sock,
                                   const pj_sockaddr_t *addr,
                                   int len)
 {
+    const struct sockaddr *sa = (const struct sockaddr*)addr;
     pj_sockaddr copy;
 
     PJ_CHECK_STACK();
 
-    PJ_ASSERT_RETURN(addr && len >= (int)sizeof(struct sockaddr_in) &&
-                     len <= (int)sizeof(copy), PJ_EINVAL);
+    PJ_ASSERT_RETURN(addr && len >= (int)sizeof(struct sockaddr_in), PJ_EINVAL);
 
     CHECK_ADDR_LEN(addr, len);
 
     /* Zephyr's bind() writes the port it picks for port 0 back into the
-     * address, so give it a copy to keep ours const.
+     * address, so give it a copy to keep ours const. Larger addresses,
+     * such as a Unix-domain one, are passed through as before.
      */
-    pj_memcpy(&copy, addr, len);
-    if (bind(sock, (struct sockaddr*)&copy, len) != 0)
+    if (len <= (int)sizeof(copy)) {
+        pj_memcpy(&copy, addr, len);
+        sa = (const struct sockaddr*)&copy;
+    }
+    if (bind(sock, (struct sockaddr*)sa, len) != 0)
         return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else
         return PJ_SUCCESS;

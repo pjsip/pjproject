@@ -491,6 +491,7 @@ PJ_DEF(pj_status_t) pjsip_tx_data_create( pjsip_tpmgr *mgr,
     pj_pool_t *pool;
     pjsip_tx_data *tdata;
     pj_status_t status;
+    PJ_USE_EXCEPTION;
 
     PJ_ASSERT_RETURN(mgr && p_tdata, PJ_EINVAL);
 
@@ -510,7 +511,14 @@ PJ_DEF(pj_status_t) pjsip_tx_data_create( pjsip_tpmgr *mgr,
      * allocated after the message's headers it would no longer fit there
      * and the pool would grow by a block for it.
      */
-    tdata->buf.start = (char*) pj_pool_alloc(pool, PJSIP_MAX_PKT_LEN);
+    PJ_TRY {
+        tdata->buf.start = (char*) pj_pool_alloc(pool, PJSIP_MAX_PKT_LEN);
+    }
+    PJ_CATCH_ANY {
+        pjsip_endpt_release_pool(mgr->endpt, pool);
+        return PJ_ENOMEM;
+    }
+    PJ_END
     tdata->buf.cur = tdata->buf.start;
     tdata->buf.end = tdata->buf.start + PJSIP_MAX_PKT_LEN;
 
