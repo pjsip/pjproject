@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -90,7 +90,7 @@ static char *TEST9_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test09";
 #define BRANCH_LEN   (7+11)
 
 /* Widen timing tolerance in CI mode — shared runners can be 5-10x slower. */
-#define      TEST1_ALLOWED_DIFF    (test_app.ut_app.prm_ci_mode ? 2500 : 500)
+#define      TEST1_ALLOWED_DIFF    (test_app.ut_app.prm_ci_mode ? 2500u : 500u)
 #define      TEST4_RETRANSMIT_CNT   3
 #define      TEST5_RETRANSMIT_CNT   3
 

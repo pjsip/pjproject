@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -48,7 +48,7 @@ static pj_status_t on_tx_msg(pjsip_tx_data *tdata)
         PJ_LOG(4,(THIS_FILE, "TX %ld bytes %s to %s:%s:%d:\n"
                              "%.*s\n"
                              "--end msg--",
-                             (tdata->buf.cur - tdata->buf.start),
+                             (long)(tdata->buf.cur - tdata->buf.start),
                              pjsip_tx_data_get_info(tdata),
                              tdata->tp_info.transport->type_name,
                              tdata->tp_info.dst_name,

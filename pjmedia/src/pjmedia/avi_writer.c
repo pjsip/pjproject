@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2025 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2025-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -189,8 +189,8 @@ static pj_status_t avi_put_frame(pjmedia_port *this_port,
     if (fport->streams->total + frame->size + sizeof(pjmedia_avi_subchunk) >
         fport->streams->max_size)
     {
-        PJ_LOG(4, (THIS_FILE, "AVI writer max size %zu reached",
-                              fport->streams->max_size));
+        PJ_LOG(4, (THIS_FILE, "AVI writer max size %lu reached",
+                              (unsigned long)fport->streams->max_size));
 
         close_avi_file(fport->streams);
 

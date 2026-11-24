@@ -18,7 +18,7 @@ a=crypto:2 aEs_cM_128_HMaC_ShA1_32 inline:t0r0/apkukU7JjjfR0mY8GEimBq4OiPEm9eKSF
 """
 
 args = "--null-audio --auto-answer 200 --max-calls 1 --use-srtp 2 --srtp-secure 0"
-include = ["m=audio \d+ RTP/SAVP", "a=crypto"]
+include = [r"m=audio \d+ RTP/SAVP", "a=crypto"]
 exclude = []
 
 sendto_cfg = sip.SendtoCfg( "caller has used mixed case in crypto attr, callee must process that normally", 

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -617,7 +617,7 @@ static int send_recv_test(int sock_type,
         if (received != BIG_DATA_LEN-total_received) {
             if (sock_type != pj_SOCK_STREAM()) {
                 PJ_LOG(3,("", "...error: expecting %lu bytes, got %lu bytes",
-                          (unsigned long)BIG_DATA_LEN-total_received,
+                          (unsigned long)(BIG_DATA_LEN-total_received),
                           (unsigned long)received));
                 rc = -176; goto on_error;
             }

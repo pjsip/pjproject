@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2010-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -280,7 +280,7 @@ pjmedia_libswscale_converter_shutdown(pjmedia_converter_mgr *mgr,
                                                     PJ_TRUE);
 }
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && PJMEDIA_AUTO_LINK_FFMPEG_LIBS
 #   pragma comment( lib, "avutil.lib")
 #   pragma comment( lib, "swscale.lib")
 #endif

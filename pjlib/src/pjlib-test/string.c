@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -415,7 +415,7 @@ static int verify_strxcpy2(const pj_str_t *src, int dst_size, int exp_ret,
         if (ret != exp_ret) {
             PJ_LOG(3,("", "  strxcpy2 \"%.*s\" slen=%ld, dst_size=%d: "
                           "ret %d!=%d",
-                          (int)src->slen, src->ptr, src->slen, dst_size,
+                          (int)src->slen, src->ptr, (long)src->slen, dst_size,
                           ret, exp_ret));
             return -724;
         }
@@ -425,7 +425,7 @@ static int verify_strxcpy2(const pj_str_t *src, int dst_size, int exp_ret,
             if (strcmp(dst, exp_dst)) {
                 PJ_LOG(3,("", "  strxcpy2 \"%.*s\" slen=%ld, dst_size=%d: "
                             "dst content mismatch: \"%s\"!=\"%s\"",  
-                            (int)src->slen, src->ptr, src->slen, dst_size, dst,
+                            (int)src->slen, src->ptr, (long)src->slen, dst_size, dst,
                             exp_dst));
                 return -726;
             }
@@ -436,7 +436,7 @@ static int verify_strxcpy2(const pj_str_t *src, int dst_size, int exp_ret,
             if (dst[i] != GUARD) {
                 PJ_LOG(3,("", "  strxcpy2 \"%.*s\" slen=%ld, dst_size=%d: "
                             "overflow at %d (chr %d)",
-                            (int)src->slen, src->ptr, src->slen, dst_size, i,
+                            (int)src->slen, src->ptr, (long)src->slen, dst_size, i,
                             (char)(dst[i] & 0xFF)));
                 return -728;
             }

@@ -2126,6 +2126,7 @@ static void close_snd_port(pjmedia_snd_port *old_snd)
     if (!old_snd)
         return;
 
+    pj_bzero(&param, sizeof(param));
     strm = pjmedia_snd_port_get_snd_stream(old_snd);
     if (strm) {
         st = pjmedia_aud_stream_get_param(strm, &param);

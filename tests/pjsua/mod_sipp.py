@@ -79,10 +79,10 @@ def resolve_pjsua_uri(mo):
     return PJSUA_INST_PARAM[int(mo.group(1))].uri[1:-1]
 
 def resolve_driver_macros(st):
-    st = re.sub("\$SIPP_PORT", str(SIPP_PORT), st)
-    st = re.sub("\$SIPP_URI", "sip:sipp@127.0.0.1:"+str(SIPP_PORT), st)
-    st = re.sub("\$PJSUA_PORT\[(\d+)\]", resolve_pjsua_port, st)
-    st = re.sub("\$PJSUA_URI\[(\d+)\]", resolve_pjsua_uri, st)
+    st = re.sub(r"\$SIPP_PORT", str(SIPP_PORT), st)
+    st = re.sub(r"\$SIPP_URI", "sip:sipp@127.0.0.1:"+str(SIPP_PORT), st)
+    st = re.sub(r"\$PJSUA_PORT\[(\d+)\]", resolve_pjsua_port, st)
+    st = re.sub(r"\$PJSUA_URI\[(\d+)\]", resolve_pjsua_uri, st)
     return st
 
 
@@ -146,7 +146,7 @@ def start_sipp():
     else:
         # get SIPp child process PID
         pid = 0
-        r = re.compile("PID=\[(\d+)\]", re.I)
+        r = re.compile(r"PID=\[(\d+)\]", re.I)
 
         while True:
             line = sipp_proc.stdout.readline()

@@ -1664,6 +1664,17 @@
 #endif
 
 /**
+ * Link with the FFMPEG libraries via pragma comment on Visual Studio.
+ * Disable this when the application links FFMPEG itself, e.g. when FFMPEG
+ * is part of a combined library.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_AUTO_LINK_FFMPEG_LIBS
+#   define PJMEDIA_AUTO_LINK_FFMPEG_LIBS                1
+#endif
+
+/**
  * Maximum video planes.
  *
  * Default: 4

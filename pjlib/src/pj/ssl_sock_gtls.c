@@ -65,7 +65,7 @@
 #include <gnutls/x509.h>
 #include <gnutls/abstract.h>
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && PJ_AUTO_LINK_SSL_LIBS
 #  pragma comment( lib, "libgnutls")
 #endif
 
@@ -174,9 +174,10 @@ static pj_status_t tls_status_from_err(pj_ssl_sock_t *ssock, int err)
 static pj_str_t tls_strerror(pj_status_t status,
                              char *buf, pj_size_t bufsize)
 {
-    PJ_UNUSED_ARG(status);
     pj_str_t errstr;
     const char *tmp = gnutls_strerror(tls_last_error);
+
+    PJ_UNUSED_ARG(status);
 
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
     if (tmp) {
@@ -188,7 +189,7 @@ static pj_str_t tls_strerror(pj_status_t status,
 
     errstr.ptr = buf;
     errstr.slen = pj_ansi_snprintf(buf, bufsize, "GnuTLS error %d: %s",
-                                   tls_last_error, tmp);
+                                   tls_last_error, tmp ? tmp : "unknown");
     if (errstr.slen < 1 || errstr.slen >= (int) bufsize)
         errstr.slen = bufsize - 1;
 
@@ -375,6 +376,7 @@ static pj_ssize_t tls_data_pull(gnutls_transport_ptr_t ptr,
 {
     pj_ssl_sock_t *ssock = (pj_ssl_sock_t *)ptr;
     gnutls_sock_t *gssock = (gnutls_sock_t *)ssock;
+    pj_size_t circ_buf_size, read_size;
 
     pj_lock_acquire(ssock->ssl_read_buf_mutex);
 
@@ -386,8 +388,8 @@ static pj_ssize_t tls_data_pull(gnutls_transport_ptr_t ptr,
         return -1;
     }
 
-    pj_size_t circ_buf_size = circ_size(&ssock->ssl_read_buf);
-    pj_size_t read_size = PJ_MIN(circ_buf_size, len);
+    circ_buf_size = circ_size(&ssock->ssl_read_buf);
+    read_size = PJ_MIN(circ_buf_size, len);
 
     circ_read(&ssock->ssl_read_buf, data, read_size);
 
@@ -655,11 +657,9 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     cert = ssock->cert;
 
     /* Initialize GnuTLS library (idempotent) */
-    {
-        pj_status_t status = tls_init();
-        if (status != PJ_SUCCESS)
-            return status;
-    }
+    status = tls_init();
+    if (status != PJ_SUCCESS)
+        return status;
 
     /* Start this socket session */
     ret = gnutls_init(&gssock->session, ssock->is_server ? GNUTLS_SERVER
@@ -778,15 +778,14 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
         if (cert->cert_buf.slen && cert->privkey_buf.slen) {
             gnutls_datum_t cert_buf;
             gnutls_datum_t privkey_buf;
+            const char *prikey_pass = cert->privkey_pass.slen
+                                    ? cert->privkey_pass.ptr
+                                    : NULL;
 
             cert_buf.data = (unsigned char*)cert->cert_buf.ptr;
             cert_buf.size = cert->cert_buf.slen;
             privkey_buf.data = (unsigned char*)cert->privkey_buf.ptr;
             privkey_buf.size = cert->privkey_buf.slen;
-
-            const char *prikey_pass = cert->privkey_pass.slen
-                                    ? cert->privkey_pass.ptr
-                                    : NULL;
             ret = gnutls_certificate_set_x509_key_mem2(gssock->xcred,
                                                        &cert_buf,
                                                        &privkey_buf,

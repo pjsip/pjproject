@@ -105,6 +105,14 @@
 #      define OSSL_HAS_TICKET_API 0
 #endif
 
+/* X509_STORE_get0_objects() is deprecated in OpenSSL 4.0 */
+#if !USING_LIBRESSL && !USING_BORINGSSL && \
+    OPENSSL_VERSION_NUMBER >= 0x40000000L
+#      define OSSL_HAS_STORE_GET1_OBJECTS 1
+#else
+#      define OSSL_HAS_STORE_GET1_OBJECTS 0
+#endif
+
 #if !USING_LIBRESSL && !defined(OPENSSL_NO_EC) \
         && OPENSSL_VERSION_NUMBER >= 0x1000200fL
 
@@ -173,7 +181,12 @@ static void update_certs_info(pj_ssl_sock_t* ssock,
 #  define OPENSSL_NO_SSL2           /* seems to be removed in 1.1.0 */
 # ifndef M_ASN1_STRING_data
 #  define M_ASN1_STRING_data(x)     ASN1_STRING_get0_data(x)
-#  define M_ASN1_STRING_length(x)   ASN1_STRING_length(x)
+#  if OPENSSL_VERSION_NUMBER >= 0x40100000L && !USING_LIBRESSL && \
+      !USING_BORINGSSL
+#    define M_ASN1_STRING_length(x) ((int)ASN1_STRING_get_length(x))
+#  else
+#    define M_ASN1_STRING_length(x) ASN1_STRING_length(x)
+#  endif
 # endif
 #  if defined(OPENSSL_API_COMPAT) && OPENSSL_API_COMPAT >= 0x10100000L || \
       defined(OPENSSL_NO_DEPRECATED)
@@ -199,10 +212,12 @@ static void update_certs_info(pj_ssl_sock_t* ssock,
 
 #ifdef _MSC_VER
 #  if OPENSSL_VERSION_NUMBER >= 0x10100000L
-#    pragma comment(lib, "libcrypto")
-#    pragma comment(lib, "libssl")
+#    if PJ_AUTO_LINK_SSL_LIBS
+#      pragma comment(lib, "libcrypto")
+#      pragma comment(lib, "libssl")
+#    endif
 #    pragma comment(lib, "crypt32")
-#  else
+#  elif PJ_AUTO_LINK_SSL_LIBS
 #    pragma comment(lib, "libeay32")
 #    pragma comment(lib, "ssleay32")
 #  endif
@@ -835,7 +850,13 @@ static pj_bool_t sess_ctx_id_init(pj_ssl_sock_t *ssock)
         ok = digest_part(md, PART_CERT, dgst, len);
 
     /* Trusted CAs and CRLs */
+#if OSSL_HAS_STORE_GET1_OBJECTS
+    objs = X509_STORE_get1_objects(SSL_CTX_get_cert_store(ossock->ossl_ctx));
+    if (!objs)
+        ok = 0;
+#else
     objs = X509_STORE_get0_objects(SSL_CTX_get_cert_store(ossock->ossl_ctx));
+#endif
     for (i = 0; ok && objs && i < sk_X509_OBJECT_num(objs); ++i) {
         X509_OBJECT *obj = sk_X509_OBJECT_value(objs, i);
 
@@ -854,6 +875,9 @@ static pj_bool_t sess_ctx_id_init(pj_ssl_sock_t *ssock)
 #endif
         }
     }
+#if OSSL_HAS_STORE_GET1_OBJECTS
+    sk_X509_OBJECT_pop_free(objs, X509_OBJECT_free);
+#endif
 
     /* CA_path certificates are loaded on demand, so take the path itself. */
     if (ok) {
@@ -1379,7 +1403,7 @@ static pj_uint32_t verify_err_to_status(long err)
     /* Unknown errors */
     case X509_V_ERR_OUT_OF_MEM:
     default:
-        status = PJ_SSL_CERT_EUNKNOWN;
+        status = (pj_uint32_t)PJ_SSL_CERT_EUNKNOWN;
         break;
     }
 
@@ -2342,6 +2366,8 @@ static void ssl_free_cert(pj_ssl_cert_t *cert)
         X509_free(cert->direct.cert);
         cert->direct.cert = NULL;
     }
+#else
+    PJ_UNUSED_ARG(cert);
 #endif
 }
 

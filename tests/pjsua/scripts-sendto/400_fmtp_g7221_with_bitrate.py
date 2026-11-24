@@ -24,7 +24,7 @@ a=fmtp:101 0-15
 
 pjsua_args = "--null-audio --auto-answer 200 --add-codec G7221"
 extra_headers = ""
-include = ["fmtp:[\d]+ bitrate="]	# response must include fmtp bitrate
+include = [r"fmtp:[\d]+ bitrate="]	# response must include fmtp bitrate
 exclude = []
 
 sendto_cfg = sip.SendtoCfg("Answer should contain fmtp bitrate for codec G722.1", pjsua_args, sdp, 200,

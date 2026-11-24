@@ -21,4 +21,7 @@ cflags:
 
 target_name:
 	@echo $(TARGET_NAME)
+
+cxx:
+	@echo $(PJ_CXX)
 	

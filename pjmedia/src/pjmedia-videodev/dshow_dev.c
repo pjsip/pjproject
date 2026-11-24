@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,9 +41,11 @@
 #include <amvideo2.h>
 #endif
 
-#pragma comment(lib, "Strmiids.lib")
-#pragma comment(lib, "Rpcrt4.lib")
-#pragma comment(lib, "Quartz.lib")
+#ifdef _MSC_VER
+#   pragma comment(lib, "Strmiids.lib")
+#   pragma comment(lib, "Rpcrt4.lib")
+#   pragma comment(lib, "Quartz.lib")
+#endif
 
 #define THIS_FILE               "dshow_dev.c"
 #define DEFAULT_CLOCK_RATE      90000
@@ -924,8 +926,8 @@ on_error:
     if (FAILED(hr)) {
         char msg[80];
         if (AMGetErrorText(hr, msg, sizeof(msg))) {
-            PJ_LOG(4,(THIS_FILE, "Error creating filter graph: %s (hr=0x%x)", 
-                      msg, hr));
+            PJ_LOG(4,(THIS_FILE, "Error creating filter graph: %s (hr=0x%lx)",
+                      msg, (unsigned long)hr));
         }
         return PJ_EUNKNOWN;
     }

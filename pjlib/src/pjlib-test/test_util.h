@@ -142,7 +142,7 @@ PJ_INLINE(void) ut_list_tests(ut_app_t *ut_app, const char *title)
     const pj_test_case *tc, *prev=NULL;
 
     pj_log_set_decor(d ^ PJ_LOG_HAS_NEWLINE);
-    PJ_LOG(3,(THIS_FILE, "%ld %s:", pj_list_size(&ut_app->suite.tests),
+    PJ_LOG(3,(THIS_FILE, "%ld %s:", (long)pj_list_size(&ut_app->suite.tests),
               title));
     pj_log_set_decor(0);
     for (tc=ut_app->suite.tests.next; tc!=&ut_app->suite.tests; tc=tc->next) {

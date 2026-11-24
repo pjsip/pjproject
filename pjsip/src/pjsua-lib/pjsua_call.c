@@ -3822,7 +3822,7 @@ PJ_DEF(pj_status_t) pjsua_call_send_ack(pjsua_call_id call_id,
 
     if (callback_inv) {
         call = (pjsua_call*) callback_inv->dlg->mod_data[pjsua_var.mod.id];
-        if (!call || call->index != call_id) {
+        if (!call || (pjsua_call_id)call->index != call_id) {
             status = PJ_EINVALIDOP;
             goto on_return;
         }
@@ -7283,7 +7283,7 @@ static void pjsua_call_on_siprec_metadata_update(
             }
         }
 
-        if (new_metadata->slen > call->siprec_metadata_cap) {
+        if ((pj_size_t)new_metadata->slen > call->siprec_metadata_cap) {
             call->siprec_metadata.ptr = (char*)
                 pj_pool_alloc(call->inv->pool, new_metadata->slen);
             call->siprec_metadata_cap = new_metadata->slen;

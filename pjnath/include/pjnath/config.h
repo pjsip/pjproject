@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -649,6 +649,17 @@
  */
 #ifndef PJ_UPNP_DEFAULT_SEARCH_TIME 
 #   define PJ_UPNP_DEFAULT_SEARCH_TIME  5
+#endif
+
+/**
+ * Link with libupnp, libixml and libpthread via pragma comment on Visual
+ * Studio. Disable this when the application links them itself, e.g. when
+ * they are part of a combined library.
+ *
+ * Default: 1
+ */
+#ifndef PJNATH_AUTO_LINK_UPNP_LIBS
+#   define PJNATH_AUTO_LINK_UPNP_LIBS   1
 #endif
 
 

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2022 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2022-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -955,7 +955,7 @@ PJ_DEF(pj_status_t)pj_upnp_del_port_mapping(const pj_sockaddr *mapped_addr)
     return status;
 }
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && PJNATH_AUTO_LINK_UPNP_LIBS
 #   pragma comment(lib, "libupnp")
 #   pragma comment(lib, "libixml")
 #   pragma comment(lib, "libpthread")
