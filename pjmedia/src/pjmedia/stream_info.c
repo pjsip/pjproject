@@ -296,9 +296,9 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
         pj_strltrim(&tmp_val);
 
         /* Round up ptime when the specified is not multiple of frm_ptime */
-        frm_per_pkt = ((unsigned)pj_strtoul(&tmp_val) +
-                      si->param->info.frm_ptime/2) /
-                      si->param->info.frm_ptime;
+        frm_per_pkt = (unsigned)((pj_strtoul(&tmp_val) +
+                                 si->param->info.frm_ptime/2) /
+                                 si->param->info.frm_ptime);
         if (frm_per_pkt != 0) {
             si->param->setting.frm_per_pkt = (pj_uint8_t)frm_per_pkt;
         }

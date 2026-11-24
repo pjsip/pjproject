@@ -2720,7 +2720,7 @@ static pj_bool_t parse_ossl_asn1_time(pj_time_val *tv, pj_bool_t *gmt,
     pt.year = (int)parts[0];
     if (utc)
         pt.year += (pt.year < 50)? 2000:1900;
-    pt.mon = (int)parts[1] - 1;
+    pt.mon = (int)(parts[1] - 1);
     pt.day = (int)parts[2];
     pt.hour = (int)parts[3];
     pt.min = (int)parts[4];
