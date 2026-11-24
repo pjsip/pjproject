@@ -42,6 +42,13 @@ if(MSVC)
   target_compile_options(pj_webrtc PRIVATE /wd4100 /wd4127 /wd4244)
 endif()
 
+# Warnings in the bundled code, which is kept as upstream has it
+target_compile_options(pj_webrtc
+  PRIVATE
+    $<$<C_COMPILER_ID:GNU>:-Wno-maybe-uninitialized>
+    $<$<C_COMPILER_ID:Clang,AppleClang>:-Wno-shorten-64-to-32>
+)
+
 # include SIMD source files
 if(WEBRTC_ARCH_SIMD STREQUAL "neon")
   target_sources(pj_webrtc

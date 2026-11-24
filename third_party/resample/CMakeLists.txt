@@ -28,6 +28,11 @@ target_include_directories(pj_resample
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
 )
 
+# Warnings in the bundled code, which is kept as upstream has it
+target_compile_options(pj_resample
+  PRIVATE $<$<C_COMPILER_ID:Clang,AppleClang>:-Wno-shorten-64-to-32>
+)
+
 # ##############################################################################
 # Configuration
 

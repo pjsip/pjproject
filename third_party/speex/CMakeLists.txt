@@ -67,6 +67,13 @@ target_sources(pj_speex
         "${CMAKE_CURRENT_SOURCE_DIR}/../build/speex/speex/speex_config_types.h"
 )
 
+# Warnings in the bundled code, which is kept as upstream has it
+target_compile_options(pj_speex
+  PRIVATE
+    $<$<C_COMPILER_ID:GNU>:-Wno-maybe-uninitialized>
+    $<$<C_COMPILER_ID:Clang,AppleClang>:-Wno-shorten-64-to-32>
+)
+
 # ##############################################################################
 # Dependencies
 
