@@ -17,7 +17,7 @@ target_sources(app PRIVATE
   ${CMAKE_CURRENT_LIST_DIR}/../../../pjmedia/src/test/main.c
 )
 target_link_libraries(app PRIVATE pjmedia-test-sources pjmedia-codec
-  pjmedia-audiodev pjmedia pjnath pjlib-util pjlib srtp resample)
+  pjmedia-audiodev pjmedia pjnath pjlib-util pjlib pj_srtp pj_resample)
 # The preset builds G.711 only and no resampler; the tests cover G.722 and
 # the bundled libresample too. Set here rather than in the tree's
 # config_site.h, which is the user's.

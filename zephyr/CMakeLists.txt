@@ -99,7 +99,7 @@ endforeach()
 
 # Zephyr's include paths, flags and generated headers for every target
 foreach(_t pjlib pjlib-util pjnath pjmedia pjmedia-codec pjmedia-audiodev pjmedia-videodev
-           pjsip pjsip-simple pjsip-ua pjsua-lib srtp resample)
+           pjsip pjsip-simple pjsip-ua pjsua-lib pj_srtp pj_resample)
   if(TARGET ${_t})
     target_link_libraries(${_t} PRIVATE zephyr_interface)
     add_dependencies(${_t} zephyr_generated_headers)
@@ -108,8 +108,8 @@ endforeach()
 # libsrtp's x86 byte swap uses the asm keyword, which Zephyr's -std=c99
 # takes away (only native_sim is affected). Zephyr's own options come after
 # the target's, so a -std override is lost; spell the keyword instead.
-if(TARGET srtp)
-  target_compile_definitions(srtp PRIVATE asm=__asm__)
+if(TARGET pj_srtp)
+  target_compile_definitions(pj_srtp PRIVATE asm=__asm__)
 endif()
 
 # What an application links. Static libraries, so an application that does

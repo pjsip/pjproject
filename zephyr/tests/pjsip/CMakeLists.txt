@@ -16,7 +16,7 @@ project(pjsip_test)
 target_sources(app PRIVATE
   ${CMAKE_CURRENT_LIST_DIR}/../../../pjsip/src/test/main.c
 )
-target_link_libraries(app PRIVATE pjsip-test-sources pjsip-ua pjsip-simple pjsip pjmedia pjnath pjlib-util pjlib srtp)
+target_link_libraries(app PRIVATE pjsip-test-sources pjsip-ua pjsip-simple pjsip pjmedia pjnath pjlib-util pjlib pj_srtp)
 # The suite's tests register more modules than the preset's 16 at a time,
 # the ones of the dialog and invite tests staying until the end
 zephyr_compile_definitions(PJSIP_MAX_MODULE=32)

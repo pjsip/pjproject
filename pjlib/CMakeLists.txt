@@ -412,6 +412,12 @@ function(_pj_mbedtls_libraries out)
 endfunction()
 
 function(_pj_check_mbedtls_usable)
+  # Zephyr builds Mbed TLS in this same build, which a test project cannot
+  # link; the library is known to be usable
+  if(DEFINED ZEPHYR_BASE)
+    set(MbedTLS_USABLE TRUE PARENT_SCOPE)
+    return()
+  endif()
   include(Pj/CheckLibraryUsable)
   _pj_mbedtls_libraries(_libs)
   pj_check_library_usable(MbedTLS ${PJ_FIND_QUIET}
