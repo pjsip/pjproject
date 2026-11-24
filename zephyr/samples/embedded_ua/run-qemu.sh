@@ -32,8 +32,9 @@ else
     echo "$build is not an MPS2 build; use west build -t run" >&2; exit 1
 fi
 
-qemu=$(sed -n 's/^QEMU_BIN_PATH:[A-Z]*=\(.*\)$/\1/p' "$build/CMakeCache.txt")
-qemu=${QEMU:-${qemu:+$qemu/}qemu-system-arm}
+qemu=$(sed -n 's/^QEMU:FILEPATH=\(.*\)$/\1/p' "$build/CMakeCache.txt")
+case $qemu in ''|*-NOTFOUND) qemu=qemu-system-arm ;; esac
+qemu=${QEMU:-$qemu}
 tap=$(conf CONFIG_EMBUA_HOST_TAP_IFACE)
 nic="-nic tap,ifname=${tap:-zeth},script=no,downscript=no"
 case " $* " in *" -nic "*) nic= ;; esac
