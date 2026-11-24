@@ -3200,7 +3200,18 @@ on_return:
     return (status == PJ_SUCCESS) ? 0 : -1;
 }
 
+/* OpenSSL 3.3 and later, LibreSSL and BoringSSL reject a short time field
+ * when the certificate is decoded, so the test server cannot present one.
+ */
 #if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+#   include <openssl/opensslv.h>
+#   if (OPENSSL_VERSION_NUMBER < 0x30300000L) && \
+       !defined(LIBRESSL_VERSION_NUMBER) && !defined(OPENSSL_IS_BORINGSSL)
+#       define TEST_BAD_TIME_CERT       1
+#   endif
+#endif
+
+#if TEST_BAD_TIME_CERT
 /* Self-signed cert (sharing serial_key_pem) whose notAfter is a zero-length
  * GeneralizedTime. OpenSSL keeps the raw ASN.1 time bytes without checking
  * the format, so get_cert_info() parses this field when a peer presents it.
@@ -3252,7 +3263,7 @@ on_return:
 
     return (status == PJ_SUCCESS) ? 0 : -1;
 }
-#endif  /* PJ_SSL_SOCK_IMP_OPENSSL */
+#endif  /* TEST_BAD_TIME_CERT */
 
 struct chain_state
 {
@@ -3835,7 +3846,7 @@ int ssl_sock_test(void)
     if (ret != 0)
         return ret;
 
-#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+#if TEST_BAD_TIME_CERT
     PJ_LOG(3,("", "..certificate malformed validity time test"));
     ret = cert_bad_time_test();
     if (ret != 0)
