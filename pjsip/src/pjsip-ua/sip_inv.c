@@ -725,6 +725,15 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
     method = &rdata->msg_info.msg->line.req.method;
 
     if (method->id == PJSIP_INVITE_METHOD) {
+        /* Don't claim a re-INVITE once the session is gone or has
+         * disconnected: the dialog may still be alive (e.g. during the
+         * 2xx absorb-retransmission window kept by
+         * PJSIP_INV_ABSORB_RETRANS_AFTER_ACK), but inv_on_state_*() would
+         * silently drop the request. Let the dialog layer answer it.
+         */
+        if (inv == NULL || inv->state == PJSIP_INV_STATE_DISCONNECTED)
+            return PJ_FALSE;
+
         return PJ_TRUE;
     }
 
