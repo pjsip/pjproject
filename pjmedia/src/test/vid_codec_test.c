@@ -838,8 +838,7 @@ on_return:
                                   codec);
     if (opened)
         pjmedia_vid_codec_close(codec);
-    if (codec)
-        pjmedia_vid_codec_mgr_dealloc_codec(NULL, codec);
+    pjmedia_vid_codec_mgr_dealloc_codec(NULL, codec);
 
     return rc;
 }
