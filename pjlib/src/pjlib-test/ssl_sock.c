@@ -1515,8 +1515,14 @@ on_return:
             ;
     }
 
-    if (timer)
+    /* The accepted socket whose handshake failed is closed by a timer,
+     * wait longer than PJ_SSL_SOCK_DELAYED_CLOSE_TIMEOUT (500 ms).
+     */
+    if (timer) {
+        pj_thread_sleep(600);
+        pj_timer_heap_poll(timer, NULL);
         pj_timer_heap_destroy(timer);
+    }
     if (ioqueue)
         pj_ioqueue_destroy(ioqueue);
     if (pool)
