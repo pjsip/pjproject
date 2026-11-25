@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -818,7 +818,14 @@ static pj_status_t ilbc_codec_decode(pjmedia_codec *codec,
 
     /* Convert decodec samples from float to short */
     for (i=0; i<ilbc_codec->dec_samples_per_frame; ++i) {
-        ((short*)output->buf)[i] = (short)ilbc_codec->dec_block[i];
+        float s = ilbc_codec->dec_block[i];
+        if (s != s)
+            s = 0;
+        else if (s > 32767)
+            s = 32767;
+        else if (s < -32768)
+            s = -32768;
+        ((short*)output->buf)[i] = (short)s;
     }
     output->size = (ilbc_codec->dec_samples_per_frame << 1);
 #endif
@@ -880,7 +887,14 @@ static pj_status_t  ilbc_codec_recover(pjmedia_codec *codec,
 
     /* Convert decodec samples from float to short */
     for (i=0; i<ilbc_codec->dec_samples_per_frame; ++i) {
-        ((short*)output->buf)[i] = (short)ilbc_codec->dec_block[i];
+        float s = ilbc_codec->dec_block[i];
+        if (s != s)
+            s = 0;
+        else if (s > 32767)
+            s = 32767;
+        else if (s < -32768)
+            s = -32768;
+        ((short*)output->buf)[i] = (short)s;
     }
     output->size = (ilbc_codec->dec_samples_per_frame << 1);
 #endif
