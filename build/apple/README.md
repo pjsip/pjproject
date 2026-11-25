@@ -226,7 +226,7 @@ Output:
 | Path | Contents |
 |---|---|
 | `out/dist/PJSIP.xcframework` | the framework, with a privacy manifest per slice |
-| `out/dist/PJSIP.xcframework.zip` | the release artifact; its sha256 is printed at the end |
+| `out/dist/PJSIP-<version>-ios.xcframework.zip` | the release artifact; its sha256 is printed at the end. A build with the `macos` slice is named `-macos`, or `-apple` together with iOS |
 | `out/dist/Package.swift` | copy to the repository root before tagging |
 | `out/dist/PJSIP.podspec` | upload to the release |
 | `out/stage/<slice>/` | the CMake build tree, staged headers and `hidden-symbols-<arch>.txt` |
@@ -307,7 +307,8 @@ forgets to declare fails here rather than in someone else's project.
 
 5. **Publish the release.** Create the GitHub release as a **draft** with the
    tag name set and the target set to the branch just committed to, upload
-   `PJSIP.xcframework.zip` and `PJSIP.podspec` from `out/dist/`, then publish.
+   `PJSIP-<version>-ios.xcframework.zip` and `PJSIP.podspec` from
+   `out/dist/`, then publish.
    GitHub creates the tag on publish, so tag and assets appear together — any
    gap between them is a window in which SwiftPM consumers resolve the tag and
    fail to download.

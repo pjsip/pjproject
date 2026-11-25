@@ -40,8 +40,8 @@
 #   CODESIGN_ID               sign and verify the framework with this identity
 #   JOBS                      parallel jobs (default: number of CPUs)
 #   VERSION                   release version (default: PJ_VERSION from
-#                             version.mak); sets the podspec version and the
-#                             URLs in both generated manifests
+#                             version.mak); sets the podspec version, the zip
+#                             name and the URLs in both generated manifests
 #   RELEASE_BASE              base URL the manifests point at
 #                             (default: the pjproject GitHub releases URL)
 #
@@ -779,12 +779,13 @@ package() {
         codesign --verify --strict "$DIST/$NAME.xcframework"
     fi
 
-    rm -f "$DIST/$NAME.xcframework.zip"
-    ditto -c -k --keepParent "$DIST/$NAME.xcframework" \
-          "$DIST/$NAME.xcframework.zip"
+    # Also drop the zips of earlier runs, so that only this one can be
+    # uploaded.
+    rm -f "$DIST/$NAME".xcframework.zip "$DIST/$NAME"-*.xcframework.zip
+    ditto -c -k --keepParent "$DIST/$NAME.xcframework" "$DIST/$ZIP"
 
     # Identical to `swift package compute-checksum` on the same file.
-    CHECKSUM=$(shasum -a 256 "$DIST/$NAME.xcframework.zip" | cut -d' ' -f1)
+    CHECKSUM=$(shasum -a 256 "$DIST/$ZIP" | cut -d' ' -f1)
 
     rm -rf "$DIST/spm"
     if [ -n "$PARTIAL_BUILD" ] || [ -n "$NO_OPUS" ] || [ -n "$MACOS_BUILD" ]; then
@@ -804,13 +805,13 @@ package() {
 
     echo ""
     echo "version:  $VERSION"
-    echo "artifact: $DIST/$NAME.xcframework.zip"
+    echo "artifact: $DIST/$ZIP"
     echo "sha256:   $CHECKSUM"
     if [ -f "$DIST/Package.swift" ]; then
         echo "release:  $RELEASE_URL"
         echo ""
         echo "upload to the release:"
-        echo "  $DIST/$NAME.xcframework.zip"
+        echo "  $DIST/$ZIP"
         echo "  $DIST/$NAME.podspec"
         echo ""
         echo "commit to the repo root BEFORE tagging $VERSION:"
@@ -823,7 +824,7 @@ package() {
 }
 
 main() {
-    local slice arch args=()
+    local slice arch platform args=()
 
     command -v xcodebuild >/dev/null || die "xcodebuild not found"
     mkdir -p "$OUTDIR" "$STAGE" "$DIST"
@@ -843,7 +844,15 @@ main() {
     done
 
     VERSION=${VERSION:-$(pj_version)}
-    RELEASE_URL=${RELEASE_URL:-$RELEASE_BASE/$VERSION/$NAME.xcframework.zip}
+    case " $SLICES " in
+    *" ios-"*) platform=ios ;;
+    *) platform=macos ;;
+    esac
+    if [ -n "$MACOS_BUILD" ] && [ "$platform" = ios ]; then
+        platform=apple
+    fi
+    ZIP=$NAME-$VERSION-$platform.xcframework.zip
+    RELEASE_URL=${RELEASE_URL:-$RELEASE_BASE/$VERSION/$ZIP}
     PODSPEC_URL=${PODSPEC_URL:-$RELEASE_BASE/$VERSION/$NAME.podspec}
 
     # A backup here means an earlier run was killed before its EXIT trap
