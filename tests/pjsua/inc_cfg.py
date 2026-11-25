@@ -63,10 +63,10 @@ class InstanceParam:
 			cnt = 0
 			port = 0
 			while cnt < 10:
-				cnt = cnt + 1
 				port = random.randint(DEFAULT_START_TELNET_PORT, 65534)
 				if port in USED_PORTS:
 					continue
+				cnt = cnt + 1
 				s = socket.socket(socket.AF_INET)
 				try:
 					s.bind(("0.0.0.0", port))
@@ -90,10 +90,10 @@ class InstanceParam:
 				port = random.randint(DEFAULT_START_SIP_PORT, 60000)
 				if port==self.telnet_port:
 					continue
-				cnt = cnt + 1
 				# The TLS listener takes the next port
 				if port in USED_PORTS or port + 1 in USED_PORTS:
 					continue
+				cnt = cnt + 1
 				s = socket.socket(socket.AF_INET)
 				try:
 					s.bind(("0.0.0.0", port))
