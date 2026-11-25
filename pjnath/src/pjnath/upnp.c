@@ -32,6 +32,15 @@
 
 #define THIS_FILE       "upnp.c"
 
+/* libupnp 1.14.26-1.14.29 and 1.18+ dropped the const from Upnp_FunPtr's
+ * event argument.
+ */
+#if UPNP_VERSION >= 11800 || (UPNP_VERSION >= 11426 && UPNP_VERSION < 11430)
+#   define UPNP_CB_EVENT    void
+#else
+#   define UPNP_CB_EVENT    const void
+#endif
+
 #define TRACE_(...) // PJ_LOG(6, (THIS_FILE, ##__VA_ARGS__))
 
 /* Set to 1 to enable UPnP native logging */
@@ -449,7 +458,7 @@ static void set_device_offline(const char *dev_id)
 }
 
 /* UPnP client callback. */
-static int client_cb(Upnp_EventType event_type, const void *event,
+static int client_cb(Upnp_EventType event_type, UPNP_CB_EVENT *event,
                      void * user_data)
 {
     /* Ignore if already uninitialized or incorrect user data. */
