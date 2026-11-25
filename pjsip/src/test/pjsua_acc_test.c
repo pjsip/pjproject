@@ -61,8 +61,8 @@
  *  14. A Service-Route from the registrar goes into the dialog route set
  *      but not into the next REGISTER, which keeps the account proxy.
  *      Also with a server affinity UDP pin, whose hidden Route leads the
- *      account route set. A Service-Route that cannot be used replaces
- *      the previous one too.
+ *      account route set. A 2xx whose Service-Route cannot be used
+ *      clears the stored one.
  *  15. The un-REGISTER PJSUA_CONTACT_REWRITE_UNREGISTER sends before
  *      destroying the regc is best-effort: it must not reach
  *      on_reg_started2(), nor must the one pjsua_acc_del() sends, while
@@ -1153,8 +1153,8 @@ static int service_route_unusable_test(pjsua_transport_id tp_id, int port,
     pj_status_t      status;
     int              rc = 0;
 
-    PJ_LOG(3, (THIS_FILE, "  pjsua acc: Service-Route with %s replaces "
-               "the previous one", title));
+    PJ_LOG(3, (THIS_FILE, "  pjsua acc: Service-Route with %s clears "
+               "the stored one", title));
 
     pj_bzero(&g_ctx, sizeof(g_ctx));
     g_mock_reg.req_count = 0;
