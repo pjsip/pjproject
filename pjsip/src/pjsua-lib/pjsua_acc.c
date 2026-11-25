@@ -2810,7 +2810,8 @@ static void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
         if (hr == NULL) {
             /* Error */
             PJ_LOG(1,(THIS_FILE, "Error parsing Service-Route header"));
-            return;
+            uri_cnt = 0;
+            goto update_route_set;
         }
 
         /* Save each URI in the result */
@@ -2821,12 +2822,14 @@ static void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
             {
                 PJ_LOG(1,(THIS_FILE,"Error: non SIP URI in Service-Route: %.*s",
                           (int)hsr->hvalue.slen, hsr->hvalue.ptr));
-                return;
+                uri_cnt = 0;
+                goto update_route_set;
             }
 
             if (uri_cnt >= PJ_ARRAY_SIZE(uri)) {
                 PJ_LOG(1,(THIS_FILE, "Error: too many Service-Route headers"));
-                return;
+                uri_cnt = 0;
+                goto update_route_set;
             }
 
             uri[uri_cnt++] = h->name_addr.uri;
@@ -2840,8 +2843,10 @@ static void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
     }
 
     /*
-     * Update account's route set
+     * Update account's route set. A Service-Route that cannot be used
+     * counts as none, so the previous one is dropped as well.
      */
+update_route_set:
 
     /* Detach hidden affinity Route so strip-tail size accounting below
      * operates on [outbound][acc.proxy][service-route] only. (#4964)
