@@ -1515,12 +1515,23 @@ on_return:
             ;
     }
 
-    /* The accepted socket whose handshake failed is closed by a timer,
-     * wait longer than PJ_SSL_SOCK_DELAYED_CLOSE_TIMEOUT (500 ms).
+    /* The accepted socket whose handshake failed is closed by a timer
+     * (PJ_SSL_SOCK_DELAYED_CLOSE_TIMEOUT), wait until it has run.
      */
     if (timer) {
-        pj_thread_sleep(600);
-        pj_timer_heap_poll(timer, NULL);
+        pj_time_val deadline, now;
+
+        pj_gettickcount(&deadline);
+        deadline.sec += 5;
+        while (ioqueue && pj_timer_heap_count(timer) > 0) {
+            pj_time_val delay = {0, 100};
+
+            pj_gettickcount(&now);
+            if (PJ_TIME_VAL_GTE(now, deadline))
+                break;
+            pj_ioqueue_poll(ioqueue, &delay);
+            pj_timer_heap_poll(timer, NULL);
+        }
         pj_timer_heap_destroy(timer);
     }
     if (ioqueue)
