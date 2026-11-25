@@ -24,7 +24,7 @@ static pj_bool_t thread_quit_flag = 0;
 
 static int worker_thread(void *arg)
 {
-    pj_sock_t    sock = (pj_sock_t)arg;
+    pj_sock_t    sock = (pj_sock_t)(pj_ssize_t)arg;
     char         buf[512];
     pj_status_t  last_recv_err = PJ_SUCCESS, last_write_err = PJ_SUCCESS;
 
@@ -85,7 +85,8 @@ int echo_srv_sync(void)
     }
 
     for (i=0; i<ECHO_SERVER_MAX_THREADS; ++i) {
-        rc = pj_thread_create(pool, NULL, &worker_thread, (void*)sock,
+        rc = pj_thread_create(pool, NULL, &worker_thread,
+                              (void*)(pj_ssize_t)sock,
                               PJ_THREAD_DEFAULT_STACK_SIZE, 0,
                               &thread[i]);
         if (rc != PJ_SUCCESS) {
