@@ -284,8 +284,8 @@ jobs:
     - name: config site
       run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
     - name: configure
-      # PJ_HAS_FLOATING_POINT=0 must not emit FP code; no-FPU targets fail to
-      # compile otherwise (e.g. -mno-sse).
+      # Build-and-test check of the no-FP configuration; it does not detect FP
+      # instructions on x86-64.
       run: ./configure --disable-floating-point
     - name: make
       run: $MAKE_FAST
