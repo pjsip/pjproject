@@ -1515,8 +1515,25 @@ on_return:
             ;
     }
 
-    if (timer)
+    /* The accepted socket whose handshake failed is closed by a timer
+     * (PJ_SSL_SOCK_DELAYED_CLOSE_TIMEOUT), wait until it has run.
+     */
+    if (timer) {
+        pj_time_val deadline, now;
+
+        pj_gettickcount(&deadline);
+        deadline.sec += 5;
+        while (ioqueue && pj_timer_heap_count(timer) > 0) {
+            pj_time_val delay = {0, 100};
+
+            pj_gettickcount(&now);
+            if (PJ_TIME_VAL_GTE(now, deadline))
+                break;
+            pj_ioqueue_poll(ioqueue, &delay);
+            pj_timer_heap_poll(timer, NULL);
+        }
         pj_timer_heap_destroy(timer);
+    }
     if (ioqueue)
         pj_ioqueue_destroy(ioqueue);
     if (pool)
@@ -3859,6 +3876,7 @@ int ssl_sock_test(void)
         return ret;
 
 #if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL) || \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_GNUTLS) || \
     (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_MBEDTLS)
     PJ_LOG(3,("", "..client without CA test"));
     ret = no_ca_client_test(PJ_FALSE);

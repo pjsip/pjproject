@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -38,7 +38,6 @@
 #if PJ_HAS_TCP
 
 #define THIS_FILE           "test_tcp"
-#define NON_EXISTANT_PORT   50123
 #define LOOP                100
 #define BUF_MIN_SIZE        32
 #define BUF_MAX_SIZE        2048
@@ -480,7 +479,10 @@ on_error:
 static int compliance_test_1(const pj_ioqueue_cfg *cfg)
 {
     pj_sock_t csock1=PJ_INVALID_SOCKET;
+    pj_sock_t ssock=PJ_INVALID_SOCKET;
     pj_sockaddr_in addr;
+    int addr_len;
+    pj_uint16_t port;
     pj_pool_t *pool = NULL;
     pj_ioqueue_t *ioque = NULL;
     pj_ioqueue_key_t *ckey1 = NULL;
@@ -505,6 +507,29 @@ static int compliance_test_1(const pj_ioqueue_cfg *cfg)
         status=-1; goto on_error;
     }
 
+    /* A fixed port may be in use by a test running in parallel. Bind the
+     * client so that it can't connect to itself, then connect to a free
+     * port that differs from the client's. The port must not stay bound,
+     * macOS doesn't refuse connections to a bound, non-listening socket.
+     */
+    rc = pj_sock_bind_in(csock1, 0, 0);
+    if (rc == PJ_SUCCESS)
+        rc = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, &ssock);
+    if (rc == PJ_SUCCESS)
+        rc = pj_sock_bind_in(ssock, 0, 0);
+    if (rc == PJ_SUCCESS) {
+        addr_len = sizeof(addr);
+        rc = pj_sock_getsockname(ssock, &addr, &addr_len);
+    }
+    if (rc != PJ_SUCCESS) {
+        app_perror("...ERROR in getting a free port", rc);
+        status=-21; goto on_error;
+    }
+    port = pj_sockaddr_in_get_port(&addr);
+    pj_sock_close(ssock);
+    ssock = PJ_INVALID_SOCKET;
+    pj_sockaddr_in_init(&addr, pj_cstr(&s, "127.0.0.1"), port);
+
     // Register client socket.
     rc = pj_ioqueue_register_sock(pool, ioque, csock1, NULL, 
                                   &test_cb, &ckey1);
@@ -512,9 +537,6 @@ static int compliance_test_1(const pj_ioqueue_cfg *cfg)
         app_perror("...ERROR in pj_ioqueue_register_sock()", rc);
         status=-23; goto on_error;
     }
-
-    // Initialize remote address.
-    pj_sockaddr_in_init(&addr, pj_cstr(&s, "127.0.0.1"), NON_EXISTANT_PORT);
 
     // Client socket connect()
     status = pj_ioqueue_connect(ckey1, &addr, sizeof(addr));
@@ -557,7 +579,8 @@ static int compliance_test_1(const pj_ioqueue_cfg *cfg)
                           "...error: pj_ioqueue_poll() returned %d "
                           "(only expecting %d)",
                           status, pending_op));
-                return -552;
+                status = -552;
+                goto on_error;
             }
 
             pending_op -= status;
@@ -593,7 +616,9 @@ on_error:
         pj_ioqueue_unregister(ckey1);
     else if (csock1 != PJ_INVALID_SOCKET)
         pj_sock_close(csock1);
-    
+    if (ssock != PJ_INVALID_SOCKET)
+        pj_sock_close(ssock);
+
     if (ioque != NULL)
         pj_ioqueue_destroy(ioque);
     pj_pool_release(pool);
