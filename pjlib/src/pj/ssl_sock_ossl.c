@@ -105,6 +105,14 @@
 #      define OSSL_HAS_TICKET_API 0
 #endif
 
+/* X509_STORE_get0_objects() is deprecated in OpenSSL 4.0 */
+#if !USING_LIBRESSL && !USING_BORINGSSL && \
+    OPENSSL_VERSION_NUMBER >= 0x40000000L
+#      define OSSL_HAS_STORE_GET1_OBJECTS 1
+#else
+#      define OSSL_HAS_STORE_GET1_OBJECTS 0
+#endif
+
 #if !USING_LIBRESSL && !defined(OPENSSL_NO_EC) \
         && OPENSSL_VERSION_NUMBER >= 0x1000200fL
 
@@ -173,7 +181,12 @@ static void update_certs_info(pj_ssl_sock_t* ssock,
 #  define OPENSSL_NO_SSL2           /* seems to be removed in 1.1.0 */
 # ifndef M_ASN1_STRING_data
 #  define M_ASN1_STRING_data(x)     ASN1_STRING_get0_data(x)
-#  define M_ASN1_STRING_length(x)   ASN1_STRING_length(x)
+#  if OPENSSL_VERSION_NUMBER >= 0x40100000L && !USING_LIBRESSL && \
+      !USING_BORINGSSL
+#    define M_ASN1_STRING_length(x) ((int)ASN1_STRING_get_length(x))
+#  else
+#    define M_ASN1_STRING_length(x) ASN1_STRING_length(x)
+#  endif
 # endif
 #  if defined(OPENSSL_API_COMPAT) && OPENSSL_API_COMPAT >= 0x10100000L || \
       defined(OPENSSL_NO_DEPRECATED)
@@ -199,10 +212,12 @@ static void update_certs_info(pj_ssl_sock_t* ssock,
 
 #ifdef _MSC_VER
 #  if OPENSSL_VERSION_NUMBER >= 0x10100000L
-#    pragma comment(lib, "libcrypto")
-#    pragma comment(lib, "libssl")
+#    if PJ_AUTO_LINK_SSL_LIBS
+#      pragma comment(lib, "libcrypto")
+#      pragma comment(lib, "libssl")
+#    endif
 #    pragma comment(lib, "crypt32")
-#  else
+#  elif PJ_AUTO_LINK_SSL_LIBS
 #    pragma comment(lib, "libeay32")
 #    pragma comment(lib, "ssleay32")
 #  endif
@@ -835,7 +850,13 @@ static pj_bool_t sess_ctx_id_init(pj_ssl_sock_t *ssock)
         ok = digest_part(md, PART_CERT, dgst, len);
 
     /* Trusted CAs and CRLs */
+#if OSSL_HAS_STORE_GET1_OBJECTS
+    objs = X509_STORE_get1_objects(SSL_CTX_get_cert_store(ossock->ossl_ctx));
+    if (!objs)
+        ok = 0;
+#else
     objs = X509_STORE_get0_objects(SSL_CTX_get_cert_store(ossock->ossl_ctx));
+#endif
     for (i = 0; ok && objs && i < sk_X509_OBJECT_num(objs); ++i) {
         X509_OBJECT *obj = sk_X509_OBJECT_value(objs, i);
 
@@ -854,6 +875,9 @@ static pj_bool_t sess_ctx_id_init(pj_ssl_sock_t *ssock)
 #endif
         }
     }
+#if OSSL_HAS_STORE_GET1_OBJECTS
+    sk_X509_OBJECT_pop_free(objs, X509_OBJECT_free);
+#endif
 
     /* CA_path certificates are loaded on demand, so take the path itself. */
     if (ok) {
@@ -1241,7 +1265,8 @@ static pj_status_t init_openssl(void)
     /* Create OpenSSL application data index for SSL socket */
     sslsock_idx = SSL_get_ex_new_index(0, "SSL socket", NULL, NULL, NULL);
     if (sslsock_idx == -1) {
-        status = STATUS_FROM_SSL_ERR2("Init", NULL, -1, ERR_get_error(), 0);
+        status = STATUS_FROM_SSL_ERR2("Init", NULL, -1,
+                                      (int)ERR_get_error(), 0);
         PJ_LOG(1,(THIS_FILE,
                "Fatal error: failed to get application data index for "
                "SSL socket"));
@@ -1379,7 +1404,7 @@ static pj_uint32_t verify_err_to_status(long err)
     /* Unknown errors */
     case X509_V_ERR_OUT_OF_MEM:
     default:
-        status = PJ_SSL_CERT_EUNKNOWN;
+        status = (pj_uint32_t)PJ_SSL_CERT_EUNKNOWN;
         break;
     }
 
@@ -2342,6 +2367,8 @@ static void ssl_free_cert(pj_ssl_cert_t *cert)
         X509_free(cert->direct.cert);
         cert->direct.cert = NULL;
     }
+#else
+    PJ_UNUSED_ARG(cert);
 #endif
 }
 
@@ -2572,13 +2599,13 @@ static pj_status_t set_curves_list(pj_ssl_sock_t *ssock)
     }
 
     if( SSL_is_server(ossock->ossl_ssl) ) {
-        ret = SSL_set1_curves(ossock->ossl_ssl, curves,
-                              ssock->param.curves_num);
+        ret = (int)SSL_set1_curves(ossock->ossl_ssl, curves,
+                                   ssock->param.curves_num);
         if (ret < 1)
             return GET_SSL_STATUS(ssock);
     } else {
-        ret = SSL_CTX_set1_curves(ossock->ossl_ctx, curves,
-                                  ssock->param.curves_num);
+        ret = (int)SSL_CTX_set1_curves(ossock->ossl_ctx, curves,
+                                       ssock->param.curves_num);
         if (ret < 1)
             return GET_SSL_STATUS(ssock);
     }
@@ -2597,11 +2624,11 @@ static pj_status_t set_sigalgs(pj_ssl_sock_t *ssock)
     if (ssock->param.sigalgs.ptr && ssock->param.sigalgs.slen) {
 #if !USING_BORINGSSL
         if (ssock->is_server) {
-            ret = SSL_set1_client_sigalgs_list(ossock->ossl_ssl,
-                                               ssock->param.sigalgs.ptr);
+            ret = (int)SSL_set1_client_sigalgs_list(ossock->ossl_ssl,
+                                                    ssock->param.sigalgs.ptr);
         } else {
-            ret = SSL_set1_sigalgs_list(ossock->ossl_ssl,
-                                        ssock->param.sigalgs.ptr);
+            ret = (int)SSL_set1_sigalgs_list(ossock->ossl_ssl,
+                                             ssock->param.sigalgs.ptr);
         }
 #else
         ret = SSL_set1_sigalgs_list(ossock->ossl_ssl,
@@ -2663,6 +2690,17 @@ static pj_bool_t parse_ossl_asn1_time(pj_time_val *tv, pj_bool_t *gmt,
     utc = ASN1_STRING_type(tm) == V_ASN1_UTCTIME;
     p = (char*)M_ASN1_STRING_data(tm);
     len = M_ASN1_STRING_length(tm);
+
+    /* A UTCTime holds at least "YYMMDDHHMMZ" and a GeneralizedTime at least
+     * "YYYYMMDDHHMMZ". OpenSSL keeps the raw ASN.1 bytes without checking the
+     * time format, so a crafted peer certificate can present a shorter field;
+     * reject it rather than read before the buffer or past its end below.
+     */
+    if ((int)len < (utc ? 11 : 13)) {
+        pj_bzero(tv, sizeof(*tv));
+        *gmt = PJ_FALSE;
+        return PJ_FALSE;
+    }
     end = p + len - 1;
 
     /* GMT */
@@ -2690,15 +2728,15 @@ static pj_bool_t parse_ossl_asn1_time(pj_time_val *tv, pj_bool_t *gmt,
     }
 
     /* encode parts to pj_time_val */
-    pt.year = parts[0];
+    pt.year = (int)parts[0];
     if (utc)
         pt.year += (pt.year < 50)? 2000:1900;
-    pt.mon = parts[1] - 1;
-    pt.day = parts[2];
-    pt.hour = parts[3];
-    pt.min = parts[4];
-    pt.sec = parts[5];
-    pt.msec = parts[6];
+    pt.mon = (int)(parts[1] - 1);
+    pt.day = (int)parts[2];
+    pt.hour = (int)parts[3];
+    pt.min = (int)parts[4];
+    pt.sec = (int)parts[5];
+    pt.msec = (int)parts[6];
 
     pj_time_encode(&pt, tv);
 
@@ -2785,7 +2823,7 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci, X509 *x,
     pj_bzero(ci, sizeof(pj_ssl_cert_info));
 
     /* Version */
-    ci->version = X509_get_version(x) + 1;
+    ci->version = (unsigned)(X509_get_version(x) + 1);
 
     /* Issuer */
     pj_strdup2(pool, &ci->issuer.info, buf);

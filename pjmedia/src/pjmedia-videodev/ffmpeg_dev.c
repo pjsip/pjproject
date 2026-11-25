@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -737,7 +737,7 @@ static pj_status_t ffmpeg_stream_destroy(pjmedia_vid_dev_stream *s)
     return PJ_SUCCESS;
 }
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && PJMEDIA_AUTO_LINK_FFMPEG_LIBS
 #   pragma comment( lib, "avdevice.lib")
 #   pragma comment( lib, "avformat.lib")
 #   pragma comment( lib, "avutil.lib")

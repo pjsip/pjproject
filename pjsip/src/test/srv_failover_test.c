@@ -1284,7 +1284,7 @@ static int regc_transport_case(pj_bool_t srv2_closed)
     pj_str_t contact = pj_str("<sip:test@127.0.0.1;transport=tcp>");
     pjsip_regc *regc;
     pjsip_regc_info info;
-    pjsip_tx_data *tdata;
+    pjsip_tx_data *tdata = NULL;
     const pjsip_transport *seen[8];
     unsigned seen_cnt = 0, waited, i, dropped_at = 0;
     unsigned first_port = 0, last_port = 0, td;
@@ -1423,7 +1423,7 @@ static int regc_auth_case(pj_bool_t failover)
     pjsip_cred_info cred;
     pjsip_regc *regc;
     pjsip_regc_info info;
-    pjsip_tx_data *tdata;
+    pjsip_tx_data *tdata = NULL;
     unsigned waited, i, port = 0, samples = 0, missing = 0;
     pj_status_t status;
     int rc = 0;

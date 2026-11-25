@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -463,28 +463,11 @@
  *
  * @subsection build_sys_install_win32_sec Visual Studio
  *
- * The PJLIB Visual Studio workspace supports the building of PJLIB
- * for Win32 target. Although currently only the Visual Studio 6 Workspace is
- * actively maintained, developers with later version of Visual Studio
- * can easily imports VS6 workspace into their IDE.
- *
- * To start building PJLIB projects with Visual Studio 6 or later, open
- * the \a workspace file in the corresponding \b \c build directory. You have
- * several choices on which \a dsw file to open:
- \verbatim
-  $PJPROJECT/pjlib/build/pjlib.dsw
-  $PJPROJECT/pjsip/build/pjsip.dsw
- ..etc
- \endverbatim
- *
- * The easiest way is to open <tt>pjsip_apps.dsw</tt> file in \b \c $PJPROJECT/pjsip-apps/build
- * directory, and build pjsua project or the samples project. 
- * However this will not build the complete projects. 
- * For example, the PJLIB test is not included in this workspace. 
- * To build the complete projects, you must
- * open and build each \a dsw file in \c build directory in each
- * subprojects. For example, to open the complete PJLIB workspace, open
- * <tt>pjlib.dsw</tt> in <tt>$PJPROJECT/pjlib/build</tt> directory.
+ * To build PJLIB and the other PJSIP libraries with Visual Studio 2022,
+ * open the <tt>pjproject-vs14.sln</tt> solution file in the
+ * \c $PJPROJECT directory, then build the \c pjsua project, or any
+ * other project in the solution. PJSIP can also be built with CMake.
+ * See the "Getting Started" document in the website for details.
  *
  *
  * @subsubsection config_site_create_vc_sec Create config_site.h

@@ -85,6 +85,10 @@ ifeq (@ac_external_webrtc@,1)
 else
 DIRS += webrtc
 WEBRTC_OTHER_CFLAGS = -fexceptions -DWEBRTC_POSIX=1 @ac_webrtc_cflags@
+# GCC's false positives in the bundled code. Only GCC has the option.
+ifneq ($(findstring Free Software Foundation,$(shell $(CC) --version 2>&1)),)
+    WEBRTC_OTHER_CFLAGS += -Wno-maybe-uninitialized
+endif
 ifneq ($(findstring sse2,@ac_webrtc_instset@),)
     WEBRTC_SRC = \
     	      modules/audio_processing/aec/aec_core_sse2.o		 \

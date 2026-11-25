@@ -338,7 +338,7 @@ static pj_status_t cmd_handler(pj_cli_cmd_val *cval)
 
     switch(cval->cmd->id) {
     case CLI_CMD_CHANGE_LOG:
-        level = pj_strtoul(&cval->argv[1]);
+        level = (unsigned)pj_strtoul(&cval->argv[1]);
         if (!level && cval->argv[1].slen > 0 && (cval->argv[1].ptr[0] < '0' ||
             cval->argv[1].ptr[0] > '9'))
         {
@@ -631,7 +631,7 @@ static pj_status_t add_arg_node(pj_cli_t *cli,
         if (!pj_stricmp2(&attr->name, "name")) {
             pj_strassign(&arg->name, &attr->value);
         } else if (!pj_stricmp2(&attr->name, "id")) {
-            arg->id = pj_strtol(&attr->value);
+            arg->id = (pj_cli_arg_id)pj_strtol(&attr->value);
         } else if (!pj_stricmp2(&attr->name, "type")) {
             if (!pj_stricmp2(&attr->value, "text")) {
                 arg->type = PJ_CLI_ARG_TEXT;
@@ -698,7 +698,7 @@ static pj_status_t add_cmd_node(pj_cli_t *cli,
         } else if (!pj_stricmp2(&attr->name, "id")) {       
             pj_bool_t is_valid = PJ_FALSE;
             if (attr->value.slen) {             
-                pj_cli_cmd_id cmd_id = pj_strtol(&attr->value);
+                pj_cli_cmd_id cmd_id = (pj_cli_cmd_id)pj_strtol(&attr->value);
                 if (!pj_hash_get(cli->cmd_id_hash, &cmd_id, 
                                  sizeof(pj_cli_cmd_id), NULL))
                     is_valid = PJ_TRUE;

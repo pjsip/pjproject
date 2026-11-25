@@ -301,9 +301,11 @@ if(APPLE)
   # pjlib compiles a C++ source of its own (atomic_queue.cpp), so a consumer
   # needs the C++ runtime even when the consumer is pure C. Nothing surfaces
   # this while building the archive; it appears as undefined std::terminate()
-  # when an application is linked.
+  # when an application is linked. A C++ link adds it already, and ld warns
+  # about the duplicate.
   if(PJ_WITH_CXX)
-    target_link_libraries(pjlib PUBLIC c++)
+    target_link_libraries(pjlib PUBLIC
+      "$<$<NOT:$<LINK_LANGUAGE:CXX,OBJCXX>>:c++>")
   endif()
 endif()
 

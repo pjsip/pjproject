@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1548,12 +1548,14 @@ static pj_status_t job_queue_destroy(job_queue *jq)
 }
 
 #ifdef _MSC_VER
-#   if defined(PJMEDIA_SDL_LIB)
-#       pragma comment( lib, PJMEDIA_SDL_LIB)
-#   elif SDL_VERSION_ATLEAST(2,0,0)
-#       pragma comment( lib, "sdl2.lib")
-#   elif SDL_VERSION_ATLEAST(1,3,0)
-#       pragma comment( lib, "sdl.lib")
+#   if PJMEDIA_AUTO_LINK_SDL_LIBS
+#       if defined(PJMEDIA_SDL_LIB)
+#           pragma comment( lib, PJMEDIA_SDL_LIB)
+#       elif SDL_VERSION_ATLEAST(2,0,0)
+#           pragma comment( lib, "sdl2.lib")
+#       elif SDL_VERSION_ATLEAST(1,3,0)
+#           pragma comment( lib, "sdl.lib")
+#       endif
 #   endif
 #   if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
 #       pragma comment(lib, "OpenGL32.lib")

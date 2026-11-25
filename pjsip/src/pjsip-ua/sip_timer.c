@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2009-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2009-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -241,7 +241,7 @@ static pjsip_hdr *parse_hdr_se(pjsip_parse_ctx *ctx)
     pj_str_t token;
 
     pj_scan_get(ctx->scanner, &pc->pjsip_DIGIT_SPEC, &token);
-    hdr->sess_expires = pj_strtoul(&token);
+    hdr->sess_expires = (unsigned)pj_strtoul(&token);
 
     while (*ctx->scanner->curptr == ';') {
         pj_str_t pname, pvalue;
@@ -272,7 +272,7 @@ static pjsip_hdr *parse_hdr_min_se(pjsip_parse_ctx *ctx)
     pj_str_t token;
 
     pj_scan_get(ctx->scanner, &pc->pjsip_DIGIT_SPEC, &token);
-    hdr->min_se = pj_strtoul(&token);
+    hdr->min_se = (unsigned)pj_strtoul(&token);
 
     while (*ctx->scanner->curptr == ';') {
         pj_str_t pname, pvalue;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -81,7 +81,8 @@ static void list_tests(const pj_test_suite *suite, const char *title)
     const pj_test_case *tc;
 
     pj_log_set_decor(d ^ PJ_LOG_HAS_NEWLINE);
-    PJ_LOG(3,(THIS_FILE, "%ld %s:", pj_list_size(&suite->tests), title));
+    PJ_LOG(3,(THIS_FILE, "%ld %s:", (long)pj_list_size(&suite->tests),
+              title));
     pj_log_set_decor(0);
     for (tc=suite->tests.next; tc!=&suite->tests; tc=tc->next) {
         PJ_LOG(3,(THIS_FILE, " %s", tc->obj_name));

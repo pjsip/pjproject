@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2017-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,10 +23,12 @@
 #    if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
 #      include <openssl/opensslv.h>
 #      if OPENSSL_VERSION_NUMBER >= 0x10100000L
-#        pragma comment(lib, "libcrypto")
-#        pragma comment(lib, "libssl")
+#        if PJ_AUTO_LINK_SSL_LIBS
+#          pragma comment(lib, "libcrypto")
+#          pragma comment(lib, "libssl")
+#        endif
 #        pragma comment(lib, "crypt32")
-#      else
+#      elif PJ_AUTO_LINK_SSL_LIBS
 #        pragma comment(lib, "libeay32")
 #        pragma comment(lib, "ssleay32")
 #      endif
@@ -222,7 +224,7 @@ static pj_status_t parse_attr_crypto(pj_pool_t *pool,
             return PJMEDIA_SDP_EINATTR;
 
     /* Get tag value. */
-    *tag = pj_strtoul(&token);
+    *tag = (int)pj_strtoul(&token);
 
     /* Crypto-suite */
     found_idx = pj_strtok(&attr->value, &delim, &token, found_idx+token.slen);

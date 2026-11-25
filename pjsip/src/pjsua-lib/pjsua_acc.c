@@ -555,6 +555,7 @@ static pj_status_t initialize_acc(unsigned acc_id)
 
     /* Mark account as valid */
     pjsua_var.acc[acc_id].valid = PJ_TRUE;
+    pjsua_var.acc[acc_id].gen = ++pjsua_var.acc_gen;
 
     /* Insert account ID into account ID array, sorted by priority */
     for (i=0; i<pjsua_var.acc_cnt; ++i) {
@@ -2658,7 +2659,8 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
         pj_in6_addr v6_addr;
         pj_str_t new_contact;
 
-        secure = pjsip_transport_get_flag_from_type(tp->key.type) &
+        secure = pjsip_transport_get_flag_from_type(
+                    (pjsip_transport_type_e)tp->key.type) &
                  PJSIP_TRANSPORT_SECURE;
 
         /* Enclose IPv6 address in square brackets. Decide based on the
@@ -2821,7 +2823,8 @@ static void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
         if (hr == NULL) {
             /* Error */
             PJ_LOG(1,(THIS_FILE, "Error parsing Service-Route header"));
-            return;
+            uri_cnt = 0;
+            goto update_route_set;
         }
 
         /* Save each URI in the result */
@@ -2832,12 +2835,14 @@ static void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
             {
                 PJ_LOG(1,(THIS_FILE,"Error: non SIP URI in Service-Route: %.*s",
                           (int)hsr->hvalue.slen, hsr->hvalue.ptr));
-                return;
+                uri_cnt = 0;
+                goto update_route_set;
             }
 
             if (uri_cnt >= PJ_ARRAY_SIZE(uri)) {
                 PJ_LOG(1,(THIS_FILE, "Error: too many Service-Route headers"));
-                return;
+                uri_cnt = 0;
+                goto update_route_set;
             }
 
             uri[uri_cnt++] = h->name_addr.uri;
@@ -2851,8 +2856,10 @@ static void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
     }
 
     /*
-     * Update account's route set
+     * Update account's route set. A Service-Route that cannot be used
+     * counts as none, so the previous one is dropped as well.
      */
+update_route_set:
 
     /* Detach hidden affinity Route so strip-tail size accounting below
      * operates on [outbound][acc.proxy][service-route] only. (#4964)
@@ -2923,11 +2930,12 @@ static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
 
     PJ_LOG(5,(THIS_FILE, 
               "Sending %ld bytes keep-alive packet for acc %d to %s",
-              acc->cfg.ka_data.slen, acc->index,
+              (long)acc->cfg.ka_data.slen, acc->index,
               pj_sockaddr_print(&acc->ka_target, addrtxt, sizeof(addrtxt),3)));
 
     /* Send raw packet */
     status = pjsip_tpmgr_send_raw(pjsip_endpt_get_tpmgr(pjsua_var.endpt),
+                                  (pjsip_transport_type_e)
                                   acc->ka_transport->key.type, &tp_sel,
                                   NULL, acc->cfg.ka_data.ptr, 
                                   acc->cfg.ka_data.slen, 
@@ -2996,7 +3004,7 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
                                          &STR_FLOW_TIMER, hsr);
 
         if (hsr) {          
-            acc->rfc5626_flowtmr = pj_strtoul(&hsr->hvalue);
+            acc->rfc5626_flowtmr = (unsigned)pj_strtoul(&hsr->hvalue);
         }
 
         /* Only do keep-alive if:
@@ -4829,7 +4837,7 @@ static pj_status_t get_uac_addr_for_sip_uri(pjsua_acc_id acc_id,
 
             if (update_addr) {
                 pj_strdup(pool, &addr->host, &tp->local_name.host);
-                tp_type = tp->key.type;
+                tp_type = (pjsip_transport_type_e)tp->key.type;
 
                 if (pj_strchr(&addr->host, ':')) {
                     tp_type |= PJSIP_TRANSPORT_IPV6;
@@ -5966,10 +5974,18 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
     if (acc->cfg.ip_change_cfg.hangup_calls ||
         acc->cfg.ip_change_cfg.reinvite_flags)
     {
+        /* A call still in make call's STUN wait has no inv for the loop
+         * below: end the wait, as the loop would hang it up
+         */
+        pj_mutex_lock(pjsua_var.call_owner_mutex);
+        ++acc->ip_change_cnt;
+        pj_mutex_unlock(pjsua_var.call_owner_mutex);
+
         for (i = 0; i < pjsua_var.ua_cfg.max_calls; ++i) {
             pjsua_call_info call_info;
             pjsua_call *call;
             pjsip_dialog *dlg = NULL;
+            pj_bool_t hangup_pending;
 
             if (!pjsua_call_is_active(i) ||
                 pjsua_var.calls[i].acc_id != acc->index ||
@@ -5977,6 +5993,13 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
             {
                 continue;
             }
+
+            /* Hung up while an earlier call of the loop waited for STUN */
+            pj_mutex_lock(pjsua_var.call_owner_mutex);
+            hangup_pending = pjsua_var.calls[i].hangup_req.pending;
+            pj_mutex_unlock(pjsua_var.call_owner_mutex);
+            if (hangup_pending)
+                continue;
 
             status = acquire_call("call_tpsel_on_ip_change()",
                                   i, &call, &dlg);
@@ -6095,8 +6118,12 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
                 if (use_update) {
                     status = pjsua_call_update(i, call_info.setting.flag,
                                                NULL);
-                    /* If this fails, retry using INVITE below */
-                    if (status != PJ_SUCCESS) {
+                    /* If this fails, retry using INVITE below, unless the call
+                     * ended or is being hung up meanwhile
+                     */
+                    if (status != PJ_SUCCESS && status != PJ_ECANCELLED &&
+                        pjsua_call_is_active(i))
+                    {
                         PJ_LOG(3, (THIS_FILE, "Call #%d: failed sending UPDATE"
                                               " retrying using re-INVITE", i));
                         use_update = PJ_FALSE;

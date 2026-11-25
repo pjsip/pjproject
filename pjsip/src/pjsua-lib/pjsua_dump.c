@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2011-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2011-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,6 +38,10 @@ const char *good_number(char *buf, unsigned buf_size, pj_int32_t val)
 
     return buf;
 }
+
+#if PJSUA_MEDIA_HAS_PJMEDIA || \
+    (PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO && \
+     PJSUA_THIRD_PARTY_STREAM_HAS_GET_STAT)
 
 static unsigned dump_media_stat(const char *indent,
                                 char *buf, unsigned maxlen,
@@ -224,10 +228,6 @@ static unsigned dump_media_stat(const char *indent,
 
 
 /* Dump media session */
-#if PJSUA_MEDIA_HAS_PJMEDIA || \
-    (PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO && \
-     PJSUA_THIRD_PARTY_STREAM_HAS_GET_STAT)
-
 static void dump_media_session(const char *indent,
                                char *buf, unsigned maxlen,
                                pjsua_call *call)
@@ -997,7 +997,7 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
                      PJ_EINVAL);
     PJ_ASSERT_RETURN(maxlen > 3, PJ_ETOOSMALL);
 
-    status = acquire_call("pjsua_call_dump()", call_id, &call, &dlg);
+    status = acquire_call_dlg("pjsua_call_dump()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
         return status;
 

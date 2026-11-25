@@ -746,7 +746,7 @@ static void cert_parse_info(pj_pool_t* pool, pj_ssl_cert_info* ci,
             break;
         }
 
-        for (unsigned i = 0; i < alt_name_info->cAltEntry; ++i) {
+        for (i = 0; i < alt_name_info->cAltEntry; ++i) {
             CERT_ALT_NAME_ENTRY *ane = &alt_name_info->rgAltEntry[i];
             pj_ssl_cert_name_type type;
             unsigned len = 0;

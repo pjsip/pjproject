@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -440,15 +440,15 @@ static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f)
                         fmt = &qdi->info.fmt[qdi->info.fmt_cnt++];
                         pjmedia_format_init_video(fmt,
                                 darwin_fmts[l].pjmedia_format,
-                                darwin_sizes[m].supported_size_w,
-                                darwin_sizes[m].supported_size_h,
+                                (unsigned)darwin_sizes[m].supported_size_w,
+                                (unsigned)darwin_sizes[m].supported_size_h,
                                 DEFAULT_FPS, 1);
                         /* Portrait video */
                         fmt = &qdi->info.fmt[qdi->info.fmt_cnt++];
                         pjmedia_format_init_video(fmt,
                                 darwin_fmts[l].pjmedia_format,
-                                darwin_sizes[m].supported_size_h,
-                                darwin_sizes[m].supported_size_w,
+                                (unsigned)darwin_sizes[m].supported_size_h,
+                                (unsigned)darwin_sizes[m].supported_size_w,
                                 DEFAULT_FPS, 1);
                     }
                 }                
@@ -527,15 +527,22 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
 #if TARGET_OS_IPHONE
 - (void)update_image
 {
-    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+    NSAutoreleasePool *pool;
+    CGColorSpaceRef colorSpace;
+    CGImageRef cgIm;
 
-    CGImageRef cgIm = CGImageCreate(stream->size.w, stream->size.h,
-                                    8, 32, stream->bytes_per_row, colorSpace,
-                                    kCGImageAlphaFirst |
-                                    kCGBitmapByteOrder32Little,
-                                    stream->render_data_provider, 0,
-                                    false, kCGRenderingIntentDefault);
+    if (!stream)
+        return;
+
+    pool = [[NSAutoreleasePool alloc] init];
+    colorSpace = CGColorSpaceCreateDeviceRGB();
+
+    cgIm = CGImageCreate(stream->size.w, stream->size.h,
+                         8, 32, stream->bytes_per_row, colorSpace,
+                         kCGImageAlphaFirst |
+                         kCGBitmapByteOrder32Little,
+                         stream->render_data_provider, 0,
+                         false, kCGRenderingIntentDefault);
     CGColorSpaceRelease(colorSpace);
     
     stream->render_view.layer.contents = (__bridge id)(cgIm);
@@ -625,7 +632,7 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
             if ((stream->vid_size.w > stream->vid_size.h && stride < height) ||
                 (stream->vid_size.h > stream->vid_size.w && stride > height))
             {
-                pj_size_t w = stream->vid_size.w;
+                unsigned w = stream->vid_size.w;
                 stream->vid_size.w = stream->vid_size.h;
                 stream->vid_size.h = w;
             }
@@ -909,11 +916,11 @@ static pj_status_t darwin_factory_create_stream(
          * our natural orientation portrait (or landscape) as well.
          */
         if (vfd->size.w > vfd->size.h) {
-            vfd->size.w = darwin_sizes[i].supported_size_w;
-            vfd->size.h = darwin_sizes[i].supported_size_h;
+            vfd->size.w = (unsigned)darwin_sizes[i].supported_size_w;
+            vfd->size.h = (unsigned)darwin_sizes[i].supported_size_h;
         } else {
-            vfd->size.h = darwin_sizes[i].supported_size_w;
-            vfd->size.w = darwin_sizes[i].supported_size_h;
+            vfd->size.h = (unsigned)darwin_sizes[i].supported_size_w;
+            vfd->size.w = (unsigned)darwin_sizes[i].supported_size_h;
         }
         strm->size = vfd->size;
         strm->vid_size = vfd->size;
@@ -1604,20 +1611,25 @@ static pj_status_t darwin_stream_stop(pjmedia_vid_dev_stream *strm)
 {
     struct darwin_stream *stream = (struct darwin_stream*)strm;
 
-    if (!stream->cap_session || ![stream->cap_session isRunning])
+    if (!stream->is_running)
         return PJ_SUCCESS;
-    
+
     PJ_LOG(4, (THIS_FILE, "Stopping Darwin video stream"));
 
-    [stream->cap_session performSelectorOnMainThread:@selector(stopRunning)
-                         withObject:nil waitUntilDone:YES];
+    if (stream->cap_session && [stream->cap_session isRunning]) {
+        [stream->cap_session performSelectorOnMainThread:@selector(stopRunning)
+                             withObject:nil waitUntilDone:YES];
+    }
     stream->has_image = PJ_FALSE;
     stream->is_running = PJ_FALSE;
 
 #if TARGET_OS_IPHONE
     /* Wait until the rendering finishes */
-    [stream->vout_delegate performSelectorOnMainThread:@selector(finish_render)
-                           withObject:nil waitUntilDone:YES];
+    if (stream->vout_delegate) {
+        [stream->vout_delegate
+            performSelectorOnMainThread:@selector(finish_render)
+            withObject:nil waitUntilDone:YES];
+    }
 #endif
     
     return PJ_SUCCESS;
@@ -1632,7 +1644,17 @@ static pj_status_t darwin_stream_destroy(pjmedia_vid_dev_stream *strm)
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
     darwin_stream_stop(strm);
-    
+
+    /* A capture callback may still be queued or running on stream->queue;
+     * detach the delegate and drain the queue before tearing down.
+     */
+    if (stream->video_output) {
+        [stream->video_output setSampleBufferDelegate:nil queue:NULL];
+    }
+    if (stream->queue) {
+        dispatch_sync(stream->queue, ^{});
+    }
+
     if (stream->cap_session) {
         if (stream->dev_input) {
             [stream->cap_session removeInput:stream->dev_input];
@@ -1649,6 +1671,17 @@ static pj_status_t darwin_stream_destroy(pjmedia_vid_dev_stream *strm)
     }
 
     if (stream->vout_delegate) {
+        /* A render task queued by put_frame() may still run after this
+         * stream is gone (see update_image). Clear the pointer on the
+         * main thread so it is serialized with update_image().
+         */
+#if TARGET_OS_IPHONE
+        dispatch_sync_on_main_queue(^{
+            stream->vout_delegate->stream = NULL;
+        });
+#else
+        stream->vout_delegate->stream = NULL;
+#endif
         [stream->vout_delegate release];
         stream->vout_delegate = nil;
     }

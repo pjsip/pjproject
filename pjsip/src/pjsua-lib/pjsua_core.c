@@ -862,6 +862,7 @@ static int worker_thread_timer(void *arg)
     PJ_UNUSED_ARG(arg);
 
     th = pjsip_endpt_get_timer_heap(pjsua_var.endpt);
+    pjsua_call_set_in_events(PJ_TRUE);
     while (!pjsua_var.thread_quit_flag) {
         pj_time_val timeout = {0, 0};
         int c;
@@ -887,6 +888,7 @@ static int worker_thread_ioqueue(void *arg)
     PJ_UNUSED_ARG(arg);
 
     ioq = pjsip_endpt_get_ioqueue(pjsua_var.endpt);
+    pjsua_call_set_in_events(PJ_TRUE);
     while (!pjsua_var.thread_quit_flag) {
         pj_time_val timeout = {0, 100};
         pj_ioqueue_poll(ioq, &timeout);
@@ -2119,35 +2121,9 @@ pj_status_t resolve_stun_server(pj_bool_t wait, pj_bool_t retry_if_cur_error,
          * result.
          */
         if (wait) {
-            unsigned max_wait_ms;
-            pj_timestamp start, now;
-
-            /* Should limit the wait time to avoid deadlock. For example,
-             * if app holds dlg/tsx lock, pjsua worker thread will block on
-             * any dlg/tsx state change.
-             */
-            max_wait_ms = pjsua_var.ua_cfg.stun_srv_cnt *
-                          pjsua_var.stun_cfg.rto_msec * (1 << 7);
-            pj_get_timestamp(&start);
-
-            while (pjsua_var.stun_status == PJ_EPENDING) {              
-                /* If there is no worker thread or
-                 * the function is called from the only worker thread,
-                 * we have to handle the events here.
-                 */
-                if (pjsua_var.thread[0] == NULL ||
-                    (pj_thread_this() == pjsua_var.thread[0] &&
-                     pjsua_var.ua_cfg.thread_cnt == 1))
-                {
-                    pjsua_handle_events(10);
-                } else {
-                    pj_thread_sleep(10);
-                }
-
-                pj_get_timestamp(&now);
-                if (pj_elapsed_msec(&start, &now) > max_wait_ms)
-                    return PJ_ETIMEDOUT;
-            }
+            pj_status_t status = pjsua_wait_stun_server(NULL, NULL, NULL);
+            if (status != PJ_SUCCESS)
+                return status;
         }
     }
 
@@ -2163,6 +2139,65 @@ pj_status_t resolve_stun_server(pj_bool_t wait, pj_bool_t retry_if_cur_error,
 
     return pjsua_var.stun_status;
 }
+
+/*
+ * The maximum time of a STUN server resolution, in msec.
+ */
+unsigned pjsua_stun_resolve_max_wait(void)
+{
+    /* Should limit the wait time to avoid deadlock. For example,
+     * if app holds dlg/tsx lock, pjsua worker thread will block on
+     * any dlg/tsx state change.
+     */
+    return pjsua_var.ua_cfg.stun_srv_cnt * pjsua_var.stun_cfg.rto_msec *
+           (1 << 7);
+}
+
+/*
+ * Wait for a pending STUN server resolution. It only reads the state, so
+ * the caller may have released the PJSUA lock.
+ */
+pj_status_t pjsua_wait_stun_server(pj_bool_t (*stop)(void *arg), void *arg,
+                                   const pj_time_val *deadline)
+{
+    pj_time_val end, now;
+
+    if (deadline) {
+        end = *deadline;
+    } else {
+        pj_gettickcount(&end);
+        end.msec += pjsua_stun_resolve_max_wait();
+        pj_time_val_normalize(&end);
+    }
+
+    while (pjsua_var.stun_status == PJ_EPENDING) {
+        if (pjsua_var.state == PJSUA_STATE_CLOSING || (stop && stop(arg)))
+            return PJ_ECANCELLED;
+
+        /* If there is no worker thread or
+         * the function is called from the only worker thread,
+         * we have to handle the events here.
+         */
+        if (pjsua_var.thread[0] == NULL ||
+            (pj_thread_this() == pjsua_var.thread[0] &&
+             pjsua_var.ua_cfg.thread_cnt == 1))
+        {
+            pjsua_handle_events(10);
+        } else {
+            pj_thread_sleep(10);
+        }
+
+        pj_gettickcount(&now);
+        if (PJ_TIME_VAL_GTE(now, end))
+            return PJ_ETIMEDOUT;
+    }
+
+    return PJ_SUCCESS;
+}
+
+/* How long pjsua_destroy2() waits for media inits of other threads, msec */
+#define MED_INIT_WAIT_MAX       10000
+#define MED_INIT_WAIT_STEP      50
 
 /*
  * Destroy pjsua.
@@ -2194,8 +2229,29 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 
         pj_log_push_indent();
 
-        /* Terminate all calls. */
         if (pjsua_var.calls) {
+            /* Make call in another thread may still wait with its locks
+             * released (#5380). The waits end once the state is CLOSING,
+             * apart from a running 2 s mapped address query.
+             */
+            for (i = 0; pjsua_var.call_owner_mutex &&
+                        i < MED_INIT_WAIT_MAX / MED_INIT_WAIT_STEP; ++i)
+            {
+                unsigned init_cnt;
+
+                pj_mutex_lock(pjsua_var.call_owner_mutex);
+                init_cnt = pjsua_var.med_init_cnt;
+                pj_mutex_unlock(pjsua_var.call_owner_mutex);
+                if (init_cnt == 0)
+                    break;
+                pj_thread_sleep(MED_INIT_WAIT_STEP);
+            }
+            if (i == MED_INIT_WAIT_MAX / MED_INIT_WAIT_STEP) {
+                PJ_LOG(2,(THIS_FILE, "Media init still running after %d ms, "
+                          "shutting down anyway", MED_INIT_WAIT_MAX));
+            }
+
+            /* Terminate all calls. */
             if ((flags & PJSUA_DESTROY_NO_TX_MSG) == 0) {
                 pjsua_call_hangup_all();
             } else {
@@ -2531,12 +2587,15 @@ PJ_DEF(int) pjsua_handle_events(unsigned msec_timeout)
     unsigned count = 0;
     pj_time_val tv;
     pj_status_t status;
+    pj_bool_t prev_mark;
 
     tv.sec = 0;
     tv.msec = msec_timeout;
     pj_time_val_normalize(&tv);
 
+    prev_mark = pjsua_call_set_in_events(PJ_TRUE);
     status = pjsip_endpt_handle_events2(pjsua_var.endpt, &tv, &count);
+    pjsua_call_set_in_events(prev_mark);
 
     if (status != PJ_SUCCESS)
         return -status;
@@ -2612,6 +2671,9 @@ static void on_tp_state_callback(pjsip_transport *tp,
                                  pjsip_transport_state state,
                                  const pjsip_transport_state_info *info)
 {
+    /* The transport manager is locked here */
+    pj_bool_t prev_mark = pjsua_call_set_in_events(PJ_TRUE);
+
     if (pjsua_var.ua_cfg.cb.on_transport_state) {
         (*pjsua_var.ua_cfg.cb.on_transport_state)(tp, state, info);
     }
@@ -2619,6 +2681,8 @@ static void on_tp_state_callback(pjsip_transport *tp,
         (*pjsua_var.old_tp_cb)(tp, state, info);
     }
     pjsua_acc_on_tp_state_changed(tp, state, info);
+
+    pjsua_call_set_in_events(prev_mark);
 }
 
 /* Set transport state callback */
@@ -3184,7 +3248,7 @@ PJ_DEF(pj_status_t) pjsua_transport_get_info( pjsua_transport_id id,
         info->addr_len = tp->addr_len;
         info->local_addr = tp->local_addr;
         info->local_name = tp->local_name;
-        info->usage_count = pj_atomic_get(tp->ref_cnt);
+        info->usage_count = (unsigned)pj_atomic_get(tp->ref_cnt);
 
         status = PJ_SUCCESS;
 
@@ -3413,7 +3477,8 @@ PJ_DEF(pj_status_t) pjsua_transport_lis_restart(pjsua_transport_id id,
         af = pjsip_transport_type_get_af(factory->type);
     } else if (tp_type == PJSIP_TRANSPORT_UDP) {
         pjsip_transport *transport = pjsua_var.tpdata[id].data.tp;
-        af = pjsip_transport_type_get_af(transport->key.type);
+        af = pjsip_transport_type_get_af(
+                    (pjsip_transport_type_e)transport->key.type);
     } else {
         return PJ_EINVAL;
     }

@@ -328,7 +328,7 @@ static int stress_worker(void *arg)
     struct thread_param *tparam = (struct thread_param*)arg;
     int t_idx, i;
 
-    t_idx = pj_atomic_inc_and_get(tparam->idx);
+    t_idx = (int)pj_atomic_inc_and_get(tparam->idx);
     PJ_LOG(4,("test", "...thread #%d (random) started", t_idx));
     while (!tparam->stopping) {
         int job, task;
@@ -343,7 +343,7 @@ static int stress_worker(void *arg)
         else task = NOTHING;
     
         idx = pj_rand() % ST_ENTRY_COUNT;
-        prev_status = pj_atomic_get(tparam->status[idx]);
+        prev_status = (pj_status_t)pj_atomic_get(tparam->status[idx]);
         if (task == SCHEDULING) {
             if (prev_status != 0) continue;
             status = st_schedule_entry(tparam->timer, &tparam->entries[idx]);
@@ -431,7 +431,7 @@ static int poll_worker(void *arg)
     struct thread_param *tparam = (struct thread_param*)arg;
     int idx;
 
-    idx = pj_atomic_inc_and_get(tparam->idx);
+    idx = (int)pj_atomic_inc_and_get(tparam->idx);
     tparam->stat[idx].is_poll = PJ_TRUE;
 
     PJ_LOG(4,("test", "...thread #%d (poll) started", idx));
@@ -756,17 +756,17 @@ on_return:
     if (tparam.idx)
         pj_atomic_destroy(tparam.idx);
     if (tparam.n_sched) {
-        n_sched = pj_atomic_get(tparam.n_sched);
+        n_sched = (unsigned)pj_atomic_get(tparam.n_sched);
         PJ_LOG(3,("test", "Total number of scheduled entries: %d", n_sched));
         pj_atomic_destroy(tparam.n_sched);
     }
     if (tparam.n_cancel) {
-        n_cancel = pj_atomic_get(tparam.n_cancel);
+        n_cancel = (unsigned)pj_atomic_get(tparam.n_cancel);
         PJ_LOG(3,("test", "Total number of cancelled entries: %d", n_cancel));
         pj_atomic_destroy(tparam.n_cancel);
     }
     if (tparam.n_poll) {
-        n_poll = pj_atomic_get(tparam.n_poll);
+        n_poll = (unsigned)pj_atomic_get(tparam.n_poll);
         PJ_LOG(3,("test", "Total number of polled entries: %d", n_poll));
         pj_atomic_destroy(tparam.n_poll);
     }
@@ -888,7 +888,7 @@ static int bench_test(pj_timer_heap_t *timer,
             if (test_type == RANDOM_SCH)
                 delay.msec = get_random_delay();
             else
-                delay.msec = get_next_delay(delay.msec);
+                delay.msec = get_next_delay((int)delay.msec);
 
             pj_timer_entry_init(&entries[j], 0, NULL, &dummy_callback);
 

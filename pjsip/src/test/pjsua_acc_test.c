@@ -61,7 +61,8 @@
  *  14. A Service-Route from the registrar goes into the dialog route set
  *      but not into the next REGISTER, which keeps the account proxy.
  *      Also with a server affinity UDP pin, whose hidden Route leads the
- *      account route set.
+ *      account route set. A Service-Route that cannot be used replaces
+ *      the previous one too.
  *  15. The un-REGISTER PJSUA_CONTACT_REWRITE_UNREGISTER sends before
  *      destroying the regc is best-effort: it must not reach
  *      on_reg_started2(), nor must the one pjsua_acc_del() sends, while
@@ -1133,6 +1134,102 @@ on_return:
     return rc;
 }
 
+/* A 2xx whose Service-Route cannot be used (a parse error, a non-SIP URI,
+ * too many URIs) counts as a 2xx without Service-Route: the Service-Route
+ * of the previous 2xx must be dropped.
+ */
+static int service_route_unusable_test(pjsua_transport_id tp_id, int port,
+                                       const char *title,
+                                       const char *unusable, int err_base)
+{
+    pjsua_acc_config acc_cfg;
+    pjsua_acc_id     acc_id;
+    pjsua_acc       *acc;
+    char             reg_uri[64];
+    char             proxy[64];
+    char             service_route[64];
+    const pjsip_route_hdr *hr;
+    unsigned         i;
+    pj_status_t      status;
+    int              rc = 0;
+
+    PJ_LOG(3, (THIS_FILE, "  pjsua acc: Service-Route with %s replaces "
+               "the previous one", title));
+
+    pj_bzero(&g_ctx, sizeof(g_ctx));
+    g_mock_reg.req_count = 0;
+
+    pj_ansi_snprintf(reg_uri, sizeof(reg_uri), "sip:127.0.0.1:%d", port);
+    pj_ansi_snprintf(proxy, sizeof(proxy), "<sip:proxy@127.0.0.1:%d;lr>",
+                     port);
+    pj_ansi_snprintf(service_route, sizeof(service_route),
+                     "<sip:service@127.0.0.1:%d;lr>", port);
+
+    pjsua_acc_config_default(&acc_cfg);
+    acc_cfg.id       = pj_str("sip:" TEST_USER "@pjsip.org");
+    acc_cfg.reg_uri  = pj_str(reg_uri);
+    acc_cfg.transport_id = tp_id;
+    acc_cfg.register_on_acc_add = PJ_FALSE;
+    acc_cfg.allow_contact_rewrite = PJ_FALSE;
+    acc_cfg.proxy_cnt = 1;
+    acc_cfg.proxy[0] = pj_str(proxy);
+
+    status = pjsua_acc_add(&acc_cfg, PJ_FALSE, &acc_id);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(3, (THIS_FILE, "    error: pjsua_acc_add failed (%d)", status));
+        return err_base;
+    }
+    acc = &pjsua_var.acc[acc_id];
+
+    /* The first 2xx carries a valid Service-Route, the second one the
+     * unusable one.
+     */
+    for (i = 0; i < 2; ++i) {
+        unsigned ok_count = g_ctx.reg_ok_count;
+
+        g_mock_reg.service_route = (i == 0) ? service_route : unusable;
+        g_ctx.reg_done = PJ_FALSE;
+        status = pjsua_acc_set_registration(acc_id, PJ_TRUE);
+        if (status != PJ_SUCCESS || wait_reg(10000) != 0 ||
+            g_ctx.reg_ok_count == ok_count)
+        {
+            PJ_LOG(3, (THIS_FILE, "    error: registration %u failed (%d), "
+                       "last code %d", i, status, g_ctx.reg_code));
+            rc = err_base - 1;
+            goto on_return;
+        }
+
+        /* The account proxy, then the valid Service-Route only after the
+         * first 2xx
+         */
+        hr = acc->route_set.next;
+        if (hr == &acc->route_set ||
+            pj_strcmp2(&((pjsip_sip_uri*)
+                         pjsip_uri_get_uri(hr->name_addr.uri))->user,
+                       "proxy") != 0 ||
+            (i == 0 &&
+             (hr->next == &acc->route_set ||
+              hr->next->next != &acc->route_set ||
+              pj_strcmp2(&((pjsip_sip_uri*)
+                           pjsip_uri_get_uri(hr->next->name_addr.uri))->user,
+                         "service") != 0)) ||
+            (i == 1 && hr->next != &acc->route_set))
+        {
+            PJ_LOG(3, (THIS_FILE, "    error: after 2xx %u the route set "
+                       "has %d entries, expected %d", i,
+                       (int)pj_list_size(&acc->route_set), i == 0 ? 2 : 1));
+            rc = err_base - 2 - (int)i;
+            goto on_return;
+        }
+    }
+
+on_return:
+    g_mock_reg.service_route = NULL;
+    pjsua_acc_del(acc_id);
+    pjsua_handle_events(500);
+    return rc;
+}
+
 
 /*****************************************************************************
  * Unregistered by the application
@@ -1561,7 +1658,7 @@ static int abandon_window_test(pjsua_transport_id tp_id, int port,
     pj_thread_t     *thread = NULL;
     char             reg_uri[64];
     int              base = answered? -4110 : -4100;
-    int              log_level;
+    int              prev_log_level;
     pj_status_t      status;
     int              rc = 0;
 
@@ -1608,8 +1705,8 @@ static int abandon_window_test(pjsua_transport_id tp_id, int port,
     g_ctx.reg_done = PJ_FALSE;
     g_abandon_reported = PJ_FALSE;
     g_abandon_ignored = PJ_FALSE;
-    log_level = pj_log_get_level();
-    g_log_level = PJ_MAX(log_level, 4);
+    prev_log_level = pj_log_get_level();
+    g_log_level = PJ_MAX(prev_log_level, 4);
     g_log_func = pj_log_get_log_func();
     pj_log_set_level(5);
     pj_log_set_log_func(&abandon_log_func);
@@ -1637,7 +1734,7 @@ static int abandon_window_test(pjsua_transport_id tp_id, int port,
         g_defer.pending = PJ_FALSE;
     }
     pj_log_set_log_func(g_log_func);
-    pj_log_set_level(log_level);
+    pj_log_set_level(prev_log_level);
     if (status != PJ_SUCCESS) {
         rc = base - 4;
         goto on_return;
@@ -2037,6 +2134,34 @@ int pjsua_acc_test(void)
     if (rc != 0) goto on_return;
     rc = service_route_test(tp_id, (int)port, PJ_TRUE, -2560);
     if (rc != 0) goto on_return;
+
+    {
+        /* One URI more than update_service_route() keeps */
+        char too_many[(PJSUA_ACC_MAX_PROXIES + 1) * 32];
+        pj_size_t len = 0;
+        unsigned j;
+
+        for (j = 0; j <= PJSUA_ACC_MAX_PROXIES; ++j) {
+            int n = pj_ansi_snprintf(too_many + len, sizeof(too_many) - len,
+                                     "%s<sip:s%u@127.0.0.1;lr>",
+                                     j ? "," : "", j);
+            if (n < 0 || (pj_size_t)n >= sizeof(too_many) - len)
+                break;
+            len += n;
+        }
+
+        rc = service_route_unusable_test(tp_id, (int)port,
+                                         "a parse error",
+                                         "<sip:unterminated", -2570);
+        if (rc != 0) goto on_return;
+        rc = service_route_unusable_test(tp_id, (int)port,
+                                         "a non-SIP URI",
+                                         "<tel:+12345678>", -2580);
+        if (rc != 0) goto on_return;
+        rc = service_route_unusable_test(tp_id, (int)port,
+                                         "too many URIs", too_many, -2590);
+        if (rc != 0) goto on_return;
+    }
 
     {
         static const unreg_case cases[] = {

@@ -213,8 +213,10 @@ static void call_on_forked(pjsip_inv_session *inv, pjsip_event *e);
 /* Callback to be called to handle incoming requests outside dialogs: */
 static pj_bool_t on_rx_request( pjsip_rx_data *rdata );
 
+#if PJ_HAS_THREADS
 /* Worker thread prototype */
 static int sip_worker_thread(void *arg);
+#endif
 
 /* Create SDP for call */
 static pj_status_t create_sdp( pj_pool_t *pool,
@@ -411,7 +413,7 @@ static void destroy_sip()
  */
 static pj_status_t init_media()
 {
-    unsigned    i, count;
+    unsigned    i;
     pj_uint16_t rtp_port;
     pj_status_t status;
 
@@ -438,7 +440,7 @@ static pj_status_t init_media()
     rtp_port = (pj_uint16_t)(app.rtp_start_port & 0xFFFE);
 
     /* Init media transport for all calls. */
-    for (i=0, count=0; i<app.max_calls; ++i, ++count) {
+    for (i=0; i<app.max_calls; ++i) {
 
         unsigned j;
 
@@ -830,6 +832,7 @@ static void app_perror(const char *sender, const char *title,
 }
 
 
+#if PJ_HAS_THREADS
 /* Worker thread for SIP */
 static int sip_worker_thread(void *arg)
 {
@@ -842,6 +845,7 @@ static int sip_worker_thread(void *arg)
 
     return 0;
 }
+#endif
 
 
 /* Init application options */
@@ -1247,6 +1251,7 @@ static void on_rx_rtcp(void *user_data, void *pkt, pj_ssize_t size)
 }
 
 
+#if PJ_HAS_THREADS
 /* 
  * Media thread 
  *
@@ -1309,7 +1314,7 @@ static int media_thread(void *arg)
 
         /* Wait for next interval */
         //if (timeout.sec!=0 && timeout.msec!=0) {
-            pj_thread_sleep(PJ_TIME_VAL_MSEC(timeout));
+            pj_thread_sleep((unsigned)PJ_TIME_VAL_MSEC(timeout));
             if (strm->thread_quit_flag)
                 break;
         //}
@@ -1392,6 +1397,7 @@ static int media_thread(void *arg)
 
     return 0;
 }
+#endif
 
 
 /* Callback to be called when SDP negotiation is done in the call: */
@@ -1400,7 +1406,7 @@ static void call_on_media_update( pjsip_inv_session *inv,
 {
     struct call *call;
     struct media_stream *audio;
-    const pjmedia_sdp_session *local_sdp, *remote_sdp;
+    const pjmedia_sdp_session *local_sdp, *remote_sdp = NULL;
     struct codec *codec_desc = NULL;
     unsigned i;
 
@@ -1527,6 +1533,7 @@ static void destroy_call_media(unsigned call_index)
  * USER INTERFACE STUFFS
  */
 
+#if PJ_HAS_THREADS
 static void call_get_duration(int call_index, pj_time_val *dur)
 {
     struct call *call = &app.call[call_index];
@@ -1547,6 +1554,7 @@ static void call_get_duration(int call_index, pj_time_val *dur)
         PJ_TIME_VAL_SUB((*dur), call->connect_time);
     }
 }
+#endif
 
 
 static const char *good_number(char *buf, unsigned buf_size, pj_int32_t val)
@@ -1568,6 +1576,7 @@ static const char *good_number(char *buf, unsigned buf_size, pj_int32_t val)
 
 
 
+#if PJ_HAS_THREADS
 static void print_avg_stat(void)
 {
 #define MIN_(var,val)      if ((int)val < (int)var) var = val
@@ -1633,7 +1642,7 @@ static void print_avg_stat(void)
 
         /* Duration */
         call_get_duration(i, &dur);
-        msec_dur = PJ_TIME_VAL_MSEC(dur);
+        msec_dur = (unsigned)PJ_TIME_VAL_MSEC(dur);
 
         MIN_(call_dur.min, msec_dur);
         MAX_(call_dur.max, msec_dur);
@@ -1643,7 +1652,7 @@ static void print_avg_stat(void)
         if (call->connect_time.sec) {
             pj_time_val t = call->connect_time;
             PJ_TIME_VAL_SUB(t, call->start_time);
-            msec_dur = PJ_TIME_VAL_MSEC(t);
+            msec_dur = (unsigned)PJ_TIME_VAL_MSEC(t);
         } else {
             msec_dur = 10;
         }
@@ -1841,11 +1850,13 @@ static void print_avg_stat(void)
            );
 
 }
+#endif
 
 
 #include "siprtp_report.c"
 
 
+#if PJ_HAS_THREADS
 static void list_calls()
 {
     unsigned i;
@@ -1856,6 +1867,7 @@ static void list_calls()
         print_call(i);
     }
 }
+#endif
 
 static void hangup_call(unsigned index)
 {
@@ -1870,6 +1882,7 @@ static void hangup_call(unsigned index)
         pjsip_inv_send_msg(app.call[index].inv, tdata);
 }
 
+#if PJ_HAS_THREADS
 static void hangup_all_calls()
 {
     unsigned i;
@@ -1971,6 +1984,7 @@ static void console_main()
 on_exit:
     hangup_all_calls();
 }
+#endif
 
 
 /*****************************************************************************
@@ -2007,7 +2021,7 @@ static pj_status_t logger_on_tx_msg(pjsip_tx_data *tdata)
     PJ_LOG(4,(THIS_FILE, "TX %ld bytes %s to %s:%d:\n"
                          "%s\n"
                          "--end msg--",
-                         (tdata->buf.cur - tdata->buf.start),
+                         (long)(tdata->buf.cur - tdata->buf.start),
                          pjsip_tx_data_get_info(tdata),
                          tdata->tp_info.dst_name,
                          tdata->tp_info.dst_port,

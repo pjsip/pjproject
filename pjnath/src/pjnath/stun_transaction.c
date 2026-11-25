@@ -228,7 +228,7 @@ static pj_status_t tsx_transmit_msg(pj_stun_client_tsx *tsx,
         } else if (tsx->transmit_count < PJ_STUN_MAX_TRANSMIT_COUNT-1) {
             unsigned msec;
 
-            msec = PJ_TIME_VAL_MSEC(tsx->retransmit_time);
+            msec = (unsigned)PJ_TIME_VAL_MSEC(tsx->retransmit_time);
             msec <<= 1;
             tsx->retransmit_time.sec = msec / 1000;
             tsx->retransmit_time.msec = msec % 1000;

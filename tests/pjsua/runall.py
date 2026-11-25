@@ -275,10 +275,10 @@ for t in tests:
         sys.stdout.write(msg)
         sys.stdout.flush()
         if with_log:
-            logname = re.search(".*\s+(.*)", t).group(1)
-            logname = re.sub("[\\\/]", "_", logname)
-            logname = re.sub("\.py$", ".log", logname)
-            logname = re.sub("\.xml$", ".log", logname)
+            logname = re.search(r".*\s+(.*)", t).group(1)
+            logname = re.sub(r"[\\/]", "_", logname)
+            logname = re.sub(r"\.py$", ".log", logname)
+            logname = re.sub(r"\.xml$", ".log", logname)
             logname = "logs/" + logname
         else:
             logname = os.devnull

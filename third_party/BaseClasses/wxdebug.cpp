@@ -1237,7 +1237,7 @@ CDisp::CDisp(IUnknown *pUnk)
     hr = pUnk->QueryInterface(IID_IPin, (void **)&pp);
     if(SUCCEEDED(hr))
     {
-        CDisp::CDisp(pp);
+        (void)CDisp(pp);
         pp->Release();
         return;
     }

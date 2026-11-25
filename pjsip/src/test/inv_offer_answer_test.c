@@ -140,6 +140,7 @@ typedef struct inv_test_param_t
     pj_bool_t   multipart_body;
     pj_bool_t   test_null_offer_reinvite;
     pj_bool_t   test_non_sdp_body_reinvite;
+    pj_bool_t   test_reinvite_after_disconnect;
 } inv_test_param_t;
 
 typedef struct inv_test_t
@@ -171,6 +172,12 @@ static unsigned     null_offer_response_media_count;
 static pj_bool_t    null_offer_response_has_sdp;
 static unsigned    null_offer_create_offer_count;
 static pj_status_t null_offer_reinvite_answer_status;
+
+/* Set while waiting for the response to a re-INVITE sent after the call
+ * has disconnected; disc_reinvite_code records that response's status.
+ */
+static pj_bool_t   capture_disc_reinvite;
+static int         disc_reinvite_code;
 
 typedef enum job_type
 {
@@ -636,6 +643,60 @@ static int perform_test(inv_test_param_t *param)
         }
     }
 
+    if (param->test_reinvite_after_disconnect) {
+        pjsip_dialog *uac_dlg = inv_test.uac->dlg;
+        pjsip_dialog *uas_dlg = inv_test.uas->dlg;
+        pjsip_method inv_method;
+        pjsip_tx_data *reinv;
+        int i;
+
+        /* Keep both dialogs alive past the hangup, as the transaction
+         * absorbing 2xx retransmissions does in a real call. The invite
+         * sessions are destroyed when they disconnect.
+         */
+        pjsip_dlg_inc_session(uac_dlg, &mod_inv_oa_test);
+        pjsip_dlg_inc_session(uas_dlg, &mod_inv_oa_test);
+
+        TRACE_((THIS_FILE, "    Disconnecting call before the re-INVITE"));
+        PJ_TEST_SUCCESS(pjsip_inv_end_session(inv_test.uas, PJSIP_SC_DECLINE,
+                                              0, &tdata),
+                        NULL, { rc = -74; goto reinv_cleanup; });
+        if (tdata) {
+            PJ_TEST_SUCCESS(pjsip_inv_send_msg(inv_test.uas, tdata),
+                            NULL, { rc = -75; goto reinv_cleanup; });
+        }
+        flush_events(500);
+
+        /* The UAS invite session has ended but its dialog is still alive.
+         * A re-INVITE must be answered with 481, not silently dropped.
+         */
+        capture_disc_reinvite = PJ_TRUE;
+        disc_reinvite_code = 0;
+        pjsip_method_set(&inv_method, PJSIP_INVITE_METHOD);
+
+        TRACE_((THIS_FILE, "    Sending re-INVITE after disconnect"));
+        PJ_TEST_SUCCESS(pjsip_dlg_create_request(uac_dlg, &inv_method, -1,
+                                                 &reinv),
+                        NULL, { rc = -70; goto reinv_cleanup; });
+        PJ_TEST_SUCCESS(pjsip_dlg_send_request(uac_dlg, reinv, -1, NULL),
+                        NULL, { rc = -71; goto reinv_cleanup; });
+
+        for (i = 0; i < 100 && disc_reinvite_code == 0; ++i) {
+            pj_time_val delay = { 0, 20 };
+            pjsip_endpt_handle_events(endpt, &delay);
+        }
+
+        PJ_TEST_EQ(disc_reinvite_code, PJSIP_SC_CALL_TSX_DOES_NOT_EXIST,
+                   "re-INVITE after disconnect", { rc = -72; });
+
+reinv_cleanup:
+        capture_disc_reinvite = PJ_FALSE;
+        pjsip_dlg_dec_session(uac_dlg, &mod_inv_oa_test);
+        pjsip_dlg_dec_session(uas_dlg, &mod_inv_oa_test);
+        flush_events(500);
+        return rc;
+    }
+
     /*
      * Hangup
      */
@@ -675,6 +736,13 @@ static pj_bool_t log_on_rx_msg(pjsip_rx_data *rdata)
         null_offer_response_media_count = null_offer_response_has_sdp ?
                                          sdp_info->sdp->media_count : 0;
         null_offer_response_code = msg->line.status.code;
+    }
+
+    if (capture_disc_reinvite && msg->type == PJSIP_RESPONSE_MSG &&
+        rdata->msg_info.cseq->method.id == PJSIP_INVITE_METHOD &&
+        msg->line.status.code >= 200 && disc_reinvite_code == 0)
+    {
+        disc_reinvite_code = msg->line.status.code;
     }
 
     if (msg->type == PJSIP_REQUEST_MSG)
@@ -737,6 +805,18 @@ static inv_test_param_t test_params[] =
         PJ_TRUE,
         1,
         { OFFERER_UAC },
+        PJ_FALSE,
+        PJ_TRUE
+    },
+
+    {
+        "re-INVITE after the call has disconnected",
+        0,
+        PJ_TRUE,
+        1,
+        { OFFERER_UAC },
+        PJ_FALSE,
+        PJ_FALSE,
         PJ_FALSE,
         PJ_TRUE
     },

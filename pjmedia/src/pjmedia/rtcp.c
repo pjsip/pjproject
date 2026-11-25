@@ -76,8 +76,9 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_get_ntp_time(const pjmedia_rtcp_session *sess,
     status = pj_get_timestamp(&ts);
 
     /* Fill up the high 32bit part */
-    ntp->hi = (pj_uint32_t)((ts.u64 - sess->ts_base.u64) / sess->ts_freq.u64)
-              + sess->tv_base.sec + JAN_1970;
+    ntp->hi = (pj_uint32_t)((pj_uint32_t)((ts.u64 - sess->ts_base.u64) /
+                                          sess->ts_freq.u64) +
+                            sess->tv_base.sec + JAN_1970);
 
     /* Calculate seconds fractions */
     ts.u64 = (ts.u64 - sess->ts_base.u64) % sess->ts_freq.u64;

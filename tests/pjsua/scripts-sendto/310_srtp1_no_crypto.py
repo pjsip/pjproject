@@ -16,7 +16,7 @@ a=fmtp:101 0-15
 """
 
 args = "--null-audio --auto-answer 200 --max-calls 1 --use-srtp 1 --srtp-secure 0"
-include = ["m=audio \d+ RTP/AVP"]
+include = [r"m=audio \d+ RTP/AVP"]
 exclude = ["a=crypto"]
 
 sendto_cfg = sip.SendtoCfg( "caller has no crypto attr, answer must accept without crypto attr", 

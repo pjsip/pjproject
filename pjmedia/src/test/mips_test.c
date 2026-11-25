@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -711,6 +711,7 @@ static pjmedia_port* large_filt_resample( pj_pool_t *pool,
 /***************************************************************************/
 /* Codec encode/decode */
 
+#if HAS_AUDIO_CODECS
 struct codec_port
 {
     pjmedia_port     base;
@@ -771,7 +772,6 @@ static pj_status_t codec_on_destroy(struct pjmedia_port *this_port)
     return PJ_SUCCESS;
 }
 
-#if HAS_AUDIO_CODECS
 static pjmedia_port* codec_encode_decode( pj_pool_t *pool,
                                           const char *codec,
                                           pj_status_t (*codec_init)(pjmedia_endpt*),
@@ -1742,6 +1742,7 @@ static pjmedia_port* create_tonegen2(pj_pool_t *pool,
 /***************************************************************************/
 /* Stream */
 
+#if HAS_AUDIO_CODECS
 struct stream_port
 {
     pjmedia_port         base;
@@ -1763,7 +1764,6 @@ static void stream_port_custom_deinit(struct test_entry *te)
 
 }
 
-#if HAS_AUDIO_CODECS
 static pjmedia_port* create_stream( pj_pool_t *pool,
                                     const char *codec,
                                     pj_status_t (*codec_init)(pjmedia_endpt*),
@@ -2358,6 +2358,7 @@ static pjmedia_port* delaybuf_n20(pj_pool_t *pool,
 }
 
 
+#if PJMEDIA_HAS_G711_CODEC || PJMEDIA_HAS_SPEEX_CODEC
 /***************************************************************************/
 
 static pjmedia_stream* create_call_stream(  pjmedia_endpt *endpt,
@@ -2592,6 +2593,7 @@ static pjmedia_port* init_conf_call(unsigned nb_participant,
     return pjmedia_conf_get_master_port(conf);
 }
 
+#if PJMEDIA_HAS_G711_CODEC
 /***************************************************************************/
 /* Benchmark conf with 100 call using PCMU codec */
 static pjmedia_port* conf100_pcmu_test_init(pj_pool_t *pool,
@@ -2621,7 +2623,9 @@ static pjmedia_port* conf100_pcmu_noparallel_test_init(pj_pool_t *pool,
                           samples_per_frame, PJ_FALSE, PJ_FALSE, PJ_FALSE,
                           PJ_TRUE, flags, te);
 }
+#endif
 
+#if PJMEDIA_HAS_SPEEX_CODEC
 /***************************************************************************/
 /* Benchmark conf with 100 call using Speex codec */
 static pjmedia_port* conf100_speex_test_init(pj_pool_t *pool,
@@ -2636,7 +2640,9 @@ static pjmedia_port* conf100_speex_test_init(pj_pool_t *pool,
                           samples_per_frame, PJ_FALSE, PJ_FALSE, PJ_FALSE,
                           PJ_FALSE, flags, te);
 }
+#endif
 
+#if PJMEDIA_HAS_G711_CODEC
 /***************************************************************************/
 /* Benchmark conf with 100 call using PCMU codec, SRTP 80 bit with auth */
 static pjmedia_port* conf100_pcmu_srtp80auth_test_init(pj_pool_t *pool,
@@ -2651,6 +2657,9 @@ static pjmedia_port* conf100_pcmu_srtp80auth_test_init(pj_pool_t *pool,
                           samples_per_frame, PJ_TRUE, PJ_TRUE, PJ_TRUE,
                           PJ_FALSE, flags, te);
 }
+#endif
+
+#endif  /* PJMEDIA_HAS_G711_CODEC || PJMEDIA_HAS_SPEEX_CODEC */
 
 
 /***************************************************************************/

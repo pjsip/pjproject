@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1516,18 +1516,12 @@ static pjsip_uri *int_parse_uri(pj_scanner *scanner, pj_pool_t *pool,
         }
 
         func = find_uri_handler(&scheme);
-        if (func)  {
-            return (pjsip_uri*)(*func)(scanner, pool, parse_params);
-
-        } else {
+        if (!func)  {
             /* Unsupported URI scheme */
             PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
-            /* This return is unreachable at runtime (PJ_THROW unwinds via
-             * longjmp), but is needed to satisfy the compiler when
-             * PJ_ATTR_NORETURN is empty (e.g. Apple Clang + ASan on ARM64).
-             */
-            return NULL;
         }
+
+        return (pjsip_uri*)(*func)(scanner, pool, parse_params);
 
     /*
     }
@@ -1898,7 +1892,7 @@ static void parse_generic_int_hdr( pjsip_generic_int_hdr *hdr,
 {
     pj_str_t tmp;
     pj_scan_get( scanner, &pconst.pjsip_DIGIT_SPEC, &tmp);
-    hdr->ivalue = pj_strtoul(&tmp);
+    hdr->ivalue = (pj_uint32_t)pj_strtoul(&tmp);
     parse_hdr_end(scanner);
 }
 
@@ -1970,7 +1964,7 @@ static void int_parse_contact_param( pjsip_contact_hdr *hdr,
         } else if (!parser_stricmp(pname, pconst.pjsip_EXPIRES_STR) && 
                    pvalue.slen) 
         {
-            hdr->expires = pj_strtoul(&pvalue);
+            hdr->expires = (pj_uint32_t)pj_strtoul(&pvalue);
             if (hdr->expires == PJSIP_EXPIRES_NOT_SPECIFIED)
                 hdr->expires--;
             //if (hdr->expires > PJSIP_MAX_EXPIRES)

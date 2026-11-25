@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -183,7 +183,7 @@ PJ_DEF(void) pj_pool_init_int(pj_pool_t *pool,
     pool->alignment = !alignment ? PJ_POOL_ALIGNMENT : alignment;
 
     if (name) {
-        char *p = pj_ansi_strchr(name, '%');
+        const char *p = pj_ansi_strchr(name, '%');
         if (p && *(p+1)=='p' && *(p+2)=='\0') {
             /* Special name with "%p" suffix */
             pj_ansi_snprintf(pool->obj_name, sizeof(pool->obj_name), 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -816,7 +816,7 @@ static OSStatus resample_callback(void                       *inRefCon,
         ab.mNumberBuffers = 1;
         ab.mBuffers[0].mNumberChannels = strm->streamFormat.mChannelsPerFrame;
         ab.mBuffers[0].mData = strm->rec_buf;
-        ab.mBuffers[0].mDataByteSize = frame.size;
+        ab.mBuffers[0].mDataByteSize = (UInt32)frame.size;
 
         /* If buffer is not empty, combine the buffer with the just incoming
          * samples, then call put_frame.
@@ -856,7 +856,7 @@ static OSStatus resample_callback(void                       *inRefCon,
             
             /* Do the resample */
             strm->resample_buf_ptr = input;
-            ab.mBuffers[0].mDataByteSize = frame.size;
+            ab.mBuffers[0].mDataByteSize = (UInt32)frame.size;
             resampleOutput = strm->param.samples_per_frame /
                              strm->streamFormat.mChannelsPerFrame;
             ostatus = AudioConverterFillComplexBuffer(strm->resample,

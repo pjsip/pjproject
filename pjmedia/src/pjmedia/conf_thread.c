@@ -3956,12 +3956,12 @@ static pj_status_t thread_pool_start(pjmedia_conf *conf)
     pj_assert(conf->is_parallel);
 
     CONF_CHECK_SUCCESS(pj_barrier_create(conf->pool,
-                                      conf->threads,
+                                      (unsigned)conf->threads,
                                       &conf->active_thread),
                        return tmp_status_);
 
     CONF_CHECK_SUCCESS(pj_barrier_create(conf->pool,
-                                      conf->threads,
+                                      (unsigned)conf->threads,
                                       &conf->barrier),
                        return tmp_status_);
 

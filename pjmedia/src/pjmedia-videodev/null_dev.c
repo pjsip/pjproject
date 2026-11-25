@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -288,7 +288,7 @@ static pj_status_t null_factory_create_stream(
     }
 
     for (i = 0; i < PJ_ARRAY_SIZE(null_fmts); ++i) {
-        if (null_fmts[i] == param->fmt.id) {
+        if ((pj_uint32_t)null_fmts[i] == param->fmt.id) {
             fmt_supported = PJ_TRUE;
             break;
         }

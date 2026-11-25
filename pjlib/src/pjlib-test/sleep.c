@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -133,7 +133,7 @@ static int sleep_duration_test(void)
         }
 
         /* Sleep */
-        rc = pj_thread_sleep(duration[i]);
+        rc = pj_thread_sleep((unsigned)duration[i]);
         if (rc != PJ_SUCCESS) {
             app_perror("...error: pj_thread_sleep()", rc);
             return -20;
@@ -153,7 +153,7 @@ static int sleep_duration_test(void)
         msec = PJ_TIME_VAL_MSEC(stop);
 
         /* Check if it's within range. */
-        diff = PJ_ABS(msec - duration[i]);
+        diff = (unsigned)PJ_ABS(msec - duration[i]);
         avg_diff = ((avg_diff * i) + diff) / (i+1);
         max_diff = diff>max_diff ? diff : max_diff;
         slip = max_slip(duration[i]);
@@ -191,7 +191,7 @@ static int sleep_duration_test(void)
         pj_gettimeofday(&t1);
 
         /* Sleep */
-        rc = pj_thread_sleep(duration[i]);
+        rc = pj_thread_sleep((unsigned)duration[i]);
         if (rc != PJ_SUCCESS) {
             app_perror("...error: pj_thread_sleep()", rc);
             return -70;
@@ -213,7 +213,7 @@ static int sleep_duration_test(void)
         msec = pj_elapsed_msec(&start, &stop);
 
         /* Check if it's within range. */
-        diff = PJ_ABS(msec - duration[i]);
+        diff = (unsigned)PJ_ABS(msec - duration[i]);
         avg_diff = ((avg_diff * i) + diff) / (i+1);
         max_diff = diff>max_diff ? diff : max_diff;
         slip = max_slip(duration[i]);

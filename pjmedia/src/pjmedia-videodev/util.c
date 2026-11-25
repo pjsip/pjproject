@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2015 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2014-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -128,10 +128,10 @@ pjmedia_vid_dev_conv_create_converter(pjmedia_vid_dev_conv *conv,
              * conversion must be the same as before conversion.
              * For example: 352x288 will be converted to 288x236
              */
-            pj_size_t long_s  = (conv->rot_size.h > conv->rot_size.w?
-                                 conv->rot_size.h: conv->rot_size.w);
-            pj_size_t short_s = (conv->rot_size.h > conv->rot_size.w?
-                                 conv->rot_size.w: conv->rot_size.h);
+            unsigned long_s  = (conv->rot_size.h > conv->rot_size.w?
+                                conv->rot_size.h: conv->rot_size.w);
+            unsigned short_s = (conv->rot_size.h > conv->rot_size.w?
+                                conv->rot_size.w: conv->rot_size.h);
             if (src_size.w > src_size.h) {
                 conv->res_size.w = long_s;
                 conv->res_size.h = short_s;

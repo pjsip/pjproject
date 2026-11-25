@@ -1326,6 +1326,7 @@ if(BUILD_TESTING)
       pjmedia-codec
       pjmedia-audiodev
       pjmedia-videodev
+      $<$<BOOL:${PJMEDIA_WITH_OPUS_CODEC}>:OPUS::OPUS>
   )
 
   # The test data is found relative to pjmedia/build, where make runs it

@@ -28,7 +28,7 @@ void audioMediaPortTest();
 void callReplaceRejectReasonTest();
 void callTransferCustomCallIdTest();
 
-int main(int argc, char *argv[])
+int main()
 {
 #if !PJ_HAS_THREADS
     /* Most of the tests need the library's worker or media threads */
