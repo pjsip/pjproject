@@ -17,6 +17,18 @@ G_EXE = ""		# pjsua executable path (set by run.py once resolved)
 # Ports given to the instances of this test, so that no two share one
 USED_PORTS = set()
 
+# Is the TCP port taken on this host?
+def port_in_use(port):
+	s = socket.socket(socket.AF_INET)
+	try:
+		s.bind(("0.0.0.0", port))
+	except socket.error as serr:
+		if serr.errno == errno.EADDRINUSE or serr.errno == errno.EACCES:
+			return True
+	finally:
+		s.close()
+	return False
+
 # Individual pjsua instance configuration class
 class InstanceParam:
 	# Name to identify this pjsua instance (e.g. "caller", "callee", etc.)
@@ -67,15 +79,9 @@ class InstanceParam:
 				if port in USED_PORTS:
 					continue
 				cnt = cnt + 1
-				s = socket.socket(socket.AF_INET)
-				try:
-					s.bind(("0.0.0.0", port))
-				except socket.error as serr:
-					s.close()
-					if serr.errno ==  errno.EADDRINUSE or serr.errno == errno.EACCES:
-						continue
-				s.close()
-				break;
+				if port_in_use(port):
+					continue
+				break
 			self.telnet_port = port
 		else:
 			self.telnet_port = telnet_port
@@ -94,15 +100,9 @@ class InstanceParam:
 				if port in USED_PORTS or port + 1 in USED_PORTS:
 					continue
 				cnt = cnt + 1
-				s = socket.socket(socket.AF_INET)
-				try:
-					s.bind(("0.0.0.0", port))
-				except socket.error as serr:
-					s.close()
-					if serr.errno ==  errno.EADDRINUSE or serr.errno ==  errno.EACCES:
-						continue
-				s.close()
-				break;
+				if port_in_use(port) or port_in_use(port + 1):
+					continue
+				break
 			self.sip_port = port
 			# Give some time for socket close
 			time.sleep(0.5)
