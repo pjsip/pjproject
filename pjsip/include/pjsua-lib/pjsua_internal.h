@@ -298,12 +298,40 @@ struct pjsua_call
 
     pjmedia_av_sync     *av_sync;       /**< Media stream synchronizer      */
     pjmedia_sdp_session *answer_sdp;/**< Application SDP pending media init.*/
+    unsigned             med_init_cnt;/**< Media inits in progress. The slot
+                                            stays reserved.                 */
+    pj_bool_t            med_wait;  /**< A media init is waiting for STUN
+                                         or ICE.                            */
+    pj_bool_t            med_unlock_pjsua;/**< Its STUN waits may release
+                                         the PJSUA lock (make call).        */
+    unsigned             med_acc_gen;/**< The account's gen then,          */
+    unsigned             med_acc_ip_change;/**< and its ip_change_cnt.      */
+    struct pjsua_call_hangup_req {
+        pj_bool_t        pending;   /**< Requested during a media init.     */
+        pj_bool_t        released;  /**< From a released owner (#5340).     */
+        unsigned         code;      /**< Hangup code.                       */
+        pj_str_t         reason;    /**< Hangup reason.                     */
+        pjsua_msg_data  *msg_data;  /**< Hangup message data.               */
+        pj_pool_t       *pool;      /**< Holds reason and msg_data.         */
+        pj_bool_t        stop;      /**< A hangup asks the wait to end.     */
+    } hangup_req;                   /**< Hangup during a media init, under
+                                         call_owner_mutex.                  */
 };
 
 PJ_INLINE(pj_bool_t) pjsua_call_media_is_app_managed(
                                                 const pjsua_call *call)
 {
     return (call->opt.flag & PJSUA_CALL_MEDIA_APP_MANAGED) != 0;
+}
+
+/* Is an offer/answer of the call still pending? A media init now could
+ * meet its answer while the sync ICE wait has released the dialog.
+ */
+PJ_INLINE(pj_bool_t) pjsua_call_offer_pending(const pjsua_call *call)
+{
+    return call->inv && call->inv->neg &&
+           pjmedia_sdp_neg_get_state(call->inv->neg) !=
+               PJMEDIA_SDP_NEG_STATE_DONE;
 }
 
 
@@ -449,6 +477,10 @@ typedef struct pjsua_acc
     pj_bool_t        app_unreg;     /**< Unregistered by application.   */
     pj_bool_t        ip_change_reg_done; /**< IP change registration step
                                               is over.                  */
+    unsigned         gen;           /**< Tells it from an account added
+                                         later in the same slot.        */
+    unsigned         ip_change_cnt; /**< Times its calls were handled
+                                         for an IP change.              */
 } pjsua_acc;
 
 
@@ -769,6 +801,13 @@ struct pjsua_data
      * no other lock is taken while holding it.
      */
     pj_mutex_t          *call_owner_mutex;
+
+    unsigned             med_init_cnt;          /**< Sum of the calls'
+                                                     med_init_cnt.      */
+    unsigned             med_wait_cnt;          /**< STUN waits keeping
+                                                     their locks, under
+                                                     call_owner_mutex.  */
+    unsigned             acc_gen;               /**< Last pjsua_acc.gen */
 };
 
 
@@ -882,6 +921,30 @@ void pjsua_set_state(pjsua_state new_state);
 /* Resolve the STUN server */
 pj_status_t resolve_stun_server(pj_bool_t wait, pj_bool_t retry_if_cur_error,
                                 unsigned options);
+
+/* Wait for a pending STUN server resolution, without changing its state.
+ * Returns PJ_ECANCELLED when stop() returns PJ_TRUE or the library is
+ * closing, and PJ_ETIMEDOUT at the deadline (pj_gettickcount() time; if
+ * NULL, the resolution's maximum time from now).
+ */
+pj_status_t pjsua_wait_stun_server(pj_bool_t (*stop)(void *arg), void *arg,
+                                   const pj_time_val *deadline);
+
+/* The maximum time of a STUN server resolution, in msec */
+unsigned pjsua_stun_resolve_max_wait(void);
+
+/* Bracket a media init of the call, which may wait for STUN: the slot
+ * stays reserved and pjsua_destroy() waits for it.
+ */
+void pjsua_call_med_init_begin(pjsua_call *call);
+void pjsua_call_med_init_end(pjsua_call *call);
+
+/* Has the call ended during its media init? See pjsua_media.c */
+pj_bool_t pjsua_media_init_cancelled(const pjsua_call *call);
+
+/* Mark this thread as handling pjsua's events, see pjsua_call.c */
+pj_bool_t pjsua_call_set_in_events(pj_bool_t in_events);
+pj_bool_t pjsua_call_in_events(void);
 
 /** 
  * Normalize route URI (check for ";lr" and append one if it doesn't
@@ -1137,10 +1200,16 @@ void pjsua_init_tpselector(pjsua_transport_id tp_id,
                            pjsip_tpselector *sel);
 
 pjsip_dialog* on_dlg_forked(pjsip_dialog *first_set, pjsip_rx_data *res);
+/* Lock the call, PJ_EINVALIDOP if it has no INVITE session yet */
 pj_status_t acquire_call(const char *title,
                          pjsua_call_id call_id,
                          pjsua_call **p_call,
                          pjsip_dialog **p_dlg);
+/* Lock the call, also one that has no INVITE session yet */
+pj_status_t acquire_call_dlg(const char *title,
+                             pjsua_call_id call_id,
+                             pjsua_call **p_call,
+                             pjsip_dialog **p_dlg);
 
 /* If the call's user data is still owner, clear it and hang up the call,
  * unless the library is being destroyed. Used by pjsua2 when a Call is

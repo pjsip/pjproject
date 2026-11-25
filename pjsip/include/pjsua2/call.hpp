@@ -1753,7 +1753,16 @@ public:
     pj_stun_nat_type getRemNatType() PJSUA2_THROW(Error);
 
     /**
-     * Make outgoing call to the specified URI.
+     * Make outgoing call to the specified URI. If the call is hung up, its
+     * account deleted or its IP address changed, or the library destroyed,
+     * while the media of the call waits for the STUN server, this fails with
+     * PJ_ECANCELLED. Before that, onCallState() may already have reported
+     * the call disconnected.
+     * Until the call has its INVITE session, i.e. while its media is being
+     * created, waiting for the STUN server or for the ICE candidates,
+     * Endpoint::hangupAllCalls() skips the call, and the call methods that
+     * need the session, e.g. sendRequest(), xfer() or sendInstantMessage(),
+     * fail with PJ_EINVALIDOP.
      *
      * @param dst_uri       URI to be put in the To header (normally is the same
      *                      as the target URI).
@@ -1802,6 +1811,15 @@ public:
      * will hangup the call regardless of the state and role of the call,
      * while answer() only works with incoming calls on EARLY
      * state.
+     *
+     * If the call can't be locked in time because the media of the call,
+     * or of another call during an IP change, is being created and waits
+     * for the STUN server, this function returns and onCallState()
+     * reports DISCONNECTED once the call can be hung up, from another
+     * thread. A wait of the call itself ends for the hangup, apart from a
+     * running STUN query (up to two seconds) and the wait of an incoming
+     * call not answered yet; another call's wait goes on, up to the STUN
+     * timeout.
      *
      * @param prm.statusCode
      *                      Optional status code to be sent when we're rejecting

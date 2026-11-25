@@ -415,6 +415,210 @@ static int get_media_ip_version(pjsua_call_media *call_med,
     return 4;
 }
 
+/* Has the call ended, been reset or been hung up during its media init, has
+ * make call's account been deleted or changed IP, or is the library closing?
+ * Only then does PJ_ECANCELLED from the init mean "call ended": a STUN
+ * resolution cancelled by the app reports it too.
+ */
+pj_bool_t pjsua_media_init_cancelled(const pjsua_call *call)
+{
+    if (pjsua_var.state == PJSUA_STATE_CLOSING)
+        return PJ_TRUE;
+    if (!call->inv) {
+        const pjsua_acc *acc = &pjsua_var.acc[call->acc_id];
+
+        /* Before the INVITE: hung up, or with make call's lock released,
+         * the account deleted or its calls handled for an IP change (which
+         * would hang this one up)
+         */
+        return call->async_call.dlg == NULL || call->hanging_up ||
+               call->hangup_req.pending || call->hangup_req.stop ||
+               (call->med_unlock_pjsua &&
+                (!acc->valid || acc->gen != call->med_acc_gen ||
+                 acc->ip_change_cnt != call->med_acc_ip_change));
+    }
+    /* Hangup of an incoming call is deferred until media is ready */
+    if (call->inv->state == PJSIP_INV_STATE_NULL)
+        return PJ_FALSE;
+    return call->hanging_up || call->hangup_req.pending ||
+           call->hangup_req.stop ||
+           call->inv->state == PJSIP_INV_STATE_DISCONNECTED;
+}
+
+static pj_bool_t call_wait_cancelled(const pjsua_call *call)
+{
+    pj_bool_t cancelled;
+
+    pj_mutex_lock(pjsua_var.call_owner_mutex);
+    cancelled = pjsua_media_init_cancelled(call);
+    pj_mutex_unlock(pjsua_var.call_owner_mutex);
+    if (!cancelled)
+        return PJ_FALSE;
+
+    PJ_LOG(5,(THIS_FILE, "Media transport creation of call %d cancelled: %s",
+              call->index, pjsua_var.state == PJSUA_STATE_CLOSING ?
+                           "the library is shutting down" :
+                           "the call is hung up or its account deleted"));
+    return PJ_TRUE;
+}
+
+typedef struct call_wait_state
+{
+    unsigned             pjsua_locks;
+    pjsip_dialog        *dlg;
+    pj_bool_t            keeps_locks;
+} call_wait_state;
+
+/* May a STUN wait of this call release its locks? Only make call's own
+ * PJSUA lock and its new dialog, which nothing else can reach yet but the
+ * guarded ICE completion (#5380), and only outside pjsua's event handling:
+ * a callback there may hold a dialog or the transport manager, which a
+ * thread that took the PJSUA lock meanwhile could wait for.
+ */
+static pj_bool_t call_wait_may_release(const pjsua_call *call)
+{
+    return call->med_unlock_pjsua && !pjsua_call_in_events();
+}
+
+/* Begin a wait of the call's media init. pjsua_call_media_is_changing() is
+ * true until it ends. A STUN wait keeps the dialog of an existing call, so
+ * nothing else sees the media being initialized; a hangup that can't lock
+ * a call meanwhile is deferred. With always (the sync ICE wait), the dialog
+ * and one PJSUA level are released as before (#1737).
+ */
+static void call_wait_begin(pjsua_call *call, pj_bool_t always,
+                            call_wait_state *st)
+{
+    st->pjsua_locks = 0;
+    st->dlg = NULL;
+    st->keeps_locks = !always && !call_wait_may_release(call);
+
+    pj_mutex_lock(pjsua_var.call_owner_mutex);
+    call->med_wait = PJ_TRUE;
+    if (st->keeps_locks)
+        ++pjsua_var.med_wait_cnt;
+    pj_mutex_unlock(pjsua_var.call_owner_mutex);
+
+    if (always) {
+        if (PJSUA_LOCK_IS_LOCKED()) {
+            PJSUA_UNLOCK();
+            st->pjsua_locks = 1;
+        }
+        st->dlg = call->inv ? call->inv->dlg : NULL;
+        if (st->dlg) {
+            pjsip_dlg_inc_session(st->dlg, &pjsua_var.mod);
+            pjsip_dlg_dec_lock(st->dlg);
+        }
+    } else if (!st->keeps_locks) {
+        st->pjsua_locks = PJSUA_RELEASE_LOCK();
+        st->dlg = call->inv ? NULL : call->async_call.dlg;
+        if (st->dlg) {
+            pjsip_dlg_inc_session(st->dlg, &pjsua_var.mod);
+            pjsip_dlg_dec_lock(st->dlg);
+        }
+    }
+}
+
+/* End the wait. The dialog is taken back first: another thread may hold it
+ * and wait for the PJSUA lock.
+ */
+static void call_wait_end(pjsua_call *call, call_wait_state *st)
+{
+    if (st->dlg) {
+        pjsip_dlg_inc_lock(st->dlg);
+        pjsip_dlg_dec_session(st->dlg, &pjsua_var.mod);
+    }
+    PJSUA_RELOCK(st->pjsua_locks);
+
+    pj_mutex_lock(pjsua_var.call_owner_mutex);
+    call->med_wait = PJ_FALSE;
+    if (st->keeps_locks && pjsua_var.med_wait_cnt > 0)
+        --pjsua_var.med_wait_cnt;
+    pj_mutex_unlock(pjsua_var.call_owner_mutex);
+}
+
+/* Stop the wait once the call is hung up or reset. reset_call() clears the
+ * call under call_owner_mutex.
+ */
+static pj_bool_t call_wait_stop(void *arg)
+{
+    pj_bool_t stop;
+
+    pj_mutex_lock(pjsua_var.call_owner_mutex);
+    stop = pjsua_media_init_cancelled((const pjsua_call*)arg);
+    pj_mutex_unlock(pjsua_var.call_owner_mutex);
+
+    return stop;
+}
+
+/* Make sure the STUN server resolution has completed. Never returns
+ * PJ_EPENDING: another call may restart the resolution while this one
+ * takes the locks back, then it waits again until the same deadline.
+ */
+static pj_status_t call_resolve_stun_server(pjsua_call *call,
+                                            pj_bool_t retry,
+                                            unsigned options)
+{
+    call_wait_state st;
+    pj_time_val deadline;
+    pj_bool_t started;
+    pj_status_t status;
+
+    started = (pjsua_var.stun_status != PJ_EPENDING);
+    status = resolve_stun_server(PJ_FALSE, retry, options);
+    if (status != PJ_EPENDING)
+        return status;
+
+    pj_gettickcount(&deadline);
+    deadline.msec += pjsua_stun_resolve_max_wait();
+    pj_time_val_normalize(&deadline);
+
+    do {
+        call_wait_begin(call, PJ_FALSE, &st);
+        status = pjsua_wait_stun_server(&call_wait_stop, call, &deadline);
+        call_wait_end(call, &st);
+
+        /* As master: the timeout of a resolution this call started is a
+         * failure like any other, only waiting for one already pending is not
+         */
+        if (status == PJ_ETIMEDOUT && started &&
+            pjsua_var.ua_cfg.stun_ignore_failure)
+        {
+            PJ_LOG(2,(THIS_FILE,
+                      "Ignoring STUN resolution failure (by setting)"));
+            return PJ_SUCCESS;
+        }
+        if (status != PJ_SUCCESS)
+            return status;
+
+        /* Read the result; keep the options the resolution was started with */
+        status = resolve_stun_server(PJ_FALSE, PJ_FALSE, pjsua_var.stun_opt);
+    } while (status == PJ_EPENDING);
+
+    return status;
+}
+
+/* Query the STUN mapped address of the RTP/RTCP sockets */
+static pj_status_t call_get_mapped_addr(pjsua_call *call,
+                                        const pjstun_setting *opt,
+                                        pj_sock_t sock[],
+                                        pj_sockaddr_in mapped_addr[])
+{
+    call_wait_state st;
+    pj_status_t status;
+
+    /* Don't start a 2 s query once the call is hung up or closing */
+    if (call_wait_stop(call))
+        return PJ_ECANCELLED;
+
+    call_wait_begin(call, PJ_FALSE, &st);
+    status = pjstun_get_mapped_addr2(&pjsua_var.cp.factory, opt, 2, sock,
+                                     mapped_addr);
+    call_wait_end(call, &st);
+
+    return status;
+}
+
 /*
  * Create RTP and RTCP socket pair, and possibly resolve their public
  * address via STUN/UPnP.
@@ -435,21 +639,30 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
     pj_status_t status = PJ_SUCCESS;
     char addr_buf[PJ_INET6_ADDRSTRLEN+10];
     pjsua_acc *acc = &pjsua_var.acc[call_med->call->acc_id];
+    pjsua_transport_config rtp_cfg;
+    pj_bool_t use_stun, retry_stun;
     pj_sock_t sock[2];
+    pj_uint16_t rtp_port;
+
+    /* Make call may release the PJSUA lock while it waits for STUN, and the
+     * account be modified meanwhile: use one set of its settings.
+     */
+    pj_memcpy(&rtp_cfg, cfg, sizeof(rtp_cfg));
+    cfg = &rtp_cfg;
+    use_stun = pjsua_media_acc_is_using_stun(call_med->call->acc_id);
+    retry_stun = (acc->cfg.media_stun_use & PJSUA_STUN_RETRY_ON_FAILURE) ==
+                 PJSUA_STUN_RETRY_ON_FAILURE;
 
     use_ipv6 = (get_media_ip_version(call_med, rem_sdp, PJ_FALSE, PJ_FALSE)==6);
     use_nat64 = PJ_HAS_IPV6 && (acc->cfg.nat64_opt != PJSUA_NAT64_DISABLED);
     af = (use_ipv6 || use_nat64) ? pj_AF_INET6() : pj_AF_INET();
 
     /* Make sure STUN server resolution has completed */
-    if ((!use_ipv6 || use_nat64) &&
-        pjsua_media_acc_is_using_stun(call_med->call->acc_id))
-    {
-        pj_bool_t retry_stun = (acc->cfg.media_stun_use &
-                                PJSUA_STUN_RETRY_ON_FAILURE) ==
-                                PJSUA_STUN_RETRY_ON_FAILURE;
-        status = resolve_stun_server(PJ_TRUE, retry_stun,
-                                     (unsigned)acc->cfg.nat64_opt);
+    if ((!use_ipv6 || use_nat64) && use_stun) {
+        status = call_resolve_stun_server(call_med->call, retry_stun,
+                                          (unsigned)acc->cfg.nat64_opt);
+        if (call_wait_cancelled(call_med->call))
+            return PJ_ECANCELLED;
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
             return status;
@@ -569,8 +782,7 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
          * If we're configured to use STUN, then find out the mapped address,
          * and make sure that the mapped RTCP port is adjacent with the RTP.
          */
-        if ((!use_ipv6 || use_nat64) &&
-            pjsua_media_acc_is_using_stun(call_med->call->acc_id) &&
+        if ((!use_ipv6 || use_nat64) && use_stun &&
             pjsua_var.stun_srv.addr.sa_family != 0)
         {
             char ip_addr[PJ_INET6_ADDRSTRLEN];
@@ -587,8 +799,14 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
             stun_opt.srv1  = stun_opt.srv2  = stun_srv;
             stun_opt.port1 = stun_opt.port2 = 
                              pj_sockaddr_get_port(&pjsua_var.stun_srv);
-            status=pjstun_get_mapped_addr2(&pjsua_var.cp.factory, &stun_opt,
-                                           2, sock, resolved_addr);
+            /* Another call may move the account's port meanwhile */
+            rtp_port = acc->next_rtp_port;
+            status = call_get_mapped_addr(call_med->call, &stun_opt, sock,
+                                          resolved_addr);
+            if (call_wait_cancelled(call_med->call)) {
+                status = PJ_ECANCELLED;
+                goto on_error;
+            }
 #if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
             PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
             /* Handle EPIPE (Broken Pipe) error, which happens on UDP socket
@@ -610,8 +828,7 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 #endif
 
             if (status != PJ_SUCCESS && pjsua_var.ua_cfg.stun_srv_cnt > 1 &&
-                ((acc->cfg.media_stun_use & PJSUA_STUN_RETRY_ON_FAILURE)==
-                  PJSUA_STUN_RETRY_ON_FAILURE))
+                retry_stun)
             {
                 pj_str_t srv = 
                              pjsua_var.ua_cfg.stun_srv[pjsua_var.stun_srv_idx];
@@ -637,9 +854,21 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 
                     PJSUA_UNLOCK();
                 }
-                status=pjsua_update_stun_servers(pjsua_var.ua_cfg.stun_srv_cnt,
-                                                 pjsua_var.ua_cfg.stun_srv,
-                                                 PJ_TRUE);
+                /* As pjsua_update_stun_servers() with wait, but the wait
+                 * may end on a hangup
+                 */
+                status = pjsua_update_stun_servers(
+                                            pjsua_var.ua_cfg.stun_srv_cnt,
+                                            pjsua_var.ua_cfg.stun_srv,
+                                            PJ_FALSE);
+                if (status == PJ_SUCCESS) {
+                    status = call_resolve_stun_server(call_med->call,
+                                                      PJ_FALSE, 0);
+                }
+                if (call_wait_cancelled(call_med->call)) {
+                    status = PJ_ECANCELLED;
+                    goto on_error;
+                }
                 if (status == PJ_SUCCESS) {
                     if (pjsua_var.stun_srv.addr.sa_family != 0) {
                         pj_sockaddr_print(&pjsua_var.stun_srv,
@@ -653,9 +882,12 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
                     stun_opt.srv1  = stun_opt.srv2  = stun_srv;
                     stun_opt.port1 = stun_opt.port2 = 
                                 pj_sockaddr_get_port(&pjsua_var.stun_srv);
-                    status = pjstun_get_mapped_addr2(&pjsua_var.cp.factory,
-                                                     &stun_opt, 2, sock,
-                                                     resolved_addr);
+                    status = call_get_mapped_addr(call_med->call, &stun_opt,
+                                                  sock, resolved_addr);
+                    if (call_wait_cancelled(call_med->call)) {
+                        status = PJ_ECANCELLED;
+                        goto on_error;
+                    }
                 }
             }
 
@@ -683,7 +915,7 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
                     pj_sockaddr_init(af, &mapped_addr[i], NULL, 0);
                     pj_sockaddr_copy_addr(&mapped_addr[i], &bound_addr);
                     pj_sockaddr_set_port(&mapped_addr[i],
-                                         (pj_uint16_t)(acc->next_rtp_port+i));
+                                         (pj_uint16_t)(rtp_port+i));
                 }
                 break;
             }
@@ -848,8 +1080,11 @@ static pj_status_t create_udp_media_transport(const pjsua_transport_config *cfg,
 
     status = create_rtp_rtcp_sock(call_med, cfg, &skinfo, rem_sdp);
     if (status != PJ_SUCCESS) {
-        pjsua_perror(THIS_FILE, "Unable to create RTP/RTCP socket",
-                     status);
+        /* PJ_ECANCELLED: the call ended, already logged */
+        if (status != PJ_ECANCELLED) {
+            pjsua_perror(THIS_FILE, "Unable to create RTP/RTCP socket",
+                         status);
+        }
         goto on_error;
     }
 
@@ -1004,15 +1239,19 @@ static void ice_init_complete_cb(void *user_data)
      * calling acquire_call() here may cause deadlock. See
      * https://github.com/pjsip/pjproject/issues/1578
      */
-    call_med->tp_ready = call_med->tp_result;
+    if (!call_med->med_create_cb) {
+        call_med->tp_ready = call_med->tp_result;
+        return;
+    }
 
-    if (call_med->med_create_cb) {
+    {
         pjsua_call *call = NULL;
         pjsip_dialog *dlg = NULL;
+        pj_bool_t busy;
         pj_status_t status;
 
-        status = acquire_call("ice_init_complete_cb", call_med->call->index,
-                              &call, &dlg);
+        status = acquire_call_dlg("ice_init_complete_cb",
+                                  call_med->call->index, &call, &dlg);
         if (status != PJ_SUCCESS) {
             if (status != PJSIP_ESESSIONTERMINATED) {
                 /* Retry, if call is still active */
@@ -1020,6 +1259,26 @@ static void ice_init_complete_cb(void *user_data)
             }
             return;
         }
+
+        /* Don't complete in the middle of make call's media init, which
+         * waits with its locks released; retry, as when the locks are busy.
+         */
+        pj_mutex_lock(pjsua_var.call_owner_mutex);
+        busy = (call->med_init_cnt > 0);
+        pj_mutex_unlock(pjsua_var.call_owner_mutex);
+        if (busy) {
+            pjsip_dlg_dec_lock(dlg);
+            if (pjsua_schedule_timer2(&ice_init_complete_cb, call_med,
+                                      10) != PJ_SUCCESS)
+            {
+                PJ_LOG(1,(THIS_FILE, "Call %d: unable to complete the ICE "
+                          "media transport", call->index));
+            }
+            return;
+        }
+
+        /* Set only now: a retry returns early once it is set */
+        call_med->tp_ready = call_med->tp_result;
 
         (*call_med->med_create_cb)(call_med, call_med->tp_ready,
                                    call_med->call->secure_level, NULL);
@@ -1037,7 +1296,7 @@ static void ice_failed_nego_cb(void *user_data)
     pjsip_dialog *dlg = NULL;
     pj_status_t status;
 
-    status = acquire_call("ice_failed_nego_cb", call_id, &call, &dlg);
+    status = acquire_call_dlg("ice_failed_nego_cb", call_id, &call, &dlg);
     if (status != PJ_SUCCESS) {
         if (status != PJSIP_ESESSIONTERMINATED) {
             /* Retry, if call is still active */
@@ -1166,8 +1425,10 @@ static pj_status_t create_ice_media_transport(
         pj_bool_t retry_stun = (acc_cfg->media_stun_use &
                                 PJSUA_STUN_RETRY_ON_FAILURE) ==
                                 PJSUA_STUN_RETRY_ON_FAILURE;
-        status = resolve_stun_server(PJ_TRUE, retry_stun,
-                                     (unsigned)acc_cfg->nat64_opt);
+        status = call_resolve_stun_server(call_med->call, retry_stun,
+                                          (unsigned)acc_cfg->nat64_opt);
+        if (call_wait_cancelled(call_med->call))
+            return PJ_ECANCELLED;
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
             return status;
@@ -1399,9 +1660,7 @@ static pj_status_t create_ice_media_transport(
 
     /* Wait until transport is initialized, or time out */
     if (!async && !trickle) {
-        pj_bool_t has_pjsua_lock = PJSUA_LOCK_IS_LOCKED();
-        pjsip_dialog *dlg = call_med->call->inv ?
-                                call_med->call->inv->dlg : NULL;
+        call_wait_state wst;
         pj_time_val deadline = {0, 0};
         pj_bool_t use_deadline = (PJSUA_ICE_TRANSPORT_INIT_TIMEOUT > 0);
         if (use_deadline) {
@@ -1409,17 +1668,25 @@ static pj_status_t create_ice_media_transport(
             deadline.msec += PJSUA_ICE_TRANSPORT_INIT_TIMEOUT;
             pj_time_val_normalize(&deadline);
         }
-        if (has_pjsua_lock)
-            PJSUA_UNLOCK();
-        if (dlg) {
-            /* Don't lock otherwise deadlock:
-             * https://github.com/pjsip/pjproject/issues/1737
-             */
-            pjsip_dlg_inc_session(dlg, &pjsua_var.mod);
-            pjsip_dlg_dec_lock(dlg);
-        }
+        /* Don't keep the dialog locked, otherwise deadlock:
+         * https://github.com/pjsip/pjproject/issues/1737
+         */
+        call_wait_begin(call_med->call, PJ_TRUE, &wst);
         while (call_med->tp_ready == PJ_EPENDING) {
             pjsua_handle_events(100);
+            if (call_med->tp_ready == PJ_EPENDING &&
+                call_wait_stop(call_med->call))
+            {
+                /* Hung up (also deferred, while an outer caller holds the
+                 * PJSUA lock), or closing: pjsua_destroy() waits for this
+                 * only so long, and with PJSUA_DESTROY_NO_TX_MSG nothing
+                 * resets the call. As at the deadline, invalidate a queued
+                 * completion.
+                 */
+                ++call_med->tp_init_gen;
+                call_med->tp_ready = PJ_ECANCELLED;
+                break;
+            }
             if (use_deadline && call_med->tp_ready == PJ_EPENDING) {
                 pj_time_val now;
                 pj_gettickcount(&now);
@@ -1440,12 +1707,12 @@ static pj_status_t create_ice_media_transport(
                 }
             }
         }
-        if (dlg) {
-            pjsip_dlg_inc_lock(dlg);
-            pjsip_dlg_dec_session(dlg, &pjsua_var.mod);
+        call_wait_end(call_med->call, &wst);
+
+        if (call_med->tp && call_wait_cancelled(call_med->call)) {
+            status = PJ_ECANCELLED;
+            goto on_error;
         }
-        if (has_pjsua_lock)
-            PJSUA_LOCK();
     }
 
     if (!call_med->tp) {
@@ -2173,8 +2440,10 @@ pj_bool_t  pjsua_call_media_is_changing(pjsua_call *call)
      * adding media, which could cause incoming re-INVITE to be processed and
      * cause havoc. Since the handle_events() loop only happens while adding
      * media, it is sufficient to only check if "prov > cnt" for now.
+     * A wait in the media init for STUN or ICE (med_wait) is the same
+     * case, but a REINIT_MEDIA keeps the media count.
      */
-    return call->med_prov_cnt > call->med_cnt;
+    return call->med_wait || call->med_prov_cnt > call->med_cnt;
 }
 
 /* Initialize the media line */
@@ -2246,7 +2515,9 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
                 *sip_err_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
             call_med->tp_ready = status;
             pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_NULL);
-            pjsua_perror(THIS_FILE, "Error creating media transport", status);
+            if (status != PJ_ECANCELLED)
+                pjsua_perror(THIS_FILE, "Error creating media transport",
+                             status);
             return status;
         }
 
@@ -2490,7 +2761,37 @@ static pj_bool_t is_stream_media(const pjsua_call *call,
             type == PJMEDIA_TYPE_TEXT);
 }
 
+static pj_status_t media_channel_init(pjsua_call_id call_id,
+                                     pjsip_role_e role,
+                                     int security_level,
+                                     pj_pool_t *tmp_pool,
+                                     const pjmedia_sdp_session *rem_sdp,
+                                     int *sip_err_code,
+                                     pj_bool_t async,
+                                     pjsua_med_tp_state_cb cb);
+
 pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
+                                     pjsip_role_e role,
+                                     int security_level,
+                                     pj_pool_t *tmp_pool,
+                                     const pjmedia_sdp_session *rem_sdp,
+                                     int *sip_err_code,
+                                     pj_bool_t async,
+                                     pjsua_med_tp_state_cb cb)
+{
+    pjsua_call *call = &pjsua_var.calls[call_id];
+    pj_status_t status;
+
+    /* The waits of the media transports, see call_wait_begin() */
+    pjsua_call_med_init_begin(call);
+    status = media_channel_init(call_id, role, security_level, tmp_pool,
+                                rem_sdp, sip_err_code, async, cb);
+    pjsua_call_med_init_end(call);
+
+    return status;
+}
+
+static pj_status_t media_channel_init(pjsua_call_id call_id,
                                      pjsip_role_e role,
                                      int security_level,
                                      pj_pool_t *tmp_pool,
@@ -3512,7 +3813,10 @@ static void stop_media_stream(pjsua_call *call, unsigned med_idx,
 {
     pjsua_call_media *call_med;
 
-    if (pjsua_call_media_is_changing(call)) {
+    /* Only added media make the provisional array the one in use. During
+     * a media init, media_prov[] may share the streams of media[].
+     */
+    if (call->med_prov_cnt > call->med_cnt) {
         call_med = &call->media_prov[med_idx];
         if (med_idx >= call->med_prov_cnt)
             return;
