@@ -845,7 +845,7 @@ main() {
 
     VERSION=${VERSION:-$(pj_version)}
     case " $SLICES " in
-    *" ios-"*) platform=ios ;;
+    *[[:space:]]ios-*) platform=ios ;;
     *) platform=macos ;;
     esac
     if [ -n "$MACOS_BUILD" ] && [ "$platform" = ios ]; then
