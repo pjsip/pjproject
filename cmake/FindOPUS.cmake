@@ -26,7 +26,7 @@ mark_as_advanced(OPUS_LIBRARY)
 if(OPUS_INCLUDE_DIR AND OPUS_LIBRARY)
   include(Pj/CheckLibraryUsable)
   pj_check_library_usable(OPUS
-    FUNCTION opus_repacketizer_get_size
+    FUNCTION opus_packet_unpad
     LIBRARIES "${OPUS_LIBRARY}"
     STATIC_LIBS m
   )
