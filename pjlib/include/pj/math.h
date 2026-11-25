@@ -184,16 +184,20 @@ PJ_INLINE(void) pj_math_stat_update(pj_math_stat *stat, int val)
 PJ_INLINE(unsigned) pj_math_stat_get_stddev(const pj_math_stat *stat)
 {
     pj_highprec_t    var;
+    unsigned         shift = 0;
 
     if (stat->n == 0) return 0;
 
     var = stat->m2_ / stat->n;
     if (var <= 0)
         return 0;
-    /* Saturate at isqrt(UINT_MAX) */
-    if (var / 65536 >= 65536)
-        return 65535;
-    return (pj_isqrt((unsigned)var));
+    /* Scale to fit pj_isqrt(): sqrt(v) = sqrt(v / 4^k) * 2^k */
+    while (var / 65536 >= 65536) {
+        if (++shift > 16)
+            return 0xFFFFFFFF;
+        var /= 4;
+    }
+    return (pj_isqrt((unsigned)var) << shift);
 }
 
 /**
@@ -209,7 +213,7 @@ PJ_INLINE(void) pj_math_stat_set_stddev(pj_math_stat *stat, unsigned dev)
 {
     if (stat->n == 0) 
         stat->n = 1;
-    /* get_stddev() saturates at isqrt(UINT_MAX) */
+    /* Keeps dev * dev * n within pj_int64_t when there is no floating point */
     if (dev > 65535)
         dev = 65535;
     stat->m2_ = (pj_highprec_t)dev * dev * stat->n;
