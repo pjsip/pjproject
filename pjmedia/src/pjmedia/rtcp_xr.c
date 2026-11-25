@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -594,8 +594,8 @@ void pjmedia_rtcp_xr_rx_rtcp_xr( pjmedia_rtcp_xr_session *sess,
             sess->stat.tx.stat_sum.toh.min = rb_stats->toh_min;
             sess->stat.tx.stat_sum.toh.max = rb_stats->toh_max;
             sess->stat.tx.stat_sum.toh.mean= rb_stats->toh_mean;
-            pj_math_stat_set_stddev(&sess->stat.tx.stat_sum.toh, 
-                                    pj_ntohl(rb_stats->toh_dev));
+            pj_math_stat_set_stddev(&sess->stat.tx.stat_sum.toh,
+                                    rb_stats->toh_dev);
         }
 
         pj_gettimeofday(&sess->stat.tx.stat_sum.update);
