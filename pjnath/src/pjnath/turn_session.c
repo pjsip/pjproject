@@ -401,7 +401,8 @@ static void sess_shutdown(pj_turn_session *sess,
         sess->last_status = status;
 
     /* Stop the DNS resolution. Its callback may never be called, e.g. when
-     * the resolver is destroyed, unless a DNS answer is being processed.
+     * the resolver is destroyed, unless a DNS answer or timeout is being
+     * processed.
      */
     if (sess->q) {
         dns_cancelled = (pj_dns_srv_cancel_query(sess->q, PJ_FALSE) ==

@@ -566,9 +566,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_create( pj_pool_factory *pf,
 
         /* Give the owned timer heap its own lock, so that
          * pj_dns_resolver_handle_events() can poll it without holding the
-         * resolver group lock. Holding that lock around the poll would
-         * invert against the lock a timer callback takes downstream (e.g.
-         * the TURN session lock when a DNS cancel races the callback).
+         * resolver group lock (see there).
          */
         status = pj_lock_create_simple_mutex(pool, name, &timer_lock);
         if (status != PJ_SUCCESS)
@@ -890,14 +888,19 @@ PJ_DEF(void) pj_dns_resolver_handle_events(pj_dns_resolver *resolver,
 {
     PJ_ASSERT_ON_FAIL(resolver, return);
 
-    /* The timer heap serializes itself with its own lock (the owned heap
-     * gets one at create; an external heap already has one), so the poll
-     * must not hold the resolver group lock: a timer callback that takes a
-     * downstream lock (e.g. the TURN session lock on a DNS cancel) would
-     * otherwise invert against a thread holding that lock and cancelling
-     * the query.
+    /* The owned timer heap has its own lock (see create), so poll it
+     * without the resolver group lock: a timer callback may take a
+     * downstream lock (e.g. the TURN session lock) that a thread starting
+     * or cancelling a query holds. An external heap may have no lock, so
+     * keep serializing its poll with the resolver's timer operations.
      */
-    pj_timer_heap_poll(resolver->timer, NULL);
+    if (resolver->own_timer) {
+        pj_timer_heap_poll(resolver->timer, NULL);
+    } else {
+        pj_grp_lock_acquire(resolver->grp_lock);
+        pj_timer_heap_poll(resolver->timer, NULL);
+        pj_grp_lock_release(resolver->grp_lock);
+    }
 
     pj_ioqueue_poll(resolver->ioqueue, timeout);
 }

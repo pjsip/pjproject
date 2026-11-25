@@ -521,7 +521,8 @@ PJ_DEF(pj_status_t) pj_stun_sock_destroy(pj_stun_sock *stun_sock)
                                    &stun_sock->ka_timer, 0);
 
     /* Release the reference of the DNS query, unless its callback is still
-     * to be called, i.e. another thread is processing a DNS answer.
+     * to be called, i.e. another thread is processing a DNS answer or
+     * timeout.
      */
     if (stun_sock->q) {
         if (pj_dns_srv_cancel_query(stun_sock->q, PJ_FALSE) == PJ_SUCCESS)

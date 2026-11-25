@@ -92,6 +92,7 @@ static pj_sem_t *cancel_unlocked_entered;
 static pj_sem_t *cancel_unlocked_probed;
 static pj_bool_t cancel_unlocked_probe_seen;
 static int cancel_unlocked_count;
+static pj_bool_t poll_lock_held;
 
 #define MAX_LABEL   32
 
@@ -1910,6 +1911,138 @@ on_return:
     cancel_unlocked_res = NULL;
     if (ioq)
         pj_ioqueue_destroy(ioq);
+
+    return rc;
+}
+
+/* Probe thread for dns_poll_lock_test(): once the timeout callback runs,
+ * tell whether another thread holds the resolver group lock.
+ */
+static int poll_lock_probe_thread(void *arg)
+{
+    pj_grp_lock_t *grp_lock;
+
+    PJ_UNUSED_ARG(arg);
+
+    pj_sem_wait(cancel_unlocked_entered);
+    grp_lock = pj_dns_resolver_get_grp_lock(cancel_unlocked_res);
+    if (pj_grp_lock_tryacquire(grp_lock) == PJ_SUCCESS) {
+        pj_grp_lock_release(grp_lock);
+        poll_lock_held = PJ_FALSE;
+    } else {
+        poll_lock_held = PJ_TRUE;
+    }
+    pj_sem_post(cancel_unlocked_probed);
+
+    return 0;
+}
+
+static int poll_lock_check(pj_bool_t ext_heap)
+{
+    pj_str_t name = pj_str("name_poll_lock");
+    pj_str_t nameservers[2];
+    pj_uint16_t ports[2];
+    pj_timer_heap_t *th = NULL;
+    pj_thread_t *probe = NULL;
+    pj_dns_settings s;
+    unsigned i;
+    int rc = 0;
+
+    cancel_unlocked_res = NULL;
+    cancel_unlocked_entered = cancel_unlocked_probed = NULL;
+    cancel_unlocked_count = 0;
+    cancel_unlocked_probe_seen = PJ_FALSE;
+    poll_lock_held = !ext_heap;
+
+    /* Servers ignore the query so it times out */
+    g_server[0].action = ACTION_IGNORE;
+    g_server[1].action = ACTION_IGNORE;
+
+    nameservers[0] = nameservers[1] = pj_str("127.0.0.1");
+    ports[0] = g_server[0].port;
+    ports[1] = g_server[1].port;
+
+    /* An external heap without a lock, or the resolver's own heap. The
+     * resolver's own ioqueue is polled only by this thread.
+     */
+    if (ext_heap) {
+        PJ_TEST_SUCCESS(pj_timer_heap_create(pool, 16, &th), NULL,
+                        {rc = -780; goto on_return;});
+    }
+    PJ_TEST_SUCCESS(pj_dns_resolver_create(mem, NULL, 0, th, NULL,
+                                           &cancel_unlocked_res),
+                    NULL, {rc = -781; goto on_return;});
+    pj_dns_resolver_get_settings(cancel_unlocked_res, &s);
+    s.qretr_delay = 300;
+    s.qretr_count = 0;
+    s.sys_fallback = PJ_FALSE;
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_settings(cancel_unlocked_res, &s),
+                    NULL, {rc = -782; goto on_return;});
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(cancel_unlocked_res, 2,
+                                           nameservers, ports),
+                    NULL, {rc = -783; goto on_return;});
+
+    PJ_TEST_SUCCESS(pj_sem_create(pool, NULL, 0, 1, &cancel_unlocked_entered),
+                    NULL, {rc = -784; goto on_return;});
+    PJ_TEST_SUCCESS(pj_sem_create(pool, NULL, 0, 1, &cancel_unlocked_probed),
+                    NULL, {rc = -785; goto on_return;});
+    PJ_TEST_SUCCESS(pj_thread_create(pool, NULL, &poll_lock_probe_thread,
+                                     NULL, 0, 0, &probe),
+                    NULL, {rc = -786; goto on_return;});
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(
+                        cancel_unlocked_res, &name, PJ_DNS_TYPE_A, 0,
+                        &dns_callback_cancel_unlocked, NULL, NULL),
+                    NULL, {rc = -787; goto on_return;});
+
+    /* The timeout is delivered by this thread */
+    for (i = 0; cancel_unlocked_count == 0 && i < 1000; ++i) {
+        pj_time_val timeout = {0, 10};
+        pj_dns_resolver_handle_events(cancel_unlocked_res, &timeout);
+    }
+
+    PJ_TEST_EQ(cancel_unlocked_count, 1, NULL, {rc = -788; goto on_return;});
+    PJ_TEST_EQ(cancel_unlocked_probe_seen, PJ_TRUE, NULL,
+               {rc = -789; goto on_return;});
+    PJ_TEST_EQ(poll_lock_held, ext_heap, NULL,
+               {rc = ext_heap ? -791 : -790; goto on_return;});
+
+on_return:
+    if (probe) {
+        /* Let the probe finish if the timeout never came */
+        if (cancel_unlocked_count == 0)
+            pj_sem_post(cancel_unlocked_entered);
+        pj_thread_join(probe);
+        pj_thread_destroy(probe);
+    }
+    if (cancel_unlocked_entered)
+        pj_sem_destroy(cancel_unlocked_entered);
+    if (cancel_unlocked_probed)
+        pj_sem_destroy(cancel_unlocked_probed);
+    if (cancel_unlocked_res)
+        pj_dns_resolver_destroy(cancel_unlocked_res, PJ_FALSE);
+    cancel_unlocked_res = NULL;
+    if (th)
+        pj_timer_heap_destroy(th);
+
+    return rc;
+}
+
+/* pj_dns_resolver_handle_events() polls the resolver's own timer heap, which
+ * has its own lock, without the resolver lock, so a timeout callback taking
+ * another lock cannot invert against a thread holding that lock to start or
+ * cancel a query. An external heap may have no lock, so its poll stays
+ * serialized with the resolver lock.
+ */
+static int dns_poll_lock_test(void)
+{
+    int rc;
+
+    PJ_LOG(3,(THIS_FILE, "  handle_events timer poll lock test"));
+
+    rc = poll_lock_check(PJ_FALSE);
+    if (rc == 0)
+        rc = poll_lock_check(PJ_TRUE);
 
     return rc;
 }
@@ -6759,6 +6892,11 @@ int resolver_test(void)
 
     PJ_LOG(3,(THIS_FILE, "dns_answer_unlocked_test"));
     rc = dns_answer_unlocked_test();
+    if (rc != 0)
+        goto on_error;
+
+    PJ_LOG(3,(THIS_FILE, "dns_poll_lock_test"));
+    rc = dns_poll_lock_test();
     if (rc != 0)
         goto on_error;
 

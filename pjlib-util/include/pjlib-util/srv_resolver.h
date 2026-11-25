@@ -223,8 +223,9 @@ PJ_DECL(pj_status_t) pj_dns_srv_resolve(const pj_str_t *domain_name,
  *                  will not be called anymore, other than by this function
  *                  when \a notify is set.
  *                  PJ_EPENDING if another thread is processing a DNS answer
- *                  of the query: the callback will still be called once,
- *                  with a failure status, regardless of \a notify.
+ *                  or timeout of the query: the callback will still be
+ *                  called once, with a failure status, regardless of
+ *                  \a notify.
  *                  PJ_EINVALIDOP if the resolution has completed and the
  *                  callback has been called.
  */
