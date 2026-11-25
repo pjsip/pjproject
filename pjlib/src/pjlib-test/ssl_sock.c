@@ -785,7 +785,6 @@ static int echo_test_with_certs(pj_ssl_sock_proto srv_proto,
     pj_sockaddr addr, listen_addr;
     pj_ssl_cipher ciphers[1];
     pj_ssl_cert_t *cert = NULL;
-    pj_ssl_cert_t *cli_cert = NULL;
     pj_status_t status;
 
 #if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_SCHANNEL)
@@ -988,7 +987,7 @@ static int echo_test_with_certs(pj_ssl_sock_proto srv_proto,
     }
 #else
     {
-        cli_cert = cert;
+        pj_ssl_cert_t *cli_cert = cert;
 
         if (!client_provide_cert) {
             pj_str_t ca_file = pj_str(CERT_CA_FILE);
@@ -1516,8 +1515,25 @@ on_return:
             ;
     }
 
-    if (timer)
+    /* The accepted socket whose handshake failed is closed by a timer
+     * (PJ_SSL_SOCK_DELAYED_CLOSE_TIMEOUT), wait until it has run.
+     */
+    if (timer) {
+        pj_time_val deadline, now;
+
+        pj_gettickcount(&deadline);
+        deadline.sec += 5;
+        while (ioqueue && pj_timer_heap_count(timer) > 0) {
+            pj_time_val delay = {0, 100};
+
+            pj_gettickcount(&now);
+            if (PJ_TIME_VAL_GTE(now, deadline))
+                break;
+            pj_ioqueue_poll(ioqueue, &delay);
+            pj_timer_heap_poll(timer, NULL);
+        }
         pj_timer_heap_destroy(timer);
+    }
     if (ioqueue)
         pj_ioqueue_destroy(ioqueue);
     if (pool)
@@ -3009,6 +3025,7 @@ static pj_bool_t serial_on_connect(pj_ssl_sock_t *ssock, pj_status_t status)
                               pj_ssl_sock_get_user_data(ssock);
     pj_ssl_sock_info info;
 
+    pj_bzero(&info, sizeof(info));
     if (status == PJ_SUCCESS)
         status = pj_ssl_sock_get_info(ssock, &info);
     if (status == PJ_SUCCESS)
@@ -3200,6 +3217,71 @@ on_return:
     return (status == PJ_SUCCESS) ? 0 : -1;
 }
 
+/* OpenSSL 3.3 and later, LibreSSL and BoringSSL reject a short time field
+ * when the certificate is decoded, so the test server cannot present one.
+ */
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+#   include <openssl/opensslv.h>
+#   if (OPENSSL_VERSION_NUMBER < 0x30300000L) && \
+       !defined(LIBRESSL_VERSION_NUMBER) && !defined(OPENSSL_IS_BORINGSSL)
+#       define TEST_BAD_TIME_CERT       1
+#   endif
+#endif
+
+#if TEST_BAD_TIME_CERT
+/* Self-signed cert (sharing serial_key_pem) whose notAfter is a zero-length
+ * GeneralizedTime. OpenSSL keeps the raw ASN.1 time bytes without checking
+ * the format, so get_cert_info() parses this field when a peer presents it.
+ * Serial number is 1.
+ */
+static const struct serial_cert bad_time_cert =
+{
+    "zero-length GeneralizedTime notAfter",
+    "-----BEGIN CERTIFICATE-----\n"
+    "MIIBDDCBsqADAgECAgEBMAoGCCqGSM49BAMCMBYxFDASBgNVBAMMC3NlcmlhbC50\n"
+    "ZXN0MBEXDTI2MDkyNzE2NTc1NVoYADAWMRQwEgYDVQQDDAtzZXJpYWwudGVzdDBZ\n"
+    "MBMGByqGSM49AgEGCCqGSM49AwEHA0IABKURpoINUF2O5Qe4E9gzbQ2snGV3q1P0\n"
+    "hyE+hQbxqdwt6kA2CX5fdqQ8OSnbYVe7Bt1oD5Qz8r3CKU9CsGBZfXswCgYIKoZI\n"
+    "zj0EAwIDSQAwRgIhAPelQ0duY6Mx3K9ojfVD5Jhwd8k/c4EpCUDzftBRheRhAiEA\n"
+    "zmslYbYrD9DX9xAfHCf8e4xMfl4Pya3HS+7POgpGSws=\n"
+    "-----END CERTIFICATE-----\n",
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 }
+};
+
+/* A peer certificate with a malformed validity time must not read outside
+ * the ASN.1 time field when its info is parsed (ASan regression).
+ */
+static int cert_bad_time_test(void)
+{
+    pj_pool_t *pool;
+    pj_ioqueue_t *ioqueue = NULL;
+    pj_timer_heap_t *timer = NULL;
+    pj_status_t status;
+
+    pool = pj_pool_create(mem, "ssl_badtime", 512, 512, NULL);
+    status = pj_ioqueue_create(pool, 8, &ioqueue);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+    status = pj_timer_heap_create(pool, 8, &timer);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    status = serial_check(pool, ioqueue, timer, &bad_time_cert);
+    if (status != PJ_SUCCESS)
+        app_perror("...ERROR cert_bad_time_test()", status);
+
+on_return:
+    if (timer)
+        pj_timer_heap_destroy(timer);
+    if (ioqueue)
+        pj_ioqueue_destroy(ioqueue);
+    pj_pool_release(pool);
+
+    return (status == PJ_SUCCESS) ? 0 : -1;
+}
+#endif  /* TEST_BAD_TIME_CERT */
+
 struct chain_state
 {
     pj_pool_t      *pool;
@@ -3281,6 +3363,8 @@ static int untrusted_chain_test(void)
 
     pj_bzero(&state_serv, sizeof(state_serv));
     pj_bzero(&state_cli, sizeof(state_cli));
+    pj_bzero(&cli_buf, sizeof(cli_buf));
+    pj_bzero(&issuer_buf, sizeof(issuer_buf));
 
     pool = pj_pool_create(mem, "ssl_chain", 512, 512, NULL);
     state_serv.pool = state_cli.pool = pool;
@@ -3779,12 +3863,20 @@ int ssl_sock_test(void)
     if (ret != 0)
         return ret;
 
+#if TEST_BAD_TIME_CERT
+    PJ_LOG(3,("", "..certificate malformed validity time test"));
+    ret = cert_bad_time_test();
+    if (ret != 0)
+        return ret;
+#endif
+
     PJ_LOG(3,("", "..untrusted client certificate chain test"));
     ret = untrusted_chain_test();
     if (ret != 0)
         return ret;
 
 #if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL) || \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_GNUTLS) || \
     (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_MBEDTLS)
     PJ_LOG(3,("", "..client without CA test"));
     ret = no_ca_client_test(PJ_FALSE);

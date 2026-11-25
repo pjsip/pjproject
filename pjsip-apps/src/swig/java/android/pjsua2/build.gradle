@@ -56,7 +56,6 @@ android {
                     // which the SWIG Makefile has to copy by hand.
                     arguments "-DANDROID_STL=c++_shared",
                               "-DPJ_BUILD_SWIG_JAVA=ON",
-                              "-DPJ_SKIP_EXPERIMENTAL_NOTICE=ON",
                               "-DBUILD_TESTING=OFF",
                               "-DPJSUA2_JAVA_OUTPUT_DIR=${generatedJavaDir}"
 
@@ -76,8 +75,8 @@ android {
             cmake {
                 path file("${pjprojectRoot}/CMakeLists.txt")
                 // The project's cmake_minimum_required is 3.28, above the
-                // 3.22.1 AGP defaults to and ships in the SDK. The "+" lets
-                // AGP accept any newer CMake it finds on PATH.
+                // 3.22.1 AGP defaults to. The "+" lets AGP accept any newer
+                // CMake, from the SDK Manager or on PATH.
                 version "3.28.0+"
             }
         }

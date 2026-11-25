@@ -331,7 +331,7 @@ PJ_DEF(pj_status_t) pjsip_regc_get_info( pjsip_regc *regc,
         pj_gettimeofday(&now);
         if (PJ_TIME_VAL_GT(next_reg, now)) {
             PJ_TIME_VAL_SUB(next_reg, now);
-            info->next_reg = next_reg.sec;
+            info->next_reg = (unsigned)next_reg.sec;
         } else {
             info->next_reg = 0;
         }

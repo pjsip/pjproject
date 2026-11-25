@@ -3991,7 +3991,7 @@ PJ_DEF(pj_status_t) pjsua_call_send_ack(pjsua_call_id call_id,
 
     if (callback_inv) {
         call = (pjsua_call*) callback_inv->dlg->mod_data[pjsua_var.mod.id];
-        if (!call || call->index != call_id) {
+        if (!call || (pjsua_call_id)call->index != call_id) {
             status = PJ_EINVALIDOP;
             goto on_return;
         }
@@ -5819,7 +5819,7 @@ static pj_bool_t is_non_av_fmt(const pjmedia_sdp_media *m,
     const pj_str_t STR_RED = {"red", 3};
     unsigned pt;
 
-    pt = pj_strtoul(fmt);
+    pt = (unsigned)pj_strtoul(fmt);
 
     /* Check for comfort noise */
     if (pt == PJMEDIA_RTP_PT_CN)
@@ -7733,7 +7733,7 @@ static void pjsua_call_on_siprec_metadata_update(
             }
         }
 
-        if (new_metadata->slen > call->siprec_metadata_cap) {
+        if ((pj_size_t)new_metadata->slen > call->siprec_metadata_cap) {
             call->siprec_metadata.ptr = (char*)
                 pj_pool_alloc(call->inv->pool, new_metadata->slen);
             call->siprec_metadata_cap = new_metadata->slen;
@@ -8619,7 +8619,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
                             {
                                 val_str.ptr = ptr;
                                 val_str.slen = input.slen - (ptr - input.ptr);
-                                info.duration = pj_strtoul(&val_str);
+                                info.duration = (unsigned)pj_strtoul(&val_str);
                             } else {
                                 info.duration = PJSUA_UNKNOWN_DTMF_DURATION;
                                 is_handled = PJ_FALSE;

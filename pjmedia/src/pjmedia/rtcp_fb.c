@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2018 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2018-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -349,7 +349,7 @@ static pj_status_t get_codec_info_from_sdp(pjmedia_endpt *endpt,
     codec_mgr = pjmedia_endpt_get_codec_mgr(endpt);
     for (j = 0; j < m->desc.fmt_count && cnt < *sci_cnt; ++j) {
         unsigned pt = 0;
-        pt = pj_strtoul(&m->desc.fmt[j]);
+        pt = (unsigned)pj_strtoul(&m->desc.fmt[j]);
         if (pt < 96) {
             if (type == PJMEDIA_TYPE_AUDIO) {
                 const pjmedia_codec_info *ci;

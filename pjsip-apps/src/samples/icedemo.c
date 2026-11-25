@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -171,7 +171,7 @@ static pj_status_t handle_events(unsigned max_msec, unsigned *p_count)
         c = pj_ioqueue_poll( icedemo.ice_cfg.stun_cfg.ioqueue, &timeout);
         if (c < 0) {
             pj_status_t err = pj_get_netos_error();
-            pj_thread_sleep(PJ_TIME_VAL_MSEC(timeout));
+            pj_thread_sleep((unsigned)PJ_TIME_VAL_MSEC(timeout));
             if (p_count)
                 *p_count = count;
             return err;
@@ -227,7 +227,7 @@ static void cb_on_rx_data(pj_ice_strans *ice_st,
     //((char*)pkt)[size] = '\0';
 
     PJ_LOG(3,(THIS_FILE, "Component %d: received %ld bytes data from %s: \"%.*s\"",
-              comp_id, size,
+              comp_id, (long)size,
               pj_sockaddr_print(src_addr, ipstr, sizeof(ipstr), 3),
               (unsigned)size,
               (char*)pkt));

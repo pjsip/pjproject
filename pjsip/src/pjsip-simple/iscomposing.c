@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -208,7 +208,7 @@ PJ_DEF(pj_status_t) pjsip_iscomposing_parse( pj_pool_t *pool,
     if (p_refresh) {
         node = pj_xml_find_node(doc, &STR_REFRESH);
         if (node)
-            *p_refresh = pj_strtoul(&node->content);
+            *p_refresh = (int)pj_strtoul(&node->content);
     }
 
     return PJ_SUCCESS;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -119,7 +119,11 @@ PJ_INLINE(float) FABS(float val)
 
     int pj_ufloat_mul_i(int val1, pj_ufloat_t val2)
     {
+#if PJ_HAS_INT64
+        return (int)(((pj_int64_t)val1 * val2) >> 16);
+#else
         return (val1 * (pj_int32_t)val2) >> 16;
+#endif
     }
 #endif
 
@@ -652,7 +656,15 @@ static void amplify_frame(pj_int16_t *frm, unsigned length,
     unsigned i;
 
     for (i=0; i<length; ++i) {
-        frm[i] = (pj_int16_t)pj_ufloat_mul_i(frm[i], factor);
+#if defined(PJ_HAS_FLOATING_POINT) && PJ_HAS_FLOATING_POINT!=0
+        float amplified = pj_ufloat_mul_i(frm[i], factor);
+        if (amplified != amplified)
+            amplified = 0;
+#else
+        int amplified = pj_ufloat_mul_i(frm[i], factor);
+#endif
+        frm[i] = amplified > 32767 ? 32767 :
+                 amplified < -32768 ? -32768 : (pj_int16_t)amplified;
     }
 }
 

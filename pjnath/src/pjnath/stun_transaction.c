@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -228,7 +228,7 @@ static pj_status_t tsx_transmit_msg(pj_stun_client_tsx *tsx,
         } else if (tsx->transmit_count < PJ_STUN_MAX_TRANSMIT_COUNT-1) {
             unsigned msec;
 
-            msec = PJ_TIME_VAL_MSEC(tsx->retransmit_time);
+            msec = (unsigned)PJ_TIME_VAL_MSEC(tsx->retransmit_time);
             msec <<= 1;
             tsx->retransmit_time.sec = msec / 1000;
             tsx->retransmit_time.msec = msec % 1000;
@@ -476,22 +476,32 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
                 pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_ERROR_CODE, 0);
 
     if (err_attr && err_attr->err_code <= 200) {
-        /* draft-ietf-behave-rfc3489bis-05.txt Section 8.3.2:
-         * Any response between 100 and 299 MUST result in the cessation
-         * of request retransmissions, but otherwise is discarded.
+        /* Not an error code. The retransmission has been stopped, so the
+         * transaction must fail rather than be left without completion.
          */
         PJ_LOG(4,(tsx->obj_name, 
-                  "STUN rx_msg() error: received provisional %d code (%.*s)",
+                  "STUN rx_msg() error: received invalid %d code (%.*s)",
                   err_attr->err_code,
                   (int)err_attr->reason.slen,
                   err_attr->reason.ptr));
-        return PJ_SUCCESS;
-    }
-
-    if (err_attr == NULL) {
-        status = PJ_SUCCESS;
+        status = PJNATH_EINSTUNMSG;
+    } else if (err_attr == NULL) {
+        if (PJ_STUN_IS_ERROR_RESPONSE(msg->hdr.type)) {
+            PJ_LOG(4,(tsx->obj_name, "STUN rx_msg() error: no ERROR-CODE "
+                      "attribute in error response"));
+            status = PJNATH_EINSTUNMSG;
+        } else {
+            status = PJ_SUCCESS;
+        }
     } else {
         status = PJ_STATUS_FROM_STUN_CODE(err_attr->err_code);
+    }
+
+    /* An invalid response is not passed on */
+    if (status == PJNATH_EINSTUNMSG) {
+        msg = NULL;
+        src_addr = NULL;
+        src_addr_len = 0;
     }
 
     /* Call callback */

@@ -14,6 +14,20 @@ DEFAULT_START_TELNET_PORT = 60000
 ARGS = []		# arguments containing script module & config
 HAS_SND_DEV = config_site.HAS_SND_DEV
 G_EXE = ""		# pjsua executable path (set by run.py once resolved)
+# Ports given to the instances of this test, so that no two share one
+USED_PORTS = set()
+
+# Is the TCP port taken on this host?
+def port_in_use(port):
+	s = socket.socket(socket.AF_INET)
+	try:
+		s.bind(("0.0.0.0", port))
+	except socket.error as serr:
+		if serr.errno == errno.EADDRINUSE or serr.errno == errno.EACCES:
+			return True
+	finally:
+		s.close()
+	return False
 
 # Individual pjsua instance configuration class
 class InstanceParam:
@@ -61,20 +75,18 @@ class InstanceParam:
 			cnt = 0
 			port = 0
 			while cnt < 10:
-				cnt = cnt + 1
 				port = random.randint(DEFAULT_START_TELNET_PORT, 65534)
-				s = socket.socket(socket.AF_INET)
-				try:
-					s.bind(("0.0.0.0", port))
-				except socket.error as serr:
-					s.close()
-					if serr.errno ==  errno.EADDRINUSE or serr.errno == errno.EACCES:
-						continue
-				s.close()
-				break;
+				if port in USED_PORTS:
+					continue
+				cnt = cnt + 1
+				if port_in_use(port):
+					continue
+				break
 			self.telnet_port = port
 		else:
 			self.telnet_port = telnet_port
+		if self.telnet_port:
+			USED_PORTS.add(self.telnet_port)
 		# Give random sip_port if it's not specified
 		if sip_port==0:
 			# avoid port conflict
@@ -84,21 +96,19 @@ class InstanceParam:
 				port = random.randint(DEFAULT_START_SIP_PORT, 60000)
 				if port==self.telnet_port:
 					continue
+				# The TLS listener takes the next port
+				if port in USED_PORTS or port + 1 in USED_PORTS:
+					continue
 				cnt = cnt + 1
-				s = socket.socket(socket.AF_INET)
-				try:
-					s.bind(("0.0.0.0", port))
-				except socket.error as serr:
-					s.close()
-					if serr.errno ==  errno.EADDRINUSE or serr.errno ==  errno.EACCES:
-						continue
-				s.close()
-				break;
+				if port_in_use(port) or port_in_use(port + 1):
+					continue
+				break
 			self.sip_port = port
 			# Give some time for socket close
 			time.sleep(0.5)
 		else:
 			self.sip_port = sip_port
+		USED_PORTS.update((self.sip_port, self.sip_port + 1))
 		# Autogenerate URI if it's empty.
 		self.uri = uri
 		if self.uri=="":

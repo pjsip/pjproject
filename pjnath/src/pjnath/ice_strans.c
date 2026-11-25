@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -2075,7 +2075,7 @@ static void on_valid_pair(pj_ice_sess *ice)
 
     pj_gettimeofday(&t);
     PJ_TIME_VAL_SUB(t, ice_st->start_time);
-    msec = PJ_TIME_VAL_MSEC(t);
+    msec = (unsigned)PJ_TIME_VAL_MSEC(t);
 
     if (cb.on_valid_pair) {
         unsigned i;
@@ -2159,7 +2159,7 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 
     pj_gettimeofday(&t);
     PJ_TIME_VAL_SUB(t, ice_st->start_time);
-    msec = PJ_TIME_VAL_MSEC(t);
+    msec = (unsigned)PJ_TIME_VAL_MSEC(t);
 
     if (cb.on_ice_complete) {
         if (status != PJ_SUCCESS) {

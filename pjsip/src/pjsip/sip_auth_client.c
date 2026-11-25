@@ -46,7 +46,7 @@
 #    define EVP_MD_CTX_free(ctx) EVP_MD_CTX_destroy(ctx)
 #  endif
 
-#  ifdef _MSC_VER
+#  if defined(_MSC_VER) && PJ_AUTO_LINK_SSL_LIBS
 #    if OPENSSL_VERSION_NUMBER >= 0x10100000L
 #      pragma comment(lib, "libcrypto")
 #    else

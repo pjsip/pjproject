@@ -39,6 +39,10 @@ const char *good_number(char *buf, unsigned buf_size, pj_int32_t val)
     return buf;
 }
 
+#if PJSUA_MEDIA_HAS_PJMEDIA || \
+    (PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO && \
+     PJSUA_THIRD_PARTY_STREAM_HAS_GET_STAT)
+
 static unsigned dump_media_stat(const char *indent,
                                 char *buf, unsigned maxlen,
                                 const pjmedia_rtcp_stat *stat,
@@ -224,10 +228,6 @@ static unsigned dump_media_stat(const char *indent,
 
 
 /* Dump media session */
-#if PJSUA_MEDIA_HAS_PJMEDIA || \
-    (PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO && \
-     PJSUA_THIRD_PARTY_STREAM_HAS_GET_STAT)
-
 static void dump_media_session(const char *indent,
                                char *buf, unsigned maxlen,
                                pjsua_call *call)

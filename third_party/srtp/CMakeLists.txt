@@ -122,6 +122,13 @@ target_sources(pj_srtp
         "${CMAKE_CURRENT_SOURCE_DIR}/../build/srtp/srtp_config.h"
 )
 
+# Warnings in the bundled code, which is kept as upstream has it
+target_compile_options(pj_srtp
+  PRIVATE
+    $<$<C_COMPILER_ID:GNU>:-Wno-format>
+    $<$<C_COMPILER_ID:Clang,AppleClang>:-Wno-shorten-64-to-32>
+)
+
 # ##############################################################################
 # Dependencies
 

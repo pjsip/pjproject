@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2014 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2014-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -171,7 +171,7 @@ static void diff_file()
         }
 
         fseek(fhnd, 0, SEEK_END);
-        size[i] = ftell(fhnd);
+        size[i] = (unsigned)ftell(fhnd);
         fseek(fhnd, 0, SEEK_SET);
 
         buf[i] = (pj_uint8_t*)malloc(size[i] + 4);

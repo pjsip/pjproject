@@ -67,7 +67,7 @@ def test_func(t):
     print("WAV input len = " + str(inwavlen) + "s")
 
     # Get clock rate of the output
-    mo_clock_rate = re.compile("\.(\d+)\.wav").search(output_filename)
+    mo_clock_rate = re.compile(r"\.(\d+)\.wav").search(output_filename)
     if (mo_clock_rate is None):
         raise TestError("Cannot compare input & output, incorrect output filename format")
     clock_rate = mo_clock_rate.group(1)
@@ -78,10 +78,10 @@ def test_func(t):
     # Get matched input file from output file
     # (PESQ evaluates only files whose same clock rate & channel count)
     if channel_count == 2:
-        if re.search("\.\d+\.\d+\.wav", input_filename) != None:
-            input_filename = re.sub("\.\d+\.\d+\.wav", "." + str(channel_count) + "."+clock_rate+".wav", input_filename)
+        if re.search(r"\.\d+\.\d+\.wav", input_filename) != None:
+            input_filename = re.sub(r"\.\d+\.\d+\.wav", "." + str(channel_count) + "."+clock_rate+".wav", input_filename)
         else:
-            input_filename = re.sub("\.\d+\.wav", "." + str(channel_count) + "."+clock_rate+".wav", input_filename)
+            input_filename = re.sub(r"\.\d+\.wav", "." + str(channel_count) + "."+clock_rate+".wav", input_filename)
 
     if (clock_rate != "8") and (clock_rate != "16"):
         raise TestError("PESQ only works on clock rate 8kHz or 16kHz, clock rate used = "+clock_rate+ "kHz")
@@ -216,7 +216,7 @@ def post_func(t):
         pesq_out  = pesq_proc.communicate()
 
         # Parse output
-        mo_pesq_out = re.compile("Prediction[^=]+=\s+([\-\d\.]+)\s*").search(pesq_out[0])
+        mo_pesq_out = re.compile(r"Prediction[^=]+=\s+([\-\d\.]+)\s*").search(pesq_out[0])
         if (mo_pesq_out is None):
             raise TestError("Failed to fetch PESQ result")
 
@@ -244,8 +244,8 @@ def post_func(t):
     if (pesq_test_res == 0 and visqol_test_res == 0):
         # Save the wav file
         wavoutname = ARGS[1]
-        wavoutname = re.sub("[\\\/]", "_", wavoutname)
-        wavoutname = re.sub("\.py$", ".wav", wavoutname)
+        wavoutname = re.sub(r"[\\/]", "_", wavoutname)
+        wavoutname = re.sub(r"\.py$", ".wav", wavoutname)
         wavoutname = "logs/" + wavoutname
         try:
             shutil.copyfile(output_filename, wavoutname)

@@ -2,6 +2,10 @@
 #
 # Build PJSIP as a multi-platform XCFramework for binary distribution.
 #
+# By default it builds the iOS slices, which are what the release distributes.
+# The macOS slice is built when SLICES asks for it; the release does not
+# include it, so a build with it gets no manifests.
+#
 # TLS comes from Apple's Network framework, so the artifact links no OpenSSL
 # and has no DTLS-SRTP. Codecs with patent or copyleft encumbrance are left
 # out; Opus is built from a pinned source release and bundled. See
@@ -25,8 +29,8 @@
 #
 # Environment:
 #   OUTDIR                    output directory (default: <pjdir>/out)
-#   SLICES                    slices to build
-#                             (default: "ios-device ios-simulator macos")
+#   SLICES                    slices to build: ios-device, ios-simulator,
+#                             macos (default: "ios-device ios-simulator")
 #   IOS_DEPLOYMENT_TARGET     default 15.0; below 14.0 is not honoured for the
 #                             simulator by the current Xcode SDK
 #   MACOS_DEPLOYMENT_TARGET   default 11.0
@@ -52,7 +56,7 @@ DIST=$OUTDIR/dist
 SRCDIR=$OUTDIR/src
 NAME=PJSIP
 
-SLICES=${SLICES:-"ios-device ios-simulator macos"}
+SLICES=${SLICES:-"ios-device ios-simulator"}
 # Anything below 14.0 is not honoured for the simulator: clang records a floor
 # of 14.0 with the current Xcode SDK no matter what is asked for, so a lower
 # value only makes the slice advertise a target its objects do not meet.
@@ -63,6 +67,7 @@ NO_OPUS=${NO_OPUS:-}
 CODESIGN_ID=${CODESIGN_ID:-}
 SITE_EXISTED=
 PARTIAL_BUILD=
+MACOS_BUILD=
 JOBS=${JOBS:-$(sysctl -n hw.ncpu)}
 RELEASE_BASE=${RELEASE_BASE:-https://github.com/pjsip/pjproject/releases/download}
 
@@ -83,7 +88,6 @@ BACKUP=$OUTDIR/config_site.h.orig
 # The distribution's configuration. Everything CMake has an option for is set
 # here rather than in config_site.h, so the build is described in one place.
 CMAKE_OPTS=(
-    -DPJ_SKIP_EXPERIMENTAL_NOTICE=ON
     -DBUILD_TESTING=OFF
     # the sample-app staging writes into the source tree; a distribution build
     # must not be influenced by, or leave behind, anything there
@@ -752,9 +756,7 @@ render() {
         -e "s|@CHECKSUM@|$CHECKSUM|g" \
         -e "s|@VERSION@|$VERSION|g" \
         -e "s|@IOS_MIN@|\"$IOS_DEPLOYMENT_TARGET\"|g" \
-        -e "s|@MACOS_MIN@|\"$MACOS_DEPLOYMENT_TARGET\"|g" \
         -e "s|@IOS_MIN_RAW@|$IOS_DEPLOYMENT_TARGET|g" \
-        -e "s|@MACOS_MIN_RAW@|$MACOS_DEPLOYMENT_TARGET|g" \
         "$1" > "$2"
 }
 
@@ -785,12 +787,16 @@ package() {
     CHECKSUM=$(shasum -a 256 "$DIST/$NAME.xcframework.zip" | cut -d' ' -f1)
 
     rm -rf "$DIST/spm"
-    if [ -n "$PARTIAL_BUILD" ] || [ -n "$NO_OPUS" ]; then
-        # The manifests describe the full distribution and carry one checksum
+    if [ -n "$PARTIAL_BUILD" ] || [ -n "$NO_OPUS" ] || [ -n "$MACOS_BUILD" ]; then
+        # The manifests describe the iOS distribution and carry one checksum
         # for it; emitting them here would publish metadata that does not
         # match the artifact.
         rm -f "$DIST/Package.swift" "$DIST/$NAME.podspec"
-        echo "note: this is an iteration build, so no manifests were generated"
+        if [ -n "$MACOS_BUILD" ]; then
+            echo "note: the release does not include macOS, so no manifests were generated"
+        else
+            echo "note: this is an iteration build, so no manifests were generated"
+        fi
     else
         render "$SELF_DIR/Package.swift.in" "$DIST/Package.swift"
         render "$SELF_DIR/PJSIP.podspec.in" "$DIST/$NAME.podspec"
@@ -822,7 +828,14 @@ main() {
     command -v xcodebuild >/dev/null || die "xcodebuild not found"
     mkdir -p "$OUTDIR" "$STAGE" "$DIST"
 
-    for slice in ios-device ios-simulator macos; do
+    for slice in $SLICES; do
+        case $slice in
+        ios-device|ios-simulator) ;;
+        macos) MACOS_BUILD=1 ;;
+        *) die "unknown slice '$slice' in SLICES" ;;
+        esac
+    done
+    for slice in ios-device ios-simulator; do
         case " $SLICES " in
         *" $slice "*) ;;
         *) PARTIAL_BUILD=1 ;;

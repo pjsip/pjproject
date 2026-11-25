@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -214,8 +214,8 @@ int main(int argc, char *argv[])
     }
 
     PJ_LOG(3,(THIS_FILE, "Done. Output duration: %ld.%03ld",
-              (processed >> 2)/clock_rate,
-              ((processed >> 2)*1000/clock_rate) % 1000));
+              (long)((processed >> 2)/clock_rate),
+              (long)(((processed >> 2)*1000/clock_rate) % 1000)));
 
     /* Shutdown everything */
     CHECK( pjmedia_port_destroy(wavout) );

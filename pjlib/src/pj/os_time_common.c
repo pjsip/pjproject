@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -46,7 +46,7 @@ PJ_DEF(pj_status_t) pj_time_decode(const pj_time_val *tv, pj_parsed_time *pt)
     pt->min = local_time.tm_min;
     pt->sec = local_time.tm_sec;
     pt->wday = local_time.tm_wday;
-    pt->msec = tv->msec;
+    pt->msec = (int)tv->msec;
 
     return PJ_SUCCESS;
 }

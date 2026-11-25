@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -128,7 +128,7 @@ static pj_status_t logging_on_tx_msg(pjsip_tx_data *tdata)
     PJ_LOG(3,(THIS_FILE, "TX %ld bytes %s to %s %s:%d:\n"
                          "%.*s\n"
                          "--end msg--",
-                         (tdata->buf.cur - tdata->buf.start),
+                         (long)(tdata->buf.cur - tdata->buf.start),
                          pjsip_tx_data_get_info(tdata),
                          tdata->tp_info.transport->type_name,
                          tdata->tp_info.dst_name,
@@ -393,12 +393,12 @@ static void call_on_state_changed( pjsip_inv_session *inv,
     PJ_UNUSED_ARG(e);
     if (inv->state == PJSIP_INV_STATE_DISCONNECTED) {
         PJ_LOG(3,(THIS_FILE, "Call %ld: DISCONNECTED [reason=%d (%s)]",
-                  call - app.call, inv->cause,
+                  (long)(call - app.call), inv->cause,
                   pjsip_get_status_text(inv->cause)->ptr));
         destroy_call(call);
     } else {
         PJ_LOG(3,(THIS_FILE, "Call %ld: state changed to %s",
-                  call - app.call, pjsip_inv_state_name(inv->state)));
+                  (long)(call - app.call), pjsip_inv_state_name(inv->state)));
     }
 }
 

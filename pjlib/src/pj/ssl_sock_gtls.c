@@ -65,7 +65,7 @@
 #include <gnutls/x509.h>
 #include <gnutls/abstract.h>
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && PJ_AUTO_LINK_SSL_LIBS
 #  pragma comment( lib, "libgnutls")
 #endif
 
@@ -174,9 +174,10 @@ static pj_status_t tls_status_from_err(pj_ssl_sock_t *ssock, int err)
 static pj_str_t tls_strerror(pj_status_t status,
                              char *buf, pj_size_t bufsize)
 {
-    PJ_UNUSED_ARG(status);
     pj_str_t errstr;
     const char *tmp = gnutls_strerror(tls_last_error);
+
+    PJ_UNUSED_ARG(status);
 
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
     if (tmp) {
@@ -188,7 +189,7 @@ static pj_str_t tls_strerror(pj_status_t status,
 
     errstr.ptr = buf;
     errstr.slen = pj_ansi_snprintf(buf, bufsize, "GnuTLS error %d: %s",
-                                   tls_last_error, tmp);
+                                   tls_last_error, tmp ? tmp : "unknown");
     if (errstr.slen < 1 || errstr.slen >= (int) bufsize)
         errstr.slen = bufsize - 1;
 
@@ -300,9 +301,10 @@ static int tls_cert_verify_cb(gnutls_session_t session)
     ssock = (pj_ssl_sock_t *)gnutls_session_get_ptr(session);
     pj_assert(ssock);
 
+    ssock->verify_status = PJ_SSL_CERT_ESUCCESS;
+
     /* Support only x509 format */
-    ret = gnutls_certificate_type_get(session) != GNUTLS_CRT_X509;
-    if (ret < 0) {
+    if (gnutls_certificate_type_get(session) != GNUTLS_CRT_X509) {
         ssock->verify_status |= PJ_SSL_CERT_EINVALID_FORMAT;
         return GNUTLS_E_CERTIFICATE_ERROR;
     }
@@ -339,49 +341,8 @@ static int tls_cert_verify_cb(gnutls_session_t session)
             return GNUTLS_E_CERTIFICATE_ERROR;
     }
 
-    if (ssock->param.verify_peer && ssock->param.server_name.slen) {
-        gnutls_x509_crt_t cert;
-        unsigned int cert_list_size;
-        const gnutls_datum_t *cert_list;
-        int ret2;
-
-        ret2 = gnutls_x509_crt_init(&cert);
-        if (ret2 < 0)
-            goto out;
-
-        cert_list = gnutls_certificate_get_peers(session, &cert_list_size);
-        if (cert_list == NULL) {
-            ret = GNUTLS_E_NO_CERTIFICATE_FOUND;
-            goto out;
-        }
-
-        /* TODO: verify whole chain perhaps? */
-        ret = gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER);
-        if (ret < 0)
-            ret = gnutls_x509_crt_import(cert, &cert_list[0],
-                                         GNUTLS_X509_FMT_PEM);
-        if (ret < 0) {
-            ssock->verify_status |= PJ_SSL_CERT_EINVALID_FORMAT;
-            goto out;
-        }
-        ret = gnutls_x509_crt_check_hostname(cert,
-                                             ssock->param.server_name.ptr);
-        if (ret < 0)
-            goto out;
-
-        gnutls_x509_crt_deinit(cert);
-
-        /* notify GnuTLS to continue handshake normally */
-        return GNUTLS_E_SUCCESS;
-
-out:
-        tls_last_error = ret;
-        ssock->verify_status |= PJ_SSL_CERT_EUNKNOWN;
-        return GNUTLS_E_CERTIFICATE_ERROR;
-    }
-
-    /* verify_peer is false: allow the handshake to complete. Upper layers
-     * will read ssock->verify_status to enforce their own policy. */
+    /* The peer identity is not checked here (see pj_ssl_cert_verify_name()).
+     * Upper layers read ssock->verify_status to enforce their own policy. */
     return GNUTLS_E_SUCCESS;
 }
 
@@ -415,6 +376,7 @@ static pj_ssize_t tls_data_pull(gnutls_transport_ptr_t ptr,
 {
     pj_ssl_sock_t *ssock = (pj_ssl_sock_t *)ptr;
     gnutls_sock_t *gssock = (gnutls_sock_t *)ssock;
+    pj_size_t circ_buf_size, read_size;
 
     pj_lock_acquire(ssock->ssl_read_buf_mutex);
 
@@ -426,8 +388,8 @@ static pj_ssize_t tls_data_pull(gnutls_transport_ptr_t ptr,
         return -1;
     }
 
-    pj_size_t circ_buf_size = circ_size(&ssock->ssl_read_buf);
-    pj_size_t read_size = PJ_MIN(circ_buf_size, len);
+    circ_buf_size = circ_size(&ssock->ssl_read_buf);
+    read_size = PJ_MIN(circ_buf_size, len);
 
     circ_read(&ssock->ssl_read_buf, data, read_size);
 
@@ -695,11 +657,9 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     cert = ssock->cert;
 
     /* Initialize GnuTLS library (idempotent) */
-    {
-        pj_status_t status = tls_init();
-        if (status != PJ_SUCCESS)
-            return status;
-    }
+    status = tls_init();
+    if (status != PJ_SUCCESS)
+        return status;
 
     /* Start this socket session */
     ret = gnutls_init(&gssock->session, ssock->is_server ? GNUTLS_SERVER
@@ -740,10 +700,15 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
         goto out;
     gnutls_certificate_set_verify_function(gssock->xcred, tls_cert_verify_cb);
 
-    /* Load system trust file(s) */
-    status = tls_trust_set(ssock);
-    if (status != PJ_SUCCESS)
-        return status;
+    /* Load system trust file(s) on client sockets when no CA is configured */
+    if (!ssock->is_server &&
+        (!cert || (!cert->CA_file.slen && !cert->CA_path.slen &&
+                   !cert->CA_buf.slen)))
+    {
+        status = tls_trust_set(ssock);
+        if (status != PJ_SUCCESS)
+            return status;
+    }
 
     /* Load user-provided CA, certificate and key if available */
     if (cert) {
@@ -813,15 +778,14 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
         if (cert->cert_buf.slen && cert->privkey_buf.slen) {
             gnutls_datum_t cert_buf;
             gnutls_datum_t privkey_buf;
+            const char *prikey_pass = cert->privkey_pass.slen
+                                    ? cert->privkey_pass.ptr
+                                    : NULL;
 
             cert_buf.data = (unsigned char*)cert->cert_buf.ptr;
             cert_buf.size = cert->cert_buf.slen;
             privkey_buf.data = (unsigned char*)cert->privkey_buf.ptr;
             privkey_buf.size = cert->privkey_buf.slen;
-
-            const char *prikey_pass = cert->privkey_pass.slen
-                                    ? cert->privkey_pass.ptr
-                                    : NULL;
             ret = gnutls_certificate_set_x509_key_mem2(gssock->xcred,
                                                        &cert_buf,
                                                        &privkey_buf,

@@ -1553,7 +1553,7 @@ static int window_test(const pj_str_t *registrar_uri, window_kind kind)
 
     /* The newer request is handled as itself */
     if (window_result.res[1].is_unreg == reg ||
-        window_result.res[1].expiration != (reg? 300 : 0))
+        window_result.res[1].expiration != (reg? 300u : 0u))
     {
         PJ_LOG(3,(THIS_FILE, "    error: the newer request is reported as "
                              "%s of %u s",

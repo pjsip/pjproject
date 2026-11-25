@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -89,7 +89,7 @@ static void setup_signal_handler(void)
 static void print_stack(int sig)
 {
     void *array[16];
-    size_t size;
+    int size;
 
     size = backtrace(array, 16);
     fprintf(stderr, "Error: signal %d:\n", sig);

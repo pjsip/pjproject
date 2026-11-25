@@ -305,8 +305,9 @@ struct AccountSipConfig : public PersistentObject
     /**
      * Server affinity. When enabled, the account pins the resolved
      * next-hop server (address + transport) and reuses it across
-     * subsequent same-account requests. See \issue{4964} for the
-     * design (motivation, trust model, lifecycle).
+     * subsequent same-account requests. See
+     * https://github.com/pjsip/pjproject/issues/4964 for the design
+     * (motivation, trust model, lifecycle).
      *
      * Default: PJSUA_SERVER_AFFINITY_UNSPECIFIED (inherit from
      * UaConfig::accServerAffinityDefault).
@@ -2492,7 +2493,8 @@ public:
      * dialogs/calls keep their own transport refs and are unaffected.
      * No-op if server affinity is disabled for the account.
      *
-     * See AccountSipConfig::serverAffinity, \issue{4964}.
+     * See AccountSipConfig::serverAffinity and
+     * https://github.com/pjsip/pjproject/issues/4964.
      */
     void refreshTransport() PJSUA2_THROW(Error);
 
@@ -2511,7 +2513,8 @@ public:
      *                  AccountSipConfig::transportId is set; otherwise
      *                  the underlying transport-acquisition error.
      *
-     * See AccountSipConfig::serverAffinity, \issue{4964}.
+     * See AccountSipConfig::serverAffinity and
+     * https://github.com/pjsip/pjproject/issues/4964.
      */
     void setAffinityAddr(const SocketAddress &addr) PJSUA2_THROW(Error);
 

@@ -257,7 +257,7 @@ pj_status_t app_parse_custom_sdp(pj_pool_t *pool, pjmedia_sdp_session **sdp)
 
 pj_status_t app_make_call(pjsua_acc_id acc_id, const pj_str_t *uri,
                          const pjsua_call_setting *opt,
-                         const pjsua_msg_data *msg_data,
+                         const pjsua_msg_data *mdata,
                          pjsua_call_id *call_id)
 {
 #if !PJSUA_MEDIA_HAS_PJMEDIA
@@ -284,7 +284,7 @@ pj_status_t app_make_call(pjsua_acc_id acc_id, const pj_str_t *uri,
                 pjsua_call_op_param_default(&param);
                 param.opt = opt;
                 param.sdp = sdp;
-                param.msg_data = msg_data;
+                param.msg_data = mdata;
                 status = pjsua_call_make_call2(acc_id, uri, &param, call_id);
             }
             pj_pool_release(pool);
@@ -295,12 +295,12 @@ pj_status_t app_make_call(pjsua_acc_id acc_id, const pj_str_t *uri,
             return status;
     }
 #endif
-    return pjsua_call_make_call(acc_id, uri, opt, NULL, msg_data, call_id);
+    return pjsua_call_make_call(acc_id, uri, opt, NULL, mdata, call_id);
 }
 
 pj_status_t app_answer_call(pjsua_call_id call_id,
                            const pjsua_call_setting *opt,
-                           unsigned code, const pjsua_msg_data *msg_data)
+                           unsigned code, const pjsua_msg_data *mdata)
 {
 #if !PJSUA_MEDIA_HAS_PJMEDIA
     if ((code == PJSIP_SC_PROGRESS || code/100 == 2) &&
@@ -337,7 +337,7 @@ pj_status_t app_answer_call(pjsua_call_id call_id,
             pjsip_dlg_dec_lock(inv->dlg);
             PJSUA_UNLOCK();
             if (!needs_sdp)
-                return pjsua_call_answer2(call_id, opt, code, NULL, msg_data);
+                return pjsua_call_answer2(call_id, opt, code, NULL, mdata);
 
             pool = pjsua_pool_create("custom sdp", 1024, 1024);
             if (!pool)
@@ -346,14 +346,14 @@ pj_status_t app_answer_call(pjsua_call_id call_id,
             status = app_parse_custom_sdp(pool, &sdp);
             if (status == PJ_SUCCESS) {
                 status = pjsua_call_answer_with_sdp(call_id, sdp, opt, code,
-                                                    NULL, msg_data);
+                                                    NULL, mdata);
             }
             pj_pool_release(pool);
             return status;
         }
     }
 #endif
-    return pjsua_call_answer2(call_id, opt, code, NULL, msg_data);
+    return pjsua_call_answer2(call_id, opt, code, NULL, mdata);
 }
 
 /* Indexed by pjmedia_dir */

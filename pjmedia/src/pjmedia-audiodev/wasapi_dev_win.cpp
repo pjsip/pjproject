@@ -1399,10 +1399,10 @@ static int PJ_THREAD_FUNC wasapi_thread(void *arg)
             LONG v = InterlockedExchange(&s->cmd, 0);
 
             if (v != 0) {
-                float arg = s->cmd_arg[WASAPI_SEQ_OF(v) & 3];
+                float cmd_val = s->cmd_arg[WASAPI_SEQ_OF(v) & 3];
 
-                quit = exec_cmd(s, WASAPI_CMD_OF(v), &arg, &s->cmd_status);
-                s->cmd_volume = arg;
+                quit = exec_cmd(s, WASAPI_CMD_OF(v), &cmd_val, &s->cmd_status);
+                s->cmd_volume = cmd_val;
                 InterlockedExchange(&s->done_seq, WASAPI_SEQ_OF(v));
                 SetEvent(s->done_event);
             }

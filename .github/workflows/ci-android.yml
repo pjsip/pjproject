@@ -32,7 +32,9 @@ jobs:
         # catch the format-string and pointer-width mistakes the others miss.
         abi: [arm64-v8a, armeabi-v7a, x86_64, x86]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
 
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y swig
@@ -54,7 +56,6 @@ jobs:
           -DANDROID_ABI=${{ matrix.abi }} \
           -DANDROID_PLATFORM=android-${ANDROID_API} \
           -DCMAKE_BUILD_TYPE=Release \
-          -DPJ_SKIP_EXPERIMENTAL_NOTICE=ON \
           -DPJ_BUILD_SWIG_JAVA=ON \
           -DPJMEDIA_WITH_AUDIODEV_OPENSL=ON \
           -DOboe_ROOT="${{ runner.temp }}/oboe"

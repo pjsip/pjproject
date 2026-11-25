@@ -538,14 +538,17 @@ static pj_status_t ssl_generate_cert(X509 **p_cert, EVP_PKEY **p_priv_key)
     X509_gmtime_adj(X509_get_notAfter(cert), 60*60*24*365);
 
     /* Set subject name */
-    cert_name = X509_get_subject_name(cert);
+    cert_name = X509_NAME_new();
     if (!cert_name) goto on_error;
     if (!X509_NAME_add_entry_by_txt(cert_name, "CN", MBSTRING_ASC,
                                     (const unsigned char*)"pjmedia.pjsip.org",
                                     -1, -1, 0)) goto on_error;
+    if (!X509_set_subject_name(cert, cert_name)) goto on_error;
 
     /* Set the issuer name (to subject name as this is self-signed cert) */
     if (!X509_set_issuer_name(cert, cert_name)) goto on_error;
+    X509_NAME_free(cert_name);
+    cert_name = NULL;
 
     /* Set the public key */
     if (!X509_set_pubkey(cert, priv_key)) goto on_error;
@@ -558,6 +561,7 @@ static pj_status_t ssl_generate_cert(X509 **p_cert, EVP_PKEY **p_priv_key)
     return PJ_SUCCESS;
 
 on_error:
+    if (cert_name) X509_NAME_free(cert_name);
     if (priv_key) EVP_PKEY_free(priv_key);
     if (cert) X509_free(cert);
     return PJ_EUNKNOWN;

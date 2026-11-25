@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -628,7 +628,7 @@ static pj_status_t logger_on_tx_msg(pjsip_tx_data *tdata)
     PJ_LOG(3,(THIS_FILE, "TX %ld bytes %s to %s %s:%d:\n"
                          "%.*s\n"
                          "--end msg--",
-                         (tdata->buf.cur - tdata->buf.start),
+                         (long)(tdata->buf.cur - tdata->buf.start),
                          pjsip_tx_data_get_info(tdata),
                          tdata->tp_info.transport->type_name,
                          tdata->tp_info.dst_name,
@@ -1165,7 +1165,7 @@ static void usage(void)
 static int my_atoi(const char *s)
 {
     pj_str_t ss = pj_str((char*)s);
-    return pj_strtoul(&ss);
+    return (int)pj_strtoul(&ss);
 }
 
 
@@ -1607,7 +1607,7 @@ static int server_thread(void *arg)
 
                 tmp = now;
                 PJ_TIME_VAL_SUB(tmp, last_report);
-                msec = PJ_TIME_VAL_MSEC(tmp);
+                msec = (unsigned)PJ_TIME_VAL_MSEC(tmp);
 
                 last_report = now;
                 next_report = last_report;
@@ -1737,7 +1737,7 @@ int main(int argc, char *argv[])
             pj_time_val duration;
             duration = app.client.last_completion;
             PJ_TIME_VAL_SUB(duration, app.client.first_request);
-            msec_res = PJ_TIME_VAL_MSEC(duration);
+            msec_res = (unsigned)PJ_TIME_VAL_MSEC(duration);
         } else {
             msec_res = app.client.timeout * 1000;
         }
@@ -1748,7 +1748,7 @@ int main(int argc, char *argv[])
             pj_time_val duration;
             duration = app.client.requests_sent;
             PJ_TIME_VAL_SUB(duration, app.client.first_request);
-            msec_req = PJ_TIME_VAL_MSEC(duration);
+            msec_req = (unsigned)PJ_TIME_VAL_MSEC(duration);
         } else {
             msec_req = app.client.timeout * 1000;
         }

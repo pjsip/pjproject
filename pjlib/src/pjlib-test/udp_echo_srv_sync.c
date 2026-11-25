@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -130,7 +130,7 @@ int echo_srv_common_loop(pj_atomic_t *bytes_counter)
         pj_gettimeofday(&now);
         duration = now;
         PJ_TIME_VAL_SUB(duration, last_print);
-        msec = PJ_TIME_VAL_MSEC(duration);
+        msec = (unsigned)PJ_TIME_VAL_MSEC(duration);
         
         bw = cur_received;
         pj_highprec_mul(bw, 1000);

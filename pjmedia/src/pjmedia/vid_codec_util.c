@@ -101,9 +101,9 @@ static pj_status_t parse_custom_res_fmtp(const pj_str_t *fmtp_val,
     if (val[2]<1 || val[2]>32)
         return PJ_EINVAL;
 
-    size->w = val[0];
-    size->h = val[1];
-    *mpi = val[2];
+    size->w = (unsigned)val[0];
+    size->h = (unsigned)val[1];
+    *mpi = (unsigned)val[2];
     return PJ_SUCCESS;
 }
 
@@ -133,7 +133,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h263_parse_fmtp(
             {
                 unsigned mpi;
 
-                mpi = pj_strtoul(&fmtp->param[i].val);
+                mpi = (unsigned)pj_strtoul(&fmtp->param[i].val);
                 if (mpi<1 || mpi>32)
                     return PJMEDIA_SDP_EINFMTP;
 
@@ -355,7 +355,7 @@ static pj_status_t init_h264_profile(const pj_str_t *profile,
     if (profile->slen != 6)
         return PJMEDIA_SDP_EINFMTP;
 
-    tmp = pj_strtoul2(profile, &endst, 16);
+    tmp = (unsigned)pj_strtoul2(profile, &endst, 16);
     if (endst.slen)
         return PJMEDIA_SDP_EINFMTP;
 
@@ -410,25 +410,25 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_parse_fmtp(
             if (status != PJ_SUCCESS)
                 return status;
         } else if (pj_stricmp(&fmtp->param[i].name, &PACKETIZATION_MODE)==0) {
-            tmp = pj_strtoul(&fmtp->param[i].val);
+            tmp = (unsigned)pj_strtoul(&fmtp->param[i].val);
             if (tmp <= 2) 
                 h264_fmtp->packetization_mode = (pj_uint8_t)tmp;
             else
                 return PJMEDIA_SDP_EINFMTP;
         } else if (pj_stricmp(&fmtp->param[i].name, &MAX_MBPS)==0) {
-            tmp = pj_strtoul(&fmtp->param[i].val);
+            tmp = (unsigned)pj_strtoul(&fmtp->param[i].val);
             h264_fmtp->max_mbps = PJ_MAX(tmp, h264_fmtp->max_mbps);
         } else if (pj_stricmp(&fmtp->param[i].name, &MAX_FS)==0) {
-            tmp = pj_strtoul(&fmtp->param[i].val);
+            tmp = (unsigned)pj_strtoul(&fmtp->param[i].val);
             h264_fmtp->max_fs = PJ_MAX(tmp, h264_fmtp->max_fs);
         } else if (pj_stricmp(&fmtp->param[i].name, &MAX_CPB)==0) {
-            tmp = pj_strtoul(&fmtp->param[i].val);
+            tmp = (unsigned)pj_strtoul(&fmtp->param[i].val);
             h264_fmtp->max_cpb = PJ_MAX(tmp, h264_fmtp->max_cpb);
         } else if (pj_stricmp(&fmtp->param[i].name, &MAX_DPB)==0) {
-            tmp = pj_strtoul(&fmtp->param[i].val);
+            tmp = (unsigned)pj_strtoul(&fmtp->param[i].val);
             h264_fmtp->max_dpb = PJ_MAX(tmp, h264_fmtp->max_dpb);
         } else if (pj_stricmp(&fmtp->param[i].name, &MAX_BR)==0) {
-            tmp = pj_strtoul(&fmtp->param[i].val);
+            tmp = (unsigned)pj_strtoul(&fmtp->param[i].val);
             h264_fmtp->max_br = PJ_MAX(tmp, h264_fmtp->max_br);
         } else if (pj_stricmp(&fmtp->param[i].name, &SPROP_PARAMETER_SETS)==0)
         {
@@ -506,9 +506,9 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_match_sdp(pj_pool_t *pool,
 
     /* Parse offer */
     status = pjmedia_stream_info_parse_fmtp(
-                                    NULL, offer, 
-                                    pj_strtoul(&offer->desc.fmt[o_fmt_idx]),
-                                    &o_fmtp_raw);
+                NULL, offer,
+                (unsigned)pj_strtoul(&offer->desc.fmt[o_fmt_idx]),
+                &o_fmtp_raw);
     if (status != PJ_SUCCESS)
         return status;
 
@@ -518,9 +518,9 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_match_sdp(pj_pool_t *pool,
 
     /* Parse answer */
     status = pjmedia_stream_info_parse_fmtp(
-                                    NULL, answer, 
-                                    pj_strtoul(&answer->desc.fmt[a_fmt_idx]),
-                                    &a_fmtp_raw);
+                NULL, answer,
+                (unsigned)pj_strtoul(&answer->desc.fmt[a_fmt_idx]),
+                &a_fmtp_raw);
     if (status != PJ_SUCCESS)
         return status;
 
@@ -796,13 +796,13 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_vpx_parse_fmtp(
         unsigned tmp;
 
         if (pj_stricmp(&fmtp->param[i].name, &MAX_FS) == 0) {
-            tmp = pj_strtoul(&fmtp->param[i].val);
+            tmp = (unsigned)pj_strtoul(&fmtp->param[i].val);
             vpx_fmtp->max_fs = PJ_MAX(tmp, vpx_fmtp->max_fs);
         } else if (pj_stricmp(&fmtp->param[i].name, &MAX_FR) == 0) {
-            tmp = pj_strtoul(&fmtp->param[i].val);
+            tmp = (unsigned)pj_strtoul(&fmtp->param[i].val);
             vpx_fmtp->max_fr = PJ_MAX(tmp, vpx_fmtp->max_fr);
         } else if (pj_stricmp(&fmtp->param[i].name, &PROFILE_ID) == 0) {
-            tmp = pj_strtoul(&fmtp->param[i].val);
+            tmp = (unsigned)pj_strtoul(&fmtp->param[i].val);
             vpx_fmtp->profile_id = (pj_uint8_t)
                                    PJ_MAX(tmp, vpx_fmtp->profile_id);
         }

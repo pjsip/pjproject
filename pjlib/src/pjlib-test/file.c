@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -111,7 +111,7 @@ static int file_test_internal(void)
         status = pj_file_read(fd, &readbuf[size], &read);
         if (status != PJ_SUCCESS) {
             PJ_LOG(3,("", "...error reading file after %ld bytes "
-                          "(error follows)", size));
+                          "(error follows)", (long)size));
             app_perror("...error", status);
             pj_file_close(fd);
             return -110;

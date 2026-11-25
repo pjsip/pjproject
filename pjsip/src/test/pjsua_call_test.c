@@ -947,7 +947,7 @@ static pj_bool_t on_call_send_ack(pjsua_call_id call_id,
 {
     pjsua_call *call;
     const pjmedia_sdp_session *remote_sdp;
-    pjmedia_sdp_session *local_sdp;
+    pjmedia_sdp_session *local_sdp = NULL;
     pj_status_t status;
 
     if (!g_ctx.late_offer_armed || call_id != g_ctx.late_offer_caller)
@@ -3353,7 +3353,7 @@ static int test_offerless_reinvite_applies_opt(void)
     pj_pool_t *pool;
     pj_status_t status;
     pjsua_call_id caller = PJSUA_INVALID_ID;
-    pjsua_call_id callee;
+    pjsua_call_id callee = PJSUA_INVALID_ID;
     pj_bool_t acc_cfg_valid = PJ_FALSE;
     int rc = 0;
 

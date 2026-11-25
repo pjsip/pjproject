@@ -2649,7 +2649,8 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
         pj_in6_addr v6_addr;
         pj_str_t new_contact;
 
-        secure = pjsip_transport_get_flag_from_type(tp->key.type) &
+        secure = pjsip_transport_get_flag_from_type(
+                    (pjsip_transport_type_e)tp->key.type) &
                  PJSIP_TRANSPORT_SECURE;
 
         /* Enclose IPv6 address in square brackets. Decide based on the
@@ -2911,11 +2912,12 @@ static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
 
     PJ_LOG(5,(THIS_FILE, 
               "Sending %ld bytes keep-alive packet for acc %d to %s",
-              acc->cfg.ka_data.slen, acc->index,
+              (long)acc->cfg.ka_data.slen, acc->index,
               pj_sockaddr_print(&acc->ka_target, addrtxt, sizeof(addrtxt),3)));
 
     /* Send raw packet */
     status = pjsip_tpmgr_send_raw(pjsip_endpt_get_tpmgr(pjsua_var.endpt),
+                                  (pjsip_transport_type_e)
                                   acc->ka_transport->key.type, &tp_sel,
                                   NULL, acc->cfg.ka_data.ptr, 
                                   acc->cfg.ka_data.slen, 
@@ -2984,7 +2986,7 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
                                          &STR_FLOW_TIMER, hsr);
 
         if (hsr) {          
-            acc->rfc5626_flowtmr = pj_strtoul(&hsr->hvalue);
+            acc->rfc5626_flowtmr = (unsigned)pj_strtoul(&hsr->hvalue);
         }
 
         /* Only do keep-alive if:
@@ -4810,7 +4812,7 @@ static pj_status_t get_uac_addr_for_sip_uri(pjsua_acc_id acc_id,
 
             if (update_addr) {
                 pj_strdup(pool, &addr->host, &tp->local_name.host);
-                tp_type = tp->key.type;
+                tp_type = (pjsip_transport_type_e)tp->key.type;
 
                 if (pj_strchr(&addr->host, ':')) {
                     tp_type |= PJSIP_TRANSPORT_IPV6;

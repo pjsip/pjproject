@@ -605,6 +605,245 @@ static int h264_default_profile_test(void)
     return 0;
 }
 
+#if PJMEDIA_HAS_VPX_CODEC && PJMEDIA_HAS_VPX_CODEC_VP8
+typedef struct vp8_loss_test_data
+{
+    unsigned keyframe_missing;
+} vp8_loss_test_data;
+
+static pj_status_t vp8_loss_test_on_event(pjmedia_event *event,
+                                          void *user_data)
+{
+    vp8_loss_test_data *data = (vp8_loss_test_data*)user_data;
+
+    if (event->type == PJMEDIA_EVENT_KEYFRAME_MISSING)
+        data->keyframe_missing++;
+
+    return PJ_SUCCESS;
+}
+
+/* Encode one picture and collect the packets it produces. */
+static pj_status_t vp8_encode_frame(pjmedia_vid_codec *codec,
+                                    const pjmedia_frame *input,
+                                    pj_bool_t force_keyframe,
+                                    pj_uint8_t *buf, unsigned buf_size,
+                                    pjmedia_frame *packets,
+                                    unsigned max_packets,
+                                    unsigned *p_cnt)
+{
+    pjmedia_vid_encode_opt opt;
+    pj_bool_t has_more = PJ_FALSE;
+    pj_uint8_t *p = buf;
+    unsigned left = buf_size;
+    unsigned cnt = 0;
+    pj_status_t status;
+
+    pj_bzero(&opt, sizeof(opt));
+    opt.force_keyframe = force_keyframe;
+
+    packets[cnt].buf = p;
+    packets[cnt].size = left;
+    packets[cnt].type = PJMEDIA_FRAME_TYPE_VIDEO;
+    packets[cnt].timestamp = input->timestamp;
+
+    status = pjmedia_vid_codec_encode_begin(codec, &opt, input, left,
+                                            &packets[cnt], &has_more);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    /* The encoder dropped the frame (rate control). */
+    if (packets[cnt].size == 0)
+        return PJMEDIA_CODEC_EFAILED;
+
+    p += packets[cnt].size;
+    left -= (unsigned)packets[cnt].size;
+    ++cnt;
+
+    while (has_more) {
+        if (cnt >= max_packets)
+            return PJMEDIA_CODEC_EFRMTOOSHORT;
+
+        packets[cnt].buf = p;
+        packets[cnt].size = left;
+        packets[cnt].type = PJMEDIA_FRAME_TYPE_VIDEO;
+        packets[cnt].timestamp = input->timestamp;
+
+        status = pjmedia_vid_codec_encode_more(codec, left, &packets[cnt],
+                                                &has_more);
+        if (status != PJ_SUCCESS)
+            return status;
+
+        p += packets[cnt].size;
+        left -= (unsigned)packets[cnt].size;
+        ++cnt;
+    }
+
+    *p_cnt = cnt;
+    return PJ_SUCCESS;
+}
+
+/* A frame that loses its tail must produce no picture and one
+ * KEYFRAME_MISSING event; following pictures are held back until a
+ * keyframe arrives, then normal output resumes.
+ */
+static int vp8_loss_test(pj_pool_t *pool)
+{
+    enum { MAX_PACKETS = 50, ENC_BUF_SIZE = 256 * 1024, SEQ_LEN = 6 };
+    static const pjmedia_frame_type expect_type[SEQ_LEN] = {
+        PJMEDIA_FRAME_TYPE_VIDEO, PJMEDIA_FRAME_TYPE_VIDEO,
+        PJMEDIA_FRAME_TYPE_NONE,  PJMEDIA_FRAME_TYPE_NONE,
+        PJMEDIA_FRAME_TYPE_VIDEO, PJMEDIA_FRAME_TYPE_VIDEO
+    };
+    static const unsigned expect_events[SEQ_LEN] = { 0, 0, 1, 1, 1, 1 };
+    pj_str_t codec_id_st;
+    const pjmedia_vid_codec_info *codec_info;
+    unsigned info_cnt = 1;
+    pjmedia_vid_codec_param param;
+    pjmedia_vid_codec *codec = NULL;
+    vp8_loss_test_data ev_data;
+    pj_bool_t opened = PJ_FALSE, subscribed = PJ_FALSE;
+    pjmedia_frame in_frame, out_frame, lost_frame;
+    pjmedia_frame packets[MAX_PACKETS];
+    pj_uint8_t *in_buf, *enc_buf, *out_buf;
+    unsigned in_size, out_size, enc_cnt, i;
+    pj_uint32_t ts;
+    int rc = 0;
+    pj_status_t status;
+
+    PJ_LOG(3, (THIS_FILE, "  VP8 packet-loss decoder test"));
+
+    pj_bzero(&ev_data, sizeof(ev_data));
+    pj_cstr(&codec_id_st, "vp8");
+    status = pjmedia_vid_codec_mgr_find_codecs_by_id(NULL, &codec_id_st,
+                                                     &info_cnt, &codec_info,
+                                                     NULL);
+    if (status != PJ_SUCCESS || info_cnt == 0 ||
+        (codec_info->dir & PJMEDIA_DIR_DECODING) == 0)
+    {
+        PJ_LOG(3, (THIS_FILE, "    VP8 codec not available"));
+        return 0;
+    }
+
+    status = pjmedia_vid_codec_mgr_get_default_param(NULL, codec_info,
+                                                     &param);
+    if (status != PJ_SUCCESS)
+        return 460;
+
+    param.packing = PJMEDIA_VID_PACKING_PACKETS;
+    param.ignore_fmtp = PJ_TRUE;
+    param.enc_fmt.det.vid.avg_bps = 2000000;
+    param.enc_fmt.det.vid.max_bps = 2000000;
+
+    status = pjmedia_vid_codec_mgr_alloc_codec(NULL, codec_info, &codec);
+    if (status != PJ_SUCCESS)
+        return 470;
+
+    status = pjmedia_vid_codec_init(codec, pool);
+    if (status != PJ_SUCCESS) {
+        rc = 480; goto on_return;
+    }
+
+    status = pjmedia_vid_codec_open(codec, &param);
+    if (status != PJ_SUCCESS) {
+        rc = 490; goto on_return;
+    }
+    opened = PJ_TRUE;
+
+    status = pjmedia_vid_codec_get_param(codec, &param);
+    if (status != PJ_SUCCESS) {
+        rc = 500; goto on_return;
+    }
+
+    in_size = param.enc_fmt.det.vid.size.w *
+              param.enc_fmt.det.vid.size.h * 3 / 2;
+    out_size = in_size;
+    in_buf = pj_pool_alloc(pool, in_size);
+    enc_buf = pj_pool_alloc(pool, ENC_BUF_SIZE);
+    out_buf = pj_pool_alloc(pool, out_size);
+
+    status = pjmedia_event_subscribe(NULL, &vp8_loss_test_on_event, &ev_data,
+                                     codec);
+    if (status != PJ_SUCCESS) {
+        rc = 510; goto on_return;
+    }
+    subscribed = PJ_TRUE;
+
+    ts = 0;
+    for (i = 0; i < SEQ_LEN; ++i) {
+        /* A shifting luma gradient keeps frames compressible but not
+         * static; chroma stays neutral.
+         */
+        {
+            unsigned w = param.enc_fmt.det.vid.size.w;
+            unsigned h = param.enc_fmt.det.vid.size.h;
+            unsigned x, y;
+            pj_uint8_t *p = in_buf;
+
+            for (y = 0; y < h; ++y) {
+                for (x = 0; x < w; ++x)
+                    *p++ = (pj_uint8_t)(x + y + i * 13);
+            }
+            pj_memset(in_buf + w * h, 128, w * h / 2);
+        }
+
+        pj_bzero(&in_frame, sizeof(in_frame));
+        in_frame.type = PJMEDIA_FRAME_TYPE_VIDEO;
+        in_frame.buf = in_buf;
+        in_frame.size = in_size;
+        in_frame.timestamp.u64 = ts;
+        ts += 3000;
+
+        status = vp8_encode_frame(codec, &in_frame, i == 4, enc_buf,
+                                  ENC_BUF_SIZE, packets, MAX_PACKETS,
+                                  &enc_cnt);
+        if (status != PJ_SUCCESS) {
+            rc = 520 + (int)i; goto on_return;
+        }
+
+        pj_bzero(&out_frame, sizeof(out_frame));
+        out_frame.buf = out_buf;
+        out_frame.size = out_size;
+
+        if (i == 2) {
+            /* A surviving packet too short to unpacketize makes the
+             * decoder treat the frame's input as lost.
+             */
+            lost_frame = packets[0];
+            lost_frame.size = 1;
+            status = pjmedia_vid_codec_decode(codec, 1, &lost_frame,
+                                              out_size, &out_frame);
+        } else {
+            status = pjmedia_vid_codec_decode(codec, enc_cnt, packets,
+                                              out_size, &out_frame);
+        }
+        if (status != PJ_SUCCESS) {
+            rc = 540 + (int)i; goto on_return;
+        }
+
+        if (out_frame.type != expect_type[i] ||
+            ev_data.keyframe_missing != expect_events[i])
+        {
+            PJ_LOG(3, (THIS_FILE, "    step %u: got type=%d "
+                       "keyframe_missing=%u", i, out_frame.type,
+                       ev_data.keyframe_missing));
+            rc = 560 + (int)i; goto on_return;
+        }
+    }
+
+on_return:
+    if (status != PJ_SUCCESS)
+        PJ_PERROR(3, (THIS_FILE, status, "    error"));
+    if (subscribed)
+        pjmedia_event_unsubscribe(NULL, &vp8_loss_test_on_event, &ev_data,
+                                  codec);
+    if (opened)
+        pjmedia_vid_codec_close(codec);
+    pjmedia_vid_codec_mgr_dealloc_codec(NULL, codec);
+
+    return rc;
+}
+#endif /* PJMEDIA_HAS_VPX_CODEC && PJMEDIA_HAS_VPX_CODEC_VP8 */
+
 int vid_codec_test(void)
 {
     pj_pool_t *pool;
@@ -692,6 +931,10 @@ int vid_codec_test(void)
         goto on_return;
 
     rc = encode_decode_test(pool, "vp8", PJMEDIA_VID_PACKING_PACKETS);
+    if (rc != 0)
+        goto on_return;
+
+    rc = vp8_loss_test(pool);
     if (rc != 0)
         goto on_return;
 #endif

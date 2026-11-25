@@ -960,7 +960,7 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
             
 
             /* Find matching answer */
-            pt = pj_strtoul(fmt);
+            pt = (unsigned)pj_strtoul(fmt);
 
             if (pt < 96) {
                 for (j=0; j<answer->desc.fmt_count; ++j) {
@@ -1283,8 +1283,8 @@ static void apply_answer_symmetric_pt(pj_pool_t *pool,
                 unsigned pt_o=0, pt_a=0, buf_len=0;
                 char buf[MAX_FMTP_STR_LEN];
 
-                pt_o = pj_strtoul(&pt_offer[i]);
-                pt_a = pj_strtoul(&pt_answer[i]);
+                pt_o = (unsigned)pj_strtoul(&pt_offer[i]);
+                pt_a = (unsigned)pj_strtoul(&pt_answer[i]);
                 buf_len = pj_ansi_snprintf(buf, MAX_FMTP_STR_LEN, "%d ", pt_o);
                 status = pjmedia_stream_info_parse_fmtp(pool, answer, pt_a, 
                                                         &fmtp);
@@ -1296,10 +1296,10 @@ static void apply_answer_symmetric_pt(pj_pool_t *pool,
 
                     /* Update the fmtp redundancy PT. */
                     for (j = 0; j < fmtp.cnt; ++j) {
-                        pt_o = pj_strtoul(&fmtp.param[j].val);
+                        pt_o = (unsigned)pj_strtoul(&fmtp.param[j].val);
                         for (k = 0; k < pt_cnt ;++k) {
                             if (!pj_stricmp(&fmtp.param[j].val, &pt_answer[k])){
-                                pt_o = pj_strtoul(&pt_offer[k]);
+                                pt_o = (unsigned)pj_strtoul(&pt_offer[k]);
                                 break;
                             }
                         }
@@ -1416,7 +1416,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
              */
             unsigned pt;
 
-            pt = pj_strtoul(&master->desc.fmt[i]);
+            pt = (unsigned)pj_strtoul(&master->desc.fmt[i]);
             
             if (pt < 96) {
                 /* For static payload type, it's enough to compare just
@@ -1435,7 +1435,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
                 /* Find matching codec in local descriptor. */
                 for (j=0; j<slave->desc.fmt_count; ++j) {
                     unsigned p;
-                    p = pj_strtoul(&slave->desc.fmt[j]);
+                    p = (unsigned)pj_strtoul(&slave->desc.fmt[j]);
                     if (p == pt && pj_isdigit(*slave->desc.fmt[j].ptr)) {
                         unsigned k;
 
@@ -1582,7 +1582,8 @@ static pj_status_t match_offer(pj_pool_t *pool,
 
                                 o_med = (pjmedia_sdp_media *)offer;
                                 o_fmt_idx = prefer_remote_codec_order? i:j;
-                                pt = pj_strtoul(&o_med->desc.fmt[o_fmt_idx]);
+                                pt = (unsigned)pj_strtoul(
+                                         &o_med->desc.fmt[o_fmt_idx]);
                                 status = pjmedia_stream_info_parse_fmtp(
                                              pool, o_med, pt, &fmtp);
                                 if (status != PJ_SUCCESS)
@@ -1675,7 +1676,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
             if (pj_stricmp2(&r.enc_name, "red"))
                 continue;
 
-            pt = pj_strtoul(&preanswer->desc.fmt[i]);
+            pt = (unsigned)pj_strtoul(&preanswer->desc.fmt[i]);
             status = pjmedia_stream_info_parse_fmtp(pool, preanswer,
                                                     pt, &fmtp);
             if (status != PJ_SUCCESS)
@@ -2072,7 +2073,7 @@ static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
                 continue;
 
             /* We only need to handle mapping for dynamic PT */
-            pt = pj_strtoul(&rtpmap.pt);
+            pt = (unsigned)pj_strtoul(&rtpmap.pt);
             if (!is_dynamic_pt(pt))
                 continue;
 
@@ -2194,7 +2195,7 @@ static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
                 continue;
 
             /* We only need to handle mapping for dynamic PT */
-            pt = pj_strtoul(&fmtp.fmt);
+            pt = (unsigned)pj_strtoul(&fmtp.fmt);
             if (!is_dynamic_pt(pt))
                 continue;
 
@@ -2249,7 +2250,8 @@ static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
                         continue;
 
                     for (k = 0; k < parsed.cnt; ++k) {
-                        unsigned ref_pt = pj_strtoul(&parsed.param[k].val);
+                        unsigned ref_pt =
+                            (unsigned)pj_strtoul(&parsed.param[k].val);
                         unsigned new_ref = ref_pt;
 
                         if (is_dynamic_pt(ref_pt) &&
@@ -2290,7 +2292,7 @@ static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
         for (j = 0; j < sdp_m->desc.fmt_count; ++j) {
             unsigned pt, new_pt = 0;
 
-            pt = pj_strtoul(&sdp_m->desc.fmt[j]);
+            pt = (unsigned)pj_strtoul(&sdp_m->desc.fmt[j]);
             if (!is_dynamic_pt(pt))
                  continue;
 
@@ -2561,8 +2563,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_fmt_match(pj_pool_t *pool,
     unsigned o_pt;
     unsigned a_pt;
 
-    o_pt = pj_strtoul(&offer->desc.fmt[o_fmt_idx]);
-    a_pt = pj_strtoul(&answer->desc.fmt[a_fmt_idx]);
+    o_pt = (unsigned)pj_strtoul(&offer->desc.fmt[o_fmt_idx]);
+    a_pt = (unsigned)pj_strtoul(&answer->desc.fmt[a_fmt_idx]);
 
     if (o_pt < 96 || a_pt < 96) {
         if (o_pt == a_pt)

@@ -985,7 +985,7 @@ static pj_status_t codec_recover( pjmedia_codec *codec,
         return codec_decode(codec, NULL, output_buf_len, output);
 
     /* Otherwise just return zero-fill frame. */
-    if (output_buf_len < (codec_data->samples_per_frame << 1))
+    if (output_buf_len < ((unsigned)codec_data->samples_per_frame << 1))
         return PJMEDIA_CODEC_EPCMTOOSHORT;
 
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
