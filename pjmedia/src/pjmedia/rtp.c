@@ -180,6 +180,9 @@ PJ_DEF(pj_status_t) pjmedia_rtp_decode_rtp2(
     /* Assume RTP header at the start of packet. We'll verify this later. */
     *hdr = (pjmedia_rtp_hdr*)pkt;
 
+    if (pkt_len < (int)sizeof(pjmedia_rtp_hdr))
+        return PJMEDIA_RTP_EINLEN;
+
     /* Check RTP header sanity. */
     if ((*hdr)->v != RTP_VERSION) {
         return PJMEDIA_RTP_EINVER;
