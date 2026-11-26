@@ -3089,6 +3089,87 @@ static int sdp_neg_bundle_only_relaxed_test(pj_pool_t *pool)
     return 0;
 }
 
+
+/* A failed initial negotiation leaves the negotiator DONE with no active
+ * SDP. The active SDP getters must then report PJMEDIA_SDPNEG_ENOACTIVE
+ * (not assert), and a later offer/answer must still succeed.
+ */
+static int sdp_neg_no_active_test(pj_pool_t *pool)
+{
+    static char offer_str[] =
+        "v=0\r\n"
+        "o=- 0 0 IN IP4 127.0.0.1\r\n"
+        "s=-\r\n"
+        "c=IN IP4 127.0.0.1\r\n"
+        "t=0 0\r\n"
+        "m=audio 4000 RTP/AVP 0\r\n";
+
+    /* Answers with a format that was not offered. */
+    static char bad_answer_str[] =
+        "v=0\r\n"
+        "o=- 1 1 IN IP4 127.0.0.2\r\n"
+        "s=-\r\n"
+        "c=IN IP4 127.0.0.2\r\n"
+        "t=0 0\r\n"
+        "m=audio 5000 RTP/AVP 8\r\n";
+
+    static char good_answer_str[] =
+        "v=0\r\n"
+        "o=- 1 2 IN IP4 127.0.0.2\r\n"
+        "s=-\r\n"
+        "c=IN IP4 127.0.0.2\r\n"
+        "t=0 0\r\n"
+        "m=audio 5000 RTP/AVP 0\r\n";
+
+    pjmedia_sdp_session *offer, *bad_answer, *good_answer;
+    const pjmedia_sdp_session *active_local, *active_remote;
+    pjmedia_sdp_neg *neg;
+    char b1[sizeof(offer_str)], b2[sizeof(bad_answer_str)],
+         b3[sizeof(good_answer_str)];
+
+    pj_memcpy(b1, offer_str, sizeof(offer_str));
+    pj_memcpy(b2, bad_answer_str, sizeof(bad_answer_str));
+    pj_memcpy(b3, good_answer_str, sizeof(good_answer_str));
+    if (pjmedia_sdp_parse(pool, b1, pj_ansi_strlen(b1), &offer) != PJ_SUCCESS ||
+        pjmedia_sdp_parse(pool, b2, pj_ansi_strlen(b2), &bad_answer) !=
+            PJ_SUCCESS ||
+        pjmedia_sdp_parse(pool, b3, pj_ansi_strlen(b3), &good_answer) !=
+            PJ_SUCCESS ||
+        pjmedia_sdp_neg_create_w_local_offer(pool, offer, &neg) != PJ_SUCCESS)
+    {
+        return -4000;
+    }
+
+    if (pjmedia_sdp_neg_set_remote_answer(pool, neg, bad_answer) !=
+            PJ_SUCCESS ||
+        pjmedia_sdp_neg_negotiate(pool, neg, 0) == PJ_SUCCESS ||
+        pjmedia_sdp_neg_get_state(neg) != PJMEDIA_SDP_NEG_STATE_DONE)
+    {
+        return -4010;
+    }
+
+    if (pjmedia_sdp_neg_get_active_local(neg, &active_local) !=
+            PJMEDIA_SDPNEG_ENOACTIVE ||
+        pjmedia_sdp_neg_get_active_remote(neg, &active_remote) !=
+            PJMEDIA_SDPNEG_ENOACTIVE)
+    {
+        return -4020;
+    }
+
+    if (pjmedia_sdp_neg_modify_local_offer2(pool, neg, 0, offer) !=
+            PJ_SUCCESS ||
+        pjmedia_sdp_neg_set_remote_answer(pool, neg, good_answer) !=
+            PJ_SUCCESS ||
+        pjmedia_sdp_neg_negotiate(pool, neg, 0) != PJ_SUCCESS ||
+        pjmedia_sdp_neg_get_active_local(neg, &active_local) != PJ_SUCCESS ||
+        pjmedia_sdp_neg_get_active_remote(neg, &active_remote) != PJ_SUCCESS)
+    {
+        return -4030;
+    }
+
+    return 0;
+}
+
 int sdp_neg_test()
 {
     unsigned i;
@@ -3203,6 +3284,21 @@ int sdp_neg_test()
 
         PJ_LOG(3,(THIS_FILE, "  sdp_neg_strict_validate_test"));
         status = sdp_neg_strict_validate_test(pool);
+        pj_pool_release(pool);
+
+        if (status != 0)
+            return status;
+    }
+
+    {
+        pj_pool_t *pool;
+
+        pool = pj_pool_create(mem, "sdp_neg_no_active", 4000, 4000, NULL);
+        if (!pool)
+            return PJ_ENOMEM;
+
+        PJ_LOG(3,(THIS_FILE, "  sdp_neg_no_active_test"));
+        status = sdp_neg_no_active_test(pool);
         pj_pool_release(pool);
 
         if (status != 0)
