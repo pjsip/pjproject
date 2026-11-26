@@ -61,6 +61,8 @@
 #   ifndef O_CLOEXEC
 #       define O_CLOEXEC        0
 #   endif
+    /* Interrupted calls in a row before giving up */
+#   define CSRAND_MAX_EINTR     10
 #endif
 
 PJ_DEF(void) pj_srand(unsigned int seed)
@@ -76,31 +78,28 @@ PJ_DEF(int) pj_rand(void)
 }
 
 #if defined(CSRAND_URANDOM)
-/* A missing device means no generator (PJ_ENOTSUP), not a failed one. */
 static pj_status_t urandom_fill(pj_uint8_t *p, pj_size_t len)
 {
-    pj_bool_t retried = PJ_FALSE;
     pj_status_t status = PJ_SUCCESS;
+    int intr = 0;
     int fd;
 
-    fd = open("/dev/urandom", O_RDONLY | O_CLOEXEC);
-    if (fd < 0 && errno == EINTR)
+    do {
         fd = open("/dev/urandom", O_RDONLY | O_CLOEXEC);
-    if (fd < 0) {
-        return (errno == ENOENT || errno == ENXIO || errno == ENODEV) ?
-               PJ_ENOTSUP : PJ_STATUS_FROM_OS(errno);
-    }
+    } while (fd < 0 && errno == EINTR && ++intr < CSRAND_MAX_EINTR);
+    if (fd < 0)
+        return PJ_STATUS_FROM_OS(errno);
+
+    intr = 0;
 
     while (len > 0) {
         ssize_t n = read(fd, p, len);
         if (n > 0) {
             p += n;
             len -= (pj_size_t)n;
-            retried = PJ_FALSE;
-        } else if (n < 0 && (errno == EINTR || errno == EAGAIN) &&
-                   !retried)
-        {
-            retried = PJ_TRUE;
+            intr = 0;
+        } else if (n < 0 && errno == EINTR && ++intr < CSRAND_MAX_EINTR) {
+            continue;
         } else {
             status = (n < 0) ? PJ_STATUS_FROM_OS(errno) : PJ_EEOF;
             break;
@@ -117,27 +116,23 @@ static pj_status_t getrandom_fill(pj_uint8_t *p, pj_size_t len)
 {
     pj_uint8_t *start = p;
     pj_size_t total = len;
-    pj_bool_t retried = PJ_FALSE;
+    int intr = 0;
 
     while (len > 0) {
         ssize_t n = getrandom(p, len, 0);
         if (n > 0) {
             p += n;
             len -= (pj_size_t)n;
-            retried = PJ_FALSE;
+            intr = 0;
         } else if (n < 0 && (errno == ENOSYS || errno == EPERM) &&
                    p == start)
         {
             /* Kernel without the syscall, or a seccomp filter denying it.
-             * A denied generator is a failure, not a missing one.
+             * The kernel has a generator, so a missing device is an error.
              */
-            int err = errno;
-            pj_status_t status = urandom_fill(start, total);
-            if (status == PJ_ENOTSUP && err == EPERM)
-                status = PJ_STATUS_FROM_OS(err);
-            return status;
-        } else if (n < 0 && errno == EINTR && !retried) {
-            retried = PJ_TRUE;
+            return urandom_fill(start, total);
+        } else if (n < 0 && errno == EINTR && ++intr < CSRAND_MAX_EINTR) {
+            continue;
         } else {
             return (n < 0) ? PJ_STATUS_FROM_OS(errno) : PJ_EUNKNOWN;
         }
@@ -181,7 +176,19 @@ PJ_DEF(pj_status_t) pj_csrand_bytes(void *buf, pj_size_t len)
     arc4random_buf(buf, len);
     return PJ_SUCCESS;
 #elif defined(CSRAND_URANDOM)
-    return urandom_fill((pj_uint8_t*)buf, len);
+    {
+        /* Here the platform may lack a generator, so a missing device
+         * means PJ_ENOTSUP rather than a failure.
+         */
+        pj_status_t status = urandom_fill((pj_uint8_t*)buf, len);
+        if (status == PJ_STATUS_FROM_OS(ENOENT) ||
+            status == PJ_STATUS_FROM_OS(ENXIO) ||
+            status == PJ_STATUS_FROM_OS(ENODEV))
+        {
+            status = PJ_ENOTSUP;
+        }
+        return status;
+    }
 #else
     return PJ_ENOTSUP;
 #endif

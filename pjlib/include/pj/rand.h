@@ -72,9 +72,11 @@ PJ_DECL(int) pj_rand(void);
  *    targeting Windows 7 or later, otherwise RtlGenRandom().
  *  - Linux, Android (API 28 and later) and other systems with
  *    getrandom(): getrandom(), or /dev/urandom when the kernel does not
- *    provide the system call.
+ *    provide the system call or a seccomp filter denies it. A missing
+ *    device is then reported as an error, not PJ_ENOTSUP.
  *  - macOS, iOS, the BSDs and older Android: arc4random_buf().
- *  - Other POSIX systems: /dev/urandom.
+ *  - Other POSIX systems: /dev/urandom, or PJ_ENOTSUP when it does not
+ *    exist.
  *
  * @param buf       Buffer to fill. May be NULL when \a len is zero.
  * @param len       Number of bytes to fill.

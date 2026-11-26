@@ -127,7 +127,8 @@ static pj_status_t generate_crypto_attr_value(pj_pool_t *pool,
         do {
             /* The OS generator first, then the SSL library's. The
              * timing-mixed stand-in below is only for when neither
-             * exists; a real failure of either fails key generation.
+             * exists; a real failure that neither can cover fails key
+             * generation.
              */
             status = pj_csrand_bytes(key,
                                      crypto_suites[cs_idx].cipher_key_len);
