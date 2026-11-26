@@ -119,7 +119,10 @@ static pj_status_t getrandom_fill(pj_uint8_t *p, pj_size_t len)
     int intr = 0;
 
     while (len > 0) {
-        ssize_t n = getrandom(p, len, 0);
+        /* Solaris rejects requests over 1024 bytes. Up to 256, Linux
+         * returns them whole, without EINTR, once the pool is ready.
+         */
+        ssize_t n = getrandom(p, (len > 256) ? 256 : len, 0);
         if (n > 0) {
             p += n;
             len -= (pj_size_t)n;
@@ -177,16 +180,19 @@ PJ_DEF(pj_status_t) pj_csrand_bytes(void *buf, pj_size_t len)
     return PJ_SUCCESS;
 #elif defined(CSRAND_URANDOM)
     {
-        /* Here the platform may lack a generator, so a missing device
-         * means PJ_ENOTSUP rather than a failure.
-         */
         pj_status_t status = urandom_fill((pj_uint8_t*)buf, len);
+#if !defined(__linux__)
+        /* A Linux kernel always has the urandom driver, so on Linux a
+         * missing device is a failure and never becomes PJ_ENOTSUP.
+         * Other platforms may lack a generator, so here it does.
+         */
         if (status == PJ_STATUS_FROM_OS(ENOENT) ||
             status == PJ_STATUS_FROM_OS(ENXIO) ||
             status == PJ_STATUS_FROM_OS(ENODEV))
         {
             status = PJ_ENOTSUP;
         }
+#endif
         return status;
     }
 #else

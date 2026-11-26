@@ -70,13 +70,17 @@ PJ_DECL(int) pj_rand(void);
  * The OS generators used are:
  *  - Windows: BCryptGenRandom() with the system preferred RNG when
  *    targeting Windows 7 or later, otherwise RtlGenRandom().
- *  - Linux, Android (API 28 and later) and other systems with
- *    getrandom(): getrandom(), or /dev/urandom when the kernel does not
- *    provide the system call or a seccomp filter denies it. A missing
- *    device is then reported as an error, not PJ_ENOTSUP.
- *  - macOS, iOS, the BSDs and older Android: arc4random_buf().
- *  - Other POSIX systems: /dev/urandom, or PJ_ENOTSUP when it does not
- *    exist.
+ *  - Linux, Android (API 28 and later), FreeBSD (12 and later) and other
+ *    systems with getrandom(): getrandom(), or /dev/urandom when the
+ *    kernel does not provide the system call or a seccomp filter denies
+ *    it.
+ *  - macOS, iOS, the other BSDs and older Android: arc4random_buf().
+ *  - Other POSIX systems, including Linux with a C library that lacks
+ *    getrandom(): /dev/urandom.
+ *
+ * A missing /dev/urandom means PJ_ENOTSUP only on systems other than
+ * Linux that lack getrandom(); elsewhere the kernel has a generator, so
+ * it is reported as an error.
  *
  * @param buf       Buffer to fill. May be NULL when \a len is zero.
  * @param len       Number of bytes to fill.
