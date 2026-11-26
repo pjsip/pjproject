@@ -955,6 +955,43 @@ static int handle_unknown_non_mandatory(void)
     return rc==0 ? 0 : -4410;
 }
 
+/* Without PJ_STUN_CHECK_PACKET, a PDU shorter than the STUN header must be
+ * rejected without reading past it. Each PDU is placed at the end of the
+ * array, so a read past it is out of bounds.
+ */
+static int decode_short_pdu_test(void)
+{
+    const unsigned options[] = { 0, PJ_STUN_IS_DATAGRAM };
+    pj_uint8_t pdu[sizeof(pj_stun_msg_hdr)];
+    pj_pool_t *pool;
+    unsigned i, len;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  STUN decode short PDU test"));
+
+    pool = pj_pool_create(mem, "decode_short", 1024, 1024, NULL);
+    pj_bzero(pdu, sizeof(pdu));
+
+    for (i = 0; i < PJ_ARRAY_SIZE(options) && rc == 0; ++i) {
+        for (len = 1; len < sizeof(pdu); ++len) {
+            pj_stun_msg *msg;
+            pj_status_t status;
+
+            status = pj_stun_msg_decode(pool, pdu + sizeof(pdu) - len, len,
+                                        options[i], &msg, NULL, NULL);
+            if (status != PJNATH_EINSTUNMSGLEN) {
+                PJ_LOG(1,(THIS_FILE, "    %u-byte PDU: expecting status "
+                          "%d, got %d", len, PJNATH_EINSTUNMSGLEN, status));
+                rc = -4420;
+                break;
+            }
+        }
+    }
+
+    pj_pool_release(pool);
+    return rc;
+}
+
 
 int stun_test(void)
 {
@@ -975,6 +1012,10 @@ int stun_test(void)
         goto on_return;
 
     rc = handle_unknown_non_mandatory();
+    if (rc != 0)
+        goto on_return;
+
+    rc = decode_short_pdu_test();
     if (rc != 0)
         goto on_return;
 

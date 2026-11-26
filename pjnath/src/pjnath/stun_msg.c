@@ -2352,7 +2352,12 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
             return status;
     } else {
         /* For safety, verify packet length at least */
-        pj_uint32_t msg_len = GETVAL16H(pdu, 2) + 20;
+        pj_uint32_t msg_len;
+
+        if (pdu_len < sizeof(pj_stun_msg_hdr))
+            return PJNATH_EINSTUNMSGLEN;
+
+        msg_len = GETVAL16H(pdu, 2) + 20;
         if (msg_len > pdu_len ||
             ((options & PJ_STUN_IS_DATAGRAM) && msg_len != pdu_len))
         {
