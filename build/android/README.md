@@ -178,6 +178,35 @@ and **Ninja**, which the Android Gradle plugin requires for CMake projects. The
 SDK Manager offers CMake 3.30.3 and newer, which ship Ninja; with a CMake from
 elsewhere on `PATH`, Ninja has to be installed separately.
 
+## The pjsua sample
+
+`-DPJ_BUILD_PJSUA_ANDROID=ON` builds the JNI library of the pjsua CLI sample,
+`pjsip-apps/src/pjsua/android`, as `make -C pjsip-apps/src/pjsua/android/jni`
+does. SWIG runs over `jni/pjsua.i`, and the result is `libpjsua.so`, holding
+the pjsua app, its Java callback glue and the wrapper. It is off by default
+and needs **SWIG 4.0+**. It needs static libraries too, since `libpjsua.so`
+has to hold the pjproject libraries:
+
+```sh
+cmake -B build-android \
+  -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake" \
+  -DANDROID_ABI=arm64-v8a -DBUILD_SHARED_LIBS=OFF -DPJ_BUILD_PJSUA_ANDROID=ON
+cmake --build build-android -j
+cd pjsip-apps/src/pjsua/android
+./gradlew :app:assembleDebug
+```
+
+The CMake target is `pjsuajni`, since `pjsua` is the desktop app. A build
+copies `libpjsua.so` into the sample's `app/src/main/jniLibs/<abi>`, with
+`libc++_shared.so` unless built with `-DANDROID_STL=c++_static`, and the
+`org.pjsip.pjsua` classes, with the helper classes above, into `java/` beside
+it. Build once per ABI the app should carry. `-DPJSUA_ANDROID_DIR=<dir>`
+copies into another app's source set instead, and `-DPJSUA_ANDROID_DIR=`
+leaves the source tree alone.
+
+Gradle 8.11, which the sample uses, does not run on JDK 25, the one recent
+Android Studio bundles; build with JDK 21.
+
 ## Finding dependencies outside the NDK
 
 The NDK toolchain file sets `CMAKE_FIND_ROOT_PATH_MODE_*` to `ONLY`, which
