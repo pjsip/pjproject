@@ -1,6 +1,6 @@
 /* $Id: pjsua_app_callback.cpp $ */
 /* 
- * Copyright (C) 2012-2012 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2012-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -130,8 +130,6 @@ static int initMain(int argc, char **argv)
 
 int pjsuaStart()
 {
-    pj_status_t status;
-
     const char **argv = pjsua_app_def_argv;
     int argc = pjsua_app_def_argc;
 
@@ -154,8 +152,6 @@ void pjsuaDestroy()
 
 int pjsuaRestart()
 {
-    pj_status_t status;
-
     pjsuaDestroy();
 
     return initMain(restart_argc, restart_argv);

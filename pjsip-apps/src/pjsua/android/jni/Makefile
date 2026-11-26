@@ -13,7 +13,7 @@ LIBPJSUA_SO	:= ../app/src/main/jniLibs/$(TARGET_ARCH)/libpjsua.so
 
 # Env settings, e.g: path to SWIG, JDK, java(.exe), javac(.exe)
 MY_SWIG		:= swig
-MY_JNI_CFLAGS   := -D__ANDROID__ -fPIC
+MY_JNI_CFLAGS   := -D__ANDROID__ -fPIC -I. -I../..
 MY_JNI_LDFLAGS  := -Wl,-soname,libpjsua.so
 SWIG_FLAGS      := -D__ANDROID__ -c++
 
