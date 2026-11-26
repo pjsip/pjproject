@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -150,7 +150,11 @@ struct pjsip_dialog
 
     /* Dialog's session properties. */
     pjsip_dialog_state  state;      /**< Dialog state.                      */
-    pjsip_uri          *target;     /**< Current target.                    */
+    pjsip_uri          *target;     /**< Current target. A new Contact in
+                                         an incoming target refresh request
+                                         is applied when the request is
+                                         accepted, i.e. when 2xx or reliable
+                                         1xx response is sent.              */
     pjsip_target_set    target_set; /**< Target set, for UAC only.          */
     pjsip_hdr           inv_hdr;    /**< Headers from hparam in dest URL    */
     pjsip_dlg_party     local;      /**< Local party info.                  */
@@ -195,6 +199,12 @@ struct pjsip_dialog
      */
     pjsip_host_port     via_addr;   /**< Via address.                       */
     const void         *via_tp;     /**< Via transport.                     */
+
+    /**
+     * Remote target updates of incoming target refresh requests that are
+     * not answered yet. Internal.
+     */
+    pj_list             rem_target_pending;
 };
 
 /**

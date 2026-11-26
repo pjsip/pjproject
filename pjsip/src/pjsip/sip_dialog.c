@@ -19,6 +19,7 @@
 #include <pjsip/sip_dialog.h>
 #include <pjsip/sip_ua_layer.h>
 #include <pjsip/sip_errno.h>
+#include <pjsip/sip_event.h>
 #include <pjsip/sip_endpoint.h>
 #include <pjsip/sip_parser.h>
 #include <pjsip/sip_module.h>
@@ -44,6 +45,20 @@ pj_bool_t pjsip_include_allow_hdr_in_dlg = PJSIP_INCLUDE_ALLOW_HDR_IN_DLG;
 
 /* Contact header string */
 static const pj_str_t HCONTACT = { "Contact", 7 };
+static const pj_str_t HRSEQ = { "RSeq", 4 };
+
+/* Remote target update carried by an incoming target refresh request,
+ * applied only once the request is accepted (RFC 6141 Section 4.6). The
+ * headers live in the transaction's pool. An entry with NULL tsx is free.
+ */
+typedef struct dlg_target_refresh
+{
+    PJ_DECL_LIST_MEMBER(struct dlg_target_refresh);
+    pjsip_transaction   *tsx;
+    pj_int32_t           cseq;
+    pjsip_contact_hdr   *contact;
+    pjsip_fromto_hdr    *info;
+} dlg_target_refresh;
 
 
 PJ_DEF(pj_bool_t) pjsip_method_creates_dialog(const pjsip_method *m)
@@ -106,6 +121,7 @@ static pj_status_t create_dialog( pjsip_user_agent *ua,
 
     pj_list_init(&dlg->inv_hdr);
     pj_list_init(&dlg->rem_cap_hdr);
+    pj_list_init(&dlg->rem_target_pending);
 
     /* Init client authentication session. */
     status = pjsip_auth_clt_init(&dlg->auth_sess, dlg->endpt,
@@ -1829,12 +1845,8 @@ PJ_DEF(pj_status_t) pjsip_dlg_respond(  pjsip_dialog *dlg,
  *    pjsip_dlg_on_rx_response(), where a response can't be rejected the
  *    way a request can (there's nothing to answer), and
  *  - the request-path target-refresh site in pjsip_dlg_on_rx_request(),
- *    as a fallback for the one case its own reject-with-400 check
- *    (right after the CSeq check) can't cover: a forged ACK carrying a
- *    mismatched CSeq method (see that check's comment for why), which
- *    also can't be answered.
- * Everywhere else on the request path, the earlier check rejects the
- * request outright with 400 instead (RFC 5630 Section 5.1.2).
+ *    as a second line behind its own reject-with-400 check (right after
+ *    the CSeq check, RFC 5630 Section 5.1.2).
  */
 static pj_bool_t dlg_target_refresh_allowed(const pjsip_dialog *dlg,
                                             const pjsip_contact_hdr *contact)
@@ -1850,6 +1862,113 @@ static pj_bool_t dlg_target_refresh_allowed(const pjsip_dialog *dlg,
 }
 
 
+static dlg_target_refresh *dlg_find_target_refresh(pjsip_dialog *dlg,
+                                                   pjsip_transaction *tsx)
+{
+    dlg_target_refresh *r = (dlg_target_refresh*)dlg->rem_target_pending.next;
+
+    while (r != (dlg_target_refresh*)&dlg->rem_target_pending) {
+        if (r->tsx == tsx)
+            return r;
+        r = r->next;
+    }
+    return NULL;
+}
+
+
+static pj_bool_t dlg_has_target_refresh(pjsip_dialog *dlg)
+{
+    dlg_target_refresh *r = (dlg_target_refresh*)dlg->rem_target_pending.next;
+
+    while (r != (dlg_target_refresh*)&dlg->rem_target_pending) {
+        if (r->tsx)
+            return PJ_TRUE;
+        r = r->next;
+    }
+    return PJ_FALSE;
+}
+
+
+/* Apply or drop the remote target update of an incoming target refresh
+ * request, according to the response sent (RFC 6141 Section 4.6): 2xx and
+ * reliable provisional responses update the target, error responses must
+ * not.
+ */
+static void dlg_on_target_refresh_tsx_state(pjsip_dialog *dlg,
+                                            pjsip_transaction *tsx,
+                                            const pjsip_event *e)
+{
+    dlg_target_refresh *r;
+    pj_bool_t accepted = PJ_FALSE;
+
+    r = dlg_find_target_refresh(dlg, tsx);
+    if (!r)
+        return;
+
+    if (e->body.tsx_state.type == PJSIP_EVENT_TX_MSG) {
+        const pjsip_msg *msg = e->body.tsx_state.src.tdata->msg;
+        int code = msg->line.status.code;
+
+        if (code < 200 && !pjsip_msg_find_hdr_by_name(msg, &HRSEQ, NULL))
+            return;
+
+        accepted = (code < 300);
+    } else if (tsx->state < PJSIP_TSX_STATE_COMPLETED) {
+        return;
+    }
+
+    r->tsx = NULL;
+
+    if (accepted) {
+        /* This request supersedes the older ones still pending, whatever
+         * the order they are answered in.
+         */
+        dlg_target_refresh *old;
+
+        old = (dlg_target_refresh*)dlg->rem_target_pending.next;
+        while (old != (dlg_target_refresh*)&dlg->rem_target_pending) {
+            if (old->tsx && old->cseq < r->cseq)
+                old->tsx = NULL;
+            old = old->next;
+        }
+    }
+
+    if (accepted &&
+        (dlg->remote.contact==NULL ||
+         pjsip_uri_cmp(PJSIP_URI_IN_REQ_URI, dlg->remote.contact->uri,
+                       r->contact->uri)))
+    {
+        char buf[PJSIP_MAX_URL_SIZE];
+        pj_str_t tmp;
+        pj_ssize_t len;
+
+        PJ_LOG(4, (dlg->obj_name, "Updating remote contact in "
+                                  "target refresh"));
+
+        dlg->remote.contact = (pjsip_contact_hdr*)
+                              pjsip_hdr_clone(dlg->pool, r->contact);
+        dlg->target = dlg->remote.contact->uri;
+
+        /* Update remote info as well. */
+        dlg->remote.info = (pjsip_fromto_hdr*)
+                           pjsip_hdr_clone(dlg->pool, r->info);
+
+        tmp.ptr = buf;
+        len = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR,
+                              dlg->remote.info->uri, buf, sizeof(buf));
+        if (len < 1) {
+            tmp.slen = pj_ansi_strxcpy(buf, "<-error: uri too long->",
+                                       sizeof(buf));
+            if (tmp.slen < 0)
+                tmp.slen = pj_ansi_strlen(buf);
+        } else
+            tmp.slen = len;
+
+        pj_strdup(dlg->pool, &dlg->remote.info_str, &tmp);
+    }
+}
+
+
 /* This function is called by user agent upon receiving incoming request
  * message.
  */
@@ -1859,6 +1978,7 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
     pjsip_transaction *tsx = NULL;
     pj_grp_lock_t *tsx_lock = NULL;
     pj_bool_t processed = PJ_FALSE;
+    dlg_target_refresh *pending;
     unsigned i;
 
     PJ_LOG(5,(dlg->obj_name, "Received %s",
@@ -1907,9 +2027,8 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
      * spoofed CSeq method (e.g. "CSeq: n INVITE") -- ACK never creates a
      * UAS transaction, so it skips pjsip_tsx_create_uas()'s CSeq/request
      * line method match check, and an ACK can't be answered anyway. That
-     * variant is instead caught by dlg_target_refresh_allowed() at the
-     * target-refresh block below, which keys on the CSeq method and can
-     * only ignore (not reject) since there's nothing to respond to.
+     * variant never updates the target, as the target-refresh block below
+     * needs a transaction.
      */
     if (pjsip_cfg()->endpt.disable_secure_dlg_check == PJ_FALSE &&
         dlg->secure &&
@@ -1998,69 +2117,53 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 
         /* Add transaction count. */
         ++dlg->tsx_count;
+
+        /* Free the entry of a transaction whose termination was not
+         * reported, if this one happens to reuse its address.
+         */
+        pending = dlg_find_target_refresh(dlg, tsx);
+        if (pending)
+            pending->tsx = NULL;
     }
 
-    /* Update the target URI if this is a target refresh request.
-     * We have passed the basic checking for the request, I think we
-     * should update the target URI regardless of whether the request
-     * is accepted or not (e.g. when re-INVITE is answered with 488,
-     * we would still need to update the target URI, otherwise our
-     * target URI would be wrong, wouldn't it).
+    /* Note the new remote target if this is a target refresh request. It
+     * is applied when the request is accepted, i.e. when a 2xx or reliable
+     * provisional response is sent, and dropped when the request is
+     * rejected (RFC 6141 Section 4.6), see
+     * dlg_on_target_refresh_tsx_state(). A request without a transaction
+     * in this dialog, such as ACK, cannot be accepted and never updates
+     * the target.
      */
-    /* A non-SIPS Contact on a secure dialog is normally already rejected
-     * above (right after the CSeq check), which keys on the request
-     * line's method. This block keys on the CSeq header's method
-     * instead -- normally identical, but not for a forged ACK carrying a
-     * mismatched CSeq method, since ACK skips the tsx-creation path that
-     * would otherwise enforce the two match (see the reject check above
-     * for details). dlg_target_refresh_allowed() catches that remaining
-     * case; it can only ignore the Contact here, not reject, since
-     * there's no response to send for an ACK (or once we've already
-     * decided, above, that this particular request doesn't warrant a
-     * reject).
-     */
-    if (pjsip_method_creates_dialog(&rdata->msg_info.cseq->method)) {
+    if (tsx && pjsip_method_creates_dialog(&rdata->msg_info.cseq->method)) {
         pjsip_contact_hdr *contact;
+        dlg_target_refresh *r;
 
         contact = (pjsip_contact_hdr*)
                   pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT,
                                      NULL);
+        /* A Contact equal to the current target is noted too when another
+         * update is pending, as that one may be applied first.
+         */
         if (contact && contact->uri &&
             (dlg->remote.contact==NULL ||
              pjsip_uri_cmp(PJSIP_URI_IN_REQ_URI,
                            dlg->remote.contact->uri,
-                           contact->uri)) &&
+                           contact->uri) ||
+             dlg_has_target_refresh(dlg)) &&
             dlg_target_refresh_allowed(dlg, contact))
         {
-            pj_str_t tmp;
-            enum { TMP_LEN=PJSIP_MAX_URL_SIZE };
-            pj_ssize_t len;
-
-            PJ_LOG(4, (dlg->obj_name, "Updating remote contact in "
-                                      "target refresh"));
-
-            dlg->remote.contact = (pjsip_contact_hdr*)
-                                  pjsip_hdr_clone(dlg->pool, contact);
-            dlg->target = dlg->remote.contact->uri;
-
-            /* Update remote info as well. */
-            dlg->remote.info = (pjsip_fromto_hdr*)
-                               pjsip_hdr_clone(dlg->pool, rdata->msg_info.from);
-            pjsip_fromto_hdr_set_to(dlg->remote.info);
-        
-            /* Print the remote info. */
-            tmp.ptr = (char*) pj_pool_alloc(rdata->tp_info.pool, TMP_LEN);
-            len = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR,
-                                  dlg->remote.info->uri, tmp.ptr, TMP_LEN);
-            if (len < 1) {
-                tmp.slen=pj_ansi_strxcpy(tmp.ptr, "<-error: uri too long->", TMP_LEN);
-                if (tmp.slen<0)
-                    tmp.slen = pj_ansi_strlen(tmp.ptr);
-            } else
-                tmp.slen = len;
-        
-            /* Save the remote info. */
-            pj_strdup(dlg->pool, &dlg->remote.info_str, &tmp);
+            r = dlg_find_target_refresh(dlg, NULL);
+            if (!r) {
+                r = PJ_POOL_ZALLOC_T(dlg->pool, dlg_target_refresh);
+                pj_list_push_back(&dlg->rem_target_pending, r);
+            }
+            r->tsx = tsx;
+            r->cseq = rdata->msg_info.cseq->cseq;
+            r->contact = (pjsip_contact_hdr*)
+                         pjsip_hdr_clone(tsx->pool, contact);
+            r->info = (pjsip_fromto_hdr*)
+                      pjsip_hdr_clone(tsx->pool, rdata->msg_info.from);
+            pjsip_fromto_hdr_set_to(r->info);
         }
     }
 
@@ -2513,6 +2616,12 @@ void pjsip_dlg_on_tsx_state( pjsip_dialog *dlg,
 
     /* Lock the dialog and increment session. */
     pjsip_dlg_inc_lock(dlg);
+
+    if (tsx->role == PJSIP_ROLE_UAS &&
+        !pj_list_empty(&dlg->rem_target_pending))
+    {
+        dlg_on_target_refresh_tsx_state(dlg, tsx, e);
+    }
 
     /* Pass to dialog usages. */
     for (i=0; i<dlg->usage_cnt; ++i) {

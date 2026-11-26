@@ -24,6 +24,10 @@
  *      NOTIFY with a PIDF body, then a NOTIFY without body. The empty
  *      NOTIFY must leave the buddy's presence status unchanged and still
  *      readable.
+ *   2. A subscription refresh with a new Contact, on an account that sends
+ *      initial Authorization headers. The NOTIFY that follows the 200 is
+ *      created before the 200 is sent: its Request-URI and the URI in its
+ *      Authorization header must both be the new Contact.
  */
 
 #include "test.h"
@@ -145,6 +149,188 @@ on_return:
 
 
 /*****************************************************************************
+ * Sub-test 2: refresh_new_contact_test
+ *****************************************************************************/
+static struct notify_cap_t
+{
+    unsigned    cnt;
+    char        req_uri[128];
+    char        auth_uri[128];
+} notify_cap;
+
+/* Remember the Request-URI and the Authorization URI of the last NOTIFY */
+static pj_status_t cap_on_tx_request(pjsip_tx_data *tdata)
+{
+    const pjsip_authorization_hdr *auth;
+    pj_ssize_t len;
+
+    if (pjsip_method_cmp(&tdata->msg->line.req.method,
+                         pjsip_get_notify_method()) != 0)
+    {
+        return PJ_SUCCESS;
+    }
+
+    len = pjsip_uri_print(PJSIP_URI_IN_REQ_URI, tdata->msg->line.req.uri,
+                          notify_cap.req_uri, sizeof(notify_cap.req_uri)-1);
+    notify_cap.req_uri[len > 0 ? len : 0] = '\0';
+
+    notify_cap.auth_uri[0] = '\0';
+    auth = (const pjsip_authorization_hdr*)
+           pjsip_msg_find_hdr(tdata->msg, PJSIP_H_AUTHORIZATION, NULL);
+    if (auth &&
+        auth->credential.digest.uri.slen < (int)sizeof(notify_cap.auth_uri))
+    {
+        pj_memcpy(notify_cap.auth_uri, auth->credential.digest.uri.ptr,
+                  auth->credential.digest.uri.slen);
+        notify_cap.auth_uri[auth->credential.digest.uri.slen] = '\0';
+    }
+
+    notify_cap.cnt++;
+    return PJ_SUCCESS;
+}
+
+static pjsip_module mod_notify_cap =
+{
+    NULL, NULL,                         /* prev, next.          */
+    { "mod-pres-notify-cap", 19 },      /* Name.                */
+    -1,                                 /* Id                   */
+    PJSIP_MOD_PRIORITY_TRANSPORT_LAYER-1,/* Priority            */
+    NULL,                               /* load()               */
+    NULL,                               /* start()              */
+    NULL,                               /* stop()               */
+    NULL,                               /* unload()             */
+    NULL,                               /* on_rx_request()      */
+    NULL,                               /* on_rx_response()     */
+    &cap_on_tx_request,                 /* on_tx_request.       */
+    NULL,                               /* on_tx_response()     */
+    NULL,                               /* on_tsx_state()       */
+};
+
+static int refresh_new_contact_test(pjsua_transport_id tp_id, int port)
+{
+    pjsua_acc_config   acc_cfg;
+    pjsua_buddy_config bud_cfg;
+    pjsua_buddy_info   info;
+    pjsua_acc_id       acc_id;
+    pjsua_buddy_id     buddy_id;
+    pjsua_buddy       *buddy;
+    pjsip_sip_uri     *contact_uri;
+    pjsip_tx_data     *tdata = NULL;
+    char               bud_uri[64];
+    pj_status_t        status;
+    unsigned           elapsed;
+    int                rc = 0;
+
+    PJ_LOG(3, (THIS_FILE, "  pjsua pres: refresh with a new Contact"));
+
+    pj_bzero(&info, sizeof(info));
+
+    pjsua_acc_config_default(&acc_cfg);
+    acc_cfg.id       = pj_str("sip:pjsua-pres-test@pjsip.org");
+    acc_cfg.register_on_acc_add = PJ_FALSE;
+    acc_cfg.allow_contact_rewrite = PJ_FALSE;
+    acc_cfg.transport_id = tp_id;
+    /* Requests get an Authorization header, which has the request URI */
+    acc_cfg.auth_pref.initial_auth = PJ_TRUE;
+    acc_cfg.cred_count = 1;
+    acc_cfg.cred_info[0].realm = pj_str("*");
+    acc_cfg.cred_info[0].scheme = pj_str("digest");
+    acc_cfg.cred_info[0].username = pj_str("user");
+    acc_cfg.cred_info[0].data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
+    acc_cfg.cred_info[0].data = pj_str("secret");
+
+    status = pjsua_acc_add(&acc_cfg, PJ_TRUE, &acc_id);
+    if (status != PJ_SUCCESS)
+        return -3410;
+
+    status = pjsip_endpt_register_module(pjsua_get_pjsip_endpt(),
+                                         &mod_notify_cap);
+    if (status != PJ_SUCCESS) {
+        pjsua_acc_del(acc_id);
+        return -3415;
+    }
+
+    pjsua_acc_set_online_status(acc_id, PJ_TRUE);
+
+    pj_ansi_snprintf(bud_uri, sizeof(bud_uri),
+                     "sip:pjsua-pres-test@127.0.0.1:%d", port);
+    pjsua_buddy_config_default(&bud_cfg);
+    bud_cfg.uri = pj_str(bud_uri);
+    bud_cfg.subscribe = PJ_TRUE;
+
+    status = pjsua_buddy_add(&bud_cfg, &buddy_id);
+    if (status != PJ_SUCCESS) {
+        pjsip_endpt_unregister_module(pjsua_get_pjsip_endpt(),
+                                      &mod_notify_cap);
+        pjsua_acc_del(acc_id);
+        return -3420;
+    }
+
+    for (elapsed = 0; elapsed < 5000; elapsed += 50) {
+        pjsua_handle_events(50);
+        if (pjsua_buddy_get_info(buddy_id, &info) == PJ_SUCCESS &&
+            info.status == PJSUA_BUDDY_STATUS_ONLINE)
+        {
+            break;
+        }
+    }
+    if (info.status != PJSUA_BUDDY_STATUS_ONLINE) {
+        rc = -3430;
+        goto on_return;
+    }
+
+    /* Refresh the subscription from a new Contact */
+    pj_bzero(&notify_cap, sizeof(notify_cap));
+
+    PJSUA_LOCK();
+    buddy = &pjsua_var.buddy[buddy_id];
+    if (buddy->sub && buddy->dlg) {
+        contact_uri = (pjsip_sip_uri*)
+                      pjsip_uri_get_uri(buddy->dlg->local.contact->uri);
+        contact_uri->user = pj_str("moved");
+        status = pjsip_pres_initiate(buddy->sub, -1, &tdata);
+        if (status == PJ_SUCCESS)
+            status = pjsip_pres_send_request(buddy->sub, tdata);
+    } else {
+        status = PJ_ENOTFOUND;
+    }
+    PJSUA_UNLOCK();
+    if (status != PJ_SUCCESS) {
+        rc = -3440;
+        goto on_return;
+    }
+
+    for (elapsed = 0; elapsed < 5000 && notify_cap.cnt == 0; elapsed += 50)
+        pjsua_handle_events(50);
+
+    if (notify_cap.cnt == 0) {
+        PJ_LOG(3, (THIS_FILE, "    error: no NOTIFY after the refresh"));
+        rc = -3450;
+        goto on_return;
+    }
+    if (pj_ansi_strstr(notify_cap.req_uri, "sip:moved@") == NULL) {
+        PJ_LOG(3, (THIS_FILE, "    error: NOTIFY sent to %s",
+                   notify_cap.req_uri));
+        rc = -3460;
+        goto on_return;
+    }
+    if (pj_ansi_strcmp(notify_cap.auth_uri, notify_cap.req_uri) != 0) {
+        PJ_LOG(3, (THIS_FILE, "    error: Authorization URI is %s, request "
+                   "URI is %s", notify_cap.auth_uri, notify_cap.req_uri));
+        rc = -3470;
+    }
+
+on_return:
+    pjsua_buddy_del(buddy_id);
+    for (elapsed = 0; elapsed < 500; elapsed += 50)
+        pjsua_handle_events(50);
+    pjsip_endpt_unregister_module(pjsua_get_pjsip_endpt(), &mod_notify_cap);
+    pjsua_acc_del(acc_id);
+    return rc;
+}
+
+
+/*****************************************************************************
  * Main entry point
  *****************************************************************************/
 int pjsua_pres_test(void)
@@ -221,6 +407,8 @@ int pjsua_pres_test(void)
 
     /* ---- Run sub-tests ---- */
     rc = empty_notify_test(tp_id, (int)port);
+    if (rc == 0)
+        rc = refresh_new_contact_test(tp_id, (int)port);
 
     pjsip_cfg()->endpt.disable_tcp_switch = old_tcp_switch;
 
