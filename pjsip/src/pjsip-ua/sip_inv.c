@@ -673,8 +673,10 @@ static pj_status_t inv_send_ack(pjsip_inv_session *inv, pjsip_event *e)
     /* Send ACK */
     status = pjsip_dlg_send_request(inv->dlg, inv->last_ack, -1, NULL);
     if (status != PJ_SUCCESS) {
-        /* Better luck next time */
-        pj_assert(!"Unable to send ACK!");
+        /* Can be caused by remote, e.g: unroutable Contact in the 2xx.
+         * Better luck next time.
+         */
+        PJ_PERROR(2,(inv->obj_name, status, "Unable to send ACK"));
         return status;
     }
 
