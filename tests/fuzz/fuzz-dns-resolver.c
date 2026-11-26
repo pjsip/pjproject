@@ -27,7 +27,7 @@
  * Asynchronous DNS resolver (pjlib-util/resolver.c) fuzz target.
  *
  * The existing fuzz-dns target only exercises the stateless packet parser;
- * the resolver object itself (query state machine, retransmission, cache,
+ * the resolver object itself (query state machine, cache,
  * and cancellation) was never driven by any harness. This target runs a
  * real pj_dns_resolver against a fake nameserver: a harness-owned UDP
  * socket on 127.0.0.1. Each iteration starts a query for a fixed name,
@@ -55,11 +55,6 @@
 #define MEM_SIZE            (2*1024*1024)
 #define QUERY_NAME          "fuzz.example.com"
 #define ANSWER_MAX          PJ_DNS_RESOLVER_MAX_UDP_SIZE
-/* A short retransmit delay keeps every query timeline inside the wait
- * budgets: with QRETR_COUNT = 2 the retransmit goes out at QRETR_DELAY ms
- * and a reply that is never accepted fails at about 2*QRETR_DELAY ms (the
- * sole nameserver goes BAD after the last retransmit), so both outcomes are
- * deterministic and dropped-reply inputs stay fast. */
 #define QRETR_DELAY         10
 #define QRETR_COUNT         2
 
@@ -278,9 +273,6 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
 
     ns_port = pj_sockaddr_get_port(&bound);
 
-    /* Retransmit once at QRETR_DELAY ms: the nameserver stays PROBING until
-     * the retransmit budget is used up, so on_timeout() sends a second
-     * packet before the resolver considers failing the query. */
     pj_dns_settings_default(&settings);
     settings.qretr_delay = QRETR_DELAY;
     settings.qretr_count = QRETR_COUNT;
@@ -385,11 +377,6 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
                                              &on_dns_response, &qdx, &qx);
         if (status == PJ_SUCCESS && qx != NULL) {
             cancel_if_pending(qx, &qdx);
-            /* cancel_query fires the callback synchronously but leaves the
-             * query pending with its retransmit timer; pump until that whole
-             * timeline has run out (last expiry at
-             * (QRETR_COUNT+1)*QRETR_DELAY ms) so it does not fire in the
-             * next input. */
             wait_callbacks(1, 100);
             pump_resolver(QRETR_DELAY * (QRETR_COUNT + 2));
         }
