@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -111,6 +111,7 @@ extern int errno_test(void);
 extern int timestamp_test(void);
 extern int exception_test(void);
 extern int rand_test(void);
+extern int csrand_test(void);
 extern int list_test(void);
 extern int atomic_slist_test(void);
 extern int atomic_slist_mt_test(void);
