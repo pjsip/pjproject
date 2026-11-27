@@ -173,7 +173,7 @@ jobs:
         fi
     - name: Compare with the baseline
       run: |
-        python3 pjproject/zephyr/scripts/footprint_check.py an521-qemu build.log run.log pjproject/zephyr/ci-footprint-limits.json
+        python3 pjproject/zephyr/scripts/footprint_check.py an521-srtp-udp-nothr-4calls build.log run.log pjproject/zephyr/ci-footprint-limits.json
     - name: Upload the logs
       if: failure()
       uses: actions/upload-artifact@v6

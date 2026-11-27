@@ -264,10 +264,11 @@
 #define SIP_SHUTDOWN_TIMEOUT    5
 
 /* Place this many calls to ourselves at start-up, hang them up SELF_CALL_SECS
- * later and report the heap: a footprint check that needs no peer, for
- * -DEMBUA_SELF_CALLS=2. UDP builds only, and each call takes two of the
- * MAX_CALLS slots. Zephyr drops a datagram whose two endpoints are
- * identical, so the calls leave from a second port, SIP_PORT + 1.
+ * later and report the heap and how many of the legs ran media: a footprint
+ * check that needs no peer, for -DEMBUA_SELF_CALLS=2. UDP builds only, and
+ * each call takes two of the MAX_CALLS slots. Zephyr drops a datagram whose
+ * two endpoints are identical, so the calls leave from a second port,
+ * SIP_PORT + 1.
  */
 #ifndef EMBUA_SELF_CALLS
 #  define EMBUA_SELF_CALLS      0
@@ -328,6 +329,7 @@ static struct global_t {
     pjsip_tpselector      self_sel;    /* the calls' own transport */
     pj_time_val           self_hangup; /* when to end them, {0,0} if done */
     pj_bool_t             self_done;   /* heap reported */
+    unsigned              self_media;  /* legs whose media started */
 #endif
 } g;
 
@@ -1047,7 +1049,8 @@ int main(void)
         } else if (!g.self_done && active_calls() == 0) {
             g.self_done = PJ_TRUE;
             dump_heap();
-            PJ_LOG(3,(THIS_FILE, "Self calls done"));
+            PJ_LOG(3,(THIS_FILE, "Self calls done: media ran on %u of %u "
+                      "legs", g.self_media, 2 * EMBUA_SELF_CALLS));
         }
 #endif
     }
@@ -1770,6 +1773,9 @@ static void call_on_media_update( pjsip_inv_session *inv,
 
     PJ_LOG(3,(THIS_FILE, "Call %d media started (%u samples/%u ms)",
               (int)(call - g_calls), samples_per_frame, ptime));
+#if EMBUA_SELF_CALLS
+    ++g.self_media;
+#endif
     return;
 
 on_error:

@@ -1,42 +1,58 @@
 #!/usr/bin/env python3
 # Compare an embedded_ua build and its self-call run with the committed
 # footprint limits of a target: flash and RAM from the build log, the heap's
-# high-water mark from the run log (embedded_ua's "C heap:" line after "Self
-# calls done"). Growth beyond the tolerance fails; a shrink is only reported,
-# so that the limit gets lowered by hand.
+# high-water mark from the run log (embedded_ua's "C heap:" line before "Self
+# calls done"). A run in which some leg did not run media is not compared at
+# all. Growth beyond the tolerance fails; a shrink is only reported, so that
+# the limit gets lowered by hand.
 #
 #   footprint_check.py <target> <build.log> <run.log> <limits.json> [tol%]
 #
-# limits.json is a list of {"target", "flash", "ram", "heap_peak"}, one per
-# target. ci-zephyr.yml runs it; to refresh a target's entry, paste the JSON
-# it prints.
+# limits.json maps a target to its {"flash", "ram", "heap_peak"}, in bytes
+# rounded up to a thousand. ci-zephyr.yml runs it; to refresh a target's
+# entry, paste the JSON it prints.
 import json
 import os
 import re
 import sys
 
 
-def measure(build_log, run_log):
+UNITS = {"B": 1, "KB": 1024, "MB": 1024 ** 2, "GB": 1024 ** 3}
+
+
+def region_size(build, name):
+    # GNU ld prints a size in KB, MB or GB when it is a multiple of that unit
+    m = re.search(r"^\s*%s:\s+(\d+)\s*([KMG]?B)" % name, build, re.M)
+    return int(m.group(1)) * UNITS[m.group(2)] if m else None
+
+
+def measure(target, build_log, run_log):
     build = open(build_log).read()
     run = open(run_log).read()
-    flash = re.search(r"^\s*FLASH:\s+(\d+) B", build, re.M)
-    ram = re.search(r"^\s*RAM:\s+(\d+) B", build, re.M)
+    flash = region_size(build, "FLASH")
+    ram = region_size(build, "RAM")
     heap = re.findall(r"C heap: \d+ used, (\d+) peak", run)
-    if not (flash and ram and heap):
-        sys.exit("footprint_check: FLASH, RAM or the C heap line not found")
-    return {"flash": int(flash.group(1)), "ram": int(ram.group(1)),
-            "heap_peak": int(heap[-1])}
+    done = re.search(r"Self calls done: media ran on (\d+) of (\d+) legs", run)
+    if flash is None or ram is None or not heap or not done:
+        sys.exit("footprint_check: FLASH, RAM, the C heap line or the "
+                 "'Self calls done' line not found")
+    if done.group(1) != done.group(2):
+        print("::error::%s: media ran on only %s of the %s call legs of "
+              "embedded_ua's calls to itself, so the heap peak is not that "
+              "of the calls and was not compared; see run.log in the "
+              "footprint artifact" % (target, done.group(1), done.group(2)))
+        sys.exit(1)
+    return {"flash": flash, "ram": ram, "heap_peak": int(heap[-1])}
 
 
 def main():
     target, build_log, run_log, limits_file = sys.argv[1:5]
     tolerance = float(sys.argv[5]) if len(sys.argv) > 5 else 2.0
-    limits = [l for l in json.load(open(limits_file)) if l["target"] == target]
-    if not limits:
+    limits = json.load(open(limits_file))
+    if target not in limits:
         sys.exit("footprint_check: no limits for target %s" % target)
-    baseline = limits[0]
-    now = measure(build_log, run_log)
-    now = dict([("target", target)] + list(now.items()))
+    baseline = limits[target]
+    now = measure(target, build_log, run_log)
     names = {"flash": "flash", "ram": "static RAM",
              "heap_peak": "heap peak of two calls"}
     rows = []
@@ -58,7 +74,8 @@ def main():
               key, limit, cur, delta, pct,
               "  GREW" if key in grown else "  shrank" if key in shrunk else ""))
 
-    entry = json.dumps(now)
+    entry = '"%s": %s' % (target, json.dumps(
+            dict((k, -(-v // 1000) * 1000) for k, v in now.items())))
     for key, limit, cur, delta, pct in rows:
         if key in grown:
             print("::error::%s: the %s of embedded_ua grew by %d bytes "

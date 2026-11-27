@@ -547,7 +547,7 @@ embedded_ua has no console input. Send it a SIP MESSAGE (in pjsua: use `i`) with
 - **`mem`** logs its pool usage (and the C heap, when built with `CONFIG_SYS_HEAP_RUNTIME_STATS=y`),
 - **`quit`** ends every call, unregisters and exits.
 
-Built with `-DEXTRA_CFLAGS=-DEMBUA_SELF_CALLS=2` and the [`overlay-self-calls.conf`](zephyr/samples/embedded_ua/overlay-self-calls.conf) overlay, the sample instead places two calls to itself at start-up, from a second UDP port, hangs them up five seconds later and logs the heap's peak followed by "Self calls done". That is the footprint check CI runs on the AN521 (section 5), and a quick way to see a build's heap peak on any target without a PBX: `run-qemu.sh <build dir> -nic none` needs no TAP for it. UDP builds only.
+Built with `-DEXTRA_CFLAGS=-DEMBUA_SELF_CALLS=2` and the [`overlay-self-calls.conf`](zephyr/samples/embedded_ua/overlay-self-calls.conf) overlay, the sample instead places two calls to itself at start-up, from a second UDP port, hangs them up five seconds later and logs the heap's peak followed by "Self calls done" and how many of the four legs ran media. That is the footprint check CI runs on the AN521 (section 5), and a quick way to see a build's heap peak on any target without a PBX: `run-qemu.sh <build dir> -nic none` needs no TAP for it. UDP builds only.
 
 ### pjsua-lib: simple_pjsua
 

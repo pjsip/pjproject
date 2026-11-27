@@ -2467,6 +2467,90 @@ static int hdr_print_bound_test(void)
 
 /*****************************************************************************/
 
+/* A generic array header continued on a later line is merged into the one
+ * already parsed. Past PJSIP_GENERIC_ARRAY_MAX_COUNT values the extras are
+ * dropped, except for Require, which fails the message.
+ */
+static int split_hdr_overflow_test(void)
+{
+    static const struct {
+        const char *hname;
+        pjsip_hdr_e type;
+        pj_bool_t fails;
+    } cases[] = {
+        { "Supported", PJSIP_H_SUPPORTED, PJ_FALSE },
+        { "Require",   PJSIP_H_REQUIRE,   PJ_TRUE },
+    };
+    unsigned i;
+
+    PJ_LOG(3,(THIS_FILE, "  testing array header split over two lines.."));
+
+    for (i = 0; i < PJ_ARRAY_SIZE(cases); ++i) {
+        enum { BUF_SIZE = 256 + 8 * PJSIP_GENERIC_ARRAY_MAX_COUNT };
+        pj_pool_t *pool;
+        pjsip_rx_data *rdata;
+        pjsip_msg *msg;
+        pjsip_generic_array_hdr *hdr;
+        char *buf;
+        int len;
+        unsigned j;
+
+        pool = pjsip_endpt_create_pool(endpt, NULL, POOL_SIZE, POOL_SIZE);
+        buf = (char*) pj_pool_alloc(pool, BUF_SIZE);
+        len = pj_ansi_snprintf(buf, BUF_SIZE,
+                               "OPTIONS sip:bob@example.com SIP/2.0\r\n"
+                               "Via: SIP/2.0/UDP 10.0.0.1;branch=z9hG4bK1\r\n"
+                               "From: <sip:alice@example.com>;tag=1\r\n"
+                               "To: <sip:bob@example.com>\r\n"
+                               "Call-ID: split@10.0.0.1\r\n"
+                               "CSeq: 1 OPTIONS\r\n"
+                               "%s: v0", cases[i].hname);
+        for (j = 1; j < PJSIP_GENERIC_ARRAY_MAX_COUNT; ++j)
+            len += pj_ansi_snprintf(buf + len, BUF_SIZE - len, ", v%u", j);
+        len += pj_ansi_snprintf(buf + len, BUF_SIZE - len,
+                                "\r\n%s: extra\r\n"
+                                "Content-Length: 0\r\n\r\n", cases[i].hname);
+        if (len >= BUF_SIZE) {
+            pjsip_endpt_release_pool(endpt, pool);
+            return -2970;
+        }
+
+        rdata = PJ_POOL_ZALLOC_T(pool, pjsip_rx_data);
+        rdata->tp_info.pool = pool;
+        pj_list_init(&rdata->msg_info.parse_err);
+        msg = pjsip_parse_rdata(buf, len, rdata);
+
+        if (cases[i].fails) {
+            if (pj_list_empty(&rdata->msg_info.parse_err)) {
+                PJ_LOG(3,(THIS_FILE, "    error: %s with %d values over "
+                          "two lines was accepted", cases[i].hname,
+                          PJSIP_GENERIC_ARRAY_MAX_COUNT + 1));
+                pjsip_endpt_release_pool(endpt, pool);
+                return -2980;
+            }
+        } else {
+            hdr = msg ? (pjsip_generic_array_hdr*)
+                        pjsip_msg_find_hdr(msg, cases[i].type, NULL) : NULL;
+            if (!pj_list_empty(&rdata->msg_info.parse_err) || hdr == NULL ||
+                hdr->count != PJSIP_GENERIC_ARRAY_MAX_COUNT)
+            {
+                PJ_LOG(3,(THIS_FILE, "    error: %s with %d values over "
+                          "two lines: %s, count %u", cases[i].hname,
+                          PJSIP_GENERIC_ARRAY_MAX_COUNT + 1,
+                          pj_list_empty(&rdata->msg_info.parse_err) ?
+                              "parsed" : "parse error",
+                          hdr ? hdr->count : 0));
+                pjsip_endpt_release_pool(endpt, pool);
+                return -2990;
+            }
+        }
+        pjsip_endpt_release_pool(endpt, pool);
+    }
+
+    return 0;
+}
+
+
 int msg_test(void)
 {
 #if INCLUDE_BENCHMARKS
@@ -2490,6 +2574,10 @@ int msg_test(void)
         return status;
 
     status = malformed_hdr_test();
+    if (status != PJ_SUCCESS)
+        return status;
+
+    status = split_hdr_overflow_test();
     if (status != PJ_SUCCESS)
         return status;
 
