@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -21,8 +21,16 @@
 #include <pjmedia.h>
 #include <pjmedia-codec.h>
 
-/* Ignore gap >30s */
+/* Do not fill a gap >30s when the RTP stream restarts across it */
 #define GAP_IGNORE_SECONDS 30
+
+/* Jitter buffer capacity, in ms */
+#define JB_MAX_MS 1000
+
+/* Jitter buffer delay, in ms. Latency costs nothing offline, so keep enough
+ * to absorb reordering and jitter.
+ */
+#define JB_DELAY_MS 200
 
 static const char *USAGE =
 "pcaputil [options] INPUT OUTPUT\n"
@@ -91,6 +99,15 @@ static struct app
     pjmedia_transport   *srtp;
     pjmedia_rtp_session  rtp_sess;
     pj_bool_t            rtp_sess_init;
+    pjmedia_jbuf        *jb;
+    unsigned             samples_per_frame;
+    unsigned             frames_per_pkt;
+    pj_uint32_t          ext_seq;
+    pj_uint16_t          last_seq;
+    unsigned             plc_cnt;
+    unsigned             max_plc_cnt;
+    pj_uint64_t          tick_ns;
+    pj_uint64_t          next_pull;
 } app;
 
 struct args
@@ -125,6 +142,7 @@ static void cleanup()
         pjmedia_port_destroy(app.wav);
     }
     if (app.pcap) pj_pcap_close(app.pcap);
+    if (app.jb) pjmedia_jbuf_destroy(app.jb);
     if (app.codec) {
         pjmedia_codec_mgr *cmgr;
         pjmedia_codec_close(app.codec);
@@ -192,7 +210,8 @@ struct rtp_packet
     pjmedia_rtp_hdr *rtp;
     pj_uint8_t      *payload;
     unsigned         payload_len;
-    pj_uint32_t      rtp_ts;
+    pj_uint16_t      seq;
+    pj_bool_t        restart;
     pj_timestamp     packet_ts;
 };
 
@@ -263,12 +282,6 @@ static int read_rtp(struct rtp_packet *pkt, pj_bool_t check_pt)
         /* Update RTP session */
         pjmedia_rtp_session_update2(&app.rtp_sess, r, &seq_st, PJ_FALSE);
 
-        /* Skip out-of-order packet */
-        if (seq_st.diff == 0) {
-            printf("Skipping out of order packet\n");
-            continue;
-        }
-
         /* Skip if payload type is different */
         if (check_pt && r->pt != app.pt) {
             printf("Skipping RTP packet with bad payload type\n");
@@ -284,7 +297,8 @@ static int read_rtp(struct rtp_packet *pkt, pj_bool_t check_pt)
 
         pkt->rtp = (pjmedia_rtp_hdr*)r;
         pkt->payload = (pj_uint8_t*)p;
-        pkt->rtp_ts = pj_ntohl(pkt->rtp->ts);
+        pkt->seq = pj_ntohs(pkt->rtp->seq);
+        pkt->restart = seq_st.status.flag.restart;
 
         /* We have good packet */
         break;
@@ -325,15 +339,137 @@ static pj_status_t play_cb(void *user_data, pjmedia_frame *f)
 }
 
 
+static void write_pcm(pjmedia_frame *pcm_frame)
+{
+    pj_status_t status;
+
+    if (app.wav) {
+        T( pjmedia_port_put_frame(app.wav, pcm_frame) );
+    }
+    if (app.aud_strm) {
+        T( wait_play(pcm_frame) );
+    }
+}
+
+/* Parse RTP payload into frames and put them into the jitter buffer. */
+static void jb_put_packet(struct rtp_packet *pkt)
+{
+    pjmedia_frame frames[16];
+    unsigned i, frame_cnt = PJ_ARRAY_SIZE(frames);
+    pj_int16_t delta;
+    pj_uint32_t idx;
+    pj_status_t status;
+
+    T( pjmedia_codec_parse(app.codec, pkt->payload, pkt->payload_len,
+                           &pkt->packet_ts, &frame_cnt, frames) );
+    if (!app.frames_per_pkt)
+        app.frames_per_pkt = frame_cnt;
+
+    /* Start at an offset that keeps late packet indexes non-negative, and
+     * continue seamlessly when the stream restarts.
+     */
+    if (!app.ext_seq || pkt->restart) {
+        app.ext_seq = app.ext_seq ? app.ext_seq + 1 : 0x10000;
+        app.last_seq = pkt->seq;
+    }
+
+    /* Extend 16-bit seq */
+    delta = (pj_int16_t)(pkt->seq - app.last_seq);
+    idx = app.ext_seq + delta;
+    if (delta > 0) {
+        app.ext_seq = idx;
+        app.last_seq = pkt->seq;
+    }
+
+    /* ponytail: assumes constant frames per packet */
+    for (i=0; i<frame_cnt; ++i) {
+        pjmedia_jbuf_put_frame3(app.jb, frames[i].buf, frames[i].size,
+                                frames[i].bit_info,
+                                idx * app.frames_per_pkt + i, 0, NULL);
+    }
+}
+
+/* Decode (or conceal) one jitter buffer frame and write it. */
+static void write_frame(char ftype, const void *buf, pj_size_t size,
+                        pj_uint32_t bit_info)
+{
+    short pcm[PJMEDIA_MAX_MTU];
+    pjmedia_frame frame_in, pcm_frame;
+    pj_status_t status;
+
+    pj_assert(sizeof(pcm) >= app.samples_per_frame);
+
+    pcm_frame.buf = pcm;
+    pcm_frame.size = app.samples_per_frame * 2;
+    if (ftype == PJMEDIA_JB_NORMAL_FRAME) {
+        frame_in.buf = (void*)buf;
+        frame_in.size = size;
+        frame_in.bit_info = bit_info;
+        frame_in.type = PJMEDIA_FRAME_TYPE_AUDIO;
+        T( pjmedia_codec_decode(app.codec, &frame_in,
+                                (unsigned)pcm_frame.size, &pcm_frame) );
+        app.plc_cnt = 0;
+    } else if (app.plc_cnt < app.max_plc_cnt &&
+               pjmedia_codec_recover(app.codec, (unsigned)pcm_frame.size,
+                                     &pcm_frame) == PJ_SUCCESS)
+    {
+        ++app.plc_cnt;
+    } else {
+        /* Silence before the first frame, after PLC limit, or no PLC */
+        pcm_frame.size = app.samples_per_frame * 2;
+        pj_bzero(pcm_frame.buf, pcm_frame.size);
+    }
+    write_pcm(&pcm_frame);
+    app.next_pull += app.tick_ns;
+}
+
+/* Pull one frame per ptime tick of wall-clock time up to time t. */
+static void jb_pull_until(pj_uint64_t t)
+{
+    pj_uint8_t buf[PJMEDIA_MAX_MTU];
+    pj_size_t size;
+    pj_uint32_t bit_info;
+    char ftype;
+
+    while (app.next_pull <= t) {
+        size = sizeof(buf);
+        pjmedia_jbuf_get_frame3(app.jb, buf, &size, &ftype, &bit_info,
+                                NULL, NULL);
+        write_frame(ftype, buf, size, bit_info);
+    }
+}
+
+/* Write out all buffered frames now, even while the jitter buffer is
+ * still prefetching, and restart prefetching for the next packet.
+ */
+static void jb_flush(void)
+{
+    pjmedia_jb_state state;
+    const void *buf;
+    pj_size_t size;
+    pj_uint32_t bit_info;
+    char ftype;
+    unsigned i;
+
+    pjmedia_jbuf_get_state(app.jb, &state);
+    for (i = 0; i < state.size; ++i) {
+        pjmedia_jbuf_peek_frame(app.jb, i, &buf, &size, &ftype, &bit_info,
+                                NULL, NULL);
+        write_frame(ftype, buf, size, bit_info);
+    }
+    pjmedia_jbuf_reset(app.jb);
+}
+
 static void pcap2wav(const struct args *args)
 {
     const pj_str_t WAV = {".wav", 4};
-    struct rtp_packet pkt0;
+    struct rtp_packet pkt;
 
     pjmedia_codec_mgr *cmgr;
     const pjmedia_codec_info *ci;
     pjmedia_codec_param param;
-    unsigned samples_per_frame;
+    unsigned samples_per_frame, jb_max;
+    pj_str_t jb_name = pj_str("pcaputil");
     pj_status_t status;
 
     /* Initialize all codecs */
@@ -355,14 +491,14 @@ static void pcap2wav(const struct args *args)
 #endif
 
     /* Read first packet */
-    read_rtp(&pkt0, PJ_FALSE);
+    read_rtp(&pkt, PJ_FALSE);
 
     cmgr = pjmedia_endpt_get_codec_mgr(app.mept);
 
     /* Get codec info and param for the specified payload type */
-    app.pt = pkt0.rtp->pt;
+    app.pt = pkt.rtp->pt;
     if (app.pt < 96) {
-        T( pjmedia_codec_mgr_get_codec_info(cmgr, pkt0.rtp->pt, &ci) );
+        T( pjmedia_codec_mgr_get_codec_info(cmgr, pkt.rtp->pt, &ci) );
     } else {
         unsigned cnt = 2;
         const pjmedia_codec_info *info[2];
@@ -385,6 +521,7 @@ static void pcap2wav(const struct args *args)
 
     /* Init audio device or WAV file */
     samples_per_frame = param.info.clock_rate * param.info.frm_ptime / 1000;
+    app.samples_per_frame = samples_per_frame;
     if (pj_strcmp2(&args->wav_filename, "-") == 0) {
         pjmedia_aud_param aud_param;
 
@@ -416,73 +553,49 @@ static void pcap2wav(const struct args *args)
         err_exit("invalid output file", PJ_EINVAL);
     }
 
-    /* Loop reading PCAP and writing WAV file */
+    /* Jitter buffer */
+    jb_max = JB_MAX_MS / param.info.frm_ptime;
+    T( pjmedia_jbuf_create(app.pool, &jb_name, PJMEDIA_MAX_MTU,
+                           param.info.frm_ptime, jb_max, &app.jb) );
+    T( pjmedia_jbuf_set_fixed(app.jb, JB_DELAY_MS / param.info.frm_ptime) );
+
+    /* No PLC until the first decoded frame, then at most 240ms */
+    app.max_plc_cnt = (PJMEDIA_MAX_PLC_DURATION_MSEC + param.info.frm_ptime - 1)
+                      / param.info.frm_ptime;
+    app.plc_cnt = app.max_plc_cnt;
+
+    /* Feed packets to the jitter buffer in pcap wall-clock order and pull
+     * one frame per ptime tick of wall-clock time, like a live receiver.
+     * Pauses are thus filled with the real elapsed time, regardless of
+     * RTP timestamps.
+     */
+    app.tick_ns = (pj_uint64_t)param.info.frm_ptime * 1000000;
+    app.next_pull = pkt.packet_ts.u64 + app.tick_ns;
     for (;;) {
-        struct rtp_packet pkt1;
-        pjmedia_frame frames[16], pcm_frame;
-        short pcm[PJMEDIA_MAX_MTU];
-        unsigned i, frame_cnt;
-        long samples_cnt, ts_gap;
+        jb_put_packet(&pkt);
 
-        pj_assert(sizeof(pcm) >= samples_per_frame);
-
-        /* Parse first packet */
-        frame_cnt = PJ_ARRAY_SIZE(frames);
-        T( pjmedia_codec_parse(app.codec, pkt0.payload, pkt0.payload_len,
-                                &pkt0.packet_ts, &frame_cnt, frames) );
-
-        /* Decode and write to WAV file */
-        samples_cnt = 0;
-        for (i=0; i<frame_cnt; ++i) {
-            pcm_frame.buf = pcm;
-            pcm_frame.size = samples_per_frame * 2;
-
-            T( pjmedia_codec_decode(app.codec, &frames[i],
-                                    (unsigned)pcm_frame.size, &pcm_frame) );
-            if (app.wav) {
-                T( pjmedia_port_put_frame(app.wav, &pcm_frame) );
-            }
-            if (app.aud_strm) {
-                T( wait_play(&pcm_frame) );
-            }
-            samples_cnt += samples_per_frame;
-        }
-
-        /* Read next packet */
-        if (!read_rtp(&pkt1, PJ_TRUE)) {
+        if (!read_rtp(&pkt, PJ_TRUE))
             break;
-        }
 
-        /* Fill in the gap (if any) between pkt0 and pkt1 */
-        ts_gap = pkt1.rtp_ts - pkt0.rtp_ts - samples_cnt;
-
-        if (ts_gap <= (long)param.info.clock_rate * GAP_IGNORE_SECONDS) { /* Ignore gap >30s */
-            while (ts_gap >= (long)samples_per_frame) {
-                pcm_frame.buf = pcm;
-                pcm_frame.size = samples_per_frame * 2;
-
-                if (app.codec->op->recover) {
-                    T( pjmedia_codec_recover(app.codec, (unsigned)pcm_frame.size,
-                                            &pcm_frame) );
-                } else {
-                    pj_bzero(pcm_frame.buf, pcm_frame.size);
-                }
-
-                if (app.wav) {
-                    T( pjmedia_port_put_frame(app.wav, &pcm_frame) );
-                }
-                if (app.aud_strm) {
-                    T( wait_play(&pcm_frame) );
-                }
-                ts_gap -= samples_per_frame;
+        /* No packet can join the buffered frames in time: play them out
+         * instead of waiting for the next talkspurt to end prefetching.
+         */
+        if (pkt.packet_ts.u64 > app.next_pull + JB_DELAY_MS * 1000000ull) {
+            /* Skip long silence before a new stream */
+            if (pkt.restart && pkt.packet_ts.u64 >
+                app.next_pull + GAP_IGNORE_SECONDS * 1000000000ull)
+            {
+                app.next_pull = pkt.packet_ts.u64;
             }
+            jb_flush();
         }
 
-        /* Next */
-        pkt0 = pkt1;
-        pkt0.rtp = (pjmedia_rtp_hdr*)pkt0.buffer;
-        pkt0.payload = pkt0.buffer + (pkt1.payload - pkt1.buffer);
+        jb_pull_until(pkt.packet_ts.u64);
     }
+    jb_flush();
+
+    /* Push out samples still delayed in the decoder */
+    write_frame(PJMEDIA_JB_ZERO_EMPTY_FRAME, NULL, 0, 0);
 }
 
 
