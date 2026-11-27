@@ -469,6 +469,11 @@ int test_main(int argc, char *argv[])
 #if INCLUDE_UDP_TEST
     /* Transport tests share same testing codes which are not reentrant */
     UT_ADD_TEST(&test_app.ut_app, transport_udp_test, 0);
+#if PJ_HAS_THREADS
+    /* Exclusive, as it polls the endpoint and floods its transport */
+    UT_ADD_TEST(&test_app.ut_app, transport_udp_restart_test,
+                PJ_TEST_EXCLUSIVE);
+#endif
 #endif
 
 #if INCLUDE_TCP_TEST

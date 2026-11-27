@@ -121,6 +121,7 @@ int txdata_test(void);
 int tsx_bench(void);
 int tsx_destroy_test(void);
 int transport_udp_test(void);
+int transport_udp_restart_test(void);
 int transport_loop_test(void);
 int transport_loop_multi_test(void);
 int transport_loop_resolve_error_test(void);

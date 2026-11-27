@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -79,6 +79,9 @@ struct udp_transport
 
     /* Group lock to be used by UDP transport and ioqueue key */
     pj_grp_lock_t      *grp_lock;
+
+    /* Serializes pause and restart */
+    pj_mutex_t         *restart_mutex;
 };
 
 
@@ -430,6 +433,9 @@ static void udp_on_destroy(void *arg)
     /* Destroy lock */
     if (tp->base.lock)
         pj_lock_destroy(tp->base.lock);
+
+    if (tp->restart_mutex)
+        pj_mutex_destroy(tp->restart_mutex);
 
     PJ_LOG(4,(tp->base.obj_name, "SIP UDP transport destroyed"));
 
@@ -825,6 +831,10 @@ static pj_status_t transport_attach( pjsip_endpoint *endpt,
     if (status != PJ_SUCCESS)
         goto on_error;
 
+    status = pj_mutex_create_simple(pool, pool->obj_name, &tp->restart_mutex);
+    if (status != PJ_SUCCESS)
+        goto on_error;
+
     /* Set type. */
     tp->base.key.type = type;
 
@@ -1095,13 +1105,10 @@ PJ_DEF(pj_sock_t) pjsip_udp_transport_get_socket(pjsip_transport *transport)
 /*
  * Temporarily pause or shutdown the transport. 
  */
-PJ_DEF(pj_status_t) pjsip_udp_transport_pause(pjsip_transport *transport,
-                                              unsigned option)
+static pj_status_t udp_pause(pjsip_transport *transport, unsigned option)
 {
     struct udp_transport *tp;
     unsigned i;
-
-    PJ_ASSERT_RETURN(transport != NULL, PJ_EINVAL);
 
     /* Flag must be specified */
     PJ_ASSERT_RETURN((option & 0x03) != 0, PJ_EINVAL);
@@ -1145,6 +1152,21 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_pause(pjsip_transport *transport,
     return PJ_SUCCESS;
 }
 
+PJ_DEF(pj_status_t) pjsip_udp_transport_pause(pjsip_transport *transport,
+                                              unsigned option)
+{
+    struct udp_transport *tp = (struct udp_transport*) transport;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(transport != NULL, PJ_EINVAL);
+
+    pj_mutex_lock(tp->restart_mutex);
+    status = udp_pause(transport, option);
+    pj_mutex_unlock(tp->restart_mutex);
+
+    return status;
+}
+
 
 /*
  * Restart transport.
@@ -1166,18 +1188,17 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_restart(pjsip_transport *transport,
 }
 
 
-PJ_DEF(pj_status_t) pjsip_udp_transport_restart2(pjsip_transport *transport,
-                                                 unsigned option,
-                                                 pj_sock_t sock,
-                                                 const pj_sockaddr *local,
-                                                 const pjsip_host_port *a_name)
+static pj_status_t udp_restart(pjsip_transport *transport,
+                               unsigned option,
+                               pj_sock_t sock,
+                               const pj_sockaddr *local,
+                               const pjsip_host_port *a_name)
 {
     struct udp_transport *tp;
     pj_status_t status;
     char addr[PJ_INET6_ADDRSTRLEN+10];
     int i;
 
-    PJ_ASSERT_RETURN(transport != NULL, PJ_EINVAL);
     /* Flag must be specified */
     PJ_ASSERT_RETURN((option & 0x03) != 0, PJ_EINVAL);
 
@@ -1284,4 +1305,22 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_restart2(pjsip_transport *transport,
                                  addr, sizeof(addr), 1)));
 
     return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjsip_udp_transport_restart2(pjsip_transport *transport,
+                                                 unsigned option,
+                                                 pj_sock_t sock,
+                                                 const pj_sockaddr *local,
+                                                 const pjsip_host_port *a_name)
+{
+    struct udp_transport *tp = (struct udp_transport*) transport;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(transport != NULL, PJ_EINVAL);
+
+    pj_mutex_lock(tp->restart_mutex);
+    status = udp_restart(transport, option, sock, local, a_name);
+    pj_mutex_unlock(tp->restart_mutex);
+
+    return status;
 }
