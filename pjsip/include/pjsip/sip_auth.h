@@ -886,11 +886,14 @@ PJ_DECL(pj_status_t) pjsip_auth_srv_init2(
  * callback, which receives the Authorization header being verified (an
  * error returned by the callback is returned by this function, with
  * status code 403). The nonce count should be checked once this function
- * has returned PJ_SUCCESS: record it for the nonce and reject the request
- * if it was already recorded, as one atomic step (e.g. under a lock), so
- * that two copies of a request handled at the same time cannot both be
- * accepted. Without qop the request has no nonce count, so the nonce
- * itself should then be accepted only once.
+ * has returned PJ_SUCCESS: record it for the user, nonce and cnonce (a
+ * nonce may be used by several clients or sessions, each counting from 1
+ * with its own cnonce) and reject the request if it was already recorded,
+ * as one atomic step (e.g. under a lock), so that two copies of a request
+ * handled at the same time cannot both be accepted. The records can be
+ * dropped once the nonce expires. Without qop the request has no nonce
+ * count or cnonce, so the nonce itself should then be accepted only once,
+ * which requires a new nonce for each challenge.
  *
  * @param auth_srv      The server authentication structure.
  * @param rdata         Incoming request to be authenticated.
