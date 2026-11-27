@@ -414,7 +414,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
     defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
     if (ioctlsocket(sock, FIONBIO, &value)) {
 #else
-    if (ioctl((int)sock, FIONBIO, &value)) {
+    if (ioctl(sock, FIONBIO, &value)) {
 #endif
         rc = pj_get_netos_error();
         goto on_return;
@@ -780,12 +780,14 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
     /* Can only replace UDP socket */
     pj_assert(h->fd_type == pj_SOCK_DGRAM());
 
-    PJ_LOG(4,(THIS_FILE, "Attempting to replace UDP socket %ld", old_sock));
+    PJ_LOG(4,(THIS_FILE, "Attempting to replace UDP socket %ld",
+                         (long)old_sock));
 
     for (msec=20; (msec<1000 && status != PJ_SUCCESS); msec=msec*2)
     {
         if (msec > 20) {
-            PJ_LOG(4,(THIS_FILE, "Retry to replace UDP socket %ld", h->fd));
+            PJ_LOG(4,(THIS_FILE, "Retry to replace UDP socket %ld",
+                                 (long)h->fd));
             pj_thread_sleep(msec);
         }
         
@@ -933,7 +935,8 @@ on_error:
     }
 
     h->fd = PJ_INVALID_SOCKET;
-    PJ_PERROR(1,(THIS_FILE, status, "Error replacing socket %ld", old_sock));
+    PJ_PERROR(1,(THIS_FILE, status, "Error replacing socket %ld",
+                            (long)old_sock));
     pj_lock_release(h->ioqueue->lock);
     return PJ_ESOCKETSTOP;
 }

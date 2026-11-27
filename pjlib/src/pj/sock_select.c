@@ -40,7 +40,7 @@
 #define PART_COUNT(ps)          (ps->data[0])
 
 /* pj_fd_set_t must have room for the native fd_set after the count. */
-PJ_STATIC_ASSERT(sizeof(pj_fd_set_t)-sizeof(pj_sock_t) >= sizeof(fd_set),
+PJ_STATIC_ASSERT(sizeof(pj_fd_set_t)-sizeof(pj_ssize_t) >= sizeof(fd_set),
                  pj_fd_set_t_must_hold_fd_set);
 
 PJ_DEF(void) PJ_FD_ZERO(pj_fd_set_t *fdsetp)

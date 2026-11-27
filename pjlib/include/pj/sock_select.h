@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -54,7 +54,8 @@ PJ_BEGIN_DECL
  */
 typedef struct pj_fd_set_t
 {
-    pj_sock_t data[PJ_IOQUEUE_MAX_HANDLES+ 4]; /**< Opaque buffer for fd_set */
+    /** Opaque buffer for fd_set, in units wide enough to align it. */
+    pj_ssize_t data[PJ_IOQUEUE_MAX_HANDLES+ 4];
 } pj_fd_set_t;
 
 

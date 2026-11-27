@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -290,11 +290,13 @@ typedef struct pj_pipe_t pj_pipe_t;
 /** Operating system handle. */
 typedef void *pj_oshandle_t;
 
-/** Socket handle. */
+/** Socket handle, of the type the OS socket API takes. */
 #if defined(PJ_WIN64) && PJ_WIN64!=0
     typedef pj_int64_t pj_sock_t;
-#else
+#elif defined(PJ_WIN32) && PJ_WIN32!=0
     typedef long pj_sock_t;
+#else
+    typedef int pj_sock_t;
 #endif
 
 /** Generic socket address. */

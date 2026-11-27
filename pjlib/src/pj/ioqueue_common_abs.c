@@ -377,7 +377,7 @@ static pj_bool_t ioqueue_dispatch_write_event( pj_ioqueue_t *ioqueue,
                 {
                     PJ_PERROR(4,(THIS_FILE, send_rc,
                                  "Send error for socket %ld, retrying",
-                                 h->fd));
+                                 (long)h->fd));
                     send_rc = replace_udp_sock(h);
                     continue;
                 }
@@ -808,7 +808,7 @@ static pj_bool_t ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue,
                 //rc = ReadFile((HANDLE)h->fd, read_op->buf, read_op->size,
                 //              &bytes_read, NULL);
 #           elif (defined(PJ_HAS_UNISTD_H) && PJ_HAS_UNISTD_H != 0)
-                bytes_read = read((int)h->fd, read_op->buf, bytes_read);
+                bytes_read = read(h->fd, read_op->buf, bytes_read);
                 rc = (bytes_read >= 0) ? PJ_SUCCESS : pj_get_os_error();
 #           else
 #               error "Implement read() for this platform!"
@@ -1354,7 +1354,7 @@ retry_on_restart:
                     if (!restart_retry) {
                         PJ_PERROR(4, (THIS_FILE, status,
                                       "Send error for socket %ld, retrying",
-                                      key->fd));
+                                      (long)key->fd));
                         status = replace_udp_sock(key);
                         if (status == PJ_SUCCESS) {
                             restart_retry = PJ_TRUE;
