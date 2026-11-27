@@ -140,6 +140,7 @@ typedef struct inv_test_param_t
     pj_bool_t   multipart_body;
     pj_bool_t   test_null_offer_reinvite;
     pj_bool_t   test_non_sdp_body_reinvite;
+    pj_bool_t   test_reinvite_after_disconnect;
 } inv_test_param_t;
 
 typedef struct inv_test_t
@@ -171,6 +172,12 @@ static unsigned     null_offer_response_media_count;
 static pj_bool_t    null_offer_response_has_sdp;
 static unsigned    null_offer_create_offer_count;
 static pj_status_t null_offer_reinvite_answer_status;
+
+/* Set while waiting for the response to a re-INVITE sent after the call
+ * has disconnected; disc_reinvite_code records that response's status.
+ */
+static pj_bool_t   capture_disc_reinvite;
+static int         disc_reinvite_code;
 
 typedef enum job_type
 {
@@ -351,6 +358,34 @@ static void on_state_changed(pjsip_inv_session *inv, pjsip_event *e)
 
 /**************** MODULE TO RECEIVE INITIAL INVITE ******************/
 
+/* Callee of inv_ack_send_fail_test(): answer 200 with a Contact that the
+ * caller can't route its ACK to.
+ */
+static pj_bool_t ack_fail_on_rx_invite(pjsip_rx_data *rdata)
+{
+    pj_str_t tel_contact = pj_str("<tel:+15550100>");
+    pjsip_dialog *dlg;
+    pjsip_tx_data *tdata;
+
+    PJ_TEST_SUCCESS(pjsip_dlg_create_uas_and_inc_lock(pjsip_ua_instance(),
+                                                      rdata, &tel_contact,
+                                                      &dlg),
+                    NULL, return PJ_TRUE);
+    PJ_TEST_SUCCESS(pjsip_inv_create_uas(dlg, rdata,
+                                         create_sdp(rdata->tp_info.pool,
+                                                    oa_sdp[0].answer),
+                                         0, &inv_test.uas),
+                    NULL, {pjsip_dlg_dec_lock(dlg); return PJ_TRUE;});
+    pjsip_dlg_dec_lock(dlg);
+
+    PJ_TEST_SUCCESS(pjsip_inv_initial_answer(inv_test.uas, rdata, 200, NULL,
+                                             NULL, &tdata),
+                    NULL, return PJ_TRUE);
+    PJ_TEST_SUCCESS(pjsip_inv_send_msg(inv_test.uas, tdata), NULL,
+                    return PJ_TRUE);
+    return PJ_TRUE;
+}
+
 static pj_bool_t on_rx_request(pjsip_rx_data *rdata)
 {
     if (rdata->msg_info.msg->type == PJSIP_REQUEST_MSG &&
@@ -360,6 +395,9 @@ static pj_bool_t on_rx_request(pjsip_rx_data *rdata)
         pjmedia_sdp_session *sdp = NULL;
         pj_str_t uri;
         pjsip_tx_data *tdata;
+
+        if (is_user_equal(rdata->msg_info.from, "inv_ack_fail_test"))
+            return ack_fail_on_rx_invite(rdata);
 
         if (!is_user_equal(rdata->msg_info.from, "inv_offer_answer_test"))
             return PJ_FALSE;
@@ -636,6 +674,60 @@ static int perform_test(inv_test_param_t *param)
         }
     }
 
+    if (param->test_reinvite_after_disconnect) {
+        pjsip_dialog *uac_dlg = inv_test.uac->dlg;
+        pjsip_dialog *uas_dlg = inv_test.uas->dlg;
+        pjsip_method inv_method;
+        pjsip_tx_data *reinv;
+        int i;
+
+        /* Keep both dialogs alive past the hangup, as the transaction
+         * absorbing 2xx retransmissions does in a real call. The invite
+         * sessions are destroyed when they disconnect.
+         */
+        pjsip_dlg_inc_session(uac_dlg, &mod_inv_oa_test);
+        pjsip_dlg_inc_session(uas_dlg, &mod_inv_oa_test);
+
+        TRACE_((THIS_FILE, "    Disconnecting call before the re-INVITE"));
+        PJ_TEST_SUCCESS(pjsip_inv_end_session(inv_test.uas, PJSIP_SC_DECLINE,
+                                              0, &tdata),
+                        NULL, { rc = -74; goto reinv_cleanup; });
+        if (tdata) {
+            PJ_TEST_SUCCESS(pjsip_inv_send_msg(inv_test.uas, tdata),
+                            NULL, { rc = -75; goto reinv_cleanup; });
+        }
+        flush_events(500);
+
+        /* The UAS invite session has ended but its dialog is still alive.
+         * A re-INVITE must be answered with 481, not silently dropped.
+         */
+        capture_disc_reinvite = PJ_TRUE;
+        disc_reinvite_code = 0;
+        pjsip_method_set(&inv_method, PJSIP_INVITE_METHOD);
+
+        TRACE_((THIS_FILE, "    Sending re-INVITE after disconnect"));
+        PJ_TEST_SUCCESS(pjsip_dlg_create_request(uac_dlg, &inv_method, -1,
+                                                 &reinv),
+                        NULL, { rc = -70; goto reinv_cleanup; });
+        PJ_TEST_SUCCESS(pjsip_dlg_send_request(uac_dlg, reinv, -1, NULL),
+                        NULL, { rc = -71; goto reinv_cleanup; });
+
+        for (i = 0; i < 100 && disc_reinvite_code == 0; ++i) {
+            pj_time_val delay = { 0, 20 };
+            pjsip_endpt_handle_events(endpt, &delay);
+        }
+
+        PJ_TEST_EQ(disc_reinvite_code, PJSIP_SC_CALL_TSX_DOES_NOT_EXIST,
+                   "re-INVITE after disconnect", { rc = -72; });
+
+reinv_cleanup:
+        capture_disc_reinvite = PJ_FALSE;
+        pjsip_dlg_dec_session(uac_dlg, &mod_inv_oa_test);
+        pjsip_dlg_dec_session(uas_dlg, &mod_inv_oa_test);
+        flush_events(500);
+        return rc;
+    }
+
     /*
      * Hangup
      */
@@ -675,6 +767,13 @@ static pj_bool_t log_on_rx_msg(pjsip_rx_data *rdata)
         null_offer_response_media_count = null_offer_response_has_sdp ?
                                          sdp_info->sdp->media_count : 0;
         null_offer_response_code = msg->line.status.code;
+    }
+
+    if (capture_disc_reinvite && msg->type == PJSIP_RESPONSE_MSG &&
+        rdata->msg_info.cseq->method.id == PJSIP_INVITE_METHOD &&
+        msg->line.status.code >= 200 && disc_reinvite_code == 0)
+    {
+        disc_reinvite_code = msg->line.status.code;
     }
 
     if (msg->type == PJSIP_REQUEST_MSG)
@@ -737,6 +836,18 @@ static inv_test_param_t test_params[] =
         PJ_TRUE,
         1,
         { OFFERER_UAC },
+        PJ_FALSE,
+        PJ_TRUE
+    },
+
+    {
+        "re-INVITE after the call has disconnected",
+        0,
+        PJ_TRUE,
+        1,
+        { OFFERER_UAC },
+        PJ_FALSE,
+        PJ_FALSE,
         PJ_FALSE,
         PJ_TRUE
     },
@@ -986,6 +1097,57 @@ static int inv_dec_ref_unlocked_test(void)
     return 0;
 }
 
+/*
+ * The callee controls the Contact of its 2xx, which is where the ACK goes
+ * when there is no route set. Failing to send the ACK there (here to a tel:
+ * URI) must not trip an assertion; the caller just stays in CONNECTING.
+ */
+static int inv_ack_send_fail_test(void)
+{
+    pj_str_t local = pj_str("sip:inv_ack_fail_test@127.0.0.1");
+    pj_str_t target = contact_uri;
+    pjsip_dialog *dlg;
+    pjsip_tx_data *tdata;
+    unsigned i;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "  2xx with a Contact the ACK can't be sent to"));
+
+    pj_bzero(&inv_test, sizeof(inv_test));
+
+    PJ_TEST_SUCCESS(pjsip_dlg_create_uac(pjsip_ua_instance(), &local, &local,
+                                         &target, &target, &dlg),
+                    NULL, return -500);
+    PJ_TEST_SUCCESS(pjsip_inv_create_uac(dlg,
+                                         create_sdp(dlg->pool,
+                                                    oa_sdp[0].offer),
+                                         0, &inv_test.uac),
+                    NULL, return -510);
+    PJ_TEST_SUCCESS(pjsip_inv_invite(inv_test.uac, &tdata), NULL,
+                    return -520);
+    PJ_TEST_SUCCESS(pjsip_inv_send_msg(inv_test.uac, tdata), NULL,
+                    return -530);
+
+    for (i = 0; i < 50 &&
+                inv_test.uac->state < PJSIP_INV_STATE_CONNECTING; ++i)
+    {
+        flush_events(20);
+    }
+    flush_events(100);
+
+    PJ_TEST_EQ(inv_test.uac->state, PJSIP_INV_STATE_CONNECTING,
+               "caller is not waiting with its ACK unsent", rc = -540);
+
+    pjsip_inv_terminate(inv_test.uac, PJSIP_SC_REQUEST_TERMINATED, PJ_FALSE);
+    if (inv_test.uas) {
+        pjsip_inv_terminate(inv_test.uas, PJSIP_SC_REQUEST_TERMINATED,
+                            PJ_FALSE);
+    }
+    flush_events(100);
+
+    return rc;
+}
+
 int inv_offer_answer_test(void)
 {
     unsigned i;
@@ -1043,6 +1205,10 @@ int inv_offer_answer_test(void)
     }
 
     rc = inv_dec_ref_unlocked_test();
+    if (rc != 0)
+        goto on_return;
+
+    rc = inv_ack_send_fail_test();
     if (rc != 0)
         goto on_return;
 

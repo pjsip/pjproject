@@ -673,8 +673,10 @@ static pj_status_t inv_send_ack(pjsip_inv_session *inv, pjsip_event *e)
     /* Send ACK */
     status = pjsip_dlg_send_request(inv->dlg, inv->last_ack, -1, NULL);
     if (status != PJ_SUCCESS) {
-        /* Better luck next time */
-        pj_assert(!"Unable to send ACK!");
+        /* Can be caused by remote, e.g: unroutable Contact in the 2xx.
+         * Better luck next time.
+         */
+        PJ_PERROR(2,(inv->obj_name, status, "Unable to send ACK"));
         return status;
     }
 
@@ -725,6 +727,10 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
     method = &rdata->msg_info.msg->line.req.method;
 
     if (method->id == PJSIP_INVITE_METHOD) {
+        /* Without invite session, let the dialog layer answer it */
+        if (inv == NULL)
+            return PJ_FALSE;
+
         return PJ_TRUE;
     }
 
@@ -6955,6 +6961,22 @@ static void inv_on_state_disconnected( pjsip_inv_session *inv, pjsip_event *e)
             status = pjsip_dlg_send_response(dlg, tsx, tdata);
             if (status != PJ_SUCCESS) return;
 
+        } else if (tsx->method.id == PJSIP_INVITE_METHOD) {
+            /*
+             * Respond re-INVITE with 481, the session has ended. The dialog
+             * may outlive it, e.g. kept by the transaction absorbing 2xx
+             * retransmissions (PJSIP_INV_ABSORB_RETRANS_AFTER_ACK).
+             */
+            pjsip_tx_data *tdata;
+            pj_status_t status;
+
+            status = pjsip_dlg_create_response(
+                                dlg, rdata, PJSIP_SC_CALL_TSX_DOES_NOT_EXIST,
+                                NULL, &tdata);
+            if (status != PJ_SUCCESS) return;
+
+            status = pjsip_dlg_send_response(dlg, tsx, tdata);
+            if (status != PJ_SUCCESS) return;
         }
 
     } else if (tsx->role == PJSIP_ROLE_UAC) {

@@ -1628,7 +1628,10 @@ public:
      * SIP server, terminate presense subscription, and hangup active calls),
      * however, this function will do all of these if it finds there are
      * active sessions that need to be terminated. This function will
-     * block for few seconds to wait for replies from remote.
+     * block for few seconds to wait for replies from remote. If another
+     * thread is creating the media of a call and waiting for the STUN
+     * server, it also waits for that to end (the STUN query takes up to
+     * two seconds; at most 10 seconds).
      *
      * Application.may safely call this function more than once if it doesn't
      * keep track of it's state.

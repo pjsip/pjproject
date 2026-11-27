@@ -127,6 +127,7 @@ extern int errno_test(void);
 extern int timestamp_test(void);
 extern int exception_test(void);
 extern int rand_test(void);
+extern int csrand_test(void);
 extern int list_test(void);
 extern int atomic_slist_test(void);
 extern int atomic_slist_mt_test(void);

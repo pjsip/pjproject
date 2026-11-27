@@ -61,7 +61,12 @@
  *  14. A Service-Route from the registrar goes into the dialog route set
  *      but not into the next REGISTER, which keeps the account proxy.
  *      Also with a server affinity UDP pin, whose hidden Route leads the
- *      account route set.
+ *      account route set. A 2xx whose Service-Route cannot be used
+ *      clears the stored one.
+ *  15. The un-REGISTER PJSUA_CONTACT_REWRITE_UNREGISTER sends before
+ *      destroying the regc is best-effort: it must not reach
+ *      on_reg_started2(), nor must the one pjsua_acc_del() sends, while
+ *      an un-REGISTER whose regc stays alive still is.
  */
 
 #include "test.h"
@@ -338,6 +343,8 @@ static struct {
     unsigned    reg_ok_count;
     pj_int32_t  reg_ok_cseq;    /* CSeq of the last 2xx reported */
     pj_bool_t   unreg_done;     /* an unregistration was answered */
+    unsigned    reg_started;    /* on_reg_started2 for a REGISTER */
+    unsigned    unreg_started;  /* on_reg_started2 for an un-REGISTER */
     int         ipc_update_cnt; /* ACC_UPDATE_CONTACT reports */
     int         ipc_done_cnt;   /* COMPLETED reports */
     pj_bool_t   published;      /* still published after a refused unreg */
@@ -356,6 +363,17 @@ static void on_reg_state2(pjsua_acc_id acc_id, pjsua_reg_info *info)
         g_ctx.reg_ok_cseq = info->cbparam->cseq;
         g_ctx.reg_done = PJ_TRUE;
     }
+}
+
+
+static void on_reg_started2(pjsua_acc_id acc_id, pjsua_reg_info *info)
+{
+    PJ_UNUSED_ARG(acc_id);
+
+    if (info->renew)
+        g_ctx.reg_started++;
+    else
+        g_ctx.unreg_started++;
 }
 
 
@@ -832,6 +850,174 @@ on_return:
 }
 
 
+/* The un-REGISTER PJSUA_CONTACT_REWRITE_UNREGISTER sends before tearing
+ * the regc down is best-effort: the session is destroyed before its
+ * answer can arrive, so reporting its start would leave the application
+ * a start no on_reg_state2() will ever follow. The un-REGISTER
+ * pjsua_acc_del() sends is the same. A un-REGISTER whose regc stays
+ * alive, like the application's own, must still be reported.
+ */
+static int unreg_start_report_test(pjsua_transport_id tp_id, int port)
+{
+    pjsua_acc_config acc_cfg;
+    pjsua_acc_id     acc_id = PJSUA_INVALID_ID;
+    char             reg_uri[64];
+    char             local_host[PJ_INET6_ADDRSTRLEN + 16];
+    unsigned         before;
+    unsigned         i;
+    int              rc = 0;
+
+    PJ_LOG(3, (THIS_FILE, "  pjsua acc: un-REGISTER start not reported"));
+
+    pj_bzero(&g_ctx, sizeof(g_ctx));
+    g_mock_reg.received  = "1.2.3.4";
+    g_mock_reg.req_count = 0;
+    g_mock_reg.reg_count = 0;
+
+    pj_ansi_snprintf(reg_uri, sizeof(reg_uri), "sip:127.0.0.1:%d", port);
+
+    pjsua_acc_config_default(&acc_cfg);
+    acc_cfg.id       = pj_str("sip:" TEST_USER "@pjsip.org");
+    acc_cfg.reg_uri  = pj_str(reg_uri);
+    acc_cfg.transport_id = tp_id;
+    acc_cfg.register_on_acc_add = PJ_FALSE;
+    acc_cfg.allow_contact_rewrite = 2;
+    acc_cfg.allow_via_rewrite = PJ_FALSE;
+    acc_cfg.contact_rewrite_method = PJSUA_CONTACT_REWRITE_UNREGISTER;
+
+    if (pjsua_acc_add(&acc_cfg, PJ_FALSE, &acc_id) != PJ_SUCCESS ||
+        pjsua_acc_set_registration(acc_id, PJ_TRUE) != PJ_SUCCESS)
+    {
+        rc = -4200;
+        goto on_return;
+    }
+
+    /* The Contact the account generates locally: feeding it back as the
+     * Via received param later keeps the Contact stable, so that only
+     * the un-REGISTERs under test go out.
+     */
+    if (get_acc_contact_host(acc_id, local_host, sizeof(local_host)) != 0) {
+        rc = -4210;
+        goto on_return;
+    }
+    if (wait_reg(10000) != 0) {
+        rc = -4211;
+        goto on_return;
+    }
+
+    /* The first 2xx rewrote the Contact: the registrar saw the
+     * un-REGISTER, the regc was destroyed and the new REGISTER
+     * completed. Only the two REGISTERs may have been reported.
+     * req_count - reg_count counts the requests that add no binding,
+     * i.e. the un-REGISTERs.
+     */
+    pump_events(2000, NULL, PJ_TRUE);
+    if (g_ctx.reg_started != 2 || g_ctx.unreg_started != 0 ||
+        g_ctx.unreg_done || g_mock_reg.req_count != 3 ||
+        g_mock_reg.req_count - g_mock_reg.reg_count != 1)
+    {
+        PJ_LOG(3, (THIS_FILE, "    error: reported starts %u reg / %u "
+                   "unreg, unreg state %d, %u requests, %u un-REGISTERs, "
+                   "expected 2/0, no state, 3, 1", g_ctx.reg_started,
+                   g_ctx.unreg_started, (int)g_ctx.unreg_done,
+                   g_mock_reg.req_count,
+                   g_mock_reg.req_count - g_mock_reg.reg_count));
+        rc = -4201;
+        goto on_return;
+    }
+
+    /* Modify the account while it is still registered: unreg_first's
+     * un-REGISTER is best-effort too and must not be reported, though
+     * the registrar must see it go out. The received param now matches
+     * the local Contact, so no Contact rewrite adds requests of its
+     * own.
+     */
+    g_mock_reg.received = local_host;
+    before = g_mock_reg.req_count - g_mock_reg.reg_count;
+    acc_cfg.id = pj_str("sip:" TEST_USER "@pjsip.net");
+    g_ctx.reg_done = PJ_FALSE;
+    if (pjsua_acc_modify(acc_id, &acc_cfg) != PJ_SUCCESS ||
+        wait_reg(10000) != 0)
+    {
+        rc = -4204;
+        goto on_return;
+    }
+    if (g_mock_reg.req_count - g_mock_reg.reg_count != before + 1 ||
+        g_ctx.unreg_started != 0 || g_ctx.unreg_done)
+    {
+        PJ_LOG(3, (THIS_FILE, "    error: modify sent %u un-REGISTERs, "
+                   "%u un-REGISTER starts and unreg state %d, expected "
+                   "1, 0 and none",
+                   g_mock_reg.req_count - g_mock_reg.reg_count - before,
+                   g_ctx.unreg_started, (int)g_ctx.unreg_done));
+        rc = -4205;
+        goto on_return;
+    }
+
+    /* An un-REGISTER whose regc stays alive is still reported */
+    before = g_mock_reg.req_count - g_mock_reg.reg_count;
+    g_ctx.reg_done = PJ_FALSE;
+    g_ctx.unreg_done = PJ_FALSE;
+    if (pjsua_acc_set_registration(acc_id, PJ_FALSE) != PJ_SUCCESS ||
+        wait_reg(5000) != 0)
+    {
+        rc = -4206;
+        goto on_return;
+    }
+    if (g_ctx.unreg_started != 1 || !g_ctx.unreg_done ||
+        g_mock_reg.req_count - g_mock_reg.reg_count != before + 1)
+    {
+        PJ_LOG(3, (THIS_FILE, "    error: live un-REGISTER reported %u "
+                   "starts, state %d, sent %u un-REGISTERs",
+                   g_ctx.unreg_started, (int)g_ctx.unreg_done,
+                   g_mock_reg.req_count - g_mock_reg.reg_count - before));
+        rc = -4207;
+        goto on_return;
+    }
+
+    /* Register again so that deleting the account has a regc to send
+     * its best-effort un-REGISTER through.
+     */
+    g_ctx.reg_done = PJ_FALSE;
+    if (pjsua_acc_set_registration(acc_id, PJ_TRUE) != PJ_SUCCESS ||
+        wait_reg(10000) != 0)
+    {
+        rc = -4208;
+        goto on_return;
+    }
+
+    /* Deleting the account sends another best-effort un-REGISTER, which
+     * must not be reported either. It goes out asynchronously: pump
+     * until the registrar sees it.
+     */
+    before = g_mock_reg.req_count - g_mock_reg.reg_count;
+    g_ctx.unreg_done = PJ_FALSE;
+    pjsua_acc_del(acc_id);
+    acc_id = PJSUA_INVALID_ID;
+    for (i = 0; i < 200 &&
+         g_mock_reg.req_count - g_mock_reg.reg_count == before; ++i) {
+        pjsua_handle_events(10);
+    }
+    if (g_ctx.unreg_started != 1 || g_ctx.unreg_done ||
+        g_mock_reg.req_count - g_mock_reg.reg_count != before + 1)
+    {
+        PJ_LOG(3, (THIS_FILE, "    error: account deletion sent %u "
+                   "un-REGISTERs, %u un-REGISTER starts and unreg state "
+                   "%d, expected 1, 1 and none",
+                   g_mock_reg.req_count - g_mock_reg.reg_count - before,
+                   g_ctx.unreg_started, (int)g_ctx.unreg_done));
+        rc = -4209;
+    }
+
+on_return:
+    g_mock_reg.received = NULL;
+    if (acc_id != PJSUA_INVALID_ID)
+        pjsua_acc_del(acc_id);
+    pjsua_handle_events(500);
+    return rc;
+}
+
+
 /*****************************************************************************
  * Service-Route
  *****************************************************************************/
@@ -939,6 +1125,102 @@ static int service_route_test(pjsua_transport_id tp_id, int port,
                    "account proxy followed by the Service-Route"));
         rc = err_base - 3;
         goto on_return;
+    }
+
+on_return:
+    g_mock_reg.service_route = NULL;
+    pjsua_acc_del(acc_id);
+    pjsua_handle_events(500);
+    return rc;
+}
+
+/* A 2xx whose Service-Route cannot be used (a parse error, a non-SIP URI,
+ * too many URIs) counts as a 2xx without Service-Route: the Service-Route
+ * of the previous 2xx must be dropped.
+ */
+static int service_route_unusable_test(pjsua_transport_id tp_id, int port,
+                                       const char *title,
+                                       const char *unusable, int err_base)
+{
+    pjsua_acc_config acc_cfg;
+    pjsua_acc_id     acc_id;
+    pjsua_acc       *acc;
+    char             reg_uri[64];
+    char             proxy[64];
+    char             service_route[64];
+    const pjsip_route_hdr *hr;
+    unsigned         i;
+    pj_status_t      status;
+    int              rc = 0;
+
+    PJ_LOG(3, (THIS_FILE, "  pjsua acc: Service-Route with %s clears "
+               "the stored one", title));
+
+    pj_bzero(&g_ctx, sizeof(g_ctx));
+    g_mock_reg.req_count = 0;
+
+    pj_ansi_snprintf(reg_uri, sizeof(reg_uri), "sip:127.0.0.1:%d", port);
+    pj_ansi_snprintf(proxy, sizeof(proxy), "<sip:proxy@127.0.0.1:%d;lr>",
+                     port);
+    pj_ansi_snprintf(service_route, sizeof(service_route),
+                     "<sip:service@127.0.0.1:%d;lr>", port);
+
+    pjsua_acc_config_default(&acc_cfg);
+    acc_cfg.id       = pj_str("sip:" TEST_USER "@pjsip.org");
+    acc_cfg.reg_uri  = pj_str(reg_uri);
+    acc_cfg.transport_id = tp_id;
+    acc_cfg.register_on_acc_add = PJ_FALSE;
+    acc_cfg.allow_contact_rewrite = PJ_FALSE;
+    acc_cfg.proxy_cnt = 1;
+    acc_cfg.proxy[0] = pj_str(proxy);
+
+    status = pjsua_acc_add(&acc_cfg, PJ_FALSE, &acc_id);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(3, (THIS_FILE, "    error: pjsua_acc_add failed (%d)", status));
+        return err_base;
+    }
+    acc = &pjsua_var.acc[acc_id];
+
+    /* The first 2xx carries a valid Service-Route, the second one the
+     * unusable one.
+     */
+    for (i = 0; i < 2; ++i) {
+        unsigned ok_count = g_ctx.reg_ok_count;
+
+        g_mock_reg.service_route = (i == 0) ? service_route : unusable;
+        g_ctx.reg_done = PJ_FALSE;
+        status = pjsua_acc_set_registration(acc_id, PJ_TRUE);
+        if (status != PJ_SUCCESS || wait_reg(10000) != 0 ||
+            g_ctx.reg_ok_count == ok_count)
+        {
+            PJ_LOG(3, (THIS_FILE, "    error: registration %u failed (%d), "
+                       "last code %d", i, status, g_ctx.reg_code));
+            rc = err_base - 1;
+            goto on_return;
+        }
+
+        /* The account proxy, then the valid Service-Route only after the
+         * first 2xx
+         */
+        hr = acc->route_set.next;
+        if (hr == &acc->route_set ||
+            pj_strcmp2(&((pjsip_sip_uri*)
+                         pjsip_uri_get_uri(hr->name_addr.uri))->user,
+                       "proxy") != 0 ||
+            (i == 0 &&
+             (hr->next == &acc->route_set ||
+              hr->next->next != &acc->route_set ||
+              pj_strcmp2(&((pjsip_sip_uri*)
+                           pjsip_uri_get_uri(hr->next->name_addr.uri))->user,
+                         "service") != 0)) ||
+            (i == 1 && hr->next != &acc->route_set))
+        {
+            PJ_LOG(3, (THIS_FILE, "    error: after 2xx %u the route set "
+                       "has %d entries, expected %d", i,
+                       (int)pj_list_size(&acc->route_set), i == 0 ? 2 : 1));
+            rc = err_base - 2 - (int)i;
+            goto on_return;
+        }
     }
 
 on_return:
@@ -1696,6 +1978,7 @@ int pjsua_acc_test(void)
 
     pjsua_config_default(&ua_cfg);
     ua_cfg.cb.on_reg_state2 = &on_reg_state2;
+    ua_cfg.cb.on_reg_started2 = &on_reg_started2;
     ua_cfg.cb.on_ip_change_progress = &on_ip_change_progress;
     ua_cfg.cb.on_auth_challenge = &on_auth_challenge;
     /* No worker threads: everything runs from pjsua_handle_events() so
@@ -1844,10 +2127,41 @@ int pjsua_acc_test(void)
     rc = rewrite_send_fail_test(tp_id, (int)port);
     if (rc != 0) goto on_return;
 
+    rc = unreg_start_report_test(tp_id, (int)port);
+    if (rc != 0) goto on_return;
+
     rc = service_route_test(tp_id, (int)port, PJ_FALSE, -2550);
     if (rc != 0) goto on_return;
     rc = service_route_test(tp_id, (int)port, PJ_TRUE, -2560);
     if (rc != 0) goto on_return;
+
+    {
+        /* One URI more than update_service_route() keeps */
+        char too_many[(PJSUA_ACC_MAX_PROXIES + 1) * 32];
+        pj_size_t len = 0;
+        unsigned j;
+
+        for (j = 0; j <= PJSUA_ACC_MAX_PROXIES; ++j) {
+            int n = pj_ansi_snprintf(too_many + len, sizeof(too_many) - len,
+                                     "%s<sip:s%u@127.0.0.1;lr>",
+                                     j ? "," : "", j);
+            if (n < 0 || (pj_size_t)n >= sizeof(too_many) - len)
+                break;
+            len += n;
+        }
+
+        rc = service_route_unusable_test(tp_id, (int)port,
+                                         "a parse error",
+                                         "<sip:unterminated", -2570);
+        if (rc != 0) goto on_return;
+        rc = service_route_unusable_test(tp_id, (int)port,
+                                         "a non-SIP URI",
+                                         "<tel:+12345678>", -2580);
+        if (rc != 0) goto on_return;
+        rc = service_route_unusable_test(tp_id, (int)port,
+                                         "too many URIs", too_many, -2590);
+        if (rc != 0) goto on_return;
+    }
 
     {
         static const unreg_case cases[] = {

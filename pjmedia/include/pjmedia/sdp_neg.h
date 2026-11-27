@@ -452,7 +452,9 @@ pjmedia_sdp_neg_get_state( pjmedia_sdp_neg *neg );
  * @param neg           The SDP negotiator instance.
  * @param local         Pointer to receive the local active SDP.
  *
- * @return              PJ_SUCCESS if local active SDP is present.
+ * @return              PJ_SUCCESS if local active SDP is present, or
+ *                      PJMEDIA_SDPNEG_ENOACTIVE if there is none (e.g:
+ *                      no negotiation has succeeded yet).
  */
 PJ_DECL(pj_status_t) 
 pjmedia_sdp_neg_get_active_local( pjmedia_sdp_neg *neg,
@@ -467,7 +469,9 @@ pjmedia_sdp_neg_get_active_local( pjmedia_sdp_neg *neg,
  * @param neg           The SDP negotiator instance.
  * @param remote        Pointer to receive the remote active SDP.
  *
- * @return              PJ_SUCCESS if remote active SDP is present.
+ * @return              PJ_SUCCESS if remote active SDP is present, or
+ *                      PJMEDIA_SDPNEG_ENOACTIVE if there is none (e.g:
+ *                      no negotiation has succeeded yet).
  */
 PJ_DECL(pj_status_t) 
 pjmedia_sdp_neg_get_active_remote( pjmedia_sdp_neg *neg,

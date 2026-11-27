@@ -6038,15 +6038,18 @@ on_return:
 static pj_sem_t *hold_sem;
 static volatile pj_bool_t hold_armed;
 static volatile int hold_passed;
+static pj_str_t hold_name;
 static int srv_cached_cb_count;
 
-/* Answers the DNS A query, the first one only once the test lets it */
+/* Answers the DNS A query, the first one for hold_name only once the test
+ * lets it. A late query of an earlier test is answered right away.
+ */
 static void action4_hold(const pj_dns_parsed_packet *pkt,
                          pj_dns_parsed_packet **p_res)
 {
     pj_dns_parsed_packet *res;
 
-    if (hold_armed) {
+    if (hold_armed && pj_stricmp(&pkt->q[0].name, &hold_name) == 0) {
         hold_armed = PJ_FALSE;
         pj_sem_wait(hold_sem);
         hold_passed++;
@@ -6083,39 +6086,40 @@ static void srv_cached_cb(void *user_data, pj_status_t status,
     srv_cached_cb_count++;
 }
 
-/* Starts the resolution while the server holds the DNS A query, cancels it
- * and lets the answer through. The answer is cached after the callback.
+/* Starts the resolution while the server holds the DNS A query for a_name,
+ * cancels it and lets the answer through. The answer is cached after the
+ * callback.
  */
 static int srv_cancel_held(pj_dns_resolver *res, const pj_str_t *domain,
-                           unsigned cached)
+                           const pj_str_t *a_name, unsigned cached)
 {
     pj_str_t res_name = pj_str("_stun._udp.");
     pj_dns_srv_async_query *srv_q = NULL;
-    unsigned i, sent;
+    unsigned i;
     int rc = 0;
 
+    hold_name = *a_name;
     hold_armed = PJ_TRUE;
-    sent = g_server[0].pkt_count;
     PJ_TEST_SUCCESS(pj_dns_srv_resolve(domain, &res_name, 3478, pool, res,
                                        PJ_DNS_SRV_FALLBACK_A, NULL,
                                        &srv_cached_cb, &srv_q),
                     NULL, {rc = -2720; goto on_return;});
-    for (i = 0; g_server[0].pkt_count == sent && i < 500; ++i)
+    /* Wait for the hold rather than for the server's packet count, which a
+     * late query of an earlier test raises too
+     */
+    for (i = 0; hold_armed && i < 500; ++i)
         pj_thread_sleep(10);
-    PJ_TEST_EQ(g_server[0].pkt_count, sent + 1, NULL,
+    PJ_TEST_EQ(hold_armed, PJ_FALSE, "the DNS A query was not held",
                {rc = -2721; goto on_return;});
     PJ_TEST_NOT_NULL(srv_q, NULL, {rc = -2722; goto on_return;});
     PJ_TEST_SUCCESS(pj_dns_srv_cancel_query(srv_q, PJ_FALSE), NULL,
                     {rc = -2723; goto on_return;});
 
 on_return:
-    /* The server takes the query after its simulated RTT */
-    for (i = 0; hold_armed && g_server[0].pkt_count != sent && i < 500; ++i)
-        pj_thread_sleep(10);
     if (hold_armed) {
         /* The query never reached the server */
         hold_armed = PJ_FALSE;
-        return rc ? rc : -2724;
+        return rc;
     }
     pj_sem_post(hold_sem);
     for (i = 0; !hold_passed && i < 500; ++i)
@@ -6193,7 +6197,7 @@ static int srv_resolver_cached_cancel_test(void)
 
     g_server[0].action = ACTION_CB;
     g_server[0].action_cb = &action4_hold;
-    rc = srv_cancel_held(res, &domain, 1);
+    rc = srv_cancel_held(res, &domain, &domain, 1);
     if (rc)
         goto on_return;
 
@@ -6226,7 +6230,7 @@ static int srv_resolver_cached_cancel_test(void)
     ans.rdata.srv.target = target;
     PJ_TEST_SUCCESS(pj_dns_resolver_add_entry(res, &pkt, PJ_TRUE), NULL,
                     {rc = -2709; goto on_return;});
-    rc = srv_cancel_held(res, &domain_rec, 3);
+    rc = srv_cancel_held(res, &domain_rec, &target, 3);
 
 on_return:
     if (res)

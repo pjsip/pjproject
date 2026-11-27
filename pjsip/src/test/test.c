@@ -532,6 +532,10 @@ int test_main(int argc, char *argv[])
                 PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
     UT_ADD_TEST(&test_app.ut_app, pjsua_late_sdp_offer_test,
                 PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
+#if PJ_HAS_THREADS
+    UT_ADD_TEST(&test_app.ut_app, pjsua_stun_wait_test,
+                PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
+#endif
 #endif
 
 #if INCLUDE_PJSUA_ACC_TEST

@@ -50,6 +50,7 @@
 #endif
 #define HAS_MIPS_TEST           WITH_BENCHMARK
 #define HAS_OPUS_FMTP_TEST      PJMEDIA_HAS_OPUS_CODEC
+#define HAS_OPUS_PARSE_TEST     PJMEDIA_HAS_OPUS_CODEC
 #define HAS_TONE_DETECTOR_TEST  1
 /* The text stream paces its RTP with a clock thread */
 #define HAS_TXT_STREAM_TEST     PJ_HAS_THREADS
@@ -66,6 +67,7 @@ int sdp_attr_test(void);
 int mips_test(void);
 int codec_test_vectors(void);
 int codec_opus_fmtp_test(void);
+int codec_opus_parse_test(void);
 int vid_codec_test(void);
 int vid_dev_test(void);
 int vid_port_test(void);

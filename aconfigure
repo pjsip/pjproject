@@ -5988,6 +5988,57 @@ case $target in
 
         printf "%s\n" "#define WIN32_LEAN_AND_MEAN 1" >>confdefs.h
 
+                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for puts in -lbcrypt" >&5
+printf %s "checking for puts in -lbcrypt... " >&6; }
+if test ${ac_cv_lib_bcrypt_puts+y}
+then :
+  printf %s "(cached) " >&6
+else case e in #(
+  e) ac_check_lib_save_LIBS=$LIBS
+LIBS="-lbcrypt  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.
+   The 'extern "C"' is for builds by C++ compilers;
+   although this is not generally supported in C code supporting it here
+   has little cost and some practical benefit (sr 110532).  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char puts (void);
+int
+main (void)
+{
+return puts ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_lib_bcrypt_puts=yes
+else case e in #(
+  e) ac_cv_lib_bcrypt_puts=no ;;
+esac
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS ;;
+esac
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_bcrypt_puts" >&5
+printf "%s\n" "$ac_cv_lib_bcrypt_puts" >&6; }
+if test "x$ac_cv_lib_bcrypt_puts" = xyes
+then :
+  printf "%s\n" "#define HAVE_LIBBCRYPT 1" >>confdefs.h
+
+  LIBS="-lbcrypt $LIBS"
+
+fi
+
         case $target in
             *_64-w64-mingw* )
             printf "%s\n" "#define PJ_WIN64 1" >>confdefs.h
@@ -6403,6 +6454,62 @@ then :
 
 fi
 
+
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for getrandom()" >&5
+printf %s "checking for getrandom()... " >&6; }
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <sys/random.h>
+int
+main (void)
+{
+char b[4];
+                                  return (int)getrandom(b, sizeof(b), 0);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  printf "%s\n" "#define PJ_HAS_GETRANDOM 1" >>confdefs.h
+
+                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+else case e in #(
+  e) { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; } ;;
+esac
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for arc4random_buf()" >&5
+printf %s "checking for arc4random_buf()... " >&6; }
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdlib.h>
+int
+main (void)
+{
+char b[4];
+                                  arc4random_buf(b, sizeof(b));
+                                  return b[0];
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  printf "%s\n" "#define PJ_HAS_ARC4RANDOM_BUF 1" >>confdefs.h
+
+                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+else case e in #(
+  e) { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; } ;;
+esac
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
 
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Setting PJ_OS_NAME to $target" >&5
 printf "%s\n" "Setting PJ_OS_NAME to $target" >&6; }
@@ -10769,9 +10876,9 @@ then :
   opus_h_present=1
 fi
 
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for opus_repacketizer_get_size in -lopus" >&5
-printf %s "checking for opus_repacketizer_get_size in -lopus... " >&6; }
-if test ${ac_cv_lib_opus_opus_repacketizer_get_size+y}
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for opus_packet_unpad in -lopus" >&5
+printf %s "checking for opus_packet_unpad in -lopus... " >&6; }
+if test ${ac_cv_lib_opus_opus_packet_unpad+y}
 then :
   printf %s "(cached) " >&6
 else case e in #(
@@ -10789,20 +10896,20 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 #ifdef __cplusplus
 extern "C"
 #endif
-char opus_repacketizer_get_size (void);
+char opus_packet_unpad (void);
 int
 main (void)
 {
-return opus_repacketizer_get_size ();
+return opus_packet_unpad ();
   ;
   return 0;
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"
 then :
-  ac_cv_lib_opus_opus_repacketizer_get_size=yes
+  ac_cv_lib_opus_opus_packet_unpad=yes
 else case e in #(
-  e) ac_cv_lib_opus_opus_repacketizer_get_size=no ;;
+  e) ac_cv_lib_opus_opus_packet_unpad=no ;;
 esac
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
@@ -10810,9 +10917,9 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam \
 LIBS=$ac_check_lib_save_LIBS ;;
 esac
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_opus_opus_repacketizer_get_size" >&5
-printf "%s\n" "$ac_cv_lib_opus_opus_repacketizer_get_size" >&6; }
-if test "x$ac_cv_lib_opus_opus_repacketizer_get_size" = xyes
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_opus_opus_packet_unpad" >&5
+printf "%s\n" "$ac_cv_lib_opus_opus_packet_unpad" >&6; }
+if test "x$ac_cv_lib_opus_opus_packet_unpad" = xyes
 then :
 
             opus_present=1 && LIBS="-lopus $LIBS"

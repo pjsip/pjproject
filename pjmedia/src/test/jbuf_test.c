@@ -272,6 +272,85 @@ static int jbuf_negative_seq_test(void)
     return 0;
 }
 
+
+/* Frames carry their own sequence number as content. After a progressive
+ * discard, the sequence number reported by a peek must still match the
+ * frame it returns.
+ */
+static int jbuf_peek_seq_test(void)
+{
+    enum { JB_FRAME_SIZE = 16, JB_MAX_COUNT = 20 };
+    pj_str_t jb_name = {"JBTEST", 6};
+    pj_pool_t *pool;
+    pjmedia_jbuf *jb;
+    char buf[JB_FRAME_SIZE];
+    unsigned skipped = 0;
+    unsigned tick;
+    int idx = 0;
+    int rc = 0;
+    pj_status_t status;
+
+    pool = pj_pool_create(mem, "JBPOOL", 4000, 4000, NULL);
+    status = pjmedia_jbuf_create(pool, &jb_name, JB_FRAME_SIZE, JB_PTIME,
+                                 JB_MAX_COUNT, &jb);
+    PJ_TEST_SUCCESS(status, NULL, { pj_pool_release(pool); return -1; });
+    pjmedia_jbuf_set_adaptive(jb, 2, 1, 4);
+    pjmedia_jbuf_set_discard(jb, PJMEDIA_JB_DISCARD_PROGRESSIVE);
+
+    for (tick = 0; tick < 400 && rc == 0; ++tick) {
+        int put_cnt = (tick < 60 && tick % 5 == 0) ? 2 : 1;
+        pj_size_t size = sizeof(buf);
+        char frm_type;
+        int first_off = -1;
+        int first_content = 0;
+        unsigned off;
+
+        /* Overfill the buffer at first, so progressive discard runs */
+        for (; put_cnt > 0; --put_cnt, ++idx) {
+            pj_bzero(buf, sizeof(buf));
+            pj_memcpy(buf, &idx, sizeof(idx));
+            pjmedia_jbuf_put_frame3(jb, buf, sizeof(buf), 0, idx,
+                                    (pj_uint32_t)(idx * 160), NULL);
+        }
+
+        for (off = 0; off < JB_MAX_COUNT; ++off) {
+            const void *frame = NULL;
+            pj_size_t frame_size = 0;
+            char peek_type;
+            int seq = -1;
+            int content;
+
+            pjmedia_jbuf_peek_frame(jb, off, &frame, &frame_size, &peek_type,
+                                    NULL, NULL, &seq);
+            if (peek_type == PJMEDIA_JB_ZERO_EMPTY_FRAME)
+                break;
+            if (peek_type != PJMEDIA_JB_NORMAL_FRAME)
+                continue;
+
+            pj_memcpy(&content, frame, sizeof(content));
+            if (first_off < 0) {
+                first_off = (int)off;
+                first_content = content;
+            } else if (content - first_content != (int)off - first_off) {
+                /* A discarded slot lies between the two frames */
+                ++skipped;
+            }
+            PJ_TEST_EQ(seq, content, "peek seq does not match the frame",
+                       { rc = -2; break; });
+        }
+
+        pjmedia_jbuf_get_frame3(jb, buf, &size, &frm_type, NULL, NULL, NULL);
+    }
+
+    if (rc == 0) {
+        PJ_TEST_GT(skipped, 0, "no peek crossed a discarded frame", rc = -3);
+    }
+
+    pjmedia_jbuf_destroy(jb);
+    pj_pool_release(pool);
+    return rc;
+}
+
 int jbuf_test(void)
 {
     FILE *input;
@@ -290,6 +369,10 @@ int jbuf_test(void)
         return rc;
 
     rc = jbuf_negative_seq_test();
+    if (rc != 0)
+        return rc;
+
+    rc = jbuf_peek_seq_test();
     if (rc != 0)
         return rc;
 

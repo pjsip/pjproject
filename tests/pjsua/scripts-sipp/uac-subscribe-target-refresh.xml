@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+
+<!-- Presence subscription to pjsua, then a SUBSCRIBE refresh with a new   -->
+<!-- Contact. pjsua accepts the refresh, so the NOTIFY that follows the    -->
+<!-- 200 must already be addressed to the new Contact, although it is      -->
+<!-- created before the response is sent.                                  -->
+
+<scenario name="UAC SUBSCRIBE refresh with new Contact">
+
+  <send retrans="500">
+    <![CDATA[
+
+      SUBSCRIBE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+      To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 1 SUBSCRIBE
+      Contact: <sip:sipp@[local_ip]:[local_port]>
+      Max-Forwards: 70
+      Event: presence
+      Accept: application/pidf+xml
+      Expires: 600
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv response="200" rtd="true">
+  </recv>
+
+  <recv request="NOTIFY">
+    <action>
+      <ereg regexp="NOTIFY sip:sipp@" search_in="msg" check_it="true"
+            assign_to="1"/>
+    </action>
+  </recv>
+
+  <send>
+    <![CDATA[
+
+      SIP/2.0 200 OK
+      [last_Via:]
+      [last_From:]
+      [last_To:]
+      [last_Call-ID:]
+      [last_CSeq:]
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <pause milliseconds="500"/>
+
+  <!-- Refresh with a new Contact -->
+  <send retrans="500">
+    <![CDATA[
+
+      SUBSCRIBE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+      To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 2 SUBSCRIBE
+      Contact: <sip:moved@[local_ip]:[local_port]>
+      Max-Forwards: 70
+      Event: presence
+      Accept: application/pidf+xml
+      Expires: 600
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv response="200" rtd="true">
+  </recv>
+
+  <recv request="NOTIFY">
+    <action>
+      <ereg regexp="NOTIFY sip:moved@" search_in="msg" check_it="true"
+            assign_to="2"/>
+    </action>
+  </recv>
+
+  <send>
+    <![CDATA[
+
+      SIP/2.0 200 OK
+      [last_Via:]
+      [last_From:]
+      [last_To:]
+      [last_Call-ID:]
+      [last_CSeq:]
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <pause milliseconds="500"/>
+
+  <!-- Unsubscribe -->
+  <send retrans="500">
+    <![CDATA[
+
+      SUBSCRIBE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+      To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 3 SUBSCRIBE
+      Contact: <sip:moved@[local_ip]:[local_port]>
+      Max-Forwards: 70
+      Event: presence
+      Accept: application/pidf+xml
+      Expires: 0
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv response="200" rtd="true">
+  </recv>
+
+  <recv request="NOTIFY">
+    <action>
+      <ereg regexp="NOTIFY sip:moved@" search_in="msg" check_it="true"
+            assign_to="3"/>
+    </action>
+  </recv>
+
+  <send>
+    <![CDATA[
+
+      SIP/2.0 200 OK
+      [last_Via:]
+      [last_From:]
+      [last_To:]
+      [last_Call-ID:]
+      [last_CSeq:]
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <Reference variables="1,2,3"/>
+
+  <!-- definition of the response time repartition table (unit is ms)   -->
+  <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>
+
+  <!-- definition of the call length repartition table (unit is ms)     -->
+  <CallLengthRepartition value="10, 50, 100, 500, 1000, 5000, 10000"/>
+
+</scenario>

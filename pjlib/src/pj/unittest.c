@@ -124,7 +124,7 @@ PJ_DEF(void) pj_test_suite_add_case(pj_test_suite *suite, pj_test_case *tc)
  */
 static pj_uint32_t rand_int(pj_uint32_t seed)
 {
-#define M   ((pj_uint32_t)(1<<31))
+#define M   ((pj_uint32_t)1 << 31)
 #define A   ((pj_uint32_t)1103515245)
 #define C   ((pj_uint32_t)12345)
 

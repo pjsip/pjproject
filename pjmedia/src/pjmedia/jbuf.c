@@ -401,7 +401,8 @@ static pj_bool_t jb_framelist_peek(jb_framelist_t *framelist,
     if (ts)
         *ts = framelist->ts[pos];
     if (seq)
-        *seq = framelist->origin + offset;
+        *seq = framelist->origin + (pos + framelist->max_count -
+                                    framelist->head) % framelist->max_count;
 
     return PJ_TRUE;
 }

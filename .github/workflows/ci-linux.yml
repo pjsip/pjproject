@@ -277,6 +277,36 @@ jobs:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
 
+  no-fp:
+    needs: [detect-changes]
+    # any_src, not pjlib_deps: the no-FPU guarantee covers the upper layers
+    # too, e.g. pj_math_stat is used by pjmedia's RTCP code.
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.any_src == 'true'
+    runs-on: ubuntu-latest
+    name: NoFP / pjlib
+    steps:
+    - uses: actions/checkout@v5
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
+    - name: configure
+      # Build-and-test check of the no-FP configuration; it does not detect FP
+      # instructions on x86-64.
+      run: ./configure --disable-floating-point
+    - name: make
+      run: $MAKE_FAST
+    - name: pjlib-test
+      run: make pjlib-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v6
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
+
   no-threads:
     needs: [detect-changes]
     # any_src, not pjlib_deps: the no-pthread guarantee covers the upper layers
