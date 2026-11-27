@@ -1696,6 +1696,16 @@ typedef struct pjsua_callback
      * See also on_call_replace_request2() callback for the version
      * with \a pjsua_call_setting in the argument list.
      *
+     * The library does not check whether the sender is authorized to
+     * replace the call (RFC 3891 Section 3), as a user agent normally
+     * does not authenticate incoming requests (that is usually done by
+     * the SIP server). Application that needs this check should implement
+     * it in this callback, e.g. based on the sender identity asserted by
+     * a trusted SIP server (P-Asserted-Identity, RFC 3325), and reject
+     * the request when the check fails. If neither this callback nor
+     * on_call_replace_request2() is implemented, the replacement is
+     * accepted without this check.
+     *
      * @param call_id       The call ID to be replaced.
      * @param rdata         The incoming INVITE request to replace the call.
      * @param st_code       Status code to be set by application. Application
@@ -1710,6 +1720,8 @@ typedef struct pjsua_callback
     /**
      * Notify application about incoming INVITE with Replaces header.
      * Application may reject the request by setting non-2xx code.
+     * See also on_call_replace_request() about checking that the sender
+     * is authorized to replace the call.
      *
      * @param call_id       The call ID to be replaced.
      * @param rdata         The incoming INVITE request to replace the call.
