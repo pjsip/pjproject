@@ -879,12 +879,18 @@ PJ_DECL(pj_status_t) pjsip_auth_srv_init2(
  * issued. This function verifies the response in the request against the
  * credential returned by the lookup callback, but it does not check that
  * the nonce is one the application has issued and is still valid, that a
- * nonce count is not reused (replay), or that the algorithm is one that
- * was offered in the challenge. Application that needs these checks
- * should implement them, e.g. in the #pjsip_auth_lookup_cred2 callback,
- * which receives the Authorization header being verified, and record the
- * nonce count of a request only after this function has returned
- * PJ_SUCCESS for it.
+ * nonce count is not reused (replay), or that the algorithm and opaque
+ * are the ones sent in the challenge. Application that needs these checks
+ * should implement them. The nonce, algorithm and opaque can be checked
+ * before calling this function, or in the #pjsip_auth_lookup_cred2
+ * callback, which receives the Authorization header being verified (an
+ * error returned by the callback is returned by this function, with
+ * status code 403). The nonce count should be checked once this function
+ * has returned PJ_SUCCESS: record it for the nonce and reject the request
+ * if it was already recorded, as one atomic step (e.g. under a lock), so
+ * that two copies of a request handled at the same time cannot both be
+ * accepted. Without qop the request has no nonce count, so the nonce
+ * itself should then be accepted only once.
  *
  * @param auth_srv      The server authentication structure.
  * @param rdata         Incoming request to be authenticated.
@@ -915,7 +921,9 @@ PJ_DECL(pj_status_t) pjsip_auth_srv_verify( pjsip_auth_srv *auth_srv,
  * to specify a different algorithm, use #pjsip_auth_srv_challenge2.
  *
  * @param auth_srv      The server authentication structure.
- * @param qop           Optional qop value.
+ * @param qop           Optional qop value. A server should send one (e.g.
+ *                      "auth"), as RFC 3261 section 22.4 requires;
+ *                      without it, requests carry no nonce count.
  * @param nonce         Optional nonce value.
  * @param opaque        Optional opaque value.
  * @param stale         Stale indication.
@@ -940,7 +948,10 @@ PJ_DECL(pj_status_t) pjsip_auth_srv_challenge( pjsip_auth_srv *auth_srv,
  * Application must specify the algorithm to use.
  *
  * @param auth_srv       The server authentication structure.
- * @param qop            Optional qop value.
+ * @param qop            Optional qop value. A server should send one
+ *                       (e.g. "auth"), as RFC 3261 section 22.4
+ *                       requires; without it, requests carry no nonce
+ *                       count.
  * @param nonce          Optional nonce value.
  * @param opaque         Optional opaque value.
  * @param stale          Stale indication.

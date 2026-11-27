@@ -1700,9 +1700,9 @@ typedef struct pjsua_callback
      * replace the call (RFC 3891 Section 3), as a user agent normally
      * does not authenticate incoming requests (that is usually done by
      * the SIP server). Application that needs this check should implement
-     * it in this callback, e.g. based on the sender identity asserted by
-     * a trusted SIP server (P-Asserted-Identity, RFC 3325), and reject
-     * the request when the check fails. If neither this callback nor
+     * it in this callback, e.g. based on the P-Asserted-Identity (RFC 3325)
+     * of a request received from a trusted SIP server, and reject the
+     * request when the check fails. If neither this callback nor
      * on_call_replace_request2() is implemented, the replacement is
      * accepted without this check.
      *

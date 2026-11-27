@@ -114,9 +114,9 @@
  * which RFC 3891 Section 3 requires of the UA (proxies just forward the
  * Replaces header). A user agent normally does not authenticate incoming
  * requests, as that is usually done by the SIP server, so this check is
- * left to the application's own policy. The policy may use the sender
- * identity asserted by a trusted SIP server (e.g. P-Asserted-Identity,
- * RFC 3325), and should be applied before accepting the request.
+ * left to the application's own policy. The policy may use, for example,
+ * the P-Asserted-Identity (RFC 3325) of a request received from a trusted
+ * SIP server, and should be applied before accepting the request.
  *
  * The following pseudocode illustrates how application can process the
  * incoming INVITE if it wants to support Replaces extension:
@@ -127,7 +127,7 @@
   {
     pjsip_dialog *dlg, *replaced_dlg;
     pjsip_inv_session *inv;
-    pjsip_tx_data *response;
+    pjsip_tx_data *response, *tdata;
     pj_status_t status;
 
     // Check whether Replaces header is present in the request and process accordingly.
@@ -136,15 +136,15 @@
     if (status != PJ_SUCCESS) {
         // Something wrong with Replaces request.
         //
-        pj_status_t status;
         if (response) {
-            status = pjsip_endpt_send_response(endpt, rdata, response, NULL, NULL);
-            if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(tdata);
+            status = pjsip_endpt_send_response2(endpt, rdata, response,
+                                                NULL, NULL);
+            if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(response);
         } else {
             // Respond with 500 (Internal Server Error)
-            status = pjsip_endpt_respond_stateless(endpt, rdata, 500, NULL, NULL, NULL);
-            if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(tdata);
+            pjsip_endpt_respond_stateless(endpt, rdata, 500, NULL, NULL, NULL);
         }
+        return PJ_TRUE;
     }
 
     // If a dialog is to be replaced, check here that the sender is
@@ -199,6 +199,7 @@
         // Process normal INVITE without Replaces.
         ...
     }
+    return PJ_TRUE;
   }
 
  \endcode

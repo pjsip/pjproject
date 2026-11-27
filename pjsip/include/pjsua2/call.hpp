@@ -2344,9 +2344,9 @@ public:
      * replace the call (RFC 3891 Section 3), as a user agent normally
      * does not authenticate incoming requests (that is usually done by
      * the SIP server). Application that needs this check should implement
-     * it in this callback, e.g. based on the sender identity asserted by
-     * a trusted SIP server (P-Asserted-Identity, RFC 3325), and reject
-     * the request when the check fails. By default, the replacement is
+     * it in this callback, e.g. based on the P-Asserted-Identity (RFC 3325)
+     * of a request received from a trusted SIP server, and reject the
+     * request when the check fails. By default, the replacement is
      * accepted without this check.
      *
      * In this callback, application should create a new Call instance and
