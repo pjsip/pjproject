@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2020 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2019-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -424,6 +424,7 @@ static pj_status_t create_identity_from_cert(applessl_sock_t *assock,
     SecIdentityRef identity = NULL;
     OSStatus err;
     pj_status_t status;
+    const char *import_name;
 
     /* Init */
     *p_identity = NULL;
@@ -466,6 +467,7 @@ static pj_status_t create_identity_from_cert(applessl_sock_t *assock,
         }
         
 #if TARGET_OS_IPHONE
+        import_name = "SecPKCS12Import";
         err = SecPKCS12Import(cert_data, options, &items);
 #else
         {
@@ -474,10 +476,11 @@ static pj_status_t create_identity_from_cert(applessl_sock_t *assock,
                                                kSecFormatX509Cert/* DER */};
             SecExternalItemType ext_type = kSecItemTypeCertificate;
             SecItemImportExportKeyParameters key_params;
-    
+
             pj_bzero(&key_params, sizeof(key_params));
             key_params.version = SEC_KEY_IMPORT_EXPORT_PARAMS_VERSION;
             key_params.passphrase = password;
+            import_name = "SecItemImport";
 
             for (i = 0; i < (CFIndex)PJ_ARRAY_SIZE(ext_format); i++) {
                 items = NULL;
@@ -495,7 +498,7 @@ static pj_status_t create_identity_from_cert(applessl_sock_t *assock,
             CFRelease(password);
         CFRelease(cert_data);
         if (err != noErr || !items) {
-            return pj_status_from_err(assock, "SecItemImport", err);
+            return pj_status_from_err(assock, import_name, err);
         }
     
         count = CFArrayGetCount(items);
