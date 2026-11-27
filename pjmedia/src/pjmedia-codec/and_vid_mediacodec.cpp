@@ -1,5 +1,5 @@
 /*
- * Copyright (C)2020 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C)2020-2026 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1648,6 +1648,15 @@ static pj_status_t and_media_decode(pjmedia_vid_codec *codec,
             PJ_LOG(4,(THIS_FILE, "Decoder failed getting input buffer"));
             return status;
         }
+    }
+    if (and_media_data->dec_input_buf_len + buf_size >
+        and_media_data->dec_input_buf_max_size)
+    {
+        PJ_LOG(4,(THIS_FILE, "Decoder input buffer too small (%lu), "
+                  "dropping %u bytes",
+                  (unsigned long)and_media_data->dec_input_buf_max_size,
+                  buf_size));
+        buf_size = 0;
     }
     pj_memcpy(and_media_data->dec_input_buf + and_media_data->dec_input_buf_len,
               input_buf, buf_size);
