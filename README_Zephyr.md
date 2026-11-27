@@ -43,9 +43,9 @@ The sizes of the whole embedded_ua image on the AN521, Zephyr and its network st
 
 | Build | Flash | RAM, one call | RAM, four calls |
 |---|---|---|---|
-| SIP over UDP, single thread | 345 KB | 178 KB | 379 KB |
-| SIP over UDP, threads | 354 KB | 216 KB | 411 KB |
-| SIP over TLS, single thread | 454 KB | 290 KB | 498 KB |
+| SIP over UDP, single thread | 345 KB | 177 KB | 379 KB |
+| SIP over UDP, threads | 354 KB | 207 KB | 411 KB |
+| SIP over TLS, single thread | 454 KB | 299 KB | 498 KB |
 | SIP over TLS, threads | 464 KB | 329 KB | 531 KB |
 
 Most of the RAM is what the configuration sets aside rather than pjproject's own data: the heap arena for pjlib's pools, the kernel heap the media thread's stack comes from in the threaded build, and about 80 KB of network buffers, most of it the receive pool for four INVITEs at once (the LAN9118 note under Known limitations). The image is the same size however many calls are active, since calls draw on the arena at run time.
