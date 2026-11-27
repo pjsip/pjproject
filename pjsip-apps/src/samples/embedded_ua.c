@@ -263,6 +263,25 @@
  */
 #define SIP_SHUTDOWN_TIMEOUT    5
 
+/* Place this many calls to ourselves at start-up, hang them up SELF_CALL_SECS
+ * later and report the heap: a footprint check that needs no peer, for
+ * -DEMBUA_SELF_CALLS=2. UDP builds only, and each call takes two of the
+ * MAX_CALLS slots. Zephyr drops a datagram whose two endpoints are
+ * identical, so the calls leave from a second port, SIP_PORT + 1.
+ */
+#ifndef EMBUA_SELF_CALLS
+#  define EMBUA_SELF_CALLS      0
+#endif
+#if EMBUA_SELF_CALLS
+#  if CONFIG_EMBUA_SIP_TRANSPORT != SIP_UDP
+#    error EMBUA_SELF_CALLS needs the UDP transport
+#  endif
+#  if EMBUA_SELF_CALLS * 2 > MAX_CALLS
+#    error EMBUA_SELF_CALLS: each call takes two of the MAX_CALLS slots
+#  endif
+#  define SELF_CALL_SECS        5
+#endif
+
 /* Longest the main loop blocks; SIP timers wake it earlier anyway. */
 #define MAX_POLL_MSEC       1000
 
@@ -304,6 +323,11 @@ static struct global_t {
     pj_thread_t          *media_thread;
     pj_mutex_t           *media_lock;  /* guards the media clock state */
     volatile pj_bool_t    media_quit;
+#endif
+#if EMBUA_SELF_CALLS
+    pjsip_tpselector      self_sel;    /* the calls' own transport */
+    pj_time_val           self_hangup; /* when to end them, {0,0} if done */
+    pj_bool_t             self_done;   /* heap reported */
 #endif
 } g;
 
@@ -364,6 +388,9 @@ static void send_unregister(void);
 #endif
 static unsigned media_poll(void);
 static unsigned active_calls(void);
+#if EMBUA_SELF_CALLS
+static pj_status_t make_call(const pj_str_t *dst_uri);
+#endif
 #if CONFIG_EMBUA_USE_MEDIA_THREAD
 static int media_thread_proc(void *arg);
 #endif
@@ -893,6 +920,29 @@ static void init(void)
         send_register();
     }
 #endif
+
+#if EMBUA_SELF_CALLS
+    {
+        pjsip_transport *tp;
+        pj_str_t uri;
+        int i;
+
+        pj_sockaddr_init(PJ_AF_INET, &addr, NULL, (pj_uint16_t)(SIP_PORT+1));
+        CHKS( pjsip_udp_transport_start(g.endpt, &addr.ipv4, NULL, 1, &tp),
+              45);
+        g.self_sel.type = PJSIP_TPSELECTOR_TRANSPORT;
+        g.self_sel.u.transport = tp;
+
+        /* Our Contact, without its angle brackets */
+        uri.ptr = g.contact_buf + 1;
+        uri.slen = g.contact.slen - 2;
+        for (i=0; i<EMBUA_SELF_CALLS; ++i)
+            make_call(&uri);
+
+        pj_gettimeofday(&g.self_hangup);
+        g.self_hangup.sec += SELF_CALL_SECS;
+    }
+#endif
 }
 
 
@@ -978,6 +1028,26 @@ int main(void)
             pj_gettimeofday(&now);
             if (PJ_TIME_VAL_GTE(now, g.reg_due))
                 send_register();
+        }
+#endif
+
+#if EMBUA_SELF_CALLS
+        if (g.self_hangup.sec) {
+            pj_time_val now;
+            int i;
+
+            pj_gettimeofday(&now);
+            if (PJ_TIME_VAL_GTE(now, g.self_hangup)) {
+                pj_bzero(&g.self_hangup, sizeof(g.self_hangup));
+                for (i=0; i<MAX_CALLS; ++i) {
+                    if (g_calls[i].inv && g_calls[i].inv->role == PJSIP_ROLE_UAC)
+                        hangup_call(&g_calls[i], PJSIP_SC_DECLINE);
+                }
+            }
+        } else if (!g.self_done && active_calls() == 0) {
+            g.self_done = PJ_TRUE;
+            dump_heap();
+            PJ_LOG(3,(THIS_FILE, "Self calls done"));
         }
 #endif
     }
@@ -1266,6 +1336,11 @@ static pj_status_t make_call(const pj_str_t *dst_uri)
                                   &call->inv);
     if (status != PJ_SUCCESS)
         goto on_error;
+
+#if EMBUA_SELF_CALLS
+    /* Only now: a dialog without a session is destroyed when unlocked */
+    pjsip_dlg_set_transport(dlg, &g.self_sel);
+#endif
 
     /* The INVITE session owns the dialog now, and may destroy it before a
      * failed pjsip_inv_send_msg() returns.

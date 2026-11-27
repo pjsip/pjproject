@@ -24,7 +24,9 @@ concurrency:
 # catches both, so every test suite and sample is built for native_sim and
 # for the Cortex-M33 AN521, where the link fails when the image outgrows the
 # RAM, and pjlib-test, which exercises the OS abstraction the port consists
-# of, is run on native_sim in both thread modes.
+# of, is run on native_sim in both thread modes. Growth below that wall is
+# caught by the footprint job, which compares the shipped UDP image and the
+# heap two calls need with a committed baseline.
 jobs:
   detect-changes:
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
@@ -123,3 +125,60 @@ jobs:
       with:
         name: ${{ matrix.scenario }}
         path: twister-out/**/*.log
+
+  # Footprint: embedded_ua for the AN521 in its shipped UDP build, run under
+  # QEMU with two calls to itself (EMBUA_SELF_CALLS, no network beyond
+  # loopback), and its flash, RAM and heap peak compared with its entry in
+  # zephyr/ci-footprint-limits.json. Growth beyond 2% fails; the entry is
+  # refreshed by hand, from the JSON the check prints.
+  footprint:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.zephyr_deps == 'true'
+    runs-on: ubuntu-latest
+    name: footprint on the AN521
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        path: pjproject
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+    - name: Set up the Zephyr workspace and SDK
+      uses: zephyrproject-rtos/action-zephyr-setup@v1
+      with:
+        app-path: pjproject
+        toolchains: arm-zephyr-eabi
+    - name: Install QEMU
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends qemu-system-arm
+    - name: Select the Zephyr preset
+      run: |
+        printf '#define PJ_CONFIG_ZEPHYR 1\n#include <pj/config_site_sample.h>\n' > pjproject/pjlib/include/pj/config_site.h
+    - name: Build
+      run: |
+        west build -p always -b mps2/an521/cpu0 -d build pjproject/zephyr/samples/embedded_ua -- -DEXTRA_CONF_FILE=overlay-self-calls.conf -DEXTRA_CFLAGS=-DEMBUA_SELF_CALLS=2 2>&1 | tee build.log
+    - name: Run the self calls
+      run: |
+        sh pjproject/zephyr/samples/embedded_ua/run-qemu.sh build -nic none > run.log 2>&1 &
+        for i in $(seq 1 120); do
+          grep -q 'Self calls done' run.log && break
+          sleep 1
+        done
+        pkill qemu-system-arm || true
+        if ! grep -q 'Self calls done' run.log; then
+          tail -40 run.log
+          echo "::error::embedded_ua did not finish its two calls to itself within 120 s under QEMU (no 'Self calls done' in run.log, attached as the footprint artifact): the image did not boot, the calls failed, or it ran out of heap"
+          exit 1
+        fi
+    - name: Compare with the baseline
+      run: |
+        python3 pjproject/zephyr/scripts/footprint_check.py an521-qemu build.log run.log pjproject/zephyr/ci-footprint-limits.json
+    - name: Upload the logs
+      if: failure()
+      uses: actions/upload-artifact@v6
+      with:
+        name: footprint
+        path: |
+          build.log
+          run.log

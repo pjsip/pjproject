@@ -547,6 +547,8 @@ embedded_ua has no console input. Send it a SIP MESSAGE (in pjsua: use `i`) with
 - **`mem`** logs its pool usage (and the C heap, when built with `CONFIG_SYS_HEAP_RUNTIME_STATS=y`),
 - **`quit`** ends every call, unregisters and exits.
 
+Built with `-DEXTRA_CFLAGS=-DEMBUA_SELF_CALLS=2` and the [`overlay-self-calls.conf`](zephyr/samples/embedded_ua/overlay-self-calls.conf) overlay, the sample instead places two calls to itself at start-up, from a second UDP port, hangs them up five seconds later and logs the heap's peak followed by "Self calls done". That is the footprint check CI runs on the AN521 (section 5), and a quick way to see a build's heap peak on any target without a PBX: `run-qemu.sh <build dir> -nic none` needs no TAP for it. UDP builds only.
+
 ### pjsua-lib: simple_pjsua
 
 [`simple_pjsua.c`](pjsip-apps/src/samples/simple_pjsua.c), pjsua-lib's minimal user agent, builds as the Zephyr sample in [`zephyr/samples/simple_pjsua`](zephyr/samples/simple_pjsua/):
@@ -631,12 +633,13 @@ west twister -T $PJ_DIR/zephyr/tests -p native_sim/native/64 -p mps2/an521/cpu0 
 
 ### Continuous integration
 
-The "CI Zephyr" workflow ([`.github/workflows/ci-zephyr.yml`](.github/workflows/ci-zephyr.yml)) runs on every pull request that touches the libraries, the samples or the Zephyr files, in the workspace that `west.yml` describes (section 1), with the SDK's Arm toolchain cached between runs. Four jobs in parallel:
+The "CI Zephyr" workflow ([`.github/workflows/ci-zephyr.yml`](.github/workflows/ci-zephyr.yml)) runs on every pull request that touches the libraries, the samples or the Zephyr files, in the workspace that `west.yml` describes (section 1), with the SDK's Arm toolchain cached between runs. Five jobs in parallel:
 
 - every test suite and sample built for native_sim
 - the same built for the AN521, where the link fails when an image outgrows 640 KB of RAM
 - pjlib-test run on native_sim, single threaded
 - pjlib-test run on native_sim, with threads
+- the footprint check: embedded_ua's shipped UDP build for the AN521, run under QEMU with two calls to itself, and its flash, RAM and heap peak compared with the target's entry in [`zephyr/ci-footprint-limits.json`](zephyr/ci-footprint-limits.json) by [`zephyr/scripts/footprint_check.py`](zephyr/scripts/footprint_check.py); growth beyond 2% fails the job, and a change that legitimately grows the image updates the entry with the JSON the check prints
 
 The other suites are built but not run: what Zephyr does differently they found once, and those things are fixed in the tests. What a library change breaks on Zephyr afterwards is the build, a call into something its libc or POSIX layer lacks, or the footprint, and the builds catch both in a fraction of the time the suites take.
 
@@ -917,7 +920,8 @@ The Zephyr-specific parts are few, and this is where to look when something need
 - The `PJ_CONFIG_ZEPHYR` preset in `pjlib/include/pj/config_site_sample.h`, which sizes pjsip and pjmedia for a small endpoint; `config_site.h` selects it.
 - `zephyr/tests/<lib>` and `zephyr/tests/overlay-threads.conf`: the five test applications of section 5, each with the `testcase.yaml` that twister runs and, in `boards/`, the heap and stack sizes its tests need on each board. Their sources are the libraries' own, in `<lib>/src/<lib>-test` (`pjmedia/src/test`, `pjsip/src/test`).
 - `zephyr/snippets/pjproject-target`: a [snippet](https://docs.zephyrproject.org/latest/build/snippets/index.html) with what pjproject's applications need on each target beyond Zephyr's board files: the NUCLEO-H563ZI, and QEMU's AN521 and native_sim as its stand-ins. Each file under its `boards/` says what it sets and why. The sample and the test select it in their `CMakeLists.txt`; a `-S` on the command line replaces that selection, so give `-S pjproject-target` too when adding another snippet. It is registered through `snippet_root` in `module.yml` and so available to any application that uses the module.
-- `zephyr/samples/embedded_ua`: the sample's `CMakeLists.txt`, `Kconfig`, `prj.conf`, `run-qemu.sh` and, in `boards/`, the static TAP address of the two emulated boards. The source is `pjsip-apps/src/samples/embedded_ua.c`, the same file that builds on Linux, Windows and macOS; on Zephyr it reads its settings from the `CONFIG_EMBUA_*` options.
+- `zephyr/samples/embedded_ua`: the sample's `CMakeLists.txt`, `Kconfig`, `prj.conf`, the three overlays, `run-qemu.sh` and, in `boards/`, the static TAP address of the two emulated boards. The source is `pjsip-apps/src/samples/embedded_ua.c`, the same file that builds on Linux, Windows and macOS; on Zephyr it reads its settings from the `CONFIG_EMBUA_*` options.
+- `zephyr/ci-footprint-limits.json` and `zephyr/scripts/footprint_check.py`: the per-target limits and the check of CI's footprint job (section 5).
 
 Random numbers come from Zephyr's `sys_rand32_get()` rather than the C library's `rand()`, which is unseeded on Zephyr, and `pj_csrand_bytes()` from `sys_csrand_get()`, Zephyr's cryptographically secure generator, where the configuration has one (`CONFIG_HARDWARE_DEVICE_CS_GENERATOR`, which an entropy driver enables by default). Zephyr's `sockaddr_in` is 8 bytes rather than 16, which pjlib accommodates. Zephyr's `sockaddr_in6` differs from the BSD layout in ways pjlib does not yet accommodate, which is why IPv6 is off.
 
