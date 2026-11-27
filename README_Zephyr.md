@@ -43,10 +43,10 @@ The sizes of the whole embedded_ua image on the AN521, Zephyr and its network st
 
 | Build | Flash | RAM, one call | RAM, four calls |
 |---|---|---|---|
-| SIP over UDP, single thread | 342 KB | 178 KB | 371 KB |
-| SIP over UDP, threads | 351 KB | 216 KB | 411 KB |
-| SIP over TLS, single thread | 450 KB | 290 KB | 492 KB |
-| SIP over TLS, threads | 460 KB | 329 KB | 531 KB |
+| SIP over UDP, single thread | 345 KB | 178 KB | 379 KB |
+| SIP over UDP, threads | 354 KB | 216 KB | 411 KB |
+| SIP over TLS, single thread | 454 KB | 290 KB | 498 KB |
+| SIP over TLS, threads | 464 KB | 329 KB | 531 KB |
 
 Most of the RAM is what the configuration sets aside rather than pjproject's own data: the heap arena for pjlib's pools, the kernel heap the media thread's stack comes from in the threaded build, and about 80 KB of network buffers, most of it the receive pool for four INVITEs at once (the LAN9118 note under Known limitations). The image is the same size however many calls are active, since calls draw on the arena at run time.
 
@@ -56,18 +56,18 @@ What the arena holds, measured on the AN521 in the single-threaded UDP build wit
 |---|---|
 | Registered, idle | 39 KB |
 | Each established call | about 48 KB |
-| Four concurrent calls | 219 KB, peak 224 KB while they were set up |
+| Four concurrent calls | 224 KB, peak 232 KB while they were set up |
 
 On the NUCLEO-H563ZI the heap behaves as on the emulator: the same pools from the same arena, and the four-call peak is the same number of bytes in the UDP builds and within 400 bytes in the TLS builds. The images are larger by Zephyr's drivers for the board and the DHCP client. The board's four images as they ship, each with the heap's peak while **four** INVITEs arrived at once and the **four** calls ran, the AN521's peak in the same test, and the arena it has to fit in:
 
 | Build | Flash | RAM | Heap peak, four calls | Same on AN521 | Arena |
 |---|---|---|---|---|---|
-| SIP over UDP, single thread | 364 KB | 382 KB | 224 KB | 224 KB | 244 KB |
-| SIP over UDP, threads | 372 KB | 422 KB | 236 KB | 244 KB | 257 KB |
-| SIP over TLS, single thread | 470 KB | 503 KB | 284 KB | 284 KB | 299 KB |
+| SIP over UDP, single thread | 364 KB | 390 KB | 232 KB | 232 KB | 244 KB |
+| SIP over UDP, threads | 372 KB | 422 KB | 243 KB | 243 KB | 257 KB |
+| SIP over TLS, single thread | 470 KB | 509 KB | 284 KB | 284 KB | 299 KB |
 | SIP over TLS, threads | 479 KB | 542 KB | 297 KB | 297 KB | 312 KB |
 
-So the arena has 13 to 21 KB to spare at the four-call peak; an application with less margin than the sample should measure on its own board, with `mem`, before trimming it. In the threaded builds the kernel heap holds the media thread's stack and 1 KB is left, as intended: nothing else is allocated from it after start-up.
+So the arena has 12 to 15 KB to spare at the four-call peak; an application with less margin than the sample should measure on its own board, with `mem`, before trimming it. In the threaded builds the kernel heap holds the media thread's stack and 1 KB is left, as intended: nothing else is allocated from it after start-up.
 
 > [!NOTE]
 > **G.722 needs a larger arena.** These arenas are sized for G.711. With G.722 (section 8) each call's jitter buffer and frames are for 16 kHz, and the same four-call burst on the board peaked at 240 KB, and at 243 KB when a call had ended a few seconds before (its pools linger until the transaction timers run out), past the UDP arena: with it the sample aborted on "No memory" at the fourth call. For G.722 set `CONFIG_COMMON_LIBC_MALLOC_ARENA_SIZE` to 256 KB over UDP without threads, verified, and add the same 16 KB to the other three.

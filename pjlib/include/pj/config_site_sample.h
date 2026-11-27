@@ -701,10 +701,12 @@
     /* Codecs the media endpoint can register, each a descriptor in the
      * codec manager and an entry in every SDP negotiator: G.711 is two,
      * G.722 one, L16 two (its 44.1 kHz pair; each PJMEDIA_CODEC_L16_HAS_*
-     * rate turned on adds one, so raise this with them).
+     * rate turned on adds one, so raise this with them), and two spare, so
+     * that a build with no codec at all still has a table the codec sort
+     * compiles against without bound warnings.
      */
     #ifndef PJMEDIA_CODEC_MGR_MAX_CODECS
-    #   define PJMEDIA_CODEC_MGR_MAX_CODECS     (2 * PJMEDIA_HAS_G711_CODEC + \
+    #   define PJMEDIA_CODEC_MGR_MAX_CODECS     (2 + 2 * PJMEDIA_HAS_G711_CODEC + \
                                                  PJMEDIA_HAS_G722_CODEC + \
                                                  2 * PJMEDIA_HAS_L16_CODEC)
     #endif

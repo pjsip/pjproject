@@ -1020,6 +1020,15 @@ struct hdr_test_t
     },
 
     {
+        /* Overflowing Require: fails, unlike the other array headers */
+        "Require", NULL,
+        "a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, " \
+        "a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a",
+        NULL,
+        HDR_FLAG_PARSE_FAIL
+    },
+
+    {
         /* Accept with params */
         "Accept", NULL,
         "application/*;p1=v1, text/plain",
