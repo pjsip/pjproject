@@ -1090,9 +1090,8 @@ static pj_status_t setup_vid_capture(pjsua_call_media *call_med)
 {
     pjsua_acc *acc_enc = &pjsua_var.acc[call_med->call->acc_id];
     pjmedia_port *media_port;
-    pjsua_vid_win *w;
+    pjsua_vid_win *w = NULL;
     pjsua_vid_win_id wid;
-    pj_bool_t just_created = PJ_FALSE;
     pj_status_t status;
 
     /* Retrieve stream encoding port */
@@ -1122,8 +1121,6 @@ static pj_status_t setup_vid_capture(pjsua_call_media *call_med)
                                 &wid);
         if (status != PJ_SUCCESS)
             goto on_error;
-
-        just_created = PJ_TRUE;
     }
 
     w = &pjsua_var.win[wid];
@@ -1139,8 +1136,10 @@ static pj_status_t setup_vid_capture(pjsua_call_media *call_med)
     if (status != PJ_SUCCESS)
         goto on_error;
 
-    /* Start capturer */
-    if (just_created) {
+    /* Start capturer if it is not running. The window may be reused from
+     * a previous failed attempt where the capturer could not be started.
+     */
+    if (!pjmedia_vid_port_is_running(w->vp_cap)) {
         status = pjmedia_vid_port_start(w->vp_cap);
         if (status != PJ_SUCCESS)
             goto on_error;
@@ -1158,6 +1157,18 @@ static pj_status_t setup_vid_capture(pjsua_call_media *call_med)
     return PJ_SUCCESS;
 
 on_error:
+    if (w) {
+#if ENABLE_EVENT
+        media_event_unsubscribe(NULL, &call_media_on_event, call_med,
+                                w->vp_cap);
+#endif
+        /* Undo the capture->encoder connection if it was queued or
+         * established, so that a retry or a capture device change does
+         * not see stale state (the call never acquired the window).
+         */
+        pjsua_vid_conf_disconnect(w->cap_slot,
+                                  call_med->strm.v.strm_enc_slot);
+    }
     PJSUA_UNLOCK();
     return status;
 }
@@ -1246,22 +1257,34 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 
             status = pjmedia_vid_dev_get_info(call_med->strm.v.cap_dev,
                                               &dev_info);
-            if (status != PJ_SUCCESS)
-                goto on_error;
+            if (status != PJ_SUCCESS) {
+                /* The capture device may be (temporarily) unavailable.
+                 * This is only an optimization to match the encoder
+                 * format with the capture device, so don't fail the
+                 * media update; any real capture failure will be
+                 * reported when setting up the capture.
+                 */
+                PJ_PERROR(4,(THIS_FILE, status,
+                             "Call %d media %d: cannot get info of video "
+                             "capture device %d, format matching skipped",
+                             call->index, call_med->idx,
+                             call_med->strm.v.cap_dev));
+                status = PJ_SUCCESS;
+            } else {
+                /* Find matched format ID */
+                for (i = 0; i < codec_info->dec_fmt_id_cnt; ++i) {
+                    for (j = 0; j < dev_info.fmt_cnt; ++j) {
+                        if (codec_info->dec_fmt_id[i] ==
+                            (pjmedia_format_id)dev_info.fmt[j].id)
+                        {
+                            /* Apply the matched format ID to the codec */
+                            si->codec_param->dec_fmt.id =
+                                                    codec_info->dec_fmt_id[i];
 
-            /* Find matched format ID */
-            for (i = 0; i < codec_info->dec_fmt_id_cnt; ++i) {
-                for (j = 0; j < dev_info.fmt_cnt; ++j) {
-                    if (codec_info->dec_fmt_id[i] == 
-                        (pjmedia_format_id)dev_info.fmt[j].id)
-                    {
-                        /* Apply the matched format ID to the codec */
-                        si->codec_param->dec_fmt.id = 
-                                                codec_info->dec_fmt_id[i];
-
-                        /* Force outer loop to break */
-                        i = codec_info->dec_fmt_id_cnt;
-                        break;
+                            /* Force outer loop to break */
+                            i = codec_info->dec_fmt_id_cnt;
+                            break;
+                        }
                     }
                 }
             }
@@ -1321,25 +1344,6 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
                                           PJMEDIA_DIR_ENCODING);
         if (status != PJ_SUCCESS)
             goto on_error;
-
-        /* Schedule start stream encoding */
-        if (acc->cfg.vid_out_auto_transmit) {
-            pjmedia_stream_common *c_strm = (pjmedia_stream_common*)
-                                            call_med->strm.v.stream;
-            pj_grp_lock_add_ref(c_strm->grp_lock);
-            if (pjsua_schedule_timer2(&timer_on_start_vid_stream_encoding,
-                                      call_med->strm.v.stream,
-                                      PJSUA_VIDEO_STREAM_DELAY_START_ENCODE)
-                != PJ_SUCCESS)
-            {
-                if (PJSUA_VIDEO_STREAM_DELAY_START_ENCODE) {
-                    PJ_LOG(4,(THIS_FILE, "Failed in scheduling video stream "
-                                         "encoding start, start it now."));
-                }
-                /* Just in case there is failure in scheduling */
-                timer_on_start_vid_stream_encoding(call_med->strm.v.stream);
-            }
-        }
 
         if (call_med->prev_state == PJSUA_CALL_MEDIA_NONE)
             pjmedia_vid_stream_send_rtcp_sdes(call_med->strm.v.stream);
@@ -1449,8 +1453,42 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 
             if (!call->local_hold && acc->cfg.vid_out_auto_transmit) {
                 status = setup_vid_capture(call_med);
-                if (status != PJ_SUCCESS)
-                    goto on_error;
+                if (status != PJ_SUCCESS) {
+                    /* The capture device may be (temporarily) unavailable,
+                     * e.g. camera permission revoked or the app is in the
+                     * background on mobile. This should not fail the media
+                     * update: keep the stream up for receiving with the
+                     * encoding left paused. The application can retry
+                     * later with pjsua_call_set_vid_strm(
+                     * PJSUA_CALL_VID_STRM_START_TRANSMIT).
+                     */
+                    PJ_PERROR(3,(THIS_FILE, status,
+                                 "Call %d media %d: failed to setup video "
+                                 "capture, TX will remain paused",
+                                 call->index, call_med->idx));
+                    status = PJ_SUCCESS;
+                } else {
+                    /* Schedule start stream encoding */
+                    pjmedia_stream_common *c_strm =
+                                        (pjmedia_stream_common*)
+                                        call_med->strm.v.stream;
+                    pj_grp_lock_add_ref(c_strm->grp_lock);
+                    if (pjsua_schedule_timer2(
+                            &timer_on_start_vid_stream_encoding,
+                            call_med->strm.v.stream,
+                            PJSUA_VIDEO_STREAM_DELAY_START_ENCODE)
+                        != PJ_SUCCESS)
+                    {
+                        if (PJSUA_VIDEO_STREAM_DELAY_START_ENCODE) {
+                            PJ_LOG(4,(THIS_FILE, "Failed in scheduling video "
+                                             "stream encoding start, start "
+                                             "it now."));
+                        }
+                        /* Just in case there is failure in scheduling */
+                        timer_on_start_vid_stream_encoding(
+                                                call_med->strm.v.stream);
+                    }
+                }
             }
 
             pj_log_pop_indent();
@@ -2823,9 +2861,13 @@ static pj_status_t call_set_tx_video(pjsua_call *call,
             pjsua_vid_conf_disconnect(w->cap_slot,
                                       call_med->strm.v.strm_enc_slot);
 
-            /* Decrement ref count of the video window */
-            dec_vid_win(call_med->strm.v.cap_win_id);
-            call_med->strm.v.cap_win_id = PJSUA_INVALID_ID;
+            /* Decrement ref count of the video window. The call may not
+             * hold the window when its capture setup previously failed.
+             */
+            if (call_med->strm.v.cap_win_id != PJSUA_INVALID_ID) {
+                dec_vid_win(call_med->strm.v.cap_win_id);
+                call_med->strm.v.cap_win_id = PJSUA_INVALID_ID;
+            }
         }
         
         PJSUA_UNLOCK();
