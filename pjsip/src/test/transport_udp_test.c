@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -20,6 +20,7 @@
 #include "test.h"
 #include <pjsip.h>
 #include <pjlib.h>
+#include <pj/compat/socket.h>
 
 #define THIS_FILE   "transport_udp_test.c"
 
@@ -187,3 +188,186 @@ int transport_udp_test(void)
     /* Done */
     return 0;
 }
+
+#if PJ_HAS_THREADS
+
+#define RESTART_TEST_PORT   (TEST_UDP_PORT + 20)
+
+#if defined(PJ_WIN32) && PJ_WIN32!=0
+#   define RESTART_ADDR_IN_USE  PJ_STATUS_FROM_OS(WSAEADDRINUSE)
+#else
+#   define RESTART_ADDR_IN_USE  PJ_STATUS_FROM_OS(EADDRINUSE)
+#endif
+
+/* Each restart takes a new ioqueue key, freed only after
+ * PJ_IOQUEUE_KEY_FREE_DELAY: more loops can run out of keys.
+ */
+enum { RESTART_THREADS = 2, RESTART_LOOP = 12, RESTART_RETRY = 50 };
+
+static struct restart_test
+{
+    pjsip_transport *tp;
+    pj_sockaddr      bind_addr;
+    pj_sock_t        flood_sock;
+    pj_atomic_t     *quit;
+    pj_status_t      status[RESTART_THREADS];
+} rt;
+
+static int restart_poll_thread(void *arg)
+{
+    PJ_UNUSED_ARG(arg);
+    while (!pj_atomic_get(rt.quit)) {
+        pj_time_val timeout = {0, 1};
+        pjsip_endpt_handle_events(endpt, &timeout);
+    }
+    return 0;
+}
+
+static int restart_flood_thread(void *arg)
+{
+    pj_sockaddr_in dst;
+    pj_str_t s;
+
+    PJ_UNUSED_ARG(arg);
+    (void)pj_sockaddr_in_init(&dst, pj_cstr(&s, "127.0.0.1"),
+                              RESTART_TEST_PORT);
+    while (!pj_atomic_get(rt.quit)) {
+        pj_ssize_t len = 4;
+        (void)pj_sock_sendto(rt.flood_sock, "\r\n\r\n", &len, 0, &dst,
+                             sizeof(dst));
+        pj_thread_sleep(1);
+    }
+    return 0;
+}
+
+/* Restart the transport, retrying while the port is still in use: on some
+ * platforms the old socket keeps the port until the thread polling the
+ * ioqueue returns from select().
+ */
+static pj_status_t restart_tp(void)
+{
+    pj_status_t status;
+    int i = 0;
+
+    for (;;) {
+        status = pjsip_udp_transport_restart2(rt.tp,
+                                        PJSIP_UDP_TRANSPORT_DESTROY_SOCKET,
+                                        PJ_INVALID_SOCKET, &rt.bind_addr,
+                                        NULL);
+        if (status != RESTART_ADDR_IN_USE || ++i == RESTART_RETRY)
+            break;
+        pj_thread_sleep(2);
+    }
+    return status;
+}
+
+static int restart_thread(void *arg)
+{
+    unsigned idx = (unsigned)(pj_ssize_t)arg;
+    int i;
+
+    for (i = 0; i < RESTART_LOOP; ++i) {
+        pj_status_t status = restart_tp();
+
+        if (status != PJ_SUCCESS && rt.status[idx] == PJ_SUCCESS)
+            rt.status[idx] = status;
+        pj_thread_sleep(1);
+    }
+    return 0;
+}
+
+/*
+ * Restarting a UDP transport from several threads at once while it
+ * receives packets.
+ */
+int transport_udp_restart_test(void)
+{
+    pj_pool_t *pool;
+    pj_thread_t *poll_th = NULL, *flood_th = NULL;
+    pj_thread_t *th[RESTART_THREADS];
+    char host_port[32];
+    unsigned i, th_cnt = 0;
+    int rtt, rc = 0;
+    pj_status_t status;
+
+    pj_bzero(&rt, sizeof(rt));
+    rt.flood_sock = PJ_INVALID_SOCKET;
+    pool = pjsip_endpt_create_pool(endpt, "udprestart", 512, 512);
+    PJ_TEST_NOT_NULL(pool, NULL, return -10);
+
+    PJ_TEST_SUCCESS(pj_atomic_create(pool, 0, &rt.quit), NULL,
+                    {rc = -15; goto on_return;});
+    PJ_TEST_SUCCESS(pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0,
+                                   &rt.flood_sock),
+                    NULL, {rc = -17; goto on_return;});
+
+    (void)pj_sockaddr_init(pj_AF_INET(), &rt.bind_addr, NULL,
+                           RESTART_TEST_PORT);
+    PJ_TEST_SUCCESS(pjsip_udp_transport_start(endpt, &rt.bind_addr.ipv4, NULL,
+                                              1, &rt.tp),
+                    NULL, {rc = -20; goto on_return;});
+
+    PJ_TEST_SUCCESS(pj_thread_create(pool, "udprpoll", &restart_poll_thread,
+                                     NULL, 0, 0, &poll_th),
+                    NULL, {rc = -30; goto on_return;});
+    PJ_TEST_SUCCESS(pj_thread_create(pool, "udprflood", &restart_flood_thread,
+                                     NULL, 0, 0, &flood_th),
+                    NULL, {rc = -40; goto on_return;});
+
+    for (i = 0; i < RESTART_THREADS; ++i) {
+        PJ_TEST_SUCCESS(pj_thread_create(pool, "udprestart", &restart_thread,
+                                         (void*)(pj_ssize_t)i, 0, 0,
+                                         &th[th_cnt]),
+                        NULL, {rc = -50; goto on_return;});
+        ++th_cnt;
+    }
+
+on_return:
+    for (i = 0; i < th_cnt; ++i) {
+        pj_thread_join(th[i]);
+        pj_thread_destroy(th[i]);
+        if (rc == 0)
+            PJ_TEST_SUCCESS(rt.status[i], NULL, rc = -55);
+    }
+
+    /* A restart must still succeed after the concurrent ones */
+    if (rc == 0 && rt.tp) {
+        PJ_TEST_SUCCESS(restart_tp(), NULL, rc = -60);
+    }
+
+    if (rt.quit)
+        pj_atomic_set(rt.quit, 1);
+    if (flood_th) {
+        pj_thread_join(flood_th);
+        pj_thread_destroy(flood_th);
+    }
+    if (poll_th) {
+        pj_thread_join(poll_th);
+        pj_thread_destroy(poll_th);
+    }
+    if (rt.flood_sock != PJ_INVALID_SOCKET)
+        pj_sock_close(rt.flood_sock);
+
+    /* And the transport must still receive */
+    if (rc == 0) {
+        pj_ansi_snprintf(host_port, sizeof(host_port), "127.0.0.1:%d",
+                         RESTART_TEST_PORT);
+        PJ_TEST_EQ(transport_send_recv_test(PJSIP_TRANSPORT_UDP, rt.tp,
+                                            host_port, &rtt), 0,
+                   NULL, rc = -65);
+    }
+
+    if (rt.tp) {
+        pjsip_transport_dec_ref(rt.tp);
+        status = pjsip_transport_destroy(rt.tp);
+        if (rc == 0 && status != PJ_SUCCESS)
+            rc = -70;
+    }
+    flush_events(500);
+    if (rt.quit)
+        pj_atomic_destroy(rt.quit);
+    pj_pool_release(pool);
+    return rc;
+}
+
+#endif  /* PJ_HAS_THREADS */

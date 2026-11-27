@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -265,6 +265,12 @@ PJ_DECL(pj_sock_t) pjsip_udp_transport_get_socket(pjsip_transport *transport);
  *    flag when calling this function, and specify a new socket when
  *    calling #pjsip_udp_transport_restart().
  *
+ * Pausing and restarting the same transport are serialized: this function
+ * waits for a restart running in another thread, which waits for the read
+ * callbacks to finish. So, like #pjsip_udp_transport_restart2(), it must
+ * not be called from a callback of this transport or while holding a lock
+ * that the receive path may take.
+ *
  * @param transport     The UDP transport.
  * @param option        Pause option.
  *
@@ -301,6 +307,9 @@ PJ_DECL(pj_status_t) pjsip_udp_transport_pause(pjsip_transport *transport,
  * the read operation tries to acquire the same lock held by the thread calling
  * this method. 
  * Please see https://github.com/pjsip/pjproject/pull/2731 for more details. 
+ *
+ * Restarts and pauses of the same transport are serialized: a call made
+ * while another thread restarts the transport waits for it to finish.
  *
  * @param transport     The UDP transport.
  * @param option        Restart option.
@@ -354,6 +363,9 @@ PJ_DECL(pj_status_t) pjsip_udp_transport_restart(pjsip_transport *transport,
  * the read operation tries to acquire the same lock held by the thread calling
  * this method. 
  * Please see https://github.com/pjsip/pjproject/pull/2731 for more details.
+ *
+ * Restarts and pauses of the same transport are serialized: a call made
+ * while another thread restarts the transport waits for it to finish.
  *
  * @param transport     The UDP transport.
  * @param option        Restart option.
