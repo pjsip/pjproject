@@ -169,6 +169,9 @@
     <ClInclude Include="..\include\pjlib-util\srv_resolver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\pjlib-util\resolver_internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\include\pjlib-util\string.h">
       <Filter>Header Files</Filter>
     </ClInclude>

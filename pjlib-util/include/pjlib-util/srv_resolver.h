@@ -184,7 +184,10 @@ typedef void pj_dns_srv_resolver_cb(void *user_data,
  *                      was started. If this pointer is specified, a NULL will
  *                      be returned if the resolution has completed
  *                      synchronously in this function, e.g. when all the
- *                      responses are available in the cache.
+ *                      responses are available in the cache. A query object
+ *                      keeps the memory of the resolver until the callback
+ *                      is called or the query is cancelled, so that it can
+ *                      be cancelled after the resolver is destroyed.
  *
  * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
@@ -202,11 +205,29 @@ PJ_DECL(pj_status_t) pj_dns_srv_resolve(const pj_str_t *domain_name,
 /**
  * Cancel an outstanding DNS SRV query.
  *
+ * The memory of the query must be kept until this function returns
+ * PJ_SUCCESS or the callback has been called.
+ *
+ * This must not be called while the query's callback is running in another
+ * thread: serialize the two with a lock the callback also takes, as the
+ * STUN socket and the TURN session do. Once the callback has been called,
+ * the query no longer keeps the resolver alive, so a cancel racing the end
+ * of the callback could reach a resolver that another thread has already
+ * destroyed.
+ *
  * @param query     The pending asynchronous query to be cancelled.
  * @param notify    If non-zero, the callback will be called with failure
  *                  status to notify that the query has been cancelled.
  *
- * @return          PJ_SUCCESS on success, or the appropriate error code,
+ * @return          PJ_SUCCESS if the query has been cancelled: the callback
+ *                  will not be called anymore, other than by this function
+ *                  when \a notify is set.
+ *                  PJ_EPENDING if another thread is processing a DNS answer
+ *                  or timeout of the query: the callback will still be
+ *                  called once, with a failure status, regardless of
+ *                  \a notify.
+ *                  PJ_EINVALIDOP if the resolution has completed and the
+ *                  callback has been called.
  */
 PJ_DECL(pj_status_t) pj_dns_srv_cancel_query(pj_dns_srv_async_query *query,
                                              pj_bool_t notify);

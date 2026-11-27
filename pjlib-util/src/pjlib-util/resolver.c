@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjlib-util/resolver.h>
+#include "resolver_internal.h"
 #include <pjlib-util/errno.h>
 #include <pjlib-util/hmac_sha1.h>
 #include <pj/compat/socket.h>
@@ -167,6 +168,8 @@ struct pj_dns_async_query
     unsigned             options;       /**< Query options.                 */
     void                *user_data;     /**< Application data.              */
     pj_dns_callback     *cb;            /**< Callback to be called.         */
+    pj_bool_t            cb_dropped;    /**< Callback is cleared without
+                                             anyone going to call it.       */
     struct query_head    child_head;    /**< Child queries list head.       */
     unsigned             cache_gen;     /**< cache_gen of the resolver when
                                              the query started.             */
@@ -376,6 +379,14 @@ static pj_status_t init_sock(pj_dns_resolver *resv)
     if (status != PJ_SUCCESS)
         return status;
 
+    /* Answers are delivered with the lock released, see on_read_complete().
+     * Without concurrency, the ioqueue may hold the key lock, which is that
+     * lock, around the callback.
+     */
+    status = pj_ioqueue_set_concurrency(resv->udp_key, PJ_TRUE);
+    if (status != PJ_SUCCESS)
+        return status;
+
     pj_ioqueue_op_key_init(&resv->udp_op_rx_key, sizeof(resv->udp_op_rx_key));
     pj_ioqueue_op_key_init(&resv->udp_op_tx_key, sizeof(resv->udp_op_tx_key));
 
@@ -420,6 +431,10 @@ static pj_status_t init_sock(pj_dns_resolver *resv)
     status = pj_ioqueue_register_sock2(resv->pool, resv->ioqueue,
                                        resv->udp6_sock, resv->grp_lock,
                                        resv, &socket_cb, &resv->udp6_key);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    status = pj_ioqueue_set_concurrency(resv->udp6_key, PJ_TRUE);
     if (status != PJ_SUCCESS)
         return status;
 
@@ -542,10 +557,21 @@ PJ_DEF(pj_status_t) pj_dns_resolver_create( pj_pool_factory *pf,
 
     /* Create the timer heap if one is not specified */
     if (resv->timer == NULL) {
+        pj_lock_t *timer_lock;
+
         resv->own_timer = PJ_TRUE;
         status = pj_timer_heap_create(pool, TIMER_SIZE, &resv->timer);
         if (status != PJ_SUCCESS)
             goto on_error;
+
+        /* Give the owned timer heap its own lock, so that
+         * pj_dns_resolver_handle_events() can poll it without holding the
+         * resolver group lock (see there).
+         */
+        status = pj_lock_create_simple_mutex(pool, name, &timer_lock);
+        if (status != PJ_SUCCESS)
+            goto on_error;
+        pj_timer_heap_set_lock(resv->timer, timer_lock, PJ_TRUE);
     }
 
     /* Create the ioqueue if one is not specified */
@@ -685,6 +711,8 @@ PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
         pj_grp_lock_acquire(resolver->grp_lock);
         cb = q->cb;
         q->cb = NULL;
+        if (cb && !notify)
+            q->cb_dropped = PJ_TRUE;
         pj_grp_lock_release(resolver->grp_lock);
 
         if (notify && cb)
@@ -698,6 +726,8 @@ PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
             pj_grp_lock_acquire(resolver->grp_lock);
             ccb = cq->cb;
             cq->cb = NULL;
+            if (ccb && !notify)
+                cq->cb_dropped = PJ_TRUE;
             pj_grp_lock_release(resolver->grp_lock);
 
             if (notify && ccb)
@@ -858,9 +888,19 @@ PJ_DEF(void) pj_dns_resolver_handle_events(pj_dns_resolver *resolver,
 {
     PJ_ASSERT_ON_FAIL(resolver, return);
 
-    pj_grp_lock_acquire(resolver->grp_lock);
-    pj_timer_heap_poll(resolver->timer, NULL);
-    pj_grp_lock_release(resolver->grp_lock);
+    /* The owned timer heap has its own lock (see create), so poll it
+     * without the resolver group lock: a timer callback may take a
+     * downstream lock (e.g. the TURN session lock) that a thread starting
+     * or cancelling a query holds. An external heap may have no lock, so
+     * keep serializing its poll with the resolver's timer operations.
+     */
+    if (resolver->own_timer) {
+        pj_timer_heap_poll(resolver->timer, NULL);
+    } else {
+        pj_grp_lock_acquire(resolver->grp_lock);
+        pj_timer_heap_poll(resolver->timer, NULL);
+        pj_grp_lock_release(resolver->grp_lock);
+    }
 
     pj_ioqueue_poll(resolver->ioqueue, timeout);
 }
@@ -892,6 +932,7 @@ static pj_dns_async_query *alloc_qnode(pj_dns_resolver *resolver,
     q->options = options;
     q->user_data = user_data;
     q->cb = cb;
+    q->cb_dropped = (cb == NULL);
     q->cache_gen = resolver->cache_gen;
     pj_list_init(&q->child_head);
 
@@ -1879,11 +1920,24 @@ on_return:
 PJ_DEF(pj_status_t) pj_dns_resolver_cancel_query(pj_dns_async_query *query,
                                                  pj_bool_t notify)
 {
+    pj_dns_cancel_query_param prm;
+
+    pj_bzero(&prm, sizeof(prm));
+    prm.notify = notify;
+    return pj_dns_resolver_cancel_query2(query, &prm);
+}
+
+PJ_DEF(pj_status_t) pj_dns_resolver_cancel_query2(
+                                        pj_dns_async_query *query,
+                                        pj_dns_cancel_query_param *prm)
+{
     pj_grp_lock_t *grp_lock;
     pj_dns_callback *cb;
     void *user_data;
 
-    PJ_ASSERT_RETURN(query, PJ_EINVAL);
+    PJ_ASSERT_RETURN(query && prm, PJ_EINVAL);
+
+    prm->cb_busy = PJ_FALSE;
 
     grp_lock = query->resolver->grp_lock;
     pj_grp_lock_acquire(grp_lock);
@@ -1898,17 +1952,34 @@ PJ_DEF(pj_status_t) pj_dns_resolver_cancel_query(pj_dns_async_query *query,
     user_data = query->user_data;
     query->cb = NULL;
 
+    /* A callback which is neither pending nor dropped has been taken by a
+     * delivery site, which calls it without holding the lock.
+     */
+    if (cb)
+        query->cb_dropped = !prm->notify;
+    else if (!query->cb_dropped)
+        prm->cb_busy = PJ_TRUE;
+
     pj_grp_lock_release(grp_lock);
 
     /* Invoke the callback unlocked, as the other delivery sites do. */
-    if (notify && cb)
+    if (prm->notify && cb)
         (*cb)(user_data, PJ_ECANCELLED, NULL);
 
     return PJ_SUCCESS;
 }
 
 
-/* 
+/*
+ * Get the group lock.
+ */
+PJ_DEF(pj_grp_lock_t*) pj_dns_resolver_get_grp_lock(pj_dns_resolver *resolver)
+{
+    PJ_ASSERT_RETURN(resolver, NULL);
+    return resolver->grp_lock;
+}
+
+/*
  * DNS response containing A packet. 
  */
 PJ_DEF(pj_status_t) pj_dns_parse_a_response(const pj_dns_parsed_packet *pkt,
