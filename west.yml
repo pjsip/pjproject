@@ -14,14 +14,15 @@ manifest:
       remote: zephyrproject-rtos
       revision: v4.5.0
       import:
-        # cmsis and cmsis_6 for the Cortex-M targets, mbedtls and
-        # tf-psa-crypto for SIP over TLS, picolibc for native_sim (the
-        # SDK's picolibc serves the cross builds; without the module
-        # native_sim falls back to the host's libc, under which Zephyr
-        # leaves out its POSIX headers)
+        # cmsis and cmsis_6 for the Cortex-M targets, hal_stm32 for the
+        # NUCLEO-H563ZI, mbedtls and tf-psa-crypto for SIP over TLS,
+        # picolibc for native_sim (the SDK's picolibc serves the cross
+        # builds; without the module native_sim falls back to the host's
+        # libc, under which Zephyr leaves out its POSIX headers)
         name-allowlist:
           - cmsis
           - cmsis_6
+          - hal_stm32
           - mbedtls
           - picolibc
           - tf-psa-crypto

@@ -531,11 +531,11 @@
     #   define PJ_IOQUEUE_MAX_HANDLES           16
     #endif
 
-    /* Safe unregistration pre-allocates every key, 320 bytes each, when
-     * the I/O queue is created. It stays on without threads too: without
-     * it a key lives in the registering object's pool, and the I/O queue
-     * still touches the key after a callback that closed the socket and
-     * released that pool.
+    /* Safe unregistration pre-allocates every key with its lock when the
+     * I/O queue is created, 13 KB for the sixteen. It stays on without
+     * threads too: without it a key lives in the registering object's
+     * pool, and the I/O queue still touches the key after a callback that
+     * closed the socket and released that pool.
      */
     #define PJ_IOQUEUE_HAS_SAFE_UNREG           1
 

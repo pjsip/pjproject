@@ -94,9 +94,9 @@ endmenu
 # messages of its connection.
 config COMMON_LIBC_MALLOC_ARENA_SIZE
 	default 319488 if PJPROJECT_TLS && PJPROJECT_THREADS
-	default 300032 if PJPROJECT_TLS
+	default 306176 if PJPROJECT_TLS
 	default 263168 if PJPROJECT_THREADS
-	default 241664
+	default 249856
 
 # The kernel heap holds the media thread's 16 KB stack and nothing else
 config HEAP_MEM_POOL_SIZE
@@ -108,11 +108,16 @@ config HEAP_MEM_POOL_SIZE
 # allocation and the stream that reaches the server is corrupt ("bad record
 # mac" in its log), which drops the connection and every call on it. UDP
 # frees a sent packet as soon as the driver has it and needs far less.
+# native_sim delivers four INVITEs in the same instant, where QEMU's
+# fragment pool lets two through at a time, so the four TLS answers go out
+# together and need twice the pool.
 config NET_PKT_TX_COUNT
+	default 64 if PJPROJECT_TLS && BOARD_NATIVE_SIM
 	default 32 if PJPROJECT_TLS
 	default 24
 
 config NET_BUF_TX_COUNT
+	default 256 if PJPROJECT_TLS && BOARD_NATIVE_SIM
 	default 96 if PJPROJECT_TLS
 	default 48
 

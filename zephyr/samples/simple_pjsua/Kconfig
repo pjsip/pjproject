@@ -64,10 +64,12 @@ endmenu
 # overlay overrides these.
 
 # The C library heap arena, where pjlib's pools come from: 55 KB registered
-# and idle, 135 KB with the call up and 138 KB at its teardown, plus 5% for
-# the heap's own bookkeeping and fragmentation
+# and idle, 135 KB with a call up, and 157 KB at the peak of the second call
+# routed through a proxy (the first call leaves 23 KB of the heap in use
+# behind it; from the second on, the figures repeat), plus 12% for the
+# heap's own bookkeeping and fragmentation
 config COMMON_LIBC_MALLOC_ARENA_SIZE
-	default 147456
+	default 180224
 
 # The kernel heap holds the pthread stacks, DYNAMIC_THREAD_STACK_SIZE each:
 # pjsua-lib's worker thread, pjmedia's event thread and, while a call is

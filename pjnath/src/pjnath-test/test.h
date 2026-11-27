@@ -34,6 +34,11 @@
  * From 1 MB of RAM the Zephyr test's Kconfig sizes the heap for it
  */
 #define INCLUDE_TRICKLE_ICE_TEST    (PJTEST_TARGET_RAM_KB >= 1024)
+/* The valid list test fills 32 checks against 16 remote candidates, and
+ * the STUN transactions this keeps alive, each a pool and a group lock,
+ * do not fit a 640 KB board's heap either
+ */
+#define INCLUDE_ICE_VALID_LIST_FULL_TEST (PJTEST_TARGET_RAM_KB >= 1024)
 #define INCLUDE_STUN_SOCK_TEST      1
 #define INCLUDE_TURN_SOCK_TEST      1
 #define INCLUDE_CONCUR_TEST         PJ_HAS_THREADS

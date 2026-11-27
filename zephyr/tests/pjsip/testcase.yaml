@@ -20,7 +20,8 @@ tests:
       type: one_line
       regex:
         - "Looks like everything is okay"
-    timeout: 1200
+    # the threaded suite takes about 28 minutes on native_sim
+    timeout: 2400
   pjsip.pjsip.an521:
     platform_allow:
       - mps2/an521/cpu0

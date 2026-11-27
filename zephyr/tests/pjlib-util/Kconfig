@@ -10,6 +10,14 @@ config PJLIB_UTIL_TEST_ARGS
 	  Appended, split at spaces, to the "--ci-mode -w 0" the Zephyr build
 	  always passes. "-h" lists the options.
 
+# The C library heap arena, where pjlib's pools come from. The threaded
+# build runs the resolver test in full, whose forty subtests keep what they
+# allocate until the test ends: about 300 KB on a 64-bit host, 262144 is not
+# enough on the board. native_sim sets its own in boards/.
+config COMMON_LIBC_MALLOC_ARENA_SIZE
+	default 360448 if PJPROJECT_THREADS
+	default 262144
+
 # The kernel heap, where the threaded build takes its pthread stacks from
 config HEAP_MEM_POOL_SIZE
 	default 65536 if PJPROJECT_THREADS

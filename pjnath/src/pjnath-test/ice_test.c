@@ -2078,6 +2078,9 @@ struct vfull_test
     pj_bool_t        completed;
     pj_bool_t        shim_err;
     struct vfull_pkt txq;
+    /* Delivered packets, reused: the test exchanges a few thousand */
+    struct vfull_pkt freeq;
+    pj_pool_t       *scratch;
 };
 
 static void vfull_queue(struct vfull_test *t, pj_ice_sess *dst,
@@ -2091,7 +2094,13 @@ static void vfull_queue(struct vfull_test *t, pj_ice_sess *dst,
         t->shim_err = PJ_TRUE;
         return;
     }
-    p = PJ_POOL_ZALLOC_T(t->pool, struct vfull_pkt);
+    if (!pj_list_empty(&t->freeq)) {
+        p = t->freeq.next;
+        pj_list_erase(p);
+        pj_bzero(p, sizeof(*p));
+    } else {
+        p = PJ_POOL_ZALLOC_T(t->pool, struct vfull_pkt);
+    }
     p->dst = dst;
     p->comp_id = comp_id;
     p->transport_id = tp_id;
@@ -2105,15 +2114,18 @@ static pj_bool_t vfull_is_nomination(struct vfull_test *t, const void *pkt,
                                      pj_size_t size)
 {
     pj_stun_msg *msg;
+    pj_bool_t nominated = PJ_FALSE;
 
-    if (pj_stun_msg_decode(t->pool, (const pj_uint8_t*)pkt, size,
+    if (pj_stun_msg_decode(t->scratch, (const pj_uint8_t*)pkt, size,
                            PJ_STUN_IS_DATAGRAM, &msg, NULL,
-                           NULL) != PJ_SUCCESS)
+                           NULL) == PJ_SUCCESS)
     {
-        return PJ_FALSE;
+        nominated = PJ_STUN_IS_REQUEST(msg->hdr.type) &&
+                    pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_USE_CANDIDATE,
+                                          0) != NULL;
     }
-    return PJ_STUN_IS_REQUEST(msg->hdr.type) &&
-           pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_USE_CANDIDATE, 0);
+    pj_pool_reset(t->scratch);
+    return nominated;
 }
 
 static pj_status_t vfull_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id,
@@ -2245,6 +2257,7 @@ static void vfull_poll(struct vfull_test *t, pj_stun_config *stun_cfg,
             pj_ice_sess_on_rx_pkt(p->dst, p->comp_id, p->transport_id,
                                   p->data, p->len, &p->src_addr,
                                   pj_sockaddr_get_len(&p->src_addr));
+            pj_list_push_back(&t->freeq, p);
         }
 
         pj_gettimeofday(&now);
@@ -2279,6 +2292,12 @@ int ice_valid_list_full_test(void)
     pj_bzero(&t, sizeof(t));
     t.pool = app_sess.pool;
     pj_list_init(&t.txq);
+    pj_list_init(&t.freeq);
+    t.scratch = pj_pool_create(&app_sess.cp.factory, "vfull", 1024, 1024,
+                               NULL);
+    if (t.scratch == NULL) {
+        rc = -11; goto on_return;
+    }
 
     pj_bzero(&cb, sizeof(cb));
     cb.on_tx_pkt = &vfull_on_tx_pkt;
@@ -2383,6 +2402,7 @@ on_return:
     if (t.victim) pj_ice_sess_destroy(t.victim);
     if (t.peer) pj_ice_sess_destroy(t.peer);
     pj_list_init(&t.txq);
+    if (t.scratch) pj_pool_release(t.scratch);
     destroy_stun_config(&app_sess);
     pj_log_pop_indent();
 
