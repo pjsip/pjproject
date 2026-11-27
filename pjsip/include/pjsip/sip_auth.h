@@ -875,6 +875,17 @@ PJ_DECL(pj_status_t) pjsip_auth_srv_init2(
  * Request the authorization server framework to verify the authorization 
  * information in the specified request in rdata.
  *
+ * Note that the framework keeps no state about the challenges it has
+ * issued. This function verifies the response in the request against the
+ * credential returned by the lookup callback, but it does not check that
+ * the nonce is one the application has issued and is still valid, that a
+ * nonce count is not reused (replay), or that the algorithm is one that
+ * was offered in the challenge. Application that needs these checks
+ * should implement them, e.g. in the #pjsip_auth_lookup_cred2 callback,
+ * which receives the Authorization header being verified, and record the
+ * nonce count of a request only after this function has returned
+ * PJ_SUCCESS for it.
+ *
  * @param auth_srv      The server authentication structure.
  * @param rdata         Incoming request to be authenticated.
  * @param status_code   When not null, it will be filled with suitable 
@@ -899,7 +910,8 @@ PJ_DECL(pj_status_t) pjsip_auth_srv_verify( pjsip_auth_srv *auth_srv,
  * Add authentication challenge headers to the outgoing response in tdata. 
  * Application may specify its customized nonce and opaque for the challenge, 
  * or can leave the value to NULL to make the function fills them in with 
- * random characters.  The digest algorithm defaults to MD5.  If you need
+ * random characters. The nonce is not remembered by the library, see
+ * #pjsip_auth_srv_verify().  The digest algorithm defaults to MD5.  If you need
  * to specify a different algorithm, use #pjsip_auth_srv_challenge2.
  *
  * @param auth_srv      The server authentication structure.
@@ -923,7 +935,8 @@ PJ_DECL(pj_status_t) pjsip_auth_srv_challenge( pjsip_auth_srv *auth_srv,
  * Add authentication challenge headers to the outgoing response in tdata.
  * Application may specify its customized nonce and opaque for the challenge,
  * or can leave the value to NULL to make the function fills them in with
- * random characters.
+ * random characters. The nonce is not remembered by the library, see
+ * #pjsip_auth_srv_verify().
  * Application must specify the algorithm to use.
  *
  * @param auth_srv       The server authentication structure.
