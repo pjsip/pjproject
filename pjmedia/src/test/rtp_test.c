@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -16,25 +16,54 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
+#include "test.h"
+#include <pjmedia/errno.h>
 #include <pjmedia/rtp.h>
-#include <stdio.h>
 
-int rtp_test()
+#define THIS_FILE   "rtp_test.c"
+
+/*
+ * A packet shorter than the RTP header must be rejected before any of it
+ * is read. Each packet is placed at the end of the array, so a read past
+ * it is out of bounds, and its bytes don't carry a valid RTP version.
+ */
+int rtp_test(void)
 {
-    pjmedia_rtp_session rtp;
-    FILE *fhnd = fopen("RTP.DAT", "wb");
-    const void *rtphdr;
-    int hdrlen;
+    pjmedia_rtp_session ses;
+    const pjmedia_rtp_hdr *hdr;
+    pjmedia_rtp_dec_hdr dec_hdr;
+    const void *rtphdr, *payload;
+    unsigned payloadlen;
+    pj_uint8_t pkt[sizeof(pjmedia_rtp_hdr)];
+    int hdrlen, len;
+    pj_status_t status;
 
-    if (!fhnd)
-        return -1;
+    PJ_LOG(3, (THIS_FILE, "  RTP decode short packet test"));
 
-    pjmedia_rtp_session_init (&rtp, 4, 0x12345678);
-    pjmedia_rtp_encode_rtp (&rtp, 4, 0, 0, 160, &rtphdr, &hdrlen);
-    if (fwrite (rtphdr, hdrlen, 1, fhnd) != 1) {
-        fclose(fhnd);
-        return -1;
+    pjmedia_rtp_session_init(&ses, 4, 0x12345678);
+    hdrlen = 0;
+    status = pjmedia_rtp_encode_rtp(&ses, 4, 0, 160, 160, &rtphdr, &hdrlen);
+    if (status != PJ_SUCCESS || hdrlen != (int)sizeof(pkt))
+        return -10;
+
+    /* A packet with only the header is valid */
+    pj_memcpy(pkt, rtphdr, hdrlen);
+    status = pjmedia_rtp_decode_rtp2(&ses, pkt, hdrlen, &hdr, &dec_hdr,
+                                     &payload, &payloadlen);
+    if (status != PJ_SUCCESS || payloadlen != 0)
+        return -20;
+
+    pj_bzero(pkt, sizeof(pkt));
+    for (len = 0; len < hdrlen; ++len) {
+        status = pjmedia_rtp_decode_rtp2(&ses, pkt + sizeof(pkt) - len, len,
+                                         &hdr, &dec_hdr, &payload,
+                                         &payloadlen);
+        if (status != PJMEDIA_RTP_EINLEN) {
+            PJ_LOG(3, (THIS_FILE, "    error: %d-byte packet: status %d",
+                       len, status));
+            return -30;
+        }
     }
-    fclose(fhnd);
+
     return 0;
 }

@@ -111,7 +111,7 @@ int test_main(int argc, char *argv[])
     UT_ADD_TEST(&test_app.ut_app, sdp_attr_test, 0);
 #endif
     //DO_TEST(sdp_test (&caching_pool.factory));
-    //DO_TEST(rtp_test(&caching_pool.factory));
+    UT_ADD_TEST(&test_app.ut_app, rtp_test, 0);
     //DO_TEST(session_test (&caching_pool.factory));
 #if HAS_JBUF_TEST
     UT_ADD_TEST(&test_app.ut_app, jbuf_test, 0);
