@@ -54,20 +54,20 @@ What the arena holds, measured on the AN521 in the single-threaded UDP build wit
 
 | State | Heap in use |
 |---|---|
-| Registered, idle | 26 KB |
-| Each established call | about 46 KB |
-| Four concurrent calls | 218 KB, peak 226 KB while they were set up |
+| Registered, idle | 39 KB |
+| Each established call | about 48 KB |
+| Four concurrent calls | 219 KB, peak 224 KB while they were set up |
 
 On the NUCLEO-H563ZI the heap behaves as on the emulator: the same pools from the same arena, and the four-call peak is the same number of bytes in the UDP builds and within 400 bytes in the TLS builds. The images are larger by Zephyr's drivers for the board and the DHCP client. The board's four images as they ship, each with the heap's peak while **four** INVITEs arrived at once and the **four** calls ran, the AN521's peak in the same test, and the arena it has to fit in:
 
 | Build | Flash | RAM | Heap peak, four calls | Same on AN521 | Arena |
 |---|---|---|---|---|---|
-| SIP over UDP, single thread | 360 KB | 382 KB | 226 KB | 226 KB | 236 KB |
-| SIP over UDP, threads | 368 KB | 422 KB | 244 KB | 244 KB | 257 KB |
-| SIP over TLS, single thread | 465 KB | 503 KB | 278 KB | 279 KB | 293 KB |
-| SIP over TLS, threads | 474 KB | 542 KB | 297 KB | 297 KB | 312 KB |
+| SIP over UDP, single thread | 364 KB | 382 KB | 224 KB | 224 KB | 244 KB |
+| SIP over UDP, threads | 372 KB | 422 KB | 236 KB | 244 KB | 257 KB |
+| SIP over TLS, single thread | 470 KB | 503 KB | 284 KB | 284 KB | 299 KB |
+| SIP over TLS, threads | 479 KB | 542 KB | 297 KB | 297 KB | 312 KB |
 
-So the arena has 10 to 15 KB to spare at the four-call peak; an application with less margin than the sample should measure on its own board, with `mem`, before trimming it. In the threaded builds the kernel heap holds the media thread's stack and 1 KB is left, as intended: nothing else is allocated from it after start-up.
+So the arena has 13 to 21 KB to spare at the four-call peak; an application with less margin than the sample should measure on its own board, with `mem`, before trimming it. In the threaded builds the kernel heap holds the media thread's stack and 1 KB is left, as intended: nothing else is allocated from it after start-up.
 
 > [!NOTE]
 > **G.722 needs a larger arena.** These arenas are sized for G.711. With G.722 (section 8) each call's jitter buffer and frames are for 16 kHz, and the same four-call burst on the board peaked at 240 KB, and at 243 KB when a call had ended a few seconds before (its pools linger until the transaction timers run out), past the UDP arena: with it the sample aborted on "No memory" at the fourth call. For G.722 set `CONFIG_COMMON_LIBC_MALLOC_ARENA_SIZE` to 256 KB over UDP without threads, verified, and add the same 16 KB to the other three.
@@ -84,14 +84,14 @@ These figures are with the preset's sizing (section 8): with pjproject's stock p
 
 ### pjsua-lib
 
-pjsua-lib is supported, with [simple_pjsua](pjsip-apps/src/samples/simple_pjsua.c) as its sample (section 3): a user agent on pjsua-lib's null sound device, with threads, sized and tested for one call at a time. The build can take the same features as embedded_ua's, TLS, SRTP and G.722 among them, through the same Kconfig and `config_site.h` settings (section 8); the figures here are the baseline with G.711 over UDP and no SRTP. Its images as they ship, and embedded_ua's over UDP with threads on the same targets, the nearest build above:
+pjsua-lib is supported, with [simple_pjsua](pjsip-apps/src/samples/simple_pjsua.c) as its sample (section 3): a user agent on pjsua-lib's null sound device, with threads, sized and tested for one call at a time, call after call through a proxy. The build can take the same features as embedded_ua's, TLS, SRTP and G.722 among them, through the same Kconfig and `config_site.h` settings (section 8); the figures here are the baseline with G.711 over UDP and no SRTP. Its images as they ship, and embedded_ua's over UDP with threads on the same targets, the nearest build above:
 
 | Image | Flash | RAM |
 |---|---|---|
-| simple_pjsua, AN521 | 609 KB | 357 KB |
-| simple_pjsua, NUCLEO-H563ZI | 626 KB | 368 KB |
-| embedded_ua over UDP with threads, AN521 | 351 KB | 411 KB |
-| embedded_ua over UDP with threads, NUCLEO-H563ZI | 368 KB | 422 KB |
+| simple_pjsua, AN521 | 621 KB | 389 KB |
+| simple_pjsua, NUCLEO-H563ZI | 638 KB | 400 KB |
+| embedded_ua over UDP with threads, AN521 | 355 KB | 411 KB |
+| embedded_ua over UDP with threads, NUCLEO-H563ZI | 372 KB | 422 KB |
 
 The extra flash is pjsua-lib itself: presence, REFER, instant messaging, the conference bridge, the players and recorders and the rest of its API. The image has less RAM only because it is sized for one call where embedded_ua's is sized for four: a 144 KB heap arena, a 64 KB kernel heap for three 20 KB thread stacks, and 9 KB of static pjsua-lib state with the preset's limits (section 3). Where the RAM goes at run time, from the heap statistics the sample logs every ten seconds when built with `CONFIG_SYS_HEAP_RUNTIME_STATS=y`, the same bytes on the AN521 and on the board:
 
@@ -316,7 +316,7 @@ pip install west
 Then fill the workspace in one of two ways. Pick one:
 
 - A standard Zephyr workspace, as in Zephyr's guide: Zephyr at the release you choose, with all its modules, and pjproject cloned separately under "Get pjproject" below. The choice when the workspace serves other applications too.
-- A workspace from pjproject's manifest: Zephyr pinned to 4.5.0 with only the five modules the port's targets need, and pjproject inside the workspace as its manifest repository. Smaller, and what CI builds from.
+- A workspace from pjproject's manifest: Zephyr pinned to 4.5.0 with only the six modules the port's targets need, and pjproject inside the workspace as its manifest repository. Smaller, and what CI builds from.
 
 #### A standard Zephyr workspace
 
@@ -336,7 +336,7 @@ west zephyr-export
 
 #### A workspace from pjproject's manifest
 
-The manifest is [`west.yml`](west.yml) at the root of pjproject. `west init` clones pjproject to `~/zephyrproject/pjproject` and `west update` fetches Zephyr 4.5.0 and the five modules next to it:
+The manifest is [`west.yml`](west.yml) at the root of pjproject. `west init` clones pjproject to `~/zephyrproject/pjproject` and `west update` fetches Zephyr 4.5.0 and the six modules next to it:
 
 ```sh
 west init -m https://github.com/pjsip/pjproject ~/zephyrproject
@@ -711,17 +711,17 @@ What passes where, with the time a run takes:
 
 | Suite | native_sim | AN521 under QEMU | NUCLEO-H563ZI |
 |---|---|---|---|
-| pjlib-test | 15 tests, 8 min; threads 20 + self-test | 15; threads 20 | 20 in 3 min; threads 25 in 6 min |
-| pjlib-util-test | 5 in 1 s; threads 7 in 5 min | 5; threads 7 | 5 in 2 s; threads 7 in 4 min |
-| pjmedia-test | 5 in 1 s; threads 5 | 5; threads 5 | 5 in 1 s; threads 5 |
-| pjnath-test | 20 in 9 min; threads 22 in 10 min | 19 in 9 min; threads 21 in 10 min | 19 in 9 min; threads 21 in 10 min |
-| pjsip-test | 12 in 1 min; threads 30 in 28 min | 12 in 1 min | 12 in 1 min |
+| pjlib-test | 20 tests, 8 min; threads 24 + self-test | 21; threads 26 | 21 in 3 min; threads 26 in 6 min |
+| pjlib-util-test | 6 in 1 s; threads 9 in 5 min | 6; threads 9 | 6 in 2 s; threads 9 in 5 min |
+| pjmedia-test | 5 in 1 s; threads 6 | 5; threads 6 | 5 in 1 s; threads 6 |
+| pjnath-test | 21 in 9 min; threads 23 in 10 min | 19 in 9 min; threads 21 in 10 min | 19 in 9 min; threads 21 in 10 min |
+| pjsip-test | 12 in 1 min; threads 31 in 28 min | 12 in 1 min | 12 in 1 min |
 
 The counts differ by design, and each suite's `test.h` says why a test is out:
 
 - Without threads a suite leaves out what needs a worker thread: pjlib-util-test's HTTP client and WebSocket tests, whose servers are threads, and it runs the resolver test in its single-threaded form; pjnath-test's concurrency and session authentication tests; and pjsip-test's loop transport, which runs on a worker thread, and with it the transaction, invite and registration tests (`PJSIP_TEST_HAS_LOOP`).
 - The pjsua tests stay out of the Zephyr build of pjsip-test, since pjsua is not part of the port; leaving their sources out of the test target also keeps pjsua's 195 KB of static state out of the image.
-- Below 1 MB of RAM pjnath-test leaves out its trickle ICE test, which needs 448 KB of heap where the other ICE tests run in 320 (`PJTEST_TARGET_RAM_KB` in `test_profile.h`).
+- Below 1 MB of RAM pjnath-test leaves out its trickle ICE test, which needs 448 KB of heap where the other ICE tests run in 320, and the valid-list-full test, which keeps some two hundred STUN transactions alive at once (`PJTEST_TARGET_RAM_KB` in `test_profile.h`).
 - On Zephyr pjnath-test leaves out the fifty rounds of its concurrency stress: eight threads polling one select ioqueue make Zephyr's `select()` return at once.
 - The threaded pjsip-test does not fit a 640 KB board: it needs the 384 KB heap of the single-threaded suite plus some 90 KB for its threads and their locks.
 
@@ -874,7 +874,7 @@ pjproject's compile-time settings beyond Kconfig are in `pjlib/include/pj/config
 
 The `PJ_CONFIG_ZEPHYR` preset in `pjlib/include/pj/config_site_sample.h` holds the Zephyr settings, each with the reason next to it: which codecs and media features are built, and the sizes of pjsip's and pjmedia's tables, pools, messages and packets, chosen for a few calls on a 640 KB board. Read it to see exactly what is set. The sizes an application may need larger, such as `PJSIP_MAX_PKT_LEN`, `PJMEDIA_MAX_MTU`, `PJMEDIA_MAX_MRU` and the SDP limits, are behind `#ifndef`, so a definition before the include overrides them. What is a fact of the platform rather than a choice, such as pjlib keeping its per-thread data in compiler thread-local storage, is in `os_zephyr.h` and applies whatever `config_site.h` says.
 
-To change any of this, add to the same file. The codec, logging, I/O queue, SRTP and resampling settings take whatever is defined before the preset is included; the rest is overridden after it:
+To change any of this, add to the same file. The codec, logging, I/O queue, SRTP and resampling settings, and the few sizes the preset guards with `#ifndef`, take whatever is defined before the preset is included; the rest is overridden after it:
 
 ```c
 #ifdef __ZEPHYR__
@@ -945,6 +945,7 @@ Random numbers come from Zephyr's `sys_rand32_get()` rather than the C library's
 - The build stops with "config_site.h is missing or does not select the Zephyr preset": create `pjlib/include/pj/config_site.h` in the pjproject tree as in section 2.
 - The build stops with `PJ_IOQUEUE_MAX_HANDLES_must_not_exceed_FD_SETSIZE`: `FD_SETSIZE` on Zephyr is `CONFIG_ZVFS_OPEN_MAX`; raise it to at least `PJ_IOQUEUE_MAX_HANDLES` (16 in the preset).
 - The image does not fit: in `config_site.h` lower `PJ_LOG_MAX_LEVEL`; in `prj.conf` shrink `CONFIG_COMMON_LIBC_MALLOC_ARENA_SIZE`.
+- A test suite prints "!!!FATAL: unhandled exception PJLIB/No memory!" and then nothing: a test ran out of heap, and its log, which the runner holds back until the test ends, went with it. Add `--log-no-cache` to the suite's `CONFIG_<SUITE>_TEST_ARGS` to see the test's output as it happens, and raise `CONFIG_COMMON_LIBC_MALLOC_ARENA_SIZE` in the test application's `prj.conf`.
 - A SIP INVITE arrives in the host log but never in the guest: `CONFIG_NET_IPV4_FRAGMENT` is off, or the fragment buffers (`CONFIG_NET_IPV4_FRAGMENT_MAX_PKT`, `CONFIG_NET_BUF_RX_COUNT`) are too few.
-- Over TLS, the first REGISTER after boot gets a 503 with "Failed to mbedtls_ssl_handshake, ret -0x7780" and Kamailio logs "no shared cipher", then the retry ten seconds later registers: seen with Kamailio 5.7 on the first TLS connection a fresh worker process accepts, and not on later ones. A server-side matter; the sample's retry covers it.
+- Over TLS, the first REGISTER after boot gets a 503 with "Failed to mbedtls_ssl_handshake, ret -0x7780" and Kamailio logs "no shared cipher", then a retry ten seconds later registers: seen with Kamailio 5.7 on the first TLS connection a fresh worker process accepts, and not on later ones. After a restart of Kamailio every worker is fresh, so with its default `children=4` the sample can see four such failures and register on the fifth attempt, some 50 seconds after boot. A server-side matter; the sample's retries cover it.
 - Over TLS, calls and MESSAGEs to the sample time out with 408 and it logs "Handshake failed on ...:55061 in accepting": the server is opening a new connection to the sample's listener, which has no certificate (section 10), instead of reusing the registration's. One cause is a binding left by a previous run with a different transport, for instance a board reflashed from the UDP build without `quit`: Kamailio forks the request to both Contacts, and `handle_ruri_alias()` rewrites only the Request-URI, so the TLS branch is sent to the Contact's listener port. Wait for the old binding to expire (five minutes with the sample's settings), or restart the registrar.
