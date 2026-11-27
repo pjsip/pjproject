@@ -774,21 +774,6 @@
 #endif
 
 /**
- * Specify whether pj_rand() draws from a cryptographically secure
- * generator. A platform header sets this to 1 when its platform_rand()
- * is one (Zephyr with an entropy driver, see compat/os_zephyr.h). Code
- * that needs unpredictable bytes without PJ_HAS_SSL_SOCK, such as the SRTP
- * SDES key generator, then skips its own timing-based mixing. This is a
- * stopgap until PJLIB has a secure random bytes API.
- *
- * Default: 0
- */
-#ifndef PJ_RAND_IS_CSPRNG
-#  define PJ_RAND_IS_CSPRNG         0
-#endif
-
-
-/**
  * Support TCP in the library.
  * Disabling TCP will reduce the footprint slightly (about 4KB). With TCP
  * disabled:

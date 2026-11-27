@@ -149,14 +149,6 @@ static pj_status_t generate_crypto_attr_value(pj_pool_t *pool,
             }
 #endif
             if (status == PJ_ENOTSUP) {
-                /* Temporary: PJLIB has no secure random bytes API yet, so
-                 * rely on pj_rand() being a CSPRNG where the platform says
-                 * so (PJ_RAND_IS_CSPRNG).
-                 */
-#if PJ_RAND_IS_CSPRNG
-                for (i=0; i<crypto_suites[cs_idx].cipher_key_len; ++i)
-                    key[i] = (char)(pj_rand() & 0xFF);
-#else
                 PJ_LOG(3,(THIS_FILE, "Warning: simple random generator is "
                                      "used for generating SRTP key"));
                 for (i=0; i<crypto_suites[cs_idx].cipher_key_len; ++i) {
@@ -166,7 +158,6 @@ static pj_status_t generate_crypto_attr_value(pj_pool_t *pool,
                     pj_get_timestamp(&ts);
                     key[i] = (char)((pj_rand() + ts.u32.lo) & 0xFF);
                 }
-#endif
             } else if (status != PJ_SUCCESS) {
                 PJ_PERROR(4,(THIS_FILE, status,
                              "Failed generating random key"));
