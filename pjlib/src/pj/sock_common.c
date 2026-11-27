@@ -1398,8 +1398,9 @@ PJ_DEF(pj_status_t) pj_sock_socketpair(int family,
     status = socketpair(family, type, protocol, tmp_sv);
     if (status != PJ_SUCCESS) {
         /* Linux reports EOPNOTSUPP for AF_INET, Zephyr EAFNOSUPPORT */
-        if (errno == EOPNOTSUPP || errno == EAFNOSUPPORT ||
-            errno == EPROTONOSUPPORT)
+        if ((errno == EOPNOTSUPP || errno == EAFNOSUPPORT ||
+             errno == EPROTONOSUPPORT) &&
+            (family == PJ_AF_INET || family == PJ_AF_INET6))
         {
             return socketpair_imp(family, type0, protocol, sv);
         }

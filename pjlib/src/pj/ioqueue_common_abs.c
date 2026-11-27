@@ -1790,10 +1790,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_set_concurrency(pj_ioqueue_key_t *key,
     PJ_ASSERT_RETURN(key, PJ_EINVAL);
 
     /* PJ_IOQUEUE_HAS_SAFE_UNREG must be enabled if concurrency is
-     * disabled, unless there are no threads to be concurrent with.
+     * disabled.
      */
-    PJ_ASSERT_RETURN(allow || PJ_IOQUEUE_HAS_SAFE_UNREG || !PJ_HAS_THREADS,
-                     PJ_EINVAL);
+    PJ_ASSERT_RETURN(allow || PJ_IOQUEUE_HAS_SAFE_UNREG, PJ_EINVAL);
 
     key->allow_concurrent = allow;
     return PJ_SUCCESS;

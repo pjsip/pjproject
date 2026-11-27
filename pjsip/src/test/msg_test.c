@@ -938,8 +938,8 @@ static int msg_benchmark(unsigned *p_detect, unsigned *p_parse,
 
 /*****************************************************************************/
 /* Test various header parsing and production */
-static int hdr_test_success(pjsip_hdr *h);
 static int hdr_test_accept0(pjsip_hdr *h);
+static int hdr_test_accept_overflow(pjsip_hdr *h);
 static int hdr_test_accept1(pjsip_hdr *h);
 static int hdr_test_accept2(pjsip_hdr *h);
 static int hdr_test_allow0(pjsip_hdr *h);
@@ -1008,8 +1008,8 @@ struct hdr_test_t
         "a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, " \
         "a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, " \
         "a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a",
-        &hdr_test_success,
-        HDR_FLAG_PARSE_FAIL
+        &hdr_test_accept_overflow,
+        HDR_FLAG_DONT_PRINT
     },
 
     {
@@ -1227,9 +1227,25 @@ struct hdr_test_t
     }
 };
 
-static int hdr_test_success(pjsip_hdr *h)
+/* More elements than the array holds: the first ones are kept, the
+ * rest dropped, and the header still parses.
+ */
+static int hdr_test_accept_overflow(pjsip_hdr *h)
 {
-    PJ_UNUSED_ARG(h);
+    pjsip_accept_hdr *hdr = (pjsip_accept_hdr*)h;
+    unsigned i;
+
+    if (h->type != PJSIP_H_ACCEPT)
+        return -1000;
+
+    if (hdr->count != PJSIP_MAX_ACCEPT_COUNT)
+        return -1001;
+
+    for (i=0; i<hdr->count; ++i) {
+        if (pj_strcmp2(&hdr->values[i], "a") != 0)
+            return -1002;
+    }
+
     return 0;
 }
 

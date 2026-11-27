@@ -1814,10 +1814,10 @@ static void parse_generic_array_hdr( pjsip_generic_array_hdr *hdr,
 
     /* Parse array elements, skipping any empty elements (for buggy clients).
      * Scanner is configured with PJ_SCAN_AUTOSKIP_WS_HEADER, so whitespace
-     * is automatically skipped after getting comma or element.
+     * is automatically skipped after getting comma or element. Elements
+     * past the array are scanned and dropped, as sip_msg.h says.
      */
-    while (hdr->count < PJ_ARRAY_SIZE(hdr->values))
-    {
+    for (;;) {
         /* Skip any leading/consecutive commas */
         while (*scanner->curptr == ',') {
             pj_scan_get_char(scanner);

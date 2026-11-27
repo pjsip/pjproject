@@ -1624,6 +1624,8 @@ PJ_DEF(void) pj_thread_local_free(long index)
 #if TLS_USE_PTHREAD_KEYS
     pthread_key_delete(index);
 #else
+    if (index < 0 || index >= MAX_TLS)
+        return;
     if (initialized)
         pj_enter_critical_section();
     tls_gen[index] = 0;
@@ -1644,7 +1646,8 @@ PJ_DEF(pj_status_t) pj_thread_local_set(long index, void *value)
     int rc=pthread_setspecific(index, value);
     return rc==0 ? PJ_SUCCESS : PJ_RETURN_OS_ERROR(rc);
 #else
-    pj_assert(index >= 0 && index < MAX_TLS);
+    if (index < 0 || index >= MAX_TLS)
+        return PJ_EINVAL;
     tls_set_gen[index] = tls_gen[index];
     tls[index] = value;
     return PJ_SUCCESS;
@@ -1659,7 +1662,11 @@ PJ_DEF(void*) pj_thread_local_get(long index)
 #if TLS_USE_PTHREAD_KEYS
     return pthread_getspecific(index);
 #else
-    pj_assert(index >= 0 && index < MAX_TLS);
+    /* An index freed or never allocated reads NULL, as a pthread key
+     * does; after pj_shutdown() that includes pjlib's own thread index.
+     */
+    if (index < 0 || index >= MAX_TLS)
+        return NULL;
     return tls_gen[index] && tls_set_gen[index] == tls_gen[index] ?
            tls[index] : NULL;
 #endif

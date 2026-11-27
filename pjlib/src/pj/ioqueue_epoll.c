@@ -287,7 +287,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
     const unsigned type_mask = PJ_IOQUEUE_EPOLL_EXCLUSIVE |
                                PJ_IOQUEUE_EPOLL_ONESHOT;
     unsigned epoll_support, valid_types;
+#if PJ_IOQUEUE_HAS_SAFE_UNREG
     pj_size_t i;
+#endif
 
     /* Check that arguments are valid. */
     PJ_ASSERT_RETURN(pool != NULL && p_ioqueue != NULL && 
@@ -407,7 +409,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
  */
 PJ_DEF(pj_status_t) pj_ioqueue_destroy(pj_ioqueue_t *ioqueue)
 {
+#if PJ_IOQUEUE_HAS_SAFE_UNREG
     pj_ioqueue_key_t *key;
+#endif
 
     PJ_ASSERT_RETURN(ioqueue, PJ_EINVAL);
     PJ_ASSERT_RETURN(ioqueue->epfd > 0, PJ_EINVALIDOP);
