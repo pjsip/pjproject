@@ -1806,8 +1806,12 @@ static void parse_generic_array_hdr( pjsip_generic_array_hdr *hdr,
         goto end;
     }
 
-    if (hdr->count >= PJ_ARRAY_SIZE(hdr->values)) {
-        /* Too many elements */
+    /* A header split over several lines fills one array; past its size
+     * only Require fails, see below.
+     */
+    if (hdr->count >= PJ_ARRAY_SIZE(hdr->values) &&
+        hdr->type == PJSIP_H_REQUIRE)
+    {
         on_syntax_error(scanner);
         return;
     }
