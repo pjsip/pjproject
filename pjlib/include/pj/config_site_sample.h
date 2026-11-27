@@ -506,8 +506,11 @@
  * Zephyr's Mbed TLS, no video, no echo canceller, no sound device.
  *
  * The platform itself (threads, TCP, IPv6, TLS) is described by
- * pj/compat/os_zephyr.h from Kconfig. Everything here can be overridden
- * by defining it before including this file from config_site.h.
+ * pj/compat/os_zephyr.h from Kconfig. The settings behind #ifndef (codecs,
+ * logging, the I/O queue, SRTP, resampling, a few sizes) take what
+ * config_site.h defines before including this file; the others are plain
+ * defines, to be #undef'd and redefined after it (README_Zephyr.md,
+ * section 8).
  */
 #if defined(PJ_CONFIG_ZEPHYR) && PJ_CONFIG_ZEPHYR
 
@@ -613,15 +616,12 @@
      */
     #define PJSIP_GENERIC_ARRAY_MAX_COUNT       16
 
-    /* Codecs the media endpoint can register, each a descriptor in the
-     * codec manager and an entry in every SDP negotiator. G.711 is two.
-     */
-    #define PJMEDIA_CODEC_MGR_MAX_CODECS        4
-
     /* Largest SIP message, sent or received. An INVITE with the SDP of a
      * desktop UA offering many codecs, through a proxy, is about 2 KB. This
      * is the size of every message buffer, of which there is one per
-     * transaction and transport.
+     * transaction and transport. An offer that also lists G.722.1 is
+     * 2.2 KB and no longer fits over TLS, where it carries one more Via and
+     * Record-Route than over UDP.
      */
     #ifndef PJSIP_MAX_PKT_LEN
     #   define PJSIP_MAX_PKT_LEN                2200
@@ -697,6 +697,17 @@
     #define PJMEDIA_HAS_OPENCORE_AMRWB_CODEC    0
     #define PJMEDIA_HAS_PASSTHROUGH_CODECS      0
     #define PJMEDIA_HAS_INTEL_IPP               0
+
+    /* Codecs the media endpoint can register, each a descriptor in the
+     * codec manager and an entry in every SDP negotiator: G.711 is two,
+     * G.722 one, L16 two (its 44.1 kHz pair; each PJMEDIA_CODEC_L16_HAS_*
+     * rate turned on adds one, so raise this with them).
+     */
+    #ifndef PJMEDIA_CODEC_MGR_MAX_CODECS
+    #   define PJMEDIA_CODEC_MGR_MAX_CODECS     (2 * PJMEDIA_HAS_G711_CODEC + \
+                                                 PJMEDIA_HAS_G722_CODEC + \
+                                                 2 * PJMEDIA_HAS_L16_CODEC)
+    #endif
 
     /* G.711 computed rather than table driven: saves 16 KB of flash for a
      * little CPU, which is not the constraint here.

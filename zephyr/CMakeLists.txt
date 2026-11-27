@@ -74,6 +74,9 @@ set(CMAKE_HAVE_LIBC_PTHREAD 1 CACHE INTERNAL "")
 list(INSERT CMAKE_MODULE_PATH 0 ${PJ_DIR}/cmake)
 include(Pj/Option)
 include(Pj/PkgConfig)
+# GNUInstallDirs warns that it cannot pick a libdir without a target
+# architecture; nothing is installed from a Zephyr build
+set(CMAKE_INSTALL_LIBDIR lib)
 include(GNUInstallDirs)
 
 # config_site.h is written by the user, as on every other platform, and
