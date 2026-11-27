@@ -1253,6 +1253,8 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
     if (local_sdp) {
         status = inv_create_neg_local_offer(inv, local_sdp);
         if (status != PJ_SUCCESS) {
+            pjsip_endpt_release_pool(dlg->endpt, inv->pool_prov);
+            pjsip_endpt_release_pool(dlg->endpt, inv->pool_active);
             pjsip_dlg_dec_lock(dlg);
             return status;
         }
@@ -1261,6 +1263,8 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
     /* Register invite as dialog usage. */
     status = pjsip_dlg_add_usage(dlg, &mod_inv.mod, inv);
     if (status != PJ_SUCCESS) {
+        pjsip_endpt_release_pool(dlg->endpt, inv->pool_prov);
+        pjsip_endpt_release_pool(dlg->endpt, inv->pool_active);
         pjsip_dlg_dec_lock(dlg);
         return status;
     }
@@ -1268,6 +1272,8 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
     /* Create 100rel handler */
     status = pjsip_100rel_attach(inv);
     if (status != PJ_SUCCESS) {
+        pjsip_endpt_release_pool(dlg->endpt, inv->pool_prov);
+        pjsip_endpt_release_pool(dlg->endpt, inv->pool_active);
         pjsip_dlg_dec_lock(dlg);
         return status;
     }
