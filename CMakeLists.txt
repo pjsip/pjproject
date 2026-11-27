@@ -294,6 +294,11 @@ cmake_dependent_option(PJ_BUILD_SWIG_CSHARP
   "Build the pjsua2 C# bindings with SWIG" OFF
   "PJ_BUILD_PJSUA2" OFF
 )
+# The JNI library of the Android pjsua sample, pjsip-apps/src/pjsua/android
+cmake_dependent_option(PJ_BUILD_PJSUA_ANDROID
+  "Build the Android pjsua sample's JNI library with SWIG" OFF
+  "ANDROID" OFF
+)
 # The bindings' native library has to hold the pjproject libraries: iOS apps
 # link it statically (DllImport("__Internal")), and Android, which does not
 # version library names, would name pjproject's shared pjsua2 library
@@ -306,7 +311,13 @@ if((IOS OR ANDROID) AND (PJ_BUILD_SWIG_CSHARP OR PJ_BUILD_SWIG_JAVA)
     "Android) has to hold the pjproject libraries. Set BUILD_SHARED_LIBS=OFF, "
     "or turn off the bindings (PJ_BUILD_SWIG_CSHARP, PJ_BUILD_SWIG_JAVA).")
 endif()
-if(PJ_BUILD_SWIG_JAVA OR PJ_BUILD_SWIG_PYTHON OR PJ_BUILD_SWIG_CSHARP)
+if(PJ_BUILD_PJSUA_ANDROID AND BUILD_SHARED_LIBS)
+  message(FATAL_ERROR
+    "PJ_BUILD_PJSUA_ANDROID needs static libraries: libpjsua.so has to hold "
+    "the pjproject libraries. Set BUILD_SHARED_LIBS=OFF.")
+endif()
+if(PJ_BUILD_SWIG_JAVA OR PJ_BUILD_SWIG_PYTHON OR PJ_BUILD_SWIG_CSHARP
+   OR PJ_BUILD_PJSUA_ANDROID)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 

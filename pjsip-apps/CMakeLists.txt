@@ -118,6 +118,11 @@ if(PJ_BUILD_SWIG_JAVA)
   add_subdirectory(src/swig)
 endif()
 
+# See PJ_BUILD_PJSUA_ANDROID in the top-level CMakeLists.txt
+if(PJ_BUILD_PJSUA_ANDROID)
+  add_subdirectory(src/pjsua/android/jni)
+endif()
+
 # See PJ_BUILD_SWIG_PYTHON in the top-level CMakeLists.txt
 if(PJ_BUILD_SWIG_PYTHON)
   add_subdirectory(src/swig/python)
