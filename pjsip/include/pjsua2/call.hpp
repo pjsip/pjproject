@@ -2340,6 +2340,15 @@ public:
      * Notify application about incoming INVITE with Replaces header.
      * Application may reject the request by setting non-2xx code.
      *
+     * The library does not check whether the sender is authorized to
+     * replace the call (RFC 3891 Section 3), as a user agent normally
+     * does not authenticate incoming requests (that is usually done by
+     * the SIP server). Application that needs this check should implement
+     * it in this callback, e.g. based on the P-Asserted-Identity (RFC 3325)
+     * of a request received from a trusted SIP server, and reject the
+     * request when the check fails. By default, the replacement is
+     * accepted without this check.
+     *
      * In this callback, application should create a new Call instance and
      * return the Call object via prm.newCall. In creating the new Call
      * instance, the account should use the same account as this call and

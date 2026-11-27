@@ -875,6 +875,26 @@ PJ_DECL(pj_status_t) pjsip_auth_srv_init2(
  * Request the authorization server framework to verify the authorization 
  * information in the specified request in rdata.
  *
+ * Note that the framework keeps no state about the challenges it has
+ * issued. This function verifies the response in the request against the
+ * credential returned by the lookup callback, but it does not check that
+ * the nonce is one the application has issued and is still valid, that a
+ * nonce count is not reused (replay), or that the algorithm and opaque
+ * are the ones sent in the challenge. Application that needs these checks
+ * should implement them. The nonce, algorithm and opaque can be checked
+ * before calling this function, or in the #pjsip_auth_lookup_cred2
+ * callback, which receives the Authorization header being verified (an
+ * error returned by the callback is returned by this function, with
+ * status code 403). The nonce count should be checked once this function
+ * has returned PJ_SUCCESS: record it for the user, nonce and cnonce (a
+ * nonce may be used by several clients or sessions, each counting from 1
+ * with its own cnonce) and reject the request if it was already recorded,
+ * as one atomic step (e.g. under a lock), so that two copies of a request
+ * handled at the same time cannot both be accepted. The records can be
+ * dropped once the nonce expires. Without qop the request has no nonce
+ * count or cnonce, so the nonce itself should then be accepted only once,
+ * which requires a new nonce for each challenge.
+ *
  * @param auth_srv      The server authentication structure.
  * @param rdata         Incoming request to be authenticated.
  * @param status_code   When not null, it will be filled with suitable 
@@ -899,11 +919,14 @@ PJ_DECL(pj_status_t) pjsip_auth_srv_verify( pjsip_auth_srv *auth_srv,
  * Add authentication challenge headers to the outgoing response in tdata. 
  * Application may specify its customized nonce and opaque for the challenge, 
  * or can leave the value to NULL to make the function fills them in with 
- * random characters.  The digest algorithm defaults to MD5.  If you need
+ * random characters. The nonce is not remembered by the library, see
+ * #pjsip_auth_srv_verify().  The digest algorithm defaults to MD5.  If you need
  * to specify a different algorithm, use #pjsip_auth_srv_challenge2.
  *
  * @param auth_srv      The server authentication structure.
- * @param qop           Optional qop value.
+ * @param qop           Optional qop value. A server should send one (e.g.
+ *                      "auth"), as RFC 3261 section 22.4 requires;
+ *                      without it, requests carry no nonce count.
  * @param nonce         Optional nonce value.
  * @param opaque        Optional opaque value.
  * @param stale         Stale indication.
@@ -923,11 +946,15 @@ PJ_DECL(pj_status_t) pjsip_auth_srv_challenge( pjsip_auth_srv *auth_srv,
  * Add authentication challenge headers to the outgoing response in tdata.
  * Application may specify its customized nonce and opaque for the challenge,
  * or can leave the value to NULL to make the function fills them in with
- * random characters.
+ * random characters. The nonce is not remembered by the library, see
+ * #pjsip_auth_srv_verify().
  * Application must specify the algorithm to use.
  *
  * @param auth_srv       The server authentication structure.
- * @param qop            Optional qop value.
+ * @param qop            Optional qop value. A server should send one
+ *                       (e.g. "auth"), as RFC 3261 section 22.4
+ *                       requires; without it, requests carry no nonce
+ *                       count.
  * @param nonce          Optional nonce value.
  * @param opaque         Optional opaque value.
  * @param stale          Stale indication.

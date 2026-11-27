@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -109,6 +109,15 @@
  *  - if matching dialog with correct state is found, it will give PJ_SUCCESS
  *    status and return the matching dialog back to the application.
  *
+ * Note that #pjsip_replaces_verify_request() does not check whether the
+ * initiator of the request is authorized to replace the matched dialog,
+ * which RFC 3891 Section 3 requires of the UA (proxies just forward the
+ * Replaces header). A user agent normally does not authenticate incoming
+ * requests, as that is usually done by the SIP server, so this check is
+ * left to the application's own policy. The policy may use, for example,
+ * the P-Asserted-Identity (RFC 3325) of a request received from a trusted
+ * SIP server, and should be applied before accepting the request.
+ *
  * The following pseudocode illustrates how application can process the
  * incoming INVITE if it wants to support Replaces extension:
  *
@@ -118,7 +127,7 @@
   {
     pjsip_dialog *dlg, *replaced_dlg;
     pjsip_inv_session *inv;
-    pjsip_tx_data *response;
+    pjsip_tx_data *response, *tdata;
     pj_status_t status;
 
     // Check whether Replaces header is present in the request and process accordingly.
@@ -127,16 +136,20 @@
     if (status != PJ_SUCCESS) {
         // Something wrong with Replaces request.
         //
-        pj_status_t status;
         if (response) {
-            status = pjsip_endpt_send_response(endpt, rdata, response, NULL, NULL);
-            if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(tdata);
+            status = pjsip_endpt_send_response2(endpt, rdata, response,
+                                                NULL, NULL);
+            if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(response);
         } else {
             // Respond with 500 (Internal Server Error)
-            status = pjsip_endpt_respond_stateless(endpt, rdata, 500, NULL, NULL, NULL);
-            if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(tdata);
+            pjsip_endpt_respond_stateless(endpt, rdata, 500, NULL, NULL, NULL);
         }
+        return PJ_TRUE;
     }
+
+    // If a dialog is to be replaced, check here that the sender is
+    // authorized to replace it (see the note above), and reject the
+    // request otherwise.
 
     // Create UAS Invite session as usual.
     //
@@ -186,6 +199,7 @@
         // Process normal INVITE without Replaces.
         ...
     }
+    return PJ_TRUE;
   }
 
  \endcode
@@ -255,9 +269,12 @@ PJ_DECL(pjsip_replaces_hdr*) pjsip_replaces_hdr_create(pj_pool_t *pool);
 
 
 /**
- * Verify that incoming request with Replaces header can be processed.
- * This function will perform all necessary checks according to RFC 3891
- * Section 3 "User Agent Server Behavior: Receiving a Replaces Header".
+ * Verify that incoming request with Replaces header can be processed,
+ * according to RFC 3891 Section 3 "User Agent Server Behavior: Receiving
+ * a Replaces Header". See \ref PJSIP_REPLACES_UAS_SUBSEC for the checks
+ * performed. The function does not check whether the initiator of the
+ * request is authorized to replace the matched dialog, which is left to
+ * the application (see the note in the same section).
  *
  * @param rdata     The incoming request to be verified.
  * @param p_dlg     On return, it will be filled with the matching 
