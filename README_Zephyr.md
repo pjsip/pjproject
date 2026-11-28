@@ -63,11 +63,11 @@ On the NUCLEO-H563ZI the heap behaves as on the emulator: the same pools from th
 | Build | Flash | RAM | Heap peak, four calls | Same on AN521 | Arena |
 |---|---|---|---|---|---|
 | SIP over UDP, single thread | 364 KB | 390 KB | 224 KB | 224 KB | 244 KB |
-| SIP over UDP, threads | 372 KB | 422 KB | 236 KB | 244 KB | 257 KB |
+| SIP over UDP, threads | 372 KB | 422 KB | 236 KB | 236 KB | 257 KB |
 | SIP over TLS, single thread | 470 KB | 509 KB | 284 KB | 284 KB | 299 KB |
 | SIP over TLS, threads | 479 KB | 542 KB | 297 KB | 297 KB | 312 KB |
 
-So the arena has 13 to 21 KB to spare at the four-call peak; an application with less margin than the sample should measure on its own board, with `mem`, before trimming it. In the threaded builds the kernel heap holds the media thread's stack and 1 KB is left, as intended: nothing else is allocated from it after start-up.
+So the arena has 15 to 21 KB to spare at the four-call peak; an application with less margin than the sample should measure on its own board, with `mem`, before trimming it. In the threaded builds the kernel heap holds the media thread's stack and 1 KB is left, as intended: nothing else is allocated from it after start-up.
 
 > [!NOTE]
 > **G.722 needs a larger arena.** These arenas are sized for G.711. With G.722 (section 8) each call's jitter buffer and frames are for 16 kHz, and the same four-call burst on the board peaked at 240 KB, and at 243 KB when a call had ended a few seconds before (its pools linger until the transaction timers run out), past the UDP arena: with it the sample aborted on "No memory" at the fourth call. For G.722 set `CONFIG_COMMON_LIBC_MALLOC_ARENA_SIZE` to 256 KB over UDP without threads, verified, and add the same 16 KB to the other three.
