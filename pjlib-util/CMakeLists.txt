@@ -77,22 +77,26 @@ target_link_libraries(pjlib-util PUBLIC pjlib)
 # ##############################################################################
 # Test application
 
-if(BUILD_TESTING)
-  add_executable(pjlib-util-test
-    src/pjlib-util-test/xml.c
-    src/pjlib-util-test/encryption.c
-    src/pjlib-util-test/stun.c
-    src/pjlib-util-test/resolver_test.c
-    src/pjlib-util-test/dns_packet_test.c
-    src/pjlib-util-test/test.c
-    src/pjlib-util-test/json_test.c
-    src/pjlib-util-test/http_client.c
-    src/pjlib-util-test/websock_test.c
-    src/pjlib-util-test/cli_telnet_test.c
-    src/pjlib-util-test/${PJ_TEST_MAIN}
-  )
+# The sources, except main, are an INTERFACE target so that another build
+# (the Zephyr test app) compiles the same list.
+add_library(pjlib-util-test-sources INTERFACE)
+target_sources(pjlib-util-test-sources INTERFACE
+  src/pjlib-util-test/xml.c
+  src/pjlib-util-test/encryption.c
+  src/pjlib-util-test/stun.c
+  src/pjlib-util-test/resolver_test.c
+  src/pjlib-util-test/dns_packet_test.c
+  src/pjlib-util-test/test.c
+  src/pjlib-util-test/json_test.c
+  src/pjlib-util-test/http_client.c
+  src/pjlib-util-test/websock_test.c
+  src/pjlib-util-test/cli_telnet_test.c
+)
 
-  target_link_libraries(pjlib-util-test PRIVATE pjlib pjlib-util)
+if(BUILD_TESTING)
+  add_executable(pjlib-util-test src/pjlib-util-test/${PJ_TEST_MAIN})
+
+  target_link_libraries(pjlib-util-test PRIVATE pjlib-util-test-sources pjlib pjlib-util)
 
   # Run from pjlib-util/build, as make
   add_test(NAME pjlib-util-test

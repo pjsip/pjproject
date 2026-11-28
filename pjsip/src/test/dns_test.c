@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -451,6 +451,7 @@ static int round_robin_test(pj_pool_t *pool)
     for (i=0; i<COUNT; ++i) {
         pjsip_host_info dest;
         struct result result;
+        pj_pool_t *qpool;
         unsigned j;
 
         dest.type = PJSIP_TRANSPORT_UDP;
@@ -460,7 +461,13 @@ static int round_robin_test(pj_pool_t *pool)
 
         result.status = 0x12345678;
 
-        pjsip_endpt_resolve(endpt, pool, &dest, &result, &cb);
+        /* A pool per query: the resolver keeps its query in it until the
+         * answer, and COUNT of them would not fit a small board
+         */
+        qpool = pj_pool_create(pool->factory, "rr", 8192, 4096, NULL);
+        if (!qpool)
+            return -5;
+        pjsip_endpt_resolve(endpt, qpool, &dest, &result, &cb);
 
         while (result.status == 0x12345678) {
             int ii = 0;
@@ -471,6 +478,7 @@ static int round_robin_test(pj_pool_t *pool)
         }
 
         pjsip_endpt_stop_handle_events(endpt);
+        pj_pool_release(qpool);
 
         /* Find which server was "hit" */
         for (j=0; j<PJ_ARRAY_SIZE(server_hit); ++j) {

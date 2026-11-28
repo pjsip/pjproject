@@ -19,6 +19,7 @@
 #include <pjlib.h>
 #include <pjlib-util.h>
 #include <pjnath.h>
+#include "../../../pjlib/src/pjlib-test/test_profile.h"
 
 #if defined(PJ_EXCLUDE_BENCHMARK_TESTS) && (PJ_EXCLUDE_BENCHMARK_TESTS==1)
 #   define WITH_BENCHMARK           0
@@ -28,10 +29,28 @@
 
 #define INCLUDE_STUN_TEST           1
 #define INCLUDE_ICE_TEST            1
-#define INCLUDE_TRICKLE_ICE_TEST    1
+/* The trickle ICE test needs more heap than a 640 KB board has to spare:
+ * it passes with 448 KB, not with 384, while the other ICE tests run in 320.
+ * From 1 MB of RAM the Zephyr test's Kconfig sizes the heap for it
+ */
+#define INCLUDE_TRICKLE_ICE_TEST    (PJTEST_TARGET_RAM_KB >= 1024)
+/* The valid list test fills 32 checks against 16 remote candidates, and
+ * the STUN transactions this keeps alive, each a pool and a group lock,
+ * do not fit a 640 KB board's heap either
+ */
+#define INCLUDE_ICE_VALID_LIST_FULL_TEST (PJTEST_TARGET_RAM_KB >= 1024)
 #define INCLUDE_STUN_SOCK_TEST      1
 #define INCLUDE_TURN_SOCK_TEST      1
-#define INCLUDE_CONCUR_TEST         1
+#define INCLUDE_CONCUR_TEST         PJ_HAS_THREADS
+/* The 50 rounds of concur_test: its four pollers and the ICE test's four
+ * on one select ioqueue make Zephyr's select() return at once, and on
+ * native_sim a thread that never blocks stops the simulated clock
+ */
+#if defined(__ZEPHYR__)
+#   define INCLUDE_CONCUR_STRESS_TEST 0
+#else
+#   define INCLUDE_CONCUR_STRESS_TEST INCLUDE_CONCUR_TEST
+#endif
 
 #define GET_AF(use_ipv6) (use_ipv6?pj_AF_INET6():pj_AF_INET())
 

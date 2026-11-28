@@ -27,7 +27,9 @@
 
 #define HFIND(msg,h,H) ((pjsip_##h##_hdr*) pjsip_msg_find_hdr(msg, PJSIP_H_##H, NULL))
 
-#if defined(PJ_DEBUG) && PJ_DEBUG!=0
+#if PJTEST_SLOW_CPU
+#   define LOOP     1000
+#elif defined(PJ_DEBUG) && PJ_DEBUG!=0
 #   define LOOP     10000
 #else
 #   define LOOP     100000
@@ -629,7 +631,8 @@ static int txdata_test_uri_params(void)
  */
 static int create_request_bench(pj_timestamp *p_elapsed)
 {
-    enum { COUNT = 100 };
+    /* Messages alive at once, their pools on the heap: one per 64 KB of RAM */
+    enum { COUNT = PJTEST_RAM_SCALE(64, 10, 100) };
     unsigned i, j;
     pjsip_tx_data *tdata[COUNT];
     pj_timestamp t1, t2, elapsed;
@@ -684,7 +687,8 @@ on_error:
  */
 static int create_response_bench(pj_timestamp *p_elapsed)
 {
-    enum { COUNT = 100 };
+    /* Messages alive at once, their pools on the heap: one per 64 KB of RAM */
+    enum { COUNT = PJTEST_RAM_SCALE(64, 10, 100) };
     unsigned i, j;
     pjsip_via_hdr *via;
     pjsip_rx_data rdata;
@@ -915,7 +919,8 @@ int txdata_test(void)
         if (usec[i].u64 < min.u64) min.u64 = usec[i].u64;
     }
 
-    msgs = (unsigned)(freq.u64 * LOOP / min.u64);
+    /* The clock may not advance while the CPU is busy (native_sim) */
+    msgs = min.u64 ? (unsigned)(freq.u64 * LOOP / min.u64) : 0;
 
     PJ_LOG(3,(THIS_FILE, "    Requests created at %d requests/sec", msgs));
 
@@ -942,7 +947,8 @@ int txdata_test(void)
         if (usec[i].u64 < min.u64) min.u64 = usec[i].u64;
     }
 
-    msgs = (unsigned)(freq.u64 * LOOP / min.u64);
+    /* The clock may not advance while the CPU is busy (native_sim) */
+    msgs = min.u64 ? (unsigned)(freq.u64 * LOOP / min.u64) : 0;
 
     PJ_LOG(3,(THIS_FILE, "    Responses created at %d responses/sec", msgs));
 

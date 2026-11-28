@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -29,8 +29,10 @@
 /* Skip the first msec from the calculation */
 #define SKIP_DURATION       1000
 
-/* Division helper */
-#define DIV_ROUND_UP(a,b) (((a) + ((b) - 1)) / (b))
+/* Division helpers; some C libraries define the first one too. */
+#ifndef DIV_ROUND_UP
+#   define DIV_ROUND_UP(a,b) (((a) + ((b) - 1)) / (b))
+#endif
 #define DIV_ROUND(a,b) (((a) + ((b)/2 - 1)) / (b))
 
 struct stream_data

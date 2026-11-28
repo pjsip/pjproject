@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2024-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2024 jimying at github dot com.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -143,6 +143,7 @@ int iocp_unregister_test(void)
                                           &cb, NULL, &sock_info->asock,
                                           &sock_info->bound_addr);
         if (status != PJ_SUCCESS) {
+            PJ_PERROR(1, (THIS_FILE, status, "activesock %d create error", i));
             status = -903;
             pj_pool_release(pool);
             goto on_error;
@@ -183,11 +184,11 @@ int iocp_unregister_test(void)
 
     pj_thread_sleep(20);
 
-    /* quit */
-    test->quit = PJ_TRUE;
     status = PJ_SUCCESS;
 
 on_error:
+    /* quit, also on error, or the join below never returns */
+    test->quit = PJ_TRUE;
     if (test->tid)
         pj_thread_join(test->tid);
     for (i = 0; i < PJ_ARRAY_SIZE(test->socks); i++) {

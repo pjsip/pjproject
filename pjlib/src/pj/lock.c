@@ -411,7 +411,8 @@ PJ_DEF(pj_status_t) pj_grp_lock_create( pj_pool_t *pool,
 
     PJ_UNUSED_ARG(cfg);
 
-    pool = pj_pool_create(pool->factory, "glck%p", 512, 512, NULL);
+    pool = pj_pool_create(pool->factory, "glck%p", PJ_GRP_LOCK_POOL_SIZE,
+                          PJ_GRP_LOCK_POOL_SIZE, NULL);
     if (!pool)
         return PJ_ENOMEM;
 

@@ -1,0 +1,186 @@
+name: CI Zephyr
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref (e.g. a force-push to a PR) so they
+# stop holding CI runner slots.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# pjproject as a Zephyr module (README_Zephyr.md), from the workspace that
+# west.yml at the repository root describes: Zephyr pinned to a release, the
+# five modules the targets need, and the SDK's Arm toolchain, cached between
+# runs by action-zephyr-setup. Every job restores the same caches.
+#
+# The suites found Zephyr's own quirks once, and those are fixed; what breaks
+# on Zephyr afterwards is a library change that calls something its libc or
+# POSIX layer lacks, or growth that no longer fits 640 KB of RAM. A build
+# catches both, so every test suite and sample is built for native_sim and
+# for the Cortex-M33 AN521, where the link fails when the image outgrows the
+# RAM, and pjlib-test, which exercises the OS abstraction the port consists
+# of, is run on native_sim in both thread modes. Growth below that wall is
+# caught by the footprint job, which compares the UDP image built for the
+# calls to itself and the heap two of them need with a committed baseline.
+jobs:
+  detect-changes:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    outputs:
+      # Sources that reach a Zephyr image, the Zephyr build files and this
+      # workflow. On a push the filter is skipped and everything runs.
+      zephyr_deps: ${{ github.event_name != 'pull_request' || steps.filter.outputs.src == 'true' }}
+    steps:
+    - uses: actions/checkout@v5
+    - uses: dorny/paths-filter@v4
+      if: github.event_name == 'pull_request'
+      id: filter
+      with:
+        filters: |
+          src:
+            - 'pjlib/**'
+            - 'pjlib-util/**'
+            - 'pjnath/**'
+            - 'pjmedia/**'
+            - 'pjsip/**'
+            - 'pjsip-apps/src/samples/**'
+            - 'third_party/**'
+            - 'zephyr/**'
+            - 'CMakeLists.txt'
+            - 'cmake/**'
+            - 'west.yml'
+            - '.github/workflows/ci-zephyr.yml'
+
+  # Every test suite and sample, built for the host and for the Cortex-M33
+  build:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.zephyr_deps == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [native_sim/native/64, mps2/an521/cpu0]
+    name: build ${{ matrix.platform }}
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        path: pjproject
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+    - name: Set up the Zephyr workspace and SDK
+      uses: zephyrproject-rtos/action-zephyr-setup@v1
+      with:
+        app-path: pjproject
+        toolchains: arm-zephyr-eabi
+    - name: Select the Zephyr preset
+      run: |
+        printf '#define PJ_CONFIG_ZEPHYR 1\n#include <pj/config_site_sample.h>\n' > pjproject/pjlib/include/pj/config_site.h
+    - name: Build
+      run: |
+        west twister -T pjproject/zephyr -p ${{ matrix.platform }} --build-only -v --inline-logs -O twister-out
+    - name: Upload the logs
+      if: failure()
+      uses: actions/upload-artifact@v6
+      with:
+        name: build-${{ strategy.job-index }}
+        path: twister-out/**/*.log
+
+  # pjlib-test on native_sim, single threaded and with threads
+  pjlib-test:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.zephyr_deps == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: [pjsip.pjlib, pjsip.pjlib.threads]
+    name: ${{ matrix.scenario }} on native_sim
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        path: pjproject
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+    - name: Set up the Zephyr workspace and SDK
+      uses: zephyrproject-rtos/action-zephyr-setup@v1
+      with:
+        app-path: pjproject
+        toolchains: arm-zephyr-eabi
+    - name: Select the Zephyr preset
+      run: |
+        printf '#define PJ_CONFIG_ZEPHYR 1\n#include <pj/config_site_sample.h>\n' > pjproject/pjlib/include/pj/config_site.h
+    - name: Build and run
+      run: |
+        west twister -T pjproject/zephyr/tests/pjlib -p native_sim/native/64 -s ${{ matrix.scenario }} -v --inline-logs -O twister-out
+    - name: Upload the logs
+      if: failure()
+      uses: actions/upload-artifact@v6
+      with:
+        name: ${{ matrix.scenario }}
+        path: twister-out/**/*.log
+
+  # Footprint: embedded_ua's UDP build for the AN521 with the self-call
+  # overlay (no registration, no DHCP, heap statistics on), run under QEMU
+  # with two calls to itself (EMBUA_SELF_CALLS, no network beyond loopback),
+  # and its flash, RAM and heap peak compared with its entry in
+  # zephyr/ci-footprint-limits.json. Growth beyond 2% fails; the entry is
+  # refreshed by hand, from the JSON the check prints.
+  footprint:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.zephyr_deps == 'true'
+    runs-on: ubuntu-latest
+    name: footprint on the AN521
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        path: pjproject
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+    - name: Set up the Zephyr workspace and SDK
+      uses: zephyrproject-rtos/action-zephyr-setup@v1
+      with:
+        app-path: pjproject
+        toolchains: arm-zephyr-eabi
+    - name: Install QEMU
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends qemu-system-arm
+    - name: Select the Zephyr preset
+      run: |
+        printf '#define PJ_CONFIG_ZEPHYR 1\n#include <pj/config_site_sample.h>\n' > pjproject/pjlib/include/pj/config_site.h
+    - name: Build
+      run: |
+        set -o pipefail
+        west build -p always -b mps2/an521/cpu0 -d build pjproject/zephyr/samples/embedded_ua -- -DEXTRA_CONF_FILE=overlay-self-calls.conf -DEXTRA_CFLAGS=-DEMBUA_SELF_CALLS=2 2>&1 | tee build.log
+    - name: Run the self calls
+      run: |
+        sh pjproject/zephyr/samples/embedded_ua/run-qemu.sh build -nic none > run.log 2>&1 &
+        for i in $(seq 1 120); do
+          grep -q 'Self calls done' run.log && break
+          sleep 1
+        done
+        pkill qemu-system-arm || true
+        if ! grep -q 'Self calls done' run.log; then
+          tail -40 run.log
+          echo "::error::embedded_ua did not finish its two calls to itself within 120 s under QEMU (no 'Self calls done' in run.log, attached as the footprint artifact): the image did not boot, the calls failed, or it ran out of heap"
+          exit 1
+        fi
+    - name: Compare with the baseline
+      run: |
+        python3 pjproject/zephyr/scripts/footprint_check.py an521-srtp-udp-nothr-4calls build.log run.log pjproject/zephyr/ci-footprint-limits.json
+    - name: Upload the logs
+      if: failure()
+      uses: actions/upload-artifact@v6
+      with:
+        name: footprint
+        path: |
+          build.log
+          run.log

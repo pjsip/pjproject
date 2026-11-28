@@ -1,0 +1,80 @@
+# Copyright (C) 2026 Teluu Inc. (http://www.teluu.com)
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+mainmenu "PJSIP simple_pjsua sample"
+
+menu "simple_pjsua"
+
+# The sample's settings. simple_pjsua.c reads them as CONFIG_SIMPLE_PJSUA_*
+# on every platform; on/off ones are ints so that they are always defined,
+# whichever way they are set.
+
+config SIMPLE_PJSUA_SIP_DOMAIN
+	string "SIP domain: the registrar, as an IP address or a name"
+	default "192.0.2.2"
+
+config SIMPLE_PJSUA_USERNAME
+	string "SIP user name"
+	default "bob"
+
+config SIMPLE_PJSUA_PASSWORD
+	string "SIP password"
+	default "secret"
+
+config SIMPLE_PJSUA_SIP_PORT
+	int "SIP UDP port to listen on"
+	range 1 65535
+	default 5060
+
+config SIMPLE_PJSUA_MAX_CALLS
+	int "Calls at once"
+	range 1 4
+	default 1
+	help
+	  Each call that is up holds its media transport, stream and jitter
+	  buffer. The upper bound is PJSUA_MAX_CALLS.
+
+config SIMPLE_PJSUA_LOG_LEVEL
+	int "Log level"
+	range 0 6
+	default 4
+	help
+	  pjsua log level on the console: 3 shows registration and call
+	  state, 4 adds every SIP message in full, 5 and 6 pjlib's own debug
+	  and trace. PJ_LOG_MAX_LEVEL in config_site.h caps this at build
+	  time.
+
+config SIMPLE_PJSUA_NULL_SND_DEV
+	int "Run the media on the null sound device (1)"
+	range 0 1
+	default 1
+	help
+	  The port has no sound device driver: the null sound device clocks
+	  the conference bridge so that a call's audio flows, into nothing
+	  and out as silence.
+
+config SIMPLE_PJSUA_CALL_URL
+	string "URL to call at start; empty calls nobody"
+	default ""
+
+endmenu
+
+# Memory sized from measurements on the AN521 with one G.711 call, as
+# embedded_ua's (README_Zephyr.md, section 3). A value in prj.conf or an
+# overlay overrides these.
+
+# The C library heap arena, where pjlib's pools come from: 55 KB registered
+# and idle, 135 KB with a call up, and 157 KB at the peak of the second call
+# routed through a proxy (the first call leaves 23 KB of the heap in use
+# behind it; from the second on, the figures repeat), plus 12% for the
+# heap's own bookkeeping and fragmentation
+config COMMON_LIBC_MALLOC_ARENA_SIZE
+	default 180224
+
+# The kernel heap holds the pthread stacks, DYNAMIC_THREAD_STACK_SIZE each:
+# pjsua-lib's worker thread, pjmedia's event thread and, while a call is
+# up, the null sound device's clock thread
+config HEAP_MEM_POOL_SIZE
+	default 65536
+
+source "Kconfig.zephyr"

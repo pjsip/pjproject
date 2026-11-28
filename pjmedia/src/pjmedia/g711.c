@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -156,7 +156,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_g711_init(pjmedia_endpt *endpt)
     pj_list_init(&g711_factory.codec_list);
 
     /* Create pool */
-    g711_factory.pool = pjmedia_endpt_create_pool(endpt, "g711", 1000, 4000);
+    g711_factory.pool = pjmedia_endpt_create_pool(endpt, "g711", 1000, 1000);
     if (!g711_factory.pool)
         return PJ_ENOMEM;
 

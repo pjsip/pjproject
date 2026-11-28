@@ -308,7 +308,8 @@ static const char *get_test_case_info(const pj_test_case *tc,
 
         pj_ansi_snprintf(arg_info, sizeof(arg_info), " (arg: %s)", arg_val);
     }
-    pj_ansi_snprintf(buf, size, "%s%s", tc->obj_name, arg_info);
+    pj_ansi_strxcpy(buf, tc->obj_name, size);
+    pj_ansi_strxcat(buf, arg_info, size);
     return buf;
 }
 
@@ -853,6 +854,15 @@ PJ_DEF(pj_status_t) pj_test_create_text_runner(
     return PJ_SUCCESS;
 
 on_error:
+    /* The threads created so far are suspended, waiting for a suite that
+     * will never come: wake them to exit before destroying them, or they
+     * run on a destroyed runner.
+     */
+    runner->base.stopping = PJ_TRUE;
+    for (i=0; i<runner->base.prm.nthreads; ++i) {
+        pj_thread_resume(runner->threads[i]);
+        pj_thread_join(runner->threads[i]);
+    }
     text_runner_destroy(&runner->base);
     return status;
 }

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1187,8 +1187,12 @@ PJ_DECL(pjsip_generic_int_hdr*) pjsip_generic_int_hdr_init( pj_pool_t *pool,
 
 /* **************************************************************************/
 
-/** Maximum elements in the header array. */
-#define PJSIP_GENERIC_ARRAY_MAX_COUNT   32
+/** Maximum elements in the header array. Elements past this in a parsed
+ *  header are ignored. Default: 32
+ */
+#ifndef PJSIP_GENERIC_ARRAY_MAX_COUNT
+#   define PJSIP_GENERIC_ARRAY_MAX_COUNT    32
+#endif
 
 /**
  * Generic array of string header.

@@ -635,9 +635,12 @@ struct pjmedia_codec_factory
 
 
 /**
- * Declare maximum codecs
+ * Declare maximum codecs. The codec manager has a descriptor for each,
+ * and every SDP negotiator a table of that size. Default: 32
  */
-#define PJMEDIA_CODEC_MGR_MAX_CODECS        32
+#ifndef PJMEDIA_CODEC_MGR_MAX_CODECS
+#   define PJMEDIA_CODEC_MGR_MAX_CODECS     32
+#endif
 
 
 /**

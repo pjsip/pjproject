@@ -1,0 +1,34 @@
+# Copyright (C) 2026 Teluu Inc. (http://www.teluu.com)
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+mainmenu "pjsip-test on Zephyr"
+
+config PJSIP_TEST_ARGS
+	string "Arguments for pjsip-test: test names and options; empty runs every test"
+	default ""
+	help
+	  Appended, split at spaces, to the "--ci-mode -w 0" the Zephyr build
+	  always passes. "-h" lists the options.
+
+config PJSIP_TEST_BENCHMARK
+	bool "Build the parsing benchmarks on a small board too"
+	default n
+	help
+	  test_profile.h leaves the benchmarks out on a board with less than
+	  2 MB of RAM, and on native_sim, whose clock stands still while the
+	  CPU is busy. Set it to measure URI and message parsing and printing
+	  on real hardware; "uri_test msg_test txdata_test" in
+	  PJSIP_TEST_ARGS runs just those, with "--log-no-cache -l 3" to see
+	  the figures.
+
+# The kernel heap, where the threaded build takes its pthread stacks from:
+# the endpoint's worker thread and a few test threads at a time
+config HEAP_MEM_POOL_SIZE
+	default 32768 if PJPROJECT_THREADS
+
+# Mutexes for the threaded build: one per ioqueue handle, plus the transactions and
+# dialogs the registration test keeps alive at once
+config MAX_PTHREAD_MUTEX_COUNT
+	default 512 if PJPROJECT_THREADS
+
+source "Kconfig.zephyr"

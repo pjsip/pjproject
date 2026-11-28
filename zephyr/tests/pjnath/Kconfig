@@ -1,0 +1,28 @@
+# Copyright (C) 2026 Teluu Inc. (http://www.teluu.com)
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+mainmenu "pjnath-test on Zephyr"
+
+config PJNATH_TEST_ARGS
+	string "Arguments for pjnath-test: test names and options; empty runs every test"
+	default ""
+	help
+	  Appended, split at spaces, to the "--ci-mode -w 0" the Zephyr build
+	  always passes. "-h" lists the options.
+
+# The C heap, where PJLIB's pools come from. With 1 MB of RAM or more the
+# suite includes the trickle ICE test (pjnath-test's test.h), which needs
+# 448 KB of heap
+config COMMON_LIBC_MALLOC_ARENA_SIZE
+	default 491520 if SRAM_SIZE >= 1024
+	default 360448
+
+# The kernel heap, where the threaded build takes its pthread stacks from
+config HEAP_MEM_POOL_SIZE
+	default 65536 if PJPROJECT_THREADS
+
+# Mutexes for the threaded build: one per ioqueue handle
+config MAX_PTHREAD_MUTEX_COUNT
+	default 256 if PJPROJECT_THREADS
+
+source "Kconfig.zephyr"

@@ -1806,18 +1806,24 @@ static void parse_generic_array_hdr( pjsip_generic_array_hdr *hdr,
         goto end;
     }
 
-    if (hdr->count >= PJ_ARRAY_SIZE(hdr->values)) {
-        /* Too many elements */
+    /* A header split over several lines fills one array; past its size
+     * only Require fails, see below.
+     */
+    if (hdr->count >= PJ_ARRAY_SIZE(hdr->values) &&
+        hdr->type == PJSIP_H_REQUIRE)
+    {
         on_syntax_error(scanner);
         return;
     }
 
     /* Parse array elements, skipping any empty elements (for buggy clients).
      * Scanner is configured with PJ_SCAN_AUTOSKIP_WS_HEADER, so whitespace
-     * is automatically skipped after getting comma or element.
+     * is automatically skipped after getting comma or element. Elements
+     * past the array are scanned and dropped, as sip_msg.h says, except in
+     * Require: a tag the UAS never sees cannot get its 420, so that header
+     * fails instead.
      */
-    while (hdr->count < PJ_ARRAY_SIZE(hdr->values))
-    {
+    for (;;) {
         /* Skip any leading/consecutive commas */
         while (*scanner->curptr == ',') {
             pj_scan_get_char(scanner);
@@ -1832,8 +1838,11 @@ static void parse_generic_array_hdr( pjsip_generic_array_hdr *hdr,
         
         /* Get element */
         pj_scan_get( scanner, &pconst.pjsip_NOT_COMMA_OR_NEWLINE, &elem);
-        if (elem.slen > 0) {
+        if (elem.slen > 0 && hdr->count < PJ_ARRAY_SIZE(hdr->values)) {
             hdr->values[hdr->count++] = elem;
+        } else if (elem.slen > 0 && hdr->type == PJSIP_H_REQUIRE) {
+            on_syntax_error(scanner);
+            return;
         }
         
         /* If not followed by comma, we're done */

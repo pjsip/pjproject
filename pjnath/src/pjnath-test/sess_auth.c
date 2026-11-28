@@ -544,6 +544,9 @@ static void destroy_client_server(void)
     if (client->test_complete)
         pj_sem_destroy(client->test_complete);
 
+    pj_pool_release(client->pool);
+    client = NULL;
+
     if (server)
         destroy_server();
 }
@@ -571,6 +574,7 @@ static int run_client_test(const char *title,
     pj_stun_session_cb sess_cb;
     pj_stun_auth_cred cred;
     pj_stun_tx_data *tdata;
+    unsigned i;
     pj_status_t status;
     pj_sockaddr addr;
     int rc = 0;
@@ -789,6 +793,15 @@ static int run_client_test(const char *title,
 
 done:
     destroy_client_server();
+
+    /* Let the sessions' remaining timers fire and free what they hold: the
+     * client thread that polled the heap is gone, and a small board cannot
+     * afford to carry them over to the next test
+     */
+    for (i = 0; i < 300 && pj_timer_heap_count(stun_cfg.timer_heap); ++i) {
+        pj_thread_sleep(10);
+        pj_timer_heap_poll(stun_cfg.timer_heap, NULL);
+    }
 
     /* If IPv6 is enabled, test again for IPv4. */
     if ((rc == 0) && use_ipv6) {

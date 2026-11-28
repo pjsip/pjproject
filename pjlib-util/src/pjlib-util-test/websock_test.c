@@ -46,6 +46,9 @@ static struct echo_server_t
     pj_bool_t       quit;
     pj_pool_t      *pool;
     pj_bool_t       send_masked;  /* Send masked frames (protocol violation) */
+    pj_uint8_t     *buf;          /* The thread's buffers, too big for its
+                                   * stack on a small target: 3 x
+                                   * SERVER_BUF_SIZE */
 } g_server;
 
 /* Minimal Base64 encode (RFC 4648) for the server handshake */
@@ -181,9 +184,9 @@ static pj_size_t server_encode_frame(pj_uint8_t *buf, pj_uint8_t opcode,
 static int server_thread(void *p)
 {
     struct echo_server_t *srv = (struct echo_server_t*)p;
-    pj_uint8_t buf[SERVER_BUF_SIZE];
-    pj_uint8_t frame_payload[SERVER_BUF_SIZE];
-    pj_uint8_t out_buf[SERVER_BUF_SIZE];
+    pj_uint8_t *buf = srv->buf;
+    pj_uint8_t *frame_payload = srv->buf + SERVER_BUF_SIZE;
+    pj_uint8_t *out_buf = srv->buf + 2 * SERVER_BUF_SIZE;
 
     while (!srv->quit) {
         pj_sock_t csock = PJ_INVALID_SOCKET;
@@ -221,7 +224,7 @@ static int server_thread(void *p)
             if (rc != 1)
                 break;
 
-            rlen = sizeof(buf) - total;
+            rlen = SERVER_BUF_SIZE - total;
             if (pj_sock_recv(csock, buf + total, &rlen, 0) != PJ_SUCCESS
                 || rlen <= 0)
             {
@@ -333,6 +336,8 @@ static pj_status_t start_echo_server(void)
         return PJ_ENOMEM;
     }
 
+    g_server.buf = (pj_uint8_t*)pj_pool_alloc(g_server.pool,
+                                              3 * SERVER_BUF_SIZE);
     status = pj_thread_create(g_server.pool, "ws_echo_srv", &server_thread,
                               &g_server, 0, 0, &g_server.thread);
     if (status != PJ_SUCCESS) {
@@ -387,7 +392,10 @@ typedef struct test_state_t
     unsigned                rx_count;
     pj_websock_opcode       rx_opcode[MAX_RX_MSGS];
     pj_size_t               rx_len[MAX_RX_MSGS];
-    pj_uint8_t              rx_data[MAX_RX_MSGS][MAX_MSG_SIZE];
+    pj_uint8_t            (*rx_data)[MAX_MSG_SIZE]; /* MAX_RX_MSGS of them,
+                                                     * from the pool: 64 KB
+                                                     * is too much for a
+                                                     * small stack */
 
     pj_bool_t               done;
 } test_state_t;
@@ -514,6 +522,9 @@ static pj_status_t setup_test_state(test_state_t *st)
     pj_bzero(st, sizeof(*st));
     st->pool = pj_pool_create(mem, "wstest", 8192, 4096, NULL);
     if (!st->pool) return PJ_ENOMEM;
+    st->rx_data = (pj_uint8_t (*)[MAX_MSG_SIZE])
+                  pj_pool_alloc(st->pool, MAX_RX_MSGS * MAX_MSG_SIZE);
+    if (!st->rx_data) return PJ_ENOMEM;
 
     status = pj_ioqueue_create(st->pool, 8, &st->ioq);
     if (status != PJ_SUCCESS) return status;

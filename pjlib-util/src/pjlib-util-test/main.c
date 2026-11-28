@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -37,8 +37,22 @@ static void usage()
 }
 
 
+#ifdef __ZEPHYR__
+/* Zephyr's main() has no arguments: they come from the test application's
+ * CONFIG_PJLIB_UTIL_TEST_ARGS, after these. No worker thread, so tests run one at a time.
+ */
+#ifndef CONFIG_PJLIB_UTIL_TEST_ARGS
+#   define CONFIG_PJLIB_UTIL_TEST_ARGS ""
+#endif
+int main(void)
+{
+    static char args[] = CONFIG_PJLIB_UTIL_TEST_ARGS;
+    char *argv[16] = { "pjlib-util-test", "--ci-mode", "-w", "0" };
+    int argc = ut_split_args(args, argv, 4, PJ_ARRAY_SIZE(argv));
+#else
 int main(int argc, char *argv[])
 {
+#endif
     int rc;
     int interractive = 0;
 

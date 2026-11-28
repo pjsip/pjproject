@@ -42,6 +42,19 @@
         BOOLEAN NTAPI SystemFunction036(PVOID buf, ULONG len);
         PJ_END_DECL
 #   endif
+#elif defined(PJ_ZEPHYR) && PJ_ZEPHYR != 0
+    /* Zephyr's own secure generator, which the Kconfig choice
+     * CSPRNG_GENERATOR_CHOICE backs with the entropy driver, PSA Crypto or,
+     * for emulators, its test generator; the C library's getrandom(), where
+     * the libc has one, is not the one to trust. Without a generator the
+     * function does not exist, and pj_csrand_bytes() reports PJ_ENOTSUP.
+     */
+#   if defined(CONFIG_HARDWARE_DEVICE_CS_GENERATOR) || \
+       defined(CONFIG_PSA_CSPRNG_GENERATOR) || \
+       defined(CONFIG_TEST_CSPRNG_GENERATOR)
+#       define CSRAND_ZEPHYR    1
+#       include <zephyr/random/random.h>
+#   endif
 #elif defined(PJ_HAS_GETRANDOM) && PJ_HAS_GETRANDOM != 0
     /* /dev/urandom stays as the fallback for kernels without the syscall */
 #   define CSRAND_GETRANDOM     1
@@ -144,6 +157,14 @@ static pj_status_t getrandom_fill(pj_uint8_t *p, pj_size_t len)
 }
 #endif
 
+#if defined(CSRAND_ZEPHYR)
+static pj_status_t zephyr_fill(pj_uint8_t *p, pj_size_t len)
+{
+    int rc = sys_csrand_get(p, len);
+    return (rc == 0) ? PJ_SUCCESS : PJ_RETURN_OS_ERROR(-rc);
+}
+#endif
+
 #if defined(CSRAND_WIN32)
 static pj_status_t win32_fill(pj_uint8_t *p, pj_size_t len)
 {
@@ -173,6 +194,8 @@ PJ_DEF(pj_status_t) pj_csrand_bytes(void *buf, pj_size_t len)
 
 #if defined(CSRAND_WIN32)
     return win32_fill((pj_uint8_t*)buf, len);
+#elif defined(CSRAND_ZEPHYR)
+    return zephyr_fill((pj_uint8_t*)buf, len);
 #elif defined(CSRAND_GETRANDOM)
     return getrandom_fill((pj_uint8_t*)buf, len);
 #elif defined(CSRAND_ARC4RANDOM)

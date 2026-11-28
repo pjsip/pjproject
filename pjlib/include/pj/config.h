@@ -72,7 +72,17 @@
 /********************************************************************
  * Include target OS specific configuration.
  */
-#if defined(PJ_AUTOCONF)
+#if defined(__ZEPHYR__)
+    /*
+     * Zephyr RTOS. CMake always defines PJ_AUTOCONF, but its OS probes
+     * fail under Zephyr, hence a Zephyr specific OS compat layer, checked
+     * first.
+     */
+#   undef PJ_ZEPHYR
+#   define PJ_ZEPHYR        1
+#   include <pj/compat/os_zephyr.h>
+
+#elif defined(PJ_AUTOCONF)
     /*
      * Autoconf
      */
@@ -277,10 +287,24 @@
        defined(_M_ARM) || defined(_M_ARM64) || defined(__aarch64__)
 #   define PJ_HAS_PENTIUM       0
     /*
-     * ARM, bi-endian, so raise error if endianness is not configured
+     * ARM, bi-endian, so raise error if endianness is not configured.
+     * GCC and Clang do say which: __ARMEB__ for big endian, __ARMEL__ for
+     * little endian (and only __ARM_ARCH on the ARM64 big-endian ABI).
      */
 #   if !PJ_IS_LITTLE_ENDIAN && !PJ_IS_BIG_ENDIAN
-#       error Endianness must be declared for this processor
+#       if defined(__ARMEB__) || defined(__AARCH64EB__)
+#           undef PJ_IS_LITTLE_ENDIAN
+#           undef PJ_IS_BIG_ENDIAN
+#           define PJ_IS_LITTLE_ENDIAN  0
+#           define PJ_IS_BIG_ENDIAN     1
+#       elif defined(__ARMEL__) || defined(__AARCH64EL__)
+#           undef PJ_IS_LITTLE_ENDIAN
+#           undef PJ_IS_BIG_ENDIAN
+#           define PJ_IS_LITTLE_ENDIAN  1
+#           define PJ_IS_BIG_ENDIAN     0
+#       else
+#           error Endianness must be declared for this processor
+#       endif
 #   endif
 #   if defined (PJ_M_ARMV7) || defined(ARMV7)
 #       undef PJ_M_ARMV7
@@ -294,6 +318,11 @@
 #       undef PJ_M_ARM64
 #       define PJ_M_ARM64               1
 #       define PJ_M_NAME                "arm64"
+#   elif !defined(PJ_M_NAME)
+        /* Any other ARM the compiler targets, e.g. Cortex-M (ARMv7-M,
+         * ARMv8-M), when the build system has not named it.
+         */
+#       define PJ_M_NAME                "arm"
 #   endif 
 
 #elif defined (PJ_M_POWERPC) || defined(__powerpc) || defined(__powerpc__) || \
@@ -661,6 +690,15 @@
 #  define PJ_GRP_LOCK_DEBUG     0
 #endif
 
+/**
+ * Initial size and increment of the pool each group lock creates for
+ * itself. The lock, its mutex, its reference counter and the handlers and
+ * locks added to it come out of it. Default: 512
+ */
+#ifndef PJ_GRP_LOCK_POOL_SIZE
+#  define PJ_GRP_LOCK_POOL_SIZE 512
+#endif
+
 
 /**
  * Numeric default stack size used by pjlib in legacy code paths and on
@@ -676,6 +714,26 @@
  */
 #ifndef PJ_THREAD_DEFAULT_STACK_SIZE
 #  define PJ_THREAD_DEFAULT_STACK_SIZE    8192
+#endif
+
+
+/**
+ * Keep pj_thread_local_set()/pj_thread_local_get() values in compiler
+ * thread-local storage (#PJ_THREAD_LOCAL, i.e. __thread) rather than in
+ * pthread keys. This applies to the POSIX implementation only (Windows
+ * uses TlsAlloc() and is unaffected).
+ *
+ * Use it on a platform where pthread keys are not available to every
+ * thread, such as Zephyr, which keeps key values only for threads
+ * created with pthread_create() and so rejects them from its main
+ * thread, where pj_init() is usually called. The platform must give
+ * every thread its own thread-local storage; on Zephyr that is
+ * CONFIG_THREAD_LOCAL_STORAGE, which os_core_unix.c checks.
+ *
+ * Default: 0 (pthread keys). os_zephyr.h sets it to 1.
+ */
+#ifndef PJ_THREAD_LOCAL_USE_COMPILER_TLS
+#  define PJ_THREAD_LOCAL_USE_COMPILER_TLS    0
 #endif
 
 
@@ -714,7 +772,6 @@
 #ifndef PJ_HAS_SCHED_YIELD
 #  define PJ_HAS_SCHED_YIELD        1
 #endif
-
 
 /**
  * Support TCP in the library.

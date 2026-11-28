@@ -1,0 +1,30 @@
+# West manifest: a Zephyr workspace with pjproject as its manifest
+# repository, pinned to the Zephyr release the port is tested on, with only
+# the modules its targets need. CI (.github/workflows/ci-zephyr.yml) builds
+# from it; it also gives a ready workspace with
+#   west init -m https://github.com/pjsip/pjproject && west update
+# README_Zephyr.md section 1 is the usual setup, pjproject added to an
+# existing workspace.
+manifest:
+  remotes:
+    - name: zephyrproject-rtos
+      url-base: https://github.com/zephyrproject-rtos
+  projects:
+    - name: zephyr
+      remote: zephyrproject-rtos
+      revision: v4.5.0
+      import:
+        # cmsis and cmsis_6 for the Cortex-M targets, hal_stm32 for the
+        # NUCLEO-H563ZI, mbedtls and tf-psa-crypto for SIP over TLS,
+        # picolibc for native_sim (the SDK's picolibc serves the cross
+        # builds; without the module native_sim falls back to the host's
+        # libc, under which Zephyr leaves out its POSIX headers)
+        name-allowlist:
+          - cmsis
+          - cmsis_6
+          - hal_stm32
+          - mbedtls
+          - picolibc
+          - tf-psa-crypto
+  self:
+    path: pjproject

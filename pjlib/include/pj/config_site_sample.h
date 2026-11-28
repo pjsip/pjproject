@@ -1,4 +1,21 @@
 /*
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+/*
  * This file contains several sample settings especially for Windows
  * Mobile and Symbian targets. You can include this file in your
  * <pj/config_site.h> file.
@@ -17,6 +34,10 @@
  * #define PJ_CONFIG_WIN32_WMME_DIRECT
  *   Configuration to activate "APS-Direct" media mode on Windows or
  *   Windows Mobile, useful for testing purposes only.
+ *
+ * #define PJ_CONFIG_ZEPHYR
+ *   Settings for a small SIP endpoint on Zephyr RTOS. The Zephyr build
+ *   requires config_site.h to define this; see README_Zephyr.md.
  */
 
 
@@ -478,6 +499,360 @@
     #define PJMEDIA_AUDIO_DEV_HAS_ALSA                  0    
 #endif
 
+
+/*
+ * Zephyr RTOS: a small SIP endpoint on a Cortex-M class device. A few
+ * calls, G.711 (G.722 optionally), SDES-SRTP, optionally SIP over TLS with
+ * Zephyr's Mbed TLS, no video, no echo canceller, no sound device.
+ *
+ * The platform itself (threads, TCP, IPv6, TLS) is described by
+ * pj/compat/os_zephyr.h from Kconfig. The settings behind #ifndef (codecs,
+ * logging, the I/O queue, SRTP, resampling, a few sizes) take what
+ * config_site.h defines before including this file; the others are plain
+ * defines, to be #undef'd and redefined after it (README_Zephyr.md,
+ * section 8).
+ */
+#if defined(PJ_CONFIG_ZEPHYR) && PJ_CONFIG_ZEPHYR
+
+    /* The PJ_TODO() markers would otherwise show up as unused-label
+     * warnings.
+     */
+    #define PJ_TODO(x)
+
+    /*
+     * PJLIB settings.
+     */
+
+    /* Logging stays at pjlib's default of 5 while a port is being brought
+     * up; a lower PJ_LOG_MAX_LEVEL saves flash, 0 compiles logging out.
+     */
+
+    /* Zephyr's select() is sized by CONFIG_ZVFS_OPEN_MAX, which must be at
+     * least this (ioqueue_select.c checks at build time).
+     */
+    #ifndef PJ_IOQUEUE_MAX_HANDLES
+    #   define PJ_IOQUEUE_MAX_HANDLES           16
+    #endif
+
+    /* Safe unregistration pre-allocates every key with its lock when the
+     * I/O queue is created, 13 KB for the sixteen. It stays on without
+     * threads too: without it a key lives in the registering object's
+     * pool, and the I/O queue still touches the key after a callback that
+     * closed the socket and released that pool.
+     */
+    #define PJ_IOQUEUE_HAS_SAFE_UNREG           1
+
+    #define PJ_CRC32_HAS_TABLES                 0
+
+    /* pjlib's cipher table is filled from the suites Mbed TLS enables;
+     * Zephyr's Mbed TLS offers 16 in all.
+     */
+    #ifndef PJ_SSL_SOCK_MAX_CIPHERS
+    #   define PJ_SSL_SOCK_MAX_CIPHERS          32
+    #endif
+
+    /* A WebSocket endpoint allocates its receive and transmit buffers, and
+     * one for reassembling the largest message it accepts, when it is
+     * created.
+     */
+    #ifndef PJ_WEBSOCK_RX_BUF_SIZE
+    #   define PJ_WEBSOCK_RX_BUF_SIZE           8192
+    #endif
+    #ifndef PJ_WEBSOCK_TX_BUF_SIZE
+    #   define PJ_WEBSOCK_TX_BUF_SIZE           8192
+    #endif
+    #ifndef PJ_WEBSOCK_MAX_RX_MSG_SIZE
+    #   define PJ_WEBSOCK_MAX_RX_MSG_SIZE       16384
+    #endif
+
+    /*
+     * PJSIP settings.
+     */
+
+    /* A handful of calls. These are hash table sizes, not limits. They also
+     * size the timer heap by default, 2*tsx + 2*dialog entries; it grows by
+     * itself if ever needed, so it starts small.
+     */
+    #define PJSIP_MAX_TSX_COUNT                 15
+    #define PJSIP_MAX_DIALOG_COUNT              15
+    #define PJSIP_MAX_TIMER_COUNT               32
+
+    /* Modules registered with the endpoint, a pointer each in the endpoint
+     * and in every transaction, dialog and message buffer. embedded_ua
+     * registers 8. pjsua-lib registers 20 and pjsip-test up to 32: their
+     * applications set it (zephyr/samples/simple_pjsua, zephyr/tests/pjsip).
+     */
+    #ifndef PJSIP_MAX_MODULE
+    #   define PJSIP_MAX_MODULE                 16
+    #endif
+
+    /* Addresses a destination may resolve to, kept in every transmit buffer
+     * (52 bytes each). A device that is given its server's address resolves
+     * to one. pjsip-test needs 6, set in zephyr/tests/pjsip/CMakeLists.txt.
+     */
+    #ifndef PJSIP_MAX_RESOLVED_ADDRESSES
+    #   define PJSIP_MAX_RESOLVED_ADDRESSES     2
+    #endif
+
+    /* Queued media events, 72 bytes each in the event manager and again in
+     * a static scratch queue. Only posted events queue up, which audio
+     * never does; four covers nested publishes.
+     */
+    #define PJMEDIA_EVENT_MAX_EVENTS            4
+
+    /* A group lock uses about 220 bytes of its own pool without threads
+     * and about 330 with them (the two mutexes), so one block of the
+     * matching size holds it.
+     */
+    #if PJ_HAS_THREADS
+    #   define PJ_GRP_LOCK_POOL_SIZE            512
+    #else
+    #   define PJ_GRP_LOCK_POOL_SIZE            256
+    #endif
+
+    /* Values an Allow, Supported, Require or Accept header can hold, in
+     * every parsed or built one and in the two a dialog keeps for the
+     * peer; a desktop UA sends about 12 methods. Extra values are ignored.
+     */
+    #define PJSIP_GENERIC_ARRAY_MAX_COUNT       16
+
+    /* Largest SIP message, sent or received. An INVITE with the SDP of a
+     * desktop UA offering many codecs, through a proxy, is about 2 KB. This
+     * is the size of every message buffer, of which there is one per
+     * transaction and transport. An offer that also lists G.722.1 is
+     * 2.2 KB and no longer fits over TLS, where it carries one more Via and
+     * Record-Route than over UDP.
+     */
+    #ifndef PJSIP_MAX_PKT_LEN
+    #   define PJSIP_MAX_PKT_LEN                2200
+    #endif
+
+    /* Pools sized to what they hold. The caching pool rounds an initial size
+     * up to its next class (..., 2048, 4096, 8192, 12288, 16384, ...), so
+     * each is a class, with a small increment for whatever does not fit.
+     */
+    /* The endpoint pool holds about 11.2 KB when the I/O queue pre-allocates
+     * its keys (safe unregistration, above) and 3.8 KB when it does not.
+     */
+    #if PJ_IOQUEUE_HAS_SAFE_UNREG
+    #   define PJSIP_POOL_LEN_ENDPT             12288
+    #else
+    #   define PJSIP_POOL_LEN_ENDPT             4096
+    #endif
+    #define PJSIP_POOL_INC_ENDPT                1024
+    #define PJSIP_POOL_LEN_TDATA                4096
+    #define PJSIP_POOL_INC_TDATA                1024
+    #define PJSIP_POOL_RDATA_LEN                4096
+    #define PJSIP_POOL_RDATA_INC                1024
+    #define PJSIP_POOL_LEN_DIALOG               4096
+    #define PJSIP_POOL_INC_DIALOG               1024
+    #define PJSIP_POOL_TSX_LEN                  1024
+    #define PJSIP_POOL_TSX_INC                  256
+
+    /* The TLS listener stays (PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER 0)
+     * although a client without a certificate cannot accept a connection:
+     * tested against Kamailio, requests to a registered client arrive over
+     * its registration connection only while the client has a listener;
+     * without one Kamailio opens a new connection to the Contact, which
+     * fails.
+     */
+
+    /* Zephyr's socket buffers are the net_buf pools sized in prj.conf, and
+     * SO_SNDBUF/SO_RCVBUF exist only with CONFIG_NET_CONTEXT_SNDBUF/RCVBUF.
+     * 0 skips setting them.
+     */
+    #define PJSIP_UDP_SO_SNDBUF_SIZE            0
+    #define PJSIP_UDP_SO_RCVBUF_SIZE            0
+
+    /* SIP over TLS follows CONFIG_PJPROJECT_TLS through PJ_HAS_SSL_SOCK in
+     * os_zephyr.h; PJSIP_HAS_TLS_TRANSPORT follows that by default.
+     */
+
+    /*
+     * PJMEDIA settings
+     */
+
+    /* G.711 only by default. G.722 and L16 need no library and can be
+     * turned on here; the other codecs need libraries the Zephyr module
+     * does not build.
+     */
+    #ifndef PJMEDIA_HAS_G711_CODEC
+    #   define PJMEDIA_HAS_G711_CODEC           1
+    #endif
+    #ifndef PJMEDIA_HAS_G722_CODEC
+    #   define PJMEDIA_HAS_G722_CODEC           0
+    #endif
+    #ifndef PJMEDIA_HAS_L16_CODEC
+    #   define PJMEDIA_HAS_L16_CODEC            0
+    #endif
+    #define PJMEDIA_HAS_GSM_CODEC               0
+    #define PJMEDIA_HAS_ILBC_CODEC              0
+    #define PJMEDIA_HAS_SPEEX_CODEC             0
+    #define PJMEDIA_HAS_G7221_CODEC             0
+    #define PJMEDIA_HAS_OPUS_CODEC              0
+    #define PJMEDIA_HAS_SILK_CODEC              0
+    #define PJMEDIA_HAS_LYRA_CODEC              0
+    #define PJMEDIA_HAS_BCG729                  0
+    #define PJMEDIA_HAS_OPENCORE_AMRNB_CODEC    0
+    #define PJMEDIA_HAS_OPENCORE_AMRWB_CODEC    0
+    #define PJMEDIA_HAS_PASSTHROUGH_CODECS      0
+    #define PJMEDIA_HAS_INTEL_IPP               0
+
+    /* Codecs the media endpoint can register, each a descriptor in the
+     * codec manager and an entry in every SDP negotiator: G.711 is two,
+     * G.722 one, L16 two (its 44.1 kHz pair; each PJMEDIA_CODEC_L16_HAS_*
+     * rate turned on adds one, so raise this with them), and two spare, so
+     * that a build with no codec at all still has a table the codec sort
+     * compiles against without bound warnings.
+     */
+    #ifndef PJMEDIA_CODEC_MGR_MAX_CODECS
+    #   define PJMEDIA_CODEC_MGR_MAX_CODECS     (2 + 2 * PJMEDIA_HAS_G711_CODEC + \
+                                                 PJMEDIA_HAS_G722_CODEC + \
+                                                 2 * PJMEDIA_HAS_L16_CODEC)
+    #endif
+
+    /* G.711 computed rather than table driven: saves 16 KB of flash for a
+     * little CPU, which is not the constraint here.
+     */
+    #define PJMEDIA_HAS_ALAW_ULAW_TABLE         0
+
+    /* RTP sizing. PJMEDIA_MAX_MTU is the largest RTP or RTCP packet sent:
+     * a 20 ms G.711 or G.722 frame with SRTP is under 200 bytes, so 512
+     * leaves room for 40 ms. It sizes four pending-write buffers in the UDP
+     * transport, two in SRTP and two in the stream, per call.
+     * PJMEDIA_MAX_MRU is the largest packet received.
+     */
+    #ifndef PJMEDIA_MAX_MTU
+    #   define PJMEDIA_MAX_MTU                  512
+    #endif
+    #ifndef PJMEDIA_MAX_MRU
+    #   define PJMEDIA_MAX_MRU                  1000
+    #endif
+
+    /* SDP sizing. Every SDP session and media line has fixed arrays of
+     * these sizes, and a call keeps several copies, in the negotiator, the
+     * invite session and the application. Formats and attributes past the
+     * limit are ignored with a log message; 16 formats hold a desktop UA's
+     * full offer.
+     */
+    #ifndef PJMEDIA_MAX_SDP_FMT
+    #   define PJMEDIA_MAX_SDP_FMT              16
+    #endif
+    #ifndef PJMEDIA_MAX_SDP_MEDIA
+    #   define PJMEDIA_MAX_SDP_MEDIA            4
+    #endif
+
+    /* fmtp parameters per codec, in every copy of the codec parameters;
+     * G.711, G.722 and telephone-event use one.
+     */
+    #define PJMEDIA_CODEC_MAX_FMTP_CNT          4
+
+    /* Transport-specific info slots: UDP and SRTP take one each. */
+    #define PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXCNT 2
+
+    /* Pools sized to what they hold, as the PJSIP pools above. The stream
+     * pool holds the stream and its jitter buffer. The media endpoint pool
+     * holds an ioqueue only when the endpoint has its own, as in the
+     * sample's threaded build.
+     */
+    #define PJMEDIA_STREAM_SIZE                 8192
+    #define PJMEDIA_STREAM_INC                  1024
+    #if PJ_HAS_THREADS
+    #   define PJMEDIA_POOL_LEN_ENDPT           8192
+    #else
+    #   define PJMEDIA_POOL_LEN_ENDPT           1024
+    #endif
+    #define PJMEDIA_POOL_INC_ENDPT              1024
+
+    /* The lighter WSOLA for the jitter buffer: less RAM and CPU per stream,
+     * a little less quality under loss.
+     */
+    #define PJMEDIA_WSOLA_IMP                   PJMEDIA_WSOLA_IMP_WSOLA_LITE
+
+    /* One core: the conference bridge processes its ports in the thread
+     * that clocks it, with no worker threads (16 KB of stack each).
+     */
+    #define PJMEDIA_CONF_THREADS                1
+
+    /* No video, no echo canceller */
+    #define PJMEDIA_HAS_VIDEO                   0
+    #define PJMEDIA_HAS_SPEEX_AEC               0
+    #define PJMEDIA_HAS_WEBRTC_AEC              0
+    #define PJMEDIA_HAS_WEBRTC_AEC3             0
+    #define PJMEDIA_HAS_RTCP_XR                 0
+    #define PJMEDIA_STREAM_ENABLE_KA            0
+
+    /* No sound device: media is driven by the application, e.g. from a
+     * memory buffer.
+     */
+    #define PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO    1
+    #define PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO     0
+    #define PJMEDIA_AUDIO_DEV_HAS_ALSA          0
+    #define PJMEDIA_AUDIO_DEV_HAS_WMME          0
+    #define PJMEDIA_HAS_LEGACY_SOUND_API        0
+
+    /* No sample rate conversion: with one codec clock rate none is
+     * needed. PJMEDIA_RESAMPLE_LIBRESAMPLE brings in the bundled
+     * libresample, for a call that switches between G.711 and G.722.
+     */
+    #ifndef PJMEDIA_RESAMPLE_IMP
+    #   define PJMEDIA_RESAMPLE_IMP             PJMEDIA_RESAMPLE_NONE
+    #endif
+
+    /* pjsua-lib's conference bridge runs at the codec's rate, 8 kHz for
+     * G.711, since a stream at another rate would need the resampler.
+     * 16000 for G.722.
+     */
+    #ifndef PJSUA_DEFAULT_CLOCK_RATE
+    #   define PJSUA_DEFAULT_CLOCK_RATE         8000
+    #endif
+
+    /* pjsua-lib's state is one static object with an array for each of
+     * these; at the desktop defaults (8 accounts, 256 buddies, 32 players
+     * and recorders) it is 195 KB on a Cortex-M, 159 KB of it buddies. An
+     * account is 4 KB, a buddy 620 bytes, a call 4.7 KB (PJSUA_MAX_CALLS
+     * stays at its default of 4). A local account per transport, as the
+     * pjsua application adds with pjsua_acc_add_local(), takes a slot too.
+     */
+    #ifndef PJSUA_MAX_ACC
+    #   define PJSUA_MAX_ACC                    1
+    #endif
+    #ifndef PJSUA_MAX_BUDDIES
+    #   define PJSUA_MAX_BUDDIES                2
+    #endif
+    #ifndef PJSUA_MAX_PLAYERS
+    #   define PJSUA_MAX_PLAYERS                2
+    #endif
+    #ifndef PJSUA_MAX_RECORDERS
+    #   define PJSUA_MAX_RECORDERS              2
+    #endif
+    /* Conference bridge slots, allocated when the bridge is created: the
+     * sound device, the calls, the players and recorders, and two spare.
+     */
+    #ifndef PJSUA_MAX_CONF_PORTS
+    #   define PJSUA_MAX_CONF_PORTS             (1 + PJSUA_MAX_CALLS + \
+                                                 PJSUA_MAX_PLAYERS + \
+                                                 PJSUA_MAX_RECORDERS + 2)
+    #endif
+    /* No echo canceller on the sound device: the preset builds none, and
+     * the echo suppressor it would fall back to has nothing to suppress on
+     * a null sound device.
+     */
+    #ifndef PJSUA_DEFAULT_EC_TAIL_LEN
+    #   define PJSUA_DEFAULT_EC_TAIL_LEN        0
+    #endif
+
+    /* SRTP keyed by SDES only. 0 leaves libsrtp out of the image. */
+    #ifndef PJMEDIA_HAS_SRTP
+    #   define PJMEDIA_HAS_SRTP                 1
+    #endif
+    #define PJMEDIA_SRTP_HAS_SDES               1
+    #define PJMEDIA_SRTP_HAS_DTLS               0
+    #define PJMEDIA_SRTP_HAS_AES_CM_256         0
+    #define PJMEDIA_SRTP_HAS_AES_GCM_256        0
+    #define PJMEDIA_SRTP_HAS_AES_GCM_128        0
+
+#endif  /* PJ_CONFIG_ZEPHYR */
 
 /*
  * Minimum size

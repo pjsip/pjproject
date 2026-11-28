@@ -1,0 +1,31 @@
+sample:
+  name: PJSIP embedded_ua
+  description: SIP user agent on pjsip and pjmedia, registering to a PBX
+tests:
+  sample.pjsip.embedded_ua:
+    build_only: true
+    platform_allow:
+      - mps2/an521/cpu0
+      - native_sim/native/64
+    tags: pjsip
+  sample.pjsip.embedded_ua.threads:
+    build_only: true
+    extra_args: EXTRA_CONF_FILE=overlay-threads.conf
+    platform_allow:
+      - mps2/an521/cpu0
+      - native_sim/native/64
+    tags: pjsip
+  sample.pjsip.embedded_ua.tls:
+    build_only: true
+    extra_args: EXTRA_CONF_FILE=overlay-tls.conf
+    platform_allow:
+      - mps2/an521/cpu0
+      - native_sim/native/64
+    tags: pjsip
+  sample.pjsip.embedded_ua.tls_threads:
+    build_only: true
+    extra_args: EXTRA_CONF_FILE="overlay-threads.conf;overlay-tls.conf"
+    platform_allow:
+      - mps2/an521/cpu0
+      - native_sim/native/64
+    tags: pjsip

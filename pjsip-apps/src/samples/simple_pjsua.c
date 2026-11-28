@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2026 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -34,16 +34,91 @@
  *
  *  - Incoming calls will automatically be answered with 200.
  *
- * This program will quit once it has completed a single call.
+ * Press 'h' to hang up all calls and 'q' to quit. On Zephyr, which has no
+ * stdin, the program runs until it is reset, and the URL to call comes
+ * from CONFIG_SIMPLE_PJSUA_CALL_URL.
  */
 
 #include <pjsua-lib/pjsua.h>
 
-#define THIS_FILE       "APP"
+#define THIS_FILE       "simple_pjsua.c"
 
-#define SIP_DOMAIN      "example.com"
-#define SIP_USER        "alice"
-#define SIP_PASSWD      "secret"
+/* The CONFIG_SIMPLE_PJSUA_ settings below can each be set from the build,
+ * e.g. -DCONFIG_SIMPLE_PJSUA_SIP_DOMAIN='"pbx.example.com"'. On Zephyr they
+ * are the sample's Kconfig options, which always define them, so the
+ * defaults here apply elsewhere.
+ */
+#ifndef CONFIG_SIMPLE_PJSUA_SIP_DOMAIN
+#  define CONFIG_SIMPLE_PJSUA_SIP_DOMAIN    "example.com"
+#endif
+#ifndef CONFIG_SIMPLE_PJSUA_USERNAME
+#  define CONFIG_SIMPLE_PJSUA_USERNAME      "alice"
+#endif
+#ifndef CONFIG_SIMPLE_PJSUA_PASSWORD
+#  define CONFIG_SIMPLE_PJSUA_PASSWORD      "secret"
+#endif
+/* The SIP UDP port to listen on. */
+#ifndef CONFIG_SIMPLE_PJSUA_SIP_PORT
+#  define CONFIG_SIMPLE_PJSUA_SIP_PORT      5060
+#endif
+/* Calls at once; PJSUA_MAX_CALLS is the most the library allows. */
+#ifndef CONFIG_SIMPLE_PJSUA_MAX_CALLS
+#  define CONFIG_SIMPLE_PJSUA_MAX_CALLS     PJSUA_MAX_CALLS
+#endif
+/* Log level on the console. */
+#ifndef CONFIG_SIMPLE_PJSUA_LOG_LEVEL
+#  define CONFIG_SIMPLE_PJSUA_LOG_LEVEL     4
+#endif
+/* The null sound device (1): the media runs on a clock with no audio
+ * hardware, for a target without a sound device.
+ */
+#ifndef CONFIG_SIMPLE_PJSUA_NULL_SND_DEV
+#  define CONFIG_SIMPLE_PJSUA_NULL_SND_DEV  0
+#endif
+/* URL to call at startup where there is no command line; "" calls nobody. */
+#ifndef CONFIG_SIMPLE_PJSUA_CALL_URL
+#  define CONFIG_SIMPLE_PJSUA_CALL_URL      ""
+#endif
+
+#define SIP_DOMAIN      CONFIG_SIMPLE_PJSUA_SIP_DOMAIN
+#define SIP_USER        CONFIG_SIMPLE_PJSUA_USERNAME
+#define SIP_PASSWD      CONFIG_SIMPLE_PJSUA_PASSWORD
+
+/* On Zephyr, built with CONFIG_SYS_HEAP_RUNTIME_STATS, the heaps' peak use
+ * is logged every ten seconds: the C heap the pools come from and the
+ * kernel heap the thread stacks come from. The getter for the C heap is
+ * not declared in any header.
+ */
+#if defined(__ZEPHYR__) && defined(CONFIG_SYS_HEAP_RUNTIME_STATS)
+#include <zephyr/sys/mem_stats.h>
+#include <zephyr/kernel.h>
+int malloc_runtime_stats_get(struct sys_memory_stats *stats);
+#  if CONFIG_HEAP_MEM_POOL_SIZE > 0
+extern struct k_heap _system_heap;
+#  endif
+
+static void dump_heap(void)
+{
+    struct sys_memory_stats st;
+
+    if (malloc_runtime_stats_get(&st) == 0) {
+        PJ_LOG(3,(THIS_FILE, "C heap: %u used, %u peak, %u free",
+                  (unsigned)st.allocated_bytes,
+                  (unsigned)st.max_allocated_bytes,
+                  (unsigned)st.free_bytes));
+    }
+#  if CONFIG_HEAP_MEM_POOL_SIZE > 0
+    if (sys_heap_runtime_stats_get(&_system_heap.heap, &st) == 0) {
+        PJ_LOG(3,(THIS_FILE, "Kernel heap: %u used, %u peak, %u free",
+                  (unsigned)st.allocated_bytes,
+                  (unsigned)st.max_allocated_bytes,
+                  (unsigned)st.free_bytes));
+    }
+#  endif
+}
+#else
+#define dump_heap()
+#endif
 
 
 /* Callback called by the library upon receiving incoming call */
@@ -101,11 +176,9 @@ static void error_exit(const char *title, pj_status_t status)
 }
 
 /*
- * main()
- *
- * argv[1] may contain URL to call.
+ * The program, with the URL to call, or NULL.
  */
-int main(int argc, char *argv[])
+static int simple_pjsua(const char *call_url)
 {
     pjsua_acc_id acc_id;
     pj_status_t status;
@@ -114,26 +187,35 @@ int main(int argc, char *argv[])
     status = pjsua_create();
     if (status != PJ_SUCCESS) error_exit("Error in pjsua_create()", status);
 
-    /* If argument is specified, it's got to be a valid SIP URL */
-    if (argc > 1) {
-        status = pjsua_verify_url(argv[1]);
-        if (status != PJ_SUCCESS) error_exit("Invalid URL in argv", status);
+    /* If URL is specified, it's got to be a valid SIP URL */
+    if (call_url) {
+        status = pjsua_verify_url(call_url);
+        if (status != PJ_SUCCESS) error_exit("Invalid URL to call", status);
     }
 
     /* Init pjsua */
     {
         pjsua_config cfg;
         pjsua_logging_config log_cfg;
+        pjsua_media_config media_cfg;
 
         pjsua_config_default(&cfg);
+        cfg.max_calls = CONFIG_SIMPLE_PJSUA_MAX_CALLS;
         cfg.cb.on_incoming_call = &on_incoming_call;
         cfg.cb.on_call_media_state = &on_call_media_state;
         cfg.cb.on_call_state = &on_call_state;
 
         pjsua_logging_config_default(&log_cfg);
-        log_cfg.console_level = 4;
+        log_cfg.console_level = CONFIG_SIMPLE_PJSUA_LOG_LEVEL;
 
-        status = pjsua_init(&cfg, &log_cfg, NULL);
+        pjsua_media_config_default(&media_cfg);
+#if defined(__ZEPHYR__)
+        /* RTP on the SIP worker thread rather than a thread of its own */
+        media_cfg.has_ioqueue = PJ_FALSE;
+        media_cfg.thread_cnt = 0;
+#endif
+
+        status = pjsua_init(&cfg, &log_cfg, &media_cfg);
         if (status != PJ_SUCCESS) error_exit("Error in pjsua_init()", status);
     }
 
@@ -142,7 +224,7 @@ int main(int argc, char *argv[])
         pjsua_transport_config cfg;
 
         pjsua_transport_config_default(&cfg);
-        cfg.port = 5060;
+        cfg.port = CONFIG_SIMPLE_PJSUA_SIP_PORT;
         status = pjsua_transport_create(PJSIP_TRANSPORT_UDP, &cfg, NULL);
         if (status != PJ_SUCCESS) error_exit("Error creating transport", status);
     }
@@ -150,6 +232,11 @@ int main(int argc, char *argv[])
     /* Initialization is done, now start pjsua */
     status = pjsua_start();
     if (status != PJ_SUCCESS) error_exit("Error starting pjsua", status);
+
+#if CONFIG_SIMPLE_PJSUA_NULL_SND_DEV
+    status = pjsua_set_null_snd_dev();
+    if (status != PJ_SUCCESS) error_exit("Error setting null sound device", status);
+#endif
 
     /* Register to SIP server by creating SIP account. */
     {
@@ -170,12 +257,19 @@ int main(int argc, char *argv[])
     }
 
     /* If URL is specified, make call to the URL. */
-    if (argc > 1) {
-        pj_str_t uri = pj_str(argv[1]);
+    if (call_url) {
+        pj_str_t uri = pj_str((char*)call_url);
         status = pjsua_call_make_call(acc_id, &uri, 0, NULL, NULL, NULL);
         if (status != PJ_SUCCESS) error_exit("Error making call", status);
     }
 
+#if defined(__ZEPHYR__)
+    /* No stdin: the worker thread runs the calls until the board is reset */
+    for (;;) {
+        pj_thread_sleep(10000);
+        dump_heap();
+    }
+#else
     /* Wait until user press "q" to quit. */
     for (;;) {
         char option[10];
@@ -192,9 +286,28 @@ int main(int argc, char *argv[])
         if (option[0] == 'h')
             pjsua_call_hangup_all();
     }
+#endif  /* __ZEPHYR__ */
 
     /* Destroy pjsua */
     pjsua_destroy();
 
     return 0;
 }
+
+#if defined(__ZEPHYR__)
+int main(void)
+{
+    const char *url = CONFIG_SIMPLE_PJSUA_CALL_URL;
+    return simple_pjsua(*url ? url : NULL);
+}
+#else
+/*
+ * main()
+ *
+ * argv[1] may contain URL to call.
+ */
+int main(int argc, char *argv[])
+{
+    return simple_pjsua(argc > 1 ? argv[1] : NULL);
+}
+#endif  /* __ZEPHYR__ */

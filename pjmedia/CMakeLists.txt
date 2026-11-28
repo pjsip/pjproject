@@ -699,8 +699,9 @@ target_sources(pjmedia
 # AEC and FFmpeg are written into pjmedia/config_auto.h, see below
 target_compile_definitions(pjmedia
   PUBLIC
-    # resampling backend
-    PJMEDIA_RESAMPLE_IMP=PJMEDIA_RESAMPLE_$<UPPER_CASE:${PJMEDIA_WITH_RESAMPLE}>
+    # resampling backend; a Zephyr build leaves it to config_site.h, where
+    # the preset defaults to none
+    $<$<NOT:$<BOOL:${ZEPHYR_BASE}>>:PJMEDIA_RESAMPLE_IMP=PJMEDIA_RESAMPLE_$<UPPER_CASE:${PJMEDIA_WITH_RESAMPLE}>>
 
     # aec
     PJMEDIA_HAS_WEBRTC_AEC=$<BOOL:${PJMEDIA_WITH_WEBRTC_AEC}>
@@ -858,11 +859,13 @@ if(PJMEDIA_WITH_WEBRTC_AEC3)
   unset(_pj_aec3_provider)
 endif()
 
-if (NOT (WIN32 OR CYGWIN OR MINGW))
+if (NOT (WIN32 OR CYGWIN OR MINGW OR DEFINED ZEPHYR_BASE))
   # pjmedia calls libm functions (sin(), cos(), ...), a separate library on
   # these systems that the final link needs. Linked by name so that a cross
   # toolchain picks the libm matching its CPU flags; a Generic one resolves
   # -lm through its multilib specs, where find_library() does not look.
+  # Zephyr's own libc provides them (and the host's static libm does not
+  # link into native_sim).
   find_library(MATH_LIBRARY m)
   if(MATH_LIBRARY OR CMAKE_SYSTEM_NAME STREQUAL "Generic")
     target_link_libraries(pjmedia PRIVATE m)
@@ -1297,28 +1300,33 @@ endif()
 # ##############################################################################
 #  Test application
 
+# The sources, except main, are an INTERFACE target so that another build
+# (the Zephyr test app) compiles the same list.
+add_library(pjmedia-test-sources INTERFACE)
+target_sources(pjmedia-test-sources INTERFACE
+  src/test/codec_vectors.c
+  src/test/conf_test.c
+  src/test/jbuf_test.c
+  src/test/mips_test.c
+  src/test/vid_codec_test.c
+  src/test/vid_conf_test.c
+  src/test/vid_dev_test.c
+  src/test/vid_port_test.c
+  src/test/rtp_test.c
+  src/test/test.c
+  src/test/tone_detector_test.c
+  src/test/txt_stream_test.c
+  src/test/sdp_neg_test.c
+  src/test/sdp_attr_test.c
+  src/test/transport_srtp_test.c
+)
+
 if(BUILD_TESTING)
-  add_executable(pjmedia-test
-    src/test/codec_vectors.c
-    src/test/conf_test.c
-    src/test/jbuf_test.c
-    src/test/main.c
-    src/test/mips_test.c
-    src/test/vid_codec_test.c
-    src/test/vid_conf_test.c
-    src/test/vid_dev_test.c
-    src/test/vid_port_test.c
-    src/test/rtp_test.c
-    src/test/test.c
-    src/test/tone_detector_test.c
-    src/test/txt_stream_test.c
-    src/test/sdp_neg_test.c
-    src/test/sdp_attr_test.c
-    src/test/transport_srtp_test.c
-  )
+  add_executable(pjmedia-test src/test/main.c)
 
   target_link_libraries(pjmedia-test
     PRIVATE
+      pjmedia-test-sources
       pjlib
       pjlib-util
       pjnath

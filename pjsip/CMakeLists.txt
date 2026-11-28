@@ -331,41 +331,51 @@ unset(_pj_tgt)
 # ##############################################################################
 # Test application
 
-if(BUILD_TESTING)
-  # pjsip test application
-  add_executable(pjsip-test
-    src/test/dlg_core_test.c
-    src/test/dlg_target_refresh_test.c
-    src/test/dns_test.c
-    src/test/msg_err_test.c
-    src/test/msg_logger.c
-    src/test/msg_test.c
-    src/test/multipart_test.c
-    src/test/regc_test.c
-    src/test/test.c
-    src/test/transport_loop_test.c
-    src/test/transport_tcp_test.c
-    src/test/transport_test.c
-    src/test/transport_udp_test.c
-    src/test/tsx_basic_test.c
-    src/test/tsx_bench.c
-    src/test/tsx_uac_test.c
-    src/test/tsx_uas_test.c
-    src/test/txdata_test.c
-    src/test/uri_test.c
-    src/test/inv_offer_answer_test.c
-    src/test/auth_async_test.c
+# The sources, except main, are an INTERFACE target so that another build
+# (the Zephyr test app) compiles the same list.
+add_library(pjsip-test-sources INTERFACE)
+target_sources(pjsip-test-sources INTERFACE
+  src/test/dlg_core_test.c
+  src/test/dlg_target_refresh_test.c
+  src/test/dns_test.c
+  src/test/msg_err_test.c
+  src/test/msg_logger.c
+  src/test/msg_test.c
+  src/test/multipart_test.c
+  src/test/regc_test.c
+  src/test/test.c
+  src/test/transport_loop_test.c
+  src/test/transport_tcp_test.c
+  src/test/transport_test.c
+  src/test/transport_udp_test.c
+  src/test/tsx_basic_test.c
+  src/test/tsx_bench.c
+  src/test/tsx_uac_test.c
+  src/test/tsx_uas_test.c
+  src/test/txdata_test.c
+  src/test/uri_test.c
+  src/test/inv_offer_answer_test.c
+  src/test/auth_async_test.c
+  src/test/srv_failover_test.c
+)
+# pjsua is not part of the Zephyr port: its tests stay out of that build
+if(NOT DEFINED ZEPHYR_BASE)
+  target_sources(pjsip-test-sources INTERFACE
     src/test/pjsua_auth_test.c
     src/test/pjsua_call_test.c
     src/test/pjsua_acc_test.c
     src/test/pjsua_pres_test.c
     src/test/pjsua_dns_test.c
-    src/test/srv_failover_test.c
-    src/test/${PJ_TEST_MAIN}
   )
+endif()
+
+if(BUILD_TESTING)
+  # pjsip test application
+  add_executable(pjsip-test src/test/${PJ_TEST_MAIN})
 
   target_link_libraries(pjsip-test
     PRIVATE
+      pjsip-test-sources
       pjlib
       pjlib-util
       pjnath

@@ -106,21 +106,25 @@ unset(_pj_turn_exclude)
 # ##############################################################################
 # Test application
 
-if(BUILD_TESTING)
-  add_executable(pjnath-test
-    src/pjnath-test/ice_test.c
-    src/pjnath-test/stun.c
-    src/pjnath-test/sess_auth.c
-    src/pjnath-test/server.c
-    src/pjnath-test/concur_test.c
-    src/pjnath-test/stun_sock_test.c
-    src/pjnath-test/turn_sock_test.c
-    src/pjnath-test/test.c
-    # main.c for every target, as make: pjnath has no main_rtems.c
-    src/pjnath-test/main.c
-  )
+# The sources, except main, are an INTERFACE target so that another build
+# (the Zephyr test app) compiles the same list.
+add_library(pjnath-test-sources INTERFACE)
+target_sources(pjnath-test-sources INTERFACE
+  src/pjnath-test/ice_test.c
+  src/pjnath-test/stun.c
+  src/pjnath-test/sess_auth.c
+  src/pjnath-test/server.c
+  src/pjnath-test/concur_test.c
+  src/pjnath-test/stun_sock_test.c
+  src/pjnath-test/turn_sock_test.c
+  src/pjnath-test/test.c
+)
 
-  target_link_libraries(pjnath-test PRIVATE pjlib pjlib-util pjnath)
+if(BUILD_TESTING)
+  # main.c for every target, as make: pjnath has no main_rtems.c
+  add_executable(pjnath-test src/pjnath-test/main.c)
+
+  target_link_libraries(pjnath-test PRIVATE pjnath-test-sources pjlib pjlib-util pjnath)
 
   # Run from pjnath/build, as make
   add_test(NAME pjnath-test

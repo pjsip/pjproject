@@ -51,8 +51,14 @@
                 ARMv7-M         Cortex-M3   1.250 MIPS/MHz
     */
 
+#if defined(__ZEPHYR__) && defined(CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC)
+    /* The board's core clock. The CPU column is the one to read there */
+#   define CPU_MHZ          (CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC / MEGA)
+#   define CPU_IPS          (1.5 * CPU_MHZ * MEGA)      /* Cortex-M33   */
+#else
 #   define CPU_MHZ          (2666)
 #   define CPU_IPS          (3.039 * CPU_MHZ * MEGA)    /* P4 2.6GHz    */
+#endif
 
 //#   define CPU_MHZ        700
 //#   define CPU_IPS        (700 * MEGA * 2.708)        /* P3 700Mhz    */
@@ -636,6 +642,7 @@ static pjmedia_port* conf16_test_init(pj_pool_t *pool,
                           samples_per_frame, flags, te);
 }
 
+#if PJMEDIA_RESAMPLE_IMP != PJMEDIA_RESAMPLE_NONE
 /***************************************************************************/
 /* Up and downsample */
 static pjmedia_port* updown_resample_get(pj_pool_t *pool,
@@ -707,6 +714,8 @@ static pjmedia_port* large_filt_resample( pj_pool_t *pool,
                                channel_count, samples_per_frame, flags, te);
 }
 
+
+#endif  /* PJMEDIA_RESAMPLE_IMP */
 
 /***************************************************************************/
 /* Codec encode/decode */
@@ -1834,6 +1843,7 @@ static pjmedia_port* create_stream( pj_pool_t *pool,
     pj_memcpy(&si.fmt, ci[0], sizeof(pjmedia_codec_info));
     si.param = NULL;
     si.tx_pt = ci[0]->pt;
+    si.rx_pt = ci[0]->pt;
     si.tx_event_pt = 101;
     si.rx_event_pt = 101;
     si.ssrc = pj_rand();
@@ -2358,7 +2368,9 @@ static pjmedia_port* delaybuf_n20(pj_pool_t *pool,
 }
 
 
-#if PJMEDIA_HAS_G711_CODEC || PJMEDIA_HAS_SPEEX_CODEC
+/* The hundred-call entries: a hundred streams of pools and jitter buffers */
+#if PJTEST_TARGET_RAM_KB >= 2048 && \
+    (PJMEDIA_HAS_G711_CODEC || PJMEDIA_HAS_SPEEX_CODEC)
 /***************************************************************************/
 
 static pjmedia_stream* create_call_stream(  pjmedia_endpt *endpt,
@@ -2409,6 +2421,7 @@ static pjmedia_stream* create_call_stream(  pjmedia_endpt *endpt,
     pj_memcpy(&si.fmt, ci[0], sizeof(pjmedia_codec_info));
     si.param = NULL;
     si.tx_pt = ci[0]->pt;
+    si.rx_pt = ci[0]->pt;
     si.tx_event_pt = 101;
     si.rx_event_pt = 101;
     si.ssrc = pj_rand();
@@ -2659,8 +2672,7 @@ static pjmedia_port* conf100_pcmu_srtp80auth_test_init(pj_pool_t *pool,
 }
 #endif
 
-#endif  /* PJMEDIA_HAS_G711_CODEC || PJMEDIA_HAS_SPEEX_CODEC */
-
+#endif  /* PJTEST_TARGET_RAM_KB >= 2048 && (G711 || SPEEX) */
 
 /***************************************************************************/
 /* Run test entry, return elapsed time */
@@ -2773,6 +2785,7 @@ int mips_test(void)
         { "conference bridge with 4 ports", OP_GET_PUT, K8|K16, &conf4_test_init},
         { "conference bridge with 8 ports", OP_GET_PUT, K8|K16, &conf8_test_init},
         { "conference bridge with 16 ports", OP_GET_PUT, K8|K16, &conf16_test_init},
+#if PJTEST_TARGET_RAM_KB >= 2048
 #if PJMEDIA_HAS_G711_CODEC
         { "conf bridge 100 calls - PCMU", OP_PUT_GET, K8, &conf100_pcmu_test_init},
         { "conf bridge 100 calls - PCMU, no parallel", OP_PUT_GET, K8, &conf100_pcmu_noparallel_test_init},
@@ -2782,9 +2795,12 @@ int mips_test(void)
 #if PJMEDIA_HAS_SPEEX_CODEC
         { "conf bridge 100 calls - Speex", OP_PUT_GET, K16, &conf100_speex_test_init},
 #endif
+#endif
+#if PJMEDIA_RESAMPLE_IMP != PJMEDIA_RESAMPLE_NONE
         { "upsample+downsample - linear", OP_GET, K8|K16, &linear_resample},
         { "upsample+downsample - small filter", OP_GET, K8|K16, &small_filt_resample},
         { "upsample+downsample - large filter", OP_GET, K8|K16, &large_filt_resample},
+#endif
         { "WSOLA PLC - 0% loss", OP_GET, K8|K16, &wsola_plc_0},
         { "WSOLA PLC - 2% loss", OP_GET, K8|K16, &wsola_plc_2},
         { "WSOLA PLC - 5% loss", OP_GET, K8|K16, &wsola_plc_5},
@@ -2937,7 +2953,8 @@ int mips_test(void)
             mips_val = (float)(CPU_IPS * usec / 1000000.0 / 1000000);
             cpu_pct = (float)(100.0 * usec / 1000000);
             PJ_LOG(3,(THIS_FILE, "%2dKHz %-55s % 10d %8.3f %7.2f", 
-                      clock_rate/1000, e->title, usec, cpu_pct, mips_val));
+                      clock_rate/1000, e->title, usec, (double)cpu_pct,
+                      (double)mips_val));
 
         }
     }

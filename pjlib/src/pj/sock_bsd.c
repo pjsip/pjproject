@@ -326,7 +326,12 @@ PJ_DEF(int) pj_inet_aton(const pj_str_t *cp, pj_in_addr *inp)
 #   if !defined(PJ_SOCK_HAS_INET_PTON) || PJ_SOCK_HAS_INET_PTON == 0
 #       error "PJ_SOCK_HAS_INET_ADDR=0 requires PJ_SOCK_HAS_INET_PTON"
 #   endif
-    return inet_pton(AF_INET, tempaddr, inp) == 1;
+    /* Zephyr's inet_pton() zeroes the output before it fails on a name */
+    if (inet_pton(AF_INET, tempaddr, inp) != 1) {
+        inp->s_addr = PJ_INADDR_NONE;
+        return 0;
+    }
+    return 1;
 #else
     inp->s_addr = inet_addr(tempaddr);
     return inp->s_addr == PJ_INADDR_NONE ? 0 : 1;
@@ -667,13 +672,24 @@ PJ_DEF(pj_status_t) pj_sock_bind( pj_sock_t sock,
                                   const pj_sockaddr_t *addr,
                                   int len)
 {
+    const struct sockaddr *sa = (const struct sockaddr*)addr;
+    pj_sockaddr copy;
+
     PJ_CHECK_STACK();
 
     PJ_ASSERT_RETURN(addr && len >= (int)sizeof(struct sockaddr_in), PJ_EINVAL);
 
     CHECK_ADDR_LEN(addr, len);
 
-    if (bind(OS_SOCK(sock), (struct sockaddr*)addr, len) != 0)
+    /* Zephyr's bind() writes the port it picks for port 0 back into the
+     * address, so give it a copy to keep ours const. Larger addresses,
+     * such as a Unix-domain one, are passed through as before.
+     */
+    if (len <= (int)sizeof(copy)) {
+        pj_memcpy(&copy, addr, len);
+        sa = (const struct sockaddr*)&copy;
+    }
+    if (bind(OS_SOCK(sock), (struct sockaddr*)sa, len) != 0)
         return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else
         return PJ_SUCCESS;

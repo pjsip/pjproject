@@ -23,7 +23,9 @@
 #include <pjlib.h>
 
 #define POOL_SIZE       8000
-#if defined(PJ_DEBUG) && PJ_DEBUG!=0
+#if PJTEST_SLOW_CPU
+#   define LOOP         2000
+#elif defined(PJ_DEBUG) && PJ_DEBUG!=0
 #   define LOOP         10000
 #else
 #   define LOOP         100000
@@ -881,9 +883,11 @@ static int msg_benchmark(unsigned *p_detect, unsigned *p_parse,
     pj_highprec_div(kbytes, 100000);
     elapsed = pj_elapsed_time(&zero, &var.detect_time);
     avg_detect = pj_elapsed_usec(&zero, &var.detect_time);
-    pj_highprec_mul(avg_detect, AVERAGE_MSG_LEN);
+    pj_highprec_mul(avg_detect, AVERAGE_MSG_LEN * 1000);
     pj_highprec_div(avg_detect, var.detect_len);
-    avg_detect = 1000000 / avg_detect;
+    if (avg_detect == 0)
+        avg_detect = 1;
+    avg_detect = 1000000000 / avg_detect;
 
     PJ_LOG(3,(THIS_FILE, 
               "    %u.%u MB detected in %ld.%03lds (avg=%d msg detection/sec)", 
@@ -897,9 +901,11 @@ static int msg_benchmark(unsigned *p_detect, unsigned *p_parse,
     pj_highprec_div(kbytes, 100000);
     elapsed = pj_elapsed_time(&zero, &var.parse_time);
     avg_parse = pj_elapsed_usec(&zero, &var.parse_time);
-    pj_highprec_mul(avg_parse, AVERAGE_MSG_LEN);
+    pj_highprec_mul(avg_parse, AVERAGE_MSG_LEN * 1000);
     pj_highprec_div(avg_parse, var.parse_len);
-    avg_parse = 1000000 / avg_parse;
+    if (avg_parse == 0)
+        avg_parse = 1;
+    avg_parse = 1000000000 / avg_parse;
 
     PJ_LOG(3,(THIS_FILE, 
               "    %u.%u MB parsed in %ld.%03lds (avg=%d msg parsing/sec)", 
@@ -913,9 +919,11 @@ static int msg_benchmark(unsigned *p_detect, unsigned *p_parse,
     pj_highprec_div(kbytes, 100000);
     elapsed = pj_elapsed_time(&zero, &var.print_time);
     avg_print = pj_elapsed_usec(&zero, &var.print_time);
-    pj_highprec_mul(avg_print, AVERAGE_MSG_LEN);
+    pj_highprec_mul(avg_print, AVERAGE_MSG_LEN * 1000);
     pj_highprec_div(avg_print, var.print_len);
-    avg_print = 1000000 / avg_print;
+    if (avg_print == 0)
+        avg_print = 1;
+    avg_print = 1000000000 / avg_print;
 
     PJ_LOG(3,(THIS_FILE, 
               "    %u.%u MB printed in %ld.%03lds (avg=%d msg print/sec)", 
@@ -930,8 +938,8 @@ static int msg_benchmark(unsigned *p_detect, unsigned *p_parse,
 
 /*****************************************************************************/
 /* Test various header parsing and production */
-static int hdr_test_success(pjsip_hdr *h);
 static int hdr_test_accept0(pjsip_hdr *h);
+static int hdr_test_accept_overflow(pjsip_hdr *h);
 static int hdr_test_accept1(pjsip_hdr *h);
 static int hdr_test_accept2(pjsip_hdr *h);
 static int hdr_test_allow0(pjsip_hdr *h);
@@ -1000,8 +1008,8 @@ struct hdr_test_t
         "a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, " \
         "a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, " \
         "a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a",
-        &hdr_test_success,
-        HDR_FLAG_PARSE_FAIL
+        &hdr_test_accept_overflow,
+        HDR_FLAG_DONT_PRINT
     },
 
     {
@@ -1009,6 +1017,15 @@ struct hdr_test_t
         "Accept", NULL,
         "application/*, text/plain",
         &hdr_test_accept1
+    },
+
+    {
+        /* Overflowing Require: fails, unlike the other array headers */
+        "Require", NULL,
+        "a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, " \
+        "a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a",
+        NULL,
+        HDR_FLAG_PARSE_FAIL
     },
 
     {
@@ -1219,9 +1236,25 @@ struct hdr_test_t
     }
 };
 
-static int hdr_test_success(pjsip_hdr *h)
+/* More elements than the array holds: the first ones are kept, the
+ * rest dropped, and the header still parses.
+ */
+static int hdr_test_accept_overflow(pjsip_hdr *h)
 {
-    PJ_UNUSED_ARG(h);
+    pjsip_accept_hdr *hdr = (pjsip_accept_hdr*)h;
+    unsigned i;
+
+    if (h->type != PJSIP_H_ACCEPT)
+        return -1000;
+
+    if (hdr->count != PJSIP_MAX_ACCEPT_COUNT)
+        return -1001;
+
+    for (i=0; i<hdr->count; ++i) {
+        if (pj_strcmp2(&hdr->values[i], "a") != 0)
+            return -1002;
+    }
+
     return 0;
 }
 
@@ -2434,8 +2467,96 @@ static int hdr_print_bound_test(void)
 
 /*****************************************************************************/
 
+/* A generic array header continued on a later line is merged into the one
+ * already parsed. Past PJSIP_GENERIC_ARRAY_MAX_COUNT values the extras are
+ * dropped, except for Require, which fails the message.
+ */
+static int split_hdr_overflow_test(void)
+{
+    static const struct {
+        const char *hname;
+        pjsip_hdr_e type;
+        pj_bool_t fails;
+    } cases[] = {
+        { "Supported", PJSIP_H_SUPPORTED, PJ_FALSE },
+        { "Require",   PJSIP_H_REQUIRE,   PJ_TRUE },
+    };
+    unsigned i;
+
+    PJ_LOG(3,(THIS_FILE, "  testing array header split over two lines.."));
+
+    for (i = 0; i < PJ_ARRAY_SIZE(cases); ++i) {
+        enum { BUF_SIZE = 256 + 8 * PJSIP_GENERIC_ARRAY_MAX_COUNT };
+        pj_pool_t *pool;
+        pjsip_rx_data *rdata;
+        pjsip_msg *msg;
+        pjsip_generic_array_hdr *hdr;
+        char *buf;
+        int len;
+        unsigned j;
+
+        pool = pjsip_endpt_create_pool(endpt, NULL, POOL_SIZE, POOL_SIZE);
+        buf = (char*) pj_pool_alloc(pool, BUF_SIZE);
+        len = pj_ansi_snprintf(buf, BUF_SIZE,
+                               "OPTIONS sip:bob@example.com SIP/2.0\r\n"
+                               "Via: SIP/2.0/UDP 10.0.0.1;branch=z9hG4bK1\r\n"
+                               "From: <sip:alice@example.com>;tag=1\r\n"
+                               "To: <sip:bob@example.com>\r\n"
+                               "Call-ID: split@10.0.0.1\r\n"
+                               "CSeq: 1 OPTIONS\r\n"
+                               "%s: v0", cases[i].hname);
+        for (j = 1; j < PJSIP_GENERIC_ARRAY_MAX_COUNT && len < BUF_SIZE; ++j)
+            len += pj_ansi_snprintf(buf + len, BUF_SIZE - len, ", v%u", j);
+        if (len < BUF_SIZE) {
+            len += pj_ansi_snprintf(buf + len, BUF_SIZE - len,
+                                    "\r\n%s: extra\r\n"
+                                    "Content-Length: 0\r\n\r\n",
+                                    cases[i].hname);
+        }
+        if (len >= BUF_SIZE) {
+            pjsip_endpt_release_pool(endpt, pool);
+            return -2970;
+        }
+
+        rdata = PJ_POOL_ZALLOC_T(pool, pjsip_rx_data);
+        rdata->tp_info.pool = pool;
+        pj_list_init(&rdata->msg_info.parse_err);
+        msg = pjsip_parse_rdata(buf, len, rdata);
+
+        if (cases[i].fails) {
+            if (pj_list_empty(&rdata->msg_info.parse_err)) {
+                PJ_LOG(3,(THIS_FILE, "    error: %s with %d values over "
+                          "two lines was accepted", cases[i].hname,
+                          PJSIP_GENERIC_ARRAY_MAX_COUNT + 1));
+                pjsip_endpt_release_pool(endpt, pool);
+                return -2980;
+            }
+        } else {
+            hdr = msg ? (pjsip_generic_array_hdr*)
+                        pjsip_msg_find_hdr(msg, cases[i].type, NULL) : NULL;
+            if (!pj_list_empty(&rdata->msg_info.parse_err) || hdr == NULL ||
+                hdr->count != PJSIP_GENERIC_ARRAY_MAX_COUNT)
+            {
+                PJ_LOG(3,(THIS_FILE, "    error: %s with %d values over "
+                          "two lines: %s, count %u", cases[i].hname,
+                          PJSIP_GENERIC_ARRAY_MAX_COUNT + 1,
+                          pj_list_empty(&rdata->msg_info.parse_err) ?
+                              "parsed" : "parse error",
+                          hdr ? hdr->count : 0));
+                pjsip_endpt_release_pool(endpt, pool);
+                return -2990;
+            }
+        }
+        pjsip_endpt_release_pool(endpt, pool);
+    }
+
+    return 0;
+}
+
+
 int msg_test(void)
 {
+#if INCLUDE_BENCHMARKS
     enum { COUNT = 1, DETECT=0, PARSE=1, PRINT=2 };
     struct {
         unsigned detect;
@@ -2444,6 +2565,7 @@ int msg_test(void)
     } run[COUNT];
     unsigned i, max, avg_len;
     char desc[250];
+#endif
     pj_status_t status;
 
     status = hdr_test();
@@ -2455,6 +2577,10 @@ int msg_test(void)
         return status;
 
     status = malformed_hdr_test();
+    if (status != PJ_SUCCESS)
+        return status;
+
+    status = split_hdr_overflow_test();
     if (status != PJ_SUCCESS)
         return status;
 
