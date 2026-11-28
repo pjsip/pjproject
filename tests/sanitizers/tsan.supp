@@ -255,3 +255,20 @@ deadlock:call_wait_end
 # master; the test checks that pjsua doesn't turn it into a hang.
 deadlock:th_on_transport_state
 #=============================================================================
+
+#=============================================================================
+# Lock-order-inversion between two ioqueue keys of pjnath-test's TURN
+# server, reported about every other run of turn_sock_test.
+#
+# turn_tcp_on_accept_complete() starts a read on the accepted connection,
+# which locks its key, from the accept callback, which the ioqueue
+# dispatches with the listener's key locked. The server closes a data
+# connection as soon as it breaks (turn_tcp_on_data_read), so its key is
+# freed and reused: the key that was the listener's in one sub-test is an
+# accepted connection's in the next, and TSan sees the two keys locked in
+# both orders. Both stacks are on the same thread, in different sub-tests
+# that never overlap, so the two cannot wait for each other.
+#
+# Suppressed on that frame only; it is unique to the test server.
+deadlock:turn_tcp_on_accept_complete
+#=============================================================================

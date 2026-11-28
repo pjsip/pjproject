@@ -2505,11 +2505,14 @@ static int split_hdr_overflow_test(void)
                                "Call-ID: split@10.0.0.1\r\n"
                                "CSeq: 1 OPTIONS\r\n"
                                "%s: v0", cases[i].hname);
-        for (j = 1; j < PJSIP_GENERIC_ARRAY_MAX_COUNT; ++j)
+        for (j = 1; j < PJSIP_GENERIC_ARRAY_MAX_COUNT && len < BUF_SIZE; ++j)
             len += pj_ansi_snprintf(buf + len, BUF_SIZE - len, ", v%u", j);
-        len += pj_ansi_snprintf(buf + len, BUF_SIZE - len,
-                                "\r\n%s: extra\r\n"
-                                "Content-Length: 0\r\n\r\n", cases[i].hname);
+        if (len < BUF_SIZE) {
+            len += pj_ansi_snprintf(buf + len, BUF_SIZE - len,
+                                    "\r\n%s: extra\r\n"
+                                    "Content-Length: 0\r\n\r\n",
+                                    cases[i].hname);
+        }
         if (len >= BUF_SIZE) {
             pjsip_endpt_release_pool(endpt, pool);
             return -2970;

@@ -25,8 +25,8 @@ concurrency:
 # for the Cortex-M33 AN521, where the link fails when the image outgrows the
 # RAM, and pjlib-test, which exercises the OS abstraction the port consists
 # of, is run on native_sim in both thread modes. Growth below that wall is
-# caught by the footprint job, which compares the shipped UDP image and the
-# heap two calls need with a committed baseline.
+# caught by the footprint job, which compares the UDP image built for the
+# calls to itself and the heap two of them need with a committed baseline.
 jobs:
   detect-changes:
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
@@ -126,9 +126,10 @@ jobs:
         name: ${{ matrix.scenario }}
         path: twister-out/**/*.log
 
-  # Footprint: embedded_ua for the AN521 in its shipped UDP build, run under
-  # QEMU with two calls to itself (EMBUA_SELF_CALLS, no network beyond
-  # loopback), and its flash, RAM and heap peak compared with its entry in
+  # Footprint: embedded_ua's UDP build for the AN521 with the self-call
+  # overlay (no registration, no DHCP, heap statistics on), run under QEMU
+  # with two calls to itself (EMBUA_SELF_CALLS, no network beyond loopback),
+  # and its flash, RAM and heap peak compared with its entry in
   # zephyr/ci-footprint-limits.json. Growth beyond 2% fails; the entry is
   # refreshed by hand, from the JSON the check prints.
   footprint:
@@ -157,6 +158,7 @@ jobs:
         printf '#define PJ_CONFIG_ZEPHYR 1\n#include <pj/config_site_sample.h>\n' > pjproject/pjlib/include/pj/config_site.h
     - name: Build
       run: |
+        set -o pipefail
         west build -p always -b mps2/an521/cpu0 -d build pjproject/zephyr/samples/embedded_ua -- -DEXTRA_CONF_FILE=overlay-self-calls.conf -DEXTRA_CFLAGS=-DEMBUA_SELF_CALLS=2 2>&1 | tee build.log
     - name: Run the self calls
       run: |

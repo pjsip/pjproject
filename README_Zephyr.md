@@ -56,18 +56,18 @@ What the arena holds, measured on the AN521 in the single-threaded UDP build wit
 |---|---|
 | Registered, idle | 39 KB |
 | Each established call | about 48 KB |
-| Four concurrent calls | 224 KB, peak 232 KB while they were set up |
+| Four concurrent calls | 219 KB, peak 224 KB while they were set up |
 
 On the NUCLEO-H563ZI the heap behaves as on the emulator: the same pools from the same arena, and the four-call peak is the same number of bytes in the UDP builds and within 400 bytes in the TLS builds. The images are larger by Zephyr's drivers for the board and the DHCP client. The board's four images as they ship, each with the heap's peak while **four** INVITEs arrived at once and the **four** calls ran, the AN521's peak in the same test, and the arena it has to fit in:
 
 | Build | Flash | RAM | Heap peak, four calls | Same on AN521 | Arena |
 |---|---|---|---|---|---|
-| SIP over UDP, single thread | 364 KB | 390 KB | 232 KB | 232 KB | 244 KB |
-| SIP over UDP, threads | 372 KB | 422 KB | 243 KB | 243 KB | 257 KB |
+| SIP over UDP, single thread | 364 KB | 390 KB | 224 KB | 224 KB | 244 KB |
+| SIP over UDP, threads | 372 KB | 422 KB | 236 KB | 244 KB | 257 KB |
 | SIP over TLS, single thread | 470 KB | 509 KB | 284 KB | 284 KB | 299 KB |
 | SIP over TLS, threads | 479 KB | 542 KB | 297 KB | 297 KB | 312 KB |
 
-So the arena has 12 to 15 KB to spare at the four-call peak; an application with less margin than the sample should measure on its own board, with `mem`, before trimming it. In the threaded builds the kernel heap holds the media thread's stack and 1 KB is left, as intended: nothing else is allocated from it after start-up.
+So the arena has 13 to 21 KB to spare at the four-call peak; an application with less margin than the sample should measure on its own board, with `mem`, before trimming it. In the threaded builds the kernel heap holds the media thread's stack and 1 KB is left, as intended: nothing else is allocated from it after start-up.
 
 > [!NOTE]
 > **G.722 needs a larger arena.** These arenas are sized for G.711. With G.722 (section 8) each call's jitter buffer and frames are for 16 kHz, and the same four-call burst on the board peaked at 240 KB, and at 243 KB when a call had ended a few seconds before (its pools linger until the transaction timers run out), past the UDP arena: with it the sample aborted on "No memory" at the fourth call. For G.722 set `CONFIG_COMMON_LIBC_MALLOC_ARENA_SIZE` to 256 KB over UDP without threads, verified, and add the same 16 KB to the other three.
@@ -639,7 +639,7 @@ The "CI Zephyr" workflow ([`.github/workflows/ci-zephyr.yml`](.github/workflows/
 - the same built for the AN521, where the link fails when an image outgrows 640 KB of RAM
 - pjlib-test run on native_sim, single threaded
 - pjlib-test run on native_sim, with threads
-- the footprint check: embedded_ua's shipped UDP build for the AN521, run under QEMU with two calls to itself, and its flash, RAM and heap peak compared with the target's entry in [`zephyr/ci-footprint-limits.json`](zephyr/ci-footprint-limits.json) by [`zephyr/scripts/footprint_check.py`](zephyr/scripts/footprint_check.py); growth beyond 2% fails the job, and a change that legitimately grows the image updates the entry with the JSON the check prints
+- the footprint check: embedded_ua's UDP build for the AN521 with the self-call overlay (no registration, no DHCP, heap statistics on: a few KB smaller than the image in "Footprint"), run under QEMU with two calls to itself, and its flash, RAM and heap peak compared with the target's entry in [`zephyr/ci-footprint-limits.json`](zephyr/ci-footprint-limits.json) by [`zephyr/scripts/footprint_check.py`](zephyr/scripts/footprint_check.py); growth beyond 2% fails the job, and a change that legitimately grows the image updates the entry with the JSON the check prints
 
 The other suites are built but not run: what Zephyr does differently they found once, and those things are fixed in the tests. What a library change breaks on Zephyr afterwards is the build, a call into something its libc or POSIX layer lacks, or the footprint, and the builds catch both in a fraction of the time the suites take.
 
